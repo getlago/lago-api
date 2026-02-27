@@ -2638,6 +2638,825 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(aggregator_service).to have_received(:aggregate)
         end
       end
+
+      context "with non_persistable_charge_cache_optimization flag" do
+        before do
+          organization.update!(feature_flags: ["non_persistable_charge_cache_optimization"])
+        end
+
+        context "when all fees are zero" do
+          it "returns a zero fee" do
+            result = charge_subscription_service.call
+
+            expect(result).to be_success
+            expect(result.fees.count).to eq(1)
+            expect(result.fees.first).to have_attributes(
+              units: 0,
+              amount_cents: 0,
+              precise_amount_cents: 0.0,
+              unit_amount_cents: 0,
+              precise_unit_amount: 0,
+              events_count: 0,
+              grouped_by: {},
+              charge_filter_id: nil,
+              pay_in_advance: false,
+              amount_currency: "EUR"
+            )
+          end
+
+          context "with graduated charge model" do
+            let(:charge) do
+              create(
+                :graduated_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {
+                  graduated_ranges: [
+                    {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "100"},
+                    {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "50"}
+                  ]
+                }
+              )
+            end
+
+            it "returns zero fee with graduated amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(
+                units: 0,
+                amount_cents: 0,
+                precise_amount_cents: 0.0,
+                unit_amount_cents: 0,
+                precise_unit_amount: 0,
+                events_count: 0,
+                grouped_by: {},
+                charge_filter_id: nil,
+                pay_in_advance: false,
+                amount_currency: "EUR"
+              )
+              expect(result.fees.first.amount_details).to eq(
+                "graduated_ranges" => [
+                  {
+                    "from_value" => 0,
+                    "to_value" => 10,
+                    "flat_unit_amount" => "0.0",
+                    "per_unit_amount" => "0.0",
+                    "units" => "0.0",
+                    "per_unit_total_amount" => "0.0",
+                    "total_with_flat_amount" => "0.0"
+                  }
+                ]
+              )
+            end
+          end
+
+          context "with package charge model" do
+            let(:charge) do
+              create(
+                :package_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {amount: "100", free_units: 10, package_size: 10}
+              )
+            end
+
+            it "returns zero fee with package amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(
+                units: 0,
+                amount_cents: 0,
+                precise_amount_cents: 0.0,
+                unit_amount_cents: 0,
+                precise_unit_amount: 0,
+                events_count: 0,
+                grouped_by: {},
+                charge_filter_id: nil,
+                pay_in_advance: false,
+                amount_currency: "EUR"
+              )
+              expect(result.fees.first.amount_details).to eq(
+                "free_units" => "0.0",
+                "paid_units" => "0.0",
+                "per_package_size" => 0,
+                "per_package_unit_amount" => "0.0"
+              )
+            end
+          end
+
+          context "with percentage charge model" do
+            let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value") }
+            let(:charge) do
+              create(
+                :percentage_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {rate: "0.05", fixed_amount: "2"}
+              )
+            end
+
+            it "returns zero fee with percentage amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(
+                units: 0,
+                amount_cents: 0,
+                precise_amount_cents: 0.0,
+                unit_amount_cents: 0,
+                precise_unit_amount: 0,
+                events_count: 0,
+                grouped_by: {},
+                charge_filter_id: nil,
+                pay_in_advance: false,
+                amount_currency: "EUR"
+              )
+              expect(result.fees.first.amount_details).to eq(
+                "units" => "0.0",
+                "free_units" => "0.0",
+                "free_events" => 0,
+                "paid_units" => "0.0",
+                "rate" => "0.05",
+                "per_unit_total_amount" => "0.0",
+                "paid_events" => 0,
+                "fixed_fee_unit_amount" => "0.0",
+                "fixed_fee_total_amount" => "0.0",
+                "min_max_adjustment_total_amount" => "0.0"
+              )
+            end
+          end
+
+          context "with volume charge model" do
+            let(:charge) do
+              create(
+                :volume_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {
+                  volume_ranges: [
+                    {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
+                    {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
+                  ]
+                }
+              )
+            end
+
+            it "returns zero fee with volume amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(
+                units: 0,
+                amount_cents: 0,
+                precise_amount_cents: 0.0,
+                unit_amount_cents: 0,
+                precise_unit_amount: 0,
+                events_count: 0,
+                grouped_by: {},
+                charge_filter_id: nil,
+                pay_in_advance: false,
+                amount_currency: "EUR"
+              )
+              expect(result.fees.first.amount_details).to eq(
+                "flat_unit_amount" => "0.0",
+                "per_unit_amount" => "0.0",
+                "per_unit_total_amount" => "0.0"
+              )
+            end
+          end
+
+          context "with graduated_percentage charge model" do
+            let(:charge) do
+              create(
+                :graduated_percentage_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {
+                  graduated_percentage_ranges: [
+                    {from_value: 0, to_value: 10, rate: "1", flat_amount: "100"},
+                    {from_value: 11, to_value: nil, rate: "0.5", flat_amount: "50"}
+                  ]
+                }
+              )
+            end
+
+            it "returns zero fee with graduated_percentage amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(
+                units: 0,
+                amount_cents: 0,
+                precise_amount_cents: 0.0,
+                unit_amount_cents: 0,
+                precise_unit_amount: 0,
+                events_count: 0,
+                grouped_by: {},
+                charge_filter_id: nil,
+                pay_in_advance: false,
+                amount_currency: "EUR"
+              )
+              expect(result.fees.first.amount_details).to eq(
+                "graduated_percentage_ranges" => [
+                  {
+                    "from_value" => 0,
+                    "to_value" => 10,
+                    "flat_unit_amount" => "0.0",
+                    "rate" => "1.0",
+                    "units" => "0.0",
+                    "per_unit_total_amount" => "0.0",
+                    "total_with_flat_amount" => "0.0"
+                  }
+                ]
+              )
+            end
+          end
+        end
+
+        context "when some fees are non-zero" do
+          before do
+            create(
+              :event,
+              organization:,
+              subscription:,
+              code: billable_metric.code,
+              timestamp: Time.zone.parse("2022-03-16")
+            )
+          end
+
+          it "returns the fees" do
+            result = charge_subscription_service.call
+
+            expect(result).to be_success
+            expect(result.fees.count).to eq(1)
+            expect(result.fees.first.units).to eq(1)
+          end
+        end
+
+        context "when fee has zero units and amount but non-zero events_count" do
+          let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value") }
+
+          before do
+            create(
+              :event,
+              organization:,
+              subscription:,
+              code: billable_metric.code,
+              timestamp: Time.zone.parse("2022-03-16"),
+              properties: {value: 0}
+            )
+          end
+
+          it "returns the fee because events_count is non-zero" do
+            result = charge_subscription_service.call
+
+            expect(result).to be_success
+            expect(result.fees.count).to eq(1)
+            expect(result.fees.first).to have_attributes(
+              units: 0,
+              amount_cents: 0,
+              events_count: 1
+            )
+          end
+        end
+
+        context "when fee has an adjusted_fee" do
+          let(:adjusted_fee) do
+            create(
+              :adjusted_fee,
+              invoice:,
+              subscription:,
+              charge:,
+              properties: {
+                charges_from_datetime: boundaries.charges_from_datetime,
+                charges_to_datetime: boundaries.charges_to_datetime
+              },
+              fee_type: :charge,
+              adjusted_units: true,
+              adjusted_amount: false,
+              units: 3
+            )
+          end
+
+          before do
+            adjusted_fee
+            invoice.draft!
+          end
+
+          it "returns the fee because an adjusted_fee exists" do
+            result = charge_subscription_service.call
+
+            expect(result).to be_success
+            expect(result.fees.count).to eq(1)
+          end
+        end
+
+        context "when flag is disabled" do
+          before do
+            organization.update!(feature_flags: [])
+          end
+
+          it "returns the zero fees" do
+            result = charge_subscription_service.call
+
+            expect(result).to be_success
+            expect(result.fees.count).to eq(1)
+            expect(result.fees.first).to have_attributes(
+              units: 0,
+              amount_cents: 0,
+              precise_amount_cents: 0.0,
+              unit_amount_cents: 0,
+              precise_unit_amount: 0,
+              events_count: 0,
+              grouped_by: {},
+              charge_filter_id: nil,
+              pay_in_advance: false,
+              amount_currency: "EUR"
+            )
+          end
+
+          context "with graduated charge model" do
+            let(:charge) do
+              create(
+                :graduated_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {
+                  graduated_ranges: [
+                    {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "100"},
+                    {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "50"}
+                  ]
+                }
+              )
+            end
+
+            it "returns zero fee with graduated amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(
+                units: 0,
+                amount_cents: 0,
+                precise_amount_cents: 0.0,
+                unit_amount_cents: 0,
+                precise_unit_amount: 0,
+                events_count: 0,
+                grouped_by: {},
+                charge_filter_id: nil,
+                pay_in_advance: false,
+                amount_currency: "EUR"
+              )
+              expect(result.fees.first.amount_details).to eq(
+                "graduated_ranges" => [
+                  {
+                    "from_value" => 0,
+                    "to_value" => 10,
+                    "flat_unit_amount" => "0.0",
+                    "per_unit_amount" => "0.0",
+                    "units" => "0.0",
+                    "per_unit_total_amount" => "0.0",
+                    "total_with_flat_amount" => "0.0"
+                  }
+                ]
+              )
+            end
+          end
+
+          context "with package charge model" do
+            let(:charge) do
+              create(
+                :package_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {amount: "100", free_units: 10, package_size: 10}
+              )
+            end
+
+            it "returns zero fee with package amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(
+                units: 0,
+                amount_cents: 0,
+                precise_amount_cents: 0.0,
+                unit_amount_cents: 0,
+                precise_unit_amount: 0,
+                events_count: 0,
+                grouped_by: {},
+                charge_filter_id: nil,
+                pay_in_advance: false,
+                amount_currency: "EUR"
+              )
+              expect(result.fees.first.amount_details).to eq(
+                "free_units" => "0.0",
+                "paid_units" => "0.0",
+                "per_package_size" => 0,
+                "per_package_unit_amount" => "0.0"
+              )
+            end
+          end
+
+          context "with percentage charge model" do
+            let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value") }
+            let(:charge) do
+              create(
+                :percentage_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {rate: "0.05", fixed_amount: "2"}
+              )
+            end
+
+            it "returns zero fee with percentage amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(
+                units: 0,
+                amount_cents: 0,
+                precise_amount_cents: 0.0,
+                unit_amount_cents: 0,
+                precise_unit_amount: 0,
+                events_count: 0,
+                grouped_by: {},
+                charge_filter_id: nil,
+                pay_in_advance: false,
+                amount_currency: "EUR"
+              )
+              expect(result.fees.first.amount_details).to eq(
+                "units" => "0.0",
+                "free_units" => "0.0",
+                "free_events" => 0,
+                "paid_units" => "0.0",
+                "rate" => "0.05",
+                "per_unit_total_amount" => "0.0",
+                "paid_events" => 0,
+                "fixed_fee_unit_amount" => "0.0",
+                "fixed_fee_total_amount" => "0.0",
+                "min_max_adjustment_total_amount" => "0.0"
+              )
+            end
+          end
+
+          context "with volume charge model" do
+            let(:charge) do
+              create(
+                :volume_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {
+                  volume_ranges: [
+                    {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
+                    {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
+                  ]
+                }
+              )
+            end
+
+            it "returns zero fee with volume amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(
+                units: 0,
+                amount_cents: 0,
+                precise_amount_cents: 0.0,
+                unit_amount_cents: 0,
+                precise_unit_amount: 0,
+                events_count: 0,
+                grouped_by: {},
+                charge_filter_id: nil,
+                pay_in_advance: false,
+                amount_currency: "EUR"
+              )
+              expect(result.fees.first.amount_details).to eq(
+                "flat_unit_amount" => "0.0",
+                "per_unit_amount" => "0.0",
+                "per_unit_total_amount" => "0.0"
+              )
+            end
+          end
+
+          context "with graduated_percentage charge model" do
+            let(:charge) do
+              create(
+                :graduated_percentage_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {
+                  graduated_percentage_ranges: [
+                    {from_value: 0, to_value: 10, rate: "1", flat_amount: "100"},
+                    {from_value: 11, to_value: nil, rate: "0.5", flat_amount: "50"}
+                  ]
+                }
+              )
+            end
+
+            it "returns zero fee with graduated_percentage amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(
+                units: 0,
+                amount_cents: 0,
+                precise_amount_cents: 0.0,
+                unit_amount_cents: 0,
+                precise_unit_amount: 0,
+                events_count: 0,
+                grouped_by: {},
+                charge_filter_id: nil,
+                pay_in_advance: false,
+                amount_currency: "EUR"
+              )
+              expect(result.fees.first.amount_details).to eq(
+                "graduated_percentage_ranges" => [
+                  {
+                    "from_value" => 0,
+                    "to_value" => 10,
+                    "flat_unit_amount" => "0.0",
+                    "rate" => "1.0",
+                    "units" => "0.0",
+                    "per_unit_total_amount" => "0.0",
+                    "total_with_flat_amount" => "0.0"
+                  }
+                ]
+              )
+            end
+          end
+        end
+
+        context "with charge filters" do
+          let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa]) }
+          let(:europe_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+          let(:usa_filter) { create(:charge_filter, charge:, properties: {amount: "50"}) }
+
+          before do
+            create(:charge_filter_value, charge_filter: europe_filter, billable_metric_filter: region, values: ["europe"])
+            create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ["usa"])
+          end
+
+          context "when all filters have zero usage" do
+            it "returns zero fees for each filter and catch-all" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(3)
+              expect(result.fees).to all(have_attributes(units: 0, amount_cents: 0, events_count: 0))
+              expect(result.fees.map(&:charge_filter_id)).to match_array([europe_filter.id, usa_filter.id, nil])
+            end
+          end
+
+          context "when one filter has non-zero usage" do
+            before do
+              create(
+                :event,
+                organization:,
+                subscription:,
+                code: billable_metric.code,
+                timestamp: Time.zone.parse("2022-03-16"),
+                properties: {region: "europe"}
+              )
+            end
+
+            it "returns non-zero and zero fees for all filters" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(3)
+
+              non_zero_fees = result.fees.select { |f| f.units != 0 || f.events_count != 0 }
+              expect(non_zero_fees.count).to eq(1)
+              expect(non_zero_fees.first.charge_filter).to eq(europe_filter)
+
+              zero_fees = result.fees.select { |f| f.units == 0 && f.events_count == 0 }
+              expect(zero_fees.count).to eq(2)
+              expect(zero_fees.map(&:charge_filter_id)).to match_array([usa_filter.id, nil])
+            end
+          end
+
+          context "when flag is disabled" do
+            before do
+              organization.update!(feature_flags: [])
+            end
+
+            it "returns zero fees for all filters without reconstruction" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(3)
+              expect(result.fees).to all(have_attributes(units: 0, amount_cents: 0, events_count: 0))
+              expect(result.fees.map(&:charge_filter_id)).to match_array([europe_filter.id, usa_filter.id, nil])
+            end
+          end
+        end
+
+        context "with cache middleware enabled", cache: :memory do
+          subject(:charge_subscription_service) do
+            described_class.new(
+              invoice:,
+              charge:,
+              subscription:,
+              boundaries:,
+              context: :current_usage,
+              apply_taxes: false,
+              filtered_aggregations: nil,
+              cache_middleware:
+            )
+          end
+
+          let(:cache_middleware) do
+            Subscriptions::ChargeCacheMiddleware.new(
+              subscription:,
+              charge:,
+              to_datetime: boundaries.charges_to_datetime,
+              cache: true
+            )
+          end
+
+          let(:cache_key) do
+            Subscriptions::ChargeCacheService.new(
+              subscription:, charge:, charge_filter: nil
+            ).cache_key
+          end
+
+          around { |test| travel_to(Time.zone.parse("2022-03-16")) { test.run } }
+
+          before { Rails.cache.clear }
+
+          context "when all fees are zero" do
+            it "caches an empty array" do
+              charge_subscription_service.call
+
+              cached_value = Rails.cache.read(cache_key)
+              expect(cached_value).to eq("[]")
+            end
+
+            it "returns zero fee on subsequent calls from cache" do
+              first_result = charge_subscription_service.call
+              second_result = charge_subscription_service.call
+
+              expect(first_result).to be_success
+              expect(first_result.fees.count).to eq(1)
+              expect(first_result.fees.first).to have_attributes(units: 0, amount_cents: 0, events_count: 0)
+
+              expect(second_result).to be_success
+              expect(second_result.fees.count).to eq(1)
+              expect(second_result.fees.first).to have_attributes(units: 0, amount_cents: 0, events_count: 0)
+            end
+          end
+
+          context "when fees are non-zero" do
+            before do
+              create(
+                :event,
+                organization:,
+                subscription:,
+                code: billable_metric.code,
+                timestamp: Time.zone.parse("2022-03-16")
+              )
+            end
+
+            it "caches the fee data" do
+              charge_subscription_service.call
+
+              cached_value = Rails.cache.read(cache_key)
+              parsed = JSON.parse(cached_value)
+              expect(parsed.length).to eq(1)
+              expect(parsed.first["events_count"]).to eq(1)
+            end
+
+            it "returns fees from cache on subsequent calls" do
+              first_result = charge_subscription_service.call
+              second_result = charge_subscription_service.call
+
+              expect(second_result).to be_success
+              expect(second_result.fees.count).to eq(first_result.fees.count)
+              expect(second_result.fees.first.units).to eq(first_result.fees.first.units)
+              expect(second_result.fees.first.events_count).to eq(first_result.fees.first.events_count)
+            end
+          end
+
+          context "when flag is disabled" do
+            before do
+              organization.update!(feature_flags: [])
+            end
+
+            it "caches the zero fee data" do
+              charge_subscription_service.call
+
+              cached_value = Rails.cache.read(cache_key)
+              parsed = JSON.parse(cached_value)
+              expect(parsed.length).to eq(1)
+              expect(parsed.first["events_count"]).to eq(0)
+              expect(parsed.first["units"].to_f).to eq(0.0)
+            end
+
+            it "returns zero fees from cache on subsequent calls" do
+              charge_subscription_service.call
+              second_result = charge_subscription_service.call
+
+              expect(second_result).to be_success
+              expect(second_result.fees.count).to eq(1)
+              expect(second_result.fees.first).to have_attributes(units: 0, events_count: 0)
+            end
+          end
+
+          context "with charge filters" do
+            let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa]) }
+            let(:europe_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+            let(:usa_filter) { create(:charge_filter, charge:, properties: {amount: "50"}) }
+
+            before do
+              create(:charge_filter_value, charge_filter: europe_filter, billable_metric_filter: region, values: ["europe"])
+              create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ["usa"])
+            end
+
+            context "when one filter has events and another does not" do
+              before do
+                create(
+                  :event,
+                  organization:,
+                  subscription:,
+                  code: billable_metric.code,
+                  timestamp: Time.zone.parse("2022-03-16"),
+                  properties: {region: "europe"}
+                )
+              end
+
+              it "caches empty array for zero-usage filter and fee data for non-zero filter" do
+                charge_subscription_service.call
+
+                europe_cache_key = Subscriptions::ChargeCacheService.new(
+                  subscription:, charge:, charge_filter: europe_filter
+                ).cache_key
+                europe_cached = JSON.parse(Rails.cache.read(europe_cache_key))
+                expect(europe_cached.length).to eq(1)
+                expect(europe_cached.first["events_count"]).to eq(1)
+
+                usa_cache_key = Subscriptions::ChargeCacheService.new(
+                  subscription:, charge:, charge_filter: usa_filter
+                ).cache_key
+                expect(Rails.cache.read(usa_cache_key)).to eq("[]")
+              end
+
+              it "returns consistent results on subsequent calls from cache" do
+                first_result = charge_subscription_service.call
+                second_result = charge_subscription_service.call
+
+                expect(second_result.fees.count).to eq(first_result.fees.count)
+                first_result.fees.zip(second_result.fees).each do |first_fee, second_fee|
+                  expect(second_fee.units).to eq(first_fee.units)
+                  expect(second_fee.events_count).to eq(first_fee.events_count)
+                  expect(second_fee.amount_cents).to eq(first_fee.amount_cents)
+                end
+              end
+            end
+
+            context "when flag is disabled" do
+              before do
+                organization.update!(feature_flags: [])
+              end
+
+              it "caches zero fee data for all filters" do
+                charge_subscription_service.call
+
+                [europe_filter, usa_filter].each do |filter|
+                  filter_cache_key = Subscriptions::ChargeCacheService.new(
+                    subscription:, charge:, charge_filter: filter
+                  ).cache_key
+                  cached = JSON.parse(Rails.cache.read(filter_cache_key))
+                  expect(cached.length).to eq(1)
+                  expect(cached.first["events_count"]).to eq(0)
+                  expect(cached.first["units"].to_f).to eq(0.0)
+                end
+              end
+
+              it "returns all zero filter fees from cache on subsequent calls" do
+                charge_subscription_service.call
+                second_result = charge_subscription_service.call
+
+                expect(second_result).to be_success
+                expect(second_result.fees.count).to eq(3)
+                expect(second_result.fees).to all(have_attributes(units: 0, amount_cents: 0, events_count: 0))
+                expect(second_result.fees.map(&:charge_filter_id)).to match_array([europe_filter.id, usa_filter.id, nil])
+              end
+            end
+          end
+        end
+      end
     end
 
     context "when apply taxes" do
