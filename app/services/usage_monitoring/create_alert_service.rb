@@ -58,7 +58,7 @@ module UsageMonitoring
       return result unless result.success?
 
       ActiveRecord::Base.transaction do
-        alert = Alert.create!(
+        alert = Alert.new(
           organization:,
           subscription_external_id: subscription&.external_id,
           wallet: wallet,
@@ -68,6 +68,14 @@ module UsageMonitoring
           code: params[:code],
           direction: direction_for_alert
         )
+
+        alertable.with_lock do
+          # Lock alertable to prevent any changes to it and avoid it becoming stale
+          # as we set previous_value to the alertable metric when the alert
+          # direction is :decreasing
+          alert.previous_value = alert.find_value(alertable) if alert.decreasing?
+          alert.save!
+        end
 
         alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
 
