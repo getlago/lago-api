@@ -59,4 +59,11 @@ FactoryBot.define do
     alert_type { "billable_metric_current_usage_units" }
     billable_metric { association(:billable_metric, organization:) }
   end
+
+  factory :billable_metric_lifetime_usage_units_alert,
+    class: "UsageMonitoring::BillableMetricLifetimeUsageUnitsAlert",
+    parent: :alert do
+    alert_type { "billable_metric_lifetime_usage_units" }
+    billable_metric { association(:billable_metric, organization:) }
+  end
 end

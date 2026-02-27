@@ -171,4 +171,87 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
       end
     end
   end
+
+  context "when subscription has billable_metric_lifetime_usage_units alert" do
+    let(:premium_integrations) { [] }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let!(:charge) { create(:standard_charge, billable_metric:, plan: subscription.plan) }
+    let(:alert_5) do
+      create(:billable_metric_lifetime_usage_units_alert,
+        billable_metric:, organization:, subscription_external_id: subscription.external_id)
+    end
+    let(:mocked_lifetime_bm_usage) { double("lifetime_bm_usage") } # rubocop:disable RSpec/VerifiedDoubles
+
+    before do
+      alert_5
+      allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
+      allow(::Invoices::CustomerUsageService).to receive(:call)
+        .with(
+          customer: subscription.customer,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          usage_filters: an_instance_of(UsageFilters)
+        )
+        .and_return(double(success?: true, usage: mocked_lifetime_bm_usage)) # rubocop:disable RSpec/VerifiedDoubles
+    end
+
+    it "processes the alert with full_usage CustomerUsageService call" do
+      service.call
+
+      expect(::Invoices::CustomerUsageService).to have_received(:call).with(
+        customer: subscription.customer,
+        subscription:,
+        apply_taxes: false,
+        with_cache: false,
+        usage_filters: an_instance_of(UsageFilters)
+      )
+      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
+        .with(alert: alert_5, subscription:, current_metrics: mocked_lifetime_bm_usage)
+      expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
+    end
+
+    context "when CustomerUsageService fails" do
+      before do
+        allow(::Invoices::CustomerUsageService).to receive(:call)
+          .with(
+            customer: subscription.customer,
+            subscription:,
+            apply_taxes: false,
+            with_cache: false,
+            usage_filters: an_instance_of(UsageFilters)
+          )
+          .and_return(double(success?: false)) # rubocop:disable RSpec/VerifiedDoubles
+      end
+
+      it "skips the alert without raising" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(::UsageMonitoring::ProcessAlertService).not_to have_received(:call)
+          .with(alert: alert_5, subscription:, current_metrics: anything)
+        expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
+      end
+    end
+
+    context "when there are no matching charges" do
+      before do
+        charge.destroy!
+      end
+
+      it "skips the alert without calling CustomerUsageService" do
+        service.call
+
+        expect(::Invoices::CustomerUsageService).not_to have_received(:call).with(
+          customer: subscription.customer,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          usage_filters: an_instance_of(UsageFilters)
+        )
+        expect(::UsageMonitoring::ProcessAlertService).not_to have_received(:call)
+          .with(alert: alert_5, subscription:, current_metrics: anything)
+      end
+    end
+  end
 end
