@@ -79,6 +79,72 @@ RSpec.describe Webhooks::BaseService do
         expect(SendHttpWebhookJob).to have_been_enqueued.once
       end
     end
+
+    context "with event filtering enabled" do
+      context "when event type does not match" do
+        before do
+          webhook_endpoint = organization.webhook_endpoints.first
+          webhook_endpoint.event_types = ["other.type"]
+          webhook_endpoint.save(validate: false) # disable validation because "other.type" isn't a correct event type
+          object.reload
+        end
+
+        it "does not create the webhook model" do
+          webhook_service.call
+
+          expect(SendHttpWebhookJob).not_to have_been_enqueued
+          expect(Webhook.where(object: invoice)).not_to exist
+        end
+      end
+
+      context "when event type matches" do
+        before do
+          webhook_endpoint = organization.webhook_endpoints.first
+          webhook_endpoint.event_types = ["dummy.test"]
+          webhook_endpoint.save(validate: false) # disable validation because "dummy.test" isn't a correct event type
+          object.reload
+        end
+
+        it "creates the webhook model" do
+          webhook_service.call
+
+          expect(SendHttpWebhookJob).to have_been_enqueued.once
+          expect(Webhook.where(object: invoice)).to exist
+        end
+      end
+
+      context "when event_types doesn't contain any types" do
+        before do
+          webhook_endpoint = organization.webhook_endpoints.first
+          webhook_endpoint.event_types = []
+          webhook_endpoint.save!
+          object.reload
+        end
+
+        it "does not create the webhook model" do
+          webhook_service.call
+
+          expect(SendHttpWebhookJob).not_to have_been_enqueued
+          expect(Webhook.where(object: invoice)).not_to exist
+        end
+      end
+
+      context "when event type is null" do
+        before do
+          webhook_endpoint = organization.webhook_endpoints.first
+          webhook_endpoint.event_types = nil
+          webhook_endpoint.save!
+          object.reload
+        end
+
+        it "creates the webhook model" do
+          webhook_service.call
+
+          expect(SendHttpWebhookJob).to have_been_enqueued.once
+          expect(Webhook.where(object: invoice)).to exist
+        end
+      end
+    end
   end
 end
 

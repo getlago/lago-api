@@ -16,20 +16,81 @@ RSpec.describe Api::V1::WebhookEndpointsController do
     let(:create_params) do
       {
         webhook_url: Faker::Internet.url,
-        signature_algo: "jwt"
+        signature_algo: "jwt",
+        name: "Test Webhook",
+        event_types: ["customer.created", "customer.updated"]
       }
     end
 
     include_context "with mocked security logger"
     include_examples "requires API permission", "webhook_endpoint", "write"
 
-    it "returns a success" do
-      subject
+    context "with valid parameters" do
+      it "returns a success" do
+        subject
 
-      expect(response).to have_http_status(:success)
+        expect(response).to have_http_status(:success)
 
-      expect(json[:webhook_endpoint][:webhook_url]).to eq(create_params[:webhook_url])
-      expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
+        expect(json[:webhook_endpoint][:webhook_url]).to eq(create_params[:webhook_url])
+        expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
+        expect(json[:webhook_endpoint][:name]).to eq(create_params[:name])
+        expect(json[:webhook_endpoint][:event_types]).to eq(create_params[:event_types])
+      end
+    end
+
+    context "with event_types parameter provided" do
+      context "when event_types is invalid" do
+        let(:create_params) {
+          {
+            webhook_url: Faker::Internet.url,
+            event_types: "wrong"
+          }
+        }
+
+        it "returns unprocessable_content error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to include(
+            event_types: ["Must be an array"]
+          )
+        end
+      end
+
+      context "when event_types contains invalid types" do
+        let(:create_params) {
+          {
+            webhook_url: Faker::Internet.url,
+            event_types: ["wrong.type"]
+          }
+        }
+
+        it "returns unprocessable_content error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to include(
+            event_types: ["Contains invalid types: [\"wrong.type\"]"]
+          )
+        end
+      end
+
+      context "when event_types is [*]" do
+        let(:create_params) {
+          {
+            webhook_url: Faker::Internet.url,
+            event_types: ["*"]
+          }
+        }
+
+        it "returns a success" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:webhook_endpoint][:webhook_url]).to eq(create_params[:webhook_url])
+          expect(json[:webhook_endpoint][:event_types]).to eq(nil)
+        end
+      end
     end
 
     it "produces a security log" do
@@ -114,6 +175,8 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
         expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
         expect(json[:webhook_endpoint][:webhook_url]).to eq(webhook_endpoint.webhook_url)
+        expect(json[:webhook_endpoint][:name]).to eq(webhook_endpoint.name)
+        expect(json[:webhook_endpoint][:event_types]).to eq(webhook_endpoint.event_types)
       end
 
       it "produces a security log" do
@@ -154,7 +217,9 @@ RSpec.describe Api::V1::WebhookEndpointsController do
     let(:update_params) do
       {
         webhook_url: "http://foo.bar",
-        signature_algo: "hmac"
+        signature_algo: "hmac",
+        name: "Updated Webhook",
+        event_types: ["invoice.created", "invoice.voided"]
       }
     end
 
@@ -165,13 +230,78 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
       include_examples "requires API permission", "webhook_endpoint", "write"
 
-      it "updates a webhook endpoint" do
-        subject
+      context "when all parameters are provided" do
+        it "updates a webhook endpoint" do
+          subject
 
-        expect(response).to have_http_status(:success)
+          expect(response).to have_http_status(:success)
 
-        expect(json[:webhook_endpoint][:webhook_url]).to eq("http://foo.bar")
-        expect(json[:webhook_endpoint][:signature_algo]).to eq("hmac")
+          expect(json[:webhook_endpoint][:webhook_url]).to eq("http://foo.bar")
+          expect(json[:webhook_endpoint][:signature_algo]).to eq("hmac")
+          expect(json[:webhook_endpoint][:name]).to eq("Updated Webhook")
+          expect(json[:webhook_endpoint][:event_types]).to eq(["invoice.created", "invoice.voided"])
+        end
+      end
+
+      context "when event_types is explicitly set to null" do
+        let(:webhook_endpoint) { create(:webhook_endpoint, event_types: ["customer.created"]) }
+        let(:update_params) { {event_types: nil} }
+
+        it "updates a webhook endpoint" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:webhook_endpoint][:event_types]).to eq(nil)
+        end
+      end
+
+      context "when event_types is explicitly set to empty array" do
+        let(:webhook_endpoint) { create(:webhook_endpoint, event_types: ["customer.created"]) }
+        let(:update_params) { {event_types: []} }
+
+        it "updates a webhook endpoint" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:webhook_endpoint][:event_types]).to eq([])
+        end
+      end
+
+      context "when event_types is invalid" do
+        let(:update_params) { {event_types: "wrong"} }
+
+        it "returns unprocessable_content error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to include(
+            event_types: ["Must be an array"]
+          )
+        end
+      end
+
+      context "when event_types contains invalid types" do
+        let(:update_params) { {event_types: ["wrong.type"]} }
+
+        it "returns unprocessable_content error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to include(
+            event_types: ["Contains invalid types: [\"wrong.type\"]"]
+          )
+        end
+      end
+
+      context "when event_types is [*]" do
+        let(:update_params) { {event_types: ["*"]} }
+
+        it "returns a success" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:webhook_endpoint][:event_types]).to eq(nil)
+        end
       end
 
       it "produces a security log" do

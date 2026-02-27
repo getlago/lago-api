@@ -5538,6 +5538,22 @@ type Event {
   transactionId: String
 }
 
+enum EventCategoryEnum {
+  ALERTS
+  CREDIT_NOTES
+  CUSTOMERS
+  DUNNING_CAMPAIGNS
+  EVENT_INGESTION
+  FEATURES
+  INTEGRATIONS
+  INVOICES
+  PAYMENTS
+  PAYMENT_RECEIPTS
+  PLANS
+  SUBSCRIPTIONS_AND_FEES
+  WALLETS_AND_CREDITS
+}
+
 """
 EventCollection type
 """
@@ -5551,6 +5567,69 @@ type EventCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+enum EventTypeEnum {
+  alert_triggered
+  all
+  credit_note_created
+  credit_note_generated
+  credit_note_provider_refund_failure
+  customer_accounting_provider_created
+  customer_accounting_provider_error
+  customer_checkout_url_generated
+  customer_created
+  customer_crm_provider_created
+  customer_crm_provider_error
+  customer_payment_provider_created
+  customer_payment_provider_error
+  customer_tax_provider_error
+  customer_updated
+  customer_vies_check
+  dunning_campaign_finished
+  event_error
+  events_errors
+  feature_created
+  feature_deleted
+  feature_updated
+  fee_created
+  fee_tax_provider_error
+  integration_provider_error
+  invoice_created
+  invoice_drafted
+  invoice_generated
+  invoice_one_off_created
+  invoice_paid_credit_added
+  invoice_payment_dispute_lost
+  invoice_payment_failure
+  invoice_payment_overdue
+  invoice_payment_status_updated
+  invoice_resynced
+  invoice_voided
+  payment_provider_error
+  payment_receipt_created
+  payment_receipt_generated
+  payment_request_created
+  payment_request_payment_failure
+  payment_request_payment_status_updated
+  payment_requires_action
+  payment_succeeded
+  plan_created
+  plan_deleted
+  plan_updated
+  subscription_started
+  subscription_terminated
+  subscription_termination_alert
+  subscription_trial_ended
+  subscription_updated
+  subscription_usage_threshold_reached
+  wallet_created
+  wallet_depleted_ongoing_balance
+  wallet_terminated
+  wallet_transaction_created
+  wallet_transaction_payment_failure
+  wallet_transaction_updated
+  wallet_updated
 }
 
 """
@@ -9825,6 +9904,11 @@ type Query {
   ): Event
 
   """
+  Query Event Types for Webhook Endpoints
+  """
+  eventTypes: [WebhookEventType!]!
+
+  """
   Query events of an organization
   """
   events(limit: Int, page: Int): EventCollection
@@ -13025,7 +13109,9 @@ type WebhookCollection {
 
 type WebhookEndpoint {
   createdAt: ISO8601DateTime!
+  eventTypes: [EventTypeEnum!]
   id: ID!
+  name: String
   organization: Organization
   signatureAlgo: WebhookEndpointSignatureAlgoEnum
   updatedAt: ISO8601DateTime!
@@ -13055,6 +13141,8 @@ input WebhookEndpointCreateInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  eventTypes: [EventTypeEnum!]
+  name: String
   signatureAlgo: WebhookEndpointSignatureAlgoEnum
   webhookUrl: String!
 }
@@ -13072,9 +13160,19 @@ input WebhookEndpointUpdateInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  eventTypes: [EventTypeEnum!]
   id: ID!
+  name: String
   signatureAlgo: WebhookEndpointSignatureAlgoEnum
   webhookUrl: String!
+}
+
+type WebhookEventType {
+  category: EventCategoryEnum!
+  deprecated: Boolean!
+  description: String!
+  key: EventTypeEnum!
+  name: String!
 }
 
 enum WebhookStatusEnum {
