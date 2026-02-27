@@ -30,7 +30,6 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
       name: "Test Wallet",
       code: "test-wallet",
       currency: "EUR",
-      granted_credits: "100",
       invoice_requires_successful_payment: false,
       **params
     }, as: :model)
