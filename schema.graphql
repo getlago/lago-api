@@ -558,6 +558,8 @@ enum AlertTypeEnum {
   lifetime_usage_amount
   wallet_balance_amount
   wallet_credits_balance
+  wallet_credits_ongoing_balance
+  wallet_ongoing_balance_amount
 }
 
 type AnrokCustomer {
