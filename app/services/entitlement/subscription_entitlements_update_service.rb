@@ -88,7 +88,6 @@ module Entitlement
 
       features_by_code = organization.features
         .where(code: entitlements_params.keys)
-        .includes(:privileges)
         .index_by(&:code)
 
       entitlements_params.each do |feature_code, privilege_params|
