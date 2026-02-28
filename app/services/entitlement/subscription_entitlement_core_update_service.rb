@@ -6,12 +6,14 @@ module Entitlement
 
     Result = BaseResult
 
-    def initialize(subscription:, plan:, feature:, privilege_params:, partial:)
+    def initialize(subscription:, plan:, feature:, privilege_params:, partial:, plan_entitlement: nil, sub_entitlement: nil)
       @subscription = subscription
       @plan = plan
       @feature = feature
       @privilege_params = privilege_params.to_h.with_indifferent_access
       @partial = partial
+      @preloaded_plan_entitlement = plan_entitlement
+      @preloaded_sub_entitlement = sub_entitlement
       super
     end
 
@@ -30,7 +32,7 @@ module Entitlement
 
     private
 
-    attr_reader :subscription, :plan, :feature, :privilege_params, :partial
+    attr_reader :subscription, :plan, :feature, :privilege_params, :partial, :preloaded_plan_entitlement, :preloaded_sub_entitlement
     delegate :organization, to: :subscription
     alias_method :partial?, :partial
 
@@ -39,8 +41,8 @@ module Entitlement
     end
 
     def process_single_entitlement
-      plan_entitlement = plan.entitlements.includes(values: :privilege).find_by(feature: feature)
-      sub_entitlement = subscription.entitlements.includes(values: :privilege).find_by(feature: feature)
+      plan_entitlement = preloaded_plan_entitlement || plan.entitlements.includes(values: :privilege).find_by(feature: feature)
+      sub_entitlement = preloaded_sub_entitlement || subscription.entitlements.includes(values: :privilege).find_by(feature: feature)
 
       if plan_entitlement.nil? && sub_entitlement.nil?
         subscription.entitlement_removals.where(feature:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
@@ -130,7 +132,12 @@ module Entitlement
     end
 
     def find_privilege!(privilege_code)
-      feature.privileges.find_by!(code: privilege_code)
+      if feature.privileges.loaded?
+        feature.privileges.find { it.code == privilege_code } ||
+          raise(ActiveRecord::RecordNotFound, "Couldn't find Entitlement::Privilege")
+      else
+        feature.privileges.find_by!(code: privilege_code)
+      end
     end
 
     def privilege_params_same_as_plan?(plan_entitlement)
