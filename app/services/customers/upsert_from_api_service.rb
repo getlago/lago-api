@@ -43,9 +43,10 @@ module Customers
         )
       end
 
-      ActiveRecord::Base.transaction do
-        original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
+      original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
 
+      # Transaction 1: persist the customer (releases advisory lock quickly for new customers)
+      ActiveRecord::Base.transaction do
         customer.billing_entity = billing_entity if new_customer || (customer.editable? && params.key?(:billing_entity_code))
         customer.name = params[:name] if params.key?(:name)
         customer.country = params[:country]&.upcase if params.key?(:country)
@@ -91,7 +92,10 @@ module Customers
         end
 
         customer.save!
+      end
 
+      # Transaction 2: heavy operations (no advisory lock held)
+      ActiveRecord::Base.transaction do
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,
           new_record: new_customer,
