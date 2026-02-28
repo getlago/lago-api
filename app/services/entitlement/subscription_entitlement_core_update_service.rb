@@ -130,11 +130,7 @@ module Entitlement
     end
 
     def find_privilege!(privilege_code)
-      privileges_by_code[privilege_code] || raise(ActiveRecord::RecordNotFound.new("Entitlement::Privilege"))
-    end
-
-    def privileges_by_code
-      @privileges_by_code ||= feature.privileges.where(code: privilege_params.keys).index_by(&:code)
+      feature.privileges.find_by!(code: privilege_code)
     end
 
     def privilege_params_same_as_plan?(plan_entitlement)
