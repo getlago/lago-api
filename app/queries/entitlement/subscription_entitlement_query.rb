@@ -119,7 +119,7 @@ module Entitlement
                     AND entitlement_entitlement_id = ANY ($2::UUID [])
             )
         SELECT
-            COALESCE(pv.organization_id, pv.organization_id) AS organization_id,
+            COALESCE(pv.organization_id, sv.organization_id) AS organization_id,
             p.entitlement_feature_id,
             p.code,
             COALESCE(sv.value, pv.value) AS value,
