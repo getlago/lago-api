@@ -134,7 +134,7 @@ module Entitlement
     end
 
     def privileges_by_code
-      @privileges_by_code ||= feature.privileges.index_by(&:code)
+      @privileges_by_code ||= feature.privileges.where(code: privilege_params.keys).index_by(&:code)
     end
 
     def privilege_params_same_as_plan?(plan_entitlement)
