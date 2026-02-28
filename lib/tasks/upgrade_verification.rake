@@ -13,11 +13,7 @@ namespace :upgrade do
     resources_to_fill = [
       # TODO: Uncomment when code is required for wallets
       # {model: Wallet, job: DatabaseMigrations::PopulateWalletsWithCodeJob},
-      {model: Charge, job: DatabaseMigrations::BackfillChargesCodeJob},
-      {model: FixedCharge, job: DatabaseMigrations::BackfillFixedChargesCodeJob}
     ]
-
-    subscriptions_pending_count = -> { Subscription.active.where(last_received_event_on: nil).count }
 
     puts "##################################\nStarting required jobs"
     puts "\n#### Checking for resource to fill ####"
@@ -38,10 +34,14 @@ namespace :upgrade do
     end
 
     pp "- Checking Subscription#last_received_event_on: 🔎"
-    subscriptions_count = subscriptions_pending_count.call
-    backfill_subscriptions = subscriptions_count > 0
-    if backfill_subscriptions
-      pp "  -> #{subscriptions_count} records to fill 🧮"
+    backfill_org_ids = Organization
+      .joins(:subscriptions)
+      .where(subscriptions: {status: :active, last_received_event_on: nil})
+      .distinct
+      .pluck(:id)
+
+    if backfill_org_ids.any?
+      pp "  -> #{backfill_org_ids.size} organizations to process 🧮"
     else
       pp "  -> Nothing to do ✅"
     end
@@ -54,20 +54,15 @@ namespace :upgrade do
       end
     end
 
-    if backfill_subscriptions
+    if backfill_org_ids.any?
       puts "\n#### Enqueue BackfillLastReceivedEventOnJob per organization ####"
-      Organization
-        .joins(:subscriptions)
-        .where(subscriptions: {status: :active, last_received_event_on: nil})
-        .distinct
-        .pluck(:id)
-        .each do |organization_id|
-          pp "- Enqueuing BackfillLastReceivedEventOnJob for org #{organization_id}"
-          DatabaseMigrations::BackfillLastReceivedEventOnJob.perform_later(organization_id)
-        end
+      backfill_org_ids.each do |organization_id|
+        pp "- Enqueuing BackfillLastReceivedEventOnJob for org #{organization_id}"
+        DatabaseMigrations::BackfillLastReceivedEventOnJob.perform_later(organization_id)
+      end
     end
 
-    while to_fill.present? || backfill_subscriptions
+    while to_fill.present? || backfill_org_ids.any?
       sleep 5
       puts "\n#### Checking status ####"
 
@@ -86,13 +81,15 @@ namespace :upgrade do
       end
       to_delete.each { to_fill.delete(it) }
 
-      pp "- Checking Subscription#last_received_event_on: 🔎"
-      remaining = subscriptions_pending_count.call
-      if remaining > 0
-        pp "  -> #{remaining} remaining 🧮"
-      else
-        backfill_subscriptions = false
-        pp "  -> Done ✅"
+      if backfill_org_ids.any?
+        pp "- Checking BackfillLastReceivedEventOnJob: 🔎"
+        still_running = backfill_last_received_event_on_jobs_running?
+        if still_running
+          pp "  -> Jobs still running 🧮"
+        else
+          backfill_org_ids = []
+          pp "  -> Done ✅"
+        end
       end
     end
 
@@ -217,5 +214,16 @@ namespace :upgrade do
   def background_jobs_cleared?
     queue = Sidekiq::Queue.new("background_migration")
     queue.size == 0
+  end
+
+  def backfill_last_received_event_on_jobs_running?
+    job_class = "DatabaseMigrations::BackfillLastReceivedEventOnJob"
+
+    queued = Sidekiq::Queue.new("low_priority").any? { |job| job.klass == job_class }
+    return true if queued
+
+    Sidekiq::Workers.new.any? do |_process_id, _thread_id, work|
+      work.dig("payload", "class") == job_class
+    end
   end
 end
