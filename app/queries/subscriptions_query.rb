@@ -59,7 +59,7 @@ class SubscriptionsQuery < BaseQuery
   end
 
   def with_external_customer(scope)
-    customer_ids = Customer.where(external_id: filters.external_customer_id).select(:id)
+    customer_ids = Customer.where(external_id: filters.external_customer_id, organization: organization).select(:id)
     scope.where(customer_id: customer_ids)
   end
 
