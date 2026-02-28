@@ -29,7 +29,8 @@ module Entitlement
           "privileges" => []
         )
 
-        next unless row["privilege_code"] && (row["plan_entitlement_value_id"] || row["sub_entitlement_value_id"])
+        next if row["privilege_code"].nil?
+        next if row["plan_entitlement_value_id"].nil? && row["sub_entitlement_value_id"].nil?
 
         features_by_id[feature_id].privileges << SubscriptionEntitlementPrivilege.new(
           "organization_id" => row["organization_id"],
