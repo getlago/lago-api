@@ -6,159 +6,138 @@ module Entitlement
     Filters = BaseFilters[:subscription_id, :plan_id]
 
     def call
-      features_result = ActiveRecord::Base.connection.exec_query(
-        feature_sql,
-        "subscription_entitlement_features",
+      features_by_id = {}
+
+      ActiveRecord::Base.connection.exec_query(
+        sql,
+        "subscription_entitlements",
         [filters.plan_id, filters.subscription_id]
-      )
+      ).each do |row|
+        feature_id = row["entitlement_feature_id"]
 
-      features = features_result.map do |row|
-        SubscriptionEntitlement.new(row)
+        features_by_id[feature_id] ||= SubscriptionEntitlement.new(
+          "organization_id" => row["organization_id"],
+          "entitlement_feature_id" => feature_id,
+          "code" => row["feature_code"],
+          "name" => row["feature_name"],
+          "description" => row["feature_description"],
+          "plan_entitlement_id" => row["plan_entitlement_id"],
+          "sub_entitlement_id" => row["sub_entitlement_id"],
+          "plan_id" => row["plan_id"],
+          "subscription_id" => row["subscription_id"],
+          "ordering_date" => row["feature_ordering_date"],
+          "privileges" => []
+        )
+
+        next if row["privilege_code"].nil?
+        next if row["plan_entitlement_value_id"].nil? && row["sub_entitlement_value_id"].nil?
+
+        features_by_id[feature_id].privileges << SubscriptionEntitlementPrivilege.new(
+          "organization_id" => row["organization_id"],
+          "entitlement_feature_id" => feature_id,
+          "code" => row["privilege_code"],
+          "value" => row["value"],
+          "plan_value" => row["plan_value"],
+          "subscription_value" => row["subscription_value"],
+          "name" => row["privilege_name"],
+          "value_type" => row["value_type"],
+          "config" => row["config"],
+          "ordering_date" => row["privilege_ordering_date"],
+          "plan_entitlement_id" => row["priv_plan_entitlement_id"],
+          "sub_entitlement_id" => row["priv_sub_entitlement_id"],
+          "plan_entitlement_value_id" => row["plan_entitlement_value_id"],
+          "sub_entitlement_value_id" => row["sub_entitlement_value_id"]
+        )
       end
 
-      plan_entitlement_ids = features.map(&:plan_entitlement_id).compact.uniq
-      sub_entitlement_ids = features.map(&:sub_entitlement_id).compact.uniq
-
-      privileges_result = ActiveRecord::Base.connection.exec_query(
-        privilege_sql,
-        "subscription_entitlement_privileges",
-        [prepare_ids(plan_entitlement_ids), prepare_ids(sub_entitlement_ids), filters.subscription_id]
-      )
-
-      privileges_by_feature_id = privileges_result.map do |row|
-        SubscriptionEntitlementPrivilege.new(row)
-      end.group_by(&:entitlement_feature_id)
-
-      features.each do |f|
-        f.privileges = privileges_by_feature_id[f.entitlement_feature_id] || []
-      end
-
-      features
+      features_by_id.values
     end
 
     private
 
-    def feature_sql
+    def sql
       <<~SQL
-        WITH
-            plan_entitlements AS (
-                SELECT
-                    *
-                FROM
-                    entitlement_entitlements
-                WHERE
-                    plan_id = $1
-                    AND deleted_at IS NULL
-            ),
-            sub_entitlements AS (
-                SELECT
-                    *
-                FROM
-                    entitlement_entitlements
-                WHERE
-                    subscription_id = $2
-                    AND deleted_at IS NULL
-            )
+        -- Narrow down to only the feature IDs relevant to this plan/subscription
+        WITH relevant_features AS (
+            SELECT DISTINCT entitlement_feature_id
+            FROM entitlement_entitlements
+            WHERE (plan_id = $1 OR subscription_id = $2)
+                AND deleted_at IS NULL
+        )
         SELECT
-            COALESCE(pe.organization_id, se.organization_id) AS organization_id,
-            COALESCE(pe.entitlement_feature_id, se.entitlement_feature_id) AS entitlement_feature_id,
-            f.code,
-            f.name,
-            f.description,
-            pe.id AS plan_entitlement_id,
-            se.id AS sub_entitlement_id,
-            pe.plan_id AS plan_id,
-            se.subscription_id AS subscription_id,
-            COALESCE(pe.created_at, se.created_at) AS ordering_date
-        FROM
-            plan_entitlements pe
-            FULL OUTER JOIN sub_entitlements se ON pe.entitlement_feature_id = se.entitlement_feature_id
-            JOIN entitlement_features f ON f.id = COALESCE(pe.entitlement_feature_id, se.entitlement_feature_id)
-        WHERE
-            f.deleted_at IS NULL
-            AND (
-                pe.entitlement_feature_id IS NULL           -- Feature is in sub but not in plan
-                OR pe.entitlement_feature_id NOT IN (       -- Feature is in plan but removed from sub
-                    SELECT
-                        entitlement_feature_id
-                    FROM
-                        entitlement_subscription_feature_removals
-                    WHERE
-                        subscription_id = $2
-                        AND entitlement_feature_id IS NOT NULL
-                        AND deleted_at IS NULL
-                )
-            )
-        ORDER BY
-            ordering_date
-      SQL
-    end
-
-    def privilege_sql
-      # TODO: ADD EXCLUSION FOR REMOVED PRIVILEGES
-      # via subquery, same as feature_sql
-
-      <<~SQL
-        WITH
-            plan_values AS (
-                SELECT
-                    *
-                FROM
-                    entitlement_entitlement_values
-                WHERE
-                    deleted_at IS NULL
-                    AND entitlement_entitlement_id = ANY ($1::UUID [])
-            ),
-            sub_values AS (
-                SELECT
-                    *
-                FROM
-                    entitlement_entitlement_values
-                WHERE
-                    deleted_at IS NULL
-                    AND entitlement_entitlement_id = ANY ($2::UUID [])
-            )
-        SELECT
-            COALESCE(pv.organization_id, pv.organization_id) AS organization_id,
-            p.entitlement_feature_id,
-            p.code,
-            COALESCE(sv.value, pv.value) AS value,
-            pv.value AS plan_value,
-            sv.value AS subscription_value,
-            p.name,
+            COALESCE(plan_ent.organization_id, sub_ent.organization_id) AS organization_id,
+            f.id AS entitlement_feature_id,
+            f.code AS feature_code,
+            f.name AS feature_name,
+            f.description AS feature_description,
+            plan_ent.id AS plan_entitlement_id,
+            sub_ent.id AS sub_entitlement_id,
+            plan_ent.plan_id,
+            sub_ent.subscription_id,
+            COALESCE(plan_ent.created_at, sub_ent.created_at) AS feature_ordering_date,
+            p.code AS privilege_code,
+            p.name AS privilege_name,
             p.value_type,
             p.config,
-            COALESCE(pv.created_at, sv.created_at) AS ordering_date,
-            pv.entitlement_entitlement_id AS plan_entitlement_id,
-            sv.entitlement_entitlement_id AS sub_entitlement_id,
-            pv.id AS plan_entitlement_value_id,
-            sv.id AS sub_entitlement_value_id
+            COALESCE(sub_val.value, plan_val.value) AS value,
+            plan_val.value AS plan_value,
+            sub_val.value AS subscription_value,
+            COALESCE(plan_val.created_at, sub_val.created_at) AS privilege_ordering_date,
+            plan_val.entitlement_entitlement_id AS priv_plan_entitlement_id,
+            sub_val.entitlement_entitlement_id AS priv_sub_entitlement_id,
+            plan_val.id AS plan_entitlement_value_id,
+            sub_val.id AS sub_entitlement_value_id
         FROM
-            plan_values pv
-            FULL OUTER JOIN sub_values sv ON pv.entitlement_privilege_id = sv.entitlement_privilege_id
-            JOIN entitlement_privileges p ON p.id = COALESCE(pv.entitlement_privilege_id, sv.entitlement_privilege_id)
+            -- Start from only the features that belong to this plan or subscription
+            relevant_features rf
+            JOIN entitlement_features f
+                ON f.id = rf.entitlement_feature_id
+                AND f.deleted_at IS NULL
+            -- Find the plan's entitlement for this feature
+            LEFT JOIN entitlement_entitlements plan_ent
+                ON plan_ent.entitlement_feature_id = f.id
+                AND plan_ent.plan_id = $1
+                AND plan_ent.deleted_at IS NULL
+            -- Find the subscription's entitlement for this feature
+            LEFT JOIN entitlement_entitlements sub_ent
+                ON sub_ent.entitlement_feature_id = f.id
+                AND sub_ent.subscription_id = $2
+                AND sub_ent.deleted_at IS NULL
+            -- Find privileges defined for this feature
+            LEFT JOIN entitlement_privileges p
+                ON p.entitlement_feature_id = f.id
+                AND p.deleted_at IS NULL
+            -- Find the plan's value for this privilege
+            LEFT JOIN entitlement_entitlement_values plan_val
+                ON plan_val.entitlement_entitlement_id = plan_ent.id
+                AND plan_val.entitlement_privilege_id = p.id
+                AND plan_val.deleted_at IS NULL
+            -- Find the subscription's value for this privilege
+            LEFT JOIN entitlement_entitlement_values sub_val
+                ON sub_val.entitlement_entitlement_id = sub_ent.id
+                AND sub_val.entitlement_privilege_id = p.id
+                AND sub_val.deleted_at IS NULL
         WHERE
-            p.deleted_at IS NULL
+            -- Feature not removed from subscription
+            NOT EXISTS (
+                SELECT 1 FROM entitlement_subscription_feature_removals
+                WHERE subscription_id = $2
+                    AND entitlement_feature_id = f.id
+                    AND deleted_at IS NULL
+            )
+            -- Privilege not removed from subscription
             AND (
-                pv.entitlement_privilege_id IS NULL           -- Privilege is in sub but not in plan
-                OR pv.entitlement_privilege_id NOT IN (       -- Privilege is in plan but removed from sub
-                    SELECT
-                        entitlement_privilege_id
-                    FROM
-                        entitlement_subscription_feature_removals
-                    WHERE
-                        subscription_id = $3
-                        AND entitlement_privilege_id IS NOT NULL
+                p.id IS NULL
+                OR NOT EXISTS (
+                    SELECT 1 FROM entitlement_subscription_feature_removals
+                    WHERE subscription_id = $2
+                        AND entitlement_privilege_id = p.id
                         AND deleted_at IS NULL
                 )
             )
         ORDER BY
-            ordering_date
+            feature_ordering_date, privilege_ordering_date
       SQL
-    end
-
-    def prepare_ids(ids)
-      "{#{ids.map { ActiveRecord::Base.connection.quote_string(it) }.join(",")}}"
     end
   end
 end
