@@ -86,11 +86,15 @@ module Entitlement
     def update_entitlements
       return if entitlements_params.blank?
 
+      features_by_code = organization.features
+        .where(code: entitlements_params.keys)
+        .index_by(&:code)
+
       entitlements_params.each do |feature_code, privilege_params|
         SubscriptionEntitlementCoreUpdateService.call!(
           subscription:,
           plan: subscription.plan.parent || subscription.plan,
-          feature: organization.features.includes(:privileges).find { it.code == feature_code },
+          feature: features_by_code[feature_code],
           privilege_params:,
           partial:
         )
