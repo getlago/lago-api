@@ -6,15 +6,13 @@ module Entitlement
     Filters = BaseFilters[:subscription_id, :plan_id]
 
     def call
-      rows = ActiveRecord::Base.connection.exec_query(
+      features_by_id = {}
+
+      ActiveRecord::Base.connection.exec_query(
         sql,
         "subscription_entitlements",
         [filters.plan_id, filters.subscription_id]
-      )
-
-      features_by_id = {}
-
-      rows.each do |row|
+      ).each do |row|
         feature_id = row["entitlement_feature_id"]
 
         features_by_id[feature_id] ||= SubscriptionEntitlement.new(
