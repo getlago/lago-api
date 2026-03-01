@@ -32,20 +32,21 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
           billingTime
           subscriptionAt
           endingAt
+          progressiveBillingDisabled
           customer {
             id
           },
           plan {
             id
             amountCents
-            usageThresholds {
-              amountCents
-              thresholdDisplayName
-            }
             fixedCharges {
               invoiceDisplayName
               units
             }
+          }
+          usageThresholds {
+            amountCents
+            thresholdDisplayName
           }
         }
       }
@@ -72,6 +73,11 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
           externalId: "custom-external-id",
           billingTime: "anniversary",
           endingAt: ending_at.iso8601,
+          progressiveBillingDisabled: true,
+          usageThresholds: [
+            amountCents: 100,
+            thresholdDisplayName: "threshold display name"
+          ],
           planOverrides: {
             amountCents: 100,
             charges: [
@@ -85,10 +91,6 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
                 invoiceDisplayName: "NEW fixed charge display name",
                 units: "99"
               }
-            ],
-            usageThresholds: [
-              amountCents: 100,
-              thresholdDisplayName: "threshold display name"
             ]
           }
         }
@@ -104,7 +106,8 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
       "externalId" => "custom-external-id",
       "startedAt" => String,
       "billingTime" => "anniversary",
-      "endingAt" => ending_at.iso8601
+      "endingAt" => ending_at.iso8601,
+      "progressiveBillingDisabled" => true
     )
     expect(result_data["customer"]).to include(
       "id" => customer.id
@@ -113,7 +116,7 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
       "id" => String,
       "amountCents" => "100"
     )
-    expect(result_data["plan"]["usageThresholds"].first).to include(
+    expect(result_data["usageThresholds"].first).to include(
       "thresholdDisplayName" => "threshold display name",
       "amountCents" => "100"
     )
