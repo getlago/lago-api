@@ -50,6 +50,11 @@ RSpec.describe Wallets::Balance::IncreaseService do
         .to have_enqueued_job(SendWebhookJob).with("wallet.updated", Wallet)
     end
 
+    it "enqueues a ProcessWalletAlertsJob" do
+      expect { create_service.call }
+        .to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).at_least(:once)
+    end
+
     context "with rounding" do
       let(:wallet_credit) { WalletCredit.new(wallet:, credit_amount: credits_amount, invoiceable: false) }
       let(:credits_amount) { BigDecimal("17.96999") }

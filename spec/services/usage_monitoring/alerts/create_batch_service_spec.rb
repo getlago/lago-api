@@ -4,10 +4,10 @@ require "rails_helper"
 
 RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
   describe ".call" do
-    subject(:result) { described_class.call(organization:, subscription:, alerts_params:) }
+    subject(:result) { described_class.call(organization:, alertable:, alerts_params:) }
 
     let(:organization) { create(:organization) }
-    let(:subscription) { create(:subscription, organization:) }
+    let(:alertable) { create(:subscription, organization:) }
     let(:billable_metrics) { create_list(:billable_metric, 2, organization:) }
     let(:alerts_params) do
       [
@@ -36,7 +36,7 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
     end
 
     context "when organization is nil" do
-      subject(:result) { described_class.call(organization: nil, subscription:, alerts_params:) }
+      subject(:result) { described_class.call(organization: nil, alertable:, alerts_params:) }
 
       it "returns a not found failure" do
         expect(result).to be_failure
@@ -44,12 +44,42 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
       end
     end
 
-    context "when subscription is nil" do
-      let(:subscription) { nil }
+    context "when alertable is nil" do
+      let(:alertable) { nil }
 
       it "returns a not found failure" do
         expect(result).to be_failure
-        expect(result.error.error_code).to eq("subscription_not_found")
+        expect(result.error.error_code).to eq("alertable_not_found")
+      end
+    end
+
+    context "when alertable is a wallet" do
+      let(:alertable) { create(:wallet, organization:) }
+
+      let(:alerts_params) do
+        [
+          {
+            alert_type: "wallet_balance_amount",
+            code: "alert1",
+            name: "First Alert",
+            thresholds: [{code: "warning", value: 80}]
+          },
+          {
+            alert_type: "wallet_credits_balance",
+            code: "alert2",
+            name: "Second Alert",
+            thresholds: [{code: "critical", value: 100}]
+          }
+        ]
+      end
+
+      it "creates multiple alerts for the wallet" do
+        expect { result }.to change(UsageMonitoring::Alert, :count).by(2)
+        expect(result).to be_success
+        expect(result.alerts).to match_array([
+          have_attributes(code: "alert1", name: "First Alert", wallet: alertable),
+          have_attributes(code: "alert2", name: "Second Alert", wallet: alertable)
+        ])
       end
     end
 
@@ -93,7 +123,7 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
         expect(result.alerts).to be_empty
         expect(result.error.messages).to have_key(1)
         expect(result.error.messages[1][:params]).to eq(alerts_params[1])
-        expect(result.error.messages[1][:errors]).to include("invalid_type")
+        expect(result.error.messages[1][:errors]).to include("value_is_invalid")
       end
     end
 
@@ -190,7 +220,7 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
         expect(result).to be_failure
         expect(result.error.messages.size).to eq(4)
         expect(result.error.messages[0][:params]).to eq(alerts_params[0])
-        expect(result.error.messages[0][:errors]).to include("invalid_type")
+        expect(result.error.messages[0][:errors]).to include("value_is_invalid")
         expect(result.error.messages[1][:params]).to eq(alerts_params[1])
         expect(result.error.messages[1][:errors]).to include("value_is_mandatory")
         expect(result.error.messages[3][:params]).to eq(alerts_params[3])

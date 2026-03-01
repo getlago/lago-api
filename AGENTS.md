@@ -135,6 +135,7 @@ Soft deletion
 
 - Define enum constants as arrays before using them in enum declarations
 - For PostgreSQL enums, define constants as hashes with string values, not arrays. Use the format: `ENUM_NAME = { value1: "value1", value2: "value2" }.freeze`.
+- New model enums should always use `validate: true`
 
 Example:
 
@@ -204,6 +205,7 @@ To create a webhook:
     ```ruby
     expect(subject).to define_enum_for(:on_termination_credit_note)
       .backed_by_column_of_type(:enum)
+      .validating
       .with_values(credit: "credit", omit: "omit")
     ```
 - When testing models, test ALL associations (belongs_to, has_one, has_many, etc.) and group them all in a `describe "associations"` block with a single `it` block (not multiple `it` blocks)

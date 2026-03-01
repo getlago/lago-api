@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe UsageMonitoring::CreateAlertService do
   describe ".call" do
-    subject(:result) { described_class.call(organization:, subscription:, params:) }
+    subject(:result) { described_class.call(organization:, alertable: subscription, params:) }
 
     let(:organization) { create(:organization, premium_integrations:) }
     let(:premium_integrations) { [] }
@@ -23,6 +23,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       expect(alert.alert_type).to eq("current_usage_amount")
       expect(alert.name).to eq("Main")
       expect(alert.code).to eq("first")
+      expect(alert.direction).to eq("increasing")
 
       expect(alert.thresholds.map(&:code)).to eq %w[warning critical]
       expect(alert.thresholds.map(&:value)).to eq [80, 120]
@@ -104,7 +105,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
 
       it "returns a validation failure result" do
         expect(result).to be_failure
-        expect(result.error.messages[:alert_type]).to eq(%w[value_is_mandatory value_is_invalid])
+        expect(result.error.messages[:alert_type]).to eq(%w[value_is_mandatory])
       end
     end
 
@@ -197,7 +198,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
 
       it "returns a record validation failure result" do
         expect(result).to be_failure
-        expect(result.error.message).to include("invalid_type")
+        expect(result.error.messages[:alert_type]).to eq(["value_is_invalid"])
       end
     end
 
@@ -233,6 +234,45 @@ RSpec.describe UsageMonitoring::CreateAlertService do
           expect(result).to be_success
           expect(result.alert).to be_persisted
           expect(result.alert.alert_type).to eq "lifetime_usage_amount"
+        end
+      end
+    end
+
+    context "when direction param is passed" do
+      let(:params) { {alert_type: "current_usage_amount", name: "Main", thresholds:, code: "first", direction: "decreasing"} }
+
+      it "ignores the direction param and uses the default for subscription alerts" do
+        expect(result).to be_success
+        expect(result.alert.direction).to eq("increasing")
+      end
+    end
+
+    context "when creating wallet alert" do
+      subject(:result) { described_class.call(organization:, alertable: wallet, params:) }
+
+      let(:wallet) { create(:wallet, organization:) }
+      let(:params) { {alert_type: "wallet_balance_amount", name: "Wallet Alert", thresholds:, code: "wallet1"} }
+
+      it "sets direction to decreasing for wallet alerts" do
+        expect(result).to be_success
+        expect(result.alert.direction).to eq("decreasing")
+      end
+
+      context "when direction param is passed" do
+        let(:params) { {alert_type: "wallet_balance_amount", name: "Wallet Alert", thresholds:, code: "wallet1", direction: "increasing"} }
+
+        it "ignores the direction param" do
+          expect(result).to be_success
+          expect(result.alert.direction).to eq("decreasing")
+        end
+      end
+
+      context "when subscription alert type is used" do
+        let(:params) { {alert_type: "current_usage_amount", name: "Wallet Alert", thresholds:, code: "wallet1"} }
+
+        it "returns a validation failure" do
+          expect(result).to be_failure
+          expect(result.error.messages[:alert_type]).to eq(["value_is_invalid"])
         end
       end
     end

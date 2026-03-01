@@ -7,6 +7,7 @@ FactoryBot.define do
     name { "General Alert" }
     sequence(:code) { |n| "default#{n}" }
     alert_type { "current_usage_amount" }
+    direction { "increasing" }
 
     transient do
       thresholds { [15_00] }
@@ -58,5 +59,23 @@ FactoryBot.define do
     parent: :alert do
     alert_type { "billable_metric_current_usage_units" }
     billable_metric { association(:billable_metric, organization:) }
+  end
+
+  factory :wallet_balance_amount_alert,
+    class: "UsageMonitoring::WalletBalanceAmountAlert",
+    parent: :alert do
+    alert_type { "wallet_balance_amount" }
+    direction { "decreasing" }
+    subscription_external_id { nil }
+    wallet { association(:wallet, organization:) }
+  end
+
+  factory :wallet_credits_balance_alert,
+    class: "UsageMonitoring::WalletCreditsBalanceAlert",
+    parent: :alert do
+    alert_type { "wallet_credits_balance" }
+    direction { "decreasing" }
+    subscription_external_id { nil }
+    wallet { association(:wallet, organization:) }
   end
 end
