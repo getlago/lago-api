@@ -45,6 +45,7 @@ FactoryBot.define do
 
     invoiceable_type { "Charge" }
     invoiceable_id { charge.id }
+    events_count { 1 }
 
     properties do
       {
