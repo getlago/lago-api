@@ -37,12 +37,9 @@ module Resolvers
     ].freeze
 
     def resolve(**args)
-      includes = [:customer, :items]
-
       CreditNotesQuery.call(
         organization: current_organization,
         search_term: args[:search_term],
-        includes:,
         filters: args.slice(*FILTER_KEYS),
         pagination: args.slice(:page, :limit)
       ).credit_notes

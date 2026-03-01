@@ -315,11 +315,11 @@ RSpec.describe Api::V1::WalletTransactionsController do
       context "with invalid transaction_status value" do
         let(:params) { {transaction_status: "invalid"} }
 
-        it "ignores invalid transaction_status values" do
+        it "returns an error" do
           subject
 
-          expect(response).to have_http_status(:success)
-          expect(json[:wallet_transactions].count).to eq(4)
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:transaction_status].size).to eq(1)
         end
       end
     end

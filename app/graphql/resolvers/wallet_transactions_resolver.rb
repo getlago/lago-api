@@ -24,12 +24,12 @@ module Resolvers
     )
       result = WalletTransactionsQuery.call(
         organization: current_organization,
-        wallet_id:,
         pagination: {
           page:,
           limit:
         },
         filters: {
+          wallet_id:,
           status:,
           transaction_type:
         }
