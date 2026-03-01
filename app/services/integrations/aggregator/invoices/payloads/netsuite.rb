@@ -20,7 +20,14 @@ module Integrations
                 }
               ],
               "options" => {
-                "ignoreMandatoryFields" => false
+                "ignoreMandatoryFields" => false,
+                "fullInvoicePayload" => {
+                  "invoice_payload" => ::V1::InvoiceSerializer.new(
+                    invoice,
+                    root_name: "invoice",
+                    includes: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes]
+                  ).serialize
+                }
               }
             }
 
