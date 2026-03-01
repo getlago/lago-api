@@ -18,7 +18,11 @@ module Customers
         )
       end
 
-      PaymentProviderCustomers::Factory.new_instance(provider_customer:).generate_checkout_url(send_webhook: false)
+      ::PaymentProviders::Registry.new_instance(
+        provider_customer&.payment_provider&.payment_type,
+        :manage_customer,
+        provider_customer
+      ).generate_checkout_url(send_webhook: false)
     end
 
     private

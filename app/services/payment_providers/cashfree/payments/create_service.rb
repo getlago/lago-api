@@ -6,7 +6,7 @@ module PaymentProviders
       class CreateService < BaseService
         include ::Customers::PaymentProviderFinder
 
-        def initialize(payment:)
+        def initialize(payment:, reference: nil, metadata: nil)
           @payment = payment
           @invoice = payment.payable
           @provider_customer = payment.payment_provider_customer

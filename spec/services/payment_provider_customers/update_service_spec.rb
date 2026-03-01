@@ -8,7 +8,7 @@ RSpec.describe PaymentProviderCustomers::UpdateService do
   let(:provider_name) { "Stripe" }
   let(:provider_service_class) { "PaymentProviderCustomers::#{provider_name}Service".constantize }
   let(:provider_service) { provider_service_class.new(provider_customer) }
-  let(:provider_customer) { create(:"#{provider_name.downcase}_customer", customer:) }
+  let(:provider_customer) { create(:"#{provider_name.downcase}_customer", customer:, payment_provider:) }
 
   before do
     allow("PaymentProviderCustomers::#{provider_name}Service".constantize)

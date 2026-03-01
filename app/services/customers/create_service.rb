@@ -174,8 +174,9 @@ module Customers
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
-      PaymentProviders::CreateCustomerFactory.new_instance(
-        provider: billing_configuration[:payment_provider] || customer.payment_provider,
+      PaymentProviders::Registry.new_instance(
+        billing_configuration[:payment_provider] || customer.payment_provider,
+        :create_customer,
         customer:,
         payment_provider_id: payment_provider(customer)&.id,
         params: billing_configuration,

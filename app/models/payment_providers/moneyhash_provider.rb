@@ -55,6 +55,14 @@ module PaymentProviders
     def payable_payment_status(mh_status)
       PAYABLE_PAYMENT_STATUS_MAP[mh_status]
     end
+
+    register_services(
+      create_customer: "PaymentProviders::Moneyhash::Customers::CreateService",
+      manage_customer: "PaymentProviderCustomers::MoneyhashService",
+      create_payment: "PaymentProviders::Moneyhash::Payments::CreateService",
+      manage_invoice_payment: "Invoices::Payments::MoneyhashService",
+      manage_payment_request_payment: "PaymentRequests::Payments::MoneyhashService"
+    )
   end
 end
 
