@@ -37,11 +37,11 @@ module CreditNoteIndex
         json: ::CollectionSerializer.new(
           result.credit_notes.includes(
             :applied_taxes,
-            :file_attachment,
-            :xml_file_attachment,
             :error_details,
             :metadata,
             invoice: :billing_entity,
+            file_attachment: :blob,
+            xml_file_attachment: :blob,
             items: {
               fee: [
                 :charge_filter,
@@ -49,7 +49,7 @@ module CreditNoteIndex
                 :invoice,
                 :pricing_unit_usage,
                 :true_up_fee,
-                { subscription: :plan },
+                {subscription: :plan},
                 :customer
               ]
             }
