@@ -33,6 +33,8 @@ module DunningCampaigns
         customer.last_dunning_campaign_attempt_at = Time.zone.now
         customer.save!
 
+        send_campaign_finished_webhook if max_attempts_reached?
+
         result.customer = customer
         result.payment_request = payment_request_result.payment_request
       end
@@ -75,6 +77,14 @@ module DunningCampaigns
         .payment_overdue
         .where(ready_for_payment_processing: true)
         .where(currency: dunning_campaign_threshold.currency)
+    end
+
+    def send_campaign_finished_webhook
+      SendWebhookJob.perform_later(
+        "dunning_campaign.finished",
+        customer,
+        dunning_campaign_code: dunning_campaign.code
+      )
     end
   end
 end
