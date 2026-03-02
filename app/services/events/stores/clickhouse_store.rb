@@ -135,7 +135,7 @@ module Events
       end
 
       def distinct_charges_and_filters
-        # Implementation relies directly to the events_enriched_expanded table,
+        # Implementation relies directly on the events_enriched_expanded table,
         # so we delegate the implementation to the ClickhouseEnrichedStore
         Events::Stores::ClickhouseEnrichedStore.new(
           subscription:,
