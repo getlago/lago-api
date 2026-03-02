@@ -78,4 +78,22 @@ FactoryBot.define do
     subscription_external_id { nil }
     wallet { association(:wallet, organization:) }
   end
+
+  factory :wallet_ongoing_balance_amount_alert,
+    class: "UsageMonitoring::WalletOngoingBalanceAmountAlert",
+    parent: :alert do
+    alert_type { "wallet_ongoing_balance_amount" }
+    direction { "decreasing" }
+    subscription_external_id { nil }
+    wallet { association(:wallet, organization:) }
+  end
+
+  factory :wallet_credits_ongoing_balance_alert,
+    class: "UsageMonitoring::WalletCreditsOngoingBalanceAlert",
+    parent: :alert do
+    alert_type { "wallet_credits_ongoing_balance" }
+    direction { "decreasing" }
+    subscription_external_id { nil }
+    wallet { association(:wallet, organization:) }
+  end
 end
