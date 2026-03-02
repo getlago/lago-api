@@ -783,9 +783,7 @@ module Events
         end
       end
 
-      def grouped_by_count
-        grouped_by.count
-      end
+      delegate :count, to: :grouped_by, prefix: true
 
       def operation_type_sql
         "events_enriched.sorted_properties['operation_type']"
