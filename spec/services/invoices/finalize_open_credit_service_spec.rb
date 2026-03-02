@@ -33,6 +33,15 @@ RSpec.describe Invoices::FinalizeOpenCreditService do
       expect(Utils::ActivityLog).to have_produced("invoice.paid_credit_added").with(invoice)
     end
 
+    context "when billing entity skips automatic invoice pdf generation" do
+      before { invoice.billing_entity.update!(skip_automatic_pdf_generation: ["invoices"]) }
+
+      it "does not enqueue GenerateDocumentsJob" do
+        described_class.call(invoice:)
+        expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
+      end
+    end
+
     context "when invoice is already finalized" do
       let(:invoice) { create(:invoice, organization:, invoice_type: "credit", status: :finalized) }
 

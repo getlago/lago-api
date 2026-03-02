@@ -178,6 +178,16 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       expect(subscription.reload.lifetime_usage.recalculate_invoiced_usage).to be(true)
     end
 
+    context "when billing entity skips automatic invoice pdf generation" do
+      before { invoice.billing_entity.update!(skip_automatic_pdf_generation: ["invoices"]) }
+
+      it "does not enqueue GenerateDocumentsJob" do
+        expect do
+          finalize_service.call
+        end.not_to have_enqueued_job(Invoices::GenerateDocumentsJob)
+      end
+    end
+
     context "with lago_premium", :premium do
       it "enqueues GenerateDocumentsJob with email true" do
         expect do
