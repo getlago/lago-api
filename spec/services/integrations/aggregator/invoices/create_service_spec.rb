@@ -225,7 +225,13 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       ],
       "options" => {
         "ignoreMandatoryFields" => false
-      }
+      },
+      "taxdetails" => [
+        {
+          "sublistId" => "taxdetails",
+          "lineItems" => anything
+        }
+      ]
     }
   end
 
