@@ -770,7 +770,7 @@ module Events
       end
 
       def group_names
-        @grouped_names ||= Array.new(grouped_by.count) { |index| "g_#{index}" }
+        @group_names ||= Array.new(grouped_by.count) { |index| "g_#{index}" }
       end
 
       def joined_group_names
@@ -778,9 +778,7 @@ module Events
       end
 
       def grouped_by_columns(values)
-        grouped_by.map do |g|
-          "'#{ActiveRecord::Base.sanitize_sql_for_conditions(values[g])}'"
-        end
+        grouped_by.map { |g| quote(values[g] || "") }
       end
 
       delegate :count, to: :grouped_by, prefix: true

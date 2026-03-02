@@ -683,13 +683,7 @@ module Events
       end
 
       def grouped_by_columns(values)
-        map_values = values.map do |group, value|
-          [
-            "'#{ActiveRecord::Base.sanitize_sql_for_conditions(group)}'",
-            "'#{ActiveRecord::Base.sanitize_sql_for_conditions(value)}'"
-          ]
-        end
-
+        map_values = values.map { |g, v| [quote(g), quote(v || "")] }
         "map(#{map_values.flatten.join(", ")})"
       end
 

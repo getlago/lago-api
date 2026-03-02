@@ -28,6 +28,10 @@ module Events
             [sql, {date: date_value, timezone:}]
           )
         end
+
+        def quote(value)
+          ::Clickhouse::BaseRecord.connection.quote(value)
+        end
       end
     end
   end
