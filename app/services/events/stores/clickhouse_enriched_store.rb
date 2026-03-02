@@ -16,7 +16,7 @@ module Events
         events_cte_queries_without_deduplication(**args)
       end
 
-      def events_cte_queries_without_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
+      def events_cte_queries_without_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [], to_datetime: nil)
         query = arel_table.where(
           arel_table[:subscription_id].eq(subscription.id)
             .and(arel_table[:organization_id].eq(subscription.organization_id))
@@ -28,7 +28,7 @@ module Events
         query = with_timestamp_boundaries(
           query,
           (from_datetime if force_from || use_from_boundary),
-          applicable_to_datetime
+          to_datetime || applicable_to_datetime
         )
 
         query = apply_arel_grouped_by_values(query) if grouped_by_values?
@@ -36,14 +36,14 @@ module Events
         {"events" => query.project(select).to_sql}
       end
 
-      def events_cte_queries_with_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
+      def events_cte_queries_with_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [], to_datetime: nil)
         # Ensure presence of one of value or decimal_value for the ordering
         order_column = deduplicated_columns.include?("decimal_value") ? "decimal_value" : "value"
         deduplicated_columns << order_column if ordered
 
         base_sql = deduplicated_events_sql(
           from_datetime: (from_datetime if force_from || use_from_boundary),
-          to_datetime: (applicable_to_datetime if applicable_to_datetime),
+          to_datetime: to_datetime.presence || applicable_to_datetime.presence,
           deduplicated_columns:
         ).to_sql
 
@@ -99,15 +99,52 @@ module Events
         )
       end
 
-      def events_values
-        raise NotImplementedError
+      def events_values(limit: nil, force_from: false, exclude_event: false)
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          table = Arel::Table.new("events")
+          query = table.order(table[:timestamp].asc)
+
+          if exclude_event
+            query = query.where(table[:transaction_id].not_eq(filters[:event].transaction_id))
+          end
+
+          query = query.take(limit) if limit
+
+          sql = with_ctes(events_cte_queries(
+            deduplicated_columns: %w[decimal_value],
+            force_from:
+          ), query.project(table[:decimal_value]).to_sql)
+
+          connection.select_values(sql)
+        end
+      end
+
+      def prorated_events_values(total_duration)
+        ratio = duration_ratio_sql(
+          "events_enriched_expanded.timestamp", to_datetime, total_duration, timezone
+        )
+
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          table = Arel::Table.new("events")
+          query = table.order(table[:timestamp].asc)
+
+          sql = with_ctes(events_cte_queries(
+            select: [
+              arel_table[:timestamp],
+              Arel::Nodes::InfixOperation.new(
+                "*",
+                arel_table[:decimal_value],
+                Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
+              ).as("prorated_value")
+            ],
+            deduplicated_columns: %w[decimal_value]
+          ), query.project(table[:prorated_value]).to_sql)
+
+          connection.select_values(sql)
+        end
       end
 
       def last_event
-        raise NotImplementedError
-      end
-
-      def prorated_events_values
         raise NotImplementedError
       end
 
@@ -185,6 +222,30 @@ module Events
         end
 
         result["aggregation"]
+      end
+
+      def active_unique_property?(event)
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(
+            deduplicated_columns: %w[value properties],
+            to_datetime: event.timestamp - 0.001.seconds,
+            ordered: true
+          ), <<-SQL)
+            SELECT properties
+            FROM events
+            WHERE value = ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+          SQL
+
+          previous_properties = connection.select_one(
+            ActiveRecord::Base.sanitize_sql_for_conditions([sql, event.properties[aggregation_property].to_s])
+          )
+          return false if previous_properties.nil?
+
+          operation_type = previous_properties.dig("properties", "operation_type")
+          operation_type.nil? || operation_type == "add"
+        end
       end
 
       def max
