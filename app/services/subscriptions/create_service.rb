@@ -14,11 +14,6 @@ module Subscriptions
       @billing_time = params[:billing_time]
       @external_id = params[:external_id].to_s.strip
       @plan_overrides = params[:plan_overrides].to_h.with_indifferent_access
-
-      if editable_subscriptions
-        @current_subscription = editable_subscriptions.where(id: params[:subscription_id])
-          .or(editable_subscriptions.where(external_id:)).first
-      end
     end
 
     def call
@@ -39,9 +34,8 @@ module Subscriptions
 
         customer.with_lock do
           # Refresh current_subscription inside the lock to avoid stale data
-          @current_subscription = editable_subscriptions.where(id: params[:subscription_id])
-            .or(editable_subscriptions.where(external_id:))
-            .first
+          @current_subscription = editable_subscriptions
+            .find_by("id = ? OR external_id = ?", params[:subscription_id], external_id)
 
           subscription = handle_subscription
           InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:) unless downgrade?
