@@ -358,6 +358,44 @@ RSpec.shared_examples "a credit note index endpoint" do
     end
   end
 
+  context "with credit notes containing all associations", :with_bullet do
+    before do
+      # NOTE: Bullet cannot track ActiveStorage's internal blob access through the attachment proxy
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "ActiveStorage::Attachment", association: :blob)
+      # NOTE: The charge include is needed for charge-type fees but true-up fees have no charge
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Fee", association: :charge)
+
+      invoices = create_list(:invoice, 3, organization:, customer:)
+      invoices.each do |invoice|
+        subscription = create(:subscription, customer:, organization:)
+        charge = create(:standard_charge, plan: subscription.plan)
+        charge_filter = create(:charge_filter, charge:)
+        fee = create(:fee, invoice:, subscription:, charge:, charge_filter:, organization:)
+        create(:fee, true_up_parent_fee: fee, invoice:, subscription:, organization:)
+        create(:pricing_unit_usage, fee:, organization:)
+
+        credit_note = create(:credit_note, :with_file, invoice:, customer:)
+        create(:credit_note_item, credit_note:, fee:, organization:)
+        create(:credit_note_applied_tax, credit_note:, organization:)
+        create(:error_detail, owner: credit_note, organization:)
+        create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar"})
+      end
+    end
+
+    it "does not trigger N+1 queries" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:credit_notes].count).to eq(3)
+      json[:credit_notes].each do |credit_note|
+        expect(credit_note[:items]).not_to be_empty
+        expect(credit_note[:applied_taxes]).not_to be_empty
+        expect(credit_note[:error_details]).not_to be_empty
+        expect(credit_note[:metadata]).to eq(foo: "bar")
+      end
+    end
+  end
+
   context "with metadata" do
     let(:params) { {} }
 
