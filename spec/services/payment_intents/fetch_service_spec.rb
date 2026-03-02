@@ -19,9 +19,9 @@ RSpec.describe PaymentIntents::FetchService do
       let(:payment_url) { "https://example.com/payment" }
 
       before do
-        allow(Invoices::Payments::PaymentProviders::Factory)
+        allow(::PaymentProviders::Registry)
           .to receive(:new_instance)
-          .with(invoice:)
+          .with(invoice.customer.payment_provider, :manage_invoice_payment, invoice)
           .and_return(payment_provider_service)
 
         allow(payment_provider_service)

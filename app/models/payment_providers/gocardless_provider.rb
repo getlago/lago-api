@@ -32,6 +32,14 @@ module PaymentProviders
     def payment_type
       "gocardless"
     end
+
+    register_services(
+      create_customer: "PaymentProviders::Gocardless::Customers::CreateService",
+      manage_customer: "PaymentProviderCustomers::GocardlessService",
+      create_payment: "PaymentProviders::Gocardless::Payments::CreateService",
+      manage_invoice_payment: "Invoices::Payments::GocardlessService",
+      manage_payment_request_payment: "PaymentRequests::Payments::GocardlessService"
+    )
   end
 end
 

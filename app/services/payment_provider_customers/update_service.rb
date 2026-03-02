@@ -11,7 +11,12 @@ module PaymentProviderCustomers
     end
 
     def call
-      result = PaymentProviderCustomers::Factory.new_instance(provider_customer: customer.provider_customer).update
+      result = ::PaymentProviders::Registry.new_instance(
+        customer.provider_customer&.payment_provider&.payment_type,
+        :manage_customer,
+        customer.provider_customer
+      ).update
+
       result.raise_if_error!
       result
     end

@@ -25,6 +25,13 @@ module PaymentProviders
       API_URL
     end
 
+    register_services(
+      create_customer: "PaymentProviders::Flutterwave::Customers::CreateService",
+      manage_customer: "PaymentProviderCustomers::FlutterwaveService",
+      manage_invoice_payment: "Invoices::Payments::FlutterwaveService",
+      manage_payment_request_payment: "PaymentRequests::Payments::FlutterwaveService"
+    )
+
     private
 
     def generate_webhook_secret

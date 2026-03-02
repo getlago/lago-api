@@ -21,6 +21,14 @@ module PaymentProviders
     def payment_type
       "cashfree"
     end
+
+    register_services(
+      create_customer: "PaymentProviders::Cashfree::Customers::CreateService",
+      manage_customer: "PaymentProviderCustomers::CashfreeService",
+      create_payment: "PaymentProviders::Cashfree::Payments::CreateService",
+      manage_invoice_payment: "Invoices::Payments::CashfreeService",
+      manage_payment_request_payment: "PaymentRequests::Payments::CashfreeService"
+    )
   end
 end
 
