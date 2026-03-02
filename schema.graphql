@@ -5557,6 +5557,7 @@ type EventCollection {
 Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
+  enriched_events_aggregation
   multiple_payment_methods
   postgres_enriched_events
   wallet_traceability

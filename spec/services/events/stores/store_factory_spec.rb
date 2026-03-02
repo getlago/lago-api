@@ -5,8 +5,9 @@ require "rails_helper"
 RSpec.describe Events::Stores::StoreFactory do
   subject(:store_instance) { described_class.new_instance(organization:, **arguments) }
 
-  let(:organization) { create(:organization, clickhouse_events_store:) }
+  let(:organization) { create(:organization, clickhouse_events_store:, feature_flags:) }
   let(:clickhouse_events_store) { false }
+  let(:feature_flags) { [] }
 
   let(:arguments) do
     time = Time.current
@@ -45,6 +46,14 @@ RSpec.describe Events::Stores::StoreFactory do
 
         it "returns an instance of a Clickhouse store" do
           expect(store_instance).to be_a(Events::Stores::ClickhouseStore)
+        end
+
+        context "when enriched_events_aggregation feature flag is enabled" do
+          let(:feature_flags) { ["enriched_events_aggregation"] }
+
+          it "returns an instance of a ClickhouseEnrichedStore" do
+            expect(store_instance).to be_a(Events::Stores::ClickhouseEnrichedStore)
+          end
         end
       end
     end

@@ -14,6 +14,10 @@ module Events
 
         if supports_clickhouse? && organization.clickhouse_events_store?
           event_store = Events::Stores::ClickhouseStore
+
+          if organization.feature_flag_enabled?(:enriched_events_aggregation)
+            event_store = Events::Stores::ClickhouseEnrichedStore
+          end
         end
 
         event_store
