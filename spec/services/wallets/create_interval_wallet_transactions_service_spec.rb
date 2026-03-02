@@ -110,6 +110,17 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
             expect_to_have_scheduled_wallet_transaction
           end
         end
+
+        context "when the started_at is the future with the same month day as current" do
+          let(:started_at) { current_date + 1.month }
+          let(:interval) { :monthly }
+
+          it "does not enqueue a job before the started_at date" do
+            travel_to(current_date) do
+              expect { create_interval_transactions_service.call }.not_to have_enqueued_job
+            end
+          end
+        end
       end
 
       context "when method is target" do
