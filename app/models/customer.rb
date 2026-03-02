@@ -2,7 +2,6 @@
 
 class Customer < ApplicationRecord
   include PaperTrailTraceable
-  include Sequenced
   include Currencies
   include CustomerTimezone
   include OrganizationTimezone
@@ -46,8 +45,6 @@ class Customer < ApplicationRecord
 
   enum :subscription_invoice_issuing_date_anchor, SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS, prefix: true, validate: {allow_nil: true}
   enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: {allow_nil: true}
-
-  before_save :ensure_slug
 
   belongs_to :organization
   belongs_to :billing_entity, optional: true
@@ -116,8 +113,6 @@ class Customer < ApplicationRecord
   PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash].freeze
 
   default_scope -> { kept }
-  sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
-    lock_key: ->(customer) { customer.organization_id }
 
   scope :awaiting_wallet_refresh, -> { where(awaiting_wallet_refresh: true) }
   scope :with_active_wallets, -> { joins(:wallets).where(wallets: {status: :active}) }
@@ -319,14 +314,6 @@ class Customer < ApplicationRecord
   end
 
   private
-
-  def ensure_slug
-    return if slug.present?
-
-    formatted_sequential_id = format("%03d", sequential_id)
-
-    self.slug = "#{organization.document_number_prefix}-#{formatted_sequential_id}"
-  end
 end
 
 # == Schema Information

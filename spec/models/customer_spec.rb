@@ -929,6 +929,7 @@ RSpec.describe Customer do
 
     it "assigns a sequential id and a slug to a new customer" do
       customer.save
+      customer.reload
       organization_id_substring = organization.id.last(4).upcase
 
       expect(customer).to be_valid
@@ -946,6 +947,7 @@ RSpec.describe Customer do
 
       it "assigns a sequential id and a slug to a new customer" do
         customer.save
+        customer.reload
 
         expect(customer).to be_valid
         expect(customer.sequential_id).to eq(6)
