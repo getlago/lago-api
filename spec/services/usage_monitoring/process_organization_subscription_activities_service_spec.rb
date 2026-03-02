@@ -7,23 +7,14 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService
     let(:organization) { create(:organization) }
     let(:service) { described_class.new(organization:) }
 
-    before do
-      allow(ActiveJob).to receive(:perform_all_later)
-    end
-
     it "enqueues jobs for subscription activities that are not yet enqueued" do
       create_list(:subscription_activity, 3, organization:, enqueued: false)
       create_list(:subscription_activity, 2, organization:, enqueued: true)
 
-      result = service.call
+      expect { service.call }
+        .to have_enqueued_job(UsageMonitoring::ProcessSubscriptionActivityJob).exactly(3).times
 
-      expect(ActiveJob).to have_received(:perform_all_later).once do |jobs|
-        expect(jobs).to all(be_a(UsageMonitoring::ProcessSubscriptionActivityJob))
-      end
-
-      expect(result).to be_success
-      expect(result.nb_jobs_enqueued).to eq(3)
-
+      expect(service.call).to be_success
       expect(organization.subscription_activities.where(enqueued: true).count).to eq(5)
       expect(organization.subscription_activities.where(enqueued: false).count).to eq(0)
     end
@@ -32,7 +23,8 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService
       it "returns 0 for number of jobs enqueued and does not enqueue any job" do
         create_list(:subscription_activity, 2, organization:, enqueued: true)
 
-        expect(ActiveJob).not_to have_received(:perform_all_later)
+        expect { service.call }
+          .not_to have_enqueued_job(UsageMonitoring::ProcessSubscriptionActivityJob)
 
         result = service.call
 
@@ -51,10 +43,8 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService
       it "processes activities in batches" do
         create_list(:subscription_activity, batch_size + 1, organization:, enqueued: false)
 
-        result = service.call
-
-        expect(ActiveJob).to have_received(:perform_all_later).twice
-        expect(result.nb_jobs_enqueued).to eq(batch_size + 1)
+        expect { service.call }
+          .to have_enqueued_job(UsageMonitoring::ProcessSubscriptionActivityJob).exactly(batch_size + 1).times
       end
     end
   end
