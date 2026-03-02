@@ -86,7 +86,7 @@ describe "Wallet Credits Ongoing Balance Alerts", :premium, transaction: false d
   before { charge }
 
   describe "basic functionality" do
-    it "triggers alert when ongoing balance goes down" do
+    it "triggers alert when credits ongoing balance goes down" do
       wallet = create_test_wallet(granted_credits: "100")
       expect(wallet.credits_ongoing_balance).to eq(100)
 
@@ -135,7 +135,7 @@ describe "Wallet Credits Ongoing Balance Alerts", :premium, transaction: false d
       expect(alert.triggered_alerts.count).to eq(1)
     end
 
-    context "when there were ongoing balance changes before first alert" do
+    context "when there were credits ongoing balance changes before first alert" do
       it "triggers alerts correctly" do
         wallet = create_test_wallet(granted_credits: "50")
         subscription = create_test_subscription
@@ -164,7 +164,7 @@ describe "Wallet Credits Ongoing Balance Alerts", :premium, transaction: false d
       end
     end
 
-    context "when no ongoing balance changes happened before first alert" do
+    context "when no credits ongoing balance changes happened before first alert" do
       it "triggers alerts correctly" do
         wallet = create_test_wallet(granted_credits: "100")
         subscription = create_test_subscription
@@ -402,7 +402,7 @@ describe "Wallet Credits Ongoing Balance Alerts", :premium, transaction: false d
           ]
         )
 
-        # First event - positive alert, ongoing balance goes down to $40
+        # First event - positive alert, credits ongoing balance goes down to 40
         send_event!(subscription, 55)
         recalculate_wallet_balances
 
@@ -416,7 +416,7 @@ describe "Wallet Credits Ongoing Balance Alerts", :premium, transaction: false d
           crossed_thresholds: [{"code" => "positive", "value" => "50.0", "recurring" => false}]
         )
 
-        # Second event - negative alert, ongoing balance goes down to -$60
+        # Second event - negative alert, credits ongoing balance goes down to -60
         send_event!(subscription, 100)
         recalculate_wallet_balances
 
@@ -432,8 +432,8 @@ describe "Wallet Credits Ongoing Balance Alerts", :premium, transaction: false d
       end
     end
 
-    context "when ongoing balance goes negative with a recurring threshold" do
-      it "triggers recurring alerts when ongoing balance goes below 0" do
+    context "when credits ongoing balance goes negative with a recurring threshold" do
+      it "triggers recurring alerts when credits ongoing balance goes below 0" do
         wallet = create_test_wallet(granted_credits: "20")
         subscription = create_test_subscription
 
