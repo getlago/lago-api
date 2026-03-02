@@ -704,7 +704,6 @@ DROP INDEX IF EXISTS public.index_api_keys_on_value;
 DROP INDEX IF EXISTS public.index_api_keys_on_organization_id;
 DROP INDEX IF EXISTS public.index_ai_conversations_on_organization_id;
 DROP INDEX IF EXISTS public.index_ai_conversations_on_membership_id;
-DROP INDEX IF EXISTS public.index_admin_users_on_email;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_invoice_id;
@@ -903,7 +902,6 @@ ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS appl
 ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS applied_add_ons_pkey;
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS api_keys_pkey;
 ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS ai_conversations_pkey;
-ALTER TABLE IF EXISTS ONLY public.admin_users DROP CONSTRAINT IF EXISTS admin_users_pkey;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS adjusted_fees_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS add_ons_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons DROP CONSTRAINT IF EXISTS add_ons_pkey;
@@ -1058,7 +1056,6 @@ DROP TABLE IF EXISTS public.applied_coupons;
 DROP TABLE IF EXISTS public.applied_add_ons;
 DROP TABLE IF EXISTS public.api_keys;
 DROP TABLE IF EXISTS public.ai_conversations;
-DROP TABLE IF EXISTS public.admin_users;
 DROP TABLE IF EXISTS public.adjusted_fees;
 DROP TABLE IF EXISTS public.add_ons_taxes;
 DROP TABLE IF EXISTS public.add_ons;
@@ -1516,21 +1513,6 @@ CREATE TABLE public.adjusted_fees (
     unit_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
     organization_id uuid NOT NULL,
     fixed_charge_id uuid
-);
-
-
---
--- Name: admin_users; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.admin_users (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    email character varying NOT NULL,
-    password_digest character varying NOT NULL,
-    role character varying DEFAULT 'customer_support'::character varying NOT NULL,
-    name character varying,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -4933,14 +4915,6 @@ ALTER TABLE ONLY public.adjusted_fees
 
 
 --
--- Name: admin_users admin_users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.admin_users
-    ADD CONSTRAINT admin_users_pkey PRIMARY KEY (id);
-
-
---
 -- Name: ai_conversations ai_conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6467,13 +6441,6 @@ CREATE INDEX index_adjusted_fees_on_organization_id ON public.adjusted_fees USIN
 --
 
 CREATE INDEX index_adjusted_fees_on_subscription_id ON public.adjusted_fees USING btree (subscription_id);
-
-
---
--- Name: index_admin_users_on_email; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_admin_users_on_email ON public.admin_users USING btree (email);
 
 
 --
