@@ -228,6 +228,36 @@ RSpec.describe Customers::RefreshWalletsService do
       end
     end
 
+    context "when all charges are pricing group agnostic" do
+      it "passes usage_filters with skip_grouping true to CustomerUsageService" do
+        allow(::Invoices::CustomerUsageService).to receive(:call!).and_call_original
+
+        subject
+
+        expect(::Invoices::CustomerUsageService).to have_received(:call!).twice do |args|
+          expect(args[:usage_filters].skip_grouping).to be true
+        end
+      end
+    end
+
+    context "when some charges are not pricing group agnostic" do
+      before do
+        subscriptions.each do |subscription|
+          create(:graduated_charge, plan: subscription.plan, billable_metric:)
+        end
+      end
+
+      it "passes usage_filters with skip_grouping false to CustomerUsageService" do
+        allow(::Invoices::CustomerUsageService).to receive(:call!).and_call_original
+
+        subject
+
+        expect(::Invoices::CustomerUsageService).to have_received(:call!).twice do |args|
+          expect(args[:usage_filters].skip_grouping).to be false
+        end
+      end
+    end
+
     context "when there are wallet billable metric limitations" do
       subject(:result) { described_class.call(customer: targeted_customer, include_generating_invoices: false) }
 
