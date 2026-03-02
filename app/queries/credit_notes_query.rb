@@ -51,11 +51,12 @@ class CreditNotesQuery < BaseQuery
   private
 
   def base_scope
-    CreditNote
-      .includes(*@includes)
+    scope = CreditNote
       .where(organization:)
       .finalized
-      .ransack(search_params)
+
+    scope = scope.includes(*@includes) if @includes.present?
+    scope.ransack(search_params)
   end
 
   def search_params
