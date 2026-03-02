@@ -38,7 +38,6 @@ ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_e711e8089e;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_e4a58fbcac;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_e3cf54daac;
-ALTER TABLE IF EXISTS ONLY public.sessions DROP CONSTRAINT IF EXISTS fk_rails_e322124d9d;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_dfac602b2c;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
@@ -371,8 +370,6 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_subscription_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_organization_id;
-DROP INDEX IF EXISTS public.index_sessions_on_token;
-DROP INDEX IF EXISTS public.index_sessions_on_admin_user_id;
 DROP INDEX IF EXISTS public.index_search_quantified_events;
 DROP INDEX IF EXISTS public.index_rtr_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_roles_on_organization_id;
@@ -817,7 +814,6 @@ ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRA
 ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS subscriptions_pkey;
 ALTER TABLE IF EXISTS ONLY public.subscriptions_invoice_custom_sections DROP CONSTRAINT IF EXISTS subscriptions_invoice_custom_sections_pkey;
-ALTER TABLE IF EXISTS ONLY public.sessions DROP CONSTRAINT IF EXISTS sessions_pkey;
 ALTER TABLE IF EXISTS ONLY public.schema_migrations DROP CONSTRAINT IF EXISTS schema_migrations_pkey;
 ALTER TABLE IF EXISTS ONLY public.roles DROP CONSTRAINT IF EXISTS roles_pkey;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS refunds_pkey;
@@ -934,7 +930,6 @@ DROP TABLE IF EXISTS public.usage_monitoring_subscription_activities;
 DROP TABLE IF EXISTS public.usage_monitoring_alerts;
 DROP TABLE IF EXISTS public.usage_monitoring_alert_thresholds;
 DROP TABLE IF EXISTS public.subscriptions_invoice_custom_sections;
-DROP TABLE IF EXISTS public.sessions;
 DROP TABLE IF EXISTS public.schema_migrations;
 DROP TABLE IF EXISTS public.roles;
 DROP TABLE IF EXISTS public.refunds;
@@ -4591,19 +4586,6 @@ CREATE TABLE public.schema_migrations (
 
 
 --
--- Name: sessions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.sessions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    admin_user_id uuid NOT NULL,
-    token character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
 -- Name: subscriptions_invoice_custom_sections; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5658,14 +5640,6 @@ ALTER TABLE ONLY public.roles
 
 ALTER TABLE ONLY public.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
-
-
---
--- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.sessions
-    ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
 
 
 --
@@ -8827,20 +8801,6 @@ CREATE INDEX index_search_quantified_events ON public.quantified_events USING bt
 
 
 --
--- Name: index_sessions_on_admin_user_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_sessions_on_admin_user_id ON public.sessions USING btree (admin_user_id);
-
-
---
--- Name: index_sessions_on_token; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_sessions_on_token ON public.sessions USING btree (token);
-
-
---
 -- Name: index_subscriptions_invoice_custom_sections_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11310,14 +11270,6 @@ ALTER TABLE ONLY public.customer_metadata
 
 ALTER TABLE ONLY public.integration_collection_mappings
     ADD CONSTRAINT fk_rails_e148d17c1f FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
-
-
---
--- Name: sessions fk_rails_e322124d9d; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.sessions
-    ADD CONSTRAINT fk_rails_e322124d9d FOREIGN KEY (admin_user_id) REFERENCES public.admin_users(id);
 
 
 --
