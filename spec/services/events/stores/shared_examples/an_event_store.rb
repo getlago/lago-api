@@ -581,7 +581,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           value: "2"
         )
 
-        # NOTE: Events calculation: 16/31 + 1/31 + + 15/31 + 14/31 + 13/31 + 12/31
+        # NOTE: Events calculation: 16/31 + 1/31 + 15/31 + 14/31 + 13/31 + 12/31
         # Events:
         # 1 => added on 0 day, never removed => 16/31
         # 2 => added on 0 day, removed on 0 day => 1/31

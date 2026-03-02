@@ -600,7 +600,7 @@ module Events
 
           # NOTE: build the list of initial values for each groups
           #       from the events in the period
-          formated_initial_values = grouped_count.map do |group|
+          formatted_initial_values = grouped_count.map do |group|
             value = 0
             previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
             value = previous_group[:value] if previous_group
@@ -608,16 +608,16 @@ module Events
           end
 
           # NOTE: add the initial values for groups that are not in the events
-          initial_values.each do |intial_value|
-            next if formated_initial_values.find { |g| g[:groups] == intial_value[:groups] }
+          initial_values.each do |initial_value|
+            next if formatted_initial_values.find { |g| g[:groups] == initial_value[:groups] }
 
-            formated_initial_values << intial_value
+            formatted_initial_values << initial_value
           end
-          return [] if formated_initial_values.empty?
+          return [] if formatted_initial_values.empty?
 
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
-              sanitize_colon(query.grouped_query(initial_values: formated_initial_values)),
+              sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
