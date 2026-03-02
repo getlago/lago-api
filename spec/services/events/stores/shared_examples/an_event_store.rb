@@ -714,6 +714,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
         let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
 
+        let(:charge_filter) { create(:charge_filter, charge:) }
+
         before { create_events_for_filters }
 
         it "returns the last filtered event" do
@@ -777,6 +779,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
         let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
         let(:grouped_by) { %w[region country] }
+
+        let(:charge_filter) { create(:charge_filter, charge:) }
 
         before { create_events_for_filters }
 
@@ -1808,15 +1812,16 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
   if include_feature?(:distinct_charges_and_filters)
     describe "#distinct_charges_and_filters" do
-      let(:charge) { create(:standard_charge, organization:, billable_metric:) }
       let(:charge_filter) { create(:charge_filter, charge:) }
+
+      let(:events) { nil }
 
       before do
         create_enriched_event(
           timestamp: boundaries[:from_datetime] + 12.days,
           value: 12,
           properties: {billable_metric.field_name => 12},
-          charge_filter: charge_filter
+          charge_filter:
         )
       end
 

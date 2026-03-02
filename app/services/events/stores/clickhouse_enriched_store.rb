@@ -99,6 +99,30 @@ module Events
         )
       end
 
+      # DEPRECATED: This method will be replaced by distinct_charges_and_filters
+      #             to filter the charge and filters in a billing period.
+      #             See app/services/events/billing_period_filter_service.rb:42
+      def distinct_codes
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
+          ::Clickhouse::EventsEnrichedExpanded
+            .where(subscription_id: subscription.id)
+            .where(organization_id: subscription.organization_id)
+            .where(timestamp: from_datetime..applicable_to_datetime)
+            .pluck("DISTINCT(code)")
+        end
+      end
+
+      def distinct_charges_and_filters
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
+          ::Clickhouse::EventsEnrichedExpanded
+            .where(subscription_id: subscription.id)
+            .where(organization_id: subscription.organization_id)
+            .where(timestamp: from_datetime..to_datetime)
+            .distinct
+            .pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"))
+        end
+      end
+
       def events_values(limit: nil, force_from: false, exclude_event: false)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           table = Arel::Table.new("events")
@@ -145,7 +169,39 @@ module Events
       end
 
       def last_event
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value properties]), <<-SQL)
+            SELECT *
+            FROM events
+            ORDER BY timestamp DESC
+            LIMIT 1
+          SQL
+
+          attributes = connection.select_one(sql)
+          break if attributes.nil?
+
+          ::Clickhouse::EventsEnrichedExpanded.new(attributes)
+        end
+      end
+
+      def grouped_last_event
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = events_cte_queries(
+            select: [arel_table[:sorted_grouped_by], arel_table[:decimal_value].as("property"), arel_table[:timestamp]],
+            deduplicated_columns: %w[decimal_value]
+          )
+
+          sql = with_ctes(ctes_sql, <<-SQL)
+            SELECT
+              DISTINCT ON (sorted_grouped_by) sorted_grouped_by as groups,
+              events.timestamp,
+              property as value
+            FROM events
+            ORDER BY sorted_grouped_by, timestamp DESC
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql))
+        end
       end
 
       def count
@@ -222,6 +278,42 @@ module Events
         end
 
         result["aggregation"]
+      end
+
+      def prorated_unique_count_breakdown(with_remove: false)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.prorated_breakdown_query(with_remove:)),
+              {
+                from_datetime:,
+                to_datetime:,
+                decimal_date_scale: DECIMAL_DATE_SCALE,
+                timezone: customer.applicable_timezone
+              }
+            ]
+          )
+
+          connection.select_all(sql).to_a
+        end
+      end
+
+      def grouped_unique_count
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.grouped_query),
+              {
+                to_datetime:,
+                decimal_date_scale: DECIMAL_DATE_SCALE
+              }
+            ]
+          )
+
+          prepare_grouped_result(connection.select_all(sql), groups_key: :grouped_by, value_key: :aggregation)
+        end
       end
 
       def active_unique_property?(event)
@@ -509,6 +601,13 @@ module Events
         @arel_table ||= ::Clickhouse::EventsEnrichedExpanded.arel_table
       end
 
+      def grouped_arel_columns
+        [
+          [arel_table[:sorted_grouped_by].as("grouped_by")],
+          group_names
+        ]
+      end
+
       def group_names
         "grouped_by"
       end
@@ -542,11 +641,12 @@ module Events
         query.where(arel_table[:sorted_grouped_by].eq(map_fn))
       end
 
-      def prepare_grouped_result(result, decimal: false)
+      def prepare_grouped_result(result, decimal: false, groups_key: :groups, value_key: :value)
         result.to_ary.map do |row|
           row.symbolize_keys.tap do |r|
-            r[:groups] = r[:groups].transform_values(&:presence)
-            r[:value] = decimal ? BigDecimal(r[:value].presence || 0) : r[:value]
+            r[:groups] = r[groups_key].transform_values(&:presence)
+            r[:value] = decimal ? BigDecimal(r[value_key].presence || 0) : r[value_key]
+            r.slice!(:groups, :value, :timestamp)
           end
         end
       end
