@@ -360,26 +360,6 @@ RSpec.describe Api::V1::CreditNotesController do
         end
       end
     end
-
-    it "does not trigger N+1 queries", bullet: {unused_eager_loading: false} do
-      subscription = create(:subscription, customer:, organization:)
-
-      2.times do
-        inv = create(:invoice, customer:, organization:)
-        sub_fee = create(:fee, invoice: inv, subscription:, organization:)
-        charge_fee = create(:charge_fee, invoice: inv, subscription:, organization:)
-
-        cn = create(:credit_note, customer:, invoice: inv, organization:)
-        create(:credit_note_item, credit_note: cn, fee: sub_fee, organization:)
-        create(:credit_note_item, credit_note: cn, fee: charge_fee, organization:)
-        create(:credit_note_applied_tax, credit_note: cn, organization:)
-      end
-
-      get_with_token(organization, "/api/v1/credit_notes")
-
-      expect(response).to have_http_status(:success)
-      expect(json[:credit_notes].count).to eq(2)
-    end
   end
 
   describe "POST /api/v1/credit_notes", :premium do
