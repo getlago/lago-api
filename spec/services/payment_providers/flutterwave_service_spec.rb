@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviders::FlutterwaveService do
   subject(:flutterwave_service) { described_class.new }
 
+  include_context "with mocked security logger"
+
   let(:organization) { create(:organization) }
 
   describe "#create_or_update" do
@@ -30,6 +32,17 @@ RSpec.describe PaymentProviders::FlutterwaveService do
         expect(result.flutterwave_provider.secret_key).to eq("FLWSECK_TEST-test_secret_key")
         expect(result.flutterwave_provider.success_redirect_url).to eq("https://example.com/success")
       end
+
+      it "produces a security log" do
+        flutterwave_service.create_or_update(**args)
+
+        expect(security_logger).to have_received(:produce).with(
+          organization:,
+          log_type: "integration",
+          log_event: "integration.created",
+          resources: {integration_name: "Flutterwave Provider", integration_type: "flutterwave"}
+        )
+      end
     end
 
     context "when updating an existing provider" do
@@ -54,6 +67,17 @@ RSpec.describe PaymentProviders::FlutterwaveService do
         expect(result.flutterwave_provider.name).to eq("Flutterwave Provider")
         expect(result.flutterwave_provider.secret_key).to eq("FLWSECK_TEST-test_secret_key")
         expect(result.flutterwave_provider.success_redirect_url).to eq("https://example.com/success")
+      end
+
+      it "produces a security log" do
+        flutterwave_service.create_or_update(**args)
+
+        expect(security_logger).to have_received(:produce).with(
+          organization:,
+          log_type: "integration",
+          log_event: "integration.updated",
+          resources: hash_including(integration_name: "Flutterwave Provider", integration_type: "flutterwave")
+        )
       end
 
       context "when code is updated" do

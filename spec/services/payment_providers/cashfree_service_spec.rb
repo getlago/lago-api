@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviders::CashfreeService do
   subject(:cashfree_service) { described_class.new(membership.user) }
 
+  include_context "with mocked security logger"
+
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:code) { "code_1" }
@@ -25,6 +27,24 @@ RSpec.describe PaymentProviders::CashfreeService do
           success_redirect_url:
         )
       end.to change(PaymentProviders::CashfreeProvider, :count).by(1)
+    end
+
+    it "produces a security log" do
+      cashfree_service.create_or_update(
+        organization:,
+        code:,
+        name:,
+        client_id:,
+        client_secret:,
+        success_redirect_url:
+      )
+
+      expect(security_logger).to have_received(:produce).with(
+        organization:,
+        log_type: "integration",
+        log_event: "integration.created",
+        resources: {integration_name: name, integration_type: "cashfree"}
+      )
     end
 
     context "when code was changed" do
@@ -83,6 +103,24 @@ RSpec.describe PaymentProviders::CashfreeService do
         expect(result.cashfree_provider.code).to eq(code)
         expect(result.cashfree_provider.name).to eq(name)
         expect(result.cashfree_provider.success_redirect_url).to eq(success_redirect_url)
+      end
+
+      it "produces a security log" do
+        cashfree_service.create_or_update(
+          organization:,
+          code:,
+          name:,
+          client_id:,
+          client_secret:,
+          success_redirect_url:
+        )
+
+        expect(security_logger).to have_received(:produce).with(
+          organization:,
+          log_type: "integration",
+          log_event: "integration.updated",
+          resources: hash_including(integration_name: name, integration_type: "cashfree")
+        )
       end
     end
 
