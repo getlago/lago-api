@@ -3,7 +3,8 @@
 namespace :enriched_events do
   desc "Compare ClickhouseStore vs ClickhouseEnrichedStore usage for given subscription IDs"
   task :compare, [:subscription_id] => :environment do |_task, args|
-    abort "Usage: rake enriched_events:compare[sub_id_1,sub_id_2,...]\n\n" unless args[:subscription_id]
+    abort "Usage: [QUIET=true] rake enriched_events:compare[sub_id_1,sub_id_2,...]\n\n" unless args[:subscription_id]
+    abort "[SKIP] Clickhouse is not enabled on this system" if ENV["LAGO_CLICKHOUSE_ENABLED"].blank?
 
     subscription_ids = [args[:subscription_id]] + args.extras
     quiet = ENV["QUIET"].present?
@@ -135,31 +136,33 @@ namespace :enriched_events do
     puts "Total differences across all subscriptions: #{total_diffs}"
     puts "=" * 80
   end
-end
 
-def fee_label(fee)
-  parts = ["charge=#{fee.charge_id}"]
-  if fee.billable_metric
-    parts << "metric=#{fee.billable_metric.code}"
-    parts << "agg=#{fee.billable_metric.aggregation_type}"
+  private
+
+  def fee_label(fee)
+    parts = ["charge=#{fee.charge_id}"]
+    if fee.billable_metric
+      parts << "metric=#{fee.billable_metric.code}"
+      parts << "agg=#{fee.billable_metric.aggregation_type}"
+    end
+    parts << "model=#{fee.charge&.charge_model}" if fee.charge
+    parts << "filter=#{fee.charge_filter.to_h}" if fee.charge_filter_id
+    grouped = fee.grouped_by.presence
+    parts << "grouped_by=#{grouped}" if grouped
+    parts.join(" ")
   end
-  parts << "model=#{fee.charge&.charge_model}" if fee.charge
-  parts << "filter=#{fee.charge_filter.to_h}" if fee.charge_filter_id
-  grouped = fee.grouped_by.presence
-  parts << "grouped_by=#{grouped}" if grouped
-  parts.join(" ")
-end
 
-def compute_delta(legacy_val, enriched_val)
-  return "N/A" if legacy_val.nil? || enriched_val.nil?
+  def compute_delta(legacy_val, enriched_val)
+    return "N/A" if legacy_val.nil? || enriched_val.nil?
 
-  diff = enriched_val.to_d - legacy_val.to_d
-  if legacy_val.to_d.zero?
-    diff.zero? ? "0" : "#{diff} (from zero)"
-  else
-    pct = (diff / legacy_val.to_d * 100).round(4)
-    "#{diff} (#{pct}%)"
+    diff = enriched_val.to_d - legacy_val.to_d
+    if legacy_val.to_d.zero?
+      diff.zero? ? "0" : "#{diff} (from zero)"
+    else
+      pct = (diff / legacy_val.to_d * 100).round(4)
+      "#{diff} (#{pct}%)"
+    end
+  rescue
+    "N/A"
   end
-rescue
-  "N/A"
 end
