@@ -38,18 +38,20 @@ module Api
           render(
             json: ::CollectionSerializer.new(
               result.fees.includes(
+                :billable_metric,
+                subscription: :plan
+              ).preload(
                 :add_on,
                 :applied_taxes,
-                :billable_metric,
                 :charge,
                 :charge_filter,
                 :customer,
                 :fixed_charge,
                 :fixed_charge_add_on,
                 :invoice,
-                :true_up_fee,
-                subscription: :plan
-              ).preload(:invoiceable),
+                :invoiceable,
+                :true_up_fee
+              ),
               ::V1::FeeSerializer,
               collection_name: "fees",
               meta: pagination_metadata(result.fees),
