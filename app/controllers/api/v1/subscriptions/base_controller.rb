@@ -15,7 +15,9 @@ module Api
             .order("terminated_at DESC NULLS FIRST, started_at DESC") # TODO: Confirm
             .find_by!(
               external_id: params[:subscription_external_id],
-              status: params[:status] || :active
+              # we're keeping both `subscription_status` and `status` for backward compatibility,
+              # but we should rely more on the `subscription_status`
+              status: params[:subscription_status] || params[:status] || :active
             )
         rescue ActiveRecord::RecordNotFound
           not_found_error(resource: "subscription")
