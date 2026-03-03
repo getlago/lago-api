@@ -46,6 +46,7 @@ module CreditNoteIndex
               fee: [
                 :charge_filter,
                 :charge,
+                :billable_metric,
                 :invoice,
                 :pricing_unit_usage,
                 :true_up_fee,

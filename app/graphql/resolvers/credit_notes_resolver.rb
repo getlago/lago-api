@@ -37,7 +37,19 @@ module Resolvers
     ].freeze
 
     def resolve(**args)
-      includes = [:customer, :items]
+      includes = [
+        :customer,
+        items: {
+          fee: [
+            :charge_filter,
+            { charge: :billable_metric },
+            :billable_metric,
+            :pricing_unit_usage,
+            :true_up_fee,
+            { subscription: :plan }
+          ]
+        }
+      ]
 
       CreditNotesQuery.call(
         organization: current_organization,
