@@ -364,6 +364,8 @@ RSpec.shared_examples "a credit note index endpoint" do
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "ActiveStorage::Attachment", association: :blob)
       # NOTE: The charge include is needed for charge-type fees but true-up fees have no charge
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "Fee", association: :charge)
+      # NOTE: billable_metric is only accessed for charge-type fees; subscription fees never touch it
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Fee", association: :billable_metric)
 
       invoices = create_list(:invoice, 3, organization:, customer:)
       invoices.each do |invoice|
