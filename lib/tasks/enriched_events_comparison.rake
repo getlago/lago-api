@@ -53,6 +53,10 @@ namespace :enriched_events do
             puts "[ERROR] Legacy usage computation failed: #{legacy_result.error&.message}"
           end
 
+          raise ActiveRecord::Rollback
+        end
+
+        ActiveRecord::Base.transaction do
           # Run with enriched store (feature flag ON)
           organization.enable_feature_flag!(:enriched_events_aggregation)
           organization.reload
