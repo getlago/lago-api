@@ -765,13 +765,23 @@ module Events
           grouped_by.map.with_index do |group, index|
             Arel::Nodes::SqlLiteral.new(sanitized_property_name(group)).as("g_#{index}")
           end,
-          group_names
+          group_names.join(", ")
         ]
       end
 
       def group_names
-        @grouped_names ||= grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
+        @group_names ||= Array.new(grouped_by.count) { |index| "g_#{index}" }
       end
+
+      def joined_group_names
+        @joined_group_names ||= group_names.join(", ")
+      end
+
+      def grouped_by_columns(values)
+        grouped_by.map { |g| quote(values[g] || "") }
+      end
+
+      delegate :count, to: :grouped_by, prefix: true
 
       def operation_type_sql
         "events_enriched.sorted_properties['operation_type']"

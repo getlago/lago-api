@@ -6,8 +6,24 @@ module Events
       include Events::Stores::Utils::QueryHelpers
       include Events::Stores::Utils::ClickhouseSqlHelpers
 
-      def events
-        raise NotImplementedError
+      def events(force_from: false, ordered: false)
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
+          order_clause = ordered ? "ORDER BY timestamp ASC" : ""
+
+          sql = with_ctes(
+            events_cte_queries(
+              deduplicated_columns: %w[decimal_value value properties precise_total_amount_cents code external_subscription_id],
+              force_from:
+            ),
+            <<-SQL
+              SELECT *
+              FROM events
+              #{order_clause}
+            SQL
+          )
+
+          ::Clickhouse::EventsEnrichedExpanded.find_by_sql(sql)
+        end
       end
 
       def events_cte_queries(**args)
@@ -316,6 +332,24 @@ module Events
         end
       end
 
+      def grouped_prorated_unique_count
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.grouped_prorated_query),
+              {
+                from_datetime:,
+                to_datetime:,
+                decimal_date_scale: DECIMAL_DATE_SCALE,
+                timezone: customer.applicable_timezone
+              }
+            ]
+          )
+          prepare_grouped_result(connection.select_all(sql), groups_key: :grouped_by, value_key: :aggregation)
+        end
+      end
+
       def active_unique_property?(event)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(
@@ -561,7 +595,39 @@ module Events
       end
 
       def grouped_weighted_sum(initial_values: [])
-        raise NotImplementedError
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Clickhouse::WeightedSumQuery.new(store: self)
+
+          # NOTE: build the list of initial values for each groups
+          #       from the events in the period
+          formatted_initial_values = grouped_count.map do |group|
+            value = 0
+            previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
+            value = previous_group[:value] if previous_group
+            {groups: group[:groups], value:}
+          end
+
+          # NOTE: add the initial values for groups that are not in the events
+          initial_values.each do |initial_value|
+            next if formatted_initial_values.find { |g| g[:groups] == initial_value[:groups] }
+
+            formatted_initial_values << initial_value
+          end
+          return [] if formatted_initial_values.empty?
+
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
+              {
+                from_datetime:,
+                to_datetime: to_datetime.ceil,
+                decimal_scale: DECIMAL_SCALE
+              }
+            ]
+          )
+
+          prepare_grouped_result(connection.select_all(sql), decimal: true, groups_key: :grouped_by, value_key: :aggregation)
+        end
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
@@ -609,7 +675,20 @@ module Events
       end
 
       def group_names
+        [joined_group_names]
+      end
+
+      def joined_group_names
         "grouped_by"
+      end
+
+      def grouped_by_columns(values)
+        map_values = values.map { |g, v| [quote(g), quote(v || "")] }
+        "map(#{map_values.flatten.join(", ")})"
+      end
+
+      def grouped_by_count
+        1
       end
 
       def operation_type_sql
