@@ -9,6 +9,14 @@ RSpec.describe Webhooks::SendHttpService do
   let(:webhook) { create(:webhook, webhook_endpoint:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
 
+  around do |example|
+    original_value = ENV["LAGO_WEBHOOK_ATTEMPTS"]
+    ENV["LAGO_WEBHOOK_ATTEMPTS"] = "3"
+    example.run
+  ensure
+    ENV["LAGO_WEBHOOK_ATTEMPTS"] = original_value
+  end
+
   context "when client returns a success" do
     before do
       WebMock.stub_request(:post, "https://wh.test.com").to_return(status: 200, body: "ok")
@@ -64,32 +72,35 @@ RSpec.describe Webhooks::SendHttpService do
       end
     end
 
-    it "creates a failed webhook" do
+    it "creates a retrying webhook" do
       service.call
 
-      expect(webhook).to be_failed
+      expect(webhook).to be_retrying
       expect(webhook.http_status).to eq(403)
       expect(SendHttpWebhookJob).to have_received(:set)
     end
 
-    context "with a failed webhook" do
-      let(:webhook) { create(:webhook, :failed) }
+    context "with a retrying webhook" do
+      let(:webhook) { create(:webhook, :retrying, retries: 1) }
 
       it "fails the retried webhooks" do
         service.call
 
-        expect(webhook).to be_failed
+        expect(webhook).to be_retrying
         expect(webhook.http_status).to eq(403)
-        expect(webhook.retries).to eq(1)
+        expect(webhook.retries).to eq(2)
         expect(webhook.last_retried_at).not_to be_nil
         expect(SendHttpWebhookJob).to have_received(:set)
       end
 
       context "when the webhook failed 3 times" do
-        let(:webhook) { create(:webhook, :failed, retries: 2) }
+        let(:webhook) { create(:webhook, :retrying, retries: 2) }
 
-        it "stops trying and notify the admins" do
+        it "stops trying and marks the webhook as failed" do
           service.call
+
+          expect(webhook).to be_failed
+          expect(webhook.http_status).to eq(403)
           expect(webhook.reload.retries).to eq 3
           expect(SendHttpWebhookJob).not_to have_received(:set)
         end

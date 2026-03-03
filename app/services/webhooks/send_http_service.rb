@@ -29,11 +29,10 @@ module Webhooks
       OpenSSL::SSL::SSLError,
       SocketError,
       EOFError => e
-      mark_webhook_as_failed(e)
 
-      if webhook.retries < ENV.fetch("LAGO_WEBHOOK_ATTEMPTS", 3).to_i
-        SendHttpWebhookJob.set(wait: wait_value).perform_later(webhook)
-      end
+      retrying = ((webhook.retries + 1) < retry_limit)
+      mark_webhook_as_unsuccessful(error: e, retrying:)
+      SendHttpWebhookJob.set(wait: wait_value).perform_later(webhook) if retrying
 
       result
     end
@@ -55,6 +54,10 @@ module Webhooks
       ENV.fetch("LAGO_WEBHOOK_TIMEOUT_SECONDS", 30).to_i
     end
 
+    def retry_limit
+      ENV.fetch("LAGO_WEBHOOK_ATTEMPTS", 3).to_i
+    end
+
     def mark_webhook_as_succeeded(response)
       webhook.http_status = response&.code&.to_i
       webhook.response = response&.body.presence || {}
@@ -62,7 +65,7 @@ module Webhooks
       webhook.save!
     end
 
-    def mark_webhook_as_failed(error)
+    def mark_webhook_as_unsuccessful(error:, retrying:)
       if error.is_a?(LagoHttpClient::HttpError)
         webhook.http_status = error.error_code
         webhook.response = error.error_body
@@ -71,7 +74,7 @@ module Webhooks
       end
       webhook.retries += 1
       webhook.last_retried_at = Time.zone.now
-      webhook.status = :failed
+      webhook.status = retrying ? :retrying : :failed
       webhook.save!
     end
 
