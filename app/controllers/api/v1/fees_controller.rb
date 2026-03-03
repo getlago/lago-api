@@ -47,10 +47,9 @@ module Api
                 :fixed_charge,
                 :fixed_charge_add_on,
                 :invoice,
-                :invoiceable,
                 :true_up_fee,
                 subscription: :plan
-              ),
+              ).preload(:invoiceable),
               ::V1::FeeSerializer,
               collection_name: "fees",
               meta: pagination_metadata(result.fees),
