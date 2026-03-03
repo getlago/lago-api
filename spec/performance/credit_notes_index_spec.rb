@@ -6,15 +6,18 @@
 # same dataset in the same spec run — no git operations or stashing needed.
 #
 # Usage:
-#   bundle exec rspec spec/performance/credit_notes_index_spec.rb --format documentation
+#   - Uncomment lines 53, 67 and 119 to see the output
+#   - Change CREDIT_NOTE_COUNT and ITEMS_PER_NOTE to the desired number of records
+#   - Run bundle exec rspec spec/performance/credit_notes_index_spec.rb --format documentation
 
 require "rails_helper"
 require "benchmark"
 
-RSpec.describe "Credit notes index performance", type: :request do
-  CREDIT_NOTE_COUNT = 100
-  ITEMS_PER_NOTE = 6 # 3 subscription fees + 3 charge fees
+CREDIT_NOTE_COUNT = 2
+ITEMS_PER_NOTE = 6 # 3 subscription fees + 3 charge fees
 
+# rubocop:disable Lint/UselessAssignment
+RSpec.describe "Credit notes index performance", type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:membership) { create(:membership, organization:) }
@@ -48,7 +51,7 @@ RSpec.describe "Credit notes index performance", type: :request do
       end
     end * 1000
 
-    puts "\n  %-60s queries: %3d   time: %6.1fms" % [label, query_count, elapsed_ms]
+    # puts "\n  %-60s queries: %3d   time: %6.1fms" % [label, query_count, elapsed_ms]
     query_count
   end
 
@@ -62,7 +65,7 @@ RSpec.describe "Credit notes index performance", type: :request do
   end
 
   it "compares old vs new query strategy — REST serialization path" do
-    puts "\n\n  === Credit notes index: old vs new (#{CREDIT_NOTE_COUNT} notes, #{ITEMS_PER_NOTE} fee items each) ===\n"
+    # puts "\n\n  === Credit notes index: old vs new (#{CREDIT_NOTE_COUNT} notes, #{ITEMS_PER_NOTE} fee items each) ===\n"
 
     old_count = measure("OLD — customer join, items only, no fee tree") do
       credit_notes = CreditNote
@@ -103,7 +106,7 @@ RSpec.describe "Credit notes index performance", type: :request do
               :invoice,
               :pricing_unit_usage,
               :true_up_fee,
-              { subscription: :plan },
+              {subscription: :plan},
               :customer
             ]
           }
@@ -114,8 +117,9 @@ RSpec.describe "Credit notes index performance", type: :request do
     end
 
     reduction = ((old_count - new_count).to_f / old_count * 100).round
-    puts "\n  Reduction: #{old_count} → #{new_count} queries (#{reduction}% fewer)\n\n"
+    # puts "\n  Reduction: #{old_count} → #{new_count} queries (#{reduction}% fewer)\n\n"
 
     expect(new_count).to be < old_count
   end
 end
+# rubocop:enable Lint/UselessAssignment
