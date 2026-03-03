@@ -41,7 +41,12 @@ module InvoiceIndex
           result.invoices.includes(:metadata, :applied_taxes, :billing_entity, :applied_usage_thresholds),
           ::V1::InvoiceSerializer,
           collection_name: "invoices",
-          meta: pagination_metadata(result.invoices),
+          meta: pagination_metadata(
+            result.invoices,
+            key: "invoices",
+            organization_id: current_organization.id,
+            params: request.query_parameters
+          ),
           includes: %i[customer integration_customers metadata applied_taxes]
         )
       )
