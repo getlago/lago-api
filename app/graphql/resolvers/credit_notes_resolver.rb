@@ -42,11 +42,11 @@ module Resolvers
         items: {
           fee: [
             :charge_filter,
-            { charge: :billable_metric },
+            {charge: :billable_metric},
             :billable_metric,
             :pricing_unit_usage,
             :true_up_fee,
-            { subscription: :plan }
+            {subscription: :plan}
           ]
         }
       ]
