@@ -31,9 +31,10 @@ RSpec.describe Entitlement::SubscriptionEntitlementUpdateService do
 
   describe "#call", :premium do
     context "when successful" do
+      let(:plan_entitlement) { create(:entitlement, organization:, plan:, feature: feature) }
+
       before do
-        # Ensure result.entitlement can be resolved even if inner service is mocked
-        create(:entitlement, organization:, plan:, feature: feature)
+        plan_entitlement
 
         allow(Entitlement::SubscriptionEntitlementCoreUpdateService).to receive(:call!).and_return(true)
       end
@@ -45,6 +46,8 @@ RSpec.describe Entitlement::SubscriptionEntitlementUpdateService do
           subscription: subscription,
           plan: plan, # no parent plan created here, so it's the subscription plan
           feature: feature,
+          plan_entitlement:,
+          sub_entitlement: nil,
           privilege_params: privilege_params.with_indifferent_access,
           partial: false
         )
