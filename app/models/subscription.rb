@@ -39,6 +39,8 @@ class Subscription < ApplicationRecord
   has_one :lifetime_usage, autosave: true
   has_one :subscription_activity, class_name: "UsageMonitoring::SubscriptionActivity"
 
+  has_many :alerts, ->(s) { where(organization_id: s.organization_id) }, class_name: "UsageMonitoring::Alert", foreign_key: :subscription_external_id, primary_key: :external_id
+
   validates :external_id, :billing_time, presence: true
   validate :validate_external_id, on: :create
 

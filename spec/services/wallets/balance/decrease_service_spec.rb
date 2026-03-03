@@ -50,6 +50,10 @@ RSpec.describe Wallets::Balance::DecreaseService do
       expect { subject }.to have_enqueued_job(SendWebhookJob).with("wallet.updated", Wallet)
     end
 
+    it "enqueues a ProcessWalletAlertsJob" do
+      expect { subject }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).at_least(:once)
+    end
+
     it "calls Customers::RefreshWalletsService" do
       subject
       expect(Customers::RefreshWalletsService).to have_received(:call).with(customer: wallet.customer, include_generating_invoices: true)

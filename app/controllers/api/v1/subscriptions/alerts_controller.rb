@@ -8,8 +8,7 @@ module Api
 
         def destroy_all
           result = UsageMonitoring::Alerts::DestroyAllService.call(
-            organization: current_organization,
-            subscription:
+            alertable: subscription
           )
 
           if result.success?
@@ -86,7 +85,7 @@ module Api
         def create_single
           result = UsageMonitoring::CreateAlertService.call(
             organization: current_organization,
-            subscription:,
+            alertable: subscription,
             params: create_params.to_h
           )
 
@@ -100,7 +99,7 @@ module Api
         def create_batch
           result = UsageMonitoring::Alerts::CreateBatchService.call(
             organization: current_organization,
-            subscription:,
+            alertable: subscription,
             alerts_params: batch_create_params[:alerts]
           )
 
