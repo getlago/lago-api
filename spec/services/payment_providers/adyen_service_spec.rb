@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviders::AdyenService do
   subject(:adyen_service) { described_class.new(membership.user) }
 
+  include_context "with mocked security logger"
+
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:api_key) { "test_api_key_1" }
@@ -18,6 +20,17 @@ RSpec.describe PaymentProviders::AdyenService do
       expect do
         adyen_service.create_or_update(organization:, api_key:, code:, name:, merchant_account:, success_redirect_url:)
       end.to change(PaymentProviders::AdyenProvider, :count).by(1)
+    end
+
+    it "produces a security log" do
+      adyen_service.create_or_update(organization:, api_key:, code:, name:, merchant_account:, success_redirect_url:)
+
+      expect(security_logger).to have_received(:produce).with(
+        organization:,
+        log_type: "integration",
+        log_event: "integration.created",
+        resources: {integration_name: name, integration_type: "adyen"}
+      )
     end
 
     context "when code was changed" do
@@ -74,6 +87,23 @@ RSpec.describe PaymentProviders::AdyenService do
         expect(result.adyen_provider.code).to eq(code)
         expect(result.adyen_provider.name).to eq(name)
         expect(result.adyen_provider.success_redirect_url).to eq(success_redirect_url)
+      end
+
+      it "produces a security log" do
+        adyen_service.create_or_update(
+          organization:,
+          api_key:,
+          code:,
+          name:,
+          success_redirect_url:
+        )
+
+        expect(security_logger).to have_received(:produce).with(
+          organization:,
+          log_type: "integration",
+          log_event: "integration.updated",
+          resources: hash_including(integration_name: name, integration_type: "adyen")
+        )
       end
     end
 

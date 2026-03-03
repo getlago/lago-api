@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviders::GocardlessService do
   subject(:gocardless_service) { described_class.new(membership.user) }
 
+  include_context "with mocked security logger"
+
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:access_code) { "1234567!abc" }
@@ -38,6 +40,23 @@ RSpec.describe PaymentProviders::GocardlessService do
           success_redirect_url:
         )
       end.to change(PaymentProviders::GocardlessProvider, :count).by(1)
+    end
+
+    it "produces a security log" do
+      gocardless_service.create_or_update(
+        organization:,
+        access_code:,
+        code:,
+        name:,
+        success_redirect_url:
+      )
+
+      expect(security_logger).to have_received(:produce).with(
+        organization:,
+        log_type: "integration",
+        log_event: "integration.created",
+        resources: {integration_name: name, integration_type: "gocardless"}
+      )
     end
 
     context "when code was changed" do
@@ -94,6 +113,23 @@ RSpec.describe PaymentProviders::GocardlessService do
         expect(result.gocardless_provider.code).to eq(code)
         expect(result.gocardless_provider.name).to eq(name)
         expect(result.gocardless_provider.success_redirect_url).to eq(success_redirect_url)
+      end
+
+      it "produces a security log" do
+        gocardless_service.create_or_update(
+          organization:,
+          access_code:,
+          code:,
+          name:,
+          success_redirect_url:
+        )
+
+        expect(security_logger).to have_received(:produce).with(
+          organization:,
+          log_type: "integration",
+          log_event: "integration.updated",
+          resources: hash_including(integration_name: name, integration_type: "gocardless")
+        )
       end
     end
 

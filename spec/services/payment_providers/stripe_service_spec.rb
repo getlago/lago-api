@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviders::StripeService do
   subject(:stripe_service) { described_class.new(membership.user) }
 
+  include_context "with mocked security logger"
+
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -30,6 +32,24 @@ RSpec.describe PaymentProviders::StripeService do
           .with(result.stripe_provider)
         expect(result.stripe_provider.supports_3ds).to be(true)
       end.to change(PaymentProviders::StripeProvider, :count).by(1)
+    end
+
+    it "produces a security log" do
+      stripe_service.create_or_update(
+        organization_id: organization.id,
+        secret_key:,
+        code:,
+        name:,
+        success_redirect_url:,
+        supports_3ds: true
+      )
+
+      expect(security_logger).to have_received(:produce).with(
+        organization:,
+        log_type: "integration",
+        log_event: "integration.created",
+        resources: {integration_name: name, integration_type: "stripe"}
+      )
     end
 
     context "when code was changed" do
@@ -97,6 +117,23 @@ RSpec.describe PaymentProviders::StripeService do
         expect(result.stripe_provider.success_redirect_url).to eq(success_redirect_url)
 
         expect(PaymentProviders::Stripe::RegisterWebhookJob).not_to have_been_enqueued
+      end
+
+      it "produces a security log" do
+        stripe_service.create_or_update(
+          organization_id: organization.id,
+          secret_key: "new_key",
+          code:,
+          name:,
+          success_redirect_url:
+        )
+
+        expect(security_logger).to have_received(:produce).with(
+          organization:,
+          log_type: "integration",
+          log_event: "integration.updated",
+          resources: hash_including(integration_name: name, integration_type: "stripe")
+        )
       end
     end
 
