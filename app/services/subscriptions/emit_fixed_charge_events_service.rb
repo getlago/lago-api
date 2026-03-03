@@ -10,8 +10,10 @@ module Subscriptions
 
     def call
       subscriptions.each do |subscription|
+        emitted_fixed_charge_ids = already_emitted_fixed_charge_ids(subscription)
+
         subscription.fixed_charges.find_each do |fixed_charge|
-          next if fixed_charge_already_emitted?(subscription, fixed_charge)
+          next if emitted_fixed_charge_ids.include?(fixed_charge.id)
 
           ::FixedChargeEvents::CreateService.call!(
             subscription:,
@@ -32,16 +34,17 @@ module Subscriptions
       subscriptions.first.customer.applicable_timezone
     end
 
-    def fixed_charge_already_emitted?(subscription, fixed_charge)
-      return false unless timestamp
+    def already_emitted_fixed_charge_ids(subscription)
+      return Set.new unless timestamp
 
       FixedChargeEvent
-        .where(subscription:, fixed_charge:)
+        .where(subscription:)
         .where(
           "DATE(fixed_charge_events.timestamp AT TIME ZONE ?) = DATE(? AT TIME ZONE ?)",
           applicable_timezone, timestamp, applicable_timezone
         )
-        .exists?
+        .pluck(:fixed_charge_id)
+        .to_set
     end
   end
 end

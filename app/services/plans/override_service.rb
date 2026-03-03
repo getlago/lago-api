@@ -30,17 +30,16 @@ module Plans
           taxes_result.raise_if_error!
         end
 
+        charges_params_by_id = (params[:charges] || []).index_by { |p| p[:id] }
+        fixed_charges_params_by_id = (params[:fixed_charges] || []).index_by { |p| p[:id] }
+
         plan.charges.find_each do |charge|
-          charge_params = (
-            params[:charges]&.find { |p| p[:id] == charge.id } || {}
-          ).merge(plan_id: new_plan.id)
+          charge_params = (charges_params_by_id[charge.id] || {}).merge(plan_id: new_plan.id)
           Charges::OverrideService.call(charge:, params: charge_params)
         end
 
         plan.fixed_charges.find_each do |fixed_charge|
-          fixed_charge_params = (
-            params[:fixed_charges]&.find { |p| p[:id] == fixed_charge.id } || {}
-          ).merge(plan_id: new_plan.id)
+          fixed_charge_params = (fixed_charges_params_by_id[fixed_charge.id] || {}).merge(plan_id: new_plan.id)
           FixedCharges::OverrideService.call(fixed_charge:, params: fixed_charge_params, subscription:)
         end
 
