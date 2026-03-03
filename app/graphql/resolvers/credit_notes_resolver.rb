@@ -39,6 +39,8 @@ module Resolvers
     def resolve(**args)
       includes = [
         :customer,
+        :error_details,
+        {invoice: :billing_entity},
         items: {
           fee: [
             :charge_filter,
