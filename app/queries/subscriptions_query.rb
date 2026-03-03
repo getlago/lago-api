@@ -62,7 +62,8 @@ class SubscriptionsQuery < BaseQuery
   end
 
   def with_external_customer(scope)
-    scope.joins(:customer).where(customers: {external_id: filters.external_customer_id})
+    customers = Customer.where(external_id: filters.external_customer_id)
+    scope.where(customer_id: customers.ids)
   end
 
   def with_plan_code(scope)
