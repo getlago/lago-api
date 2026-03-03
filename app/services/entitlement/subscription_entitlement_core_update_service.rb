@@ -6,10 +6,12 @@ module Entitlement
 
     Result = BaseResult
 
-    def initialize(subscription:, plan:, feature:, privilege_params:, partial:)
+    def initialize(subscription:, plan:, feature:, plan_entitlement:, sub_entitlement:, privilege_params:, partial:)
       @subscription = subscription
       @plan = plan
       @feature = feature
+      @plan_entitlement = plan_entitlement
+      @sub_entitlement = sub_entitlement
       @privilege_params = privilege_params.to_h.with_indifferent_access
       @partial = partial
       super
@@ -30,7 +32,7 @@ module Entitlement
 
     private
 
-    attr_reader :subscription, :plan, :feature, :privilege_params, :partial
+    attr_reader :subscription, :plan, :feature, :plan_entitlement, :sub_entitlement, :privilege_params, :partial
     delegate :organization, to: :subscription
     alias_method :partial?, :partial
 
@@ -39,9 +41,6 @@ module Entitlement
     end
 
     def process_single_entitlement
-      plan_entitlement = plan.entitlements.includes(values: :privilege).find_by(feature: feature)
-      sub_entitlement = subscription.entitlements.includes(values: :privilege).find_by(feature: feature)
-
       if plan_entitlement.nil? && sub_entitlement.nil?
         subscription.entitlement_removals.where(feature:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
         create_entitlement_and_values_for_subscription
@@ -56,7 +55,7 @@ module Entitlement
       else
         subscription.entitlement_removals.where(feature:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
 
-        sub_entitlement ||= create_entitlement_for_subscription
+        sub_entitlement = self.sub_entitlement || create_entitlement_for_subscription
         remove_missing_entitlement_values(plan_entitlement, sub_entitlement) if full?
         update_values_for_subscription(plan_entitlement, sub_entitlement)
       end
@@ -130,7 +129,7 @@ module Entitlement
     end
 
     def find_privilege!(privilege_code)
-      feature.privileges.find_by!(code: privilege_code)
+      feature.privileges.find { it.code == privilege_code } || raise(ActiveRecord::RecordNotFound.new("Entitlement::Privilege"))
     end
 
     def privilege_params_same_as_plan?(plan_entitlement)

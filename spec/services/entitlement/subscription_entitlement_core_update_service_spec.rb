@@ -3,11 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
-  subject(:result) { described_class.call(subscription:, plan:, feature: seats, privilege_params:, partial:) }
+  subject(:result) { described_class.call(subscription:, plan:, feature: seats, plan_entitlement:, sub_entitlement:, privilege_params:, partial:) }
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, plan:) }
+
+  let(:plan_entitlement) { plan.entitlements.includes(values: :privilege).find_by(feature: seats) }
+  let(:sub_entitlement) { subscription.entitlements.includes(values: :privilege).find_by(feature: seats) }
 
   let(:seats) { create(:feature, organization:, code: "seats", name: "Nb users") }
   let(:seats_max) { create(:privilege, feature: seats, code: "max", name: "Max", value_type: "integer") }

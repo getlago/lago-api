@@ -86,16 +86,40 @@ module Entitlement
     def update_entitlements
       return if entitlements_params.blank?
 
+      plan = subscription.plan.parent || subscription.plan
+
       features_by_code = organization.features
         .where(code: entitlements_params.keys)
+        .includes(:privileges)
         .index_by(&:code)
 
+      # NOTE: Some feature code were not found
+      if features_by_code.size != entitlements_params.size
+        return result.not_found_failure!(resource: "feature")
+      end
+
+      feature_ids = features_by_code.values.map(&:id)
+
+      plan_entitlements_by_feature_id = plan.entitlements
+        .where(entitlement_feature_id: feature_ids)
+        .includes(values: :privilege)
+        .index_by(&:entitlement_feature_id)
+
+      sub_entitlements_by_feature_id = subscription.entitlements
+        .where(entitlement_feature_id: feature_ids)
+        .includes(values: :privilege)
+        .index_by(&:entitlement_feature_id)
+
       entitlements_params.each do |feature_code, privilege_params|
+        feature = features_by_code[feature_code]
+
         SubscriptionEntitlementCoreUpdateService.call!(
           subscription:,
-          plan: subscription.plan.parent || subscription.plan,
-          feature: features_by_code[feature_code],
+          plan:,
+          feature:,
           privilege_params:,
+          plan_entitlement: plan_entitlements_by_feature_id[feature.id],
+          sub_entitlement: sub_entitlements_by_feature_id[feature.id],
           partial:
         )
       end
