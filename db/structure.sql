@@ -7098,7 +7098,7 @@ CREATE UNIQUE INDEX index_customers_on_external_id_and_organization_id ON public
 -- Name: index_customers_on_external_id_only; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_customers_on_external_id_only ON public.customers USING btree (external_id);
+CREATE INDEX index_customers_on_external_id_only ON public.customers USING btree (external_id) WHERE (deleted_at IS NULL);
 
 
 --
