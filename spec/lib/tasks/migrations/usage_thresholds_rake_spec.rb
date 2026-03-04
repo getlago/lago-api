@@ -114,16 +114,32 @@ RSpec.describe "migrations:migrate_usage_thresholds" do # rubocop:disable RSpec/
     end
   end
 
-  context "when child plan has no usage thresholds" do
+  context "when child plan has no usage thresholds but parent does" do
     before do
       create(:usage_threshold, plan: parent_plan, organization:, amount_cents: 1000, recurring: false)
       subscription
     end
 
-    it "does nothing for that child plan" do
+    it "sets progressive_billing_disabled on the subscription" do
+      expect { task.invoke(organization.id) }.to output(/Migrated 1 subscription/).to_stdout
+
+      expect(subscription.reload.progressive_billing_disabled).to be(true)
+    end
+
+    it "does not create any subscription thresholds" do
       task.invoke(organization.id)
 
       expect(subscription.reload.usage_thresholds).to be_empty
+    end
+  end
+
+  context "when child plan has no usage thresholds and parent also has none" do
+    before { subscription }
+
+    it "does not set progressive_billing_disabled" do
+      expect { task.invoke(organization.id) }.to output(/Migrated 0 subscription/).to_stdout
+
+      expect(subscription.reload.progressive_billing_disabled).to be(false)
     end
   end
 
@@ -178,8 +194,10 @@ RSpec.describe "migrations:migrate_usage_thresholds" do # rubocop:disable RSpec/
       subscription
     end
 
-    it "does not process already soft-deleted thresholds" do
-      expect { task.invoke(organization.id) }.to output(/Done. Migrated 0 subscription./).to_stdout
+    it "sets progressive_billing_disabled since child plan has no visible thresholds" do
+      expect { task.invoke(organization.id) }.to output(/Done. Migrated 1 subscription./).to_stdout
+
+      expect(subscription.reload.progressive_billing_disabled).to be(true)
     end
   end
 
@@ -261,6 +279,56 @@ RSpec.describe "migrations:migrate_usage_thresholds" do # rubocop:disable RSpec/
       expect(subscription.reload.usage_thresholds).to be_empty
       expect(subscription2.reload.usage_thresholds.size).to eq(1)
       expect(subscription2.usage_thresholds.first.amount_cents).to eq(3000)
+    end
+  end
+
+  context "with multiple child plans where one has no thresholds" do
+    let(:child_plan2) { create(:plan, organization:, parent: parent_plan) }
+    let(:child_plan3) { create(:plan, organization:, parent: parent_plan) }
+    let(:customer2) { create(:customer, organization:) }
+    let(:customer3) { create(:customer, organization:) }
+    let!(:subscription2) { create(:subscription, organization:, plan: child_plan2, customer: customer2) }
+    let!(:subscription3) { create(:subscription, organization:, plan: child_plan3, customer: customer3) }
+
+    before do
+      create(:usage_threshold, plan: parent_plan, organization:, amount_cents: 1000, recurring: false)
+      # child_plan has matching thresholds
+      create(:usage_threshold, plan: child_plan, organization:, amount_cents: 1000, recurring: false)
+      # child_plan2 has different thresholds
+      create(:usage_threshold, plan: child_plan2, organization:, amount_cents: 2000, recurring: false)
+      # child_plan3 has NO thresholds
+      subscription
+    end
+
+    it "handles each subscription appropriately" do
+      expect { task.invoke(organization.id) }.to output(/Done/).to_stdout
+
+      # child_plan matching → soft-deleted, no subscription thresholds
+      expect(child_plan.usage_thresholds).to be_empty
+      expect(subscription.reload.usage_thresholds).to be_empty
+      expect(subscription.progressive_billing_disabled).to be(false)
+
+      # child_plan2 differing → moved to subscription, soft-deleted
+      expect(child_plan2.usage_thresholds).to be_empty
+      expect(subscription2.reload.usage_thresholds.size).to eq(1)
+      expect(subscription2.progressive_billing_disabled).to be(false)
+
+      # child_plan3 empty → progressive_billing_disabled set
+      expect(subscription3.reload.usage_thresholds).to be_empty
+      expect(subscription3.progressive_billing_disabled).to be(true)
+    end
+  end
+
+  context "when subscription already has progressive_billing_disabled set" do
+    before do
+      create(:usage_threshold, plan: parent_plan, organization:, amount_cents: 1000, recurring: false)
+      subscription.update!(progressive_billing_disabled: true)
+    end
+
+    it "keeps progressive_billing_disabled as true" do
+      expect { task.invoke(organization.id) }.to output(/Migrated 1 subscription/).to_stdout
+
+      expect(subscription.reload.progressive_billing_disabled).to be(true)
     end
   end
 end
