@@ -22,6 +22,7 @@ module Types
       argument :charges, [Types::Charges::Input]
       argument :fixed_charges, [Types::FixedCharges::Input], required: false
       argument :minimum_commitment, Types::Commitments::Input, required: false
+
       argument :usage_thresholds, [Types::UsageThresholds::Input], required: false
 
       argument :entitlements, [Types::Entitlement::EntitlementInput], required: false

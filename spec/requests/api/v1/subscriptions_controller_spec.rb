@@ -47,11 +47,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           minimum_commitment: {
             invoice_display_name: commitment_invoice_display_name,
             amount_cents: commitment_amount_cents
-          },
-          usage_thresholds: [
-            amount_cents: override_amount_cents,
-            threshold_display_name: override_display_name
-          ]
+          }
         }
       }
     end
@@ -99,24 +95,11 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           privileges: [],
           overrides: {}
         })
-        expect(json[:subscription][:applicable_usage_thresholds]).to contain_exactly(
-          {
-            amount_cents: override_amount_cents,
-            threshold_display_name: override_display_name,
-            recurring: false
-          }
-        )
         expect(json[:subscription][:plan]).to include(
           amount_cents: plan_amount_cents_override,
           name: "overridden name",
           description: "desc"
         )
-        expect(json[:subscription][:plan][:usage_thresholds].count).to eq 1
-        expect(json[:subscription][:plan][:applicable_usage_thresholds]).to contain_exactly({
-          amount_cents: plan_usage_threshold.amount_cents,
-          threshold_display_name: plan_usage_threshold.threshold_display_name,
-          recurring: false
-        })
         expect(json[:subscription][:plan][:minimum_commitment]).to include(
           invoice_display_name: commitment_invoice_display_name,
           amount_cents: commitment_amount_cents
@@ -128,6 +111,103 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
     it "doesn't create a new customer" do
       expect { subject }.not_to change(Customer, :count)
+    end
+
+    context "when usage_thresholds is part of plan_override (legacy)" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          billing_time: "anniversary",
+          subscription_at:,
+          ending_at:,
+          plan_overrides: {
+            usage_thresholds: [
+              amount_cents: override_amount_cents,
+              threshold_display_name: override_display_name
+            ]
+          }
+        }
+      end
+
+      it "attaches the usage_thresholds to the child plan" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+
+        expect(plan.usage_thresholds).to contain_exactly(plan_usage_threshold)
+        subscription = Subscription.find json[:subscription][:lago_id]
+        expect(subscription.plan.is_child?).to be true
+        expect(subscription.plan.usage_thresholds.sole.amount_cents).to eq override_amount_cents
+        expect(subscription.usage_thresholds).to be_empty
+
+        expect(json[:subscription][:applicable_usage_thresholds]).to contain_exactly(
+          {
+            amount_cents: override_amount_cents,
+            threshold_display_name: override_display_name,
+            recurring: false
+          }
+        )
+        expect(json[:subscription][:plan][:usage_thresholds]).to contain_exactly(
+          hash_including(
+            amount_cents: override_amount_cents,
+            threshold_display_name: override_display_name,
+            recurring: false
+          )
+        )
+        expect(json[:subscription][:plan][:applicable_usage_thresholds]).to contain_exactly({
+          amount_cents: plan_usage_threshold.amount_cents,
+          threshold_display_name: plan_usage_threshold.threshold_display_name,
+          recurring: false
+        })
+      end
+    end
+
+    context "when usage_thresholds is part of subscription" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          billing_time: "anniversary",
+          subscription_at:,
+          ending_at:,
+          usage_thresholds: [
+            amount_cents: override_amount_cents,
+            threshold_display_name: override_display_name
+          ],
+          plan_overrides: {
+            amount_cents: 99_99
+          }
+        }
+      end
+
+      it "attaches the usage_thresholds to the subscription" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+
+        expect(plan.usage_thresholds).to contain_exactly(plan_usage_threshold)
+        subscription = Subscription.find json[:subscription][:lago_id]
+        expect(subscription.plan.is_child?).to be true
+        expect(subscription.plan.usage_thresholds).to be_empty
+        expect(subscription.usage_thresholds.sole.amount_cents).to eq override_amount_cents
+
+        expect(json[:subscription][:applicable_usage_thresholds]).to contain_exactly(
+          {
+            amount_cents: override_amount_cents,
+            threshold_display_name: override_display_name,
+            recurring: false
+          }
+        )
+        expect(json[:subscription][:plan][:usage_thresholds]).to be_empty
+        expect(json[:subscription][:plan][:applicable_usage_thresholds]).to contain_exactly({
+          amount_cents: plan_usage_threshold.amount_cents,
+          threshold_display_name: plan_usage_threshold.threshold_display_name,
+          recurring: false
+        })
+      end
     end
 
     context "with external_customer_id, external_id and name as integer" do
@@ -510,6 +590,27 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         end
       end
     end
+
+    context "with progressive_billing_disabled" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          progressive_billing_disabled: true
+        }
+      end
+
+      it "creates a subscription with progressive_billing_disabled set to true" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:progressive_billing_disabled]).to be(true)
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.progressive_billing_disabled).to be(true)
+      end
+    end
   end
 
   describe "DELETE /api/v1/subscriptions/:external_id" do
@@ -725,12 +826,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
             invoice_display_name: commitment_invoice_display_name,
             amount_cents: commitment_amount_cents,
             tax_codes: [tax.code]
-          },
-          usage_thresholds: [
-            id: usage_threshold.id,
-            amount_cents: override_amount_cents,
-            threshold_display_name: override_display_name
-          ]
+          }
         }
       }
     end
@@ -742,7 +838,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
     let(:applied_pricing_unit) { create(:applied_pricing_unit, pricing_unitable: package_charge, pricing_unit:, organization:) }
     let(:tax) { create(:tax, organization:) }
     let(:override_amount_cents) { 999 }
-    let(:override_display_name) { "Overriden Threshold 1" }
+    let(:override_display_name) { "Overridden Threshold 1" }
     let(:usage_threshold) { create(:usage_threshold, plan:, created_at: 1.day.ago) }
 
     before do
@@ -762,12 +858,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       expect(subscription).to include(
         lago_id: Regex::UUID,
         name: "subscription name new",
-        subscription_at: "2022-09-05T12:23:12Z",
-        applicable_usage_thresholds: [{
-          threshold_display_name: override_display_name,
-          amount_cents: override_amount_cents,
-          recurring: usage_threshold.recurring
-        }]
+        subscription_at: "2022-09-05T12:23:12Z"
       )
 
       expect(subscription[:payment_method][:payment_method_type]).to eq("provider")
@@ -793,15 +884,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         parent_id: plan.id,
         pending_deletion: false,
         taxes: [],
-        usage_thresholds: [{
-          lago_id: Regex::UUID,
-          threshold_display_name: override_display_name,
-          amount_cents: override_amount_cents,
-          recurring: usage_threshold.recurring,
-          # NOTE: Notice that even if usage_threshold.id is passed, a new threshold is created
-          created_at: Regex::ISO8601_DATETIME,
-          updated_at: Regex::ISO8601_DATETIME
-        }]
+        usage_thresholds: []
       )
       expect(plan_json[:applicable_usage_thresholds]).to contain_exactly({
         threshold_display_name: usage_threshold.threshold_display_name,
@@ -886,28 +969,123 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       )
     end
 
-    context "when progressive billing premium integration is present", :premium do
-      before do
-        organization.update!(premium_integrations: ["progressive_billing"])
+    context "when updating usage_thresholds" do
+      let(:usage_thresholds) do
+        [{
+          amount_cents: override_amount_cents,
+          threshold_display_name: override_display_name
+        }]
       end
 
-      it "updates subscription with an overriden plan with usage thresholds" do
-        subject
+      context "when usage_thresholds are part of plan_overrides (legacy)" do
+        let(:update_params) do
+          {
+            name: "subscription name new",
+            plan_overrides: {
+              usage_thresholds:
+            }
+          }
+        end
 
-        expect(response).to have_http_status(:success)
+        it "attaches the usage thresholds to the child plan" do
+          subject
 
-        expect(json[:subscription][:plan][:usage_thresholds]).to match_array(
-          [
+          expect(response).to have_http_status(:success)
+
+          subscription = Subscription.find_by(id: json[:subscription][:lago_id])
+          expect(subscription.plan.is_child?).to be true
+          expect(subscription.plan.usage_thresholds.pluck(:amount_cents, :threshold_display_name)).to eq([[override_amount_cents, override_display_name]])
+          expect(subscription.plan.parent.usage_thresholds.count).to eq 2
+          expect(subscription.usage_thresholds).to be_empty
+
+          expect(json[:subscription][:plan][:usage_thresholds]).to contain_exactly(
             {
               lago_id: Regex::UUID,
-              threshold_display_name: "Overriden Threshold 1",
+              threshold_display_name: "Overridden Threshold 1",
               amount_cents: 999,
               recurring: false,
               created_at: Regex::ISO8601_DATETIME,
               updated_at: Regex::ISO8601_DATETIME
             }
-          ]
-        )
+          )
+          expect(json[:subscription][:plan][:applicable_usage_thresholds].count).to eq 2
+          expect(json[:subscription][:applicable_usage_thresholds]).to eq(json[:subscription][:plan][:usage_thresholds].map { |t| t.slice(:threshold_display_name, :amount_cents, :recurring) })
+        end
+      end
+
+      context "when usage_thresholds are part of subscription and has plan_overrides" do
+        let(:update_params) do
+          {
+            name: "subscription name new",
+            usage_thresholds:,
+            plan_overrides: {
+              name: "rename plan to create override"
+            }
+          }
+        end
+
+        it "attaches the usage thresholds to the child plan" do
+          subject
+
+          expect(response).to have_http_status(:success)
+
+          subscription = Subscription.find_by(id: json[:subscription][:lago_id])
+          expect(subscription.plan.is_child?).to be true
+          expect(subscription.plan.usage_thresholds).to be_empty
+          expect(subscription.plan.parent.usage_thresholds.count).to eq 2
+          expect(subscription.usage_thresholds.pluck(:amount_cents, :threshold_display_name)).to eq([[override_amount_cents, override_display_name]])
+
+          expect(json[:subscription][:plan][:usage_thresholds]).to be_empty
+          expect(json[:subscription][:plan][:applicable_usage_thresholds].count).to eq 2
+          expect(json[:subscription][:applicable_usage_thresholds]).to contain_exactly(
+            threshold_display_name: "Overridden Threshold 1",
+            amount_cents: 999,
+            recurring: false
+          )
+        end
+      end
+
+      context "when usage_thresholds are part of subscription without any plan_overrides" do
+        let(:update_params) do
+          {
+            name: "subscription name new",
+            usage_thresholds:
+          }
+        end
+
+        it "attaches the usage thresholds to the child plan" do
+          subject
+
+          expect(response).to have_http_status(:success)
+
+          subscription = Subscription.find_by(id: json[:subscription][:lago_id])
+          expect(subscription.plan.is_parent?).to be true
+          expect(subscription.plan.usage_thresholds.count).to eq 2
+          expect(subscription.usage_thresholds.pluck(:amount_cents, :threshold_display_name)).to eq([[override_amount_cents, override_display_name]])
+
+          expect(json[:subscription][:plan][:usage_thresholds].count).to eq 2
+          expect(json[:subscription][:plan][:applicable_usage_thresholds].count).to eq 2
+          expect(json[:subscription][:applicable_usage_thresholds]).to contain_exactly(
+            threshold_display_name: "Overridden Threshold 1",
+            amount_cents: 999,
+            recurring: false
+          )
+        end
+      end
+
+      context "when only usage_thresholds are passed without any other parameters" do
+        let(:update_params) { {usage_thresholds:} }
+
+        it "updates the usage thresholds without requiring other parameters" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:subscription][:applicable_usage_thresholds]).to contain_exactly(
+            threshold_display_name: override_display_name,
+            amount_cents: override_amount_cents,
+            recurring: false
+          )
+        end
       end
     end
 
@@ -993,7 +1171,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         other_billable_metric
       end
 
-      context "when progressive billing premium integration is present", :premium do
+      context "when progressive billing premium integration is present" do
         before do
           organization.update!(premium_integrations: ["progressive_billing"])
         end
@@ -1142,8 +1320,10 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           expect(usage_thresholds.length).to eq(2)
           expect(usage_thresholds.first).to match(
             {
-              lago_id: overriden_usage_threshold.id,
-              threshold_display_name: "Threshold 1",
+              # previous threshold was removed and a new one created
+              # so ID as changed and threshold was lost
+              lago_id: Regex::UUID,
+              threshold_display_name: nil,
               amount_cents: 999,
               recurring: false,
               created_at: Regex::ISO8601_DATETIME,
@@ -1227,6 +1407,21 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
             expect(subscription.applied_invoice_custom_sections.pluck(:invoice_custom_section_id)).to include(section_1.id)
           end
         end
+      end
+    end
+
+    context "when updating progressive_billing_disabled" do
+      let(:update_params) { {progressive_billing_disabled: true} }
+      let(:subscription) { create(:subscription, customer:, plan:) }
+
+      it "updates progressive_billing_disabled" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:progressive_billing_disabled]).to be(true)
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.progressive_billing_disabled).to be(true)
       end
     end
 

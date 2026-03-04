@@ -165,6 +165,28 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
+    context "when progressive_billing_disabled is passed" do
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          progressive_billing_disabled: true
+        }
+      end
+
+      it "creates a subscription with progressive_billing_disabled set to true" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.progressive_billing_disabled).to be(true)
+      end
+    end
+
     context "when customer is invalid in an api context" do
       let(:customer) do
         build(:customer, organization:, currency: "EUR", external_id: nil)
@@ -225,6 +247,84 @@ RSpec.describe Subscriptions::CreateService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:billing_time]).to eq(["value_is_mandatory"])
+        end
+      end
+    end
+
+    context "when both usage_thresholds and plan_overrides.usage_thresholds are present" do
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          usage_thresholds: [{threshold_display_name: "Threshold 1"}],
+          plan_overrides: {
+            usage_thresholds: [{threshold_display_name: "Override Threshold"}]
+          }
+        }
+      end
+
+      it "returns a validation error", :premium do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:"plan_overrides.usage_thresholds"]).to eq(["incompatible_params"])
+        expect(result.error.messages[:usage_thresholds]).to eq(["incompatible_params"])
+      end
+    end
+
+    context "with valid usage_thresholds", :premium do
+      let(:usage_thresholds) { [{threshold_display_name: "Threshold 1"}] }
+      let(:base_params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:
+        }
+      end
+
+      context "when usage_thresholds is part of subscription params" do
+        let(:params) do
+          base_params.merge({
+            usage_thresholds:
+          })
+        end
+
+        it "returns a validation error" do
+          allow(Subscriptions::UpdateUsageThresholdsService).to receive(:call).and_return(BaseResult.new)
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(Subscriptions::UpdateUsageThresholdsService).to have_received(:call).with(
+            subscription: result.subscription, usage_thresholds_params: usage_thresholds, partial: false
+          )
+        end
+      end
+
+      context "when usage_thresholds is part of plan_overrides params" do
+        let(:params) do
+          base_params.merge({
+            plan_overrides: {
+              usage_thresholds:
+            }
+          })
+        end
+
+        it "returns a validation error" do
+          allow(Subscriptions::UpdateUsageThresholdsService).to receive(:call).and_return(BaseResult.new)
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(Subscriptions::UpdateUsageThresholdsService).not_to have_received(:call)
         end
       end
     end
