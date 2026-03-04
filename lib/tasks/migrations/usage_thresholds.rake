@@ -28,7 +28,14 @@ namespace :migrations do
       subscriptions.find_each do |subscription|
         child_plan = subscription.plan
         child_thresholds = child_plan.usage_thresholds.to_a
-        next if child_thresholds.empty?
+
+        if child_thresholds.empty?
+          if parent_signature.present?
+            subscription.update!(progressive_billing_disabled: true)
+            total_sub_migrated += 1
+          end
+          next
+        end
 
         child_signature = threshold_signature.call(child_thresholds)
 
