@@ -5,7 +5,9 @@ module Types
     class Object < Types::BaseObject
       graphql_name "WebhookEndpoint"
 
+      field :event_types, [Types::WebhookEndpoints::EventTypeEnum], null: true
       field :id, ID, null: false
+      field :name, String, null: true
       field :organization, Types::Organizations::OrganizationType
       field :signature_algo, Types::WebhookEndpoints::SignatureAlgoEnum
       field :webhook_url, String, null: false

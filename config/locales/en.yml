@@ -41,12 +41,8 @@ en:
         less_than_or_equal_to: value_is_out_of_range
         missing_graduated_ranges: missing_graduated_ranges
         missing_volume_ranges: missing_volume_ranges
-        models:
-          api_key:
-            attributes:
-              permissions:
-                forbidden_key: 'contains forbidden keys: %{keys}'
         modification_not_allowed: modification_not_allowed
+        must_be_array: must_be_array
         must_be_greater_than_or_equal_min: must_be_greater_than_or_equal_min
         must_be_true_unless_pay_in_advance: must_be_true_unless_pay_in_advance
         not_compatible_with_aggregation_type: not_compatible_with_aggregation_type
@@ -61,6 +57,15 @@ en:
         unsupported_value: unsupported_value
         url_invalid: url_is_invalid
         value_already_exist: value_already_exist
+      models:
+        api_key:
+          attributes:
+            permissions:
+              forbidden_keys: 'contains forbidden keys: %{keys}'
+        webhook_endpoint:
+          attributes:
+            event_types:
+              invalid_types: 'contains invalid types: %{invalid_types}'
   date:
     formats:
       default: "%b %d, %Y"
