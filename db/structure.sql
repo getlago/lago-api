@@ -1357,13 +1357,13 @@ DECLARE
 BEGIN
   IF NEW.sequential_id IS NULL THEN
     -- Timeout matches the Ruby advisory lock timeout_seconds: 10
-    SET LOCAL lock_timeout = '10s';
+    SET LOCAL statement_timeout = '10s';
     -- Acquire a transaction-level advisory lock per organization to prevent races
     PERFORM pg_advisory_xact_lock(hashtext(NEW.organization_id::text));
 
     SELECT COALESCE(MAX(sequential_id), 0) + 1
     INTO next_id
-    FROM customers
+    FROM public.customers
     WHERE organization_id = NEW.organization_id;
 
     NEW.sequential_id := next_id;
@@ -1371,10 +1371,10 @@ BEGIN
 
   IF NEW.slug IS NULL THEN
     SELECT document_number_prefix INTO org_prefix
-    FROM organizations
+    FROM public.organizations
     WHERE id = NEW.organization_id;
 
-    NEW.slug := org_prefix || '-' || LPAD(NEW.sequential_id::text, GREATEST(3, LENGTH(NEW.sequential_id::text)), '0');
+    NEW.slug := COALESCE(org_prefix, '') || '-' || LPAD(NEW.sequential_id::text, GREATEST(3, LENGTH(NEW.sequential_id::text)), '0');
   END IF;
 
   RETURN NEW;

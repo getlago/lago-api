@@ -4,7 +4,7 @@ class CreateCustomerSequentialIdTrigger < ActiveRecord::Migration[8.0]
   def up
     safety_assured do
       execute <<~SQL
-        CREATE OR REPLACE FUNCTION set_customer_sequential_id()
+        CREATE OR REPLACE FUNCTION public.set_customer_sequential_id()
         RETURNS trigger AS $$
         DECLARE
           next_id bigint;
@@ -12,13 +12,13 @@ class CreateCustomerSequentialIdTrigger < ActiveRecord::Migration[8.0]
         BEGIN
           IF NEW.sequential_id IS NULL THEN
             -- Timeout matches the Ruby advisory lock timeout_seconds: 10
-            SET LOCAL lock_timeout = '10s';
+            SET LOCAL statement_timeout = '10s';
             -- Acquire a transaction-level advisory lock per organization to prevent races
             PERFORM pg_advisory_xact_lock(hashtext(NEW.organization_id::text));
 
             SELECT COALESCE(MAX(sequential_id), 0) + 1
             INTO next_id
-            FROM customers
+            FROM public.customers
             WHERE organization_id = NEW.organization_id;
 
             NEW.sequential_id := next_id;
@@ -26,10 +26,10 @@ class CreateCustomerSequentialIdTrigger < ActiveRecord::Migration[8.0]
 
           IF NEW.slug IS NULL THEN
             SELECT document_number_prefix INTO org_prefix
-            FROM organizations
+            FROM public.organizations
             WHERE id = NEW.organization_id;
 
-            NEW.slug := org_prefix || '-' || LPAD(NEW.sequential_id::text, GREATEST(3, LENGTH(NEW.sequential_id::text)), '0');
+            NEW.slug := COALESCE(org_prefix, '') || '-' || LPAD(NEW.sequential_id::text, GREATEST(3, LENGTH(NEW.sequential_id::text)), '0');
           END IF;
 
           RETURN NEW;
@@ -38,18 +38,19 @@ class CreateCustomerSequentialIdTrigger < ActiveRecord::Migration[8.0]
       SQL
 
       execute <<~SQL
+        DROP TRIGGER IF EXISTS before_customer_insert ON public.customers;
         CREATE TRIGGER before_customer_insert
-        BEFORE INSERT ON customers
+        BEFORE INSERT ON public.customers
         FOR EACH ROW
-        EXECUTE FUNCTION set_customer_sequential_id();
+        EXECUTE FUNCTION public.set_customer_sequential_id();
       SQL
     end
   end
 
   def down
     safety_assured do
-      execute "DROP TRIGGER IF EXISTS before_customer_insert ON customers;"
-      execute "DROP FUNCTION IF EXISTS set_customer_sequential_id();"
+      execute "DROP TRIGGER IF EXISTS before_customer_insert ON public.customers;"
+      execute "DROP FUNCTION IF EXISTS public.set_customer_sequential_id();"
     end
   end
 end

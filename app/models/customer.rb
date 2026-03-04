@@ -160,6 +160,11 @@ class Customer < ApplicationRecord
     []
   end
 
+  # these values are generated directly in db and this method is needed to load them into saved record
+  def self._returning_columns_for_insert(connection)
+    super + %w[sequential_id slug]
+  end
+
   def display_name(prefer_legal_name: true)
     names = prefer_legal_name ? [legal_name.presence || name.presence] : [name.presence]
 
