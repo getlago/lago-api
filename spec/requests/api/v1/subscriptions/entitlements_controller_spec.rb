@@ -87,20 +87,38 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController do
         expect(json[:entitlements].first[:overrides][:max]).to eq(100)
       end
 
-      it "returns entitlements for pending subscription when status param is pending" do
-        get_with_token organization, "/api/v1/subscriptions/#{external_id}/entitlements", {status: "pending"}
+      it "returns entitlements for pending subscription when subscription_status param is pending" do
+        get_with_token organization, "/api/v1/subscriptions/#{external_id}/entitlements", {subscription_status: "pending"}
 
         expect(response).to have_http_status(:success)
         expect(json[:entitlements]).to be_present
         expect(json[:entitlements].first[:overrides][:max]).to eq(200)
       end
 
-      it "returns entitlements for terminated subscription when status param is terminated" do
-        get_with_token organization, "/api/v1/subscriptions/#{external_id}/entitlements", {status: "terminated"}
+      it "returns entitlements for terminated subscription when subscription_status param is terminated" do
+        get_with_token organization, "/api/v1/subscriptions/#{external_id}/entitlements", {subscription_status: "terminated"}
 
         expect(response).to have_http_status(:success)
         expect(json[:entitlements]).to be_present
         expect(json[:entitlements].first[:overrides][:max]).to eq(300)
+      end
+
+      context "when using old status param" do
+        it "returns entitlements for pending subscription when status param is pending" do
+          get_with_token organization, "/api/v1/subscriptions/#{external_id}/entitlements", {status: "pending"}
+
+          expect(response).to have_http_status(:success)
+          expect(json[:entitlements]).to be_present
+          expect(json[:entitlements].first[:overrides][:max]).to eq(200)
+        end
+
+        it "returns entitlements for terminated subscription when status param is terminated" do
+          get_with_token organization, "/api/v1/subscriptions/#{external_id}/entitlements", {status: "terminated"}
+
+          expect(response).to have_http_status(:success)
+          expect(json[:entitlements]).to be_present
+          expect(json[:entitlements].first[:overrides][:max]).to eq(300)
+        end
       end
     end
   end
