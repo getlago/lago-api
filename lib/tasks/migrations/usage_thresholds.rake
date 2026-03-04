@@ -20,6 +20,7 @@ namespace :migrations do
       subscriptions = organization.subscriptions
         .joins(:plan)
         .where(plans: {parent_id: parent_plan.id})
+        .where(status: [:pending, :active])
         .includes(plan: :usage_thresholds)
 
       puts "#{subscriptions.count} subscriptions to migrate"
