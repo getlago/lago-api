@@ -115,7 +115,6 @@ RSpec.describe Customers::EuAutoTaxesService do
           expect(pending_check.attempts_count).to eq(0)
         end
       end
-
     end
 
     context "with non B2B (no TIN)" do
