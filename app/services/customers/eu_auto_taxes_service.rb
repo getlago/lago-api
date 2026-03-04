@@ -91,16 +91,14 @@ module Customers
     end
 
     def territory_tax_code(country_code, tax_exception)
-      if b2c_in_b2b_only_territory?(country_code)
-        "lago_eu_#{country_code.downcase}_standard"
-      else
-        exception_code = tax_exception["name"].parameterize.underscore
-        "lago_eu_#{country_code.downcase}_exception_#{exception_code}"
-      end
+      return if B2B_ONLY_TERRITORY_COUNTRIES.include?(country_code) && !is_b2b?
+
+      exception_code = tax_exception["name"].parameterize.underscore
+      "lago_eu_#{country_code.downcase}_exception_#{exception_code}"
     end
 
-    def b2c_in_b2b_only_territory?(country_code)
-      B2B_ONLY_TERRITORY_COUNTRIES.include?(country_code) && customer.tax_identification_number.blank?
+    def is_b2b?
+      customer.tax_identification_number.present? && is_valid_vat_number?(customer.tax_identification_number)
     end
 
     def check_vies
