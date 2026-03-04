@@ -11,11 +11,8 @@ namespace :migrations do
     threshold_signature = ->(thresholds) { thresholds.map { |t| [t.amount_cents, t.recurring] }.sort }
 
     parent_plans = organization.plans.parents
-      .joins(:entitlements)
-      .distinct
 
-    total_deleted = 0
-    total_moved = 0
+    total_sub_migrated = 0
 
     parent_plans.find_each do |parent_plan|
       parent_signature = threshold_signature.call(parent_plan.usage_thresholds)
@@ -25,6 +22,9 @@ namespace :migrations do
         .where(plans: {parent_id: parent_plan.id})
         .includes(plan: :usage_thresholds)
 
+      puts "#{subscriptions.count} subscriptions to migrate"
+      puts "\t Parent signature: #{parent_signature.to_json}"
+
       subscriptions.find_each do |subscription|
         child_plan = subscription.plan
         child_thresholds = child_plan.usage_thresholds.to_a
@@ -33,30 +33,30 @@ namespace :migrations do
         child_signature = threshold_signature.call(child_thresholds)
 
         if child_signature == parent_signature
-          deleted_count = child_plan.usage_thresholds.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-          total_deleted += deleted_count
-          puts "Deleted #{deleted_count} redundant thresholds from child plan #{child_plan.id}"
+          child_plan.usage_thresholds.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
         else
-          if subscription.usage_thresholds.none?
-            child_thresholds.each do |threshold|
-              UsageThreshold.create!(
-                organization:,
-                subscription:,
-                amount_cents: threshold.amount_cents,
-                recurring: threshold.recurring,
-                threshold_display_name: threshold.threshold_display_name
-              )
+          ActiveRecord::Base.transaction do
+            if subscription.usage_thresholds.none?
+              child_thresholds.each do |threshold|
+                UsageThreshold.create!(
+                  organization:,
+                  subscription:,
+                  amount_cents: threshold.amount_cents,
+                  recurring: threshold.recurring,
+                  threshold_display_name: threshold.threshold_display_name
+                )
+              end
             end
-            total_moved += child_thresholds.size
-          end
 
-          deleted_count = child_plan.usage_thresholds.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-          total_deleted += deleted_count
-          puts "Moved thresholds from child plan #{child_plan.id} to subscription #{subscription.id}"
+            child_plan.usage_thresholds.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+          end
         end
+
+        total_sub_migrated += 1
       end
     end
 
-    puts "Done. Deleted #{total_deleted} child plan thresholds, created #{total_moved} subscription thresholds."
+    puts
+    puts "Done. Migrated #{total_sub_migrated} subscription."
   end
 end

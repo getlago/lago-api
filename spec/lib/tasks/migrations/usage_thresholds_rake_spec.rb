@@ -15,7 +15,6 @@ RSpec.describe "migrations:migrate_usage_thresholds" do # rubocop:disable RSpec/
   let(:subscription) { create(:subscription, organization:, plan: child_plan, customer:) }
 
   before do
-    create(:entitlement, feature:, plan: parent_plan, organization:)
     Rake.application.rake_require("tasks/migrations/usage_thresholds")
     Rake::Task.define_task(:environment)
     task.reenable
@@ -46,7 +45,7 @@ RSpec.describe "migrations:migrate_usage_thresholds" do # rubocop:disable RSpec/
     end
 
     it "does not create any subscription thresholds" do
-      expect { task.invoke(organization.id) }.to output(/created 0 subscription thresholds/).to_stdout
+      expect { task.invoke(organization.id) }.to output(/Migrated 1 subscription/).to_stdout
 
       expect(subscription.reload.usage_thresholds).to be_empty
     end
@@ -92,8 +91,7 @@ RSpec.describe "migrations:migrate_usage_thresholds" do # rubocop:disable RSpec/
     end
 
     it "soft-deletes all child plan thresholds" do
-      expect { task.invoke(organization.id) }.to output(/Deleted 2 redundant thresholds/).to_stdout
-
+      task.invoke(organization.id)
       expect(child_plan.usage_thresholds.unscoped.where.not(deleted_at: nil).count).to eq(2)
     end
   end
@@ -123,7 +121,7 @@ RSpec.describe "migrations:migrate_usage_thresholds" do # rubocop:disable RSpec/
     end
 
     it "does nothing for that child plan" do
-      expect { task.invoke(organization.id) }.to output(/Deleted 0 child plan thresholds, created 0 subscription thresholds/).to_stdout
+      task.invoke(organization.id)
 
       expect(subscription.reload.usage_thresholds).to be_empty
     end
@@ -172,21 +170,6 @@ RSpec.describe "migrations:migrate_usage_thresholds" do # rubocop:disable RSpec/
     end
   end
 
-  context "when parent plan has no entitlements" do
-    let(:plan_without_entitlements) { create(:plan, organization:) }
-    let(:child_of_no_entitlements) { create(:plan, organization:, parent: plan_without_entitlements) }
-
-    before do
-      create(:usage_threshold, plan: plan_without_entitlements, organization:, amount_cents: 1000, recurring: false)
-      create(:usage_threshold, plan: child_of_no_entitlements, organization:, amount_cents: 2000, recurring: false)
-      create(:subscription, organization:, plan: child_of_no_entitlements)
-    end
-
-    it "does not process plans without entitlements" do
-      expect { task.invoke(organization.id) }.to output(/Deleted 0 child plan thresholds, created 0 subscription thresholds/).to_stdout
-    end
-  end
-
   context "when thresholds on child plan are already soft-deleted" do
     before do
       create(:usage_threshold, plan: parent_plan, organization:, amount_cents: 1000, recurring: false)
@@ -196,7 +179,7 @@ RSpec.describe "migrations:migrate_usage_thresholds" do # rubocop:disable RSpec/
     end
 
     it "does not process already soft-deleted thresholds" do
-      expect { task.invoke(organization.id) }.to output(/Deleted 0 child plan thresholds, created 0 subscription thresholds/).to_stdout
+      expect { task.invoke(organization.id) }.to output(/Done. Migrated 0 subscription./).to_stdout
     end
   end
 
@@ -211,7 +194,6 @@ RSpec.describe "migrations:migrate_usage_thresholds" do # rubocop:disable RSpec/
     end
 
     before do
-      create(:entitlement, feature: other_feature, plan: other_parent_plan, organization: other_organization)
       create(:usage_threshold, plan: other_parent_plan, organization: other_organization, amount_cents: 1000, recurring: false)
       create(:subscription, organization: other_organization, plan: other_child_plan)
     end
