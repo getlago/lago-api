@@ -45,7 +45,7 @@ class WebhookEndpoint < ApplicationRecord
 
     # since AR casts non-array values to [] we need to check the raw value
     if event_types.is_a?(Array) && event_types.blank? && !event_types_before_type_cast.is_a?(Array)
-      errors.add(:event_types, :invalid_format)
+      errors.add(:event_types, :must_be_array)
     end
 
     invalid_types = event_types - WEBHOOK_EVENT_TYPES

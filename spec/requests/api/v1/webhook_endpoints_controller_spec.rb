@@ -52,7 +52,7 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
           expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details]).to include(
-            event_types: ["Must be an array"]
+            event_types: ["must_be_array"]
           )
         end
       end
@@ -70,7 +70,7 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
           expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details]).to include(
-            event_types: ["Contains invalid types: [\"wrong.type\"]"]
+            event_types: ["contains invalid types: [\"wrong.type\"]"]
           )
         end
       end
@@ -275,7 +275,7 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
           expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details]).to include(
-            event_types: ["Must be an array"]
+            event_types: ["must_be_array"]
           )
         end
       end
@@ -288,7 +288,7 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
           expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details]).to include(
-            event_types: ["Contains invalid types: [\"wrong.type\"]"]
+            event_types: ["contains invalid types: [\"wrong.type\"]"]
           )
         end
       end
