@@ -701,6 +701,7 @@ end
 #
 # Indexes
 #
+#  idx_invoices_organization_id_status                             (organization_id,status)
 #  idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655  (billing_entity_id,billing_entity_sequential_id DESC)
 #  idx_on_organization_id_organization_sequential_id_2387146f54    (organization_id,organization_sequential_id DESC)
 #  index_invoices_on_billing_entity_id                             (billing_entity_id)
