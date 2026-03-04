@@ -40,6 +40,10 @@ module Customers
       def eu_country_exceptions(country_code:)
         @eu_country_exceptions ||= LagoEuVat::Rate.country_rates(country_code:)[:exceptions]
       end
+
+      def is_valid_vat_number?(vat_number)
+        ::Valvat::Syntax.validate(vat_number)
+      end
     end
   end
 end

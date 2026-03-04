@@ -79,10 +79,6 @@ module Customers
       }
     end
 
-    def is_valid_vat_number?(vat_number)
-      ::Valvat::Syntax.validate(vat_number)
-    end
-
     def create_or_update_pending_vies_check(exception)
       pending_check = PendingViesCheck.find_or_initialize_by(customer:)
       pending_check.assign_attributes(
