@@ -608,6 +608,7 @@ DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id;
 DROP INDEX IF EXISTS public.index_customers_on_sequential_id;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_and_sequential_id;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id;
+DROP INDEX IF EXISTS public.index_customers_on_external_id_only;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id;
 DROP INDEX IF EXISTS public.index_customers_on_deleted_at;
@@ -7096,6 +7097,13 @@ CREATE UNIQUE INDEX index_customers_on_external_id_and_organization_id ON public
 
 
 --
+-- Name: index_customers_on_external_id_only; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_external_id_only ON public.customers USING btree (external_id) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_customers_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11472,6 +11480,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260302163856'),
 ('20260220131101'),
 ('20260219102644'),
 ('20260219083335'),
