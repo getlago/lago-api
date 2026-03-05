@@ -6,6 +6,7 @@ class User < ApplicationRecord
   has_secure_password
 
   has_many :password_resets
+  has_many :user_devices
 
   has_many :memberships
   has_many :organizations, through: :memberships, class_name: "Organization"
