@@ -3247,8 +3247,10 @@ input CreateSubscriptionInput {
   paymentMethod: PaymentMethodReferenceInput
   planId: ID!
   planOverrides: PlanOverridesInput
+  progressiveBillingDisabled: Boolean
   subscriptionAt: ISO8601DateTime
   subscriptionId: ID
+  usageThresholds: [UsageThresholdInput!]
 }
 
 input CreateTransactionMetadataInput {
@@ -5538,6 +5540,22 @@ type Event {
   transactionId: String
 }
 
+enum EventCategoryEnum {
+  ALERTS
+  CREDIT_NOTES
+  CUSTOMERS
+  DUNNING_CAMPAIGNS
+  EVENT_INGESTION
+  FEATURES
+  INTEGRATIONS
+  INVOICES
+  PAYMENTS
+  PAYMENT_RECEIPTS
+  PLANS
+  SUBSCRIPTIONS_AND_FEES
+  WALLETS_AND_CREDITS
+}
+
 """
 EventCollection type
 """
@@ -5551,6 +5569,69 @@ type EventCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+enum EventTypeEnum {
+  alert_triggered
+  all
+  credit_note_created
+  credit_note_generated
+  credit_note_provider_refund_failure
+  customer_accounting_provider_created
+  customer_accounting_provider_error
+  customer_checkout_url_generated
+  customer_created
+  customer_crm_provider_created
+  customer_crm_provider_error
+  customer_payment_provider_created
+  customer_payment_provider_error
+  customer_tax_provider_error
+  customer_updated
+  customer_vies_check
+  dunning_campaign_finished
+  event_error
+  events_errors
+  feature_created
+  feature_deleted
+  feature_updated
+  fee_created
+  fee_tax_provider_error
+  integration_provider_error
+  invoice_created
+  invoice_drafted
+  invoice_generated
+  invoice_one_off_created
+  invoice_paid_credit_added
+  invoice_payment_dispute_lost
+  invoice_payment_failure
+  invoice_payment_overdue
+  invoice_payment_status_updated
+  invoice_resynced
+  invoice_voided
+  payment_provider_error
+  payment_receipt_created
+  payment_receipt_generated
+  payment_request_created
+  payment_request_payment_failure
+  payment_request_payment_status_updated
+  payment_requires_action
+  payment_succeeded
+  plan_created
+  plan_deleted
+  plan_updated
+  subscription_started
+  subscription_terminated
+  subscription_termination_alert
+  subscription_trial_ended
+  subscription_updated
+  subscription_usage_threshold_reached
+  wallet_created
+  wallet_depleted_ongoing_balance
+  wallet_terminated
+  wallet_transaction_created
+  wallet_transaction_payment_failure
+  wallet_transaction_updated
+  wallet_updated
 }
 
 """
@@ -9112,6 +9193,7 @@ type Plan {
   activityLogs: [ActivityLog!]
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
+  applicableUsageThresholds: [UsageThreshold!]
   billChargesMonthly: Boolean
   billFixedChargesMonthly: Boolean
   charges: [Charge!]
@@ -9210,7 +9292,6 @@ input PlanOverridesInput {
   name: String
   taxCodes: [String!]
   trialPeriod: Float
-  usageThresholds: [UsageThresholdOverridesInput!]
 }
 
 enum PremiumIntegrationTypeEnum {
@@ -9826,6 +9907,11 @@ type Query {
   ): Event
 
   """
+  Query Event Types for Webhook Endpoints
+  """
+  eventTypes: [WebhookEventType!]!
+
+  """
   Query events of an organization
   """
   events(limit: Int, page: Int): EventCollection
@@ -10286,7 +10372,7 @@ type Query {
   """
   Query Webhooks
   """
-  webhooks(limit: Int, page: Int, searchTerm: String, status: WebhookStatusEnum, webhookEndpointId: String!): WebhookCollection!
+  webhooks(eventTypes: [String!], fromDate: ISO8601DateTime, httpStatuses: [String!], limit: Int, page: Int, searchTerm: String, status: WebhookStatusEnum, statuses: [WebhookStatusEnum!], toDate: ISO8601DateTime, webhookEndpointId: String!): WebhookCollection!
 }
 
 enum RecurringTransactionIntervalEnum {
@@ -10852,6 +10938,7 @@ type Subscription {
   paymentMethodType: PaymentMethodTypeEnum
   periodEndDate: ISO8601Date
   plan: Plan!
+  progressiveBillingDisabled: Boolean
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   skipInvoiceCustomSections: Boolean
   startedAt: ISO8601DateTime
@@ -10859,6 +10946,7 @@ type Subscription {
   subscriptionAt: ISO8601DateTime
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
+  usageThresholds: [UsageThreshold!]!
 }
 
 """
@@ -12670,7 +12758,9 @@ input UpdateSubscriptionInput {
   name: String
   paymentMethod: PaymentMethodReferenceInput
   planOverrides: PlanOverridesInput
+  progressiveBillingDisabled: Boolean
   subscriptionAt: ISO8601DateTime
+  usageThresholds: [UsageThresholdInput!]
 }
 
 """
@@ -12692,23 +12782,13 @@ input UpdateXeroIntegrationInput {
 
 type UsageThreshold {
   amountCents: BigInt!
-  createdAt: ISO8601DateTime!
   id: ID!
   recurring: Boolean!
   thresholdDisplayName: String
-  updatedAt: ISO8601DateTime!
 }
 
 input UsageThresholdInput {
-  amountCents: BigInt
-  id: ID
-  recurring: Boolean
-  thresholdDisplayName: String
-}
-
-input UsageThresholdOverridesInput {
   amountCents: BigInt!
-  id: ID
   recurring: Boolean
   thresholdDisplayName: String
 }
@@ -13026,7 +13106,9 @@ type WebhookCollection {
 
 type WebhookEndpoint {
   createdAt: ISO8601DateTime!
+  eventTypes: [EventTypeEnum!]
   id: ID!
+  name: String
   organization: Organization
   signatureAlgo: WebhookEndpointSignatureAlgoEnum
   updatedAt: ISO8601DateTime!
@@ -13056,6 +13138,8 @@ input WebhookEndpointCreateInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  eventTypes: [EventTypeEnum!]
+  name: String
   signatureAlgo: WebhookEndpointSignatureAlgoEnum
   webhookUrl: String!
 }
@@ -13073,14 +13157,25 @@ input WebhookEndpointUpdateInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  eventTypes: [EventTypeEnum!]
   id: ID!
+  name: String
   signatureAlgo: WebhookEndpointSignatureAlgoEnum
   webhookUrl: String!
+}
+
+type WebhookEventType {
+  category: EventCategoryEnum!
+  deprecated: Boolean!
+  description: String!
+  key: EventTypeEnum!
+  name: String!
 }
 
 enum WebhookStatusEnum {
   failed
   pending
+  retrying
   succeeded
 }
 

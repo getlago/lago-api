@@ -3,7 +3,7 @@
 class Webhook < ApplicationRecord
   include RansackUuidSearch
 
-  STATUS = %i[pending succeeded failed].freeze
+  STATUS = %i[pending succeeded failed retrying].freeze
 
   belongs_to :webhook_endpoint
   belongs_to :object, polymorphic: true, optional: true
@@ -12,7 +12,7 @@ class Webhook < ApplicationRecord
   enum :status, STATUS
 
   def self.ransackable_attributes(_auth_object = nil)
-    %w[id webhook_type]
+    %w[id object_id]
   end
 
   # Up until 1.4.0, we stored the payload as a string. This method
