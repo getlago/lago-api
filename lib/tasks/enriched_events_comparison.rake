@@ -3,6 +3,8 @@
 namespace :enriched_events do
   desc "Compare ClickhouseStore vs ClickhouseEnrichedStore usage for given subscription IDs"
   task :compare, [:subscription_id] => :environment do |_task, args|
+    Rails.logger.level = Logger::Severity::ERROR
+
     abort "Usage: [QUIET=true] rake enriched_events:compare[sub_id_1,sub_id_2,...]\n\n" unless args[:subscription_id]
     abort "[SKIP] Clickhouse is not enabled on this system" if ENV["LAGO_CLICKHOUSE_ENABLED"].blank?
 
