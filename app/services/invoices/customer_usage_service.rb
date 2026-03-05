@@ -243,7 +243,7 @@ module Invoices
 
     def querying_full_usage_allowed
       any_filter_present = usage_filters.has_charge_filter? || usage_filters.filter_by_group.present?
-      subscription_has_prorated_charges = subscription.plan.charges.where(prorated: true).exists?
+      subscription_has_prorated_charges = charges.where(prorated: true).exists?
 
       # full usage is only allowed for subscriptions without prorated charges
       # and only when filtering by charge or by group

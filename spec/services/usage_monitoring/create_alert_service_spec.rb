@@ -236,5 +236,29 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         end
       end
     end
+
+    context "when creating billable_metric_lifetime_usage_units alert", :premium do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:params) { {alert_type: "billable_metric_lifetime_usage_units", billable_metric_id: billable_metric.id, thresholds:, code: "first"} }
+
+      context "when organization does not use lifetime usage" do
+        let(:premium_integrations) { [] }
+
+        it "returns a validation failure result" do
+          expect(result).to be_failure
+          expect(result.error.messages[:alert_type]).to eq ["feature_not_available"]
+        end
+      end
+
+      context "when organization uses lifetime usage" do
+        let(:premium_integrations) { ["lifetime_usage"] }
+
+        it "creates the alert" do
+          expect(result).to be_success
+          expect(result.alert).to be_persisted
+          expect(result.alert.alert_type).to eq "billable_metric_lifetime_usage_units"
+        end
+      end
+    end
   end
 end
