@@ -19,9 +19,7 @@ class CreditNotesQuery < BaseQuery
     :types
   ]
 
-  DEFAULT_INCLUDES = [:customer, :items].freeze
-
-  def initialize(includes: DEFAULT_INCLUDES, **args)
+  def initialize(includes: [], **args)
     @includes = includes
     super(**args)
   end
@@ -53,12 +51,12 @@ class CreditNotesQuery < BaseQuery
   private
 
   def base_scope
-    CreditNote
-      .includes(*@includes)
-      .joins(:customer)
-      .where("customers.organization_id = ?", organization.id)
+    scope = CreditNote
+      .where(organization:)
       .finalized
-      .ransack(search_params)
+
+    scope = scope.includes(*@includes) if @includes.present?
+    scope.ransack(search_params)
   end
 
   def search_params

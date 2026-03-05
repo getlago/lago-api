@@ -53,7 +53,7 @@ module V1
 
     def items
       ::CollectionSerializer.new(
-        model.items.order(created_at: :asc),
+        model.items.sort_by(&:created_at),
         ::V1::CreditNoteItemSerializer,
         collection_name: "items"
       ).serialize

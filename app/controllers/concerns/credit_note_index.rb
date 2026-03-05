@@ -36,13 +36,24 @@ module CreditNoteIndex
       render(
         json: ::CollectionSerializer.new(
           result.credit_notes.includes(
-            :items,
             :applied_taxes,
-            :file_attachment,
-            :xml_file_attachment,
             :error_details,
             :metadata,
-            invoice: :billing_entity
+            invoice: :billing_entity,
+            file_attachment: :blob,
+            xml_file_attachment: :blob,
+            items: {
+              fee: [
+                :charge_filter,
+                :charge,
+                :billable_metric,
+                :invoice,
+                :pricing_unit_usage,
+                :true_up_fee,
+                {subscription: :plan},
+                :customer
+              ]
+            }
           ),
           ::V1::CreditNoteSerializer,
           collection_name: "credit_notes",

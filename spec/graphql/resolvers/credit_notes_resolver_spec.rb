@@ -345,7 +345,7 @@ RSpec.describe Resolvers::CreditNotesResolver do
     end
   end
 
-  it "does not trigger N+1 queries for metadata", :with_bullet do
+  it "does not trigger N+1 queries for metadata", bullet: {unused_eager_loading: false} do
     credit_notes = create_list(:credit_note, 3, customer:)
     credit_notes.each do |credit_note|
       create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar"})
@@ -361,6 +361,46 @@ RSpec.describe Resolvers::CreditNotesResolver do
             collection {
               id
               metadata { key value }
+            }
+          }
+        }
+      GQL
+    )
+  end
+
+  it "does not trigger N+1 queries for items and fees", bullet: {unused_eager_loading: false} do
+    subscription = create(:subscription, customer:, organization:)
+
+    3.times do
+      inv = create(:invoice, customer:, organization:)
+      sub_fee = create(:fee, invoice: inv, subscription:, organization:)
+      charge_fee = create(:charge_fee, invoice: inv, subscription:, organization:)
+
+      cn = create(:credit_note, customer:, invoice: inv, organization:)
+      create(:credit_note_item, credit_note: cn, fee: sub_fee)
+      create(:credit_note_item, credit_note: cn, fee: charge_fee)
+      create(:credit_note_applied_tax, credit_note: cn, organization:)
+    end
+
+    execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: <<~GQL
+        query {
+          creditNotes(limit: 5) {
+            collection {
+              id
+              appliedTaxes { id taxRate }
+              items {
+                id
+                fee {
+                  id
+                  feeType
+                  subscription { id }
+                  charge { id }
+                }
+              }
             }
           }
         }
