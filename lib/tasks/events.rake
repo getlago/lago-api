@@ -24,12 +24,12 @@ namespace :events do
   end
 
   desc "Deduplicate events_enriched_expanded by removing older versions of duplicate rows"
-  task deduplicate: :environment do
+  task deduplicate_enriched_expanded: :environment do
     Rails.logger.level = Logger::Severity::INFO
 
     organization_id = ENV.fetch("ORGANIZATION_ID")
-    subscription_ids = ENV["SUBSCRIPTION_IDS"]&.split(",")&.map(&:strip)&.reject(&:blank?)
-    codes = ENV["BM_CODES"]&.split(",")&.map(&:strip)&.reject(&:blank?)
+    subscription_ids = ENV["SUBSCRIPTION_IDS"].to_s.split(",").map(&:strip).reject(&:blank?)
+    codes = ENV["BM_CODES"].to_s.split(",").map(&:strip).reject(&:blank?)
     dry_run = ENV.fetch("DRY_RUN", "true") != "false"
 
     organization = Organization.find(organization_id)
@@ -42,17 +42,19 @@ namespace :events do
       started_at = subscription.started_at.strftime("%Y-%m-%d %H:%M:%S")
       sub_id = subscription.id
 
+      connection = Clickhouse::EventsEnrichedExpanded.connection
+
       code_condition = if codes.present?
-        code_list = codes.map { |c| "'#{ActiveRecord::Base.sanitize_sql_like(c)}'" }.join(", ")
+        code_list = codes.map { |c| connection.quote(c) }.join(", ")
         "AND code IN (#{code_list})"
       else
         ""
       end
 
       where_clause = <<~SQL.squish
-        organization_id = '#{organization.id}'
-        AND subscription_id = '#{sub_id}'
-        AND timestamp >= '#{started_at}'
+        organization_id = #{connection.quote(organization.id)}
+        AND subscription_id = #{connection.quote(sub_id)}
+        AND timestamp >= #{connection.quote(started_at)}
         #{code_condition}
       SQL
 
@@ -98,7 +100,7 @@ namespace :events do
         end
 
         Rails.logger.info(
-          "events:deduplicate - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows removed"
+          "events:deduplicate - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows removal scheduled"
         )
       end
 
@@ -115,8 +117,8 @@ namespace :events do
     Rails.logger.level = Logger::Severity::INFO
 
     organization_id = ENV.fetch("ORGANIZATION_ID")
-    subscription_ids = ENV["SUBSCRIPTION_IDS"]&.split(",")&.map(&:strip).reject(&:blank?)
-    codes = ENV["BM_CODES"]&.split(",")&.map(&:strip).reject(&:blank?)
+    subscription_ids = ENV["SUBSCRIPTION_IDS"].to_s.split(",").map(&:strip).reject(&:blank?)
+    codes = ENV["BM_CODES"].to_s.split(",").map(&:strip).reject(&:blank?)
     reprocess = ENV.fetch("REPROCESS", "true") == "true"
     batch_size = (ENV["BATCH_SIZE"] || 1000).to_i
     sleep_seconds = (ENV["SLEEP_SECONDS"] || 0.5).to_f
@@ -137,7 +139,7 @@ namespace :events do
 
       Rails.logger.info("events:reprocess - Processing subscription #{subscription.external_id} (started_at: #{subscription.started_at})")
 
-      scope.order(:timestamp).in_batches(of: batch_size) do |batch|
+      scope.in_batches(of: batch_size, cursor: [:timestamp, :transaction_id]) do |batch|
         events = batch.to_a
         messages = events.map do |event|
           properties = event.properties
