@@ -480,7 +480,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
-      context "when prorated charges exist" do
+      context "when a different charge is prorated but filtered charge is not" do
         subject(:usage_service) do
           described_class.new(
             customer:,
@@ -499,6 +499,35 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         before do
           prorated_charge
           create_list(:event, 2, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
+        end
+
+        it "returns usage successfully" do
+          result = usage_service.call
+
+          expect(result).to be_success
+          expect(result.usage.fees.size).to eq(1)
+        end
+      end
+
+      context "when the filtered charge itself is prorated" do
+        let(:prorated_metric) { create(:billable_metric, :recurring, organization:, aggregation_type: "sum_agg", field_name: "value") }
+        let(:prorated_charge) do
+          create(:standard_charge, plan:, billable_metric: prorated_metric, prorated: true, properties: {amount: "5"})
+        end
+
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: false,
+            usage_filters: UsageFilters.new(filter_by_charge_id: prorated_charge.id, full_usage: true)
+          )
+        end
+
+        before do
+          prorated_charge
+          create_list(:event, 2, organization:, subscription:, customer:, code: prorated_metric.code, timestamp:)
         end
 
         it "returns a not_allowed failure" do
