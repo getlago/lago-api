@@ -468,7 +468,7 @@ DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
-DROP INDEX IF EXISTS public.index_invoices_on_issuing_date;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_issuing_date;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_id_and_sequential_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_subscription_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_regenerated_invoice_id;
@@ -8013,10 +8013,10 @@ CREATE UNIQUE INDEX index_invoices_on_customer_id_and_sequential_id ON public.in
 
 
 --
--- Name: index_invoices_on_issuing_date; Type: INDEX; Schema: public; Owner: -
+-- Name: index_invoices_on_organization_id_and_issuing_date; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_invoices_on_issuing_date ON public.invoices USING btree (issuing_date);
+CREATE INDEX index_invoices_on_organization_id_and_issuing_date ON public.invoices USING btree (organization_id, issuing_date DESC);
 
 
 --
@@ -11416,6 +11416,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260305165936'),
 ('20260305161302'),
 ('20260305100007'),
 ('20260220131101'),
