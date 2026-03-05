@@ -190,7 +190,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
           customer: subscription.customer,
           subscription:,
           apply_taxes: false,
-          with_cache: false,
+          with_cache: true,
           usage_filters: an_instance_of(UsageFilters)
         )
         .and_return(double(success?: true, usage: mocked_lifetime_bm_usage)) # rubocop:disable RSpec/VerifiedDoubles
@@ -203,7 +203,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
         customer: subscription.customer,
         subscription:,
         apply_taxes: false,
-        with_cache: false,
+        with_cache: true,
         usage_filters: an_instance_of(UsageFilters)
       )
       expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
@@ -218,7 +218,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
             customer: subscription.customer,
             subscription:,
             apply_taxes: false,
-            with_cache: false,
+            with_cache: true,
             usage_filters: an_instance_of(UsageFilters)
           )
           .and_return(double(success?: false)) # rubocop:disable RSpec/VerifiedDoubles
@@ -246,7 +246,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
           customer: subscription.customer,
           subscription:,
           apply_taxes: false,
-          with_cache: false,
+          with_cache: true,
           usage_filters: an_instance_of(UsageFilters)
         )
         expect(::UsageMonitoring::ProcessAlertService).not_to have_received(:call)
