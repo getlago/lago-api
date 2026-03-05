@@ -91,6 +91,43 @@ RSpec.describe DunningCampaigns::ProcessAttemptService do
       end
     end
 
+    context "when max attempts is reached after processing" do
+      let(:customer) do
+        create(
+          :customer,
+          organization:,
+          currency:,
+          last_dunning_campaign_attempt: dunning_campaign.max_attempts - 1
+        )
+      end
+
+      it "sends the campaign finished webhook" do
+        expect { result }.to have_enqueued_job(SendWebhookJob)
+          .with("dunning_campaign.finished", customer, {dunning_campaign_code: dunning_campaign.code})
+      end
+
+      it "still creates a payment request" do
+        result
+        expect(PaymentRequests::CreateService).to have_received(:call)
+      end
+    end
+
+    context "when max attempts is not yet reached after processing" do
+      let(:customer) do
+        create(
+          :customer,
+          organization:,
+          currency:,
+          last_dunning_campaign_attempt: 0
+        )
+      end
+
+      it "does not send the campaign finished webhook" do
+        result
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
     context "when the campaign threshold is not reached" do
       let(:dunning_campaign_threshold) do
         create :dunning_campaign_threshold, dunning_campaign:, currency:, amount_cents: 99_01
