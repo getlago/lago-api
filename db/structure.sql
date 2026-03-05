@@ -285,6 +285,7 @@ ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
 DROP TRIGGER IF EXISTS ensure_consistency ON public.roles;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
+DROP TRIGGER IF EXISTS before_customer_insert ON public.customers;
 CREATE OR REPLACE VIEW public.flat_filters AS
 SELECT
     NULL::uuid AS organization_id,
@@ -1064,6 +1065,7 @@ DROP TABLE IF EXISTS public.active_storage_blobs;
 DROP TABLE IF EXISTS public.active_storage_attachments;
 DROP TABLE IF EXISTS partman.template_public_enriched_events;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
+DROP FUNCTION IF EXISTS public.set_customer_sequential_id();
 DROP FUNCTION IF EXISTS public.ensure_role_consistency();
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.tax_status;
@@ -1340,6 +1342,44 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
 CREATE FUNCTION public.ensure_role_consistency() RETURNS trigger
     LANGUAGE plpgsql
     AS $$ BEGIN IF OLD.organization_id IS NULL THEN RAISE EXCEPTION 'Predefined role cannot be modified'; ELSIF OLD.organization_id IS DISTINCT FROM NEW.organization_id THEN RAISE EXCEPTION 'Custom role cannot be moved to another organization'; ELSIF OLD.code IS DISTINCT FROM NEW.code THEN RAISE EXCEPTION 'The code of the role cannot be changed'; ELSIF NEW.permissions != OLD.permissions THEN NEW.permissions := ARRAY(SELECT DISTINCT unnest(NEW.permissions) ORDER BY 1); END IF; RETURN NEW; END; $$;
+
+
+--
+-- Name: set_customer_sequential_id(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_customer_sequential_id() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  next_id bigint;
+  org_prefix text;
+BEGIN
+  IF NEW.sequential_id IS NULL THEN
+    -- Timeout matches the Ruby advisory lock timeout_seconds: 10
+    SET LOCAL statement_timeout = '10s';
+    -- Acquire a transaction-level advisory lock per organization to prevent races
+    PERFORM pg_advisory_xact_lock(hashtext(NEW.organization_id::text));
+
+    SELECT COALESCE(MAX(sequential_id), 0) + 1
+    INTO next_id
+    FROM public.customers
+    WHERE organization_id = NEW.organization_id;
+
+    NEW.sequential_id := next_id;
+  END IF;
+
+  IF NEW.slug IS NULL THEN
+    SELECT document_number_prefix INTO org_prefix
+    FROM public.organizations
+    WHERE id = NEW.organization_id;
+
+    NEW.slug := COALESCE(org_prefix, '') || '-' || LPAD(NEW.sequential_id::text, GREATEST(3, LENGTH(NEW.sequential_id::text)), '0');
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
 
 
 --
@@ -9260,6 +9300,13 @@ CREATE OR REPLACE VIEW public.flat_filters AS
 
 
 --
+-- Name: customers before_customer_insert; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_customer_insert BEFORE INSERT ON public.customers FOR EACH ROW EXECUTE FUNCTION public.set_customer_sequential_id();
+
+
+--
 -- Name: payment_receipts before_payment_receipt_insert; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -11472,6 +11519,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260302185020'),
 ('20260220131101'),
 ('20260219102644'),
 ('20260219083335'),
