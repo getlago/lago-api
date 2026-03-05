@@ -55,7 +55,7 @@ module UsageMonitoring
           customer: subscription.customer,
           subscription:,
           apply_taxes: false,
-          with_cache: false,
+          with_cache: true,
           usage_filters:
         )
         next unless usage_result.success?
