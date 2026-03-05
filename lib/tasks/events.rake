@@ -23,8 +23,97 @@ namespace :events do
     end
   end
 
+  desc "Deduplicate events_enriched_expanded by removing older versions of duplicate rows"
+  task deduplicate: :environment do
+    Rails.logger.level = Logger::Severity::INFO
+
+    organization_id = ENV.fetch("ORGANIZATION_ID")
+    subscription_ids = ENV["SUBSCRIPTION_IDS"]&.split(",")&.map(&:strip)&.reject(&:blank?)
+    codes = ENV["BM_CODES"]&.split(",")&.map(&:strip)&.reject(&:blank?)
+    dry_run = ENV.fetch("DRY_RUN", "true") != "false"
+
+    organization = Organization.find(organization_id)
+    subscriptions = organization.subscriptions
+    subscriptions = subscriptions.where(id: subscription_ids) if subscription_ids.present?
+
+    total_duplicates = 0
+
+    subscriptions.find_each do |subscription|
+      started_at = subscription.started_at.strftime("%Y-%m-%d %H:%M:%S")
+      sub_id = subscription.id
+
+      code_condition = if codes.present?
+        code_list = codes.map { |c| "'#{ActiveRecord::Base.sanitize_sql_like(c)}'" }.join(", ")
+        "AND code IN (#{code_list})"
+      else
+        ""
+      end
+
+      where_clause = <<~SQL.squish
+        organization_id = '#{organization.id}'
+        AND subscription_id = '#{sub_id}'
+        AND timestamp >= '#{started_at}'
+        #{code_condition}
+      SQL
+
+      count_sql = <<~SQL.squish
+        SELECT count() as cnt
+        FROM events_enriched_expanded
+        WHERE #{where_clause}
+        AND (organization_id, subscription_id, charge_id, charge_filter_id, transaction_id, timestamp, enriched_at)
+        NOT IN (
+          SELECT
+            organization_id, subscription_id, charge_id, charge_filter_id, transaction_id, timestamp,
+            max(enriched_at) as enriched_at
+          FROM events_enriched_expanded
+          WHERE #{where_clause}
+          GROUP BY organization_id, subscription_id, charge_id, charge_filter_id, transaction_id, timestamp
+        )
+      SQL
+
+      result = Clickhouse::EventsEnrichedExpanded.connection.select_one(count_sql)
+      duplicate_count = result["cnt"].to_i
+
+      if dry_run
+        Rails.logger.info(
+          "events:deduplicate [DRY RUN] - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows would be removed"
+        )
+      else
+        if duplicate_count > 0
+          delete_sql = <<~SQL.squish
+            ALTER TABLE events_enriched_expanded
+            DELETE WHERE #{where_clause}
+            AND (organization_id, subscription_id, charge_id, charge_filter_id, transaction_id, timestamp, enriched_at)
+            NOT IN (
+              SELECT
+                organization_id, subscription_id, charge_id, charge_filter_id, transaction_id, timestamp,
+                max(enriched_at) as enriched_at
+              FROM events_enriched_expanded
+              WHERE #{where_clause}
+              GROUP BY organization_id, subscription_id, charge_id, charge_filter_id, transaction_id, timestamp
+            )
+          SQL
+
+          Clickhouse::EventsEnrichedExpanded.connection.execute(delete_sql)
+        end
+
+        Rails.logger.info(
+          "events:deduplicate - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows removed"
+        )
+      end
+
+      total_duplicates += duplicate_count
+    end
+
+    mode = dry_run ? "DRY RUN" : "LIVE"
+    action = dry_run ? "found" : "removed"
+    Rails.logger.info("events:deduplicate [#{mode}] - Complete. #{total_duplicates} total duplicate rows #{action}.")
+  end
+
   desc "Reprocess events by pushing them back to events_raw Kafka topic with reprocess flag"
   task reprocess: :environment do
+    Rails.logger.level = Logger::Severity::INFO
+
     organization_id = ENV.fetch("ORGANIZATION_ID")
     subscription_ids = ENV["SUBSCRIPTION_IDS"]&.split(",")&.map(&:strip).reject(&:blank?)
     codes = ENV["BM_CODES"]&.split(",")&.map(&:strip).reject(&:blank?)
