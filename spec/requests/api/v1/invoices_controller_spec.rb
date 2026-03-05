@@ -331,6 +331,27 @@ RSpec.describe Api::V1::InvoicesController do
         end
       end
     end
+
+    context "with unknown params" do
+      before do
+        allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+        create(:invoice, :draft, customer:, organization:)
+        create(:invoice, customer:, organization:)
+      end
+
+      it "ignores unknown params for caching" do
+        # First request populates the cache
+        get_with_token(organization, "/api/v1/invoices", page: 1, per_page: 1)
+        expect(json[:meta][:total_count]).to eq(2)
+
+        # Add a third invoice
+        create(:invoice, customer:, organization:)
+
+        # Request with unknown param should return cached count (2), not fresh count (3)
+        get_with_token(organization, "/api/v1/invoices", page: 1, per_page: 1, unknown_param: "value")
+        expect(json[:meta][:total_count]).to eq(2)
+      end
+    end
   end
 
   describe "PUT /api/v1/invoices/:id/refresh" do

@@ -4,6 +4,29 @@ module InvoiceIndex
   include Pagination
   extend ActiveSupport::Concern
 
+  WHITELIST = [
+    :amount_from,
+    :amount_to,
+    :billing_entity_codes,
+    :currency,
+    :invoice_type,
+    :issuing_date_from,
+    :issuing_date_to,
+    :page,
+    :partially_paid,
+    :payment_dispute_lost,
+    :payment_overdue,
+    :payment_status,
+    :payment_statuses,
+    :per_page,
+    :search_term,
+    :self_billed,
+    :settlements,
+    :status,
+    :statuses,
+    metadata: {}
+  ].freeze
+
   def invoice_index(customer_external_id: nil)
     billing_entities = current_organization.all_billing_entities.where(code: params[:billing_entity_codes]) if params[:billing_entity_codes].present?
     return not_found_error(resource: "billing_entity") if params[:billing_entity_codes].present? && billing_entities.count != params[:billing_entity_codes].count
@@ -41,7 +64,12 @@ module InvoiceIndex
           result.invoices.includes(:metadata, :applied_taxes, :billing_entity, :applied_usage_thresholds),
           ::V1::InvoiceSerializer,
           collection_name: "invoices",
-          meta: pagination_metadata(result.invoices),
+          meta: pagination_metadata(
+            result.invoices,
+            key: "invoices",
+            organization_id: current_organization.id,
+            params: params.permit(*WHITELIST)
+          ),
           includes: %i[customer integration_customers metadata applied_taxes]
         )
       )
