@@ -22,4 +22,75 @@ namespace :events do
       event.update!(subscription_id: subscription.id)
     end
   end
+
+  desc "Reprocess events by pushing them back to events_raw Kafka topic with reprocess flag"
+  task reprocess: :environment do
+    organization_id = ENV.fetch("ORGANIZATION_ID")
+    subscription_ids = ENV["SUBSCRIPTION_IDS"]&.split(",")&.map(&:strip).reject(&:blank?)
+    codes = ENV["BM_CODES"]&.split(",")&.map(&:strip).reject(&:blank?)
+    reprocess = ENV.fetch("REPROCESS", "true") == "true"
+    batch_size = (ENV["BATCH_SIZE"] || 1000).to_i
+    sleep_seconds = (ENV["SLEEP_SECONDS"] || 0.5).to_f
+    topic = ENV.fetch("LAGO_KAFKA_RAW_EVENTS_TOPIC")
+
+    organization = Organization.find(organization_id)
+    subscriptions = organization.subscriptions
+    subscriptions = subscriptions.where(id: subscription_ids) if subscription_ids.present?
+
+    total = 0
+    batch_count = 0
+
+    subscriptions.find_each do |subscription|
+      scope = Clickhouse::EventsRaw
+        .where(organization_id:, external_subscription_id: subscription.external_id)
+        .where("timestamp >= ?", subscription.started_at)
+      scope = scope.where(code: codes) if codes.present?
+
+      Rails.logger.info("events:reprocess - Processing subscription #{subscription.external_id} (started_at: #{subscription.started_at})")
+
+      scope.order(:timestamp).in_batches(of: batch_size) do |batch|
+        events = batch.to_a
+        messages = events.map do |event|
+          properties = event.properties
+          properties = JSON.parse(properties) if properties.is_a?(String)
+
+          payload = {
+            organization_id: event.organization_id,
+            external_customer_id: event.external_customer_id,
+            external_subscription_id: event.external_subscription_id,
+            transaction_id: event.transaction_id,
+            timestamp: event.timestamp.to_f.to_s,
+            code: event.code,
+            precise_total_amount_cents: event.precise_total_amount_cents.present? ? event.precise_total_amount_cents.to_s : "0.0",
+            properties:,
+            ingested_at: Time.zone.now.iso8601[...-1],
+            source: Events::KafkaProducerService::EVENT_SOURCE,
+            source_metadata: {
+              api_post_processed: true,
+              reprocess:
+            }
+          }
+
+          {
+            topic:,
+            key: "#{event.organization_id}-#{event.external_subscription_id}",
+            payload: payload.to_json
+          }
+        end
+
+        Karafka.producer.produce_many_async(messages)
+
+        batch_count += 1
+        total += events.size
+        Rails.logger.info("events:reprocess - Batch ##{batch_count}: #{events.size} events (total: #{total})")
+
+        sleep(sleep_seconds)
+      end
+    end
+
+    Rails.logger.info("events:reprocess - Complete. #{total} events reprocessed in #{batch_count} batches.")
+  ensure
+    # Close the producer to flush pending messages and release resources.
+    Karafka.producer.close
+  end
 end
