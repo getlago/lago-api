@@ -59,6 +59,10 @@ module Charges
         filters[:ignored_filters] = result.ignored_filters
       end
 
+      previous = Charges::PreviousChargesAndFiltersService.call!(charge:, charge_filter:, subscription:)
+      filters[:previous_charge_ids] = previous.previous_charge_ids if previous.previous_charge_ids.present?
+      filters[:previous_charge_filter_ids] = previous.previous_charge_filter_ids if previous.previous_charge_filter_ids.present?
+
       filters
     end
   end

@@ -378,6 +378,10 @@ module Fees
         filters[:ignored_filters] = result.ignored_filters
       end
 
+      previous = Charges::PreviousChargesAndFiltersService.call!(charge:, charge_filter:, subscription:)
+      filters[:previous_charge_ids] = previous.previous_charge_ids if previous.previous_charge_ids.present?
+      filters[:previous_charge_filter_ids] = previous.previous_charge_filter_ids if previous.previous_charge_filter_ids.present?
+
       if usage_filters.filter_by_group.present?
         # when pricing group keys on a charge are "workspace" and "user", and filter_by_group is {"workspace" => ["A"]},
         # we want to remove the grouping keys "workspace", but keep the grouping key "user", so the usage will still be granular within the workspace

@@ -296,6 +296,43 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
       end
     end
 
+    describe "when subscription has previous subscription with matching charge", :clickhouse do
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["enriched_events_aggregation"]) }
+
+      let(:previous_plan) { create(:plan, organization:) }
+      let(:previous_charge) { create(:standard_charge, plan: previous_plan, billable_metric:) }
+      let(:previous_subscription) { create(:subscription, plan: previous_plan, organization:, status: :terminated) }
+      let(:subscription) { create(:subscription, customer:, previous_subscription:, started_at: Time.zone.parse("2023-03-15")) }
+      let(:sum_service) { instance_double(BillableMetrics::Aggregations::SumService, aggregate: agg_result) }
+
+      before { previous_charge }
+
+      it "includes previous_charge_ids in filters" do
+        allow(BillableMetrics::Aggregations::SumService).to receive(:new).and_return(sum_service)
+
+        agg_service.call
+
+        expect(BillableMetrics::Aggregations::SumService).to have_received(:new)
+          .with(
+            event_store_class: Events::Stores::ClickhouseEnrichedStore,
+            charge:,
+            subscription:,
+            boundaries: {
+              from_datetime: boundaries.charges_from_datetime,
+              to_datetime: boundaries.charges_to_datetime,
+              charges_duration: boundaries.charges_duration,
+              max_timestamp: event.timestamp
+            },
+            filters: {
+              event:,
+              charge_id: charge.id,
+              previous_charge_ids: [previous_charge.id]
+            }
+          )
+      end
+    end
+
     describe "when unique_count aggregation" do
       let(:aggregation_type) { "unique_count_agg" }
       let(:unique_count_service) do
