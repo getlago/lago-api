@@ -916,7 +916,6 @@ DROP TABLE IF EXISTS public.webhooks;
 DROP TABLE IF EXISTS public.webhook_endpoints;
 DROP TABLE IF EXISTS public.wallets_invoice_custom_sections;
 DROP TABLE IF EXISTS public.wallet_transactions_invoice_custom_sections;
-DROP TABLE IF EXISTS public.wallet_transaction_consumptions;
 DROP TABLE IF EXISTS public.wallet_targets;
 DROP SEQUENCE IF EXISTS public.versions_id_seq;
 DROP TABLE IF EXISTS public.versions;
@@ -965,6 +964,8 @@ DROP VIEW IF EXISTS public.exports_wallets;
 DROP TABLE IF EXISTS public.wallets;
 DROP VIEW IF EXISTS public.exports_wallet_transactions;
 DROP TABLE IF EXISTS public.wallet_transactions;
+DROP VIEW IF EXISTS public.exports_wallet_transaction_consumptions;
+DROP TABLE IF EXISTS public.wallet_transaction_consumptions;
 DROP VIEW IF EXISTS public.exports_usage_thresholds;
 DROP TABLE IF EXISTS public.usage_thresholds;
 DROP VIEW IF EXISTS public.exports_taxes;
@@ -3793,6 +3794,36 @@ CREATE VIEW public.exports_usage_thresholds AS
 
 
 --
+-- Name: wallet_transaction_consumptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.wallet_transaction_consumptions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    inbound_wallet_transaction_id uuid NOT NULL,
+    outbound_wallet_transaction_id uuid NOT NULL,
+    consumed_amount_cents bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_wallet_transaction_consumptions; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_wallet_transaction_consumptions AS
+ SELECT wtc.id AS lago_id,
+    wtc.organization_id,
+    wtc.inbound_wallet_transaction_id AS lago_inbound_wallet_transaction_id,
+    wtc.outbound_wallet_transaction_id AS lago_outbound_wallet_transaction_id,
+    wtc.consumed_amount_cents,
+    wtc.created_at,
+    wtc.updated_at
+   FROM public.wallet_transaction_consumptions wtc;
+
+
+--
 -- Name: wallet_transactions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4725,21 +4756,6 @@ CREATE TABLE public.wallet_targets (
     organization_id uuid NOT NULL,
     wallet_id uuid NOT NULL,
     billable_metric_id uuid NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: wallet_transaction_consumptions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.wallet_transaction_consumptions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    inbound_wallet_transaction_id uuid NOT NULL,
-    outbound_wallet_transaction_id uuid NOT NULL,
-    consumed_amount_cents bigint NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
@@ -11472,6 +11488,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260305100007'),
 ('20260220131101'),
 ('20260219102644'),
 ('20260219083335'),
