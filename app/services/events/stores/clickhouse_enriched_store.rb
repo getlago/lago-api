@@ -34,9 +34,9 @@ module Events
 
       def events_cte_queries_without_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [], to_datetime: nil)
         query = arel_table.where(
-          arel_table[:subscription_id].eq(subscription.id)
+          arel_table[:external_subscription_id].eq(subscription.external_id)
             .and(arel_table[:organization_id].eq(subscription.organization_id))
-            .and(arel_table[:charge_id].eq(charge_id))
+            .and(with_charge_id_condition)
         ).then { with_charge_filter_id(it) }
 
         query = query.order(arel_table[:timestamp].desc, arel_table[:value].asc) if ordered
@@ -79,9 +79,9 @@ module Events
       # by using `argMax` function, to keep only the most recent event of each group
       def deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: [])
         query = arel_table.where(
-          arel_table[:subscription_id].eq(subscription.id)
+          arel_table[:external_subscription_id].eq(subscription.external_id)
             .and(arel_table[:organization_id].eq(subscription.organization_id))
-            .and(arel_table[:charge_id].eq(charge_id))
+            .and(with_charge_id_condition)
         ).then { with_charge_filter_id(it) }
           .then { with_timestamp_boundaries(it, from_datetime, to_datetime) }
 
@@ -98,7 +98,7 @@ module Events
         query = query.group(
           arel_table[:charge_id],
           arel_table[:charge_filter_id],
-          arel_table[:subscription_id],
+          arel_table[:external_subscription_id],
           arel_table[:organization_id],
           arel_table[:timestamp],
           arel_table[:transaction_id]
@@ -107,7 +107,7 @@ module Events
           [
             arel_table[:charge_id],
             arel_table[:charge_filter_id],
-            arel_table[:subscription_id],
+            arel_table[:external_subscription_id],
             arel_table[:organization_id],
             arel_table[:timestamp],
             arel_table[:transaction_id]
@@ -121,7 +121,7 @@ module Events
       def distinct_codes
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           ::Clickhouse::EventsEnrichedExpanded
-            .where(subscription_id: subscription.id)
+            .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization_id)
             .where(timestamp: from_datetime..applicable_to_datetime)
             .pluck("DISTINCT(code)")
@@ -131,7 +131,7 @@ module Events
       def distinct_charges_and_filters
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           ::Clickhouse::EventsEnrichedExpanded
-            .where(subscription_id: subscription.id)
+            .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization_id)
             .where(timestamp: from_datetime..to_datetime)
             .distinct
@@ -701,8 +701,18 @@ module Events
         query
       end
 
+      def with_charge_id_condition
+        if previous_charge_ids.present?
+          arel_table[:charge_id].in([charge_id] + previous_charge_ids)
+        else
+          arel_table[:charge_id].eq(charge_id)
+        end
+      end
+
       def with_charge_filter_id(query)
-        if charge_filter_id.present?
+        if charge_filter_id.present? && previous_charge_filter_ids.present?
+          query.where(arel_table[:charge_filter_id].in([charge_filter_id] + previous_charge_filter_ids))
+        elsif charge_filter_id.present?
           query.where(arel_table[:charge_filter_id].eq(charge_filter_id))
         else
           query.where(arel_table[:charge_filter_id].eq(""))
