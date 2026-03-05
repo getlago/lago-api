@@ -469,17 +469,10 @@ DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_payment_request_i
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
-DROP INDEX IF EXISTS public.index_invoices_on_status;
-DROP INDEX IF EXISTS public.index_invoices_on_sequential_id;
-DROP INDEX IF EXISTS public.index_invoices_on_self_billed;
 DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
-DROP INDEX IF EXISTS public.index_invoices_on_payment_overdue;
-DROP INDEX IF EXISTS public.index_invoices_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
 DROP INDEX IF EXISTS public.index_invoices_on_issuing_date;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_id_and_sequential_id;
-DROP INDEX IF EXISTS public.index_invoices_on_customer_id;
-DROP INDEX IF EXISTS public.index_invoices_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_subscription_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_regenerated_invoice_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_organization_id;
@@ -8060,20 +8053,6 @@ CREATE INDEX index_invoice_subscriptions_on_subscription_id ON public.invoice_su
 
 
 --
--- Name: index_invoices_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_invoices_on_billing_entity_id ON public.invoices USING btree (billing_entity_id);
-
-
---
--- Name: index_invoices_on_customer_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_invoices_on_customer_id ON public.invoices USING btree (customer_id);
-
-
---
 -- Name: index_invoices_on_customer_id_and_sequential_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8095,45 +8074,10 @@ CREATE INDEX index_invoices_on_number ON public.invoices USING btree (number);
 
 
 --
--- Name: index_invoices_on_organization_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_invoices_on_organization_id ON public.invoices USING btree (organization_id);
-
-
---
--- Name: index_invoices_on_payment_overdue; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_invoices_on_payment_overdue ON public.invoices USING btree (payment_overdue);
-
-
---
 -- Name: index_invoices_on_ready_to_be_refreshed; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_invoices_on_ready_to_be_refreshed ON public.invoices USING btree (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true);
-
-
---
--- Name: index_invoices_on_self_billed; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_invoices_on_self_billed ON public.invoices USING btree (self_billed);
-
-
---
--- Name: index_invoices_on_sequential_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_invoices_on_sequential_id ON public.invoices USING btree (sequential_id);
-
-
---
--- Name: index_invoices_on_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_invoices_on_status ON public.invoices USING btree (status);
 
 
 --
@@ -11542,6 +11486,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260306115902'),
+('20260305161302'),
 ('20260305100007'),
 ('20260220131101'),
 ('20260219130831'),

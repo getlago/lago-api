@@ -704,17 +704,10 @@ end
 #  idx_invoices_organization_id_status                             (organization_id,status)
 #  idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655  (billing_entity_id,billing_entity_sequential_id DESC)
 #  idx_on_organization_id_organization_sequential_id_2387146f54    (organization_id,organization_sequential_id DESC)
-#  index_invoices_on_billing_entity_id                             (billing_entity_id)
-#  index_invoices_on_customer_id                                   (customer_id)
 #  index_invoices_on_customer_id_and_sequential_id                 (customer_id,sequential_id) UNIQUE
 #  index_invoices_on_issuing_date                                  (issuing_date)
 #  index_invoices_on_number                                        (number)
-#  index_invoices_on_organization_id                               (organization_id)
-#  index_invoices_on_payment_overdue                               (payment_overdue)
 #  index_invoices_on_ready_to_be_refreshed                         (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)
-#  index_invoices_on_self_billed                                   (self_billed)
-#  index_invoices_on_sequential_id                                 (sequential_id)
-#  index_invoices_on_status                                        (status)
 #  index_invoices_on_voided_invoice_id                             (voided_invoice_id)
 #
 # Foreign Keys
