@@ -19,6 +19,10 @@ module DunningCampaigns
         .joins(:organization)
         .where(exclude_from_dunning_campaign: false)
         .where("organizations.premium_integrations @> ARRAY[?]::varchar[]", ["auto_dunning"])
+        .where(
+          id: Invoice.where(payment_overdue: true, self_billed: false)
+            .select(:customer_id)
+        )
     end
 
     class CustomerDunningEvaluator < BaseService

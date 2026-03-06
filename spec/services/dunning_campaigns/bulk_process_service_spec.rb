@@ -254,6 +254,22 @@ RSpec.describe DunningCampaigns::BulkProcessService do
           end
         end
       end
+
+      context "when customer has no overdue invoices" do
+        let(:customer_without_overdue) { create :customer, organization:, billing_entity:, currency: }
+
+        before do
+          create(:invoice, organization:, customer: customer_without_overdue, currency:, payment_overdue: false, total_amount_cents: 100_00)
+          create(:invoice, organization:, customer:, currency:, payment_overdue: true, total_amount_cents: 51_00)
+        end
+
+        it "excludes customer without overdue invoices from eligible customers" do
+          eligible = described_class.new.send(:eligible_customers)
+
+          expect(eligible).to include(customer)
+          expect(eligible).not_to include(customer_without_overdue)
+        end
+      end
     end
 
     context "when customer has an applied dunning campaign" do
