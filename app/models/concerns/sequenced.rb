@@ -22,10 +22,12 @@ module Sequenced
     end
 
     def generate_sequential_id
+      self.class.connection.execute("SET LOCAL lock_timeout = '10s'")
+
       result = self.class.with_advisory_lock(
         lock_key_value,
         transaction: true,
-        timeout_seconds: 10.seconds
+        blocking: true
       ) do
         sequential_id = sequence_scope.with_sequential_id.order(sequential_id: :desc).limit(1).pick(:sequential_id)
         sequential_id ||= 0
@@ -41,6 +43,8 @@ module Sequenced
       raise(SequenceError, "Unable to acquire lock on the database") unless result
 
       result
+    rescue ActiveRecord::LockWaitTimeout
+      raise(SequenceError, "Unable to acquire lock on the database")
     end
 
     def sequence_scope
