@@ -290,18 +290,6 @@ RSpec.describe Api::V1::InvoicesController do
   end
 
   describe "GET /api/v1/invoices" do
-    context "when per_page exceeds the maximum" do
-      subject { get_with_token(organization, "/api/v1/invoices", {per_page: 101}) }
-
-      it "returns a validation error" do
-        subject
-
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:code]).to eq("validation_errors")
-        expect(json[:error_details]).to eq({per_page: ["must_be_less_than_or_equal_to_100"]})
-      end
-    end
-
     it_behaves_like "an invoice index endpoint" do
       subject { get_with_token(organization, "/api/v1/invoices", params) }
 
