@@ -830,39 +830,6 @@ RSpec.describe Fees::ChargeService, :premium do
         end
       end
 
-      context "when previous plan has a matching recurring charge with enriched events", :clickhouse do
-        let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["enriched_events_aggregation"]) }
-        let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
-        let(:previous_plan) { create(:plan, organization:, amount_cents: subscription.plan.amount_cents - 20) }
-        let(:previous_charge) { create(:standard_charge, plan: previous_plan, billable_metric:) }
-        let(:previous_subscription) { create(:subscription, plan: previous_plan, organization:, status: :terminated) }
-
-        let(:boundaries) do
-          BillingPeriodBoundaries.new(
-            from_datetime: Time.zone.parse("15 Apr 2022 00:01:00"),
-            to_datetime: Time.zone.parse("30 Apr 2022 00:01:00"),
-            charges_from_datetime: subscription.started_at,
-            charges_to_datetime: Time.zone.parse("30 Apr 2022 00:01:00"),
-            charges_duration: 30,
-            timestamp: Time.zone.parse("2022-05-01T00:01:00")
-          )
-        end
-
-        before do
-          previous_charge
-          subscription.update!(previous_subscription:)
-        end
-
-        it "passes previous_charge_ids to the aggregation factory" do
-          allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
-
-          charge_subscription_service.call
-
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-            .with(hash_including(filters: hash_including(previous_charge_ids: [previous_charge.id])))
-        end
-      end
-
       context "with all types of aggregation" do
         let(:event) do
           create(

@@ -18,9 +18,6 @@ module Events
         @matching_filters = filters[:matching_filters] || {}
         @ignored_filters = filters[:ignored_filters] || []
 
-        @previous_charge_ids = filters[:previous_charge_ids] || []
-        @previous_charge_filter_ids = filters[:previous_charge_filter_ids] || []
-
         @aggregation_property = nil
         @numeric_property = false
         @use_from_boundary = true
@@ -143,7 +140,7 @@ module Events
         @timezone ||= customer.applicable_timezone
       end
 
-      attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :charge_id, :charge_filter_id, :previous_charge_ids, :previous_charge_filter_ids
+      attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :charge_id, :charge_filter_id
 
       protected
 
