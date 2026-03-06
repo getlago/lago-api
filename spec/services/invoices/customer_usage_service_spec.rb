@@ -480,7 +480,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
-      context "when prorated charges exist" do
+      context "when a different charge is prorated but filtered charge is not" do
         subject(:usage_service) do
           described_class.new(
             customer:,
@@ -501,12 +501,115 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           create_list(:event, 2, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
         end
 
+        it "returns usage successfully" do
+          result = usage_service.call
+
+          expect(result).to be_success
+          expect(result.usage.fees.size).to eq(1)
+        end
+      end
+
+      context "when the filtered charge itself is prorated" do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: false,
+            usage_filters: UsageFilters.new(filter_by_charge_id: prorated_charge.id, full_usage: true)
+          )
+        end
+
+        let(:prorated_metric) { create(:billable_metric, :recurring, organization:, aggregation_type: "sum_agg", field_name: "value") }
+        let(:prorated_charge) do
+          create(:standard_charge, plan:, billable_metric: prorated_metric, prorated: true, properties: {amount: "5"})
+        end
+
+        before do
+          prorated_charge
+          create_list(:event, 2, organization:, subscription:, customer:, code: prorated_metric.code, timestamp:)
+        end
+
         it "returns a not_allowed failure" do
           result = usage_service.call
 
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
           expect(result.error.code).to eq("full_usage_not_allowed")
+        end
+      end
+
+      context "when subscription started at current period boundary" do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: true,
+            usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
+          )
+        end
+
+        let(:current_date) { DateTime.parse("2025-06-15") }
+        let(:timestamp) { current_date }
+
+        let(:subscription) do
+          create(:subscription, plan:, customer:, started_at: DateTime.parse("2025-06-01"))
+        end
+
+        before do
+          create_list(:event, 2, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
+        end
+
+        it "uses the Rails cache" do
+          key = [
+            "charge-usage",
+            Subscriptions::ChargeCacheService::CACHE_KEY_VERSION,
+            charge.id,
+            subscription.id,
+            charge.updated_at.iso8601
+          ].join("/")
+
+          travel_to(current_date) do
+            expect { usage_service.call }.to change { Rails.cache.exist?(key) }.from(false).to(true)
+          end
+        end
+      end
+
+      context "when subscription started before current period" do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: true,
+            usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
+          )
+        end
+
+        let(:current_date) { DateTime.parse("2025-06-15") }
+        let(:timestamp) { current_date }
+
+        let(:subscription) do
+          create(:subscription, plan:, customer:, started_at: DateTime.parse("2025-03-01"))
+        end
+
+        before do
+          create_list(:event, 2, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
+        end
+
+        it "does not use the Rails cache" do
+          key = [
+            "charge-usage",
+            Subscriptions::ChargeCacheService::CACHE_KEY_VERSION,
+            charge.id,
+            subscription.id,
+            charge.updated_at.iso8601
+          ].join("/")
+
+          travel_to(current_date) do
+            expect { usage_service.call }.not_to change { Rails.cache.exist?(key) }
+          end
         end
       end
     end

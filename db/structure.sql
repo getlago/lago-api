@@ -1331,7 +1331,8 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'current_usage_amount',
     'billable_metric_current_usage_amount',
     'billable_metric_current_usage_units',
-    'lifetime_usage_amount'
+    'lifetime_usage_amount',
+    'billable_metric_lifetime_usage_units'
 );
 
 
@@ -11498,6 +11499,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260306115902'),
 ('20260305100007'),
+('20260227184913'),
 ('20260220131101'),
 ('20260219102644'),
 ('20260219083335'),
