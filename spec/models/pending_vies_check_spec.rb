@@ -19,7 +19,7 @@ RSpec.describe PendingViesCheck, type: :model do
     it do
       expect(subject).to validate_uniqueness_of(:customer_id).ignoring_case_sensitivity
       expect(subject).to validate_numericality_of(:attempts_count).is_greater_than_or_equal_to(0)
-      expect(subject).to validate_inclusion_of(:last_error_type).in_array(described_class::KNOWN_ERROR_TYPES)
+      expect(subject).to validate_inclusion_of(:last_error_type).in_array(described_class::KNOWN_ERROR_TYPES).allow_nil
     end
   end
 

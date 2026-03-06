@@ -68,7 +68,7 @@ describe "Add customer-specific taxes" do
       # Nothing changes and no API call is made
       create_or_update_customer({external_id: "user_it_123", tax_identification_number: "IT123"})
       expect(Customer.find_by(external_id: "user_it_123").taxes.reload.sole.code).to eq "lago_eu_fr_standard"
-      expect(webhooks_sent.first { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
+      expect(webhooks_sent.find { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "valid" => false,
         "valid_format" => false
       })
@@ -80,7 +80,7 @@ describe "Add customer-specific taxes" do
       mock_vies_check!("IT12345678901")
       create_or_update_customer({external_id: "user_it_123", tax_identification_number: "IT12345678901"})
       expect(Customer.find_by(external_id: "user_it_123").taxes.reload.sole.code).to eq "lago_eu_reverse_charge"
-      expect(webhooks_sent.first { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
+      expect(webhooks_sent.find { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "countryCode" => "IT",
         "vatNumber" => "IT12345678901"
       })
@@ -109,7 +109,7 @@ describe "Add customer-specific taxes" do
   end
 
   context "when VIES returns an error" do
-    let(:retry_job) { class_double(Customers::RetryViesCheckJob) }
+    let(:retry_job) { class_double(Customers::ViesCheckJob) }
 
     it "does not change taxes but send the webhook" do
       enable_eu_tax_management!
@@ -122,13 +122,13 @@ describe "Add customer-specific taxes" do
       allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
         .and_raise(::Valvat::RateLimitError.new("rate limit exceeded", Valvat::Lookup::VIES))
 
-      allow(Customers::RetryViesCheckJob).to receive(:set).and_return retry_job
+      allow(Customers::ViesCheckJob).to receive(:set).and_return retry_job
       allow(retry_job).to receive(:perform_later)
 
       create_or_update_customer({external_id: "user_fr_123", tax_identification_number: vat_number})
 
       expect(Customer.find_by(external_id: "user_fr_123").taxes.reload.sole.code).to eq "lago_eu_fr_standard"
-      expect(webhooks_sent.first { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
+      expect(webhooks_sent.find { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "valid" => false,
         "valid_format" => true,
         "error" => "The VIES web service returned the error: rate limit exceeded"
@@ -138,7 +138,7 @@ describe "Add customer-specific taxes" do
 
   context "when VIES fails and invoice is blocked until retry succeeds" do
     let(:vat_number) { "FR12345678901" }
-    let(:retry_job) { class_double(Customers::RetryViesCheckJob) }
+    let(:retry_job) { class_double(Customers::ViesCheckJob) }
 
     it "blocks invoice finalization until VIES validation succeeds" do
       enable_eu_tax_management!
@@ -149,10 +149,10 @@ describe "Add customer-specific taxes" do
       expect(customer.taxes.sole.code).to eq "lago_eu_fr_standard"
 
       # Update with VAT number - VIES fails
-      # Stub RetryViesCheckJob to prevent it from running during customer update
+      # Stub ViesCheckJob to prevent it from running during customer update
       allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
         .and_raise(::Valvat::RateLimitError.new("rate limit exceeded", Valvat::Lookup::VIES))
-      allow(Customers::RetryViesCheckJob).to receive(:set).and_return(retry_job)
+      allow(Customers::ViesCheckJob).to receive(:set).and_return(retry_job)
       allow(retry_job).to receive(:perform_later)
 
       create_or_update_customer({external_id: "user_fr_123", tax_identification_number: vat_number})
@@ -174,7 +174,7 @@ describe "Add customer-specific taxes" do
 
       # VIES succeeds on retry
       mock_vies_check!(vat_number)
-      Customers::RetryViesCheckJob.perform_now(customer.id)
+      Customers::ViesCheckJob.perform_now(customer.id)
 
       # PendingViesCheck should be deleted
       expect(customer.reload.pending_vies_check).to be_nil
