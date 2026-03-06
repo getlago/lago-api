@@ -22,24 +22,23 @@ module Sequenced
     end
 
     def generate_sequential_id
-      result = self.class.with_advisory_lock(
-        lock_key_value,
-        transaction: true,
-        timeout_seconds: 3.seconds
-      ) do
-        sequential_id = sequence_scope.with_sequential_id.maximum(:sequential_id) || 0
+      conn = self.class.connection
+      lock_key = conn.quote(lock_key_value)
 
-        loop do
-          sequential_id += 1
+      conn.execute("SET LOCAL lock_timeout = '3s'")
 
-          break sequential_id unless sequence_scope.exists?(sequential_id:)
-        end
-      end
+      # Single query: acquire advisory lock + compute next ID (2 round-trips instead of 5+)
+      next_id = conn.select_value(<<~SQL.squish)
+        WITH lock AS (SELECT pg_advisory_xact_lock(hashtext(#{lock_key})))
+        SELECT COALESCE(MAX(sub.sequential_id), 0) + 1
+        FROM lock, (#{sequence_scope.with_sequential_id.select(:sequential_id).to_sql}) AS sub
+      SQL
 
-      # NOTE: If the application was unable to acquire the lock, the block returns false
-      raise(SequenceError, "Unable to acquire lock on the database") unless result
+      raise(SequenceError, "Unable to acquire lock on the database") unless next_id
 
-      result
+      next_id.to_i
+    rescue ActiveRecord::LockWaitTimeout
+      raise(SequenceError, "Unable to acquire lock on the database")
     end
 
     def sequence_scope

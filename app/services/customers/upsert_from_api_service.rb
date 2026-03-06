@@ -43,55 +43,55 @@ module Customers
         )
       end
 
+      original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
+
+      customer.billing_entity = billing_entity if new_customer || (customer.editable? && params.key?(:billing_entity_code))
+      customer.name = params[:name] if params.key?(:name)
+      customer.country = params[:country]&.upcase if params.key?(:country)
+      customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
+      customer.address_line2 = params[:address_line2] if params.key?(:address_line2)
+      customer.state = params[:state] if params.key?(:state)
+      customer.zipcode = params[:zipcode] if params.key?(:zipcode)
+      customer.email = remove_invisible_chars(params[:email]) if params.key?(:email)
+      customer.city = params[:city] if params.key?(:city)
+      customer.shipping_address_line1 = shipping_address[:address_line1] if shipping_address.key?(:address_line1)
+      customer.shipping_address_line2 = shipping_address[:address_line2] if shipping_address.key?(:address_line2)
+      customer.shipping_city = shipping_address[:city] if shipping_address.key?(:city)
+      customer.shipping_zipcode = shipping_address[:zipcode] if shipping_address.key?(:zipcode)
+      customer.shipping_state = shipping_address[:state] if shipping_address.key?(:state)
+      customer.shipping_country = shipping_address[:country]&.upcase if shipping_address.key?(:country)
+      customer.url = params[:url] if params.key?(:url)
+      customer.phone = params[:phone] if params.key?(:phone)
+      customer.logo_url = params[:logo_url] if params.key?(:logo_url)
+      customer.legal_name = params[:legal_name] if params.key?(:legal_name)
+      customer.legal_number = params[:legal_number] if params.key?(:legal_number)
+      customer.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
+      customer.external_salesforce_id = params[:external_salesforce_id] if params.key?(:external_salesforce_id)
+      customer.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] || "inherit" if params.key?(:finalize_zero_amount_invoice)
+      customer.firstname = params[:firstname] if params.key?(:firstname)
+      customer.lastname = params[:lastname] if params.key?(:lastname)
+      customer.customer_type = params[:customer_type] if params.key?(:customer_type)
+
+      if customer.organization.revenue_share_enabled? && customer.editable?
+        customer.account_type = params[:account_type] if params.key?(:account_type)
+        customer.exclude_from_dunning_campaign = customer.partner_account?
+      end
+
+      if params.key?(:tax_identification_number)
+        customer.tax_identification_number = params[:tax_identification_number]
+      end
+
+      assign_premium_attributes(customer, params)
+
+      if params.key?(:currency)
+        Customers::UpdateCurrencyService
+          .call(customer:, currency: params[:currency], customer_update: true)
+          .raise_if_error!
+      end
+
+      customer.save!
+
       ActiveRecord::Base.transaction do
-        original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
-
-        customer.billing_entity = billing_entity if new_customer || (customer.editable? && params.key?(:billing_entity_code))
-        customer.name = params[:name] if params.key?(:name)
-        customer.country = params[:country]&.upcase if params.key?(:country)
-        customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
-        customer.address_line2 = params[:address_line2] if params.key?(:address_line2)
-        customer.state = params[:state] if params.key?(:state)
-        customer.zipcode = params[:zipcode] if params.key?(:zipcode)
-        customer.email = remove_invisible_chars(params[:email]) if params.key?(:email)
-        customer.city = params[:city] if params.key?(:city)
-        customer.shipping_address_line1 = shipping_address[:address_line1] if shipping_address.key?(:address_line1)
-        customer.shipping_address_line2 = shipping_address[:address_line2] if shipping_address.key?(:address_line2)
-        customer.shipping_city = shipping_address[:city] if shipping_address.key?(:city)
-        customer.shipping_zipcode = shipping_address[:zipcode] if shipping_address.key?(:zipcode)
-        customer.shipping_state = shipping_address[:state] if shipping_address.key?(:state)
-        customer.shipping_country = shipping_address[:country]&.upcase if shipping_address.key?(:country)
-        customer.url = params[:url] if params.key?(:url)
-        customer.phone = params[:phone] if params.key?(:phone)
-        customer.logo_url = params[:logo_url] if params.key?(:logo_url)
-        customer.legal_name = params[:legal_name] if params.key?(:legal_name)
-        customer.legal_number = params[:legal_number] if params.key?(:legal_number)
-        customer.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
-        customer.external_salesforce_id = params[:external_salesforce_id] if params.key?(:external_salesforce_id)
-        customer.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] || "inherit" if params.key?(:finalize_zero_amount_invoice)
-        customer.firstname = params[:firstname] if params.key?(:firstname)
-        customer.lastname = params[:lastname] if params.key?(:lastname)
-        customer.customer_type = params[:customer_type] if params.key?(:customer_type)
-
-        if customer.organization.revenue_share_enabled? && customer.editable?
-          customer.account_type = params[:account_type] if params.key?(:account_type)
-          customer.exclude_from_dunning_campaign = customer.partner_account?
-        end
-
-        if params.key?(:tax_identification_number)
-          customer.tax_identification_number = params[:tax_identification_number]
-        end
-
-        assign_premium_attributes(customer, params)
-
-        if params.key?(:currency)
-          Customers::UpdateCurrencyService
-            .call(customer:, currency: params[:currency], customer_update: true)
-            .raise_if_error!
-        end
-
-        customer.save!
-
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,
           new_record: new_customer,

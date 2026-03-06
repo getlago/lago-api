@@ -81,9 +81,9 @@ module Customers
 
       assign_premium_attributes(customer, args)
 
-      ActiveRecord::Base.transaction do
-        customer.save!
+      customer.save!
 
+      ActiveRecord::Base.transaction do
         eu_tax_code_result = Customers::EuAutoTaxesService.call(customer:, new_record: true, tax_attributes_changed: true)
 
         if eu_tax_code_result.success?
