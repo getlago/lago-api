@@ -15,7 +15,7 @@ module Events
         def call
           duplicated_count = count_duplicates
           remove_duplicated_events
-          result.removed_count = duplicated_count - count_duplicates
+          result.removed_count = duplicated_count
 
           result
         end
@@ -29,25 +29,6 @@ module Events
         attr_reader :subscription, :codes
 
         delegate :organization, to: :subscription
-
-        def connection
-          @connection ||= ::Clickhouse::EventsEnrichedExpanded.connection
-        end
-
-        def where_clause
-          conditions = [
-            "organization_id = #{connection.quote(organization.id)}",
-            "subscription_id = #{connection.quote(subscription.id)}",
-            "timestamp >= #{connection.quote(subscription.started_at.strftime("%Y-%m-%d %H:%M:%S"))}"
-          ]
-
-          if codes.present?
-            code_list = codes.map { |c| connection.quote(c) }.join(", ")
-            conditions << "code IN (#{code_list})"
-          end
-
-          conditions.join(" AND ")
-        end
 
         def base_scope
           scope = ::Clickhouse::EventsEnrichedExpanded

@@ -54,7 +54,7 @@ RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedServic
     context "with codes filter" do
       let(:codes) { [billable_metric.code] }
       let(:other_metric) { create(:billable_metric, organization:) }
-      let(:other_charge) { create(:standard_charge, billable_metric: other_metric) }
+      let(:other_charge) { create(:standard_charge, billable_metric: other_metric, plan:) }
 
       before do
         create(

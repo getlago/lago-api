@@ -41,15 +41,18 @@ namespace :events do
     subscriptions.find_each do |subscription|
       service = Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedService.new(subscription:, codes:)
 
+      duplicate_count = service.count_duplicates
+
       if dry_run
         Rails.logger.info(
-          "events:deduplicate [DRY RUN] - Subscription #{subscription.external_id}: #{service.count_duplicates} duplicate rows would be removed"
+          "events:deduplicate_enriched_expanded [DRY RUN] - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows would be removed"
         )
       else
         result = service.call
+        duplicate_count = result.removed_count
 
         Rails.logger.info(
-          "events:deduplicate - Subscription #{subscription.external_id}: #{result.removed_count} duplicate rows removed"
+          "events:deduplicate_enriched_expanded - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows removed"
         )
       end
 
@@ -58,7 +61,7 @@ namespace :events do
 
     mode = dry_run ? "DRY RUN" : "LIVE"
     action = dry_run ? "found" : "removed"
-    Rails.logger.info("events:deduplicate [#{mode}] - Complete. #{total_duplicates} total duplicate rows #{action}.")
+    Rails.logger.info("events:deduplicate_enriched_expanded [#{mode}] - Complete. #{total_duplicates} total duplicate rows #{action}.")
   end
 
   desc "Reprocess events by pushing them back to events_raw Kafka topic with reprocess flag"
