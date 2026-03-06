@@ -27,8 +27,7 @@ module Sequenced
         transaction: true,
         timeout_seconds: 3.seconds
       ) do
-        sequential_id = sequence_scope.with_sequential_id.order(sequential_id: :desc).limit(1).pick(:sequential_id)
-        sequential_id ||= 0
+        sequential_id = sequence_scope.with_sequential_id.maximum(:sequential_id) || 0
 
         loop do
           sequential_id += 1
