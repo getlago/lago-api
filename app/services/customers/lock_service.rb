@@ -28,9 +28,14 @@ module Customers
     end
 
     def call
-      Customer.with_advisory_lock!(lock_key, timeout_seconds:, transaction:) do
-        yield
+      Customer.transaction do
+        Customer.connection.execute("SET LOCAL lock_timeout = '#{timeout_seconds.to_i}s'")
+        Customer.with_advisory_lock!(lock_key, transaction:) do
+          yield
+        end
       end
+    rescue ActiveRecord::LockWaitTimeout
+      raise FailedToAcquireLock, "Failed to acquire lock #{lock_key}"
     rescue WithAdvisoryLock::FailedToAcquireLock
       raise FailedToAcquireLock, "Failed to acquire lock #{lock_key}"
     end
