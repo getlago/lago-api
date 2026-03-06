@@ -26,17 +26,10 @@ module Sequenced
       lock_key = conn.quote(lock_key_value)
 
       conn.execute("SET LOCAL lock_timeout = '3s'")
+      conn.execute("SELECT pg_advisory_xact_lock(hashtext(#{lock_key}))")
 
-      # Single query: acquire advisory lock + compute next ID (2 round-trips instead of 5+)
-      next_id = conn.select_value(<<~SQL.squish)
-        WITH lock AS (SELECT pg_advisory_xact_lock(hashtext(#{lock_key})))
-        SELECT COALESCE(MAX(sub.sequential_id), 0) + 1
-        FROM lock, (#{sequence_scope.with_sequential_id.select(:sequential_id).to_sql}) AS sub
-      SQL
-
-      raise(SequenceError, "Unable to acquire lock on the database") unless next_id
-
-      next_id.to_i
+      next_id = sequence_scope.with_sequential_id.maximum(:sequential_id) || 0
+      next_id + 1
     rescue ActiveRecord::LockWaitTimeout
       raise(SequenceError, "Unable to acquire lock on the database")
     end
