@@ -67,7 +67,7 @@ class SubscriptionsQuery < BaseQuery
   end
 
   def with_overriden(scope)
-    if filters.overriden
+    if ActiveModel::Type::Boolean.new.cast(filters.overriden)
       scope.joins(:plan).where.not(plans: {parent_id: nil})
     else
       scope.joins(:plan).where(plans: {parent_id: nil})
