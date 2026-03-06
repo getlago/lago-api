@@ -99,7 +99,7 @@ module Invoices
     end
 
     def handle_gated_activation(payment_status)
-      return unless invoice.open? && invoice.subscription?
+      return unless (invoice.open? || invoice.closed?) && invoice.subscription?
       return unless %i[succeeded failed].include?(payment_status.to_sym)
 
       Subscriptions::ActivationRules::ProcessPaymentJob.perform_after_commit(

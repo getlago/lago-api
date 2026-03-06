@@ -3,7 +3,7 @@
 module Subscriptions
   module ActivationRules
     class RefundExpiredPaymentService < BaseService
-      Result = BaseResult[:credit_note]
+      include Customers::PaymentProviderFinder
 
       def initialize(invoice:)
         @invoice = invoice
@@ -12,21 +12,15 @@ module Subscriptions
       end
 
       def call
-        # Finalize the invoice first so it can be refunded via credit note.
-        # Gated invoices are in `open` status and credit notes require a finalized invoice.
-        Invoices::FinalizeService.call!(invoice:)
+        # Close the invoice so it remains invisible to the customer
+        # and is not considered an accounts receivable.
+        invoice.update!(status: :closed)
 
-        credit_note_result = CreditNotes::CreateService.call(
-          invoice:,
-          reason: :order_cancellation,
-          description: "Automatic refund: payment received after subscription activation expired",
-          refund_amount_cents: invoice.total_amount_cents,
-          credit_amount_cents: 0,
-          items: credit_note_items,
-          automatic: true
-        )
+        payment = invoice.payments.order(created_at: :desc).first
+        return result unless payment
 
-        result.credit_note = credit_note_result.credit_note
+        refund_payment(payment)
+
         result
       end
 
@@ -34,13 +28,84 @@ module Subscriptions
 
       attr_reader :invoice
 
-      def credit_note_items
-        invoice.fees.map do |fee|
-          {
-            fee_id: fee.id,
-            amount_cents: fee.amount_cents
-          }
+      delegate :customer, to: :invoice
+
+      def refund_payment(payment)
+        provider = payment.payment_provider
+
+        case provider
+        when PaymentProviders::StripeProvider
+          refund_stripe(payment, provider)
+        when PaymentProviders::AdyenProvider
+          refund_adyen(payment, provider)
+        when PaymentProviders::GocardlessProvider
+          refund_gocardless(payment, provider)
         end
+
+        # Cashfree, Flutterwave, and Moneyhash do not have refund support yet
+      end
+
+      def refund_stripe(payment, provider)
+        ::Stripe::Refund.create(
+          {
+            payment_intent: payment.provider_payment_id,
+            amount: payment.amount_cents,
+            reason: :requested_by_customer,
+            metadata: {
+              lago_customer_id: customer.id,
+              lago_invoice_id: invoice.id,
+              lago_refund_reason: "activation_expired"
+            }
+          },
+          {
+            api_key: provider.secret_key,
+            idempotency_key: "activation-refund-#{payment.id}"
+          }
+        )
+      end
+
+      def refund_adyen(payment, provider)
+        client = ::Adyen::Client.new(
+          api_key: provider.api_key,
+          env: provider.environment,
+          live_url_prefix: provider.live_prefix
+        )
+
+        client.checkout.modifications_api.refund_captured_payment(
+          payment.provider_payment_id,
+          Lago::Adyen::Params.new(
+            merchantAccount: provider.merchant_account,
+            amount: {
+              value: payment.amount_cents,
+              currency: payment.amount_currency.upcase
+            },
+            reference: "activation-refund-#{payment.id}"
+          ).to_h
+        )
+      end
+
+      def refund_gocardless(payment, provider)
+        client = GoCardlessPro::Client.new(
+          access_token: provider.access_token,
+          environment: provider.environment
+        )
+
+        client.refunds.create(
+          params: {
+            amount: payment.amount_cents,
+            total_amount_confirmation: payment.amount_cents,
+            metadata: {
+              lago_invoice_id: invoice.id,
+              reason: "activation_expired"
+            },
+            links: {
+              payment: payment.provider_payment_id
+            }
+          },
+          headers: {
+            "Idempotency-Key" => "activation-refund-#{payment.id}"
+          }
+        )
       end
     end
   end
