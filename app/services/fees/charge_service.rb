@@ -378,9 +378,10 @@ module Fees
         filters[:ignored_filters] = result.ignored_filters
       end
 
-      previous = Charges::PreviousChargesAndFiltersService.call!(charge:, charge_filter:, subscription:)
-      filters[:previous_charge_ids] = previous.previous_charge_ids if previous.previous_charge_ids.present?
-      filters[:previous_charge_filter_ids] = previous.previous_charge_filter_ids if previous.previous_charge_filter_ids.present?
+      previous_result = previous_charges_result
+      filters[:previous_charge_ids] = previous_result.previous_charge_ids if previous_result.previous_charge_ids.present?
+      previous_filter_ids = previous_result.previous_charge_filters[charge_filter&.id] || []
+      filters[:previous_charge_filter_ids] = previous_filter_ids if previous_filter_ids.present?
 
       if usage_filters.filter_by_group.present?
         # when pricing group keys on a charge are "workspace" and "user", and filter_by_group is {"workspace" => ["A"]},
@@ -410,6 +411,10 @@ module Fees
 
       ratio = days_passed.fdiv(charges_duration)
       ratio.clamp(0.0, 1.0)
+    end
+
+    def previous_charges_result
+      @previous_charges_result ||= Charges::PreviousChargesAndFiltersService.call!(charge:, subscription:)
     end
 
     def filtered_for_charge_boundaries(boundaries)

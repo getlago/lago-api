@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Charges::PreviousChargesAndFiltersService do
-  subject(:service) { described_class.new(charge:, charge_filter:, subscription:) }
+  subject(:service) { described_class.new(charge:, subscription:) }
 
   let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["enriched_events_aggregation"]) }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: :sum_agg, field_name: "value", recurring: true) }
@@ -16,8 +16,6 @@ RSpec.describe Charges::PreviousChargesAndFiltersService do
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:subscription) { create(:subscription, plan:, organization:, previous_subscription:) }
 
-  let(:charge_filter) { nil }
-
   before do
     previous_charge
   end
@@ -28,7 +26,7 @@ RSpec.describe Charges::PreviousChargesAndFiltersService do
         result = service.call
 
         expect(result.previous_charge_ids).to eq([previous_charge.id])
-        expect(result.previous_charge_filter_ids).to eq([])
+        expect(result.previous_charge_filters).to eq({})
       end
     end
 
@@ -63,7 +61,7 @@ RSpec.describe Charges::PreviousChargesAndFiltersService do
         result = service.call
 
         expect(result.previous_charge_ids).to eq([previous_charge.id])
-        expect(result.previous_charge_filter_ids).to eq([previous_charge_filter.id])
+        expect(result.previous_charge_filters).to eq(charge_filter.id => [previous_charge_filter.id])
       end
 
       context "when previous filter does not match" do
@@ -75,7 +73,7 @@ RSpec.describe Charges::PreviousChargesAndFiltersService do
           result = service.call
 
           expect(result.previous_charge_ids).to eq([previous_charge.id])
-          expect(result.previous_charge_filter_ids).to eq([])
+          expect(result.previous_charge_filters).to eq({})
         end
       end
     end
@@ -83,55 +81,55 @@ RSpec.describe Charges::PreviousChargesAndFiltersService do
     context "when subscription has no previous subscription" do
       let(:subscription) { create(:subscription, plan:, organization:) }
 
-      it "returns empty arrays" do
+      it "returns empty results" do
         result = service.call
 
         expect(result.previous_charge_ids).to eq([])
-        expect(result.previous_charge_filter_ids).to eq([])
+        expect(result.previous_charge_filters).to eq({})
       end
     end
 
     context "when billable metric is not recurring" do
       let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: :sum_agg, field_name: "value", recurring: false) }
 
-      it "returns empty arrays" do
+      it "returns empty results" do
         result = service.call
 
         expect(result.previous_charge_ids).to eq([])
-        expect(result.previous_charge_filter_ids).to eq([])
+        expect(result.previous_charge_filters).to eq({})
       end
     end
 
     context "when organization does not have clickhouse_events_store" do
       let(:organization) { create(:organization, clickhouse_events_store: false, feature_flags: ["enriched_events_aggregation"]) }
 
-      it "returns empty arrays" do
+      it "returns empty results" do
         result = service.call
 
         expect(result.previous_charge_ids).to eq([])
-        expect(result.previous_charge_filter_ids).to eq([])
+        expect(result.previous_charge_filters).to eq({})
       end
     end
 
     context "when organization does not have enriched_events_aggregation flag" do
       let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: []) }
 
-      it "returns empty arrays" do
+      it "returns empty results" do
         result = service.call
 
         expect(result.previous_charge_ids).to eq([])
-        expect(result.previous_charge_filter_ids).to eq([])
+        expect(result.previous_charge_filters).to eq({})
       end
     end
 
     context "when previous plan has no matching charge" do
       before { previous_charge.destroy! }
 
-      it "returns empty arrays" do
+      it "returns empty results" do
         result = service.call
 
         expect(result.previous_charge_ids).to eq([])
-        expect(result.previous_charge_filter_ids).to eq([])
+        expect(result.previous_charge_filters).to eq({})
       end
     end
   end
