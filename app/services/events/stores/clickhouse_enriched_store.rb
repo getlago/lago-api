@@ -40,7 +40,7 @@ module Events
           fallback_query = code_based_fallback_query(from_datetime: (from_datetime if force_from))
 
           current_sql = current_query.project(select).to_sql
-          fallback_sql = fallback_query.project(select).to_sql + " LIMIT 1 BY transaction_id, timestamp"
+          fallback_sql = fallback_query.project(select).to_sql + " ORDER BY enriched_at DESC LIMIT 1 BY transaction_id, timestamp"
 
           return {"events" => "(#{current_sql}) UNION ALL (#{fallback_sql})"}
         end
@@ -115,8 +115,9 @@ module Events
       end
 
       # Code-based fallback dedup query for events before subscription.started_at.
-      # Groups by transaction_id + timestamp only (no charge_id/charge_filter_id) to collapse
-      # duplicate rows from multiple charges matching the same event.
+      # Groups by the same dedup_group_by_columns used elsewhere (transaction_id, timestamp,
+      # external_subscription_id, organization_id, etc.) to collapse duplicate rows from
+      # multiple charges matching the same event, without using real charge_id/charge_filter_id.
       # Projects dummy charge_id/charge_filter_id for UNION compatibility with deduplicated_events_sql.
       def code_based_fallback_dedup_sql(from_datetime:, deduplicated_columns: [])
         query = code_based_fallback_query(from_datetime:)
@@ -726,9 +727,15 @@ module Events
         columns = deduplicated_columns.dup
         columns << "sorted_grouped_by" if grouped_by.present? || grouped_by_values.present?
 
-        columns.uniq.map do
-          Arel::Nodes::NamedFunction.new("argMax", [arel_table[it.to_sym], arel_table[:enriched_at]]).as(it)
-        end
+        group_by_column_names = dedup_group_by_columns.map { it.name.to_s }
+        excluded_column_names = group_by_column_names + %w[charge_id charge_filter_id]
+
+        columns
+          .uniq
+          .reject { excluded_column_names.include?(it) }
+          .map do
+            Arel::Nodes::NamedFunction.new("argMax", [arel_table[it.to_sym], arel_table[:enriched_at]]).as(it)
+          end
       end
 
       def needs_code_based_fallback?(force_from:)

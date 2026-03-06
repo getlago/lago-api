@@ -2014,7 +2014,15 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     let(:previous_subscription) do
       create(:subscription, plan: previous_plan, organization:, customer:, status: :terminated, started_at: started_at - 3.months)
     end
-    let(:subscription) { create(:subscription, customer:, started_at:, previous_subscription:) }
+    let(:subscription) do
+      create(
+        :subscription,
+        customer:,
+        started_at:,
+        previous_subscription:,
+        external_id: previous_subscription.external_id
+      )
+    end
 
     let(:previous_events) do
       # Events before subscription.started_at with previous charge (different charge_id)
