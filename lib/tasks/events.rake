@@ -39,68 +39,17 @@ namespace :events do
     total_duplicates = 0
 
     subscriptions.find_each do |subscription|
-      started_at = subscription.started_at.strftime("%Y-%m-%d %H:%M:%S")
-      sub_id = subscription.id
-
-      connection = Clickhouse::EventsEnrichedExpanded.connection
-
-      code_condition = if codes.present?
-        code_list = codes.map { |c| connection.quote(c) }.join(", ")
-        "AND code IN (#{code_list})"
-      else
-        ""
-      end
-
-      where_clause = <<~SQL.squish
-        organization_id = #{connection.quote(organization.id)}
-        AND subscription_id = #{connection.quote(sub_id)}
-        AND timestamp >= #{connection.quote(started_at)}
-        #{code_condition}
-      SQL
-
-      count_sql = <<~SQL.squish
-        SELECT count() as cnt
-        FROM events_enriched_expanded
-        WHERE #{where_clause}
-        AND (organization_id, subscription_id, charge_id, charge_filter_id, transaction_id, timestamp, enriched_at)
-        NOT IN (
-          SELECT
-            organization_id, subscription_id, charge_id, charge_filter_id, transaction_id, timestamp,
-            max(enriched_at) as enriched_at
-          FROM events_enriched_expanded
-          WHERE #{where_clause}
-          GROUP BY organization_id, subscription_id, charge_id, charge_filter_id, transaction_id, timestamp
-        )
-      SQL
-
-      result = Clickhouse::EventsEnrichedExpanded.connection.select_one(count_sql)
-      duplicate_count = result["cnt"].to_i
+      service = Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedService.new(subscription:, codes:)
 
       if dry_run
         Rails.logger.info(
-          "events:deduplicate [DRY RUN] - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows would be removed"
+          "events:deduplicate [DRY RUN] - Subscription #{subscription.external_id}: #{service.count_duplicates} duplicate rows would be removed"
         )
       else
-        if duplicate_count > 0
-          delete_sql = <<~SQL.squish
-            ALTER TABLE events_enriched_expanded
-            DELETE WHERE #{where_clause}
-            AND (organization_id, subscription_id, charge_id, charge_filter_id, transaction_id, timestamp, enriched_at)
-            NOT IN (
-              SELECT
-                organization_id, subscription_id, charge_id, charge_filter_id, transaction_id, timestamp,
-                max(enriched_at) as enriched_at
-              FROM events_enriched_expanded
-              WHERE #{where_clause}
-              GROUP BY organization_id, subscription_id, charge_id, charge_filter_id, transaction_id, timestamp
-            )
-          SQL
-
-          Clickhouse::EventsEnrichedExpanded.connection.execute(delete_sql)
-        end
+        result = service.call
 
         Rails.logger.info(
-          "events:deduplicate - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows removal scheduled"
+          "events:deduplicate - Subscription #{subscription.external_id}: #{result.removed_count} duplicate rows removed"
         )
       end
 
