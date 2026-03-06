@@ -25,19 +25,11 @@ module Sequenced
       result = self.class.with_advisory_lock(
         lock_key_value,
         transaction: true,
-        timeout_seconds: 10.seconds
+        timeout_seconds: 3.seconds
       ) do
-        sequential_id = sequence_scope.with_sequential_id.order(sequential_id: :desc).limit(1).pick(:sequential_id)
-        sequential_id ||= 0
-
-        loop do
-          sequential_id += 1
-
-          break sequential_id unless sequence_scope.exists?(sequential_id:)
-        end
+        (sequence_scope.with_sequential_id.maximum(:sequential_id) || 0) + 1
       end
 
-      # NOTE: If the application was unable to acquire the lock, the block returns false
       raise(SequenceError, "Unable to acquire lock on the database") unless result
 
       result
