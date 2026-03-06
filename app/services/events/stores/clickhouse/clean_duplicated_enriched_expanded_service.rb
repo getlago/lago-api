@@ -6,9 +6,10 @@ module Events
       class CleanDuplicatedEnrichedExpandedService < BaseService
         Result = BaseResult[:removed_count]
 
-        def initialize(subscription:, codes: [])
+        def initialize(subscription:, codes: [], async: true)
           @subscription = subscription
           @codes = codes
+          @async = async
           super
         end
 
@@ -26,13 +27,11 @@ module Events
 
         private
 
-        attr_reader :subscription, :codes
-
-        delegate :organization, to: :subscription
+        attr_reader :subscription, :codes, :async
 
         def base_scope
           scope = ::Clickhouse::EventsEnrichedExpanded
-            .where(organization_id: organization.id)
+            .where(organization_id: subscription.organization_id)
             .where(subscription_id: subscription.id)
 
           if codes.present?
@@ -50,28 +49,64 @@ module Events
             .pluck(:transaction_id, :timestamp, :charge_id, :charge_filter_id)
         end
 
+        def connection
+          @connection ||= ::Clickhouse::EventsEnrichedExpanded.connection
+        end
+
         def remove_duplicated_events
           duplicates = duplicated_events.to_a
           return if duplicates.empty?
 
-          duplicates.each do |transaction_id, event_timestamp, charge_id, charge_filter_id|
-            # Fetch all enriched_at timestamps for the duplicated events
-            enriched_at = base_scope
-              .where(timestamp: event_timestamp)
-              .where(transaction_id: transaction_id)
-              .where(charge_id: charge_id)
-              .where(charge_filter_id: charge_filter_id)
-              .order(enriched_at: :desc)
-              .pluck(:enriched_at)
-
-            base_scope
-              .where(timestamp: event_timestamp)
-              .where(transaction_id: transaction_id)
-              .where(charge_id: charge_id)
-              .where(charge_filter_id: charge_filter_id)
-              .where(enriched_at: enriched_at[1..])
-              .delete_all
+          code_condition = ""
+          if codes.present?
+            code_condition = "AND code IN (#{codes.map { connection.quote(it) }.join(", ")})"
           end
+
+          sql = <<~SQL
+            ALTER TABLE events_enriched_expanded
+            DELETE WHERE (transaction_id, timestamp, charge_id, charge_filter_id, enriched_at) IN (
+              SELECT
+                transaction_id,
+                timestamp,
+                charge_id,
+                charge_filter_id,
+                enriched_at
+              FROM (
+                SELECT
+                  transaction_id,
+                  timestamp,
+                  charge_id,
+                  charge_filter_id,
+                  enriched_at,
+                  row_number() OVER (
+                    PARTITION BY transaction_id, timestamp, charge_id, charge_filter_id
+                    ORDER BY enriched_at DESC
+                  ) AS row_n
+                FROM events_enriched_expanded
+                WHERE
+                  organization_id = :organization_id AND
+                  subscription_id = :subscription_id AND
+                  timestamp >= :timestamp
+                  #{code_condition}
+              )
+              WHERE row_n > 1
+            )
+          SQL
+
+          sql += " SETTINGS mutations_sync = 1" unless async
+
+          query = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sql,
+              {
+                organization_id: subscription.organization_id,
+                subscription_id: subscription.id,
+                timestamp: subscription.started_at
+              }
+            ]
+          )
+
+          connection.execute(query)
         end
       end
     end

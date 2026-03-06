@@ -3,7 +3,7 @@
 require "spec_helper"
 
 RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedService, :clickhouse do
-  subject(:service) { described_class.new(subscription:, codes:) }
+  subject(:service) { described_class.new(subscription:, codes:, async: false) }
 
   let(:organization) { create(:organization, clickhouse_events_store: true) }
   let(:customer) { create(:customer, organization:) }
@@ -47,6 +47,7 @@ RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedServic
         transaction_id: transaction_id,
         timestamp: event_timestamp
       )
+
       expect(remaining.count).to eq(1)
       expect(remaining.first.enriched_at).to match_datetime(base_enriched_at + 2.minutes)
     end
