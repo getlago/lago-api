@@ -30,7 +30,7 @@ module Customers
     def call
       Customer.transaction do
         Customer.connection.execute("SET LOCAL lock_timeout = '#{timeout_seconds.to_i}s'")
-        Customer.with_advisory_lock!(lock_key, blocking: true, transaction:) do
+        Customer.with_advisory_lock!(lock_key, transaction:) do
           yield
         end
       end
