@@ -780,6 +780,7 @@ DROP INDEX IF EXISTS public.idx_on_billing_entity_id_invoice_custom_section_id_b
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_customer_id_invoice_custom_e7aada65cb;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_724373e5ae;
+DROP INDEX IF EXISTS public.idx_invoices_organization_id_status;
 DROP INDEX IF EXISTS public.idx_invoice_subscriptions_on_subscription_with_timestamps;
 DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
 DROP INDEX IF EXISTS public.idx_events_for_distinct_codes;
@@ -5901,6 +5902,13 @@ CREATE UNIQUE INDEX idx_features_code_unique_per_organization ON public.entitlem
 --
 
 CREATE INDEX idx_invoice_subscriptions_on_subscription_with_timestamps ON public.invoice_subscriptions USING btree (subscription_id, COALESCE(to_datetime, created_at) DESC);
+
+
+--
+-- Name: idx_invoices_organization_id_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_invoices_organization_id_status ON public.invoices USING btree (organization_id, status);
 
 
 --
@@ -11488,6 +11496,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260306115902'),
 ('20260305100007'),
 ('20260220131101'),
 ('20260219102644'),
