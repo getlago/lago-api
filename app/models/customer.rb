@@ -158,7 +158,7 @@ class Customer < ApplicationRecord
   end
 
   def self.ransackable_attributes(_auth_object = nil)
-    %w[id name firstname lastname legal_name external_id email]
+    %w[id name firstname lastname legal_name external_id email search_text]
   end
 
   def self.ransackable_associations(_auth_object = nil)
@@ -398,6 +398,7 @@ end
 #  index_customers_on_external_id                      (organization_id,external_id)
 #  index_customers_on_external_id_and_organization_id  (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_customers_on_org_id_and_sequential_id_unique  (organization_id,sequential_id) UNIQUE WHERE (sequential_id IS NOT NULL)
+#  index_customers_on_organization_id_and_search_text  (organization_id,search_text) USING gin
 #  index_customers_on_sequential_id                    (sequential_id)
 #
 # Foreign Keys

@@ -594,6 +594,7 @@ DROP INDEX IF EXISTS public.index_customers_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id;
 DROP INDEX IF EXISTS public.index_customers_on_sequential_id;
+DROP INDEX IF EXISTS public.index_customers_on_organization_id_and_search_text;
 DROP INDEX IF EXISTS public.index_customers_on_org_id_and_sequential_id_unique;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id;
@@ -1072,7 +1073,9 @@ DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
+DROP EXTENSION IF EXISTS pg_trgm;
 DROP EXTENSION IF EXISTS pg_partman;
+DROP EXTENSION IF EXISTS btree_gin;
 DROP SCHEMA IF EXISTS partman;
 --
 -- Name: partman; Type: SCHEMA; Schema: -; Owner: -
@@ -1082,10 +1085,24 @@ CREATE SCHEMA partman;
 
 
 --
+-- Name: btree_gin; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS btree_gin WITH SCHEMA public;
+
+
+--
 -- Name: pg_partman; Type: EXTENSION; Schema: -; Owner: -
 --
 
 CREATE EXTENSION IF NOT EXISTS pg_partman WITH SCHEMA partman;
+
+
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
 
 --
@@ -7064,6 +7081,13 @@ CREATE UNIQUE INDEX index_customers_on_org_id_and_sequential_id_unique ON public
 
 
 --
+-- Name: index_customers_on_organization_id_and_search_text; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_organization_id_and_search_text ON public.customers USING gin (organization_id, search_text public.gin_trgm_ops);
+
+
+--
 -- Name: index_customers_on_sequential_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11339,6 +11363,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260311121245'),
+('20260306180436'),
 ('20260306180435'),
 ('20260306180434'),
 ('20260306115902'),
