@@ -10,7 +10,6 @@ module Api
     before_action :set_context_source
     before_action :track_api_key_usage
     before_action :authorize
-    before_action :validate_page_size
     include Trackable
     include ApiLoggable
 
@@ -76,17 +75,6 @@ module Api
 
     def cached_api_key?
       false
-    end
-
-    def max_page_size
-      PER_PAGE # 100 by default, see `Pagination` concern
-    end
-
-    def validate_page_size
-      return if params[:per_page].blank?
-      return if params[:per_page].to_i <= max_page_size
-
-      validation_errors(errors: {per_page: ["must_be_less_than_or_equal_to_#{max_page_size}"]})
     end
   end
 end
