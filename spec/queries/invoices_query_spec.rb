@@ -519,6 +519,23 @@ RSpec.describe InvoicesQuery do
     end
   end
 
+  context "when search_term matches invoice number and customer name across different invoices" do
+    let(:search_term) { "Rick" }
+    let!(:invoice_with_matching_number) do
+      create(:invoice, organization:, customer: customer_second, number: "RICK-001")
+    end
+
+    it "returns invoices matched by customer name and by invoice number" do
+      expect(returned_ids).to contain_exactly(
+        invoice_first.id,
+        invoice_third.id,
+        invoice_fifth.id,
+        invoice_sixth.id,
+        invoice_with_matching_number.id
+      )
+    end
+  end
+
   context "when amount filters applied" do
     let(:filters) { {amount_from:, amount_to:} }
 
