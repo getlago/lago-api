@@ -279,6 +279,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_019e2289e5;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
+DROP TRIGGER IF EXISTS restore_invariants ON public.customers;
 DROP TRIGGER IF EXISTS ensure_consistency ON public.roles;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.flat_filters AS
@@ -1047,6 +1048,7 @@ DROP TABLE IF EXISTS public.active_storage_blobs;
 DROP TABLE IF EXISTS public.active_storage_attachments;
 DROP TABLE IF EXISTS partman.template_public_enriched_events;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
+DROP FUNCTION IF EXISTS public.restore_invariants_on_customers();
 DROP FUNCTION IF EXISTS public.ensure_role_consistency();
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.tax_status;
@@ -1324,6 +1326,20 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
 CREATE FUNCTION public.ensure_role_consistency() RETURNS trigger
     LANGUAGE plpgsql
     AS $$ BEGIN IF OLD.organization_id IS NULL THEN RAISE EXCEPTION 'Predefined role cannot be modified'; ELSIF OLD.organization_id IS DISTINCT FROM NEW.organization_id THEN RAISE EXCEPTION 'Custom role cannot be moved to another organization'; ELSIF OLD.code IS DISTINCT FROM NEW.code THEN RAISE EXCEPTION 'The code of the role cannot be changed'; ELSIF NEW.permissions != OLD.permissions THEN NEW.permissions := ARRAY(SELECT DISTINCT unnest(NEW.permissions) ORDER BY 1); END IF; RETURN NEW; END; $$;
+
+
+--
+-- Name: restore_invariants_on_customers(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.restore_invariants_on_customers() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+          BEGIN
+            NEW.search_text := CONCAT_WS(' ', NEW.external_id, NEW.firstname, NEW.lastname, NEW.name, NEW.email);
+            RETURN NEW;
+          END;
+        $$;
 
 
 --
@@ -2102,6 +2118,7 @@ CREATE TABLE public.customers (
     subscription_invoice_issuing_date_anchor public.subscription_invoice_issuing_date_anchors,
     subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments,
     awaiting_wallet_refresh boolean DEFAULT false NOT NULL,
+    search_text text,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -9148,6 +9165,13 @@ CREATE TRIGGER ensure_consistency BEFORE UPDATE ON public.roles FOR EACH ROW EXE
 
 
 --
+-- Name: customers restore_invariants; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER restore_invariants BEFORE INSERT OR UPDATE ON public.customers FOR EACH ROW EXECUTE FUNCTION public.restore_invariants_on_customers();
+
+
+--
 -- Name: payment_methods fk_rails_00e7a45b0b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11315,6 +11339,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260311121245'),
+('20260306180434'),
 ('20260306115902'),
 ('20260305165936'),
 ('20260305161303'),
