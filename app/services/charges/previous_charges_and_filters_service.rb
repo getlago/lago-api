@@ -29,9 +29,13 @@ module Charges
 
         visited << current_subscription.id
 
-        previous_charge = current_subscription.plan.charges
-          .includes(filters: {values: :billable_metric_filter})
-          .find_by(billable_metric_id: charge.billable_metric_id)
+        previous_charges_scope = current_subscription.plan.charges
+
+        if charge_filter.present?
+          previous_charges_scope = previous_charges_scope.includes(filters: {values: :billable_metric_filter})
+        end
+
+        previous_charge = previous_charges_scope.find_by(billable_metric_id: charge.billable_metric_id)
 
         # TODO: how to deal with multiple charges for the same billable metric?
         if previous_charge
