@@ -141,6 +141,8 @@ module Customers
       end
 
       result
+    rescue Sequenced::SequenceError
+      result.single_validation_failure!(error_code: "resource_locked")
     rescue BaseService::ServiceFailure => e
       result.single_validation_failure!(error_code: e.code)
     rescue ActiveRecord::RecordInvalid => e

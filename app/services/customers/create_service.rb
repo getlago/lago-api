@@ -116,6 +116,8 @@ module Customers
 
       SendWebhookJob.perform_later("customer.created", customer)
       result
+    rescue Sequenced::SequenceError
+      result.single_validation_failure!(error_code: "resource_locked")
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
     rescue ActiveRecord::RecordInvalid => e
