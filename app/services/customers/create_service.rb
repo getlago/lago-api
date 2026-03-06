@@ -81,9 +81,9 @@ module Customers
 
       assign_premium_attributes(customer, args)
 
-      customer.save!
-
       ActiveRecord::Base.transaction do
+        customer.save!
+
         eu_tax_code_result = Customers::EuAutoTaxesService.call(customer:, new_record: true, tax_attributes_changed: true)
 
         if eu_tax_code_result.success?
@@ -116,8 +116,6 @@ module Customers
 
       SendWebhookJob.perform_later("customer.created", customer)
       result
-    rescue Sequenced::SequenceError
-      result.single_validation_failure!(error_code: "resource_locked")
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
     rescue ActiveRecord::RecordInvalid => e
