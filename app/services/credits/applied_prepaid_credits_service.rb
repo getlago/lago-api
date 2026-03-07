@@ -130,7 +130,7 @@ module Credits
         next if fee.sub_total_excluding_taxes_amount_cents == 0
 
         cap = fee.sub_total_excluding_taxes_amount_cents +
-          fee.taxes_precise_amount_cents -
+          fee.taxes_amount_cents -
           fee.precise_credit_notes_amount_cents
 
         next if cap <= 0

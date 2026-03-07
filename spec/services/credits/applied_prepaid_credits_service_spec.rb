@@ -14,7 +14,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
   let(:fee) {
     create(:charge_fee, invoice:, subscription:,
       amount_cents: fee_amount_cents, precise_amount_cents: fee_amount_cents,
-      taxes_precise_amount_cents: 0)
+      taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
   }
   let(:amount_cents) { 100 }
   let(:fee_amount_cents) { 100 }
@@ -119,6 +119,22 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       expect(Utils::ActivityLog).to have_produced("wallet_transaction.created").after_commit.with(wallet_transaction)
     end
 
+    context "when fee taxes_precise_amount_cents is less than taxes_amount_cents" do
+      let(:wallets) { [normal_wallet] }
+      let(:amount_cents) { 107 }
+      let(:fee) do
+        create(:charge_fee, invoice:, subscription:,
+          amount_cents: 100, precise_amount_cents: 100,
+          taxes_amount_cents: 7, taxes_precise_amount_cents: 6.54)
+      end
+
+      it "applies full invoice amount without penny rounding loss" do
+        expect(result).to be_success
+        expect(result.prepaid_credit_amount_cents).to eq(107)
+        expect(invoice.prepaid_credit_amount_cents).to eq(107)
+      end
+    end
+
     context "when priority wallet credits are less than invoice amount" do
       let(:amount_cents) { 1500 }
       let(:fee_amount_cents) { 1500 }
@@ -173,8 +189,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     context "with fee type limitations" do
       let(:subscription_fees) { [fee, fee2] }
       let(:amount_cents) { 110 }
-      let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 60, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
-      let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, precise_amount_cents: 40, taxes_precise_amount_cents: 4) }
+      let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 60, precise_amount_cents: 60, taxes_amount_cents: 6, taxes_precise_amount_cents: 6) }
+      let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, precise_amount_cents: 40, taxes_amount_cents: 4, taxes_precise_amount_cents: 4) }
 
       before { subscription_fees }
 
@@ -208,8 +224,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
       context "when wallet credits are less than invoice amount" do
         let(:amount_cents) { 5150 }
-        let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 3500, precise_amount_cents: 3500, taxes_precise_amount_cents: 100) }
-        let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 1500, precise_amount_cents: 1500, taxes_precise_amount_cents: 50) }
+        let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 3500, precise_amount_cents: 3500, taxes_amount_cents: 100, taxes_precise_amount_cents: 100) }
+        let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 1500, precise_amount_cents: 1500, taxes_amount_cents: 50, taxes_precise_amount_cents: 50) }
 
         it "calculates prepaid credit" do
           expect(result).to be_success
@@ -269,8 +285,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
       let(:subscription_fees) { [fee, fee2] }
       let(:amount_cents) { 110 }
-      let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 60, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
-      let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, precise_amount_cents: 40, taxes_precise_amount_cents: 4, charge:) }
+      let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 60, precise_amount_cents: 60, taxes_amount_cents: 6, taxes_precise_amount_cents: 6) }
+      let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, precise_amount_cents: 40, taxes_amount_cents: 4, taxes_precise_amount_cents: 4, charge:) }
       let(:charge) { create(:standard_charge, organization: wallets.first.organization, billable_metric:) }
       let(:billable_metric) { create(:billable_metric, organization: wallets.first.organization) }
       let(:wallet_targets) do
@@ -323,8 +339,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         end
       end
 
-      context "when precise fees have decimals" do
-        let(:amount_cents) { 114.4 }
+      context "when taxes_precise_amount_cents differs from taxes_amount_cents" do
+        let(:amount_cents) { 114 }
         let(:subscription_fees) { [fee2] }
 
         let(:fee2) do
@@ -334,12 +350,13 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
             subscription:,
             amount_cents: 44,
             precise_amount_cents: 44,
+            taxes_amount_cents: 4,
             taxes_precise_amount_cents: 4.4,
             charge:
           )
         end
 
-        it "rounds the decimals" do
+        it "uses rounded taxes_amount_cents for cap calculation" do
           expect(result).to be_success
           expect(result.prepaid_credit_amount_cents).to eq(114)
         end
@@ -348,8 +365,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       context "when wallet credits are less than invoice amount" do
         let(:subscription_fees) { [fee, fee2] }
         let(:amount_cents) { 10_000 }
-        let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 2_000, precise_amount_cents: 2_000, taxes_precise_amount_cents: 200) }
-        let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 1_000, precise_amount_cents: 1_000, taxes_precise_amount_cents: 100, charge:) }
+        let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 2_000, precise_amount_cents: 2_000, taxes_amount_cents: 200, taxes_precise_amount_cents: 200) }
+        let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 1_000, precise_amount_cents: 1_000, taxes_amount_cents: 100, taxes_precise_amount_cents: 100, charge:) }
 
         it "calculates prepaid credit" do
           expect(result).to be_success
