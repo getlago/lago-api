@@ -3,6 +3,8 @@
 class BaseResult
   include Result
 
+  attr_accessor :cursor
+
   class_attribute :attributes, default: [] # rubocop:disable ThreadSafety/ClassAndModuleAttributes
 
   def self.[](*attributes)

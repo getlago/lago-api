@@ -7519,6 +7519,18 @@
               "deprecationReason": null
             },
             {
+              "name": "cursor",
+              "description": "Cursor for the last record on the current page",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "limitValue",
               "description": "The number of items per page",
               "args": [],
@@ -35771,6 +35783,18 @@
               "deprecationReason": null
             },
             {
+              "name": "cursor",
+              "description": "Cursor for the last record on the current page",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "limitValue",
               "description": "The number of items per page",
               "args": [],
@@ -53543,6 +53567,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "cursor",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "customerExternalId",
                   "description": null,
                   "type": {
@@ -68620,6 +68656,18 @@
                   "name": "Int",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "cursor",
+              "description": "Cursor for the last record on the current page",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
