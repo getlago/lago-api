@@ -117,7 +117,7 @@ module Events
         .where("invoice_subscriptions.subscription_id = fees.subscription_id")
         .where("invoice_subscriptions.charges_from_datetime < ?", boundaries.charges_from_datetime)
         .joins(charge: :billable_metric)
-        .where(charges: {plan_id: plan.id})
+        .where(charges: {plan_id: plan.id, deleted_at: nil})
         .where(billable_metrics: {recurring: true})
         .distinct
         .pluck(:charge_id, :charge_filter_id)
