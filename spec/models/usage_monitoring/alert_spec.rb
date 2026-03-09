@@ -79,6 +79,12 @@ RSpec.describe UsageMonitoring::Alert do
       alert.previous_value = 33
       expect(alert.find_thresholds_crossed(351)).to eq([50, 150, 250, 350])
     end
+
+    it "returns recurring threshold if crossed and no one-time thresholds are set" do
+      alert = create(:alert, code: "my-code", thresholds: [], recurring_threshold: 100)
+      alert.previous_value = 33
+      expect(alert.find_thresholds_crossed(351)).to eq([100, 200, 300])
+    end
   end
 
   describe "#formatted_crossed_thresholds" do
