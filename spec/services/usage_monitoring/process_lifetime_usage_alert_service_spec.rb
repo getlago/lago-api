@@ -18,13 +18,6 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
 
   before do
     allow(::Invoices::CustomerUsageService).to receive(:call)
-      .with(
-        customer: subscription.customer,
-        subscription:,
-        apply_taxes: false,
-        with_cache: true,
-        usage_filters: an_instance_of(UsageFilters)
-      )
       .and_return(double(success?: true, usage: mocked_usage)) # rubocop:disable RSpec/VerifiedDoubles
     allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
   end
@@ -32,18 +25,18 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
   context "when lifetime_usage is enabled" do
     let(:premium_integrations) { %w[lifetime_usage] }
 
-    it "calls CustomerUsageService with full_usage and processes the alert" do
+    it "calls CustomerUsageService and processes the alert" do
       service.call
 
       expect(::Invoices::CustomerUsageService).to have_received(:call).with(
-        customer: subscription.customer,
-        subscription:,
+        customer: an_object_having_attributes(id: subscription.customer_id),
+        subscription: an_object_having_attributes(id: subscription.id),
         apply_taxes: false,
         with_cache: true,
         usage_filters: an_instance_of(UsageFilters)
       )
       expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
-        .with(alert:, subscription:, current_metrics: mocked_usage)
+        .with(alert:, subscription: an_object_having_attributes(id: subscription.id), current_metrics: mocked_usage)
     end
   end
 
