@@ -9652,29 +9652,6 @@ type Query {
   aiConversations(limit: Int): AiConversationCollection
 
   """
-  Query a single alert
-  """
-  alert(
-    """
-    Unique ID of the alert
-    """
-    id: ID!
-  ): Alert
-
-  """
-  Query alerts of a subscription
-  """
-  alerts(
-    limit: Int
-    page: Int
-
-    """
-    External id of a subscription
-    """
-    subscriptionExternalId: String!
-  ): AlertCollection!
-
-  """
   Query the API key
   """
   apiKey(
@@ -10316,6 +10293,29 @@ type Query {
   ): Subscription
 
   """
+  Query a single subscription alert
+  """
+  subscriptionAlert(
+    """
+    Unique ID of the alert
+    """
+    id: ID!
+  ): Alert
+
+  """
+  Query alerts of a subscription
+  """
+  subscriptionAlerts(
+    limit: Int
+    page: Int
+
+    """
+    External id of a subscription
+    """
+    subscriptionExternalId: String!
+  ): AlertCollection!
+
+  """
   Retrieve an entitlement of a subscriptions
   """
   subscriptionEntitlement(featureCode: String!, subscriptionId: ID!): SubscriptionEntitlement!
@@ -10359,6 +10359,29 @@ type Query {
     """
     id: ID!
   ): Wallet
+
+  """
+  Query a single wallet alert
+  """
+  walletAlert(
+    """
+    Unique ID of the alert
+    """
+    id: ID!
+  ): Alert
+
+  """
+  Query alerts of a wallet
+  """
+  walletAlerts(
+    limit: Int
+    page: Int
+
+    """
+    Id of a wallet
+    """
+    walletId: String!
+  ): AlertCollection!
 
   """
   Query a single wallet transaction

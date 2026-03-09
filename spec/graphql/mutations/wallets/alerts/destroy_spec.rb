@@ -45,7 +45,6 @@ RSpec.describe Mutations::Wallets::Alerts::Destroy do
       }
     )
 
-    puts "data: #{result.to_h}"
     result_data = result["data"]["destroyCustomerWalletAlert"]
     expect(result_data["alertType"]).to eq "wallet_balance_amount"
     expect(result_data["code"]).to start_with "default1"

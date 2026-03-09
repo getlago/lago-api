@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver do
+RSpec.describe Resolvers::Subscriptions::AlertsResolver do
   let(:required_permission) { "subscriptions:view" }
 
   let(:membership) { create(:membership) }
@@ -15,7 +15,7 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver do
   let(:query) do
     <<~GQL
       query($subscriptionExternalId: String!) {
-        alerts(subscriptionExternalId: $subscriptionExternalId) {
+        subscriptionAlerts(subscriptionExternalId: $subscriptionExternalId) {
           collection { id name code deletedAt thresholds { code value recurring} }
           metadata { currentPage, totalCount }
         }
@@ -41,7 +41,7 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver do
       variables: {subscriptionExternalId: subscription.external_id}
     )
 
-    alerts = result["data"]["alerts"]["collection"]
+    alerts = result["data"]["subscriptionAlerts"]["collection"]
 
     expect(alerts.pluck("id")).to contain_exactly(alert.id, alert_bm.id)
     expect(alerts).to all(include({"name" => "General Alert", "deletedAt" => nil}))
@@ -52,7 +52,7 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver do
       {"code" => "rec", "value" => "33.0", "recurring" => true}
     ))
 
-    metadata = result["data"]["alerts"]["metadata"]
+    metadata = result["data"]["subscriptionAlerts"]["metadata"]
     expect(metadata["currentPage"]).to eq(1)
     expect(metadata["totalCount"]).to eq(2)
   end
@@ -67,7 +67,7 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver do
         variables: {subscriptionExternalId: "invalid"}
       )
 
-      expect(result["data"]["alerts"]["collection"]).to be_empty
+      expect(result["data"]["subscriptionAlerts"]["collection"]).to be_empty
     end
   end
 
@@ -75,7 +75,7 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver do
     let(:query) do
       <<~GQL
         query($subscriptionExternalId: String!) {
-          alerts(subscriptionExternalId: $subscriptionExternalId) {
+          subscriptionAlerts(subscriptionExternalId: $subscriptionExternalId) {
             collection { alertType billableMetricId }
             metadata { currentPage, totalCount }
           }
@@ -91,12 +91,12 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver do
         query:,
         variables: {subscriptionExternalId: subscription.external_id}
       )
-      alerts = result["data"]["alerts"]["collection"]
+      alerts = result["data"]["subscriptionAlerts"]["collection"]
 
       h = alerts.find { it["alertType"] == "billable_metric_current_usage_amount" }
       expect(h["billableMetricId"]).to eq alert_bm.billable_metric_id
 
-      metadata = result["data"]["alerts"]["metadata"]
+      metadata = result["data"]["subscriptionAlerts"]["metadata"]
       expect(metadata["currentPage"]).to eq(1)
       expect(metadata["totalCount"]).to eq(2)
     end
