@@ -100,6 +100,35 @@ RSpec.shared_examples "a subscription index endpoint" do
     end
   end
 
+  context "with overriden filter" do
+    let(:overridden_plan) { create(:plan, organization:, parent_id: plan.id) }
+    let!(:overridden_subscription) { create(:subscription, customer:, plan: overridden_plan) }
+
+    context "when filtering overridden subscriptions" do
+      let(:params) { {overriden: true} }
+
+      it "returns only overridden subscriptions" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscriptions].count).to eq(1)
+        expect(json[:subscriptions].first[:lago_id]).to eq(overridden_subscription.id)
+      end
+    end
+
+    context "when filtering non-overridden subscriptions" do
+      let(:params) { {overriden: false} }
+
+      it "returns only non-overridden subscriptions" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscriptions].count).to eq(1)
+        expect(json[:subscriptions].first[:lago_id]).to eq(subscription.id)
+      end
+    end
+  end
+
   context "with terminated status" do
     let!(:terminated_subscription) do
       create(:subscription, customer:, plan: create(:plan, organization:), status: :terminated, terminated_at: Time.current)
