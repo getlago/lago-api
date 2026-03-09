@@ -51,6 +51,21 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
     end
   end
 
+  context "when alert type is not BillableMetricLifetimeUsageUnitsAlert" do
+    let(:premium_integrations) { %w[lifetime_usage] }
+    let(:alert) do
+      create(:usage_current_amount_alert,
+        organization:, subscription_external_id: subscription.external_id)
+    end
+
+    it "does not process the alert" do
+      service.call
+
+      expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+      expect(::UsageMonitoring::ProcessAlertService).not_to have_received(:call)
+    end
+  end
+
   context "when subscription is not active" do
     let(:premium_integrations) { %w[lifetime_usage] }
     let(:subscription) { create(:subscription, :terminated, customer:, organization:) }

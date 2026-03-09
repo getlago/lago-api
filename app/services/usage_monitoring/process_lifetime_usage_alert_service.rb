@@ -2,8 +2,6 @@
 
 module UsageMonitoring
   class ProcessLifetimeUsageAlertService < BaseService
-    ACCEPTABLE_ALERT_TYPES = ["billable_metric_lifetime_usage_units"].freeze
-
     Result = BaseResult
 
     def initialize(alert:)
@@ -15,8 +13,8 @@ module UsageMonitoring
 
     def call
       return result unless subscription
-      return result unless alert.alert_type.in?(ACCEPTABLE_ALERT_TYPES)
       return result unless organization.using_lifetime_usage?
+      return result unless alert.alert_type == "billable_metric_lifetime_usage_units"
 
       charge_ids = subscription.plan.charges.where(billable_metric_id: alert.billable_metric_id).ids
       return result if charge_ids.empty?

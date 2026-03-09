@@ -5,8 +5,6 @@ module UsageMonitoring
     unique :until_executed, on_conflict: :log
 
     def perform(alert_id)
-      return unless License.premium?
-
       alert = UsageMonitoring::Alert.find(alert_id)
       ProcessLifetimeUsageAlertService.call!(alert:)
     end

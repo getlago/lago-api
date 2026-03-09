@@ -253,17 +253,28 @@ RSpec.describe Api::V1::Customers::UsageController do
           }
         end
 
-        it "returns usage aggregated from subscription start" do
+        it "returns method not allowed without premium integration" do
           subject
 
-          expect(response).to have_http_status(:success)
-          expect(json[:customer_usage][:charges_usage].count).to eq(1)
+          expect(response).to have_http_status(:method_not_allowed)
+          expect(json[:code]).to eq("full_usage_not_allowed")
+        end
 
-          charge_usage = json[:customer_usage][:charges_usage].first
-          expect(charge_usage[:billable_metric][:code]).to eq(metric_a.code)
-          # All periods: aws(5+4+4) + gcp(7+6) = 26 units
-          expect(charge_usage[:units]).to eq("26.0")
-          expect(charge_usage[:amount_cents]).to eq(26_000)
+        context "with lifetime_usage premium integration", :premium do
+          before { organization.update!(premium_integrations: %w[lifetime_usage]) }
+
+          it "returns usage aggregated from subscription start" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:customer_usage][:charges_usage].count).to eq(1)
+
+            charge_usage = json[:customer_usage][:charges_usage].first
+            expect(charge_usage[:billable_metric][:code]).to eq(metric_a.code)
+            # All periods: aws(5+4+4) + gcp(7+6) = 26 units
+            expect(charge_usage[:units]).to eq("26.0")
+            expect(charge_usage[:amount_cents]).to eq(26_000)
+          end
         end
       end
 
@@ -298,15 +309,26 @@ RSpec.describe Api::V1::Customers::UsageController do
           }
         end
 
-        it "returns group-filtered usage aggregated from subscription start" do
+        it "returns method not allowed without premium integration" do
           subject
 
-          expect(response).to have_http_status(:success)
+          expect(response).to have_http_status(:method_not_allowed)
+          expect(json[:code]).to eq("full_usage_not_allowed")
+        end
 
-          charge_usage = json[:customer_usage][:charges_usage].find { |c| c[:billable_metric][:code] == metric_a.code }
-          # All periods, cloud=aws only: 5 + 4 + 4 = 13 units
-          expect(charge_usage[:units]).to eq("13.0")
-          expect(charge_usage[:amount_cents]).to eq(13_000)
+        context "with lifetime_usage premium integration", :premium do
+          before { organization.update!(premium_integrations: %w[lifetime_usage]) }
+
+          it "returns group-filtered usage aggregated from subscription start" do
+            subject
+
+            expect(response).to have_http_status(:success)
+
+            charge_usage = json[:customer_usage][:charges_usage].find { |c| c[:billable_metric][:code] == metric_a.code }
+            # All periods, cloud=aws only: 5 + 4 + 4 = 13 units
+            expect(charge_usage[:units]).to eq("13.0")
+            expect(charge_usage[:amount_cents]).to eq(13_000)
+          end
         end
       end
     end
