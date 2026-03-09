@@ -1171,6 +1171,11 @@ type CollectionMetadata {
   currentPage: Int!
 
   """
+  Cursor for the last record on the current page
+  """
+  cursor: String
+
+  """
   The number of items per page
   """
   limitValue: Int!
@@ -6874,6 +6879,11 @@ type Metadata {
   currentPage: Int!
 
   """
+  Cursor for the last record on the current page
+  """
+  cursor: String
+
+  """
   The number of items per page
   """
   limitValue: Int!
@@ -10052,6 +10062,7 @@ type Query {
     amountTo: Int
     billingEntityIds: [ID!]
     currency: CurrencyEnum
+    cursor: String
     customerExternalId: String
 
     """
@@ -12935,6 +12946,11 @@ type WalletCollectionMetadata {
   Current Page of loaded data
   """
   currentPage: Int!
+
+  """
+  Cursor for the last record on the current page
+  """
+  cursor: String
   customerActiveWalletsCount: Int!
 
   """

@@ -28,7 +28,8 @@ RSpec.describe Pagination do
         "next_page" => 3,
         "prev_page" => 1,
         "total_pages" => 3,
-        "total_count" => 25
+        "total_count" => 25,
+        "cursor" => nil
       )
     end
   end
@@ -58,7 +59,8 @@ RSpec.describe Pagination do
         "next_page" => nil,
         "prev_page" => nil,
         "total_pages" => 0,
-        "total_count" => 0
+        "total_count" => 0,
+        "cursor" => nil
       )
     end
   end
@@ -102,7 +104,8 @@ RSpec.describe Pagination do
         "next_page" => 3,
         "prev_page" => 1,
         "total_pages" => 3,
-        "total_count" => 25
+        "total_count" => 25,
+        "cursor" => nil
       )
     end
   end

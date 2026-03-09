@@ -9,6 +9,7 @@ module InvoiceIndex
     :amount_to,
     :billing_entity_codes,
     :currency,
+    :cursor,
     :invoice_type,
     :issuing_date_from,
     :issuing_date_to,
@@ -35,7 +36,8 @@ module InvoiceIndex
       organization: current_organization,
       pagination: {
         page: params[:page],
-        limit: params[:per_page] || PER_PAGE
+        limit: params[:per_page] || PER_PAGE,
+        cursor: params[:cursor]
       },
       search_term: params[:search_term],
       filters: {
@@ -66,6 +68,7 @@ module InvoiceIndex
           collection_name: "invoices",
           meta: pagination_metadata(
             result.invoices,
+            cursor: result.cursor,
             key: "invoices",
             organization_id: current_organization.id,
             params: params.permit(*WHITELIST)
