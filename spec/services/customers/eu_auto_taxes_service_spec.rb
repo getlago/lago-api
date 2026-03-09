@@ -95,7 +95,7 @@ RSpec.describe Customers::EuAutoTaxesService do
       it "enqueues ViesCheckJob" do
         eu_tax_service.call
 
-        expect(Customers::ViesCheckJob).to have_been_enqueued.with(customer.id)
+        expect(Customers::ViesCheckJob).to have_been_enqueued.with(customer)
       end
 
       it "returns a failure result with vies_check_pending code" do
@@ -305,7 +305,7 @@ RSpec.describe Customers::EuAutoTaxesService do
 
           expect(result).not_to be_success
           expect(result.error.code).to eq("vies_check_pending")
-          expect(Customers::ViesCheckJob).to have_been_enqueued.with(customer.id)
+          expect(Customers::ViesCheckJob).to have_been_enqueued.with(customer)
         end
       end
 

@@ -7,9 +7,7 @@ module Customers
 
     queue_as :default
 
-    def perform(customer_id)
-      customer = Customer.find(customer_id)
-
+    def perform(customer)
       vies_check_result = Customers::ViesCheckService.call(customer:)
 
       if vies_check_result.success?
@@ -30,7 +28,7 @@ module Customers
     def schedule_retry(customer, vies_check_result)
       return unless vies_check_result.pending_vies_check
 
-      ViesCheckJob.set(wait: retry_delay(vies_check_result.pending_vies_check)).perform_later(customer.id)
+      ViesCheckJob.set(wait: retry_delay(vies_check_result.pending_vies_check)).perform_later(customer)
     end
 
     def enqueue_pending_invoice_finalization(customer)

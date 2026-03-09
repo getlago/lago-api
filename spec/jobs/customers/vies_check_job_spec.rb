@@ -21,14 +21,14 @@ RSpec.describe Customers::ViesCheckJob do
   it "calls the ViesCheckService" do
     allow(Customers::ViesCheckService).to receive(:call).and_call_original
 
-    described_class.perform_now(customer.id)
+    described_class.perform_now(customer)
 
     expect(Customers::ViesCheckService).to have_received(:call).with(customer:)
   end
 
   context "when ViesCheckService returns a tax code" do
     it "applies the tax code" do
-      described_class.perform_now(customer.id)
+      described_class.perform_now(customer)
 
       expect(Customers::ApplyTaxesService).to have_received(:call)
         .with(customer: customer, tax_codes: ["lago_eu_fr_standard"])
@@ -52,17 +52,17 @@ RSpec.describe Customers::ViesCheckJob do
       end
 
       it "enqueues FinalizePendingViesInvoiceJob for pending invoices with pending tax_status" do
-        expect { described_class.perform_now(customer.id) }
+        expect { described_class.perform_now(customer) }
           .to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(pending_invoice)
       end
 
       it "does not enqueue job for finalized invoices" do
-        expect { described_class.perform_now(customer.id) }
+        expect { described_class.perform_now(customer) }
           .not_to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(finalized_invoice)
       end
 
       it "does not enqueue job for pending invoices with succeeded tax_status" do
-        expect { described_class.perform_now(customer.id) }
+        expect { described_class.perform_now(customer) }
           .not_to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(pending_but_tax_succeeded_invoice)
       end
     end
@@ -79,17 +79,17 @@ RSpec.describe Customers::ViesCheckJob do
     end
 
     it "enqueues another retry job" do
-      expect { described_class.perform_now(customer.id) }.to have_enqueued_job(described_class)
+      expect { described_class.perform_now(customer) }.to have_enqueued_job(described_class)
     end
 
     it "does not apply taxes" do
-      described_class.perform_now(customer.id)
+      described_class.perform_now(customer)
 
       expect(Customers::ApplyTaxesService).not_to have_received(:call)
     end
 
     it "does not enqueue invoice finalization" do
-      expect { described_class.perform_now(customer.id) }
+      expect { described_class.perform_now(customer) }
         .not_to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob)
     end
   end

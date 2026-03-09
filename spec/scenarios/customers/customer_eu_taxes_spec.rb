@@ -174,7 +174,7 @@ describe "Add customer-specific taxes" do
 
       # VIES succeeds on retry
       mock_vies_check!(vat_number)
-      Customers::ViesCheckJob.perform_now(customer.id)
+      Customers::ViesCheckJob.perform_now(customer)
 
       # PendingViesCheck should be deleted
       expect(customer.reload.pending_vies_check).to be_nil
