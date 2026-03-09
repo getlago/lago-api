@@ -429,11 +429,76 @@ RSpec.describe Events::BillingPeriodFilterService do
           charge_filter_value
         end
 
-        it "returns recurring charge_ids even without events" do
-          result = filter_service.call
+        context "when it is the first billing period" do
+          let(:started_at) { boundaries.charges_from_datetime }
 
-          expect(result).to be_success
-          expect(result.charges).to eq({recurring_charge.id => [charge_filter.id, nil]})
+          it "returns empty hash" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to eq({})
+          end
+        end
+
+        context "when previous fees exist" do
+          before do
+            create(
+              :charge_fee,
+              subscription:,
+              charge: recurring_charge,
+              charge_filter:,
+              created_at: boundaries.charges_from_datetime - 1.day
+            )
+          end
+
+          it "returns only charge/filter pairs from previous fees" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to eq({recurring_charge.id => [charge_filter.id]})
+          end
+        end
+
+        context "when subscription has previous_subscription_id" do
+          let(:previous_subscription) { create(:subscription, organization:, plan:) }
+          let(:subscription) do
+            create(
+              :subscription,
+              organization:,
+              plan:,
+              started_at:,
+              subscription_at: started_at,
+              external_id: "sub_id",
+              previous_subscription: previous_subscription
+            )
+          end
+
+          it "falls back to all recurring filters" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to eq({recurring_charge.id => [charge_filter.id, nil]})
+          end
+        end
+
+        context "when previous fee has a discarded charge_filter" do
+          before do
+            create(
+              :charge_fee,
+              subscription:,
+              charge: recurring_charge,
+              charge_filter:,
+              created_at: boundaries.charges_from_datetime - 1.day
+            )
+            charge_filter.discard!
+          end
+
+          it "excludes the discarded filter from results" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to eq({})
+          end
         end
       end
 
@@ -708,11 +773,76 @@ RSpec.describe Events::BillingPeriodFilterService do
           charge_filter_value
         end
 
-        it "returns recurring charge_ids even without events" do
-          result = filter_service.call
+        context "when it is the first billing period" do
+          let(:started_at) { boundaries.charges_from_datetime }
 
-          expect(result).to be_success
-          expect(result.charges).to eq({recurring_charge.id => [charge_filter.id, nil]})
+          it "returns empty hash" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to eq({})
+          end
+        end
+
+        context "when previous fees exist" do
+          before do
+            create(
+              :charge_fee,
+              subscription:,
+              charge: recurring_charge,
+              charge_filter:,
+              created_at: boundaries.charges_from_datetime - 1.day
+            )
+          end
+
+          it "returns only charge/filter pairs from previous fees" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to eq({recurring_charge.id => [charge_filter.id]})
+          end
+        end
+
+        context "when subscription has previous_subscription_id" do
+          let(:previous_subscription) { create(:subscription, organization:, plan:) }
+          let(:subscription) do
+            create(
+              :subscription,
+              organization:,
+              plan:,
+              started_at:,
+              subscription_at: started_at,
+              external_id: "sub_id",
+              previous_subscription: previous_subscription
+            )
+          end
+
+          it "falls back to all recurring filters" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to eq({recurring_charge.id => [charge_filter.id, nil]})
+          end
+        end
+
+        context "when previous fee has a discarded charge_filter" do
+          before do
+            create(
+              :charge_fee,
+              subscription:,
+              charge: recurring_charge,
+              charge_filter:,
+              created_at: boundaries.charges_from_datetime - 1.day
+            )
+            charge_filter.discard!
+          end
+
+          it "excludes the discarded filter from results" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to eq({})
+          end
         end
       end
 
