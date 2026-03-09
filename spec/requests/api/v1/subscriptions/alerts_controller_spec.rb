@@ -48,7 +48,8 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
           next_page: nil,
           prev_page: nil,
           total_pages: 1,
-          total_count: 1
+          total_count: 1,
+          cursor: nil
         })
       end
     end
