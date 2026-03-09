@@ -46,21 +46,22 @@ module UsageMonitoring
         exception_to_raise ||= e
       end
 
+      # can we do it once in 5 mins?
       alerts.using_billable_metric_lifetime_usage.each do |alert|
         charge_ids = subscription.plan.charges.where(billable_metric_id: alert.billable_metric_id).ids
         next if charge_ids.empty?
 
         usage_filters = UsageFilters.new(full_usage: true, filter_by_charge_id: charge_ids)
-        usage_result = ::Invoices::CustomerUsageService.call(
+        usage_for_charges_result = ::Invoices::CustomerUsageService.call(
           customer: subscription.customer,
           subscription:,
           apply_taxes: false,
           with_cache: true,
           usage_filters:
         )
-        next unless usage_result.success?
+        next unless usage_for_charges_result.success?
 
-        ProcessAlertService.call(alert:, subscription:, current_metrics: usage_result.usage)
+        ProcessAlertService.call(alert:, subscription:, current_metrics: usage_for_charges_result.usage)
       rescue => e
         exception_to_raise ||= e
       end
