@@ -29,6 +29,7 @@ class InvoicesQuery < BaseQuery
 
     invoices = base_scope.result.includes(:customer).includes(file_attachment: :blob)
     invoices = with_customers_filter(invoices)
+    invoices = apply_cursor(invoices)
     invoices = paginate(invoices)
     invoices = apply_consistent_ordering(
       invoices,
@@ -54,12 +55,37 @@ class InvoicesQuery < BaseQuery
     invoices = with_settlements(invoices) if valid_settlements.present?
 
     result.invoices = invoices
+    last_record = invoices.last
+    result.cursor = encode_cursor(build_cursor(last_record)) if last_record
     result
   rescue BaseService::FailedResult
     result
   end
 
   private
+
+  # Sort order is (issuing_date DESC, created_at DESC, id ASC).
+  # DESC columns use a tuple comparison; the ASC tiebreaker (id) is handled separately
+  # because UUID does not support arithmetic negation.
+  def apply_cursor(scope)
+    return scope if pagination&.cursor.blank?
+
+    decoded = decode_cursor(pagination.cursor)
+    scope.where(
+      "(invoices.issuing_date, invoices.created_at) < (?, ?) " \
+      "OR ((invoices.issuing_date, invoices.created_at) = (?, ?) AND invoices.id > ?)",
+      decoded[:issuing_date], decoded[:created_at],
+      decoded[:issuing_date], decoded[:created_at], decoded[:id]
+    )
+  end
+
+  def build_cursor(record)
+    {
+      issuing_date: record.issuing_date.iso8601,
+      created_at: record.created_at.iso8601(6),
+      id: record.id
+    }
+  end
 
   def filters_contract
     @filters_contract ||= Queries::InvoicesQueryFiltersContract.new
