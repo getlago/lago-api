@@ -8,6 +8,7 @@ module V1
         lago_customer_id: model.payable.customer.id, # TODO: why?
         external_customer_id: model.payable.customer.external_id,
         invoice_ids: invoice_id,
+        invoice_numbers: model.invoice_numbers,
         lago_payable_id: model.payable.id,
         payable_type: model.payable_type,
 
