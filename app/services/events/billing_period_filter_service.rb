@@ -113,8 +113,11 @@ module Events
 
     def recurring_charges_and_filters_from_previous_fees
       pairs = Fee.where(subscription_id: subscription.id, fee_type: :charge)
-        .where("fees.created_at < ?", boundaries.charges_from_datetime)
+        .joins(invoice: :invoice_subscriptions)
+        .where("invoice_subscriptions.subscription_id = fees.subscription_id")
+        .where("invoice_subscriptions.charges_from_datetime < ?", boundaries.charges_from_datetime)
         .joins(charge: :billable_metric)
+        .where(charges: {plan_id: plan.id})
         .where(billable_metrics: {recurring: true})
         .distinct
         .pluck(:charge_id, :charge_filter_id)

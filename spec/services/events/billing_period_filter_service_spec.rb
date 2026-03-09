@@ -442,13 +442,9 @@ RSpec.describe Events::BillingPeriodFilterService do
 
         context "when previous fees exist" do
           before do
-            create(
-              :charge_fee,
-              subscription:,
-              charge: recurring_charge,
-              charge_filter:,
-              created_at: boundaries.charges_from_datetime - 1.day
-            )
+            fee = create(:charge_fee, subscription:, charge: recurring_charge, charge_filter:)
+            create(:invoice_subscription, invoice: fee.invoice, subscription:, organization:,
+              charges_from_datetime: boundaries.charges_from_datetime - 1.month)
           end
 
           it "returns only charge/filter pairs from previous fees" do
@@ -483,13 +479,9 @@ RSpec.describe Events::BillingPeriodFilterService do
 
         context "when previous fee has a discarded charge_filter" do
           before do
-            create(
-              :charge_fee,
-              subscription:,
-              charge: recurring_charge,
-              charge_filter:,
-              created_at: boundaries.charges_from_datetime - 1.day
-            )
+            fee = create(:charge_fee, subscription:, charge: recurring_charge, charge_filter:)
+            create(:invoice_subscription, invoice: fee.invoice, subscription:, organization:,
+              charges_from_datetime: boundaries.charges_from_datetime - 1.month)
             charge_filter.discard!
           end
 
@@ -786,13 +778,9 @@ RSpec.describe Events::BillingPeriodFilterService do
 
         context "when previous fees exist" do
           before do
-            create(
-              :charge_fee,
-              subscription:,
-              charge: recurring_charge,
-              charge_filter:,
-              created_at: boundaries.charges_from_datetime - 1.day
-            )
+            fee = create(:charge_fee, subscription:, charge: recurring_charge, charge_filter:)
+            create(:invoice_subscription, invoice: fee.invoice, subscription:, organization:,
+              charges_from_datetime: boundaries.charges_from_datetime - 1.month)
           end
 
           it "returns only charge/filter pairs from previous fees" do
@@ -827,13 +815,9 @@ RSpec.describe Events::BillingPeriodFilterService do
 
         context "when previous fee has a discarded charge_filter" do
           before do
-            create(
-              :charge_fee,
-              subscription:,
-              charge: recurring_charge,
-              charge_filter:,
-              created_at: boundaries.charges_from_datetime - 1.day
-            )
+            fee = create(:charge_fee, subscription:, charge: recurring_charge, charge_filter:)
+            create(:invoice_subscription, invoice: fee.invoice, subscription:, organization:,
+              charges_from_datetime: boundaries.charges_from_datetime - 1.month)
             charge_filter.discard!
           end
 
