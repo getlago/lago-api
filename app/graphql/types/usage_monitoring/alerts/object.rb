@@ -12,7 +12,8 @@ module Types
         field :billable_metric, Types::BillableMetrics::Object
         field :billable_metric_id, ID
         field :direction, DirectionEnum, null: false
-        field :subscription_external_id, String, null: false
+        field :subscription_external_id, String
+        field :wallet_id, String
 
         field :code, String, null: false
         field :name, String
