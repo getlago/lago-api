@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Resolvers
-  module UsageMonitoring
-    class SubscriptionAlertsResolver < Resolvers::BaseResolver
+  module Subscriptions
+    class AlertsResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
 
