@@ -5,7 +5,9 @@ require "rails_helper"
 require_relative "shared_examples/an_event_store"
 
 RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_before: true} do
-  def create_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
+  def create_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil, event_charge: nil)
+    effective_charge = event_charge || charge
+
     grouped_values = if events_grouped_by.present?
       events_grouped_by.index_with({}) { properties[it] || "" }
     end
@@ -18,8 +20,8 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       plan_id: subscription.plan_id,
       code:,
       aggregation_type: billable_metric.aggregation_type,
-      charge_id: charge.id,
-      charge_version: charge.updated_at,
+      charge_id: effective_charge.id,
+      charge_version: effective_charge.updated_at,
       charge_filter_id: charge_filter&.id || "",
       charge_filter_version: charge_filter&.updated_at,
       timestamp:,

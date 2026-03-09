@@ -2008,6 +2008,88 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
+  describe "recurring metric with previous subscription" do
+    let(:previous_plan) { create(:plan, organization:) }
+    let(:previous_charge) { create(:standard_charge, organization:, billable_metric:, plan: previous_plan) }
+    let(:previous_subscription) do
+      create(:subscription, plan: previous_plan, organization:, customer:, status: :terminated, started_at: started_at - 3.months)
+    end
+    let(:subscription) do
+      create(
+        :subscription,
+        customer:,
+        started_at:,
+        previous_subscription:,
+        external_id: previous_subscription.external_id
+      )
+    end
+
+    let(:previous_events) do
+      # Events before subscription.started_at with previous charge (different charge_id)
+      create_event(
+        timestamp: subscription_started_at - 2.days,
+        value: 100,
+        properties: {"region" => "europe", "country" => "france"},
+        transaction_id: SecureRandom.uuid,
+        event_charge: previous_charge
+      )
+
+      create_event(
+        timestamp: subscription_started_at - 1.day,
+        value: 50,
+        properties: {"region" => "europe"},
+        transaction_id: SecureRandom.uuid,
+        event_charge: previous_charge
+      )
+    end
+
+    before do
+      event_store.use_from_boundary = false
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      previous_events
+    end
+
+    it "includes events from before subscription.started_at" do
+      expect(event_store.count).to eq(7) # 5 from current period + 2 from before
+      expect(event_store.sum).to eq(165) # 15 from current period + 100 + 50 from before
+    end
+
+    context "with charge filters" do
+      let(:charge_filter) { create(:charge_filter, charge:) }
+      let(:previous_charge_filter) { create(:charge_filter, charge: previous_charge) }
+      let(:matching_filters) { {"region" => ["europe"], "country" => ["france"]} }
+
+      let(:previous_events) do
+        # Previous event matching the filter
+        create_event(
+          timestamp: subscription_started_at - 1.day,
+          value: 200,
+          properties: {"region" => "europe", "country" => "france"},
+          transaction_id: SecureRandom.uuid,
+          event_charge: previous_charge,
+          charge_filter: previous_charge_filter
+        )
+
+        # Previous event NOT matching the filter
+        create_event(
+          timestamp: subscription_started_at - 2.days,
+          value: 999,
+          properties: {"region" => "asia", "country" => "japan"},
+          transaction_id: SecureRandom.uuid,
+          event_charge: previous_charge,
+          charge_filter: previous_charge_filter
+        )
+      end
+
+      it "includes only filtered events from before subscription.started_at" do
+        expect(event_store.count).to eq(3) # 2 from current period + 1 from before
+        expect(event_store.sum).to eq(204) # 4 from current period + 200 from before (999 (asia/japan) doesn't match)
+      end
+    end
+  end
+
   if include_feature?(:distinct_charges_and_filters)
     describe "#distinct_charges_and_filters" do
       let(:charge_filter) { create(:charge_filter, charge:) }
