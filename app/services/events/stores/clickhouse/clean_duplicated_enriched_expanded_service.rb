@@ -45,25 +45,20 @@ module Events
             .where(timestamp: subscription.started_at..)
             .group(:transaction_id, :timestamp, :charge_id, :charge_filter_id)
             .having("count() > 1")
-            .pluck(:transaction_id, :timestamp, :charge_id, :charge_filter_id)
+            .pluck(:transaction_id, :timestamp, :charge_id, :charge_filter_id, Arel.sql("max(enriched_at)"))
         end
 
         def remove_duplicated_events
           duplicates = duplicated_events.to_a
           return if duplicates.empty?
 
-          duplicates.each do |transaction_id, event_timestamp, charge_id, charge_filter_id|
-            enriched_at_values = base_scope
-              .where(transaction_id:, timestamp: event_timestamp, charge_id:, charge_filter_id:)
-              .order(enriched_at: :desc)
-              .pluck(:enriched_at)
-
-            keep_enriched_at = enriched_at_values.first
-
-            base_scope
-              .where(transaction_id:, timestamp: event_timestamp, charge_id:, charge_filter_id:)
-              .where(enriched_at: ...keep_enriched_at)
-              .delete_all
+          duplicates.each do |transaction_id, event_timestamp, charge_id, charge_filter_id, max_enriched_at|
+            Events::Stores::Utils::ClickhouseConnection.with_retry do
+              base_scope
+                .where(transaction_id:, timestamp: event_timestamp, charge_id:, charge_filter_id:)
+                .where(enriched_at: ...max_enriched_at)
+                .delete_all
+            end
           end
         end
       end
