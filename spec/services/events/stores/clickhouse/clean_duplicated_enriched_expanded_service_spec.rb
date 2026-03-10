@@ -3,7 +3,7 @@
 require "spec_helper"
 
 RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedService, :clickhouse do
-  subject(:service) { described_class.new(subscription:, codes:, async: false) }
+  subject(:service) { described_class.new(subscription:, codes:) }
 
   let(:organization) { create(:organization, clickhouse_events_store: true) }
   let(:customer) { create(:customer, organization:) }
