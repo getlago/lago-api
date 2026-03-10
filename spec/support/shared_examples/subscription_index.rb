@@ -127,6 +127,18 @@ RSpec.shared_examples "a subscription index endpoint" do
         expect(json[:subscriptions].first[:lago_id]).to eq(subscription.id)
       end
     end
+
+    context "when using overridden (correct spelling)" do
+      let(:params) { {overridden: true} }
+
+      it "returns only overridden subscriptions" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscriptions].count).to eq(1)
+        expect(json[:subscriptions].first[:lago_id]).to eq(overridden_subscription.id)
+      end
+    end
   end
 
   context "with terminated status" do

@@ -2,7 +2,15 @@
 
 class SubscriptionsQuery < BaseQuery
   Result = BaseResult[:subscriptions]
-  Filters = BaseFilters[:external_customer_id, :plan_code, :status, :customer, :overriden, :exclude_next_subscriptions]
+  Filters = BaseFilters[
+    :external_customer_id,
+    :plan_code,
+    :status,
+    :customer,
+    :overriden, # overriden is a legacy typo kept for backward compatibility
+    :overridden,
+    :exclude_next_subscriptions
+  ]
 
   def call
     subscriptions = base_scope.result
@@ -21,7 +29,7 @@ class SubscriptionsQuery < BaseQuery
 
     subscriptions = with_external_customer(subscriptions) if filters.external_customer_id
     subscriptions = with_plan_code(subscriptions) if filters.plan_code
-    subscriptions = with_overriden(subscriptions) unless filters.overriden.nil?
+    subscriptions = with_overridden(subscriptions) unless overridden_filter.nil?
 
     result.subscriptions = subscriptions
     result
@@ -66,8 +74,12 @@ class SubscriptionsQuery < BaseQuery
     scope.joins(:plan).where(plans: {code: filters.plan_code})
   end
 
-  def with_overriden(scope)
-    if ActiveModel::Type::Boolean.new.cast(filters.overriden)
+  def overridden_filter
+    @overridden_filter ||= filters.overridden.nil? ? filters.overriden : filters.overridden
+  end
+
+  def with_overridden(scope)
+    if ActiveModel::Type::Boolean.new.cast(overridden_filter)
       scope.joins(:plan).where.not(plans: {parent_id: nil})
     else
       scope.joins(:plan).where(plans: {parent_id: nil})
