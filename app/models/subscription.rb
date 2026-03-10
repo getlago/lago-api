@@ -279,6 +279,7 @@ end
 #  billing_time                 :integer          default("calendar"), not null
 #  canceled_at                  :datetime
 #  ending_at                    :datetime
+#  free_until                   :timestamptz
 #  last_received_event_on       :date
 #  name                         :string
 #  on_termination_credit_note   :enum
