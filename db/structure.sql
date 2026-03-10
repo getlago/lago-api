@@ -45,6 +45,7 @@ ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRA
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_dfac602b2c;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
+ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_de7694c307;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_de6b3c3138;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_dd342449a6;
 ALTER TABLE IF EXISTS ONLY public.enriched_store_subscription_migrations DROP CONSTRAINT IF EXISTS fk_rails_dc444f5f29;
@@ -58,6 +59,7 @@ ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EX
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS fk_rails_d4f02c82b2;
 ALTER TABLE IF EXISTS ONLY public.wallet_transaction_consumptions DROP CONSTRAINT IF EXISTS fk_rails_d4abfdb375;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_d384ec1ebf;
+ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS fk_rails_d2d917b73a;
 ALTER TABLE IF EXISTS ONLY public.item_metadata DROP CONSTRAINT IF EXISTS fk_rails_d0b1714507;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ce2c63d69f;
@@ -100,6 +102,7 @@ ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_a7f20c73bb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_a2d2cb3819;
+ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_a1ab65f1f7;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_9f22076477;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_9ea6759859;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_9e3f99b7a2;
@@ -152,6 +155,7 @@ ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_7886
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_77f2d4440d;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_778360c382;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_775eb0ecd8;
+ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_7734750af9;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_76ceb88c74;
 ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS fk_rails_755d734f25;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_75577c354e;
@@ -186,6 +190,7 @@ ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rail
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_5cb2f24c3d;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_5c2e0b6d34;
 ALTER TABLE IF EXISTS ONLY public.error_details DROP CONSTRAINT IF EXISTS fk_rails_5c21eece29;
+ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_5bb40a7bae;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_5ade8984b1;
 ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_5a4b906a16;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
@@ -205,6 +210,7 @@ ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sec
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_4934f27a06;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_49212d501e;
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_47d8081062;
+ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_45230f8485;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_4117574b51;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_41088c7d45;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_3ff27d7624;
@@ -264,12 +270,14 @@ ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EX
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_19c47827ba;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_195153290d;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_189f2a3949;
+ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_1811b32fcd;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_173327f0dc;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_150139409e;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_1454058c96;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_142809fee1;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_123667657c;
+ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS fk_rails_10ee148d0d;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_103e187859;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_0f807322b1;
@@ -365,6 +373,12 @@ DROP INDEX IF EXISTS public.index_usage_monitoring_alert_thresholds_on_organizat
 DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
+DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_sequential_id;
+DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_number;
+DROP INDEX IF EXISTS public.index_unique_quote_versions_on_share_token;
+DROP INDEX IF EXISTS public.index_unique_quote_versions_on_quote_sequential_id;
+DROP INDEX IF EXISTS public.index_unique_quote_versions_on_quote_active_status;
+DROP INDEX IF EXISTS public.index_unique_quote_owners_on_quote_user;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
 DROP INDEX IF EXISTS public.index_uniq_wallet_code_per_customer;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_fixed_charges_boundaries;
@@ -401,6 +415,12 @@ DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_started_at;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_organization_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_expiration_at;
+DROP INDEX IF EXISTS public.index_quotes_on_subscription_id;
+DROP INDEX IF EXISTS public.index_quotes_on_customer_id;
+DROP INDEX IF EXISTS public.index_quote_versions_on_quote_id;
+DROP INDEX IF EXISTS public.index_quote_versions_on_organization_id;
+DROP INDEX IF EXISTS public.index_quote_owners_on_user_id;
+DROP INDEX IF EXISTS public.index_quote_owners_on_organization_id;
 DROP INDEX IF EXISTS public.index_quantified_events_on_organization_id;
 DROP INDEX IF EXISTS public.index_quantified_events_on_group_id;
 DROP INDEX IF EXISTS public.index_quantified_events_on_external_id;
@@ -838,6 +858,9 @@ ALTER TABLE IF EXISTS ONLY public.roles DROP CONSTRAINT IF EXISTS roles_pkey;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS refunds_pkey;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS recurring_transaction_rules_pkey;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS recurring_transaction_rules_invoice_custom_sections_pkey;
+ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS quotes_pkey;
+ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS quote_versions_pkey;
+ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS quote_owners_pkey;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS quantified_events_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS pricing_units_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS pricing_unit_usages_pkey;
@@ -934,6 +957,7 @@ ALTER TABLE IF EXISTS ONLY public.active_storage_blobs DROP CONSTRAINT IF EXISTS
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS active_storage_attachments_pkey;
 ALTER TABLE IF EXISTS public.versions ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.usage_monitoring_subscription_activities ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.quote_owners ALTER COLUMN id DROP DEFAULT;
 DROP TABLE IF EXISTS public.webhooks;
 DROP TABLE IF EXISTS public.webhook_endpoints;
 DROP TABLE IF EXISTS public.wallets_invoice_custom_sections;
@@ -955,6 +979,10 @@ DROP TABLE IF EXISTS public.roles;
 DROP TABLE IF EXISTS public.refunds;
 DROP TABLE IF EXISTS public.recurring_transaction_rules_invoice_custom_sections;
 DROP TABLE IF EXISTS public.recurring_transaction_rules;
+DROP TABLE IF EXISTS public.quotes;
+DROP TABLE IF EXISTS public.quote_versions;
+DROP SEQUENCE IF EXISTS public.quote_owners_id_seq;
+DROP TABLE IF EXISTS public.quote_owners;
 DROP TABLE IF EXISTS public.quantified_events;
 DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
@@ -1102,9 +1130,12 @@ DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_adjustments;
 DROP TYPE IF EXISTS public.subscription_cancelation_reasons;
 DROP TYPE IF EXISTS public.subscription_activation_rule_types;
 DROP TYPE IF EXISTS public.subscription_activation_rule_statuses;
+DROP TYPE IF EXISTS public.quote_void_reason;
+DROP TYPE IF EXISTS public.quote_status;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
+DROP TYPE IF EXISTS public.order_type;
 DROP TYPE IF EXISTS public.invoice_settlement_settlement_type;
 DROP TYPE IF EXISTS public.invoice_custom_section_type;
 DROP TYPE IF EXISTS public.inbound_webhook_status;
@@ -1286,6 +1317,17 @@ CREATE TYPE public.invoice_settlement_settlement_type AS ENUM (
 
 
 --
+-- Name: order_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.order_type AS ENUM (
+    'subscription_creation',
+    'subscription_amendment',
+    'one_off'
+);
+
+
+--
 -- Name: payment_method_types; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1314,6 +1356,29 @@ CREATE TYPE public.payment_payable_payment_status AS ENUM (
 CREATE TYPE public.payment_type AS ENUM (
     'provider',
     'manual'
+);
+
+
+--
+-- Name: quote_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.quote_status AS ENUM (
+    'draft',
+    'approved',
+    'voided'
+);
+
+
+--
+-- Name: quote_void_reason; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.quote_void_reason AS ENUM (
+    'manual',
+    'superseded',
+    'cascade_of_expired',
+    'cascade_of_voided'
 );
 
 
@@ -4622,6 +4687,81 @@ CREATE TABLE public.quantified_events (
 
 
 --
+-- Name: quote_owners; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.quote_owners (
+    id bigint NOT NULL,
+    organization_id uuid NOT NULL,
+    quote_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: quote_owners_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.quote_owners_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: quote_owners_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.quote_owners_id_seq OWNED BY public.quote_owners.id;
+
+
+--
+-- Name: quote_versions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.quote_versions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    quote_id uuid NOT NULL,
+    sequential_id integer NOT NULL,
+    status public.quote_status DEFAULT 'draft'::public.quote_status NOT NULL,
+    approved_at timestamp(6) without time zone,
+    voided_at timestamp(6) without time zone,
+    void_reason public.quote_void_reason,
+    billing_items jsonb,
+    content text,
+    share_token character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT quote_versions_constraint_approved_at_matches_status CHECK (((status = 'approved'::public.quote_status) = (approved_at IS NOT NULL))),
+    CONSTRAINT quote_versions_constraint_sequential_id_positive CHECK ((sequential_id > 0)),
+    CONSTRAINT quote_versions_constraint_void_fields_match_status CHECK (((status = 'voided'::public.quote_status) = ((void_reason IS NOT NULL) AND (voided_at IS NOT NULL))))
+);
+
+
+--
+-- Name: quotes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.quotes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    customer_id uuid NOT NULL,
+    subscription_id uuid,
+    number character varying NOT NULL,
+    sequential_id integer NOT NULL,
+    order_type public.order_type NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT quotes_constraint_sequential_id_positive CHECK ((sequential_id > 0))
+);
+
+
+--
 -- Name: recurring_transaction_rules; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4995,6 +5135,13 @@ CREATE TABLE public.webhooks (
 --
 
 ALTER TABLE ONLY public.enriched_events ATTACH PARTITION public.enriched_events_default DEFAULT;
+
+
+--
+-- Name: quote_owners id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quote_owners ALTER COLUMN id SET DEFAULT nextval('public.quote_owners_id_seq'::regclass);
 
 
 --
@@ -5761,6 +5908,30 @@ ALTER TABLE ONLY public.pricing_units
 
 ALTER TABLE ONLY public.quantified_events
     ADD CONSTRAINT quantified_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: quote_owners quote_owners_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quote_owners
+    ADD CONSTRAINT quote_owners_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: quote_versions quote_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quote_versions
+    ADD CONSTRAINT quote_versions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: quotes quotes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quotes
+    ADD CONSTRAINT quotes_pkey PRIMARY KEY (id);
 
 
 --
@@ -8880,6 +9051,48 @@ CREATE INDEX index_quantified_events_on_organization_id ON public.quantified_eve
 
 
 --
+-- Name: index_quote_owners_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_quote_owners_on_organization_id ON public.quote_owners USING btree (organization_id);
+
+
+--
+-- Name: index_quote_owners_on_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_quote_owners_on_user_id ON public.quote_owners USING btree (user_id);
+
+
+--
+-- Name: index_quote_versions_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_quote_versions_on_organization_id ON public.quote_versions USING btree (organization_id);
+
+
+--
+-- Name: index_quote_versions_on_quote_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_quote_versions_on_quote_id ON public.quote_versions USING btree (quote_id);
+
+
+--
+-- Name: index_quotes_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_quotes_on_customer_id ON public.quotes USING btree (customer_id);
+
+
+--
+-- Name: index_quotes_on_subscription_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_quotes_on_subscription_id ON public.quotes USING btree (subscription_id);
+
+
+--
 -- Name: index_recurring_transaction_rules_on_expiration_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9129,6 +9342,48 @@ CREATE UNIQUE INDEX index_uniq_wallet_code_per_customer ON public.wallets USING 
 --
 
 CREATE UNIQUE INDEX index_unique_applied_to_organization_per_organization ON public.dunning_campaigns USING btree (organization_id) WHERE ((applied_to_organization = true) AND (deleted_at IS NULL));
+
+
+--
+-- Name: index_unique_quote_owners_on_quote_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_quote_owners_on_quote_user ON public.quote_owners USING btree (quote_id, user_id);
+
+
+--
+-- Name: index_unique_quote_versions_on_quote_active_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_quote_versions_on_quote_active_status ON public.quote_versions USING btree (quote_id) WHERE (status = ANY (ARRAY['draft'::public.quote_status, 'approved'::public.quote_status]));
+
+
+--
+-- Name: index_unique_quote_versions_on_quote_sequential_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_quote_versions_on_quote_sequential_id ON public.quote_versions USING btree (quote_id, sequential_id);
+
+
+--
+-- Name: index_unique_quote_versions_on_share_token; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_quote_versions_on_share_token ON public.quote_versions USING btree (share_token);
+
+
+--
+-- Name: index_unique_quotes_on_organization_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_quotes_on_organization_number ON public.quotes USING btree (organization_id, number);
+
+
+--
+-- Name: index_unique_quotes_on_organization_sequential_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_quotes_on_organization_sequential_id ON public.quotes USING btree (organization_id, sequential_id);
 
 
 --
@@ -9721,6 +9976,14 @@ ALTER TABLE ONLY public.applied_invoice_custom_sections
 
 
 --
+-- Name: quote_versions fk_rails_10ee148d0d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quote_versions
+    ADD CONSTRAINT fk_rails_10ee148d0d FOREIGN KEY (quote_id) REFERENCES public.quotes(id);
+
+
+--
 -- Name: entitlement_subscription_feature_removals fk_rails_123667657c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9766,6 +10029,14 @@ ALTER TABLE ONLY public.invoice_subscriptions
 
 ALTER TABLE ONLY public.entitlement_entitlements
     ADD CONSTRAINT fk_rails_173327f0dc FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+
+
+--
+-- Name: quote_owners fk_rails_1811b32fcd; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quote_owners
+    ADD CONSTRAINT fk_rails_1811b32fcd FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -10241,6 +10512,14 @@ ALTER TABLE ONLY public.credit_notes
 
 
 --
+-- Name: quote_owners fk_rails_45230f8485; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quote_owners
+    ADD CONSTRAINT fk_rails_45230f8485 FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: integration_items fk_rails_47d8081062; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10390,6 +10669,14 @@ ALTER TABLE ONLY public.invoice_settlements
 
 ALTER TABLE ONLY public.add_ons_taxes
     ADD CONSTRAINT fk_rails_5ade8984b1 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: quotes fk_rails_5bb40a7bae; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quotes
+    ADD CONSTRAINT fk_rails_5bb40a7bae FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
 
 
 --
@@ -10662,6 +10949,14 @@ ALTER TABLE ONLY public.integrations
 
 ALTER TABLE ONLY public.commitments
     ADD CONSTRAINT fk_rails_76ceb88c74 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: quote_owners fk_rails_7734750af9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quote_owners
+    ADD CONSTRAINT fk_rails_7734750af9 FOREIGN KEY (quote_id) REFERENCES public.quotes(id);
 
 
 --
@@ -11081,6 +11376,14 @@ ALTER TABLE ONLY public.credit_note_items
 
 
 --
+-- Name: quotes fk_rails_a1ab65f1f7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quotes
+    ADD CONSTRAINT fk_rails_a1ab65f1f7 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
 -- Name: group_properties fk_rails_a2d2cb3819; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11417,6 +11720,14 @@ ALTER TABLE ONLY public.item_metadata
 
 
 --
+-- Name: quote_versions fk_rails_d2d917b73a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quote_versions
+    ADD CONSTRAINT fk_rails_d2d917b73a FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: payments fk_rails_d384ec1ebf; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11518,6 +11829,14 @@ ALTER TABLE ONLY public.invites
 
 ALTER TABLE ONLY public.coupon_targets
     ADD CONSTRAINT fk_rails_de6b3c3138 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
+
+
+--
+-- Name: quotes fk_rails_de7694c307; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quotes
+    ADD CONSTRAINT fk_rails_de7694c307 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -11850,6 +12169,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260305161303'),
 ('20260305161302'),
 ('20260305100007'),
+('20260304074158'),
 ('20260227184913'),
 ('20260224134805'),
 ('20260220131101'),

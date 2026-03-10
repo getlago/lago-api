@@ -5752,6 +5752,7 @@ enum FeatureFlagEnum {
   multi_entity_billing
   multiple_payment_methods
   non_persistable_charge_cache_optimization
+  order_forms
   payment_gated_subscriptions
   postgres_enriched_events
   wallet_traceability
@@ -6407,6 +6408,7 @@ enum IntegrationTypeEnum {
   multi_entities_pro
   netsuite
   okta
+  order_forms
   preview
   progressive_billing
   projected_usage
@@ -9217,6 +9219,12 @@ enum PermissionEnum {
   pricing_units_create
   pricing_units_update
   pricing_units_view
+  quotes_approve
+  quotes_clone
+  quotes_create
+  quotes_update
+  quotes_view
+  quotes_void
   roles_create
   roles_delete
   roles_update
@@ -9324,6 +9332,12 @@ type Permissions {
   pricingUnitsCreate: Boolean!
   pricingUnitsUpdate: Boolean!
   pricingUnitsView: Boolean!
+  quotesApprove: Boolean!
+  quotesClone: Boolean!
+  quotesCreate: Boolean!
+  quotesUpdate: Boolean!
+  quotesView: Boolean!
+  quotesVoid: Boolean!
   rolesCreate: Boolean!
   rolesDelete: Boolean!
   rolesUpdate: Boolean!
@@ -9463,6 +9477,7 @@ enum PremiumIntegrationTypeEnum {
   multi_entities_pro
   netsuite
   okta
+  order_forms
   preview
   progressive_billing
   projected_usage
