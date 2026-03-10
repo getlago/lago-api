@@ -128,6 +128,28 @@ invoice_custom_sections:
     - finance
   delete:
     - finance
+order_forms:
+  view:
+    - finance
+    - manager
+  create:
+    - manager
+  update:
+    - manager
+  delete:
+    - manager
+  publish:
+    - manager
+  sign:
+    - manager
+  share:
+    - manager
+  void:
+    - manager
+  execute:
+    - manager
+  clone:
+    - manager
 organization:
   view:
     - finance

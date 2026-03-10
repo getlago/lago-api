@@ -6293,6 +6293,7 @@ enum IntegrationTypeEnum {
   multi_entities_pro
   netsuite
   okta
+  order_forms
   preview
   progressive_billing
   projected_usage
@@ -9036,6 +9037,16 @@ enum PermissionEnum {
   invoices_update
   invoices_view
   invoices_void
+  order_forms_clone
+  order_forms_create
+  order_forms_delete
+  order_forms_execute
+  order_forms_publish
+  order_forms_share
+  order_forms_sign
+  order_forms_update
+  order_forms_view
+  order_forms_void
   organization_emails_update
   organization_emails_view
   organization_integrations_create
@@ -9143,6 +9154,16 @@ type Permissions {
   invoicesUpdate: Boolean!
   invoicesView: Boolean!
   invoicesVoid: Boolean!
+  orderFormsClone: Boolean!
+  orderFormsCreate: Boolean!
+  orderFormsDelete: Boolean!
+  orderFormsExecute: Boolean!
+  orderFormsPublish: Boolean!
+  orderFormsShare: Boolean!
+  orderFormsSign: Boolean!
+  orderFormsUpdate: Boolean!
+  orderFormsView: Boolean!
+  orderFormsVoid: Boolean!
   organizationEmailsUpdate: Boolean!
   organizationEmailsView: Boolean!
   organizationIntegrationsCreate: Boolean!
@@ -9312,6 +9333,7 @@ enum PremiumIntegrationTypeEnum {
   multi_entities_pro
   netsuite
   okta
+  order_forms
   preview
   progressive_billing
   projected_usage
