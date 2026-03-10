@@ -87,6 +87,7 @@ namespace :events do
       scope = Clickhouse::EventsRaw
         .where(organization_id:, external_subscription_id: subscription.external_id)
         .where("timestamp >= ?", subscription.started_at)
+      scope = scope.where("timestamp <= ?", subscription.terminated_at) if subscription.terminated?
       scope = scope.where(code: codes) if codes.present?
 
       Rails.logger.info("events:reprocess - Processing subscription #{subscription.external_id} (started_at: #{subscription.started_at})")
