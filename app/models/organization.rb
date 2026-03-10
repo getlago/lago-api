@@ -74,6 +74,9 @@ class Organization < ApplicationRecord
   has_many :error_details
   has_many :dunning_campaigns
   has_many :roles
+  has_many :quotes
+  has_many :order_forms
+  has_many :orders
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
   has_many :features, class_name: "Entitlement::Feature"
   has_many :privileges, class_name: "Entitlement::Privilege"
@@ -143,6 +146,7 @@ class Organization < ApplicationRecord
     events_targeting_wallets
     security_logs
     granular_lifetime_usage
+    order_forms
   ].freeze
 
   SECURITY_LOGS_RETENTION_DAYS = 90
