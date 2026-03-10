@@ -1411,4 +1411,127 @@ RSpec.describe Fees::SubscriptionService do
       end
     end
   end
+
+  context "when free_until is in the middle of a full period" do
+    let(:started_at) { Time.zone.parse("2022-01-01 00:00") }
+    let(:created_at) { started_at }
+    let(:subscription_at) { started_at }
+    let(:boundaries) do
+      BillingPeriodBoundaries.new(
+        from_datetime: Time.zone.parse("2022-03-01 00:00:00"),
+        to_datetime: Time.zone.parse("2022-03-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2022-03-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2022-03-31 23:59:59"),
+        charges_duration: 31.days,
+        timestamp: Time.zone.parse("2022-04-01 00:00").to_i
+      )
+    end
+
+    before do
+      plan.monthly!
+      subscription.free_until = Time.zone.parse("2022-03-11 00:00:00")
+      create(:fee, subscription:, fee_type: :subscription, created_at: Time.zone.parse("2022-02-01"))
+    end
+
+    it "creates a fee with full amount" do
+      result = fees_subscription_service.call
+
+      expect(result.fee).to have_attributes(
+        amount_cents: 100,
+        precise_amount_cents: 100.0
+      )
+    end
+  end
+
+  context "when free_until is in the middle of a first subscription period" do
+    let(:started_at) { Time.zone.parse("2022-03-01 00:00") }
+    let(:created_at) { started_at }
+    let(:subscription_at) { started_at }
+    let(:boundaries) do
+      BillingPeriodBoundaries.new(
+        from_datetime: Time.zone.parse("2022-03-01 00:00:00"),
+        to_datetime: Time.zone.parse("2022-03-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2022-03-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2022-03-31 23:59:59"),
+        charges_duration: 31.days,
+        timestamp: Time.zone.parse("2022-04-01 00:00").to_i
+      )
+    end
+
+    before do
+      plan.monthly!
+      subscription.free_until = Time.zone.parse("2022-03-11 00:00:00")
+    end
+
+    it "creates a fee with prorated amount" do
+      result = fees_subscription_service.call
+
+      # 21 billable days out of 31 (Mar 11 to Mar 31)
+      expect(result.fee).to have_attributes(
+        amount_cents: 68,
+        precise_amount_cents: 67.74193548387096
+      )
+    end
+  end
+
+  context "when free_until covers the entire first subscription period" do
+    let(:started_at) { Time.zone.parse("2022-03-01 00:00") }
+    let(:created_at) { started_at }
+    let(:subscription_at) { started_at }
+    let(:boundaries) do
+      BillingPeriodBoundaries.new(
+        from_datetime: Time.zone.parse("2022-03-01 00:00:00"),
+        to_datetime: Time.zone.parse("2022-03-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2022-03-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2022-03-31 23:59:59"),
+        charges_duration: 31.days,
+        timestamp: Time.zone.parse("2022-04-01 00:00").to_i
+      )
+    end
+
+    before do
+      plan.monthly!
+      subscription.free_until = Time.zone.parse("2022-04-15 00:00:00")
+    end
+
+    it "creates a fee with zero amount" do
+      result = fees_subscription_service.call
+
+      expect(result.fee).to have_attributes(
+        amount_cents: 0,
+        precise_amount_cents: 0.0
+      )
+    end
+  end
+
+  context "when free_until is before the first subscription period" do
+    let(:started_at) { Time.zone.parse("2022-03-01 00:00") }
+    let(:created_at) { started_at }
+    let(:subscription_at) { started_at }
+
+    let(:boundaries) do
+      BillingPeriodBoundaries.new(
+        from_datetime: Time.zone.parse("2022-03-01 00:00:00"),
+        to_datetime: Time.zone.parse("2022-03-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2022-03-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2022-03-31 23:59:59"),
+        charges_duration: 31.days,
+        timestamp: Time.zone.parse("2022-04-01 00:00").to_i
+      )
+    end
+
+    before do
+      plan.monthly!
+      subscription.free_until = Time.zone.parse("2022-02-15 00:00:00")
+    end
+
+    it "creates a fee with full period amount" do
+      result = fees_subscription_service.call
+
+      expect(result.fee).to have_attributes(
+        amount_cents: 100,
+        precise_amount_cents: 100.0
+      )
+    end
+  end
 end
