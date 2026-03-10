@@ -63,36 +63,37 @@ end
 # Table name: quotes
 # Database name: primary
 #
-#  id                            :uuid             not null, primary key
-#  approved_at                   :datetime
-#  auto_execute                  :boolean          default(FALSE), not null
-#  backdated_billing(Rails enum) :integer
-#  billing_items                 :jsonb
-#  commercial_terms              :jsonb
-#  contacts                      :jsonb
-#  content                       :text
-#  currency                      :string
-#  description                   :text
-#  execution_mode(Rails enum)    :integer
-#  internal_notes                :text
-#  legal_text                    :text
-#  metadata                      :jsonb
-#  number                        :string           not null
-#  order_type(Rails enum)        :integer          not null
-#  share_token                   :string
-#  status                        :enum             default("draft"), not null
-#  version                       :integer          default(1), not null
-#  void_reason(Rails enum)       :integer
-#  voided_at                     :datetime
-#  created_at                    :datetime         not null
-#  updated_at                    :datetime         not null
-#  customer_id                   :uuid             not null
-#  organization_id               :uuid             not null
-#  sequential_id                 :integer          not null
+#  id                :uuid             not null, primary key
+#  approved_at       :datetime
+#  auto_execute      :boolean          default(FALSE), not null
+#  backdated_billing :integer
+#  billing_items     :jsonb
+#  commercial_terms  :jsonb
+#  contacts          :jsonb
+#  content           :text
+#  currency          :string
+#  description       :text
+#  execution_mode    :integer
+#  internal_notes    :text
+#  legal_text        :text
+#  metadata          :jsonb
+#  number            :string           not null
+#  order_type        :integer          not null
+#  share_token       :string
+#  status            :enum             default("draft"), not null
+#  version           :integer          default(1), not null
+#  void_reason       :integer
+#  voided_at         :datetime
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  customer_id       :uuid             not null
+#  organization_id   :uuid             not null
+#  sequential_id     :integer          not null
 #
 # Indexes
 #
 #  index_quotes_on_customer_id                               (customer_id)
+#  index_unique_quotes_on_organization_number                (organization_id,number) UNIQUE
 #  index_unique_quotes_on_organization_sequentialid_version  (organization_id,sequential_id,version DESC) UNIQUE
 #  index_unique_quotes_on_share_token                        (share_token) UNIQUE
 #

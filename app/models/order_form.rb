@@ -54,30 +54,31 @@ end
 # Table name: order_forms
 # Database name: primary
 #
-#  id                          :uuid             not null, primary key
-#  billing_snapshot            :jsonb            not null
-#  content                     :text
-#  contract_uploaded_at        :datetime
-#  contract_uploaded_by_user   :uuid
-#  expires_at                  :datetime
-#  legal_text                  :text
-#  number                      :string           not null
-#  signed_at                   :datetime
-#  status                      :enum             default("generated"), not null
-#  void_reason(Rails enum)     :integer
-#  voided_at                   :datetime
-#  created_at                  :datetime         not null
-#  updated_at                  :datetime         not null
-#  customer_id                 :uuid             not null
-#  organization_id             :uuid             not null
-#  quote_id                    :uuid             not null
-#  sequential_id               :integer          not null
-#  signed_by_user_id           :uuid
+#  id                        :uuid             not null, primary key
+#  billing_snapshot          :jsonb            not null
+#  content                   :text
+#  contract_uploaded_at      :datetime
+#  contract_uploaded_by_user :uuid
+#  expires_at                :datetime
+#  legal_text                :text
+#  number                    :string           not null
+#  signed_at                 :datetime
+#  status                    :enum             default("generated"), not null
+#  void_reason               :integer
+#  voided_at                 :datetime
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  customer_id               :uuid             not null
+#  organization_id           :uuid             not null
+#  quote_id                  :uuid             not null
+#  sequential_id             :integer          not null
+#  signed_by_user_id         :uuid
 #
 # Indexes
 #
 #  index_order_forms_on_customer_id                       (customer_id)
 #  index_order_forms_on_quote_id                          (quote_id)
+#  index_unique_order_forms_on_organization_number        (organization_id,number) UNIQUE
 #  index_unique_order_forms_on_organization_sequentialid  (organization_id,sequential_id) UNIQUE
 #
 # Foreign Keys
