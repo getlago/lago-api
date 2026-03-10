@@ -24,7 +24,7 @@ module Mutations
 
         plan = result.plan
 
-        if entitlements.present? && License.premium?
+        if entitlements.present?
           result = ::Entitlement::PlanEntitlementsUpdateService.call(
             organization: plan.organization,
             plan:,

@@ -383,7 +383,15 @@ RSpec.describe Mutations::Plans::Update do
       expect(volume_charge["chargeModel"]).to eq("volume")
       expect(volume_charge["properties"]["volumeRanges"].count).to eq(2)
 
-      expect(result_data["entitlements"].sole["privileges"].sole["value"]).to eq("99") # not updated
+      expect(result_data["entitlements"]).to contain_exactly(
+        {
+          "code" => "seats",
+          "privileges" => [{"code" => "max", "value" => "22"}]
+        }, {
+          "code" => "sso",
+          "privileges" => []
+        }
+      )
     end
 
     it "does not update minimum commitment" do
