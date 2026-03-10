@@ -93,15 +93,8 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       end
     end
 
-    it "produces a security log" do
-      subject
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "webhook_endpoint",
-        log_event: "webhook_endpoint.created",
-        resources: {webhook_url: create_params[:webhook_url], signature_algo: "jwt"}
-      )
+    it_behaves_like "produces a security log", "webhook_endpoint.created" do
+      before { subject }
     end
   end
 
@@ -179,15 +172,8 @@ RSpec.describe Api::V1::WebhookEndpointsController do
         expect(json[:webhook_endpoint][:event_types]).to eq(webhook_endpoint.event_types)
       end
 
-      it "produces a security log" do
-        subject
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: organization,
-          log_type: "webhook_endpoint",
-          log_event: "webhook_endpoint.deleted",
-          resources: {webhook_url: webhook_endpoint.webhook_url, signature_algo: "jwt"}
-        )
+      it_behaves_like "produces a security log", "webhook_endpoint.deleted" do
+        before { subject }
       end
     end
 
@@ -304,18 +290,8 @@ RSpec.describe Api::V1::WebhookEndpointsController do
         end
       end
 
-      it "produces a security log" do
-        subject
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: organization,
-          log_type: "webhook_endpoint",
-          log_event: "webhook_endpoint.updated",
-          resources: {
-            webhook_url: {deleted: webhook_endpoint.webhook_url, added: "http://foo.bar"},
-            signature_algo: {deleted: "jwt", added: "hmac"}
-          }
-        )
+      it_behaves_like "produces a security log", "webhook_endpoint.updated" do
+        before { subject }
       end
 
       context "when only webhook_url is provided" do

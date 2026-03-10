@@ -50,15 +50,7 @@ RSpec.describe DataExports::CreateService do
       .with(data_export)
   end
 
-  it "produces a security log" do
-    result
-
-    expect(security_logger).to have_received(:produce).with(
-      organization: organization,
-      log_type: "export",
-      log_event: "export.created",
-      user: user,
-      resources: {export_type: "invoices", resource_query: resource_query}
-    )
+  it_behaves_like "produces a security log", "export.created" do
+    before { result }
   end
 end

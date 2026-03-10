@@ -62,14 +62,6 @@ RSpec.describe Mutations::DataExports::CreditNotes::Create do
       expect(result_data).to include("id" => String, "status" => "pending")
     end
 
-    it "produces a security log" do
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "export",
-        log_event: "export.created",
-        user: membership.user,
-        resources: hash_including(export_type: "credit_notes", resource_query: hash_including("currency" => "USD"))
-      )
-    end
+    it_behaves_like "produces a security log", "export.created"
   end
 end

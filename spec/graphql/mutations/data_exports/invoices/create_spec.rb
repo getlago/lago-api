@@ -65,14 +65,6 @@ RSpec.describe Mutations::DataExports::Invoices::Create do
       )
     end
 
-    it "produces a security log" do
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "export",
-        log_event: "export.created",
-        user: membership.user,
-        resources: hash_including(export_type: "invoices", resource_query: hash_including("currency" => "USD"))
-      )
-    end
+    it_behaves_like "produces a security log", "export.created"
   end
 end

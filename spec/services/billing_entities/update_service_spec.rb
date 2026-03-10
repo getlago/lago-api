@@ -70,20 +70,8 @@ RSpec.describe BillingEntities::UpdateService do
       expect(result.billing_entity.document_locale).to eq("fr")
     end
 
-    it "produces a security log" do
-      original_name = billing_entity.name
-      update_service.call
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "billing_entity",
-        log_event: "billing_entity.updated",
-        resources: hash_including(
-          billing_entity_name: "New Name",
-          billing_entity_code: billing_entity.code,
-          name: {deleted: original_name, added: "New Name"}
-        )
-      )
+    it_behaves_like "produces a security log", "billing_entity.updated" do
+      before { update_service.call }
     end
 
     context "when tax_codes are changed" do
@@ -98,17 +86,8 @@ RSpec.describe BillingEntities::UpdateService do
         new_tax
       end
 
-      it "produces a security log with tax_codes diff" do
-        update_service.call
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: organization,
-          log_type: "billing_entity",
-          log_event: "billing_entity.updated",
-          resources: hash_including(
-            tax_codes: {deleted: %w[old_tax], added: %w[new_tax]}
-          )
-        )
+      it_behaves_like "produces a security log", "billing_entity.updated" do
+        before { update_service.call }
       end
     end
 
@@ -449,10 +428,8 @@ RSpec.describe BillingEntities::UpdateService do
         expect(result.error.resource).to eq("billing_entity")
       end
 
-      it "does not produce a security log" do
-        update_service.call
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { update_service.call }
       end
     end
   end

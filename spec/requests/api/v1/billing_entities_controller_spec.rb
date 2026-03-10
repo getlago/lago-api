@@ -177,15 +177,8 @@ RSpec.describe Api::V1::BillingEntitiesController do
       expect(json[:billing_entity][:logo_url]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
     end
 
-    it "produces a security log" do
-      subject
-
-      expect(security_logger).to have_received(:produce).with(
-        organization:,
-        log_type: "billing_entity",
-        log_event: "billing_entity.created",
-        resources: {billing_entity_name: "New Name", billing_entity_code: "NEW-0001"}
-      )
+    it_behaves_like "produces a security log", "billing_entity.created" do
+      before { subject }
     end
 
     context "when the logo is not provided" do
@@ -308,18 +301,8 @@ RSpec.describe Api::V1::BillingEntitiesController do
       expect(json[:billing_entity][:logo_url]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
     end
 
-    it "produces a security log" do
-      subject
-
-      expect(security_logger).to have_received(:produce).with(
-        organization:,
-        log_type: "billing_entity",
-        log_event: "billing_entity.updated",
-        resources: hash_including(
-          billing_entity_name: "New Name",
-          billing_entity_code: billing_entity1.code
-        )
-      )
+    it_behaves_like "produces a security log", "billing_entity.updated" do
+      before { subject }
     end
 
     context "when updating the applicable invoice custom sections" do

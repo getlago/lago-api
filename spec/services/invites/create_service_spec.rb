@@ -26,15 +26,8 @@ RSpec.describe Invites::CreateService do
         .to change(Invite, :count).by(1)
     end
 
-    it "produces a security log" do
-      create_service.call
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "user",
-        log_event: "user.invited",
-        resources: {invitee_email: create_args[:email]}
-      )
+    it_behaves_like "produces a security log", "user.invited" do
+      before { create_service.call }
     end
 
     context "with validation error" do
@@ -53,10 +46,8 @@ RSpec.describe Invites::CreateService do
         expect(result.error.messages[:email]).to eq(%w[invalid_email_format])
       end
 
-      it "does not produce a security log" do
-        create_service.call
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { create_service.call }
       end
     end
 
@@ -76,10 +67,8 @@ RSpec.describe Invites::CreateService do
         expect(result.error.messages[:roles]).to eq(%w[invalid_role])
       end
 
-      it "does not produce a security log" do
-        create_service.call
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { create_service.call }
       end
     end
 
@@ -100,10 +89,8 @@ RSpec.describe Invites::CreateService do
         expect(result.error.messages[:roles]).to eq(%w[invalid_role])
       end
 
-      it "does not produce a security log" do
-        create_service.call
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { create_service.call }
       end
     end
 
@@ -117,11 +104,11 @@ RSpec.describe Invites::CreateService do
         expect(result.error.messages.keys).to eq([:invite])
       end
 
-      it "does not produce a security log" do
-        create(:invite, organization: create_args[:current_organization], email: create_args[:email])
-        create_service.call
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before do
+          create(:invite, organization: create_args[:current_organization], email: create_args[:email])
+          create_service.call
+        end
       end
     end
 
@@ -138,11 +125,11 @@ RSpec.describe Invites::CreateService do
         expect(result.error.messages.keys).to eq([:email])
       end
 
-      it "does not produce a security log" do
-        create(:membership, organization:, user:)
-        create_service.call
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before do
+          create(:membership, organization:, user:)
+          create_service.call
+        end
       end
     end
   end

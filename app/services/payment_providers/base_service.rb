@@ -5,6 +5,9 @@ module PaymentProviders
     # Guarantees security logging for payment provider creation and updates.
     # Subclasses are unaware of the logging — the only requirement
     # is that `result.{type}_provider` is set upon the successful `create_or_update`.
+    #
+    # TODO: Once payment provider services migrate to the standard `call` pattern,
+    #       this can be refactored into a `BaseService` around-middleware.
     module SecurityLogging
       def create_or_update(...)
         super.tap { |r| register_security_log(extract_provider(r)) if r.success? }

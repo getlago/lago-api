@@ -71,13 +71,6 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, :premium do
       expect(result_data["scriptEndpointUrl"]).to eq(script_endpoint_url)
     end
 
-    it "produces a security log" do
-      expect(security_logger).to have_received(:produce).with(
-        organization: membership.organization,
-        log_type: "integration",
-        log_event: "integration.created",
-        resources: {integration_name: name, integration_type: "netsuite"}
-      )
-    end
+    it_behaves_like "produces a security log", "integration.created"
   end
 end

@@ -26,19 +26,8 @@ RSpec.describe ApiKeys::UpdateService, :premium do
           expect { service_result }.to change { api_key.reload.permissions }.to(permissions)
         end
 
-        it "produces a security log" do
-          service_result
-
-          expect(security_logger).to have_received(:produce).with(
-            organization: organization,
-            log_type: "api_key",
-            log_event: "api_key.updated",
-            resources: hash_including(
-              value_ending: api_key.value.last(4),
-              name: {deleted: "API Key", added: name},
-              permissions: {deleted: %w[add_on:write]}
-            )
-          )
+        it_behaves_like "produces a security log", "api_key.updated" do
+          before { service_result }
         end
       end
 
@@ -55,10 +44,8 @@ RSpec.describe ApiKeys::UpdateService, :premium do
           expect(service_result.error.code).to eq("premium_integration_missing")
         end
 
-        it "does not produce a security log" do
-          service_result
-
-          expect(security_logger).not_to have_received(:produce)
+        it_behaves_like "does not produce a security log" do
+          before { service_result }
         end
       end
     end
@@ -96,10 +83,8 @@ RSpec.describe ApiKeys::UpdateService, :premium do
       expect(service_result.error.error_code).to eq("api_key_not_found")
     end
 
-    it "does not produce a security log" do
-      service_result
-
-      expect(security_logger).not_to have_received(:produce)
+    it_behaves_like "does not produce a security log" do
+      before { service_result }
     end
   end
 end

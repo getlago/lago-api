@@ -36,15 +36,8 @@ RSpec.describe Mutations::WebhookEndpoints::Destroy do
       expect { result }.to change(WebhookEndpoint, :count).by(-1)
     end
 
-    it "produces a security log" do
-      result
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "webhook_endpoint",
-        log_event: "webhook_endpoint.deleted",
-        resources: {webhook_url: webhook_endpoint.webhook_url, signature_algo: "jwt"}
-      )
+    it_behaves_like "produces a security log", "webhook_endpoint.deleted" do
+      before { result }
     end
   end
 end

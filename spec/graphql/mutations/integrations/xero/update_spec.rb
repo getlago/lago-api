@@ -60,16 +60,6 @@ RSpec.describe Mutations::Integrations::Xero::Update, :premium do
       expect(result_data["code"]).to eq(code)
     end
 
-    it "produces a security log" do
-      expect(security_logger).to have_received(:produce).with(
-        organization: membership.organization,
-        log_type: "integration",
-        log_event: "integration.updated",
-        resources: hash_including(
-          integration_name: name,
-          integration_type: "xero"
-        )
-      )
-    end
+    it_behaves_like "produces a security log", "integration.updated"
   end
 end

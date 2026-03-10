@@ -136,17 +136,7 @@ RSpec.describe Mutations::BillingEntities::Update, :premium do
       expect(result_data["selectedInvoiceCustomSections"]).to match_array(invoice_custom_sections.map { |section| {"id" => section.id} })
     end
 
-    it "produces a security log" do
-      expect(security_logger).to have_received(:produce).with(
-        organization: membership.organization,
-        log_type: "billing_entity",
-        log_event: "billing_entity.updated",
-        resources: hash_including(
-          billing_entity_name: "Updated entity",
-          billing_entity_code: billing_entity.code
-        )
-      )
-    end
+    it_behaves_like "produces a security log", "billing_entity.updated"
   end
 
   context "with valid input and extra view permissions" do

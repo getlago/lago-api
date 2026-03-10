@@ -22,15 +22,8 @@ RSpec.describe PaymentProviders::AdyenService do
       end.to change(PaymentProviders::AdyenProvider, :count).by(1)
     end
 
-    it "produces a security log" do
-      adyen_service.create_or_update(organization:, api_key:, code:, name:, merchant_account:, success_redirect_url:)
-
-      expect(security_logger).to have_received(:produce).with(
-        organization:,
-        log_type: "integration",
-        log_event: "integration.created",
-        resources: {integration_name: name, integration_type: "adyen"}
-      )
+    it_behaves_like "produces a security log", "integration.created" do
+      before { adyen_service.create_or_update(organization:, api_key:, code:, name:, merchant_account:, success_redirect_url:) }
     end
 
     context "when code was changed" do
@@ -89,21 +82,16 @@ RSpec.describe PaymentProviders::AdyenService do
         expect(result.adyen_provider.success_redirect_url).to eq(success_redirect_url)
       end
 
-      it "produces a security log" do
-        adyen_service.create_or_update(
-          organization:,
-          api_key:,
-          code:,
-          name:,
-          success_redirect_url:
-        )
-
-        expect(security_logger).to have_received(:produce).with(
-          organization:,
-          log_type: "integration",
-          log_event: "integration.updated",
-          resources: hash_including(integration_name: name, integration_type: "adyen")
-        )
+      it_behaves_like "produces a security log", "integration.updated" do
+        before do
+          adyen_service.create_or_update(
+            organization:,
+            api_key:,
+            code:,
+            name:,
+            success_redirect_url:
+          )
+        end
       end
     end
 

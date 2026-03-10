@@ -63,13 +63,6 @@ RSpec.describe Mutations::Integrations::Avalara::Create, :premium do
       expect(Integrations::AvalaraIntegration.order(:created_at).last.connection_id).to eq("this-is-random-uuid")
     end
 
-    it "produces a security log" do
-      expect(security_logger).to have_received(:produce).with(
-        organization: membership.organization,
-        log_type: "integration",
-        log_event: "integration.created",
-        resources: {integration_name: name, integration_type: "avalara"}
-      )
-    end
+    it_behaves_like "produces a security log", "integration.created"
   end
 end

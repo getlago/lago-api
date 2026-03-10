@@ -42,19 +42,8 @@ RSpec.describe Mutations::ApiKeys::Create do
       expect(api_key_response["name"]).to eq(name)
     end
 
-    it "produces a security log" do
-      api_key_response = result["data"]["createApiKey"]
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: membership.organization,
-        log_type: "api_key",
-        log_event: "api_key.created",
-        resources: {
-          name: name,
-          value_ending: api_key_response["value"].last(4),
-          permissions: kind_of(Array)
-        }
-      )
+    it_behaves_like "produces a security log", "api_key.created" do
+      before { result }
     end
   end
 

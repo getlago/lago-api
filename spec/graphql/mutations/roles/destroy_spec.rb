@@ -44,15 +44,8 @@ RSpec.describe Mutations::Roles::Destroy do
       expect(role_response["id"]).to eq(role.id)
     end
 
-    it "produces a security log" do
-      result
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "role",
-        log_event: "role.deleted",
-        resources: {role_code: role.code}
-      )
+    it_behaves_like "produces a security log", "role.deleted" do
+      before { result }
     end
   end
 

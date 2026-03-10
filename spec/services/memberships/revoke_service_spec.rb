@@ -29,10 +29,8 @@ RSpec.describe Memberships::RevokeService do
         expect(result.error.code).to eq("cannot_revoke_own_membership")
       end
 
-      it "does not produce a security log" do
-        revoke_service.call
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { revoke_service.call }
       end
     end
 
@@ -46,10 +44,8 @@ RSpec.describe Memberships::RevokeService do
         expect(result.error.error_code).to eq("membership_not_found")
       end
 
-      it "does not produce a security log" do
-        revoke_service.call
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { revoke_service.call }
       end
     end
 
@@ -67,16 +63,8 @@ RSpec.describe Memberships::RevokeService do
         end
       end
 
-      it "produces a security log" do
-        revoke_service.call
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: organization,
-          log_type: "user",
-          log_event: "user.deleted",
-          user: user,
-          resources: {email: membership.user.email}
-        )
+      it_behaves_like "produces a security log", "user.deleted" do
+        before { revoke_service.call }
       end
     end
 
@@ -93,10 +81,8 @@ RSpec.describe Memberships::RevokeService do
         expect(result.error.code).to eq("last_admin")
       end
 
-      it "does not produce a security log" do
-        revoke_service.call
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { revoke_service.call }
       end
     end
 
@@ -116,10 +102,8 @@ RSpec.describe Memberships::RevokeService do
         expect(result.error.code).to eq("last_admin")
       end
 
-      it "does not produce a security log" do
-        revoke_service.call
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { revoke_service.call }
       end
     end
   end

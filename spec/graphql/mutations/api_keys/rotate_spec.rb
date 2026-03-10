@@ -52,19 +52,8 @@ RSpec.describe Mutations::ApiKeys::Rotate do
       expect(api_key_response["expiresAt"]).to be_nil
     end
 
-    it "produces a security log" do
-      result
-      new_api_key = membership.organization.api_keys.order(:created_at).last
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: membership.organization,
-        log_type: "api_key",
-        log_event: "api_key.rotated",
-        resources: {
-          name: new_api_key.name,
-          value_ending: {deleted: api_key.value.last(4), added: new_api_key.value.last(4)}
-        }
-      )
+    it_behaves_like "produces a security log", "api_key.rotated" do
+      before { result }
     end
   end
 

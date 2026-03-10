@@ -33,15 +33,8 @@ RSpec.describe PaymentProviders::FlutterwaveService do
         expect(result.flutterwave_provider.success_redirect_url).to eq("https://example.com/success")
       end
 
-      it "produces a security log" do
-        flutterwave_service.create_or_update(**args)
-
-        expect(security_logger).to have_received(:produce).with(
-          organization:,
-          log_type: "integration",
-          log_event: "integration.created",
-          resources: {integration_name: "Flutterwave Provider", integration_type: "flutterwave"}
-        )
+      it_behaves_like "produces a security log", "integration.created" do
+        before { flutterwave_service.create_or_update(**args) }
       end
     end
 
@@ -69,15 +62,8 @@ RSpec.describe PaymentProviders::FlutterwaveService do
         expect(result.flutterwave_provider.success_redirect_url).to eq("https://example.com/success")
       end
 
-      it "produces a security log" do
-        flutterwave_service.create_or_update(**args)
-
-        expect(security_logger).to have_received(:produce).with(
-          organization:,
-          log_type: "integration",
-          log_event: "integration.updated",
-          resources: hash_including(integration_name: "Flutterwave Provider", integration_type: "flutterwave")
-        )
+      it_behaves_like "produces a security log", "integration.updated" do
+        before { flutterwave_service.create_or_update(**args) }
       end
 
       context "when code is updated" do

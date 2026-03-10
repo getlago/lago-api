@@ -145,14 +145,7 @@ RSpec.describe Mutations::BillingEntities::Create, :premium do
       expect(result_data["billingConfiguration"]).to be_nil
     end
 
-    it "produces a security log" do
-      expect(security_logger).to have_received(:produce).with(
-        organization: membership.organization,
-        log_type: "billing_entity",
-        log_event: "billing_entity.created",
-        resources: {billing_entity_name: "New entity", billing_entity_code: "NEW-0001"}
-      )
-    end
+    it_behaves_like "produces a security log", "billing_entity.created"
   end
 
   context "when the organization can create billing entities with extra view permissions" do

@@ -20,15 +20,8 @@ RSpec.describe PaymentProviders::DestroyService do
         .to change(PaymentProviders::BaseProvider, :count).by(-1)
     end
 
-    it "produces a security log" do
-      destroy_service.call
-
-      expect(security_logger).to have_received(:produce).with(
-        organization:,
-        log_type: "integration",
-        log_event: "integration.deleted",
-        resources: {integration_name: payment_provider.name, integration_type: "stripe"}
-      )
+    it_behaves_like "produces a security log", "integration.deleted" do
+      before { destroy_service.call }
     end
 
     context "when payment provider is not found" do

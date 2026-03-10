@@ -8,21 +8,16 @@ RSpec.describe WebhookEndpoints::DestroyService do
   include_context "with mocked security logger"
 
   context "when endpoint exists" do
+    # rubocop: disable RSpec/LetSetup
     let!(:webhook_endpoint) { create(:webhook_endpoint) }
+    # rubocop: enable RSpec/LetSetup
 
     it "destroys the webhook endpoint" do
       expect { destroy_service.call }.to change(WebhookEndpoint, :count).by(-1)
     end
 
-    it "produces a security log" do
-      destroy_service.call
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: webhook_endpoint.organization,
-        log_type: "webhook_endpoint",
-        log_event: "webhook_endpoint.deleted",
-        resources: {webhook_url: webhook_endpoint.webhook_url, signature_algo: "jwt"}
-      )
+    it_behaves_like "produces a security log", "webhook_endpoint.deleted" do
+      before { destroy_service.call }
     end
   end
 
@@ -36,10 +31,8 @@ RSpec.describe WebhookEndpoints::DestroyService do
       expect(result.error.message).to eq("webhook_endpoint_not_found")
     end
 
-    it "does not produce a security log" do
-      destroy_service.call
-
-      expect(security_logger).not_to have_received(:produce)
+    it_behaves_like "does not produce a security log" do
+      before { destroy_service.call }
     end
   end
 end

@@ -57,18 +57,8 @@ RSpec.describe Mutations::Memberships::Update do
       expect(data["roles"]).to eq(%w[Admin])
     end
 
-    it "produces a security log" do
-      result
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "user",
-        log_event: "user.role_edited",
-        resources: {
-          email: membership_to_edit.user.email,
-          roles: {deleted: %w[finance], added: %w[admin]}
-        }
-      )
+    it_behaves_like "produces a security log", "user.role_edited" do
+      before { result }
     end
   end
 end

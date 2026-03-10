@@ -41,17 +41,8 @@ RSpec.describe UsersService do
       )
     end
 
-    it "produces a security log" do
-      result = user_service.register("email", "password", "organization_name")
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: result.organization,
-        log_type: "user",
-        log_event: "user.signed_up",
-        user: result.user,
-        resources: {email: "email", roles: %w[admin]},
-        skip_organization_check: true
-      )
+    it_behaves_like "produces a security log", "user.signed_up" do
+      before { user_service.register("email", "password", "organization_name") }
     end
 
     it "creates an organization, user and membership" do
@@ -80,10 +71,8 @@ RSpec.describe UsersService do
         expect(result.error.messages[:email]).to include("user_already_exists")
       end
 
-      it "does not produce a security log" do
-        user_service.register(user.email, "password", "organization_name")
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { user_service.register(user.email, "password", "organization_name") }
       end
     end
 
@@ -103,10 +92,8 @@ RSpec.describe UsersService do
         expect(result.error.message).to eq("signup_disabled")
       end
 
-      it "does not produce a security log" do
-        user_service.register("email", "password", "organization_name")
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { user_service.register("email", "password", "organization_name") }
       end
     end
   end

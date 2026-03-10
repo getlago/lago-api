@@ -47,19 +47,8 @@ RSpec.describe Mutations::ApiKeys::Update, :premium do
         expect(api_key_response["permissions"]).to eq(permissions)
       end
 
-      it "produces a security log" do
-        result
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: membership.organization,
-          log_type: "api_key",
-          log_event: "api_key.updated",
-          resources: {
-            value_ending: api_key.value.last(4),
-            name: {deleted: api_key.name, added: name},
-            permissions: {deleted: %w[add_on:write]}
-          }
-        )
+      it_behaves_like "produces a security log", "api_key.updated" do
+        before { result }
       end
     end
 
