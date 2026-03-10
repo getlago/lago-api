@@ -28,6 +28,7 @@ class InvoicesQuery < BaseQuery
     return result unless validate_filters.success?
 
     invoices = base_scope.result.includes(:customer).includes(file_attachment: :blob)
+    invoices = with_customers_filter(invoices)
     invoices = paginate(invoices)
     invoices = apply_consistent_ordering(
       invoices,
@@ -71,19 +72,28 @@ class InvoicesQuery < BaseQuery
   def search_params
     return if search_term.blank?
 
-    terms = {
+    {
       m: "or",
       id_cont: search_term,
       number_cont: search_term
     }
-    return terms if filters.customer_id.present?
+  end
 
-    terms.merge(
-      customer_name_cont: search_term,
-      customer_firstname_cont: search_term,
-      customer_lastname_cont: search_term,
-      customer_external_id_cont: search_term,
-      customer_email_cont: search_term
+  def with_customers_filter(scope)
+    return scope if search_term.blank? || filters.customer_id.present?
+
+    matching_customer_ids = organization.customers
+      .ransack(
+        m: "or",
+        name_cont: search_term,
+        firstname_cont: search_term,
+        lastname_cont: search_term,
+        external_id_cont: search_term,
+        email_cont: search_term
+      ).result.select(:id)
+
+    scope.or(
+      organization.invoices.visible.where(customer_id: matching_customer_ids)
     )
   end
 
