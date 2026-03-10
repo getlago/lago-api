@@ -21,6 +21,7 @@ RSpec.describe ::V1::PaymentSerializer do
           lago_customer_id
           external_customer_id
           invoice_ids
+          invoice_numbers
           lago_payable_id
           payable_type
           amount_cents
@@ -42,6 +43,7 @@ RSpec.describe ::V1::PaymentSerializer do
         expect(result["payment"]).to include(
           "lago_id" => payment.id,
           "invoice_ids" => [payment.payable.id],
+          "invoice_numbers" => [payment.payable.number],
           "amount_cents" => payment.amount_cents,
           "amount_currency" => payment.amount_currency,
           "payment_status" => payment.payable_payment_status,
@@ -103,6 +105,7 @@ RSpec.describe ::V1::PaymentSerializer do
         expect(result["payment"]).to include(
           "lago_id" => payment.id,
           "invoice_ids" => payment_request.invoice_ids,
+          "invoice_numbers" => payment_request.invoices.pluck(:number),
           "amount_cents" => payment.amount_cents,
           "amount_currency" => payment.amount_currency,
           "payment_status" => payment.payable_payment_status,

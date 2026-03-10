@@ -95,6 +95,7 @@ RSpec.describe Api::V1::PaymentsController do
             lago_customer_id
             external_customer_id
             invoice_ids
+            invoice_numbers
             lago_payable_id
             payable_type
             amount_cents
@@ -138,6 +139,7 @@ RSpec.describe Api::V1::PaymentsController do
           lago_customer_id
           external_customer_id
           invoice_ids
+          invoice_numbers
           lago_payable_id
           payable_type
           amount_cents

@@ -392,6 +392,25 @@ RSpec.describe Payment do
     end
   end
 
+  describe "#invoice_numbers" do
+    context "when payable is an invoice" do
+      let(:payable) { create(:invoice) }
+
+      it "returns the invoice number" do
+        expect(subject.invoice_numbers).to eq([payable.number])
+      end
+    end
+
+    context "when payable is a payment request" do
+      let(:invoices) { create_list(:invoice, 2) }
+      let(:payable) { create(:payment_request, invoices:) }
+
+      it "returns the payment request invoice numbers" do
+        expect(subject.invoice_numbers).to match_array(invoices.map(&:number))
+      end
+    end
+  end
+
   describe "#payment_provider_type" do
     subject(:payment_provider_type) { payment.payment_provider_type }
 

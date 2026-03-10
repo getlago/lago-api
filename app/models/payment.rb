@@ -71,6 +71,10 @@ class Payment < ApplicationRecord
     payable.payment_invoices
   end
 
+  def invoice_numbers
+    invoices.pluck(:number)
+  end
+
   def should_sync_payment?
     return false unless payable.is_a?(Invoice)
 
