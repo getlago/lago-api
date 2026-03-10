@@ -70,11 +70,9 @@ module Events
       charge_ids = values.map(&:first).uniq
 
       existing_charge_ids = plan.charges.where(id: charge_ids).pluck(:id)
-      existing_charge_filters = plan.charges.joins(:filters)
-        .where(charge_filters: {id: charge_filter_ids})
-        .pluck("charge_filters.id")
+      existing_charge_filters = fetch_existing_filters(charge_filter_ids)
 
-      result = all_recurring_charges_and_filters
+      result = recurring_charges_and_filters
 
       values.each do |charge_id, filter_id|
         # Charge has been removed from the plan
@@ -102,6 +100,39 @@ module Events
         .then { add_default_filter(it) }
     end
 
+    def recurring_charges_and_filters
+      # First period: no previous usage exists, events from current period are enough
+      return Hash.new { |h, k| h[k] = [] } if subscription.started_at >= boundaries.charges_from_datetime
+
+      # TODO: Subscription is part of an upgrade chain, for now just fall back to all recurring
+      return all_recurring_charges_and_filters if subscription.previous_subscription_id.present?
+
+      # Use previous fees to filter the recurring charges with existing usage
+      recurring_charges_and_filters_from_previous_fees
+    end
+
+    def recurring_charges_and_filters_from_previous_fees
+      pairs = Fee.where(subscription_id: subscription.id, fee_type: :charge)
+        .joins(invoice: :invoice_subscriptions)
+        .where("invoice_subscriptions.subscription_id = fees.subscription_id")
+        .where("invoice_subscriptions.charges_from_datetime < ?", boundaries.charges_from_datetime)
+        .joins(charge: :billable_metric)
+        .where(charges: {plan_id: plan.id, deleted_at: nil})
+        .where(billable_metrics: {recurring: true})
+        .distinct
+        .pluck(:charge_id, :charge_filter_id)
+
+      return Hash.new { |h, k| h[k] = [] } if pairs.empty?
+
+      filter_ids = pairs.map(&:last).compact
+      if filter_ids.any?
+        existing_filter_ids = fetch_existing_filters(filter_ids)
+        pairs = pairs.select { |_, f_id| f_id.nil? || existing_filter_ids.include?(f_id) }
+      end
+
+      pairs.then { group_by_charge_id(it) }
+    end
+
     # Group all charges and filters by charge_id
     def group_by_charge_id(rows)
       rows.each_with_object(Hash.new { |h, k| h[k] = [] }) do |(charge_id, filter_id), hash|
@@ -118,6 +149,12 @@ module Events
     # Make sure all filters are unique for each charge
     def deduplicate_filters(charges_and_filters)
       charges_and_filters.transform_values(&:uniq)
+    end
+
+    def fetch_existing_filters(charge_filter_ids)
+      plan.charges.joins(:filters)
+        .where(charge_filters: {id: charge_filter_ids})
+        .pluck("charge_filters.id")
     end
   end
 end
