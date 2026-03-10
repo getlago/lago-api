@@ -23,7 +23,7 @@ module Mutations
 
         return result_error(result) unless result.success?
 
-        if entitlements.present?
+        unless entitlements.nil?
           result = ::Entitlement::PlanEntitlementsUpdateService.call(
             organization: plan.organization,
             plan:,
