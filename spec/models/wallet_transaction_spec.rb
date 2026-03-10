@@ -131,4 +131,25 @@ RSpec.describe WalletTransaction do
         .and change(transaction, :failed_at).from(nil)
     end
   end
+
+  describe "#remaining_credit_amount" do
+    let(:wallet) { create(:wallet, rate_amount: "2.00", currency: "EUR") }
+
+    context "when remaining_amount_cents is nil" do
+      let(:transaction) { create(:wallet_transaction, wallet:, transaction_type: :inbound, remaining_amount_cents: nil) }
+
+      it "returns nil" do
+        expect(transaction.remaining_credit_amount).to be_nil
+      end
+    end
+
+    context "when remaining_amount_cents is present" do
+      let(:transaction) { create(:wallet_transaction, wallet:, transaction_type: :inbound, remaining_amount_cents: 5000) }
+
+      it "converts cents to credit amount using the wallet rate" do
+        # 5000 cents = 50.00 EUR, at rate 2.00 => 25.0 credits
+        expect(transaction.remaining_credit_amount).to eq("25.0")
+      end
+    end
+  end
 end

@@ -9,6 +9,12 @@ class WalletTransactionConsumption < ApplicationRecord
   validate :inbound_transaction_must_be_inbound
   validate :outbound_transaction_must_be_outbound
 
+  def credit_amount
+    wallet = outbound_wallet_transaction.wallet
+    currency = wallet.currency_for_balance
+    consumed_amount_cents.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount).to_s
+  end
+
   private
 
   def inbound_transaction_must_be_inbound

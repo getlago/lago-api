@@ -99,6 +99,13 @@ class WalletTransaction < ApplicationRecord
     wallet.rate_amount * wallet.currency_for_balance.subunit_to_unit
   end
 
+  def remaining_credit_amount
+    return nil if remaining_amount_cents.nil?
+
+    currency = wallet.currency_for_balance
+    remaining_amount_cents.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount).to_s
+  end
+
   def mark_as_failed!(timestamp = Time.zone.now)
     return if failed?
 

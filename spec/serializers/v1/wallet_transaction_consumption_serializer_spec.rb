@@ -17,6 +17,7 @@ RSpec.describe ::V1::WalletTransactionConsumptionSerializer do
       expect(result["wallet_transaction_consumption"]).to eq(
         "lago_id" => consumption.id,
         "amount_cents" => consumption.consumed_amount_cents,
+        "credit_amount" => consumption.credit_amount,
         "created_at" => consumption.created_at.iso8601
       )
     end

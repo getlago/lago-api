@@ -60,4 +60,21 @@ RSpec.describe WalletTransactionConsumption do
       end
     end
   end
+
+  describe "#credit_amount" do
+    let(:wallet) { create(:wallet, rate_amount: "2.00", currency: "EUR") }
+    let(:inbound_transaction) { create(:wallet_transaction, wallet:, transaction_type: :inbound, remaining_amount_cents: 10000) }
+    let(:outbound_transaction) { create(:wallet_transaction, wallet:, transaction_type: :outbound) }
+    let(:consumption) do
+      create(:wallet_transaction_consumption,
+        inbound_wallet_transaction: inbound_transaction,
+        outbound_wallet_transaction: outbound_transaction,
+        consumed_amount_cents: 3000)
+    end
+
+    it "converts consumed cents to credit amount using the wallet rate" do
+      # 3000 cents = 30.00 EUR, at rate 2.00 => 15.0 credits
+      expect(consumption.credit_amount).to eq("15.0")
+    end
+  end
 end
