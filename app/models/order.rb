@@ -68,27 +68,28 @@ end
 # Table name: orders
 # Database name: primary
 #
-#  id                            :uuid             not null, primary key
-#  backdated_billing(Rails enum) :integer
-#  billing_snapshot              :jsonb            not null
-#  currency                      :string
-#  executed_at                   :datetime
-#  execution_mode(Rails enum)    :integer
-#  execution_record              :json
-#  number                        :string           not null
-#  order_type(Rails enum)        :integer          not null
-#  status                        :enum             default("created"), not null
-#  created_at                    :datetime         not null
-#  updated_at                    :datetime         not null
-#  customer_id                   :uuid             not null
-#  order_form_id                 :uuid             not null
-#  organization_id               :uuid             not null
-#  sequential_id                 :integer          not null
+#  id                :uuid             not null, primary key
+#  backdated_billing :integer
+#  billing_snapshot  :jsonb            not null
+#  currency          :string
+#  executed_at       :datetime
+#  execution_mode    :integer
+#  execution_record  :json
+#  number            :string           not null
+#  order_type        :integer          not null
+#  status            :enum             default("created"), not null
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  customer_id       :uuid             not null
+#  order_form_id     :uuid             not null
+#  organization_id   :uuid             not null
+#  sequential_id     :integer          not null
 #
 # Indexes
 #
 #  index_orders_on_customer_id                       (customer_id)
 #  index_orders_on_order_form_id                     (order_form_id)
+#  index_unique_orders_on_organization_number        (organization_id,number) UNIQUE
 #  index_unique_orders_on_organization_sequentialid  (organization_id,sequential_id) UNIQUE
 #
 # Foreign Keys
