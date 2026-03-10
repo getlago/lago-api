@@ -28,6 +28,7 @@ module Auth
           )
         end
 
+        UserDevices::RegisterService.call!(user: result.user)
         generate_token
       rescue ValidationError => e
         result.single_validation_failure!(error_code: e.message)

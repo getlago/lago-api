@@ -26,6 +26,8 @@ class UsersService < BaseService
     membership = result.user.memberships.active.first
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{membership.id}")
 
+    UserDevices::RegisterService.call!(user: result.user)
+
     result
   end
 
@@ -68,6 +70,9 @@ class UsersService < BaseService
     track_organization_registered(result.organization, result.membership)
 
     register_security_log(result)
+
+    # Skip log: user.signed_up already covers signup
+    UserDevices::RegisterService.call!(user: result.user, skip_log: true)
 
     result
   end
