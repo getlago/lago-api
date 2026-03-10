@@ -168,12 +168,7 @@ module Fees
       end
 
       # NOTE: Number of days of the first period since subscription creation
-      days_to_bill = Utils::Datetime.date_diff_with_timezone(
-        from_datetime,
-        to_datetime,
-        customer.applicable_timezone
-      )
-      days_to_bill * single_day_price(subscription)
+      billable_days(from_datetime, to_datetime) * single_day_price(subscription)
     end
 
     # NOTE: When terminating a pay in arrerar subscription, we need to
@@ -195,6 +190,12 @@ module Fees
         if (subscription.trial_end_datetime > from_datetime) && (subscription.trial_end_datetime < to_datetime)
           from_datetime = subscription.trial_end_datetime
         end
+      end
+
+      # NOTE: clamp by free_until if set
+      case subscription.free_until
+      when from_datetime...to_datetime
+        from_datetime = subscription.free_until
       end
 
       # NOTE: number of days between beginning of the period and the termination date
@@ -224,22 +225,10 @@ module Fees
         end
       end
 
-      # NOTE: number of days between the upgrade and the end of the period
-      number_of_day_to_bill = Utils::Datetime.date_diff_with_timezone(
-        from_datetime,
-        to_datetime,
-        customer.applicable_timezone
-      )
-
       # NOTE: Subscription is upgraded from another plan
       #       We only bill the days between the upgrade date and the end of the period
       #       A credit note will apply automatically the amount of days from previous plan that were not consumed
-      #
-      #       The amount to bill is computed with:
-      #       **nb_day** = number of days between upgrade and the end of the period
-      #       **day_cost** = (plan amount_cents / full period duration)
-      #       amount_to_bill = (nb_day * day_cost)
-      number_of_day_to_bill * single_day_price(subscription)
+      billable_days(from_datetime, to_datetime) * single_day_price(subscription)
     end
 
     def full_period_amount
@@ -254,13 +243,7 @@ module Fees
         #       for this case, we should not apply the full period amount
         #       but the prorata between the trial end date end the invoice to_date
         if (subscription.trial_end_datetime > from_datetime) && (subscription.trial_end_datetime < to_datetime)
-          number_of_day_to_bill = Utils::Datetime.date_diff_with_timezone(
-            subscription.trial_end_datetime,
-            to_datetime,
-            customer.applicable_timezone
-          )
-
-          return number_of_day_to_bill * single_day_price(
+          return billable_days(subscription.trial_end_datetime, to_datetime) * single_day_price(
             subscription,
             optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date
           )
@@ -279,6 +262,11 @@ module Fees
       date_service(target_subscription).single_day_price(
         optional_from_date:
       )
+    end
+
+    def billable_days(from_time, to_time)
+      billable_from = (subscription.free_until || from_time).clamp(from_time, to_time)
+      Utils::Datetime.date_diff_with_timezone(billable_from, to_time, customer.applicable_timezone)
     end
   end
 end
