@@ -6,15 +6,14 @@ module UsageMonitoring
 
     def initialize(alert:)
       @alert = alert
-      @subscription = Subscription.active.where(organization_id: alert.organization_id, external_id: alert.subscription_external_id).first
       @organization = alert.organization
       super
     end
 
     def call
-      return result unless subscription
       return result unless organization.using_lifetime_usage?
       return result unless alert.alert_type == "billable_metric_lifetime_usage_units"
+      return result unless subscription
 
       charge_ids = subscription.plan.charges.where(billable_metric_id: alert.billable_metric_id).ids
       return result if charge_ids.empty?
@@ -36,6 +35,10 @@ module UsageMonitoring
 
     private
 
-    attr_reader :alert, :subscription, :organization
+    attr_reader :alert, :organization
+
+    def subscription
+      @subscription ||= Subscription.active.where(organization_id: alert.organization_id, external_id: alert.subscription_external_id).first
+    end
   end
 end
