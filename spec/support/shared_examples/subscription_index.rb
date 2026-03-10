@@ -141,6 +141,23 @@ RSpec.shared_examples "a subscription index endpoint" do
     end
   end
 
+  context "with N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    before do
+      create(:subscription, customer:, plan: create(:plan, organization:))
+
+      prev = create(:subscription, customer:, plan: create(:plan, organization:), status: :terminated)
+      nxt = create(:subscription, customer:, plan: create(:plan, organization:), status: :pending)
+      subscription.update!(previous_subscription: prev, next_subscriptions: [nxt])
+    end
+
+    it "does not trigger N+1 queries on plan, customer, or related subscriptions" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:subscriptions].count).to be >= 2
+    end
+  end
+
   context "with terminated status" do
     let!(:terminated_subscription) do
       create(:subscription, customer:, plan: create(:plan, organization:), status: :terminated, terminated_at: Time.current)

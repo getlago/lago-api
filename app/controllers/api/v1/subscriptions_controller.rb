@@ -278,7 +278,7 @@ module Api
       def preload_subscription(subscription)
         ActiveRecord::Associations::Preloader.new(
           records: [subscription],
-          associations: [:plan, :customer, {previous_subscription: :plan}]
+          associations: [:plan, :customer, {previous_subscription: :plan, next_subscriptions: :plan}]
         ).call
       end
 
