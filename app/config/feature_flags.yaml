@@ -29,3 +29,7 @@ payment_gated_subscriptions:
 multi_entity_billing:
   description: "Allow customers to have billing objects across multiple billing entities"
   owners: ["@lovrocolic", "@feliperodrigues", "@mariohd"]
+
+order_forms:
+  description: "Enable quotes, order forms and orders"
+  owners: ["@murparreira", "@toommz", "@rinasergeeva"]

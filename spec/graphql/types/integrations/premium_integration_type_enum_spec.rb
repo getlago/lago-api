@@ -32,6 +32,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       events_targeting_wallets
       security_logs
       granular_lifetime_usage
+      order_forms
     ]
   end
 
