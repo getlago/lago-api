@@ -11,11 +11,7 @@ module Types
       field :id, ID, null: false
       field :wallet_transaction, Types::WalletTransactions::Object, null: false, method: :outbound_wallet_transaction
 
-      def credit_amount
-        wallet = object.outbound_wallet_transaction.wallet
-        currency = wallet.currency_for_balance
-        object.consumed_amount_cents.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount).to_s
-      end
+      delegate :credit_amount, to: :object
     end
   end
 end

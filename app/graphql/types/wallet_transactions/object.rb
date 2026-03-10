@@ -36,15 +36,7 @@ module Types
         object.invoice&.visible? ? object.invoice : nil
       end
 
-      def remaining_credit_amount
-        return nil if object.remaining_amount_cents.nil?
-
-        wallet = object.wallet
-        currency = wallet.currency_for_balance
-        object.remaining_amount_cents.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount).to_s
-      end
-
-      delegate :voided_invoice, to: :object
+      delegate :remaining_credit_amount, :voided_invoice, to: :object
 
       def wallet_name
         object.wallet.name

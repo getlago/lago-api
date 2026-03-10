@@ -16,6 +16,7 @@ module V1
         amount: model.amount,
         credit_amount: model.credit_amount,
         remaining_amount_cents: model.remaining_amount_cents,
+        remaining_credit_amount: model.remaining_credit_amount,
         priority: model.priority,
         settled_at: model.settled_at&.iso8601,
         failed_at: model.failed_at&.iso8601,

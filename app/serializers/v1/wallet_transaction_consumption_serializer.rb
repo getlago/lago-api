@@ -6,6 +6,7 @@ module V1
       payload = {
         lago_id: model.id,
         amount_cents: model.consumed_amount_cents,
+        credit_amount: model.credit_amount,
         created_at: model.created_at.iso8601
       }
 
