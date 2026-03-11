@@ -602,7 +602,6 @@ DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id;
 DROP INDEX IF EXISTS public.index_customers_on_sequential_id;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_and_sequential_id;
-DROP INDEX IF EXISTS public.index_customers_on_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_only;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id;
@@ -7148,13 +7147,6 @@ CREATE UNIQUE INDEX index_customers_on_external_id_and_organization_id ON public
 --
 
 CREATE INDEX index_customers_on_external_id_only ON public.customers USING btree (external_id);
-
-
---
--- Name: index_customers_on_organization_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_customers_on_organization_id ON public.customers USING btree (organization_id);
 
 
 --
