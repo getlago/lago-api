@@ -841,8 +841,6 @@ ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS inb
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS idempotency_records_pkey;
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS groups_pkey;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS group_properties_pkey;
-ALTER TABLE IF EXISTS public.subscriptions DROP CONSTRAINT IF EXISTS free_until_should_be_before_end;
-ALTER TABLE IF EXISTS public.subscriptions DROP CONSTRAINT IF EXISTS free_until_should_be_after_start;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fixed_charges_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fixed_charges_pkey;
 ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fixed_charge_events_pkey;
@@ -2995,7 +2993,9 @@ CREATE TABLE public.subscriptions (
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     progressive_billing_disabled boolean DEFAULT false NOT NULL,
     last_received_event_on date,
-    free_until timestamp with time zone
+    free_until timestamp with time zone,
+    CONSTRAINT free_until_should_be_after_start CHECK (((free_until IS NULL) OR (free_until >= started_at))),
+    CONSTRAINT free_until_should_be_before_end CHECK (((free_until IS NULL) OR (ending_at IS NULL) OR (free_until <= ending_at)))
 );
 
 
@@ -5235,22 +5235,6 @@ ALTER TABLE ONLY public.fixed_charges
 
 ALTER TABLE ONLY public.fixed_charges_taxes
     ADD CONSTRAINT fixed_charges_taxes_pkey PRIMARY KEY (id);
-
-
---
--- Name: subscriptions free_until_should_be_after_start; Type: CHECK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE public.subscriptions
-    ADD CONSTRAINT free_until_should_be_after_start CHECK (((free_until IS NULL) OR (free_until >= started_at))) NOT VALID;
-
-
---
--- Name: subscriptions free_until_should_be_before_end; Type: CHECK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE public.subscriptions
-    ADD CONSTRAINT free_until_should_be_before_end CHECK (((free_until IS NULL) OR (ending_at IS NULL) OR (free_until <= ending_at))) NOT VALID;
 
 
 --
@@ -11352,6 +11336,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260311121245'),
+('20260310153444'),
 ('20260310153443'),
 ('20260306115902'),
 ('20260305165936'),

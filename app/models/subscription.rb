@@ -138,6 +138,10 @@ class Subscription < ApplicationRecord
     trial_end_datetime.present? && trial_end_datetime.future?
   end
 
+  def in_free_period?
+    free_until&.future?.present?
+  end
+
   def started_in_past?
     started_at.to_date < created_at.to_date
   end
