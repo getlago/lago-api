@@ -19,7 +19,9 @@ class PaymentMethodsQuery < BaseQuery
   private
 
   def with_external_customer(scope)
-    scope.joins(:customer).where(customers: {external_id: filters.external_customer_id, deleted_at: nil})
+    scope.joins(:customer)
+      .where(customers: {external_id: filters.external_customer_id})
+      .where("customers.deleted_at IS NULL")
   end
 
   def base_scope
