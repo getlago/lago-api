@@ -328,6 +328,24 @@ RSpec.describe Subscription do
     end
   end
 
+  describe "#in_free_period?" do
+    context "when free_until is not set" do
+      it { expect(subscription.in_free_period?).to be(false) }
+    end
+
+    context "when free_until is in the past" do
+      before { subscription.free_until = 2.days.ago }
+
+      it { expect(subscription.in_free_period?).to be(false) }
+    end
+
+    context "when free_until is in the future" do
+      before { subscription.free_until = 5.days.from_now }
+
+      it { expect(subscription.in_free_period?).to be(true) }
+    end
+  end
+
   describe "#initial_started_at" do
     let(:customer) { create(:customer) }
     let(:subscription) do
