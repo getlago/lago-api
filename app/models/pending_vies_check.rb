@@ -19,7 +19,7 @@ class PendingViesCheck < ApplicationRecord
 
   validates :customer_id, uniqueness: true
   validates :attempts_count, numericality: {greater_than_or_equal_to: 0}
-  validates :last_error_type, inclusion: {in: KNOWN_ERROR_TYPES}
+  validates :last_error_type, inclusion: {in: KNOWN_ERROR_TYPES}, allow_nil: true
 
   def self.error_type_for(exception)
     ERROR_TYPE_MAPPING.fetch(exception.class, "unknown")

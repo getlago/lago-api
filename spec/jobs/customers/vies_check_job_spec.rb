@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Customers::RetryViesCheckJob do
+RSpec.describe Customers::ViesCheckJob do
   let(:customer) { create(:customer, tax_identification_number: "IE6388047V") }
   let(:vies_response) do
     {
@@ -13,48 +13,22 @@ RSpec.describe Customers::RetryViesCheckJob do
   before do
     customer.billing_entity.update(eu_tax_management: true, country: "FR")
 
-    allow(Customers::EuAutoTaxesService).to receive(:call)
-      .with(customer: customer, new_record: false, tax_attributes_changed: true)
-      .and_call_original
     allow(Customers::ApplyTaxesService).to receive(:call)
       .and_call_original
     allow_any_instance_of(Valvat).to receive(:exists?).and_return(vies_response) # rubocop:disable RSpec/AnyInstance
   end
 
-  it "calls the EuAutoTaxesService" do
-    described_class.perform_now(customer.id)
+  it "calls the ViesCheckService" do
+    allow(Customers::ViesCheckService).to receive(:call).and_call_original
 
-    expect(Customers::EuAutoTaxesService).to have_received(:call)
+    described_class.perform_now(customer)
+
+    expect(Customers::ViesCheckService).to have_received(:call).with(customer:)
   end
 
-  context "when customer has no tax identification number" do
-    let(:customer) { create(:customer, tax_identification_number: nil, country: "DE") }
-
-    it "calls EuAutoTaxesService and applies default country taxes" do
-      described_class.perform_now(customer.id)
-
-      expect(Customers::EuAutoTaxesService).to have_received(:call)
-      expect(Customers::ApplyTaxesService).to have_received(:call)
-        .with(customer: customer, tax_codes: ["lago_eu_fr_standard"])
-    end
-
-    context "with pending invoices blocked by VIES" do
-      let(:pending_invoice) do
-        create(:invoice, :pending, customer:, organization: customer.organization, tax_status: "pending")
-      end
-
-      before { pending_invoice }
-
-      it "enqueues FinalizePendingViesInvoiceJob" do
-        expect { described_class.perform_now(customer.id) }
-          .to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(pending_invoice)
-      end
-    end
-  end
-
-  context "when EuAutoTaxesService returns a tax code" do
+  context "when ViesCheckService returns a tax code" do
     it "applies the tax code" do
-      described_class.perform_now(customer.id)
+      described_class.perform_now(customer)
 
       expect(Customers::ApplyTaxesService).to have_received(:call)
         .with(customer: customer, tax_codes: ["lago_eu_fr_standard"])
@@ -78,17 +52,17 @@ RSpec.describe Customers::RetryViesCheckJob do
       end
 
       it "enqueues FinalizePendingViesInvoiceJob for pending invoices with pending tax_status" do
-        expect { described_class.perform_now(customer.id) }
+        expect { described_class.perform_now(customer) }
           .to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(pending_invoice)
       end
 
       it "does not enqueue job for finalized invoices" do
-        expect { described_class.perform_now(customer.id) }
+        expect { described_class.perform_now(customer) }
           .not_to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(finalized_invoice)
       end
 
       it "does not enqueue job for pending invoices with succeeded tax_status" do
-        expect { described_class.perform_now(customer.id) }
+        expect { described_class.perform_now(customer) }
           .not_to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(pending_but_tax_succeeded_invoice)
       end
     end
@@ -105,17 +79,17 @@ RSpec.describe Customers::RetryViesCheckJob do
     end
 
     it "enqueues another retry job" do
-      expect { described_class.perform_now(customer.id) }.to have_enqueued_job(described_class)
+      expect { described_class.perform_now(customer) }.to have_enqueued_job(described_class)
     end
 
     it "does not apply taxes" do
-      described_class.perform_now(customer.id)
+      described_class.perform_now(customer)
 
       expect(Customers::ApplyTaxesService).not_to have_received(:call)
     end
 
     it "does not enqueue invoice finalization" do
-      expect { described_class.perform_now(customer.id) }
+      expect { described_class.perform_now(customer) }
         .not_to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob)
     end
   end
