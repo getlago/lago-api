@@ -40,23 +40,27 @@ module Subscriptions
           .call(customer:, currency: plan.amount_currency)
           .raise_if_error!
 
-        customer.with_lock do
-          # Refresh current_subscription inside the lock to avoid stale data
-          @current_subscription = editable_subscriptions
-            .find_by("id = ? OR external_id = ?", params[:subscription_id], external_id)
+        # Refresh current_subscription inside the lock to avoid stale data
+        @current_subscription = editable_subscriptions
+          .find_by("id = ? OR external_id = ?", params[:subscription_id], external_id)
 
-          subscription = handle_subscription
+        subscription = handle_subscription
 
-          if params[:usage_thresholds].present?
-            UpdateUsageThresholdsService.call!(subscription:, usage_thresholds_params: params[:usage_thresholds], partial: false)
-          end
-          InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:) unless downgrade?
-
-          result.subscription = subscription
+        if params[:usage_thresholds].present?
+          UpdateUsageThresholdsService.call!(subscription:, usage_thresholds_params: params[:usage_thresholds], partial: false)
         end
+        InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:) unless downgrade?
+
+        result.subscription = subscription
       end
 
       result
+    rescue ActiveRecord::RecordNotUnique => e
+      raise(e) if @retried
+
+      @current_subscription = nil
+      @retried = true
+      retry
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ArgumentError
@@ -265,7 +269,7 @@ module Subscriptions
     def editable_subscriptions
       return nil unless customer
 
-      @editable_subscriptions ||= customer.subscriptions.active
+      customer.subscriptions.active
         .or(customer.subscriptions.starting_in_the_future)
         .order(started_at: :desc)
     end
