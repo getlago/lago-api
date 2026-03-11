@@ -7,7 +7,6 @@ class AddCustomersExternalIdOnlyIndex < ActiveRecord::Migration[8.0]
       name: "index_customers_on_external_id_only",
       algorithm: :concurrently,
       using: :btree,
-      if_not_exists: true,
-      where: "deleted_at IS NULL"
+      if_not_exists: true
   end
 end
