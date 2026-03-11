@@ -637,6 +637,28 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
     end
 
+    context "when precise tax rounding causes fee caps to be slightly below invoice total" do
+      let(:normal_wallet) { create(:wallet, name: "normal", customer:, balance_cents: 200_000, credits_balance: 2000.0) }
+      let(:wallets) { [normal_wallet] }
+      let(:amount_cents) { 106_826 }
+      let(:fee) { nil }
+
+      before do
+        create(:charge_fee, invoice:, subscription:,
+          amount_cents: 50_000, precise_amount_cents: 50_000,
+          taxes_amount_cents: 3413, taxes_precise_amount_cents: BigDecimal("3412.7"))
+        create(:charge_fee, invoice:, subscription:,
+          amount_cents: 50_000, precise_amount_cents: 50_000,
+          taxes_amount_cents: 3413, taxes_precise_amount_cents: BigDecimal("3412.7"))
+      end
+
+      it "applies the full invoice amount without rounding gap" do
+        expect(result).to be_success
+        expect(result.prepaid_credit_amount_cents).to eq(106_826)
+        expect(invoice.prepaid_credit_amount_cents).to eq(106_826)
+      end
+    end
+
     context "when there is a concurrent lock" do
       before do
         stub_const("Customers::LockService::ACQUIRE_LOCK_TIMEOUT", 1.second)
