@@ -479,6 +479,65 @@ RSpec.describe Mutations::Plans::Create, :premium do
     end
   end
 
+  context "when entitlements is nil" do
+    it "does not call PlanEntitlementsUpdateService" do
+      allow(::Entitlement::PlanEntitlementsUpdateService).to receive(:call)
+
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            name: "Plan without entitlements",
+            code: "plan_no_entitlements",
+            interval: "monthly",
+            payInAdvance: false,
+            amountCents: 100,
+            amountCurrency: "USD",
+            charges: []
+          }
+        }
+      )
+
+      expect(::Entitlement::PlanEntitlementsUpdateService).not_to have_received(:call)
+    end
+  end
+
+  context "when entitlements is an empty array" do
+    it "calls PlanEntitlementsUpdateService to remove all entitlements" do
+      allow(::Entitlement::PlanEntitlementsUpdateService).to receive(:call)
+        .and_return(BaseService::Result.new)
+
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            name: "Plan empty entitlements",
+            code: "plan_empty_entitlements",
+            interval: "monthly",
+            payInAdvance: false,
+            amountCents: 100,
+            amountCurrency: "USD",
+            charges: [],
+            entitlements: []
+          }
+        }
+      )
+
+      expect(::Entitlement::PlanEntitlementsUpdateService).to have_received(:call).with(
+        organization: organization,
+        plan: Plan.last,
+        entitlements_params: {},
+        partial: false
+      )
+    end
+  end
+
   context "with metadata" do
     let(:mutation) do
       <<~GQL

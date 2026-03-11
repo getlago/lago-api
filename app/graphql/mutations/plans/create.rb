@@ -24,7 +24,7 @@ module Mutations
 
         plan = result.plan
 
-        if entitlements.present?
+        unless entitlements.nil?
           result = ::Entitlement::PlanEntitlementsUpdateService.call(
             organization: plan.organization,
             plan:,

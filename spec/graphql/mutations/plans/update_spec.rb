@@ -405,6 +405,67 @@ RSpec.describe Mutations::Plans::Update do
     end
   end
 
+  context "when entitlements is nil" do
+    it "does not call PlanEntitlementsUpdateService" do
+      allow(::Entitlement::PlanEntitlementsUpdateService).to receive(:call)
+
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: plan.id,
+            name: "Updated plan",
+            code: "updated_plan",
+            interval: "monthly",
+            payInAdvance: false,
+            amountCents: 200,
+            amountCurrency: "EUR",
+            charges: []
+          }
+        }
+      )
+
+      expect(::Entitlement::PlanEntitlementsUpdateService).not_to have_received(:call)
+    end
+  end
+
+  context "when entitlements is an empty array" do
+    it "calls PlanEntitlementsUpdateService to remove all entitlements" do
+      allow(::Entitlement::PlanEntitlementsUpdateService).to receive(:call)
+        .and_return(BaseService::Result.new)
+
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: plan.id,
+            name: "Updated plan",
+            code: "updated_plan",
+            interval: "monthly",
+            payInAdvance: false,
+            amountCents: 200,
+            amountCurrency: "EUR",
+            charges: [],
+            entitlements: []
+          }
+        }
+      )
+
+      expect(::Entitlement::PlanEntitlementsUpdateService).to have_received(:call).with(
+        organization: organization,
+        plan:,
+        entitlements_params: {},
+        partial: false
+      )
+    end
+  end
+
   context "when fixed charges are not provided" do
     let(:fixed_charge) { create(:fixed_charge, plan:, charge_model: "standard", properties: {amount: "100.00"}) }
 
