@@ -86,6 +86,15 @@ RSpec.describe PaymentMethodsQuery do
         expect(result).to be_success
         expect(returned_ids).to contain_exactly(payment_method_second.id)
       end
+
+      context "when including deleted payment methods" do
+        let(:filters) { {external_customer_id: customer.external_id, with_deleted: true} }
+
+        it "excludes payment methods of the discarded customer" do
+          expect(result).to be_success
+          expect(returned_ids).to contain_exactly(payment_method_second.id)
+        end
+      end
     end
   end
 
