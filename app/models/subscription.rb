@@ -302,6 +302,7 @@ end
 #
 # Indexes
 #
+#  index_subscriptions_by_external_id                          (organization_id,external_id) UNIQUE WHERE (status = 1)
 #  index_subscriptions_on_customer_id                          (customer_id)
 #  index_subscriptions_on_external_id                          (external_id)
 #  index_subscriptions_on_last_received_event_on               (last_received_event_on)
