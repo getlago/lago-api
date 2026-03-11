@@ -91,7 +91,7 @@ module Customers
         last_error_message: nil
       )
 
-      Customers::ViesCheckJob.perform_later(customer)
+      Customers::ViesCheckJob.perform_after_commit(customer)
     end
 
     def delete_pending_vies_check_if_exists
