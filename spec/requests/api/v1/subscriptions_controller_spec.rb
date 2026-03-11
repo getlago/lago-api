@@ -1535,6 +1535,22 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "with N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      before do
+        prev = create(:subscription, customer:, plan: create(:plan, organization:), status: :terminated)
+        nxt = create(:subscription, customer:, plan: create(:plan, organization:), status: :pending)
+        subscription.update!(previous_subscription: prev, next_subscriptions: [nxt])
+      end
+
+      it "does not trigger N+1 queries when serializing associations" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:previous_plan_code]).to be_present
+        expect(json[:subscription][:next_plan_code]).to be_present
+      end
+    end
+
     context "when there are multiple terminated subscriptions" do
       let(:subscription) do
         create(:subscription, customer:, plan:, status: :terminated, terminated_at: 10.days.ago)
