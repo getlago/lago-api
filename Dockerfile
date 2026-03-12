@@ -19,9 +19,9 @@ RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-de
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
 
-ENV BUNDLER_VERSION='2.6.8'
+ENV BUNDLER_VERSION='4.0.4'
 ENV PATH="$PATH:/root/.cargo/bin/"
-RUN gem install bundler --no-document -v '2.6.8'
+RUN gem install bundler --no-document -v '4.0.4'
 
 ENV BUNDLE_WITH=${BUNDLE_WITH:-}
 ENV BUNDLE_WITHOUT="development test"

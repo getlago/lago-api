@@ -19,7 +19,7 @@ RUN apt update -qq && \
 
 COPY --from=pdfcpu-build /go/bin/pdfcpu /usr/local/bin/pdfcpu
 
-ENV BUNDLER_VERSION='2.6.8'
+ENV BUNDLER_VERSION='4.0.4'
 ENV PATH="$PATH:/root/.cargo/bin/"
 
 COPY ./Gemfile /app/Gemfile
