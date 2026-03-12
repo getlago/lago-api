@@ -7,7 +7,7 @@ RSpec.describe V1::CreditNoteSerializer do
     described_class.new(credit_note, root_name: "credit_note", includes:)
   end
 
-  let(:includes) { %i[customer integration_customers items error_details] }
+  let(:includes) { [:items, :error_details, {customer: [:integration_customers]}] }
   let(:credit_note) { create(:credit_note) }
   let(:error_detail) { create(:error_detail, owner: credit_note) }
   let(:customer) { credit_note.customer }

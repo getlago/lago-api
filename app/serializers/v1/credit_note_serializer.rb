@@ -49,7 +49,7 @@ module V1
       {
         customer: ::V1::CustomerSerializer.new(
           model.customer,
-          includes: include?(:integration_customers) ? [:integration_customers] : []
+          includes: included_relations(:customer, default: [])
         ).serialize
       }
     end
