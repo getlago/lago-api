@@ -3,7 +3,7 @@
 module Events
   module Stores
     module Clickhouse
-      class ReEnrichEventsService < BaseService
+      class ReEnrichSubscriptionEventsService < BaseService
         Result = BaseResult[:events_count, :batch_count]
 
         def initialize(subscription:, codes: [], reprocess: true, batch_size: 1000, sleep_seconds: 0.5)

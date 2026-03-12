@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-RSpec.describe Events::Stores::Clickhouse::ReEnrichEventsService, :clickhouse do
+RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :clickhouse do
   subject(:service) do
     described_class.new(
       subscription:,
