@@ -4,9 +4,10 @@ require "rails_helper"
 
 RSpec.describe V1::CreditNoteSerializer do
   subject(:serializer) do
-    described_class.new(credit_note, root_name: "credit_note", includes: %i[customer items error_details])
+    described_class.new(credit_note, root_name: "credit_note", includes:)
   end
 
+  let(:includes) { %i[customer integration_customers items error_details] }
   let(:credit_note) { create(:credit_note) }
   let(:error_detail) { create(:error_detail, owner: credit_note) }
   let(:customer) { credit_note.customer }
@@ -56,5 +57,6 @@ RSpec.describe V1::CreditNoteSerializer do
     )
 
     expect(result["credit_note"].keys).to include("customer", "items")
+    expect(result["credit_note"]["customer"].keys).to include("integration_customers")
   end
 end
