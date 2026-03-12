@@ -15,8 +15,7 @@ module Integrations
 
             if fee.precise_unit_amount.round(2) != fee.precise_unit_amount
               base_item["units"] = 1
-              base_item.delete("precise_unit_amount")
-              base_item["amount_cents"] = fee.amount_cents
+              base_item["precise_unit_amount"] = amount(fee.amount_cents, resource: invoice)
             end
 
             base_item

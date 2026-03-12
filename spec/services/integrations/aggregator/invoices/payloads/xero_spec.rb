@@ -95,5 +95,73 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
         ]
       end
     end
+
+    context "when a fee has precise_unit_amount with more than 2 decimal places" do
+      let(:organization) { create(:organization) }
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:integration) { create(:xero_integration, organization:) }
+      let(:customer) { create(:customer, organization:, billing_entity:) }
+      let(:integration_customer) { create(:xero_customer, customer:, integration:) }
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
+      let(:subscription) { create(:subscription, organization:, plan:) }
+
+      let(:invoice) do
+        invoice = create(
+          :invoice,
+          customer:,
+          organization:,
+          billing_entity:,
+          coupons_amount_cents: 0,
+          prepaid_credit_amount_cents: 0,
+          progressive_billing_credit_amount_cents: 0,
+          credit_notes_amount_cents: 0,
+          taxes_amount_cents: 0,
+          issuing_date: DateTime.new(2024, 7, 8)
+        )
+        create(:invoice_subscription, invoice:, subscription:)
+        invoice
+      end
+
+      let(:high_precision_fee) do
+        create(
+          :charge_fee,
+          invoice:,
+          charge:,
+          billable_metric:,
+          units: 74_759_000,
+          amount_cents: 89_566,
+          precise_unit_amount: 0.000018,
+          taxes_amount_cents: 0
+        )
+      end
+
+      let(:billable_metric_mapping) do
+        create(
+          :xero_mapping,
+          integration:,
+          mappable_type: "BillableMetric",
+          mappable_id: billable_metric.id,
+          billing_entity:,
+          settings: {external_id: "metric_ext_id", external_account_code: "100", external_name: "metric"}
+        )
+      end
+
+      before do
+        billable_metric_mapping
+        high_precision_fee
+      end
+
+      it "sends precise_unit_amount as the total amount in currency units instead of amount_cents" do
+        fee_item = payload.first["fees"].first
+
+        expect(fee_item).to include(
+          "units" => 1,
+          "precise_unit_amount" => 895.66
+        )
+        expect(fee_item).not_to have_key("amount_cents")
+      end
+    end
   end
 end
