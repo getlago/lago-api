@@ -574,7 +574,6 @@ DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_plan_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_organization_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_entitlement_feature_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlement_values_on_organization_id;
-DROP INDEX IF EXISTS public.index_enriched_events_on_event_id;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_organization_id;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_deleted_at;
@@ -722,7 +721,6 @@ DROP INDEX IF EXISTS public.idx_usage_thresholds_on_amount_subscription_recurrin
 DROP INDEX IF EXISTS public.idx_usage_thresholds_on_amount_plan_recurring;
 DROP INDEX IF EXISTS public.idx_unique_tax_code_per_organization;
 DROP INDEX IF EXISTS public.idx_unique_privilege_removal_per_subscription;
-DROP INDEX IF EXISTS public.idx_unique_on_enriched_events;
 DROP INDEX IF EXISTS public.idx_unique_feature_removal_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_plan;
@@ -765,7 +763,6 @@ DROP INDEX IF EXISTS public.idx_on_billing_entity_id_invoice_custom_section_id_b
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_customer_id_invoice_custom_e7aada65cb;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_724373e5ae;
-DROP INDEX IF EXISTS public.idx_lookup_on_enriched_events;
 DROP INDEX IF EXISTS public.idx_invoices_organization_id_status;
 DROP INDEX IF EXISTS public.idx_invoice_subscriptions_on_subscription_with_timestamps;
 DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
@@ -773,11 +770,14 @@ DROP INDEX IF EXISTS public.idx_events_for_distinct_codes;
 DROP INDEX IF EXISTS public.idx_events_billing_lookup;
 DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_filtered_lookup;
-DROP INDEX IF EXISTS public.idx_billing_on_enriched_events;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription;
 DROP INDEX IF EXISTS public.idx_alerts_code_unique_per_subscription;
 DROP INDEX IF EXISTS public.idx_aggregation_lookup;
+DROP INDEX IF EXISTS public.idx_billing_on_enriched_events;
+DROP INDEX IF EXISTS public.idx_lookup_on_enriched_events;
+DROP INDEX IF EXISTS public.idx_unique_on_enriched_events;
+DROP INDEX IF EXISTS public.index_enriched_events_on_event_id;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS webhook_endpoints_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS wallets_pkey;
@@ -1001,6 +1001,7 @@ DROP TABLE IF EXISTS public.entitlement_privileges;
 DROP TABLE IF EXISTS public.entitlement_features;
 DROP TABLE IF EXISTS public.entitlement_entitlements;
 DROP TABLE IF EXISTS public.entitlement_entitlement_values;
+DROP TABLE IF EXISTS public.enriched_events_default;
 DROP TABLE IF EXISTS public.enriched_events;
 DROP TABLE IF EXISTS public.dunning_campaigns;
 DROP TABLE IF EXISTS public.dunning_campaign_thresholds;
@@ -1044,6 +1045,7 @@ DROP TABLE IF EXISTS public.add_ons;
 DROP TABLE IF EXISTS public.active_storage_variant_records;
 DROP TABLE IF EXISTS public.active_storage_blobs;
 DROP TABLE IF EXISTS public.active_storage_attachments;
+DROP TABLE IF EXISTS partman.template_public_enriched_events;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
 DROP FUNCTION IF EXISTS public.ensure_role_consistency();
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
@@ -1053,9 +1055,6 @@ DROP TYPE IF EXISTS public.subscription_on_termination_credit_note;
 DROP TYPE IF EXISTS public.subscription_invoicing_reason;
 DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_anchors;
 DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_adjustments;
-DROP TYPE IF EXISTS public.subscription_cancellation_reason;
-DROP TYPE IF EXISTS public.subscription_activation_rule_type;
-DROP TYPE IF EXISTS public.subscription_activation_rule_status;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
@@ -1071,6 +1070,22 @@ DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
+DROP EXTENSION IF EXISTS pg_partman;
+DROP SCHEMA IF EXISTS partman;
+--
+-- Name: partman; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA partman;
+
+
+--
+-- Name: pg_partman; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_partman WITH SCHEMA partman;
+
+
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
@@ -1223,40 +1238,6 @@ CREATE TYPE public.payment_type AS ENUM (
 
 
 --
--- Name: subscription_activation_rule_status; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.subscription_activation_rule_status AS ENUM (
-    'inactive',
-    'pending',
-    'satisfied',
-    'declined',
-    'failed',
-    'expired',
-    'not_applicable'
-);
-
-
---
--- Name: subscription_activation_rule_type; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.subscription_activation_rule_type AS ENUM (
-    'payment'
-);
-
-
---
--- Name: subscription_cancellation_reason; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.subscription_cancellation_reason AS ENUM (
-    'payment_failed',
-    'timeout'
-);
-
-
---
 -- Name: subscription_invoice_issuing_date_adjustments; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1390,6 +1371,30 @@ CREATE FUNCTION public.set_payment_receipt_number() RETURNS trigger
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: template_public_enriched_events; Type: TABLE; Schema: partman; Owner: -
+--
+
+CREATE TABLE partman.template_public_enriched_events (
+    id uuid NOT NULL,
+    organization_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    transaction_id character varying NOT NULL,
+    external_subscription_id character varying NOT NULL,
+    code character varying NOT NULL,
+    "timestamp" timestamp(6) without time zone NOT NULL,
+    subscription_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    charge_id uuid NOT NULL,
+    charge_filter_id uuid,
+    properties jsonb NOT NULL,
+    grouped_by jsonb NOT NULL,
+    value character varying,
+    decimal_value numeric(40,15) NOT NULL,
+    enriched_at timestamp(6) without time zone NOT NULL
+);
+
 
 --
 -- Name: active_storage_attachments; Type: TABLE; Schema: public; Owner: -
@@ -2229,6 +2234,33 @@ CREATE TABLE public.dunning_campaigns (
 --
 
 CREATE TABLE public.enriched_events (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    transaction_id character varying NOT NULL,
+    external_subscription_id character varying NOT NULL,
+    code character varying NOT NULL,
+    "timestamp" timestamp(6) without time zone NOT NULL,
+    subscription_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    charge_id uuid NOT NULL,
+    charge_filter_id uuid,
+    grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
+    value character varying,
+    decimal_value numeric(40,15) DEFAULT 0.0 NOT NULL,
+    enriched_at timestamp(6) without time zone NOT NULL,
+    operation_type character varying,
+    precise_total_amount_cents numeric(40,15),
+    target_wallet_code character varying
+)
+PARTITION BY RANGE ("timestamp");
+
+
+--
+-- Name: enriched_events_default; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.enriched_events_default (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     event_id uuid NOT NULL,
@@ -4746,6 +4778,13 @@ CREATE TABLE public.webhooks (
 
 
 --
+-- Name: enriched_events_default; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.enriched_events ATTACH PARTITION public.enriched_events_default DEFAULT;
+
+
+--
 -- Name: usage_monitoring_subscription_activities id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -5680,6 +5719,62 @@ ALTER TABLE ONLY public.webhooks
 
 
 --
+-- Name: index_enriched_events_on_event_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_enriched_events_on_event_id ON ONLY public.enriched_events USING btree (event_id);
+
+
+--
+-- Name: enriched_events_default_event_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX enriched_events_default_event_id_idx ON public.enriched_events_default USING btree (event_id);
+
+
+--
+-- Name: idx_unique_on_enriched_events; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_on_enriched_events ON ONLY public.enriched_events USING btree (organization_id, external_subscription_id, transaction_id, "timestamp", charge_id);
+
+
+--
+-- Name: enriched_events_default_organization_id_external_subscript_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX enriched_events_default_organization_id_external_subscript_idx1 ON public.enriched_events_default USING btree (organization_id, external_subscription_id, transaction_id, "timestamp", charge_id);
+
+
+--
+-- Name: idx_lookup_on_enriched_events; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_lookup_on_enriched_events ON ONLY public.enriched_events USING btree (organization_id, external_subscription_id, code, "timestamp");
+
+
+--
+-- Name: enriched_events_default_organization_id_external_subscripti_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX enriched_events_default_organization_id_external_subscripti_idx ON public.enriched_events_default USING btree (organization_id, external_subscription_id, code, "timestamp");
+
+
+--
+-- Name: idx_billing_on_enriched_events; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_billing_on_enriched_events ON ONLY public.enriched_events USING btree (organization_id, subscription_id, charge_id, charge_filter_id, "timestamp");
+
+
+--
+-- Name: enriched_events_default_organization_id_subscription_id_cha_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX enriched_events_default_organization_id_subscription_id_cha_idx ON public.enriched_events_default USING btree (organization_id, subscription_id, charge_id, charge_filter_id, "timestamp");
+
+
+--
 -- Name: idx_aggregation_lookup; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5705,13 +5800,6 @@ CREATE UNIQUE INDEX idx_alerts_unique_per_type_per_subscription ON public.usage_
 --
 
 CREATE UNIQUE INDEX idx_alerts_unique_per_type_per_subscription_with_bm ON public.usage_monitoring_alerts USING btree (subscription_external_id, organization_id, alert_type, billable_metric_id) WHERE ((billable_metric_id IS NOT NULL) AND (deleted_at IS NULL));
-
-
---
--- Name: idx_billing_on_enriched_events; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_billing_on_enriched_events ON public.enriched_events USING btree (organization_id, subscription_id, charge_id, charge_filter_id, "timestamp");
 
 
 --
@@ -5761,13 +5849,6 @@ CREATE INDEX idx_invoice_subscriptions_on_subscription_with_timestamps ON public
 --
 
 CREATE INDEX idx_invoices_organization_id_status ON public.invoices USING btree (organization_id, status);
-
-
---
--- Name: idx_lookup_on_enriched_events; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_lookup_on_enriched_events ON public.enriched_events USING btree (organization_id, external_subscription_id, code, "timestamp");
 
 
 --
@@ -6062,13 +6143,6 @@ CREATE UNIQUE INDEX idx_unique_feature_per_subscription ON public.entitlement_en
 --
 
 CREATE UNIQUE INDEX idx_unique_feature_removal_per_subscription ON public.entitlement_subscription_feature_removals USING btree (subscription_id, entitlement_feature_id) WHERE (deleted_at IS NULL);
-
-
---
--- Name: idx_unique_on_enriched_events; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_unique_on_enriched_events ON public.enriched_events USING btree (organization_id, external_subscription_id, transaction_id, "timestamp", charge_id);
 
 
 --
@@ -7102,13 +7176,6 @@ CREATE INDEX index_dunning_campaigns_on_organization_id ON public.dunning_campai
 --
 
 CREATE UNIQUE INDEX index_dunning_campaigns_on_organization_id_and_code ON public.dunning_campaigns USING btree (organization_id, code) WHERE (deleted_at IS NULL);
-
-
---
--- Name: index_enriched_events_on_event_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_enriched_events_on_event_id ON public.enriched_events USING btree (event_id);
 
 
 --
@@ -8971,6 +9038,34 @@ CREATE UNIQUE INDEX index_wt_invoice_custom_sections_unique ON public.wallet_tra
 --
 
 CREATE UNIQUE INDEX unique_default_payment_method_per_customer ON public.payment_methods USING btree (customer_id) WHERE ((is_default = true) AND (deleted_at IS NULL));
+
+
+--
+-- Name: enriched_events_default_event_id_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.index_enriched_events_on_event_id ATTACH PARTITION public.enriched_events_default_event_id_idx;
+
+
+--
+-- Name: enriched_events_default_organization_id_external_subscript_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_unique_on_enriched_events ATTACH PARTITION public.enriched_events_default_organization_id_external_subscript_idx1;
+
+
+--
+-- Name: enriched_events_default_organization_id_external_subscripti_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_lookup_on_enriched_events ATTACH PARTITION public.enriched_events_default_organization_id_external_subscripti_idx;
+
+
+--
+-- Name: enriched_events_default_organization_id_subscription_id_cha_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_billing_on_enriched_events ATTACH PARTITION public.enriched_events_default_organization_id_subscription_id_cha_idx;
 
 
 --
