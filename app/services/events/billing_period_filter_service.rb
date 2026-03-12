@@ -135,6 +135,7 @@ module Events
       result
     end
 
+    # Fetches all recurring charges for the current plan
     def current_recurring_charges
       @current_recurring_charges ||= plan.charges
         .joins(:billable_metric)
@@ -143,6 +144,8 @@ module Events
         .to_a
     end
 
+    # Fetches all recurring billable metrics IDs from previous subscriptions,
+    # still used in the current plan
     def previous_subscriptions_billable_metric_ids
       previous_sub_ids = collect_previous_subscription_ids
       return Set.new if previous_sub_ids.empty?
@@ -158,6 +161,7 @@ module Events
         .to_set
     end
 
+    # Fetches all terminated subscription IDs sharing the same external_id
     def collect_previous_subscription_ids
       organization.subscriptions
         .terminated
@@ -166,6 +170,7 @@ module Events
         .pluck(:id)
     end
 
+    # Fetchs all recurring fees created for the current subscription before the current billing period
     def current_subscription_recurring_fees
       Fee.where(subscription_id: subscription.id, fee_type: :charge)
         .joins(invoice: :invoice_subscriptions)
