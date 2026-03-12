@@ -44,6 +44,7 @@ Lago/NoDropColumnOrTable:
     - "db/migrate/20250218165958_drop_invoice_error_table.rb"
     - "db/migrate/20250227091909_remove_is_default_from_billing_entity.rb"
     - "db/migrate/20250526133654_drop_clickhouse_aggregation_from_organizations.rb"
+    - "db/migrate/20250528133222_drop_invoice_custom_section_selections.rb"
     - "db/migrate/20250912081524_change_wallet_min_max_to_big_int.rb"
     - "db/migrate/20251007103421_drop_customer_snapshots.rb"
     - "db/migrate/20251020090137_remove_event_id_from_cached_aggregation.rb"
