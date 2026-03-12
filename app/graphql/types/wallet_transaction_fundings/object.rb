@@ -10,12 +10,6 @@ module Types
       field :credit_amount, String, null: false
       field :id, ID, null: false
       field :wallet_transaction, Types::WalletTransactions::Object, null: false, method: :inbound_wallet_transaction
-
-      def credit_amount
-        wallet = object.inbound_wallet_transaction.wallet
-        currency = wallet.currency_for_balance
-        object.consumed_amount_cents.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount).to_s
-      end
     end
   end
 end
