@@ -28,15 +28,12 @@ module Sequenced
     end
 
     def acquire_advisory_lock!
-      conn = ApplicationRecord.connection
+      conn = self.class.connection
       quoted_key = conn.quote(lock_key_value)
-      previous_timeout = conn.select_value("SHOW statement_timeout")
-      conn.execute("SET LOCAL statement_timeout = '10s'")
+      conn.execute("SET LOCAL lock_timeout = '10s'")
       conn.execute("SELECT pg_advisory_xact_lock(hashtext(#{quoted_key}))")
-      conn.execute("SET LOCAL statement_timeout = #{conn.quote(previous_timeout)}")
-    rescue ActiveRecord::StatementInvalid => e
-      raise SequenceError, "Unable to acquire lock on the database" if e.message.include?("statement timeout")
-      raise
+    rescue ActiveRecord::LockWaitTimeout
+      raise SequenceError, "Unable to acquire lock on the database"
     end
 
     def sequence_scope
