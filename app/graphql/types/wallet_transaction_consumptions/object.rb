@@ -10,8 +10,6 @@ module Types
       field :credit_amount, String, null: false
       field :id, ID, null: false
       field :wallet_transaction, Types::WalletTransactions::Object, null: false, method: :outbound_wallet_transaction
-
-      delegate :credit_amount, to: :object
     end
   end
 end

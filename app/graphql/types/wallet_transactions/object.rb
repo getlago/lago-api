@@ -36,8 +36,6 @@ module Types
         object.invoice&.visible? ? object.invoice : nil
       end
 
-      delegate :remaining_credit_amount, :voided_invoice, to: :object
-
       def wallet_name
         object.wallet.name
       end
