@@ -82,6 +82,8 @@ module Api
         )
 
         if result.success?
+          preload_subscription(result.subscription)
+
           response[:subscription] = ::V1::SubscriptionSerializer.new(
             result.subscription, includes: %i[plan entitlements applicable_usage_thresholds]
           ).serialize
@@ -262,6 +264,8 @@ module Api
       end
 
       def render_subscription(subscription, includes: %i[plan])
+        preload_subscription(subscription)
+
         render(
           json: ::V1::SubscriptionSerializer.new(
             subscription,
@@ -269,6 +273,13 @@ module Api
             includes:
           )
         )
+      end
+
+      def preload_subscription(subscription)
+        ActiveRecord::Associations::Preloader.new(
+          records: [subscription],
+          associations: [:plan, :customer, {previous_subscription: :plan, next_subscriptions: :plan}]
+        ).call
       end
 
       def resource_name
