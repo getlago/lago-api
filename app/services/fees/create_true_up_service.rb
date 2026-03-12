@@ -56,17 +56,7 @@ module Fees
       to_datetime = boundaries.charges_to_datetime.to_time
       number_of_day_to_bill = subscription.date_diff_with_timezone(from_datetime, to_datetime)
 
-      date_service.charge_single_day_price(charge:) * number_of_day_to_bill
-    end
-
-    def date_service
-      boundaries.timestamp = Time.zone.at(boundaries.timestamp) if boundaries.timestamp.is_a?(Integer)
-
-      @date_service ||= Subscriptions::DatesService.new_instance(
-        subscription,
-        boundaries.timestamp ? Time.zone.parse(boundaries.timestamp) : Time.current,
-        current_usage: subscription.terminated? && subscription.upgraded?
-      )
+      charge.min_amount_cents.fdiv(boundaries.charges_duration) * number_of_day_to_bill
     end
 
     def pricing_unit_usage
