@@ -19,7 +19,7 @@ RUN PDFCPU_ARCH=$(case "${TARGETARCH}" in arm64) echo "arm64" ;; *) echo "x86_64
   && install -m 755 "pdfcpu_${PDFCPU_VERSION}_Linux_${PDFCPU_ARCH}/pdfcpu" /usr/local/bin/ \
   && rm -rf pdfcpu.tar.xz "pdfcpu_${PDFCPU_VERSION}_Linux_${PDFCPU_ARCH}"
 
-ENV BUNDLER_VERSION='2.6.8'
+ENV BUNDLER_VERSION='4.0.4'
 ENV PATH="$PATH:/root/.cargo/bin/"
 
 COPY ./Gemfile /app/Gemfile
