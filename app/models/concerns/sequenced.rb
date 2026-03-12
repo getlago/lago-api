@@ -29,6 +29,8 @@ module Sequenced
 
     def acquire_advisory_lock!
       conn = self.class.connection
+      raise SequenceError, "must be called inside a transaction" unless conn.transaction_open?
+
       quoted_key = conn.quote(lock_key_value)
       conn.execute("SET LOCAL lock_timeout = '10s'")
       conn.execute("SELECT pg_advisory_xact_lock(hashtext(#{quoted_key}))")
