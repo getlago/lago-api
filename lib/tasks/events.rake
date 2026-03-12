@@ -84,7 +84,7 @@ namespace :events do
     subscriptions.find_each do |subscription|
       Rails.logger.info("events:reprocess - Processing subscription #{subscription.external_id} (started_at: #{subscription.started_at})")
 
-      service_result = Events::Stores::Clickhouse::ReEnrichEventsService.call(
+      service_result = Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService.call(
         subscription:, codes:, reprocess:, batch_size:, sleep_seconds:
       )
 
