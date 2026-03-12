@@ -241,9 +241,10 @@ end
 #
 # Indexes
 #
-#  index_credit_notes_on_customer_id      (customer_id)
-#  index_credit_notes_on_invoice_id       (invoice_id)
-#  index_credit_notes_on_organization_id  (organization_id)
+#  index_credit_notes_on_customer_id                   (customer_id)
+#  index_credit_notes_on_invoice_id                    (invoice_id)
+#  index_credit_notes_on_invoice_id_and_sequential_id  (invoice_id,sequential_id) UNIQUE
+#  index_credit_notes_on_organization_id               (organization_id)
 #
 # Foreign Keys
 #
