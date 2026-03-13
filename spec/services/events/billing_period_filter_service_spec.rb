@@ -78,11 +78,15 @@ RSpec.describe Events::BillingPeriodFilterService do
     end
 
     context "when subscription has previous_subscription_id" do
-      let(:previous_subscription) { create(:subscription, organization:, plan:) }
+      let(:old_plan) { create(:plan, organization:) }
+      let(:previous_subscription) do
+        create(:subscription, :terminated, organization:, customer:, plan: old_plan, external_id: "sub_id", started_at: started_at - 1.month)
+      end
       let(:subscription) do
         create(
           :subscription,
           organization:,
+          customer:,
           plan:,
           started_at:,
           subscription_at: started_at,
@@ -91,11 +95,162 @@ RSpec.describe Events::BillingPeriodFilterService do
         )
       end
 
-      it "falls back to all recurring filters" do
-        result = filter_service.call
+      context "when no filters on either side" do
+        let(:charge_filter) { nil }
+        let(:charge_filter_value) { nil }
+        let(:recurring_charge) { create(:standard_charge, plan:, billable_metric: recurring_billable_metric) }
+        let(:old_charge) { create(:standard_charge, plan: old_plan, billable_metric: recurring_billable_metric) }
 
-        expect(result).to be_success
-        expect(result.charges).to eq({recurring_charge.id => [charge_filter.id, nil]})
+        before do
+          create(
+            :charge_fee,
+            subscription: previous_subscription,
+            charge: old_charge,
+            charge_filter_id: nil,
+            created_at: started_at - 1.day
+          )
+        end
+
+        it "returns current charge with nil filter" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to eq({recurring_charge.id => [nil]})
+        end
+      end
+
+      context "when old has filters but current does not" do
+        let(:charge_filter) { nil }
+        let(:charge_filter_value) { nil }
+        let(:recurring_charge) { create(:standard_charge, plan:, billable_metric: recurring_billable_metric) }
+        let(:old_charge) { create(:standard_charge, plan: old_plan, billable_metric: recurring_billable_metric) }
+        let(:old_filter) { create(:charge_filter, charge: old_charge) }
+
+        before do
+          create(
+            :charge_fee,
+            subscription: previous_subscription,
+            charge: old_charge,
+            charge_filter: old_filter,
+            created_at: started_at - 1.day
+          )
+        end
+
+        it "returns current charge with nil filter" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to eq({recurring_charge.id => [nil]})
+        end
+      end
+
+      context "when old has no filters but current has filters" do
+        let(:old_charge) { create(:standard_charge, plan: old_plan, billable_metric: recurring_billable_metric) }
+
+        before do
+          create(
+            :charge_fee,
+            subscription: previous_subscription,
+            charge: old_charge,
+            charge_filter_id: nil,
+            created_at: started_at - 1.day
+          )
+        end
+
+        it "returns all current filter IDs plus nil" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+        end
+      end
+
+      context "when both have filters" do
+        let(:old_charge) { create(:standard_charge, plan: old_plan, billable_metric: recurring_billable_metric) }
+        let(:old_filter) { create(:charge_filter, charge: old_charge) }
+
+        before do
+          create(
+            :charge_fee,
+            subscription: previous_subscription,
+            charge: old_charge,
+            charge_filter: old_filter,
+            created_at: started_at - 1.day
+          )
+        end
+
+        it "returns all current filter IDs plus nil" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+        end
+      end
+
+      context "when traversing a chain of subscriptions" do
+        let(:oldest_plan) { create(:plan, organization:) }
+        let(:oldest_subscription) do
+          create(:subscription, :terminated, organization:, customer:, plan: oldest_plan, external_id: "sub_id", started_at: started_at - 2.months)
+        end
+        let(:previous_subscription) do
+          create(:subscription, :terminated, organization:, customer:, plan: old_plan, external_id: "sub_id", started_at: started_at - 1.month, previous_subscription: oldest_subscription)
+        end
+        let(:oldest_charge) { create(:standard_charge, plan: oldest_plan, billable_metric: recurring_billable_metric) }
+
+        before do
+          create(
+            :charge_fee,
+            subscription: oldest_subscription,
+            charge: oldest_charge,
+            charge_filter_id: nil,
+            created_at: started_at - 2.months + 1.day
+          )
+        end
+
+        it "picks up fees from the entire chain" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+        end
+      end
+
+      context "when no previous fees exist for recurring BMs" do
+        it "returns empty hash" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to eq({})
+        end
+      end
+
+      context "when previous fees include both nil and non-nil charge_filter_id" do
+        let(:old_charge) { create(:standard_charge, plan: old_plan, billable_metric: recurring_billable_metric) }
+        let(:old_filter) { create(:charge_filter, charge: old_charge) }
+
+        before do
+          create(
+            :charge_fee,
+            subscription: previous_subscription,
+            charge: old_charge,
+            charge_filter: old_filter,
+            created_at: started_at - 1.day
+          )
+          create(
+            :charge_fee,
+            subscription: previous_subscription,
+            charge: old_charge,
+            charge_filter_id: nil,
+            created_at: started_at - 1.day
+          )
+        end
+
+        it "returns all current filter IDs plus nil" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+        end
       end
     end
 
@@ -127,11 +282,13 @@ RSpec.describe Events::BillingPeriodFilterService do
   end
 
   let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
 
   let(:subscription) do
     create(
       :subscription,
       organization:,
+      customer:,
       plan:,
       started_at:,
       subscription_at: started_at,
