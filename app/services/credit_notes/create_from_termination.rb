@@ -30,6 +30,8 @@ module CreditNotes
 
       credit_amount_cents, refund_amount_cents, offset_amount_cents = calculate_amounts(base_creditable_amount)
 
+      return result if (credit_amount_cents + refund_amount_cents + offset_amount_cents).zero?
+
       CreditNotes::CreateService.call(
         invoice: last_subscription_fee.invoice,
         credit_amount_cents:,

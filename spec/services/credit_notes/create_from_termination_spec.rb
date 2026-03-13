@@ -1093,6 +1093,30 @@ RSpec.describe CreditNotes::CreateFromTermination do
       end
     end
 
+    context "when coupon covers the entire fee amount" do
+      let(:coupon_amount) { plan_amount_cents }
+
+      it "does not create a credit note" do
+        # CREDITABLE AMOUNT CALCULATION
+        # Unused subscription (16 days)    €16.00
+        # Coupon allocation (16/31)        -€16.00
+        #                                  ------
+        # Subtotal                         €0.00
+        # Tax (20%)                        €0.00
+        #                                  ------
+        # Total creditable                 €0.00
+        #
+        # The coupon adjustment equals the full credit amount,
+        # resulting in zero amounts. Without the guard clause,
+        # this would raise an error in CreateService.
+
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.credit_note).to be_nil
+      end
+    end
+
     context "with a coupon applied to the invoice" do
       let(:coupon_amount) { 10_00 }
 
