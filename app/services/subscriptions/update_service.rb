@@ -105,6 +105,14 @@ module Subscriptions
 
     def process_subscription_at_change(subscription)
       if subscription.subscription_at <= Time.current
+        # The `CreateService` links a pending subscription to the active one via `previous_subscription`.
+        # As a result no unlinked pending subscription ever shares its `external_id` with an active one.
+        subscription.organization.subscriptions
+          .active
+          .where(external_id: subscription.external_id)
+          .where.not(id: subscription.id)
+          .find_each { |s| s.mark_as_terminated!(subscription.subscription_at) }
+
         subscription.mark_as_active!(subscription.subscription_at)
 
         EmitFixedChargeEventsService.call!(

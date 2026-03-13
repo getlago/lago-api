@@ -1311,5 +1311,41 @@ RSpec.describe Subscriptions::CreateService do
         end
       end
     end
+
+    context "when RecordNotUnique is raised once" do
+      let!(:existing_subscription) do
+        create(:subscription, customer:, plan:, external_id:, organization: organization, status: :active)
+      end
+
+      before do
+        call_count = 0
+        allow(ActiveRecord::Base).to receive(:transaction).and_wrap_original do |method, **args, &block|
+          call_count += 1
+          if call_count == 1
+            raise ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint \"index_subscriptions_by_external_id\"")
+          end
+          method.call(**args, &block)
+        end
+      end
+
+      it "retries and returns the existing subscription" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.subscription).to eq(existing_subscription)
+      end
+    end
+
+    context "when RecordNotUnique is raised twice" do
+      before do
+        allow(ActiveRecord::Base).to receive(:transaction).and_raise(
+          ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint \"index_subscriptions_by_external_id\"")
+        )
+      end
+
+      it "re-raises after exhausting the retry" do
+        expect { create_service.call }.to raise_error(ActiveRecord::RecordNotUnique)
+      end
+    end
   end
 end
