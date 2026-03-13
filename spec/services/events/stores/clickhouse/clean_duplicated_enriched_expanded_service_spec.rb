@@ -34,6 +34,20 @@ RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedServic
           enriched_at: base_enriched_at + i.minutes
         )
       end
+
+      # Non-duplicated event (single occurrence, different transaction_id)
+      create(
+        :clickhouse_events_enriched_expanded,
+        organization_id: organization.id,
+        subscription_id: subscription.id,
+        external_subscription_id: subscription.external_id,
+        charge_id: charge.id,
+        charge_filter_id: charge_filter&.id || "",
+        transaction_id: SecureRandom.uuid,
+        timestamp: event_timestamp,
+        code: billable_metric.code,
+        enriched_at: base_enriched_at
+      )
     end
 
     it "removes duplicated events and keeps the latest enriched_at" do
@@ -50,6 +64,18 @@ RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedServic
 
       expect(remaining.count).to eq(1)
       expect(remaining.first.enriched_at).to match_datetime(base_enriched_at + 2.minutes)
+    end
+
+    it "does not delete non-duplicated events" do
+      service.call
+
+      all_remaining = ::Clickhouse::EventsEnrichedExpanded.where(
+        organization_id: organization.id,
+        subscription_id: subscription.id
+      )
+
+      # 1 keeper from the duplicated group + 1 non-duplicated event
+      expect(all_remaining.count).to eq(2)
     end
 
     context "with codes filter" do
