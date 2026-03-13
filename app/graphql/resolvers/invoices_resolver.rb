@@ -13,6 +13,7 @@ module Resolvers
     argument :amount_to, Integer, required: false
     argument :billing_entity_ids, [ID], required: false
     argument :currency, Types::CurrencyEnum, required: false
+    argument :cursor, String, required: false
     argument :customer_external_id, String, required: false
     argument :customer_id, ID, required: false, description: "Uniq ID of the customer"
     argument :invoice_type, [Types::Invoices::InvoiceTypeEnum], required: false
@@ -38,6 +39,7 @@ module Resolvers
       amount_to: nil,
       billing_entity_ids: nil,
       currency: nil,
+      cursor: nil,
       customer_external_id: nil,
       customer_id: nil,
       invoice_type: nil,
@@ -58,7 +60,7 @@ module Resolvers
     )
       result = InvoicesQuery.call(
         organization: current_organization,
-        pagination: {page:, limit:},
+        pagination: {page:, limit:, cursor:},
         search_term:,
         filters: {
           amount_from:,
