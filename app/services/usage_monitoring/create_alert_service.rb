@@ -18,6 +18,10 @@ module UsageMonitoring
         return result.single_validation_failure!(field: :alert_type, error_code: "feature_not_available")
       end
 
+      if params[:alert_type].in?(%w[billable_metric_lifetime_usage_units]) && !organization.granular_lifetime_usage_enabled?
+        return result.single_validation_failure!(field: :alert_type, error_code: "feature_not_available")
+      end
+
       if params[:thresholds].blank?
         return result.single_validation_failure!(field: :thresholds, error_code: "value_is_mandatory")
       end

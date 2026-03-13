@@ -254,7 +254,7 @@ module Invoices
     end
 
     def querying_full_usage_allowed
-      return false unless organization.using_lifetime_usage?
+      return false unless organization.granular_lifetime_usage_enabled?
 
       any_filter_present = usage_filters.has_charge_filter? || usage_filters.filter_by_group.present?
       subscription_has_prorated_charges = charges.where(prorated: true).exists?

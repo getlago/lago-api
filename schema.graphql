@@ -6286,6 +6286,7 @@ enum IntegrationTypeEnum {
   events_targeting_wallets
   forecasted_usage
   from_email
+  granular_lifetime_usage
   hubspot
   issue_receipts
   lifetime_usage
@@ -9310,6 +9311,7 @@ enum PremiumIntegrationTypeEnum {
   events_targeting_wallets
   forecasted_usage
   from_email
+  granular_lifetime_usage
   hubspot
   issue_receipts
   lifetime_usage

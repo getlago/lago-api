@@ -430,9 +430,9 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
-      context "when lifetime_usage is enabled", :premium do
+      context "when granular_lifetime_usage is enabled", :premium do
         before do
-          organization.update!(premium_integrations: %w[lifetime_usage])
+          organization.update!(premium_integrations: %w[granular_lifetime_usage])
         end
 
         context "when filter_by_charge_id is provided and no prorated charges" do
