@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
-  subject(:service) { described_class.new(alert:) }
+  subject(:service) { described_class.new(alert:, subscription:) }
 
   let(:organization) { create(:organization, premium_integrations:) }
   let(:customer) { create(:customer, organization:) }
@@ -17,7 +17,7 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
   let(:mocked_usage) { double("usage") } # rubocop:disable RSpec/VerifiedDoubles
 
   before do
-    allow(::Invoices::CustomerUsageService).to receive(:call)
+    allow(::Invoices::CustomerUsageService).to receive(:call!)
       .and_return(double(success?: true, usage: mocked_usage)) # rubocop:disable RSpec/VerifiedDoubles
     allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
   end
@@ -28,7 +28,7 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
     it "calls CustomerUsageService and processes the alert" do
       service.call
 
-      expect(::Invoices::CustomerUsageService).to have_received(:call).with(
+      expect(::Invoices::CustomerUsageService).to have_received(:call!).with(
         customer: an_object_having_attributes(id: subscription.customer_id),
         subscription: an_object_having_attributes(id: subscription.id),
         apply_taxes: false,
@@ -42,11 +42,16 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
 
   context "when lifetime_usage is not enabled" do
     let(:premium_integrations) { [] }
+    let(:usage_error) { BaseService::ServiceFailure.new(nil, code: "full_usage_not_allowed", error_message: "not allowed") }
 
-    it "does not process the alert" do
-      service.call
+    before do
+      allow(::Invoices::CustomerUsageService).to receive(:call!)
+        .and_raise(usage_error)
+    end
 
-      expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+    it "raises the error from CustomerUsageService" do
+      expect { service.call }.to raise_error(usage_error)
+
       expect(::UsageMonitoring::ProcessAlertService).not_to have_received(:call)
     end
   end
@@ -61,19 +66,24 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
     it "does not process the alert" do
       service.call
 
-      expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+      expect(::Invoices::CustomerUsageService).not_to have_received(:call!)
       expect(::UsageMonitoring::ProcessAlertService).not_to have_received(:call)
     end
   end
 
-  context "when subscription is not active" do
+  context "when subscription is nil" do
     let(:premium_integrations) { %w[lifetime_usage] }
-    let(:subscription) { create(:subscription, :terminated, customer:, organization:) }
+    let(:subscription) { nil }
+    let!(:charge) { nil }
+    let(:alert) do
+      create(:billable_metric_lifetime_usage_units_alert,
+        billable_metric:, organization:, subscription_external_id: "nonexistent")
+    end
 
     it "does not process the alert" do
       service.call
 
-      expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+      expect(::Invoices::CustomerUsageService).not_to have_received(:call!)
       expect(::UsageMonitoring::ProcessAlertService).not_to have_received(:call)
     end
   end
@@ -86,21 +96,22 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
     it "does not call CustomerUsageService or process the alert" do
       service.call
 
-      expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+      expect(::Invoices::CustomerUsageService).not_to have_received(:call!)
       expect(::UsageMonitoring::ProcessAlertService).not_to have_received(:call)
     end
   end
 
   context "when CustomerUsageService fails" do
     let(:premium_integrations) { %w[lifetime_usage] }
+    let(:usage_error) { BaseService::ServiceFailure.new(nil, code: "test_error", error_message: "something went wrong") }
 
     before do
-      allow(::Invoices::CustomerUsageService).to receive(:call)
-        .and_return(double(success?: false)) # rubocop:disable RSpec/VerifiedDoubles
+      allow(::Invoices::CustomerUsageService).to receive(:call!)
+        .and_raise(usage_error)
     end
 
-    it "does not process the alert" do
-      service.call
+    it "raises the error" do
+      expect { service.call }.to raise_error(usage_error)
 
       expect(::UsageMonitoring::ProcessAlertService).not_to have_received(:call)
     end

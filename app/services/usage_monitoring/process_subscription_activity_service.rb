@@ -39,7 +39,7 @@ module UsageMonitoring
         when "lifetime_usage_amount"
           ProcessAlertService.call(alert:, subscription:, current_metrics: lifetime_usage)
         when *Alert::BILLABLE_METRIC_LIFETIME_USAGE_TYPES
-          UsageMonitoring::ProcessLifetimeUsageAlertJob.set(wait: 5.minutes).perform_later(alert.id)
+          UsageMonitoring::ProcessLifetimeUsageAlertJob.set(wait: 5.minutes).perform_later(alert:, subscription:)
         when *Alert::CURRENT_USAGE_TYPES
           ProcessAlertService.call(alert:, subscription:, current_metrics: current_usage)
         end

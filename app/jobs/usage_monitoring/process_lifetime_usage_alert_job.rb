@@ -5,9 +5,14 @@ module UsageMonitoring
     unique :until_executed, on_conflict: :log
     queue_as :default
 
-    def perform(alert_id)
-      alert = UsageMonitoring::Alert.find(alert_id)
-      ProcessLifetimeUsageAlertService.call!(alert:)
+    def perform(alert:, subscription:)
+      ProcessLifetimeUsageAlertService.call!(alert:, subscription:)
+    end
+
+    private
+
+    def lock_key_arguments
+      [arguments.first[:alert]]
     end
   end
 end

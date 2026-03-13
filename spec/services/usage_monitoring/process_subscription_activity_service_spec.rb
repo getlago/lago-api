@@ -194,7 +194,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
     it "enqueues ProcessLifetimeUsageAlertJob with a 5 minute delay" do
       service.call
 
-      expect(job_proxy).to have_received(:perform_later).with(alert_5.id)
+      expect(job_proxy).to have_received(:perform_later).with(alert: alert_5, subscription:)
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
 
