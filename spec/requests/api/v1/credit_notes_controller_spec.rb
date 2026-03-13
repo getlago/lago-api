@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Api::V1::CreditNotesController do
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let(:customer) { create(:customer, :with_tax_integration, organization:) }
   let(:credit_note) { create(:credit_note, invoice:, customer:) }
   let(:total_paid_amount_cents) { 120 }
   let(:invoice) do
@@ -68,6 +68,8 @@ RSpec.describe Api::V1::CreditNotesController do
       )
 
       expect(json[:credit_note][:customer][:lago_id]).to eq(customer.id)
+      expect(json[:credit_note][:customer][:integration_customers].count).to eq(1)
+      expect(json[:credit_note][:customer][:integration_customers].first[:lago_id]).to eq(customer.anrok_customer.id)
     end
 
     context "when credit note does not exists" do
