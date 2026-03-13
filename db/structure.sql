@@ -1727,7 +1727,8 @@ CREATE TABLE public.billing_entities (
     applied_dunning_campaign_id uuid,
     einvoicing boolean DEFAULT false NOT NULL,
     subscription_invoice_issuing_date_anchor public.subscription_invoice_issuing_date_anchors DEFAULT 'next_period_start'::public.subscription_invoice_issuing_date_anchors NOT NULL,
-    subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments DEFAULT 'align_with_finalization_date'::public.subscription_invoice_issuing_date_adjustments NOT NULL
+    subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments DEFAULT 'align_with_finalization_date'::public.subscription_invoice_issuing_date_adjustments NOT NULL,
+    skip_automatic_pdf_generation character varying[] DEFAULT '{}'::character varying[] NOT NULL
 );
 
 
@@ -11323,6 +11324,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260219130831'),
 ('20260219102644'),
 ('20260219083335'),
+('20260218202651'),
 ('20260218102426'),
 ('20260216115709'),
 ('20260209103920'),

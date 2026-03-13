@@ -157,6 +157,7 @@ RSpec.describe BillingEntities::CreateService do
               invoice_grace_period: 15,
               invoice_footer: "Invoice Footer",
               document_locale: "fr",
+              skip_automatic_pdf_generation: ["invoices"],
               subscription_invoice_issuing_date_anchor: "current_period_end",
               subscription_invoice_issuing_date_adjustment: "keep_anchor"
             },
@@ -195,6 +196,7 @@ RSpec.describe BillingEntities::CreateService do
           expect(result.billing_entity.invoice_grace_period).to eq(15)
           expect(result.billing_entity.invoice_footer).to eq("Invoice Footer")
           expect(result.billing_entity.document_locale).to eq("fr")
+          expect(result.billing_entity.skip_automatic_pdf_generation).to eq(["invoices"])
           expect(result.billing_entity.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
           expect(result.billing_entity.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
           expect(result.billing_entity.eu_tax_management).to eq(true)

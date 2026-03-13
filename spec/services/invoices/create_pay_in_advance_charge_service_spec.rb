@@ -165,6 +165,16 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
     end
 
+    context "when billing entity skips automatic invoice pdf generation" do
+      before { billing_entity.update!(skip_automatic_pdf_generation: ["invoices"]) }
+
+      it "does not enqueue GenerateDocumentsJob" do
+        expect do
+          invoice_service.call
+        end.not_to have_enqueued_job(Invoices::GenerateDocumentsJob)
+      end
+    end
+
     context "with lago_premium", :premium do
       it "enqueues GenerateDocumentsJob with email true" do
         expect do

@@ -75,7 +75,7 @@ module Invoices
         Utils::SegmentTrack.invoice_created(invoice)
         deliver_webhooks
         Utils::ActivityLog.produce(invoice, "invoice.created")
-        Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
+        Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?) unless billing_entity.skip_automatic_invoice_pdf_generation?
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
         Invoices::Payments::CreateService.call_async(invoice:)
@@ -150,8 +150,12 @@ module Invoices
       invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
     end
 
+    def billing_entity
+      @billing_entity ||= customer.billing_entity
+    end
+
     def should_deliver_email?
-      License.premium? && customer.billing_entity.email_settings.include?("invoice.finalized")
+      License.premium? && billing_entity.email_settings.include?("invoice.finalized")
     end
 
     def wallets

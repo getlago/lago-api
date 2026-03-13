@@ -75,7 +75,7 @@ module Invoices
         unless invoice.closed? # we dont need to send the webhooks if the invoice was closed ( skip 0 invoice setting )
           SendWebhookJob.perform_after_commit("invoice.created", invoice)
           Utils::ActivityLog.produce_after_commit(invoice, "invoice.created")
-          GenerateDocumentsJob.perform_after_commit(invoice:, notify: should_deliver_finalized_email?)
+          GenerateDocumentsJob.perform_after_commit(invoice:, notify: should_deliver_finalized_email?) unless billing_entity.skip_automatic_invoice_pdf_generation?
           Integrations::Aggregator::Invoices::CreateJob.perform_after_commit(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_after_commit(invoice:) if invoice.should_sync_hubspot_invoice?
           Invoices::Payments::CreateService.call_async(invoice:)
@@ -145,9 +145,13 @@ module Invoices
       Invoices::TransitionToFinalStatusService.call(invoice:)
     end
 
+    def billing_entity
+      @billing_entity ||= customer.billing_entity
+    end
+
     def should_deliver_finalized_email?
       License.premium? &&
-        customer.billing_entity.email_settings.include?("invoice.finalized")
+        billing_entity.email_settings.include?("invoice.finalized")
     end
 
     def flag_lifetime_usage_for_refresh
