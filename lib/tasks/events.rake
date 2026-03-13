@@ -64,39 +64,33 @@ namespace :events do
     Rails.logger.info("events:deduplicate_enriched_expanded [#{mode}] - Complete. #{total_duplicates} total duplicate rows #{action}.")
   end
 
-  desc "Reprocess events by pushing them back to events_raw Kafka topic with reprocess flag"
+  desc "Detect and optionally reprocess events for subscriptions needing re-enrichment"
   task reprocess: :environment do
     Rails.logger.level = Logger::Severity::INFO
 
     organization_id = ENV.fetch("ORGANIZATION_ID")
-    subscription_ids = ENV["SUBSCRIPTION_IDS"].to_s.split(",").map(&:strip).reject(&:blank?)
-    codes = ENV["BM_CODES"].to_s.split(",").map(&:strip).reject(&:blank?)
-    reprocess = ENV.fetch("REPROCESS", "true") == "true"
+    reprocess = ENV.fetch("REPROCESS", "false") == "true"
     batch_size = (ENV["BATCH_SIZE"] || 1000).to_i
     sleep_seconds = (ENV["SLEEP_SECONDS"] || 0.5).to_f
+
     organization = Organization.find(organization_id)
-    subscriptions = organization.subscriptions
-    subscriptions = subscriptions.where(id: subscription_ids) if subscription_ids.present?
 
-    total = 0
-    total_batches = 0
+    service_result = Events::Stores::Clickhouse::PreEnrichmentCheckService.call(
+      organization:, reprocess:, batch_size:, sleep_seconds:
+    )
 
-    subscriptions.find_each do |subscription|
-      Rails.logger.info("events:reprocess - Processing subscription #{subscription.external_id} (started_at: #{subscription.started_at})")
+    subscriptions_map = service_result.subscriptions_to_reprocess
+    mode = reprocess ? "REPROCESS" : "DRY RUN"
 
-      service_result = Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService.call(
-        subscription:, codes:, reprocess:, batch_size:, sleep_seconds:
-      )
-
-      total += service_result.events_count
-      total_batches += service_result.batch_count
-
-      Rails.logger.info("events:reprocess - Subscription #{subscription.external_id}: #{service_result.events_count} events in #{service_result.batch_count} batches")
+    if subscriptions_map.empty?
+      Rails.logger.info("events:reprocess [#{mode}] - No subscriptions need reprocessing")
+    else
+      subscriptions_map.each do |sub_id, codes|
+        Rails.logger.info("events:reprocess [#{mode}] - Subscription #{sub_id}: #{codes.join(', ')}")
+      end
+      Rails.logger.info("events:reprocess [#{mode}] - #{subscriptions_map.size} subscriptions detected")
     end
-
-    Rails.logger.info("events:reprocess - Complete. #{total} events reprocessed in #{total_batches} batches.")
   ensure
-    # Close the producer to flush pending messages and release resources.
-    Karafka.producer.close
+    Karafka.producer.close if reprocess
   end
 end
