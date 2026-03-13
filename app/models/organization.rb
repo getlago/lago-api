@@ -140,6 +140,7 @@ class Organization < ApplicationRecord
     custom_roles
     events_targeting_wallets
     security_logs
+    granular_lifetime_usage
   ].freeze
 
   SECURITY_LOGS_RETENTION_DAYS = 90
