@@ -31,19 +31,8 @@ RSpec.describe ApiKeys::CreateService do
               .with(hash_including(params: {api_key: instance_of(ApiKey)}))
           end
 
-          it "produces a security log with only assigned permissions" do
-            api_key = service_result.api_key
-
-            expect(security_logger).to have_received(:produce).with(
-              organization: organization,
-              log_type: "api_key",
-              log_event: "api_key.created",
-              resources: {
-                name: api_key.name,
-                value_ending: api_key.value.last(4),
-                permissions: %w[add_on:read add_on:write]
-              }
-            )
+          it_behaves_like "produces a security log", "api_key.created" do
+            before { service_result }
           end
         end
 
@@ -64,10 +53,8 @@ RSpec.describe ApiKeys::CreateService do
             expect(service_result.error.code).to eq("premium_integration_missing")
           end
 
-          it "does not produce a security log" do
-            service_result
-
-            expect(security_logger).not_to have_received(:produce)
+          it_behaves_like "does not produce a security log" do
+            before { service_result }
           end
         end
       end
@@ -130,10 +117,8 @@ RSpec.describe ApiKeys::CreateService do
             expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
           end
 
-          it "does not produce a security log" do
-            service_result
-
-            expect(security_logger).not_to have_received(:produce)
+          it_behaves_like "does not produce a security log" do
+            before { service_result }
           end
         end
 
@@ -153,10 +138,8 @@ RSpec.describe ApiKeys::CreateService do
             expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
           end
 
-          it "does not produce a security log" do
-            service_result
-
-            expect(security_logger).not_to have_received(:produce)
+          it_behaves_like "does not produce a security log" do
+            before { service_result }
           end
         end
       end
@@ -182,10 +165,8 @@ RSpec.describe ApiKeys::CreateService do
             expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
           end
 
-          it "does not produce a security log" do
-            service_result
-
-            expect(security_logger).not_to have_received(:produce)
+          it_behaves_like "does not produce a security log" do
+            before { service_result }
           end
         end
 
@@ -205,10 +186,8 @@ RSpec.describe ApiKeys::CreateService do
             expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
           end
 
-          it "does not produce a security log" do
-            service_result
-
-            expect(security_logger).not_to have_received(:produce)
+          it_behaves_like "does not produce a security log" do
+            before { service_result }
           end
         end
       end

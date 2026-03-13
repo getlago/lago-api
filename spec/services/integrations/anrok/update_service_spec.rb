@@ -49,20 +49,8 @@ RSpec.describe Integrations::Anrok::UpdateService do
           expect(result.integration).to be_a(Integrations::AnrokIntegration)
         end
 
-        it "produces a security log" do
-          original_name = integration.name
-          service_call
-
-          expect(security_logger).to have_received(:produce).with(
-            organization:,
-            log_type: "integration",
-            log_event: "integration.updated",
-            resources: hash_including(
-              integration_name: name,
-              integration_type: "anrok",
-              name: {deleted: original_name, added: name}
-            )
-          )
+        it_behaves_like "produces a security log", "integration.updated" do
+          before { service_call }
         end
       end
 

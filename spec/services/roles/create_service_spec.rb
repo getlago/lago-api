@@ -34,15 +34,8 @@ RSpec.describe Roles::CreateService do
         )
       end
 
-      it "produces a security log" do
-        result
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: organization,
-          log_type: "role",
-          log_event: "role.created",
-          resources: {role_code: "custom_role", permissions: %w[customers:view customers:create]}
-        )
+      it_behaves_like "produces a security log", "role.created" do
+        before { result }
       end
 
       context "with invalid params" do
@@ -57,10 +50,8 @@ RSpec.describe Roles::CreateService do
           expect(result.error).to be_a(BaseService::ValidationFailure)
         end
 
-        it "does not produce a security log" do
-          result
-
-          expect(security_logger).not_to have_received(:produce)
+        it_behaves_like "does not produce a security log" do
+          before { result }
         end
       end
 
@@ -91,10 +82,8 @@ RSpec.describe Roles::CreateService do
         expect(result.error.code).to eq("premium_integration_missing")
       end
 
-      it "does not produce a security log" do
-        result
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { result }
       end
     end
 
@@ -108,10 +97,8 @@ RSpec.describe Roles::CreateService do
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
       end
 
-      it "does not produce a security log" do
-        result
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { result }
       end
     end
   end

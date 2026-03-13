@@ -51,17 +51,8 @@ RSpec.describe Mutations::RegisterUser do
       end
     end
 
-    it "produces a security log" do
-      result
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: Organization.last,
-        log_type: "user",
-        log_event: "user.signed_up",
-        user: User.last,
-        resources: {email: "foo@bar.com", roles: %w[admin]},
-        skip_organization_check: true
-      )
+    it_behaves_like "produces a security log", "user.signed_up" do
+      before { result }
     end
   end
 

@@ -88,15 +88,8 @@ RSpec.describe Integrations::Netsuite::CreateService do
             expect { service_call }.to have_enqueued_job(Integrations::Aggregator::PerformSyncJob)
           end
 
-          it "produces a security log" do
-            service_call
-
-            expect(security_logger).to have_received(:produce).with(
-              organization:,
-              log_type: "integration",
-              log_event: "integration.created",
-              resources: {integration_name: name, integration_type: "netsuite"}
-            )
+          it_behaves_like "produces a security log", "integration.created" do
+            before { service_call }
           end
         end
 

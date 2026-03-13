@@ -50,18 +50,8 @@ RSpec.describe WebhookEndpoints::UpdateService do
       end
     end
 
-    it "produces a security log" do
-      update_service.call
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "webhook_endpoint",
-        log_event: "webhook_endpoint.updated",
-        resources: hash_including(
-          webhook_url: {deleted: webhook_endpoint.webhook_url, added: "http://foo.bar"},
-          signature_algo: {deleted: "jwt", added: "hmac"}
-        )
-      )
+    it_behaves_like "produces a security log", "webhook_endpoint.updated" do
+      before { update_service.call }
     end
 
     context "when webhook endpoint does not exist" do
@@ -74,10 +64,8 @@ RSpec.describe WebhookEndpoints::UpdateService do
         expect(result.error.message).to eq("webhook_endpoint_not_found")
       end
 
-      it "does not produce a security log" do
-        update_service.call
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { update_service.call }
       end
     end
 
@@ -95,10 +83,8 @@ RSpec.describe WebhookEndpoints::UpdateService do
         expect(result.error.class).to eq(BaseService::ValidationFailure)
       end
 
-      it "does not produce a security log" do
-        update_service.call
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { update_service.call }
       end
     end
 

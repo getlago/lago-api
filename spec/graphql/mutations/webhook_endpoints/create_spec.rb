@@ -55,13 +55,6 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
       )
     end
 
-    it "produces a security log" do
-      expect(security_logger).to have_received(:produce).with(
-        organization: membership.organization,
-        log_type: "webhook_endpoint",
-        log_event: "webhook_endpoint.created",
-        resources: {webhook_url: webhook_url, signature_algo: "hmac"}
-      )
-    end
+    it_behaves_like "produces a security log", "webhook_endpoint.created"
   end
 end

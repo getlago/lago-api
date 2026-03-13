@@ -85,19 +85,8 @@ RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService do
               .to(dunning_campaign_2)
           end
 
-          it "produces a security log" do
-            update_service.call
-
-            expect(security_logger).to have_received(:produce).with(
-              organization: organization,
-              log_type: "billing_entity",
-              log_event: "billing_entity.updated",
-              resources: {
-                billing_entity_name: billing_entity.name,
-                billing_entity_code: billing_entity.code,
-                applied_dunning_campaign: {added: dunning_campaign_2.code}
-              }
-            )
+          it_behaves_like "produces a security log", "billing_entity.updated" do
+            before { update_service.call }
           end
 
           it "resets only fallback customers of this billing entity attempts" do
@@ -143,10 +132,8 @@ RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService do
             expect { update_service.call }.not_to change { billing_entity.reload.applied_dunning_campaign }
           end
 
-          it "does not produce a security log" do
-            update_service.call
-
-            expect(security_logger).not_to have_received(:produce)
+          it_behaves_like "does not produce a security log" do
+            before { update_service.call }
           end
 
           it "does not reset customer attempts" do

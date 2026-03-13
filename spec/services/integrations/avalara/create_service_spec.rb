@@ -79,15 +79,8 @@ RSpec.describe Integrations::Avalara::CreateService do
             expect(Integrations::Avalara::FetchCompanyIdJob).to have_received(:perform_later).with(integration:)
           end
 
-          it "produces a security log" do
-            service_call
-
-            expect(security_logger).to have_received(:produce).with(
-              organization:,
-              log_type: "integration",
-              log_event: "integration.created",
-              resources: {integration_name: name, integration_type: "avalara"}
-            )
+          it_behaves_like "produces a security log", "integration.created" do
+            before { service_call }
           end
         end
 

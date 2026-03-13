@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviders::DestroyService do
   subject(:destroy_service) { described_class.new(payment_provider) }
 
+  include_context "with mocked security logger"
+
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -16,6 +18,10 @@ RSpec.describe PaymentProviders::DestroyService do
     it "destroys the payment_provider" do
       expect { destroy_service.call }
         .to change(PaymentProviders::BaseProvider, :count).by(-1)
+    end
+
+    it_behaves_like "produces a security log", "integration.deleted" do
+      before { destroy_service.call }
     end
 
     context "when payment provider is not found" do

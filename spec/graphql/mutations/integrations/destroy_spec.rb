@@ -38,15 +38,8 @@ RSpec.describe Mutations::Integrations::Destroy do
     expect { result }.to change(::Integrations::BaseIntegration, :count).by(-1)
   end
 
-  it "produces a security log" do
-    result
-
-    expect(security_logger).to have_received(:produce).with(
-      organization: membership.organization,
-      log_type: "integration",
-      log_event: "integration.deleted",
-      resources: {integration_name: integration.name, integration_type: "netsuite"}
-    )
+  it_behaves_like "produces a security log", "integration.deleted" do
+    before { result }
   end
 
   context "when okta integration", :premium do
@@ -63,15 +56,8 @@ RSpec.describe Mutations::Integrations::Destroy do
       expect(::Integrations::Okta::DestroyService).to have_received(:call).with(integration:)
     end
 
-    it "produces a security log" do
-      result
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: membership.organization,
-        log_type: "integration",
-        log_event: "integration.deleted",
-        resources: {integration_name: integration.name, integration_type: "okta"}
-      )
+    it_behaves_like "produces a security log", "integration.deleted" do
+      before { result }
     end
   end
 end

@@ -22,39 +22,15 @@ RSpec.describe PasswordResets::CreateService do
         .to change(PasswordReset, :count).by(1)
     end
 
-    it "produces a security log" do
-      create_service.call(**create_args)
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "user",
-        log_event: "user.password_reset_requested",
-        user: user,
-        resources: {email: user.email}
-      )
+    it_behaves_like "produces a security log", "user.password_reset_requested" do
+      before { create_service.call(**create_args) }
     end
 
     context "with multiple active memberships" do
-      let!(:other_organization) { create(:membership, user:).organization }
+      before { create(:membership, user:) }
 
-      it "produces a security log for each organization" do
-        create_service.call(**create_args)
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: organization,
-          log_type: "user",
-          log_event: "user.password_reset_requested",
-          user: user,
-          resources: {email: user.email}
-        )
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: other_organization,
-          log_type: "user",
-          log_event: "user.password_reset_requested",
-          user: user,
-          resources: {email: user.email}
-        )
+      it_behaves_like "produces a security log", "user.password_reset_requested" do
+        before { create_service.call(**create_args) }
       end
     end
 
@@ -66,10 +42,8 @@ RSpec.describe PasswordResets::CreateService do
         expect(result.error.error_code).to eq("user_not_found")
       end
 
-      it "does not produce a security log" do
-        create_service.call(user: nil)
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { create_service.call(user: nil) }
       end
     end
 

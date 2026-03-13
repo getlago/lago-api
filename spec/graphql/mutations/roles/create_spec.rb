@@ -57,15 +57,8 @@ RSpec.describe Mutations::Roles::Create do
       )
     end
 
-    it "produces a security log" do
-      result
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "role",
-        log_event: "role.created",
-        resources: {role_code: "custom_role", permissions: %w[customers:view customers:create]}
-      )
+    it_behaves_like "produces a security log", "role.created" do
+      before { result }
     end
 
     context "when permissions are sent with underscores" do

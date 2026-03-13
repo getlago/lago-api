@@ -40,39 +40,15 @@ RSpec.describe PasswordResets::ResetService do
       )
     end
 
-    it "produces a security log" do
-      reset_service.call(**reset_args)
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "user",
-        log_event: "user.password_edited",
-        user: user,
-        resources: {email: user.email}
-      )
+    it_behaves_like "produces a security log", "user.password_edited" do
+      before { reset_service.call(**reset_args) }
     end
 
     context "with multiple active memberships" do
-      let!(:other_organization) { create(:membership, user:).organization }
+      before { create(:membership, user:) }
 
-      it "produces a security log for each organization" do
-        reset_service.call(**reset_args)
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: organization,
-          log_type: "user",
-          log_event: "user.password_edited",
-          user: user,
-          resources: {email: user.email}
-        )
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: other_organization,
-          log_type: "user",
-          log_event: "user.password_edited",
-          user: user,
-          resources: {email: user.email}
-        )
+      it_behaves_like "produces a security log", "user.password_edited" do
+        before { reset_service.call(**reset_args) }
       end
     end
 
@@ -85,10 +61,8 @@ RSpec.describe PasswordResets::ResetService do
         expect(result.error.messages[:token]).to eq(["missing_token"])
       end
 
-      it "does not produce a security log when token is missing" do
-        reset_service.call(new_password: reset_args[:new_password], token: nil)
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { reset_service.call(new_password: reset_args[:new_password], token: nil) }
       end
 
       it "raises an error if new_password is not present" do
@@ -99,10 +73,8 @@ RSpec.describe PasswordResets::ResetService do
         expect(result.error.messages[:new_password]).to eq(["missing_password"])
       end
 
-      it "does not produce a security log when password is missing" do
-        reset_service.call(new_password: nil, token: password_reset.token)
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { reset_service.call(new_password: nil, token: password_reset.token) }
       end
     end
 
@@ -118,10 +90,8 @@ RSpec.describe PasswordResets::ResetService do
         expect(result.error.error_code).to eq("password_reset_not_found")
       end
 
-      it "does not produce a security log" do
-        reset_service.call(new_password: reset_args[:new_password], token: expired_password_reset.token)
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { reset_service.call(new_password: reset_args[:new_password], token: expired_password_reset.token) }
       end
     end
   end

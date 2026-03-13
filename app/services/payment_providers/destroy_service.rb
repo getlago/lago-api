@@ -23,11 +23,24 @@ module PaymentProviders
       # TODO: Create job to unregister webhook
 
       result.payment_provider = payment_provider
+      register_security_log
       result
     end
 
     private
 
     attr_reader :payment_provider
+
+    def register_security_log
+      Utils::SecurityLog.produce(
+        organization: payment_provider.organization,
+        log_type: "integration",
+        log_event: "integration.deleted",
+        resources: {
+          integration_name: payment_provider.name,
+          integration_type: payment_provider.class.name.demodulize.delete_suffix("Provider").underscore
+        }
+      )
+    end
   end
 end

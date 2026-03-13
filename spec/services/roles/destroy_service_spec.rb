@@ -21,15 +21,8 @@ RSpec.describe Roles::DestroyService do
         expect(result.role).to eq(role)
       end
 
-      it "produces a security log" do
-        result
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: organization,
-          log_type: "role",
-          log_event: "role.deleted",
-          resources: {role_code: role.code}
-        )
+      it_behaves_like "produces a security log", "role.deleted" do
+        before { result }
       end
     end
 
@@ -42,10 +35,8 @@ RSpec.describe Roles::DestroyService do
         expect(result.error.error_code).to eq("role_not_found")
       end
 
-      it "does not produce a security log" do
-        result
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { result }
       end
     end
 
@@ -62,10 +53,8 @@ RSpec.describe Roles::DestroyService do
         expect(result.error.code).to eq("predefined_role")
       end
 
-      it "does not produce a security log" do
-        result
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { result }
       end
     end
 
@@ -84,10 +73,8 @@ RSpec.describe Roles::DestroyService do
         expect(result.error.code).to eq("role_assigned_to_members")
       end
 
-      it "does not produce a security log" do
-        result
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { result }
       end
     end
 

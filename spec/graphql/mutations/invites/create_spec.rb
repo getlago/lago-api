@@ -61,15 +61,8 @@ RSpec.describe Mutations::Invites::Create do
       expect(data["token"]).to be_present
     end
 
-    it "produces a security log" do
-      result
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "user",
-        log_event: "user.invited",
-        resources: {invitee_email: email}
-      )
+    it_behaves_like "produces a security log", "user.invited" do
+      before { result }
     end
   end
 

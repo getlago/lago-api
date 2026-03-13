@@ -53,15 +53,8 @@ RSpec.describe Integrations::Anrok::CreateService do
           expect(result.integration).to be_a(Integrations::AnrokIntegration)
         end
 
-        it "produces a security log" do
-          service_call
-
-          expect(security_logger).to have_received(:produce).with(
-            organization:,
-            log_type: "integration",
-            log_event: "integration.created",
-            resources: {integration_name: name, integration_type: "anrok"}
-          )
+        it_behaves_like "produces a security log", "integration.created" do
+          before { service_call }
         end
       end
 

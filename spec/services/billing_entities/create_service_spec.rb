@@ -27,10 +27,8 @@ RSpec.describe BillingEntities::CreateService do
       expect(result.error).to be_a(BaseService::ForbiddenFailure)
     end
 
-    it "does not produce a security log" do
-      result
-
-      expect(security_logger).not_to have_received(:produce)
+    it_behaves_like "does not produce a security log" do
+      before { result }
     end
 
     context "when the organization does not have active billing entities" do
@@ -45,15 +43,8 @@ RSpec.describe BillingEntities::CreateService do
         expect(result.billing_entity.code).to eq("billing-entity")
       end
 
-      it "produces a security log" do
-        result
-
-        expect(security_logger).to have_received(:produce).with(
-          organization:,
-          log_type: "billing_entity",
-          log_event: "billing_entity.created",
-          resources: {billing_entity_name: "Billing Entity", billing_entity_code: "billing-entity"}
-        )
+      it_behaves_like "produces a security log", "billing_entity.created" do
+        before { result }
       end
 
       it "does not set eu_tax_management when not provided" do
@@ -108,10 +99,8 @@ RSpec.describe BillingEntities::CreateService do
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
       end
 
-      it "does not produce a security log" do
-        result
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { result }
       end
     end
 

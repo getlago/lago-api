@@ -26,18 +26,8 @@ RSpec.describe Memberships::UpdateService do
         expect(result.membership.roles).to eq([manager_role])
       end
 
-      it "produces a security log" do
-        described_class.call(membership:, params:)
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: organization,
-          log_type: "user",
-          log_event: "user.role_edited",
-          resources: {
-            email: membership.user.email,
-            roles: {deleted: %w[admin], added: %w[manager]}
-          }
-        )
+      it_behaves_like "produces a security log", "user.role_edited" do
+        before { described_class.call(membership:, params:) }
       end
     end
 
@@ -51,10 +41,8 @@ RSpec.describe Memberships::UpdateService do
         expect(result.error.code).to eq("last_admin")
       end
 
-      it "does not produce a security log" do
-        described_class.call(membership:, params:)
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { described_class.call(membership:, params:) }
       end
     end
 
@@ -66,10 +54,8 @@ RSpec.describe Memberships::UpdateService do
         expect(result.error.error_code).to eq("membership_not_found")
       end
 
-      it "does not produce a security log" do
-        described_class.call(membership: nil, params:)
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { described_class.call(membership: nil, params:) }
       end
     end
 
@@ -85,10 +71,8 @@ RSpec.describe Memberships::UpdateService do
         expect(result.error.error_code).to eq("role_not_found")
       end
 
-      it "does not produce a security log" do
-        described_class.call(membership:, params:)
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { described_class.call(membership:, params:) }
       end
     end
   end

@@ -38,16 +38,8 @@ RSpec.describe Mutations::PasswordResets::Create do
       expect(data["id"]).to be_present
     end
 
-    it "produces a security log" do
-      result
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "user",
-        log_event: "user.password_reset_requested",
-        user: user,
-        resources: {email: user.email}
-      )
+    it_behaves_like "produces a security log", "user.password_reset_requested" do
+      before { result }
     end
   end
 end

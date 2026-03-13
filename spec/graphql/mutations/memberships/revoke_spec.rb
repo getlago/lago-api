@@ -53,16 +53,8 @@ RSpec.describe Mutations::Memberships::Revoke do
       expect(data["revokedAt"]).to be_present
     end
 
-    it "produces a security log" do
-      result
-
-      expect(security_logger).to have_received(:produce).with(
-        organization: organization,
-        log_type: "user",
-        log_event: "user.deleted",
-        user: membership.user,
-        resources: {email: membership_to_remove.user.email}
-      )
+    it_behaves_like "produces a security log", "user.deleted" do
+      before { result }
     end
   end
 

@@ -19,15 +19,8 @@ RSpec.describe Integrations::DestroyService do
         .to change(Integrations::BaseIntegration, :count).by(-1)
     end
 
-    it "produces a security log" do
-      destroy_service.call
-
-      expect(security_logger).to have_received(:produce).with(
-        organization:,
-        log_type: "integration",
-        log_event: "integration.deleted",
-        resources: {integration_name: integration.name, integration_type: "netsuite"}
-      )
+    it_behaves_like "produces a security log", "integration.deleted" do
+      before { destroy_service.call }
     end
 
     context "when integration is not found" do

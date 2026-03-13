@@ -23,20 +23,8 @@ RSpec.describe Roles::UpdateService do
         expect(result.role).to eq(role)
       end
 
-      it "produces a security log" do
-        result
-
-        expect(security_logger).to have_received(:produce).with(
-          organization: organization,
-          log_type: "role",
-          log_event: "role.updated",
-          resources: {
-            role_code: role.code,
-            name: {deleted: "Old Name", added: "New Name"},
-            description: {deleted: "Old description", added: "New description"},
-            permissions: {deleted: %w[addons:view], added: %w[plans:view]}
-          }
-        )
+      it_behaves_like "produces a security log", "role.updated" do
+        before { result }
       end
 
       context "with partial params" do
@@ -60,10 +48,8 @@ RSpec.describe Roles::UpdateService do
           expect(result.error).to be_a(BaseService::ValidationFailure)
         end
 
-        it "does not produce a security log" do
-          result
-
-          expect(security_logger).not_to have_received(:produce)
+        it_behaves_like "does not produce a security log" do
+          before { result }
         end
       end
     end
@@ -77,10 +63,8 @@ RSpec.describe Roles::UpdateService do
         expect(result.error.error_code).to eq("role_not_found")
       end
 
-      it "does not produce a security log" do
-        result
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { result }
       end
     end
 
@@ -97,10 +81,8 @@ RSpec.describe Roles::UpdateService do
         expect(result.error.code).to eq("predefined_role")
       end
 
-      it "does not produce a security log" do
-        result
-
-        expect(security_logger).not_to have_received(:produce)
+      it_behaves_like "does not produce a security log" do
+        before { result }
       end
     end
 
