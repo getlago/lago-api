@@ -9,9 +9,10 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
   let(:mocked_current_usage) { double("current_usage") } # rubocop:disable RSpec/VerifiedDoubles
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
-  let!(:subscription_activity) { create(:subscription_activity, subscription:, organization:) }
+  let(:subscription_activity) { create(:subscription_activity, subscription:, organization:) }
 
   before do
+    subscription_activity
     allow(::Invoices::CustomerUsageService).to receive(:call)
       .and_return(double(usage: mocked_current_usage)) # rubocop:disable RSpec/VerifiedDoubles
     allow(LifetimeUsages::CalculateService).to receive(:call!)
@@ -167,6 +168,43 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
         allow(LifetimeUsages::CheckThresholdsService).to receive(:call!).and_raise(StandardError, "boom")
         expect { service.call }.to raise_error(StandardError, "boom")
         expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert:, subscription:, current_metrics: mocked_current_usage)
+        expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
+      end
+    end
+  end
+
+  context "when subscription has billable_metric_lifetime_usage_units alert" do
+    let(:premium_integrations) { [] }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:charge) { create(:standard_charge, billable_metric:, plan: subscription.plan) }
+    let(:alert_5) do
+      create(:billable_metric_lifetime_usage_units_alert,
+        billable_metric:, organization:, subscription_external_id: subscription.external_id)
+    end
+
+    let(:job_proxy) { instance_double(ActiveJob::ConfiguredJob) }
+
+    before do
+      charge
+      alert_5
+      allow(UsageMonitoring::ProcessLifetimeUsageAlertJob).to receive(:set).with(wait: 5.minutes).and_return(job_proxy)
+      allow(job_proxy).to receive(:perform_later)
+    end
+
+    it "enqueues ProcessLifetimeUsageAlertJob with a 5 minute delay" do
+      service.call
+
+      expect(job_proxy).to have_received(:perform_later).with(alert: alert_5, subscription:)
+      expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
+    end
+
+    context "when the job enqueue raises" do
+      before do
+        allow(job_proxy).to receive(:perform_later).and_raise(StandardError, "enqueue failed")
+      end
+
+      it "deletes subscription_activity before raising" do
+        expect { service.call }.to raise_error(StandardError, "enqueue failed")
         expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
       end
     end

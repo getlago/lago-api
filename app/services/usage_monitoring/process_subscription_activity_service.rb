@@ -32,16 +32,17 @@ module UsageMonitoring
       alerts = Alert.where(
         subscription_external_id: subscription.external_id,
         organization_id: subscription_activity.organization_id
-      ).includes(:thresholds)
+      ).includes(:thresholds).load
 
-      alerts.using_current_usage.find_each do |alert|
-        ProcessAlertService.call(alert:, subscription:, current_metrics: current_usage)
-      rescue => e
-        exception_to_raise ||= e
-      end
-
-      alerts.using_lifetime_usage.find_each do |alert|
-        ProcessAlertService.call(alert:, subscription:, current_metrics: lifetime_usage)
+      alerts.each do |alert|
+        case alert.alert_type
+        when "lifetime_usage_amount"
+          ProcessAlertService.call(alert:, subscription:, current_metrics: lifetime_usage)
+        when *Alert::BILLABLE_METRIC_LIFETIME_USAGE_TYPES
+          UsageMonitoring::ProcessLifetimeUsageAlertJob.set(wait: 5.minutes).perform_later(alert:, subscription:)
+        when *Alert::CURRENT_USAGE_TYPES
+          ProcessAlertService.call(alert:, subscription:, current_metrics: current_usage)
+        end
       rescue => e
         exception_to_raise ||= e
       end

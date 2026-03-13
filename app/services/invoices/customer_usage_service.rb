@@ -64,7 +64,6 @@ module Invoices
     attr_reader :usage_filters
 
     delegate :plan, to: :subscription
-    delegate :organization, to: :subscription
     delegate :billing_entity, to: :customer
 
     def charges
@@ -110,6 +109,10 @@ module Invoices
       format_usage
     end
 
+    def organization
+      @organization ||= subscription.organization
+    end
+
     def compute_charge_fees
       fees = []
       filters = event_filters(subscription, boundaries).charges
@@ -124,7 +127,7 @@ module Invoices
         subscription:,
         charge:,
         to_datetime: boundaries.charges_to_datetime,
-        cache: with_cache
+        cache: cache_applicable?
       )
 
       applied_boundaries = boundaries
@@ -152,12 +155,6 @@ module Invoices
     def boundaries
       return @boundaries if @boundaries.present?
 
-      date_service = Subscriptions::DatesService.new_instance(
-        subscription,
-        timestamp,
-        current_usage: true
-      )
-
       from = usage_filters.full_usage ? subscription.started_at : date_service.from_datetime
       charges_from = usage_filters.full_usage ? subscription.started_at : date_service.charges_from_datetime
 
@@ -170,6 +167,21 @@ module Invoices
         charges_duration: date_service.charges_duration_in_days,
         timestamp:
       )
+    end
+
+    def date_service
+      @date_service ||= Subscriptions::DatesService.new_instance(subscription, timestamp, current_usage: true)
+    end
+
+    # NOTE: The charge cache key does not include from_datetime, so when full_usage
+    #       shifts the boundaries back to subscription.started_at, the cache would
+    #       return stale current-period data. Disable cache in that case.
+    #       When started_at matches the current period boundary, the aggregation
+    #       window is identical and the cache is safe to use.
+    def cache_applicable?
+      return with_cache unless usage_filters.full_usage
+
+      with_cache && subscription.started_at == date_service.charges_from_datetime
     end
 
     def compute_amounts
@@ -242,8 +254,10 @@ module Invoices
     end
 
     def querying_full_usage_allowed
+      return false unless organization.using_lifetime_usage?
+
       any_filter_present = usage_filters.has_charge_filter? || usage_filters.filter_by_group.present?
-      subscription_has_prorated_charges = subscription.plan.charges.where(prorated: true).exists?
+      subscription_has_prorated_charges = charges.where(prorated: true).exists?
 
       # full usage is only allowed for subscriptions without prorated charges
       # and only when filtering by charge or by group
