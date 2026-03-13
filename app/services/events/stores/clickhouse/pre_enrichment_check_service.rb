@@ -81,14 +81,8 @@ module Events
         end
 
         def reprocess_subscriptions!
-          subscription_ids = result.subscriptions_to_reprocess.keys
-          subscriptions = organization.subscriptions.where(id: subscription_ids)
-
-          subscriptions.find_each do |subscription|
-            codes = result.subscriptions_to_reprocess[subscription.id]
-            ReEnrichSubscriptionEventsService.call!(
-              subscription:, codes:, reprocess: true, batch_size:, sleep_seconds:
-            )
+          result.subscriptions_to_reprocess.each do |subscription_id, codes|
+            PreEnrichmentCheckJob.perform_later(subscription_id:, codes:, batch_size:, sleep_seconds:)
           end
         end
       end

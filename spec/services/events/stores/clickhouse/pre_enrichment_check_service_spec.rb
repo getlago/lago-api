@@ -160,21 +160,13 @@ RSpec.describe Events::Stores::Clickhouse::PreEnrichmentCheckService do
 
       before do
         create(:standard_charge, plan:, billable_metric:, organization:)
-
-        allow(Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService).to receive(:call)
-          .and_return(BaseResult.new)
       end
 
-      it "calls ReEnrichSubscriptionEventsService for each subscription" do
+      it "enqueues PreEnrichmentCheckJob for each subscription" do
         service.call
 
-        expect(Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService).to have_received(:call).with(
-          subscription: subscription,
-          codes: ["recurring_metric"],
-          reprocess: true,
-          batch_size: 1000,
-          sleep_seconds: 0
-        )
+        expect(Events::Stores::Clickhouse::PreEnrichmentCheckJob).to have_been_enqueued
+          .with(subscription_id: subscription.id, codes: ["recurring_metric"], batch_size: 1000, sleep_seconds: 0)
       end
     end
   end

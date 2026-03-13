@@ -70,6 +70,7 @@ namespace :events do
 
     organization_id = ENV.fetch("ORGANIZATION_ID")
     reprocess = ENV.fetch("REPROCESS", "false") == "true"
+    refresh = ENV.fetch("REFRESH", "false") == "true"
     batch_size = (ENV["BATCH_SIZE"] || 1000).to_i
     sleep_seconds = (ENV["SLEEP_SECONDS"] || 0.5).to_f
 
@@ -86,7 +87,7 @@ namespace :events do
       Rails.logger.info("events:reprocess [#{mode}] - No subscriptions need reprocessing")
     else
       subscriptions_map.each do |sub_id, codes|
-        Rails.logger.info("events:reprocess [#{mode}] - Subscription #{sub_id}: #{codes.join(', ')}")
+        Rails.logger.info("events:reprocess [#{mode}] - Subscription #{sub_id}: #{codes.join(", ")}")
       end
       Rails.logger.info("events:reprocess [#{mode}] - #{subscriptions_map.size} subscriptions detected")
     end
