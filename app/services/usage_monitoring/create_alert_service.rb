@@ -54,6 +54,10 @@ module UsageMonitoring
         return result.single_validation_failure!(field: "thresholds:value", error_code: "value_is_invalid")
       end
 
+      if !all_recurring_threshold_values_positive?(params[:thresholds])
+        return result.single_validation_failure!(field: "thresholds:value", error_code: "recurring_value_is_negative")
+      end
+
       billable_metric = find_billable_metric_from_params!
       return result unless result.success?
 

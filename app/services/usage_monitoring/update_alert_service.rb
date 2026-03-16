@@ -31,6 +31,10 @@ module UsageMonitoring
         if !all_threshold_values_numeric?(params[:thresholds])
           return result.single_validation_failure!(field: "thresholds:value", error_code: "value_is_invalid")
         end
+
+        if !all_recurring_threshold_values_positive?(params[:thresholds])
+          return result.single_validation_failure!(field: "thresholds:value", error_code: "recurring_value_is_negative")
+        end
       end
 
       result.alert = alert

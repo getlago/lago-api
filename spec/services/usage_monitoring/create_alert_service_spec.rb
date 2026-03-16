@@ -184,6 +184,39 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
+    context "when one-time threshold values are negative" do
+      let(:params) do
+        {
+          alert_type: "current_usage_amount",
+          code: "ok",
+          thresholds: [{value: "100"}, {value: "-100"}]
+        }
+      end
+
+      it "creates the alert" do
+        expect(result).to be_success
+        expect(result.alert).to be_persisted
+      end
+    end
+
+    context "when recurring threshold values are negative" do
+      let(:params) do
+        {
+          alert_type: "current_usage_amount",
+          code: "ok",
+          thresholds: [
+            {value: "100", recurring: "true"},
+            {value: "-100", recurring: "true"}
+          ]
+        }
+      end
+
+      it "returns a record validation failure result" do
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:value"]).to eq(["recurring_value_is_negative"])
+      end
+    end
+
     context "when code is missing" do
       let(:params) { {alert_type: "current_usage_amount", thresholds:, code: nil} }
 
