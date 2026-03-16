@@ -17,7 +17,14 @@ module Integrations
                 }
               ],
               "options" => {
-                "ignoreMandatoryFields" => false
+                "ignoreMandatoryFields" => false,
+                "fullCreditNotePayload" => {
+                  "credit_note_payload" => ::V1::CreditNoteSerializer.new(
+                    credit_note,
+                    root_name: "credit_note",
+                    includes: [:items, :applied_taxes, :error_details, customer: [:integration_customers]]
+                  ).serialize
+                }
               }
             }
 
