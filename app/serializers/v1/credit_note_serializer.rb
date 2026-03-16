@@ -47,7 +47,10 @@ module V1
 
     def customer
       {
-        customer: ::V1::CustomerSerializer.new(model.customer).serialize
+        customer: ::V1::CustomerSerializer.new(
+          model.customer,
+          includes: included_relations(:customer, default: [])
+        ).serialize
       }
     end
 

@@ -32,7 +32,7 @@ module Api
           json: ::V1::CreditNoteSerializer.new(
             credit_note,
             root_name: "credit_note",
-            includes: %i[customer items applied_taxes error_details]
+            includes: [:items, :applied_taxes, :error_details, {customer: [:integration_customers]}]
           )
         )
       end
