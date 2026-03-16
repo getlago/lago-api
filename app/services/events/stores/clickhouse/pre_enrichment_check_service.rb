@@ -63,17 +63,17 @@ module Events
         end
 
         def skip_organization?
-          !has_recurring_bm_charges? && !has_pricing_group_key_charges?
+          !recurring_bm_charges? && !pricing_group_key_charges?
         end
 
-        def has_recurring_bm_charges?
+        def recurring_bm_charges?
           organization.plans
             .joins(charges: :billable_metric)
             .where(billable_metrics: {recurring: true})
             .exists?
         end
 
-        def has_pricing_group_key_charges?
+        def pricing_group_key_charges?
           organization.plans
             .joins(:charges)
             .where("charges.properties ? 'pricing_group_keys'")
