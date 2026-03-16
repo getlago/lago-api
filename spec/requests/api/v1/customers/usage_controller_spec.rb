@@ -260,8 +260,8 @@ RSpec.describe Api::V1::Customers::UsageController do
           expect(json[:code]).to eq("full_usage_not_allowed")
         end
 
-        context "with lifetime_usage premium integration", :premium do
-          before { organization.update!(premium_integrations: %w[lifetime_usage]) }
+        context "with granular_lifetime_usage premium integration", :premium do
+          before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
 
           it "returns usage aggregated from subscription start" do
             subject
@@ -316,8 +316,8 @@ RSpec.describe Api::V1::Customers::UsageController do
           expect(json[:code]).to eq("full_usage_not_allowed")
         end
 
-        context "with lifetime_usage premium integration", :premium do
-          before { organization.update!(premium_integrations: %w[lifetime_usage]) }
+        context "with granular_lifetime_usage premium integration", :premium do
+          before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
 
           it "returns group-filtered usage aggregated from subscription start" do
             subject
