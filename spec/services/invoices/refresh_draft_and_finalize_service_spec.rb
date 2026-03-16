@@ -347,13 +347,20 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
     end
 
     context "when invoice has invoice_generation_errors" do
+      let(:backtrace) do
+        [
+          "/app/app/models/invoice.rb:432:in 'generate_organization_sequential_id'",
+          "/app/app/models/invoice.rb:395:in..."
+        ]
+      end
+
       before do
         ErrorDetail.create(
           owner: invoice,
           organization: invoice.organization,
           error_code: :invoice_generation_error,
           details: {
-            backtrace: "[\"/app/app/models/invoice.rb:432:in 'generate_organization_sequential_id'\", \"/app/app/models/invoice.rb:395:in...",
+            backtrace:,
             error: "\"#\\u003cSequenced::SequenceError: Unable to acquire lock on the database\\u003e\"",
             invoice: invoice.to_json(except: [:file, :xml_file]),
             subscriptions: invoice.subscriptions.to_json
@@ -375,6 +382,19 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
         it "does not delete the invoice_generation_errors" do
           expect { finalize_service.call }.to raise_error(BaseService::ServiceFailure)
           expect(invoice.error_details.invoice_generation_error).to be_present
+        end
+      end
+
+      context "when the backtrace is related to the billing entity" do
+        let(:backtrace) do
+          [
+            "/app/app/models/invoice.rb:589:in 'Invoice#generate_billing_entity_sequential_id'",
+            "/app/app/models/invoice.rb:568:in..."
+          ]
+        end
+
+        it "deletes the invoice_generation_errors" do
+          expect { finalize_service.call }.to change(invoice.error_details.invoice_generation_error, :count).by(-1)
         end
       end
     end

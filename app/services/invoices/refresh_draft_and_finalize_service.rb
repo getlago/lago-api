@@ -107,8 +107,10 @@ module Invoices
     end
 
     def delete_generating_sequence_number_error(invoice_error)
-      return unless invoice_error.details["backtrace"].includes("generate_organization_sequential_id%")
-      error&.delete
+      backtrace = invoice_error.details["backtrace"]&.first || ""
+      return unless backtrace.include?("generate_organization_sequential_id") || backtrace.include?("generate_billing_entity_sequential_id")
+
+      invoice_error.delete
     end
   end
 end
