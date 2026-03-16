@@ -259,8 +259,8 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         end
       end
 
-      context "when organization uses lifetime usage and granular lifetime usage" do
-        let(:premium_integrations) { %w[lifetime_usage granular_lifetime_usage] }
+      context "when organization uses only granular lifetime usage" do
+        let(:premium_integrations) { ["granular_lifetime_usage"] }
 
         it "creates the alert" do
           expect(result).to be_success
