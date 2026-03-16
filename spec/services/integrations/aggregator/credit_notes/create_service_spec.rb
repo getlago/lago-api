@@ -167,7 +167,48 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
         }
       ],
       "options" => {
-        "ignoreMandatoryFields" => false
+        "ignoreMandatoryFields" => false,
+        "fullCreditNotePayload" => {
+          "credit_note_payload" => hash_including(
+            lago_id: credit_note.id,
+            billing_entity_code: invoice.billing_entity.code,
+            sequential_id: credit_note.sequential_id,
+            number: credit_note.number,
+            lago_invoice_id: invoice.id,
+            invoice_number: invoice.number,
+            issuing_date: credit_note.issuing_date&.iso8601,
+            credit_status: credit_note.credit_status,
+            refund_status: credit_note.refund_status,
+            reason: credit_note.reason,
+            description: credit_note.description,
+            currency: credit_note.currency,
+            total_amount_cents: credit_note.total_amount_cents,
+            precise_total_amount_cents: credit_note.precise_total&.to_s,
+            taxes_amount_cents: credit_note.taxes_amount_cents,
+            precise_taxes_amount_cents: credit_note.precise_taxes_amount_cents&.to_s,
+            sub_total_excluding_taxes_amount_cents: credit_note.sub_total_excluding_taxes_amount_cents,
+            balance_amount_cents: credit_note.balance_amount_cents,
+            credit_amount_cents: credit_note.credit_amount_cents,
+            refund_amount_cents: credit_note.refund_amount_cents,
+            offset_amount_cents: credit_note.offset_amount_cents,
+            coupons_adjustment_amount_cents: credit_note.coupons_adjustment_amount_cents,
+            taxes_rate: credit_note.taxes_rate,
+            created_at: credit_note.created_at.iso8601,
+            updated_at: credit_note.updated_at.iso8601,
+            customer: hash_including(
+              lago_id: customer.id,
+              external_id: customer.external_id,
+              name: customer.name,
+              integration_customers: anything
+            ),
+            items: credit_note.items.map do |item|
+              hash_including(
+                lago_id: item.id
+              )
+            end,
+            applied_taxes: anything
+          )
+        }
       }
     }
   end
