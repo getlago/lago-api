@@ -13,7 +13,21 @@ module Customers
     def perform(customer)
       return unless customer.awaiting_wallet_refresh?
 
-      Customers::RefreshWalletsService.call!(customer:)
+      result = Customers::RefreshWalletsService.call(customer:)
+
+      # NOTE: We don't want a dead job for tax provider errors (e.g. missing customer address).
+      #       The webhook `customer.tax_provider_error` is already sent by the tax provider service.
+      return if tax_error?(result)
+
+      result.raise_if_error!
+    end
+
+    private
+
+    def tax_error?(result)
+      return false unless result.error.is_a?(BaseService::ValidationFailure)
+
+      result.error.messages&.dig(:tax_error).present?
     end
   end
 end
