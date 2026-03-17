@@ -142,6 +142,46 @@ describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
     end
   end
 
+  context "with only a recurring thresholds" do
+    it "sends alert forever" do
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: subscription_external_id,
+        plan_code: plan.code
+      })
+      subscription = customer.subscriptions.sole
+      create_alert(subscription_external_id, {alert_type: :current_usage_amount, code: :simple, thresholds: [
+        {value: 10_00, code: :info, recurring: true}
+      ]})
+      alert = UsageMonitoring::Alert.find(json[:alert][:lago_id])
+
+      send_event!(code: billable_metric.code, properties: {ops_count: 7}, external_subscription_id: subscription_external_id)
+
+      perform_usage_update
+      expect(UsageMonitoring::TriggeredAlert.where(alert:).count).to eq(1)
+      expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
+
+      ta = alert.triggered_alerts.sole
+      expect(ta.current_value).to eq(3500)
+      expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
+        {code: "info", value: "1000.0", recurring: true},
+        {code: "info", value: "2000.0", recurring: true},
+        {code: "info", value: "3000.0", recurring: true}
+      ])
+
+      send_event!(code: billable_metric.code, properties: {ops_count: 4}, external_subscription_id: subscription_external_id)
+
+      perform_usage_update
+      expect(UsageMonitoring::TriggeredAlert.where(alert:).count).to eq(2)
+      ta = alert.triggered_alerts.order(:created_at).last
+      expect(ta.current_value).to eq(5500)
+      expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
+        {code: "info", value: "4000.0", recurring: true},
+        {code: "info", value: "5000.0", recurring: true}
+      ])
+    end
+  end
+
   context "with billable_metric_current_usage_units alert" do
     it do
       create_subscription({
