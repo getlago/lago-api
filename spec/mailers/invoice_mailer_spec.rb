@@ -84,6 +84,18 @@ RSpec.describe InvoiceMailer do
       end
     end
 
+    context "when customer email is an empty string" do
+      before do
+        invoice.customer.update(email: "")
+      end
+
+      it "returns a mailer with nil values" do
+        mailer = invoice_mailer.with(invoice:).created
+
+        expect(mailer.to).to be_nil
+      end
+    end
+
     context "when invoice fees amount is zero" do
       before do
         invoice.update(fees_amount_cents: 0)

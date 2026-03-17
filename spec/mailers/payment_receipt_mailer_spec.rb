@@ -74,5 +74,17 @@ RSpec.describe PaymentReceiptMailer do
         expect(mailer.to).to be_nil
       end
     end
+
+    context "when customer email is an empty string" do
+      before do
+        payment_receipt.payment.payable.customer.update(email: "")
+      end
+
+      it "returns a mailer with nil values" do
+        mailer = payment_receipt_mailer.with(payment_receipt:).created
+
+        expect(mailer.to).to be_nil
+      end
+    end
   end
 end
