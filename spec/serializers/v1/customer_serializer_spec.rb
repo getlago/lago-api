@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe ::V1::CustomerSerializer do
   subject(:serializer) do
-    described_class.new(customer, root_name: "customer", includes: %i[taxes integration_customers applicable_invoice_custom_sections])
+    described_class.new(customer, root_name: "customer", includes: %i[taxes integration_customers applicable_invoice_custom_sections error_details])
   end
 
   let(:result) { JSON.parse(serializer.to_json) }
@@ -16,60 +16,84 @@ RSpec.describe ::V1::CustomerSerializer do
   let(:customer_applied_tax) { create(:customer_applied_tax, customer:, tax:) }
   let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
 
+  let(:error_detail) { create(:error_detail, owner: customer) }
+
   before do
     metadata
     customer_applied_tax
     create(:customer_applied_invoice_custom_section, organization:, billing_entity:, customer:, invoice_custom_section:)
+    error_detail
   end
 
   it "serializes the object" do
-    expect(result["customer"]["lago_id"]).to eq(customer.id)
-    expect(result["customer"]["billing_entity_code"]).to eq(customer.billing_entity.code)
-    expect(result["customer"]["external_id"]).to eq(customer.external_id)
-    expect(result["customer"]["account_type"]).to eq(customer.account_type)
-    expect(result["customer"]["name"]).to eq(customer.name)
-    expect(result["customer"]["firstname"]).to eq(customer.firstname)
-    expect(result["customer"]["lastname"]).to eq(customer.lastname)
-    expect(result["customer"]["customer_type"]).to eq(customer.customer_type)
-    expect(result["customer"]["sequential_id"]).to eq(customer.sequential_id)
-    expect(result["customer"]["slug"]).to eq(customer.slug)
-    expect(result["customer"]["created_at"]).to eq(customer.created_at.iso8601)
-    expect(result["customer"]["updated_at"]).to eq(customer.updated_at.iso8601)
-    expect(result["customer"]["country"]).to eq(customer.country)
-    expect(result["customer"]["address_line1"]).to eq(customer.address_line1)
-    expect(result["customer"]["address_line2"]).to eq(customer.address_line2)
-    expect(result["customer"]["state"]).to eq(customer.state)
-    expect(result["customer"]["zipcode"]).to eq(customer.zipcode)
-    expect(result["customer"]["email"]).to eq(customer.email)
-    expect(result["customer"]["city"]).to eq(customer.city)
-    expect(result["customer"]["url"]).to eq(customer.url)
-    expect(result["customer"]["phone"]).to eq(customer.phone)
-    expect(result["customer"]["logo_url"]).to eq(customer.logo_url)
-    expect(result["customer"]["legal_name"]).to eq(customer.legal_name)
-    expect(result["customer"]["legal_number"]).to eq(customer.legal_number)
-    expect(result["customer"]["currency"]).to eq(customer.currency)
-    expect(result["customer"]["timezone"]).to eq(customer.timezone)
-    expect(result["customer"]["applicable_timezone"]).to eq(customer.applicable_timezone)
-    expect(result["customer"]["net_payment_term"]).to eq(customer.net_payment_term)
-    expect(result["customer"]["finalize_zero_amount_invoice"]).to eq(customer.finalize_zero_amount_invoice)
-    expect(result["customer"]["billing_configuration"]["payment_provider"]).to eq(customer.payment_provider)
-    expect(result["customer"]["billing_configuration"]["payment_provider_code"]).to eq(customer.payment_provider_code)
-    expect(result["customer"]["billing_configuration"]["invoice_grace_period"]).to eq(customer.invoice_grace_period)
-    expect(result["customer"]["billing_configuration"]["document_locale"]).to eq(customer.document_locale)
-    expect(result["customer"]["billing_configuration"]["subscription_invoice_issuing_date_anchor"]).to eq(customer.subscription_invoice_issuing_date_anchor)
-    expect(result["customer"]["billing_configuration"]["subscription_invoice_issuing_date_adjustment"]).to eq(customer.subscription_invoice_issuing_date_adjustment)
-    expect(result["customer"]["shipping_address"]["address_line1"]).to eq("test1")
-    expect(result["customer"]["shipping_address"]["city"]).to eq("Paris")
-    expect(result["customer"]["shipping_address"]["zipcode"]).to eq("002")
-    expect(result["customer"]["metadata"].first["lago_id"]).to eq(metadata.id)
-    expect(result["customer"]["metadata"].first["key"]).to eq(metadata.key)
-    expect(result["customer"]["metadata"].first["value"]).to eq(metadata.value)
-    expect(result["customer"]["metadata"].first["display_in_invoice"]).to eq(metadata.display_in_invoice)
-    expect(result["customer"]["tax_identification_number"]).to eq(customer.tax_identification_number)
-    expect(result["customer"]["taxes"].count).to eq(1)
-    expect(result["customer"]["integration_customers"].count).to eq(1)
-    expect(result["customer"]["applicable_invoice_custom_sections"].count).to eq(1)
-    expect(result["customer"]["skip_invoice_custom_sections"]).to eq(false)
+    expect(result["customer"]).to include(
+      "lago_id" => customer.id,
+      "billing_entity_code" => customer.billing_entity.code,
+      "external_id" => customer.external_id,
+      "account_type" => customer.account_type,
+      "name" => customer.name,
+      "firstname" => customer.firstname,
+      "lastname" => customer.lastname,
+      "customer_type" => customer.customer_type,
+      "sequential_id" => customer.sequential_id,
+      "slug" => customer.slug,
+      "created_at" => customer.created_at.iso8601,
+      "updated_at" => customer.updated_at.iso8601,
+      "country" => customer.country,
+      "address_line1" => customer.address_line1,
+      "address_line2" => customer.address_line2,
+      "state" => customer.state,
+      "zipcode" => customer.zipcode,
+      "email" => customer.email,
+      "city" => customer.city,
+      "url" => customer.url,
+      "phone" => customer.phone,
+      "logo_url" => customer.logo_url,
+      "legal_name" => customer.legal_name,
+      "legal_number" => customer.legal_number,
+      "currency" => customer.currency,
+      "timezone" => customer.timezone,
+      "applicable_timezone" => customer.applicable_timezone,
+      "net_payment_term" => customer.net_payment_term,
+      "finalize_zero_amount_invoice" => customer.finalize_zero_amount_invoice,
+      "tax_identification_number" => customer.tax_identification_number,
+      "taxes" => customer.taxes.map { hash_including("lago_id" => it.id) },
+      "integration_customers" => customer.integration_customers.map { hash_including("lago_id" => it.id) },
+      "applicable_invoice_custom_sections" => customer.applicable_invoice_custom_sections.map do
+        hash_including("lago_id" => it.id)
+      end,
+      "skip_invoice_custom_sections" => false,
+      "billing_configuration" => {
+        "payment_provider" => customer.payment_provider,
+        "payment_provider_code" => customer.payment_provider_code,
+        "invoice_grace_period" => customer.invoice_grace_period,
+        "document_locale" => customer.document_locale,
+        "subscription_invoice_issuing_date_anchor" => customer.subscription_invoice_issuing_date_anchor,
+        "subscription_invoice_issuing_date_adjustment" => customer.subscription_invoice_issuing_date_adjustment
+      },
+      "shipping_address" => {
+        "address_line1" => "test1",
+        "address_line2" => nil,
+        "city" => "Paris",
+        "zipcode" => "002",
+        "state" => nil,
+        "country" => nil
+      },
+      "metadata" => [{
+        "lago_id" => metadata.id,
+        "key" => metadata.key,
+        "value" => metadata.value,
+        "display_in_invoice" => metadata.display_in_invoice,
+        "created_at" => metadata.created_at.iso8601
+      }],
+      "error_details" => [
+        {
+          "lago_id" => error_detail.id,
+          "error_code" => error_detail.error_code,
+          "details" => error_detail.details
+        }
+      ]
+    )
   end
 
   context "with a stripe customer" do

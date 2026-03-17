@@ -5,6 +5,8 @@ module Integrations
     module Taxes
       class BaseService < Integrations::Aggregator::BaseService
         SPECIAL_TAXATION_TYPES = %w[exempt notCollecting productNotTaxed jurisNotTaxed jurisHasNoTax].freeze
+        CUSTOMER_ADDRESS_INVALID = "customerAddressCouldNotResolve"
+
         def initialize
           super(integration:)
         end

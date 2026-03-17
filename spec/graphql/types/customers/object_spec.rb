@@ -85,5 +85,7 @@ RSpec.describe Types::Customers::Object do
     expect(subject).to have_field(:last_dunning_campaign_attempt).of_type("Int!")
     expect(subject).to have_field(:last_dunning_campaign_attempt_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:configurable_invoice_custom_sections).of_type("[InvoiceCustomSection!]")
+
+    expect(subject).to have_field(:error_details).of_type("[ErrorDetail!]")
   end
 end

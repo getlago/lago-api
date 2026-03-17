@@ -77,6 +77,7 @@ class Customer < ApplicationRecord
 
   has_many :applied_taxes, class_name: "Customer::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
+  has_many :error_details, as: :owner, dependent: :destroy
 
   has_many :applied_invoice_custom_sections,
     class_name: "Customer::AppliedInvoiceCustomSection",
@@ -126,6 +127,18 @@ class Customer < ApplicationRecord
     where(applied_dunning_campaign_id: nil, exclude_from_dunning_campaign: false)
   }
 
+  scope :without_tax_errors, -> {
+    tax_error_code = ErrorDetail.error_codes[:tax_error]
+
+    joins(sanitize_sql_array([
+      'LEFT OUTER JOIN "error_details" ON "error_details"."owner_id" = "customers"."id"
+        AND "error_details"."owner_type" = \'Customer\'
+        AND "error_details"."error_code" = ?
+        AND "error_details"."deleted_at" IS NULL', tax_error_code
+    ]))
+      .where('"error_details"."owner_id" IS NULL')
+  }
+
   validates :country, :shipping_country, country_code: true, allow_nil: true
   validates :document_locale, language_code: true, unless: -> { document_locale.nil? }
   validates :currency, inclusion: {in: currency_list}, allow_nil: true
@@ -139,20 +152,18 @@ class Customer < ApplicationRecord
   validates :timezone, timezone: true, allow_nil: true
   validates :email, email: true, if: -> { email? && will_save_change_to_email? }
 
-  [
-    :address_line1,
-    :address_line2,
-    :city,
-    :zipcode,
-    :state,
-    :country,
-    :shipping_address_line1,
-    :shipping_address_line2,
-    :shipping_city,
-    :shipping_zipcode,
-    :shipping_state,
-    :shipping_country
-  ].each do |attribute|
+  BILLING_ADDRESS_FIELDS = %i[
+    address_line1 address_line2 city zipcode state country
+  ].freeze
+
+  SHIPPING_ADDRESS_FIELDS = %i[
+    shipping_address_line1 shipping_address_line2 shipping_city
+    shipping_zipcode shipping_state shipping_country
+  ].freeze
+
+  ADDRESS_FIELDS = (BILLING_ADDRESS_FIELDS + SHIPPING_ADDRESS_FIELDS).freeze
+
+  ADDRESS_FIELDS.each do |attribute|
     # NOTE: Null byte injection. Prevent 500 errors.
     normalizes attribute, with: ->(value) { value.delete("\u0000") }
   end
@@ -316,6 +327,10 @@ class Customer < ApplicationRecord
 
   def tax_customer
     anrok_customer || avalara_customer
+  end
+
+  def address_changed?
+    ADDRESS_FIELDS.any? { |field| send(:"#{field}_changed?") }
   end
 
   private

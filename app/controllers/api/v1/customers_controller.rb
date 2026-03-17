@@ -196,7 +196,7 @@ module Api
           json: ::V1::CustomerSerializer.new(
             customer,
             root_name: "customer",
-            includes: %i[taxes integration_customers applicable_invoice_custom_sections]
+            includes: %i[taxes integration_customers applicable_invoice_custom_sections error_details]
           )
         )
       end

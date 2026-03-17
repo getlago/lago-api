@@ -4243,6 +4243,7 @@ type Customer {
   deletedAt: ISO8601DateTime
   displayName: String!
   email: String
+  errorDetails: [ErrorDetail!]
   excludeFromDunningCampaign: Boolean!
   externalId: String!
   externalSalesforceId: String

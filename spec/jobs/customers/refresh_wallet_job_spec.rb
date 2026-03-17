@@ -33,10 +33,41 @@ RSpec.describe Customers::RefreshWalletJob do
         end
       end
 
-      context "when refresh customer's wallets fails" do
-        let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: "error"}) }
+      context "when a tax_error error_detail already exists" do
+        before do
+          create(:error_detail, owner: customer, organization:, error_code: :tax_error)
+        end
 
-        it "fails with an error" do
+        it "does not call the Customers::RefreshWalletsService service" do
+          subject
+          expect(Customers::RefreshWalletsService).not_to have_received(:call)
+        end
+      end
+
+      context "when refresh customer's wallets fails with a tax error" do
+        let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: ["customerAddressCouldNotResolve"]}) }
+
+        it "creates a tax_error error_detail on the customer" do
+          expect { subject }.to change { customer.error_details.tax_error.count }.by(1)
+        end
+
+        it "does not re-raise the error" do
+          expect { subject }.not_to raise_error
+        end
+
+        context "when the tax error is not related to the customer's address" do
+          let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: ["failure"]}) }
+
+          it "does not create an error_detail and re-raises the error" do
+            expect { subject }.to raise_error(BaseService::ValidationFailure).and not_change { customer.error_details.count }
+          end
+        end
+      end
+
+      context "when refresh customer's wallets fails with a non-tax error" do
+        let(:result) { BaseService::Result.new.validation_failure!(errors: {other_error: ["something"]}) }
+
+        it "re-raises the error" do
           expect { subject }.to raise_error(BaseService::ValidationFailure)
         end
       end

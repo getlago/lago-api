@@ -17,6 +17,7 @@ RSpec.describe Customer do
   it { is_expected.to have_many(:integration_customers).dependent(:destroy) }
   it { is_expected.to have_many(:payment_methods) }
   it { is_expected.to have_many(:payment_requests) }
+  it { is_expected.to have_many(:error_details).dependent(:destroy) }
 
   it { is_expected.to have_one(:netsuite_customer) }
   it { is_expected.to have_one(:anrok_customer) }
@@ -1187,6 +1188,35 @@ RSpec.describe Customer do
     context "without any tax integration" do
       it "returns nil" do
         expect(customer.tax_customer).to eq(nil)
+      end
+    end
+  end
+
+  describe "#address_changed?" do
+    context "when a billing address field changes" do
+      it "returns true" do
+        customer.address_line1 = "New Street"
+        expect(customer.address_changed?).to be(true)
+      end
+    end
+
+    context "when a shipping address field changes" do
+      it "returns true" do
+        customer.shipping_city = "New City"
+        expect(customer.address_changed?).to be(true)
+      end
+    end
+
+    context "when no address field changes" do
+      it "returns false" do
+        customer.name = "New Name"
+        expect(customer.address_changed?).to be(false)
+      end
+    end
+
+    context "when no field changes" do
+      it "returns false" do
+        expect(customer.address_changed?).to be(false)
       end
     end
   end
