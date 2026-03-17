@@ -56,6 +56,7 @@ RSpec.describe Subscription do
       expect(subject).to have_one(:subscription_activity).class_name("UsageMonitoring::SubscriptionActivity")
       expect(subject).to have_many(:entitlements).class_name("Entitlement::Entitlement")
       expect(subject).to have_many(:entitlement_removals).class_name("Entitlement::SubscriptionFeatureRemoval")
+      expect(subject).to have_many(:alerts).class_name("UsageMonitoring::Alert")
     end
   end
 
