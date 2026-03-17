@@ -1062,6 +1062,7 @@ DROP TYPE IF EXISTS public.subscription_on_termination_credit_note;
 DROP TYPE IF EXISTS public.subscription_invoicing_reason;
 DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_anchors;
 DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_adjustments;
+DROP TYPE IF EXISTS public.subscription_activation_rule_types;
 DROP TYPE IF EXISTS public.subscription_activation_rule_statuses;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
@@ -1257,6 +1258,15 @@ CREATE TYPE public.subscription_activation_rule_statuses AS ENUM (
     'failed',
     'expired',
     'not_applicable'
+);
+
+
+--
+-- Name: subscription_activation_rule_types; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_activation_rule_types AS ENUM (
+    'payment'
 );
 
 
@@ -11401,6 +11411,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260319125125'),
+('20260317132544'),
 ('20260317130654'),
 ('20260311121245'),
 ('20260306115902'),
