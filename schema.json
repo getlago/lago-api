@@ -32194,6 +32194,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "granular_lifetime_usage",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -46958,6 +46964,12 @@
             },
             {
               "name": "security_logs",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "granular_lifetime_usage",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

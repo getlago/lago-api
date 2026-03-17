@@ -14,7 +14,11 @@ module UsageMonitoring
     end
 
     def call
-      if params[:alert_type].in?(%w[lifetime_usage_amount billable_metric_lifetime_usage_units]) && !organization.using_lifetime_usage?
+      if params[:alert_type].in?(%w[lifetime_usage_amount]) && !organization.using_lifetime_usage?
+        return result.single_validation_failure!(field: :alert_type, error_code: "feature_not_available")
+      end
+
+      if params[:alert_type].in?(%w[billable_metric_lifetime_usage_units]) && !organization.granular_lifetime_usage_enabled?
         return result.single_validation_failure!(field: :alert_type, error_code: "feature_not_available")
       end
 

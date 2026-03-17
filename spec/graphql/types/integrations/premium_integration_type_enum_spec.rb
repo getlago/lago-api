@@ -31,6 +31,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       custom_roles
       events_targeting_wallets
       security_logs
+      granular_lifetime_usage
     ]
   end
 
