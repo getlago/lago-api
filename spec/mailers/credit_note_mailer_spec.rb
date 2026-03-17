@@ -69,5 +69,17 @@ RSpec.describe CreditNoteMailer do
         expect(mailer.to).to be_nil
       end
     end
+
+    context "when customer email is an empty string" do
+      before do
+        credit_note.customer.update(email: "")
+      end
+
+      it "returns a mailer with nil values" do
+        mailer = credit_note_mailer.with(credit_note:).created
+
+        expect(mailer.to).to be_nil
+      end
+    end
   end
 end
