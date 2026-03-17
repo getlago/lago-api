@@ -21,6 +21,7 @@ class Charge < ApplicationRecord
   has_many :filters, dependent: :destroy, class_name: "ChargeFilter"
   has_many :filter_values, through: :filters, class_name: "ChargeFilterValue", source: :values
 
+  has_many :group_keys, dependent: :destroy
   has_many :applied_taxes, class_name: "Charge::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
@@ -65,7 +66,18 @@ class Charge < ApplicationRecord
   scope :parents, -> { where(parent_id: nil) }
 
   def pricing_group_keys
+    keys = group_keys.pricing.pluck(:key)
+    return keys if keys.present?
+
     properties["pricing_group_keys"].presence || properties["grouped_by"]
+  end
+
+  def presentation_group_keys
+    group_keys.presentation.pluck(:key)
+  end
+
+  def all_group_keys
+    (Array(pricing_group_keys) + Array(presentation_group_keys)).uniq
   end
 
   def equal_properties?(charge)

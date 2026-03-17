@@ -42,6 +42,11 @@ module ChargeModels
         sliced_attributes[:pricing_group_keys] = pricing_group_keys.reject(&:empty?) if pricing_group_keys.present?
         sliced_attributes.delete(:grouped_by)
 
+        presentation_group_keys = sliced_attributes[:presentation_group_keys]
+        if presentation_group_keys.present?
+          sliced_attributes[:presentation_group_keys] = presentation_group_keys.reject(&:empty?)
+        end
+
         sliced_attributes
       end
 
@@ -64,6 +69,7 @@ module ChargeModels
         if charge_model
           attributes << :grouped_by if properties[:grouped_by].present? && properties[:pricing_group_keys].blank?
           attributes << :pricing_group_keys if properties[:pricing_group_keys].present?
+          attributes << :presentation_group_keys if properties[:presentation_group_keys].present?
         end
 
         attributes

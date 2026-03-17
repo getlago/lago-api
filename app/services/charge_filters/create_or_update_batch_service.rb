@@ -49,6 +49,8 @@ module ChargeFilters
               cascade_pricing_group_keys(filter, filter_param)
               filter.save!
 
+              GroupKeys::SyncService.call!(owner: filter, properties: filter.properties)
+
               PaperTrail.request.disable_model(filter.class)
               # NOTE: Make sure update_at is touched even if not changed to keep the order
               filter.touch # rubocop:disable Rails/SkipsModelValidations
@@ -72,6 +74,8 @@ module ChargeFilters
             filter.touch # rubocop:disable Rails/SkipsModelValidations
             PaperTrail.request.enable_model(filter.class)
           end
+
+          GroupKeys::SyncService.call!(owner: filter, properties: filter.properties)
 
           # NOTE: Create or update the filter values
           filter_param[:values].each do |key, values|
@@ -164,6 +168,13 @@ module ChargeFilters
       elsif filter.pricing_group_keys.present?
         filter.properties.delete("pricing_group_keys")
         filter.properties.delete("grouped_by")
+      end
+
+      presentation_group_keys = params.dig(:properties, :presentation_group_keys)
+      if presentation_group_keys
+        filter.properties["presentation_group_keys"] = presentation_group_keys
+      elsif filter.properties["presentation_group_keys"].present?
+        filter.properties.delete("presentation_group_keys")
       end
     end
 

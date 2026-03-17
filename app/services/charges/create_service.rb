@@ -53,6 +53,8 @@ module Charges
 
         charge.save!
 
+        GroupKeys::SyncService.call!(owner: charge, properties: charge.properties)
+
         AppliedPricingUnits::CreateService.call!(charge:, params: params[:applied_pricing_unit])
 
         if params[:tax_codes]

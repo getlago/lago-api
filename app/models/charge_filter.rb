@@ -10,6 +10,7 @@ class ChargeFilter < ApplicationRecord
   belongs_to :charge, -> { with_discarded }, touch: true
   belongs_to :organization
 
+  has_many :group_keys, dependent: :destroy
   has_many :values, class_name: "ChargeFilterValue", dependent: :destroy
   has_many :billable_metric_filters, through: :values
   has_many :fees
@@ -51,7 +52,18 @@ class ChargeFilter < ApplicationRecord
   end
 
   def pricing_group_keys
+    keys = group_keys.pricing.pluck(:key)
+    return keys if keys.present?
+
     properties["pricing_group_keys"].presence || properties["grouped_by"]
+  end
+
+  def presentation_group_keys
+    group_keys.presentation.pluck(:key)
+  end
+
+  def all_group_keys
+    (Array(pricing_group_keys) + Array(presentation_group_keys)).uniq
   end
 
   private

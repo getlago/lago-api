@@ -57,13 +57,18 @@ module V1
 
     # TODO(pricing_group_keys): remove after deprecation of grouped_by
     def properties
-      attributes = model.properties
+      attributes = model.properties.dup
       if attributes["grouped_by"].present? && attributes["pricing_group_keys"].blank?
         attributes["pricing_group_keys"] = attributes["grouped_by"]
       end
 
       if attributes["pricing_group_keys"].present? && attributes["grouped_by"].blank?
         attributes["grouped_by"] = attributes["pricing_group_keys"]
+      end
+
+      presentation_keys = model.presentation_group_keys
+      if presentation_keys.present? && attributes["presentation_group_keys"].blank?
+        attributes["presentation_group_keys"] = presentation_keys
       end
 
       attributes

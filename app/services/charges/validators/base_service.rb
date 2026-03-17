@@ -15,6 +15,7 @@ module Charges
         # NOTE: override and add validation rules
 
         validate_pricing_group_keys
+        validate_presentation_group_keys
 
         if errors?
           result.validation_failure!(errors:)
@@ -49,6 +50,17 @@ module Charges
         end
 
         add_error(field: grouped_key, error_code: "invalid_type")
+      end
+
+      def validate_presentation_group_keys
+        presentation_keys = properties["presentation_group_keys"]
+        return if presentation_keys.nil? || presentation_keys.is_a?(Array) && presentation_keys.blank?
+
+        if presentation_keys.is_a?(Array)
+          return if presentation_keys.all? { it.is_a?(String) } && presentation_keys.all?(&:present?)
+        end
+
+        add_error(field: :presentation_group_keys, error_code: "invalid_type")
       end
     end
   end

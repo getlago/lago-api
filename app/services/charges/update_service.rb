@@ -44,6 +44,8 @@ module Charges
 
         charge.save!
 
+        GroupKeys::SyncService.call!(owner: charge, properties: charge.properties)
+
         AppliedPricingUnits::UpdateService.call!(
           charge:,
           cascade_options:,
@@ -110,6 +112,13 @@ module Charges
       elsif charge.pricing_group_keys.present?
         charge.properties.delete("pricing_group_keys")
         charge.properties.delete("grouped_by")
+      end
+
+      presentation_group_keys = params.dig(:properties, :presentation_group_keys)
+      if presentation_group_keys
+        charge.properties["presentation_group_keys"] = presentation_group_keys
+      elsif charge.properties["presentation_group_keys"].present?
+        charge.properties.delete("presentation_group_keys")
       end
     end
   end

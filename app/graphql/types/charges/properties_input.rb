@@ -6,6 +6,7 @@ module Types
       # NOTE: Standard and Package charge model
       argument :amount, String, required: false
       argument :pricing_group_keys, [String], required: false
+      argument :presentation_group_keys, [String], required: false
 
       # NOTE: Graduated charge model
       argument :graduated_ranges, [Types::ChargeModels::GraduatedRangeInput], required: false

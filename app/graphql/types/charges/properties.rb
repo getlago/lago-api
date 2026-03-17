@@ -6,6 +6,7 @@ module Types
       # NOTE: Standard and Package charge model
       field :amount, String, null: true
       field :pricing_group_keys, [String], null: true
+      field :presentation_group_keys, [String], null: true
 
       # NOTE: Graduated charge model
       field :graduated_ranges, [Types::ChargeModels::GraduatedRange], null: true
@@ -34,6 +35,10 @@ module Types
       def pricing_group_keys
         # TODO(pricing_group_keys): remove after deprecation of grouped_by
         object["pricing_group_keys"].presence || object["grouped_by"]
+      end
+
+      def presentation_group_keys
+        object["presentation_group_keys"]
       end
     end
   end
