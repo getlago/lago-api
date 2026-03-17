@@ -33,10 +33,18 @@ RSpec.describe Customers::RefreshWalletJob do
         end
       end
 
-      context "when refresh customer's wallets fails" do
-        let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: "error"}) }
+      context "when refresh customer's wallets fails with a tax error" do
+        let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: ["customerAddressCouldNotResolve"]}) }
 
-        it "fails with an error" do
+        it "does not raise an error" do
+          expect { subject }.not_to raise_error
+        end
+      end
+
+      context "when refresh customer's wallets fails with a non-tax error" do
+        let(:result) { BaseService::Result.new.validation_failure!(errors: {base: ["some_other_error"]}) }
+
+        it "raises an error" do
           expect { subject }.to raise_error(BaseService::ValidationFailure)
         end
       end
