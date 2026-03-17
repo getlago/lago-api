@@ -1330,4 +1330,45 @@ RSpec.describe Customers::UpsertFromApiService do
       expect(result.customer.taxes.count).to eq(0)
     end
   end
+
+  context "with error details" do
+    let(:customer) do
+      create(:customer, organization:, external_id:, address_line1: "Old Address")
+    end
+
+    before do
+      create(:error_detail, owner: customer, organization:, error_code: :tax_error)
+    end
+
+    context "when address fields change" do
+      before { create_args[:address_line1] = "New Address" }
+
+      it "discards tax_error error_details" do
+        expect(result).to be_success
+        expect(customer.error_details.count).to be_zero
+      end
+    end
+
+    context "when non-address fields change" do
+      let(:customer) do
+        create(
+          :customer,
+          organization:, external_id:,
+          shipping_address_line1: create_args.dig(:shipping_address, :address_line1),
+          shipping_address_line2: create_args.dig(:shipping_address, :address_line2),
+          shipping_city: create_args.dig(:shipping_address, :city),
+          shipping_zipcode: create_args.dig(:shipping_address, :zipcode),
+          shipping_state: create_args.dig(:shipping_address, :state),
+          shipping_country: create_args.dig(:shipping_address, :country)&.upcase
+        )
+      end
+
+      before { create_args[:name] = "New Name" }
+
+      it "does not discard tax_error error_details" do
+        expect(result).to be_success
+        expect(customer.error_details.count).to eq(1)
+      end
+    end
+  end
 end

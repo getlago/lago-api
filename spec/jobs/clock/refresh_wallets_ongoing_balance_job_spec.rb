@@ -42,6 +42,15 @@ describe Clock::RefreshWalletsOngoingBalanceJob, job: true do
         expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(customer_without_wallet)
         expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(customer_with_terminated_wallet)
       end
+
+      context "when customer has tax errors" do
+        before { create(:error_detail, owner: customer, error_code: ErrorDetail.error_codes[:tax_error]) }
+
+        it "does not schedule refresh job for customers with tax errors" do
+          subject
+          expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(customer)
+        end
+      end
     end
   end
 end

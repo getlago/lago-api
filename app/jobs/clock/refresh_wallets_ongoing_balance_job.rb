@@ -7,7 +7,7 @@ module Clock
     def perform
       return unless License.premium?
 
-      Customer.with_active_wallets.awaiting_wallet_refresh.find_each do |customer|
+      Customer.with_active_wallets.awaiting_wallet_refresh.without_tax_errors.find_each do |customer|
         Customers::RefreshWalletJob.perform_later(customer)
       end
     end

@@ -83,6 +83,7 @@ module Customers
         end
 
         assign_premium_attributes(customer, params)
+        address_changed = !new_customer && customer.address_changed?
 
         if params.key?(:currency)
           Customers::UpdateCurrencyService
@@ -91,6 +92,7 @@ module Customers
         end
 
         customer.save!
+        customer.error_details.tax_error.delete_all if address_changed
 
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,

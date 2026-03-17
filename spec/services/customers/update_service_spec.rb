@@ -9,7 +9,7 @@ RSpec.describe Customers::UpdateService do
   let(:organization) { billing_entity.organization }
   let(:payment_provider_code) { "stripe_1" }
 
-  describe "update" do
+  describe "call" do
     let(:customer) do
       create(
         :customer,
@@ -745,6 +745,34 @@ RSpec.describe Customers::UpdateService do
             expect(result.error).to be_a(BaseService::NotFoundFailure)
             expect(result.error.error_code).to eq("dunning_campaign_not_found")
           end
+        end
+      end
+    end
+
+    context "with error details" do
+      before do
+        create(:error_detail, owner: customer, organization:, error_code: :tax_error)
+      end
+
+      context "when address fields change" do
+        let(:update_args) { {id: customer.id, address_line1: "New Address"} }
+
+        it "deletes the tax_error error_details" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(customer.reload.error_details.count).to be_zero
+        end
+      end
+
+      context "when non-address fields change" do
+        let(:update_args) { {id: customer.id, name: "New Name"} }
+
+        it "does not discard tax_error error_details" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(customer.reload.error_details.count).to eq(1)
         end
       end
     end

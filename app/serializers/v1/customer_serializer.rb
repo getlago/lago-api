@@ -45,6 +45,7 @@ module V1
       payload = payload.merge(vies_check) if include?(:vies_check)
       payload = payload.merge(integration_customers) if include?(:integration_customers)
       payload = payload.merge(applicable_invoice_custom_sections) if include?(:applicable_invoice_custom_sections)
+      payload.merge!(error_details) if include?(:error_details)
 
       payload
     end
@@ -114,6 +115,14 @@ module V1
         model.applicable_invoice_custom_sections,
         ::V1::InvoiceCustomSectionSerializer,
         collection_name: "applicable_invoice_custom_sections"
+      ).serialize
+    end
+
+    def error_details
+      ::CollectionSerializer.new(
+        model.error_details,
+        ::V1::ErrorDetailSerializer,
+        collection_name: "error_details"
       ).serialize
     end
   end

@@ -78,6 +78,8 @@ module Customers
         if billing_configuration.key?(:document_locale)
           customer.document_locale = billing_configuration[:document_locale]
         end
+
+        @address_changed = customer.address_changed?
       end
 
       if args.key?(:billing_configuration)
@@ -140,6 +142,7 @@ module Customers
         ).raise_if_error!
 
         customer.save!
+        customer.error_details.tax_error.delete_all if @address_changed
         customer.reload
 
         eu_tax_code_result = Customers::EuAutoTaxesService.call(

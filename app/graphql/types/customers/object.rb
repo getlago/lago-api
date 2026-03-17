@@ -100,6 +100,8 @@ module Types
       field :has_overwritten_invoice_custom_sections_selection, Boolean, null: true, description: "Define if the customer has custom invoice custom sections selection"
       field :skip_invoice_custom_sections, Boolean, null: true, description: "Skip invoice custom sections for the customer"
 
+      field :error_details, [Types::ErrorDetails::Object], null: true
+
       def invoices
         object.invoices.visible.order(created_at: :desc)
       end
