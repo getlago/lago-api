@@ -3046,7 +3046,8 @@ CREATE TABLE public.subscriptions (
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     progressive_billing_disabled boolean DEFAULT false NOT NULL,
-    last_received_event_on date
+    last_received_event_on date,
+    cancelation_reason public.subscription_cancelation_reasons
 );
 
 
@@ -11491,6 +11492,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260319125125'),
+('20260317134100'),
 ('20260317132911'),
 ('20260317132747'),
 ('20260317132544'),
