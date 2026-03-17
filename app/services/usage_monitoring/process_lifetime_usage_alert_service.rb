@@ -13,6 +13,7 @@ module UsageMonitoring
     def call
       return result unless alert.alert_type == "billable_metric_lifetime_usage_units"
       return result unless subscription
+      return result if alert.discarded?
 
       charge_ids = subscription.plan.charges.where(billable_metric_id: alert.billable_metric_id).ids
       return result if charge_ids.empty?
