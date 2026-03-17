@@ -16,6 +16,7 @@ module Types
       argument :plan_overrides, Types::Subscriptions::PlanOverridesInput, required: false
       argument :usage_thresholds, [Types::UsageThresholds::Input], required: false
 
+      argument :activation_rules, [Types::Subscriptions::ActivationRuleInput], required: false
       argument :billing_time, Types::Subscriptions::BillingTimeEnum, required: true
       argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
       argument :progressive_billing_disabled, Boolean, required: false

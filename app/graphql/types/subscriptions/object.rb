@@ -10,6 +10,8 @@ module Types
       field :id, ID, null: false
       field :plan, Types::Plans::Object, null: false
 
+      field :activation_rules, [Types::Subscriptions::ActivationRuleType], null: false
+      field :cancellation_reason, String, null: true
       field :name, String, null: true
       field :period_end_date, GraphQL::Types::ISO8601Date
       field :status, Types::Subscriptions::StatusTypeEnum
@@ -50,6 +52,29 @@ module Types
       field :payment_method, Types::PaymentMethods::Object
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum
       field :progressive_billing_disabled, Boolean
+
+      # TODO: Remove dummy data once activation_rules are backed by the database
+      #   To see dummy activation rules, create a subscription with external_id containing "activation_rules_test"
+      def activation_rules
+        return [] unless object.external_id&.include?("activation_rules_test")
+
+        [
+          {
+            lago_id: "00000000-0000-0000-0000-000000000000",
+            type: "payment",
+            timeout_hours: 48,
+            status: "pending",
+            expires_at: 2.days.from_now,
+            created_at: Time.current,
+            updated_at: Time.current
+          }
+        ]
+      end
+
+      # TODO: Remove dummy data once cancellation_reason is backed by the database
+      def cancellation_reason
+        nil
+      end
 
       def next_plan
         object.next_subscription&.plan

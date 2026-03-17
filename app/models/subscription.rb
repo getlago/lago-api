@@ -46,7 +46,8 @@ class Subscription < ApplicationRecord
     :pending,
     :active,
     :terminated,
-    :canceled
+    :canceled,
+    :incomplete
   ].freeze
 
   BILLING_TIME = %i[
