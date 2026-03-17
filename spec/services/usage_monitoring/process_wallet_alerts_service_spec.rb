@@ -8,7 +8,7 @@ RSpec.describe UsageMonitoring::ProcessWalletAlertsService do
 
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
-    let(:wallet) { create(:wallet, organization:, customer:, balance_cents: 400, credits_balance: 4.0) }
+    let(:wallet) { create(:wallet, organization:, customer:, balance_cents: 400, ongoing_balance_cents: 400, credits_balance: 4.0, credits_ongoing_balance: 4.0) }
 
     context "when wallet has no alerts" do
       it "returns success without processing" do
@@ -76,6 +76,58 @@ RSpec.describe UsageMonitoring::ProcessWalletAlertsService do
         triggered_alert = organization.triggered_alerts.sole
         expect(triggered_alert.alert).to eq(alert)
         expect(triggered_alert.current_value).to eq(4.0)
+        expect(triggered_alert.crossed_thresholds.map(&:symbolize_keys)).to contain_exactly(
+          {code: "warn5", value: "5.0", recurring: false},
+          {code: "warn10", value: "10.0", recurring: false}
+        )
+      end
+    end
+
+    context "when wallet has ongoing_balance_amount alert" do
+      let!(:alert) do
+        create(
+          :wallet_ongoing_balance_amount_alert,
+          wallet:,
+          organization:,
+          thresholds: [500, 800],
+          previous_value: 1000,
+          direction: "decreasing"
+        )
+      end
+
+      it "processes the ongoing balance alert" do
+        expect(result).to be_success
+
+        triggered_alert = organization.triggered_alerts.sole
+        expect(triggered_alert.alert).to eq(alert)
+        expect(triggered_alert.current_value).to eq(400)
+        expect(triggered_alert.previous_value).to eq(1000)
+        expect(triggered_alert.crossed_thresholds.map(&:symbolize_keys)).to contain_exactly(
+          {code: "warn500", value: "500.0", recurring: false},
+          {code: "warn800", value: "800.0", recurring: false}
+        )
+      end
+    end
+
+    context "when wallet has credits_ongoing_balance alert" do
+      let!(:alert) do
+        create(
+          :wallet_credits_ongoing_balance_alert,
+          wallet:,
+          organization:,
+          thresholds: [5, 10],
+          previous_value: 15,
+          direction: "decreasing"
+        )
+      end
+
+      it "processes the credits balance alert" do
+        expect(result).to be_success
+
+        triggered_alert = organization.triggered_alerts.sole
+        expect(triggered_alert.alert).to eq(alert)
+        expect(triggered_alert.current_value).to eq(4.0)
+        expect(triggered_alert.previous_value).to eq(15.0)
         expect(triggered_alert.crossed_thresholds.map(&:symbolize_keys)).to contain_exactly(
           {code: "warn5", value: "5.0", recurring: false},
           {code: "warn10", value: "10.0", recurring: false}

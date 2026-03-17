@@ -184,6 +184,39 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
+    context "when one-time threshold values are negative" do
+      let(:params) do
+        {
+          alert_type: "current_usage_amount",
+          code: "ok",
+          thresholds: [{value: "100"}, {value: "-100"}]
+        }
+      end
+
+      it "creates the alert" do
+        expect(result).to be_success
+        expect(result.alert).to be_persisted
+      end
+    end
+
+    context "when recurring threshold values are negative" do
+      let(:params) do
+        {
+          alert_type: "current_usage_amount",
+          code: "ok",
+          thresholds: [
+            {value: "100", recurring: "true"},
+            {value: "-100", recurring: "true"}
+          ]
+        }
+      end
+
+      it "returns a record validation failure result" do
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:value"]).to eq(["recurring_value_is_negative"])
+      end
+    end
+
     context "when code is missing" do
       let(:params) { {alert_type: "current_usage_amount", thresholds:, code: nil} }
 
@@ -277,6 +310,27 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       it "ignores the direction param and uses the default for subscription alerts" do
         expect(result).to be_success
         expect(result.alert.direction).to eq("increasing")
+      end
+    end
+
+    context "when direction is :increasing" do
+      let(:params) { {alert_type: "current_usage_amount", name: "Main", thresholds:, code: "first"} }
+
+      it "sets previous_value to 0" do
+        expect(result).to be_success
+        expect(result.alert.previous_value).to eq(0.0)
+      end
+    end
+
+    context "when direction is :decreasing" do
+      subject(:result) { described_class.call(organization:, alertable: wallet, params:) }
+
+      let(:wallet) { create(:wallet, organization:, balance_cents: 100) }
+      let(:params) { {alert_type: "wallet_balance_amount", name: "Wallet Alert", thresholds:, code: "wallet_alert"} }
+
+      it "sets previous_value to the current value of alertable metric" do
+        expect(result).to be_success
+        expect(result.alert.previous_value).to eq(100)
       end
     end
 

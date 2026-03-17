@@ -14,13 +14,15 @@ module UsageMonitoring
       "lifetime_usage_amount" => "UsageMonitoring::LifetimeUsageAmountAlert",
       "billable_metric_lifetime_usage_units" => "UsageMonitoring::BillableMetricLifetimeUsageUnitsAlert",
       "wallet_balance_amount" => "UsageMonitoring::WalletBalanceAmountAlert",
-      "wallet_credits_balance" => "UsageMonitoring::WalletCreditsBalanceAlert"
+      "wallet_credits_balance" => "UsageMonitoring::WalletCreditsBalanceAlert",
+      "wallet_ongoing_balance_amount" => "UsageMonitoring::WalletOngoingBalanceAmountAlert",
+      "wallet_credits_ongoing_balance" => "UsageMonitoring::WalletCreditsOngoingBalanceAlert"
     }
 
     CURRENT_USAGE_TYPES = %w[current_usage_amount billable_metric_current_usage_amount billable_metric_current_usage_units]
     BILLABLE_METRIC_TYPES = %w[billable_metric_current_usage_amount billable_metric_current_usage_units billable_metric_lifetime_usage_units]
     BILLABLE_METRIC_LIFETIME_USAGE_TYPES = %w[billable_metric_lifetime_usage_units]
-    WALLET_TYPES = %w[wallet_balance_amount wallet_credits_balance]
+    WALLET_TYPES = %w[wallet_balance_amount wallet_credits_balance wallet_ongoing_balance_amount wallet_credits_ongoing_balance]
 
     DIRECTIONS = {increasing: "increasing", decreasing: "decreasing"}.freeze
 

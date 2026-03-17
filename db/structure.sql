@@ -1329,9 +1329,11 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'billable_metric_current_usage_amount',
     'billable_metric_current_usage_units',
     'lifetime_usage_amount',
-    'billable_metric_lifetime_usage_units',
     'wallet_balance_amount',
-    'wallet_credits_balance'
+    'wallet_credits_balance',
+    'wallet_ongoing_balance_amount',
+    'wallet_credits_ongoing_balance',
+    'billable_metric_lifetime_usage_units'
 );
 
 
@@ -11381,6 +11383,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260305161302'),
 ('20260305100007'),
 ('20260227184913'),
+('20260224134805'),
 ('20260220131101'),
 ('20260219130831'),
 ('20260219102644'),

@@ -58,11 +58,15 @@ module UsageMonitoring
         return result.single_validation_failure!(field: "thresholds:value", error_code: "value_is_invalid")
       end
 
+      if !all_recurring_threshold_values_positive?(params[:thresholds])
+        return result.single_validation_failure!(field: "thresholds:value", error_code: "recurring_value_is_negative")
+      end
+
       billable_metric = find_billable_metric_from_params!
       return result unless result.success?
 
       ActiveRecord::Base.transaction do
-        alert = Alert.create!(
+        alert = Alert.new(
           organization:,
           subscription_external_id: subscription&.external_id,
           wallet: wallet,
@@ -72,6 +76,14 @@ module UsageMonitoring
           code: params[:code],
           direction: direction_for_alert
         )
+
+        alertable.with_lock do
+          # Lock alertable to prevent any changes to it and avoid it becoming stale
+          # as we set previous_value to the alertable metric when the alert
+          # direction is :decreasing
+          alert.previous_value = alert.find_value(alertable) if alert.decreasing?
+          alert.save!
+        end
 
         alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
 
