@@ -367,6 +367,15 @@ RSpec.shared_examples "a credit note index endpoint" do
       # NOTE: billable_metric is only accessed for charge-type fees; subscription fees never touch it
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "Fee", association: :billable_metric)
 
+      # NOTE: Adding the customer payment associations to Bullet safelist, Bullet is right regarding the associations
+      # not being used in the CreditNoteSerializer, but we need to eager load them in order to prevent
+      # N+1 queries in the CustomerSerializer when serializing the credit note customer
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :stripe_customer)
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :gocardless_customer)
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :cashfree_customer)
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :adyen_customer)
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :moneyhash_customer)
+
       invoices = create_list(:invoice, 3, organization:, customer:)
       invoices.each do |invoice|
         subscription = create(:subscription, customer:, organization:)
@@ -402,6 +411,15 @@ RSpec.shared_examples "a credit note index endpoint" do
     let(:params) { {} }
 
     before do
+      # NOTE: Adding the customer payment associations to Bullet safelist, Bullet is right regarding the associations
+      # not being used in the CreditNoteSerializer, but we need to eager load them in order to prevent
+      # N+1 queries in the CustomerSerializer when serializing the credit note customer
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :stripe_customer)
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :gocardless_customer)
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :cashfree_customer)
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :adyen_customer)
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :moneyhash_customer)
+
       invoices = create_list(:invoice, 3, organization:, customer:)
       invoices.each do |invoice|
         credit_note = create(:credit_note, invoice:, customer:)

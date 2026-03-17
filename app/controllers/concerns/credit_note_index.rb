@@ -53,12 +53,13 @@ module CreditNoteIndex
                 {subscription: :plan},
                 :customer
               ]
-            }
+            },
+            customer: [:billing_entity, :metadata, :stripe_customer, :gocardless_customer, :cashfree_customer, :adyen_customer, :moneyhash_customer]
           ),
           ::V1::CreditNoteSerializer,
           collection_name: "credit_notes",
           meta: pagination_metadata(result.credit_notes),
-          includes: %i[items applied_taxes error_details]
+          includes: %i[items applied_taxes error_details customer]
         )
       )
     else

@@ -360,6 +360,22 @@ RSpec.describe Api::V1::CreditNotesController do
           expect(response).to have_http_status(:success)
           expect(json[:credit_notes].pluck(:lago_id)).to contain_exactly credit_note.id
         end
+
+        it "returns nested customer data" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_notes].first[:customer][:lago_id]).to eq(customer.id)
+
+          expect(json[:credit_notes].first[:customer][:billing_configuration].keys).to eq(%i[
+            invoice_grace_period
+            payment_provider
+            payment_provider_code
+            document_locale
+            subscription_invoice_issuing_date_anchor
+            subscription_invoice_issuing_date_adjustment
+          ])
+        end
       end
     end
   end
