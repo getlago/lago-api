@@ -15,7 +15,8 @@ module Customers
 
       result = Customers::RefreshWalletsService.call(customer:)
 
-      #We don't want a dead job for tax provider errors (e.g. missing customer address).
+      # We don't want a dead job for tax provider errors (e.g. missing customer address).
+      # The webhook `customer.tax_provider_error` is already sent by the tax provider service.
       return if tax_error?(result)
 
       result.raise_if_error!
