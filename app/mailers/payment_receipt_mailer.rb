@@ -22,7 +22,7 @@ class PaymentReceiptMailer < DocumentMailer
       document.payment.payable.total_due_amount :
       document.payment.payable.amount - document.payment.amount
 
-    recipients = params[:to].presence || [@customer.email].compact
+    recipients = params[:to].presence || [@customer.email].compact_blank
     return if @billing_entity.email.blank?
     return if recipients.empty?
 
