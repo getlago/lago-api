@@ -1,22 +1,21 @@
 ARG PDFCPU_VERSION=0.11.1
+ARG GO_VERSION=1.25.8
+
+FROM golang:${GO_VERSION} AS pdfcpu-build
+
+ARG PDFCPU_VERSION
+
+RUN go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@v${PDFCPU_VERSION}
 
 FROM ruby:3.4.8-slim AS build
 
 ARG BUNDLE_WITH
-ARG PDFCPU_VERSION
 
 WORKDIR /app
 
 RUN apt update && apt upgrade -y
 RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev postgresql-client curl libyaml-dev -y && \
   curl https://sh.rustup.rs -sSf | bash -s -- -y
-
-ARG TARGETARCH
-RUN PDFCPU_ARCH=$(case "${TARGETARCH}" in arm64) echo "arm64" ;; *) echo "x86_64" ;; esac) \
-  && curl -L "https://github.com/pdfcpu/pdfcpu/releases/download/v${PDFCPU_VERSION}/pdfcpu_${PDFCPU_VERSION}_Linux_${PDFCPU_ARCH}.tar.xz" -o pdfcpu.tar.xz \
-  && tar -xf pdfcpu.tar.xz \
-  && install -m 755 "pdfcpu_${PDFCPU_VERSION}_Linux_${PDFCPU_ARCH}/pdfcpu" /usr/local/bin/ \
-  && rm -rf pdfcpu.tar.xz "pdfcpu_${PDFCPU_VERSION}_Linux_${PDFCPU_ARCH}"
 
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
@@ -50,7 +49,7 @@ ENV BUNDLE_WITH=${BUNDLE_WITH:-}
 ENV BUNDLE_WITHOUT="development test"
 
 COPY --from=build /usr/local/bundle/ /usr/local/bundle
-COPY --from=build /usr/local/bin/pdfcpu /usr/local/bin/pdfcpu
+COPY --from=pdfcpu-build /go/bin/pdfcpu /usr/local/bin/pdfcpu
 WORKDIR /app
 COPY . .
 
