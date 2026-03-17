@@ -19,7 +19,7 @@ class CreditNoteMailer < DocumentMailer
     @billing_entity = document.billing_entity
     @show_lago_logo = !@billing_entity.organization.remove_branding_watermark_enabled?
 
-    recipients = params[:to].presence || [@customer.email].compact
+    recipients = params[:to].presence || [@customer.email].compact_blank
     return if @billing_entity.email.blank?
     return if recipients.empty?
 
