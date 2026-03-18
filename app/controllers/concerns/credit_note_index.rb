@@ -8,8 +8,31 @@ module CreditNoteIndex
     billing_entities = current_organization.billing_entities.where(code: params[:billing_entity_codes]) if params[:billing_entity_codes].present?
     return not_found_error(resource: "billing_entity") if params[:billing_entity_codes].present? && billing_entities.count != params[:billing_entity_codes].count
 
+    includes = [
+      :applied_taxes,
+      :error_details,
+      :metadata,
+      invoice: :billing_entity,
+      file_attachment: :blob,
+      xml_file_attachment: :blob,
+      items: {
+        fee: [
+          :charge_filter,
+          :charge,
+          :billable_metric,
+          :invoice,
+          :pricing_unit_usage,
+          :true_up_fee,
+          {subscription: :plan},
+          :customer
+        ]
+      },
+      customer: [:billing_entity, :metadata, :stripe_customer, :gocardless_customer, :cashfree_customer, :adyen_customer, :moneyhash_customer]
+    ]
+
     result = CreditNotesQuery.call(
       organization: current_organization,
+      includes: includes,
       pagination: {
         page: params[:page],
         limit: params[:per_page] || PER_PAGE
@@ -35,30 +58,11 @@ module CreditNoteIndex
     if result.success?
       render(
         json: ::CollectionSerializer.new(
-          result.credit_notes.includes(
-            :applied_taxes,
-            :error_details,
-            :metadata,
-            invoice: :billing_entity,
-            file_attachment: :blob,
-            xml_file_attachment: :blob,
-            items: {
-              fee: [
-                :charge_filter,
-                :charge,
-                :billable_metric,
-                :invoice,
-                :pricing_unit_usage,
-                :true_up_fee,
-                {subscription: :plan},
-                :customer
-              ]
-            }
-          ),
+          result.credit_notes,
           ::V1::CreditNoteSerializer,
           collection_name: "credit_notes",
           meta: pagination_metadata(result.credit_notes),
-          includes: %i[items applied_taxes error_details]
+          includes: %i[items applied_taxes error_details customer]
         )
       )
     else

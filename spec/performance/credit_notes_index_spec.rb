@@ -6,7 +6,7 @@
 # same dataset in the same spec run — no git operations or stashing needed.
 #
 # Usage:
-#   - Uncomment lines 53, 67 and 119 to see the output
+#   - Uncomment lines 54, 68 and 120 to see the output
 #   - Change CREDIT_NOTE_COUNT and ITEMS_PER_NOTE to the desired number of records
 #   - Run bundle exec rspec spec/performance/credit_notes_index_spec.rb --format documentation
 
@@ -19,7 +19,7 @@ ITEMS_PER_NOTE = 6 # 3 subscription fees + 3 charge fees
 # rubocop:disable Lint/UselessAssignment
 RSpec.describe "Credit notes index performance", type: :request do
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
   let(:membership) { create(:membership, organization:) }
 
   before do
@@ -60,7 +60,7 @@ RSpec.describe "Credit notes index performance", type: :request do
       credit_notes,
       V1::CreditNoteSerializer,
       collection_name: "credit_notes",
-      includes: %i[items applied_taxes error_details]
+      includes: %i[items applied_taxes error_details customer]
     ).serialize
   end
 
@@ -109,9 +109,9 @@ RSpec.describe "Credit notes index performance", type: :request do
               {subscription: :plan},
               :customer
             ]
-          }
-        )
-        .page(1).per(CREDIT_NOTE_COUNT)
+          },
+          customer: [:billing_entity, :metadata, :stripe_customer, :gocardless_customer, :cashfree_customer, :adyen_customer, :moneyhash_customer]
+        ).page(1).per(CREDIT_NOTE_COUNT)
 
       serialize(credit_notes)
     end
