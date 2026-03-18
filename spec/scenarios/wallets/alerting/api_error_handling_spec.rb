@@ -65,7 +65,7 @@ describe "Wallet Alert API Error Handling", :premium, transaction: false do
 
       expect(response[:status]).to eq(422)
       expect(response[:code]).to eq("validation_errors")
-      expect(response[:error_details]).to include("alert_type" => ["value_is_invalid"])
+      expect(response[:error_details]).to include("alert_type" => ["invalid_type"])
     end
   end
 
@@ -124,7 +124,7 @@ describe "Wallet Alert API Error Handling", :premium, transaction: false do
 
       expect(response[:status]).to eq(422)
       expect(response[:code]).to eq("validation_errors")
-      expect(response[:error_details]).to include("alert_type" => ["value_is_mandatory"])
+      expect(response[:error_details]).to include("alert_type" => ["value_is_mandatory", "value_is_invalid"])
     end
   end
 
@@ -172,7 +172,7 @@ describe "Wallet Alert API Error Handling", :premium, transaction: false do
 
       expect(response[:status]).to eq(422)
       expect(response[:code]).to eq("validation_errors")
-      expect(response[:error_details]).to include("alert_type" => ["value_is_invalid"])
+      expect(response[:error_details]).to include("alert_type" => ["invalid_type"])
     end
   end
 

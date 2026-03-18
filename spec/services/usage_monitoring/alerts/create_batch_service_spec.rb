@@ -123,7 +123,7 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
         expect(result.alerts).to be_empty
         expect(result.error.messages).to have_key(1)
         expect(result.error.messages[1][:params]).to eq(alerts_params[1])
-        expect(result.error.messages[1][:errors]).to include("value_is_invalid")
+        expect(result.error.messages[1][:errors]).to include("invalid_type")
       end
     end
 
@@ -220,7 +220,7 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
         expect(result).to be_failure
         expect(result.error.messages.size).to eq(4)
         expect(result.error.messages[0][:params]).to eq(alerts_params[0])
-        expect(result.error.messages[0][:errors]).to include("value_is_invalid")
+        expect(result.error.messages[0][:errors]).to include("invalid_type")
         expect(result.error.messages[1][:params]).to eq(alerts_params[1])
         expect(result.error.messages[1][:errors]).to include("value_is_mandatory")
         expect(result.error.messages[3][:params]).to eq(alerts_params[3])
