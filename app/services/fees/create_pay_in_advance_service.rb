@@ -2,7 +2,7 @@
 
 module Fees
   class CreatePayInAdvanceService < BaseService
-    Result = BaseResult[:fees, :fees_taxes, :invoice_id]
+    Result = BaseResult[:fees, :invoice_id]
 
     def initialize(charge:, event:, billing_at: nil, estimate: false)
       @charge = charge
@@ -28,17 +28,6 @@ module Fees
 
       ActiveRecord::Base.transaction do
         result.fees = persist_fees(fees.compact)
-
-        if customer_provider_taxation?
-          fee_taxes_result = apply_provider_taxes(fees)
-
-          unless fee_taxes_result.success?
-            result.validation_failure!(errors: {tax_error: [fee_taxes_result.error.code]})
-            result.raise_if_error! unless charge.invoiceable?
-
-            return result # rubocop:disable Rails/TransactionExitStatement
-          end
-        end
       end
 
       deliver_webhooks
@@ -121,11 +110,6 @@ module Fees
 
     def persist_fees(fees)
       fees.map do |fee|
-        unless customer_provider_taxation?
-          taxes_result = Fees::ApplyTaxesService.call(fee:)
-          taxes_result.raise_if_error!
-        end
-
         fee.save! unless estimate
         fee
       end
@@ -204,48 +188,8 @@ module Fees
       grouped_by.index_with { event.properties[it] }
     end
 
-    def customer_provider_taxation?
-      @apply_provider_taxes ||= integration_customer.present?
-    end
-
-    def integration_customer
-      @integration_customer ||= customer.tax_customer
-    end
-
     def customer
       @customer ||= subscription.customer
-    end
-
-    def apply_provider_taxes(fees_result)
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: fees_result)
-
-      return taxes_result unless taxes_result.success?
-
-      result.fees_taxes = taxes_result.fees
-
-      fees_result.each do |fee|
-        item_id = fee.id || fee.item_id
-        fee_taxes = result.fees_taxes.find { |item| item.item_id == item_id }
-
-        res = Fees::ApplyProviderTaxesService.call(fee:, fee_taxes:)
-        res.raise_if_error!
-      end
-
-      taxes_result
-    end
-
-    FakeInvoice = Data.define(:id, :issuing_date, :currency, :customer, :billing_entity)
-
-    def invoice
-      result.invoice_id = SecureRandom.uuid
-
-      FakeInvoice.new(
-        id: result.invoice_id,
-        issuing_date: Time.current.in_time_zone(customer.applicable_timezone).to_date,
-        currency: subscription.plan.amount_currency,
-        customer:,
-        billing_entity: customer.billing_entity
-      )
     end
 
     def isolation_mode

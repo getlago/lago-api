@@ -26,6 +26,8 @@ module Invoices
       return result.not_found_failure!(resource: "add_on") unless add_ons.count == add_on_identifiers.count
       return result unless valid_payment_method?
 
+      tax_deferred = false
+
       ActiveRecord::Base.transaction do
         Customers::UpdateCurrencyService
           .call(customer:, currency:)
@@ -35,20 +37,17 @@ module Invoices
 
         result.invoice = invoice
 
-        fees_result = create_one_off_fees(invoice)
-        if tax_error?(fees_result)
-          invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
-          invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
-          invoice.failed!
-          Utils::ActivityLog.produce(invoice, "invoice.failed")
+        create_one_off_fees(invoice)
 
-          # TODO: Refactor this return by using a next method
-          # rubocop:disable Rails/TransactionExitStatement
-          return result
-          # rubocop:enable Rails/TransactionExitStatement
+        invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+
+        totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
+        if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
+          tax_deferred = true
+          next
         end
-
-        Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
+        totals_result.raise_if_error!
 
         unless skip_custom_sections?
           Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, custom_section_ids: invoice_custom_section_ids)
@@ -59,6 +58,8 @@ module Invoices
         invoice.voided_invoice_id = voided_invoice_id if voided_invoice_id.present?
         invoice.save!
       end
+
+      return result if tax_deferred
 
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
@@ -97,12 +98,7 @@ module Invoices
     end
 
     def create_one_off_fees(invoice)
-      fees_result = Fees::OneOffService.new(invoice:, fees:).call
-      fees_result.raise_if_error! unless tax_error?(fees_result)
-
-      result.fees_taxes = fees_result.fees_taxes
-
-      fees_result
+      Fees::OneOffService.new(invoice:, fees:).call.raise_if_error!
     end
 
     def should_deliver_email?
@@ -119,10 +115,6 @@ module Invoices
       identifier = api_context? ? :add_on_code : :add_on_id
 
       fees.pluck(identifier).uniq
-    end
-
-    def tax_error?(fee_result)
-      !fee_result.success? && fee_result.error.respond_to?(:code) && fee_result&.error&.code == "tax_error"
     end
 
     def valid_payment_method?

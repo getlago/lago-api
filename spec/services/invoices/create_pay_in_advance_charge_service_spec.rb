@@ -226,40 +226,21 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         allow_any_instance_of(Fee).to receive(:id).and_return("lago_fee_id") # rubocop:disable RSpec/AnyInstance
       end
 
-      it "creates an invoice and fees" do
+      it "creates a pending invoice for async tax resolution" do
         result = invoice_service.call
 
         expect(result).to be_success
 
+        expect(result.invoice.status).to eq("pending")
+        expect(result.invoice.tax_status).to eq("pending")
         expect(result.invoice.fees_amount_cents).to eq(10)
-        expect(result.invoice.taxes_amount_cents).to eq(1)
-        expect(result.invoice.taxes_rate).to eq(10)
-        expect(result.invoice.total_amount_cents).to eq(11)
-        expect(result.invoice).to be_finalized
-
-        expect(result.invoice.reload.error_details.count).to eq(0)
       end
 
-      context "when there is error received from the provider" do
-        let(:body) do
-          p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
-          File.read(p)
-        end
+      it "enqueues fee webhooks but not invoice webhooks" do
+        invoice_service.call
 
-        it "returns tax error" do
-          result = described_class.call(charge:, event:, timestamp: timestamp.to_i)
-
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
-
-          invoice = customer.invoices.order(created_at: :desc).first
-
-          expect(invoice.status).to eq("failed")
-          expect(invoice.error_details.count).to eq(1)
-          expect(invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
-          expect(Utils::ActivityLog).to have_produced("invoice.failed").with(invoice)
-        end
+        expect(SendWebhookJob).to have_been_enqueued.with("fee.created", anything)
+        expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
       end
     end
 
