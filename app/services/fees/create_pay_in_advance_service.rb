@@ -110,6 +110,15 @@ module Fees
 
     def persist_fees(fees)
       fees.map do |fee|
+        # Non-invoiceable fees are regrouped later by AdvanceChargesService which
+        # aggregates pre-existing fee taxes. They must have taxes applied now because
+        # there is no ComputeTaxesAndTotalsService step for them.
+        # Invoiceable fees get taxes applied later via ComputeTaxesAndTotalsService.
+        if !charge.invoiceable?
+          taxes_result = Fees::ApplyTaxesService.call(fee:)
+          taxes_result.raise_if_error!
+        end
+
         fee.save! unless estimate
         fee
       end
