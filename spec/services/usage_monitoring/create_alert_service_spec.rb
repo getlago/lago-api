@@ -89,6 +89,27 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       it do
         expect(result).to be_success
       end
+
+      it "does not create a subscription activity" do
+        expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+      end
+    end
+
+    context "when tracking subscription activity", :premium do
+      it "creates a subscription activity record" do
+        expect { result }.to change(UsageMonitoring::SubscriptionActivity, :count).by(1)
+
+        activity = UsageMonitoring::SubscriptionActivity.last
+        expect(activity.organization_id).to eq(organization.id)
+        expect(activity.subscription_id).to eq(subscription.id)
+      end
+
+      context "when license is not premium" do
+        it "does not create a subscription activity" do
+          allow(License).to receive(:premium?).and_return(false)
+          expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+        end
+      end
     end
 
     context "when code is blank" do

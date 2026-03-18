@@ -185,5 +185,32 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
         expect(alert.reload.direction).to eq("increasing")
       end
     end
+
+    context "when tracking subscription activity", :premium do
+      it "creates a subscription activity record" do
+        expect { result }.to change(UsageMonitoring::SubscriptionActivity, :count).by(1)
+
+        activity = UsageMonitoring::SubscriptionActivity.last
+        expect(activity.organization_id).to eq(organization.id)
+      end
+
+      context "when no active subscription matches" do
+        before do
+          alert
+          organization.subscriptions.update_all(status: :terminated) # rubocop:disable Rails/SkipsModelValidations
+        end
+
+        it "does not create a subscription activity" do
+          expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+        end
+      end
+
+      context "when license is not premium" do
+        it "does not create a subscription activity" do
+          allow(License).to receive(:premium?).and_return(false)
+          expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+        end
+      end
+    end
   end
 end

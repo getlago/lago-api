@@ -54,6 +54,8 @@ module UsageMonitoring
         end
       end
 
+      track_subscription_activity
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -70,5 +72,17 @@ module UsageMonitoring
 
     attr_reader :alert, :params
     delegate :organization, to: :alert
+
+    def track_subscription_activity
+      active_subscription = organization.subscriptions.active
+        .find_by(external_id: alert.subscription_external_id)
+      return unless active_subscription
+      return unless License.premium?
+
+      UsageMonitoring::SubscriptionActivity.insert_all( # rubocop:disable Rails/SkipsModelValidations
+        [{organization_id: organization.id, subscription_id: active_subscription.id}],
+        unique_by: :idx_subscription_unique
+      )
+    end
   end
 end
