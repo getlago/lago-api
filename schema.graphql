@@ -522,6 +522,7 @@ type Alert {
   code: String!
   createdAt: ISO8601DateTime!
   deletedAt: ISO8601DateTime
+  direction: DirectionEnum!
   id: ID!
   name: String
   subscriptionExternalId: String!
@@ -556,6 +557,10 @@ enum AlertTypeEnum {
   billable_metric_lifetime_usage_units
   current_usage_amount
   lifetime_usage_amount
+  wallet_balance_amount
+  wallet_credits_balance
+  wallet_credits_ongoing_balance
+  wallet_ongoing_balance_amount
 }
 
 type AnrokCustomer {
@@ -5341,6 +5346,11 @@ type DestroyWebhookEndpointPayload {
   """
   clientMutationId: String
   id: ID
+}
+
+enum DirectionEnum {
+  decreasing
+  increasing
 }
 
 """

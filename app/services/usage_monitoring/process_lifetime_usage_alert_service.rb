@@ -26,7 +26,7 @@ module UsageMonitoring
         usage_filters:
       )
 
-      ProcessAlertService.call(alert:, subscription:, current_metrics: usage_for_charges_result.usage)
+      ProcessAlertService.call(alert:, alertable: subscription, current_metrics: usage_for_charges_result.usage)
 
       result
     end

@@ -37,11 +37,11 @@ module UsageMonitoring
       alerts.each do |alert|
         case alert.alert_type
         when "lifetime_usage_amount"
-          ProcessAlertService.call(alert:, subscription:, current_metrics: lifetime_usage)
+          ProcessAlertService.call(alert:, alertable: subscription, current_metrics: lifetime_usage)
         when *Alert::BILLABLE_METRIC_LIFETIME_USAGE_TYPES
           UsageMonitoring::ProcessLifetimeUsageAlertJob.set(wait: 5.minutes).perform_later(alert:, subscription:)
         when *Alert::CURRENT_USAGE_TYPES
-          ProcessAlertService.call(alert:, subscription:, current_metrics: current_usage)
+          ProcessAlertService.call(alert:, alertable: subscription, current_metrics: current_usage)
         end
       rescue => e
         exception_to_raise ||= e

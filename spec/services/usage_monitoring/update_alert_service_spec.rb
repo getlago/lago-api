@@ -150,5 +150,40 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
         expect(alert.reload.thresholds.map(&:value)).to eq [100, 200.5]
       end
     end
+
+    context "when one-time threshold values are negative" do
+      let(:params) { {thresholds: [{value: "100"}, {value: "-100"}]} }
+
+      it "creates the alert" do
+        expect(result).to be_success
+        expect(result.alert).to be_persisted
+      end
+    end
+
+    context "when recurring threshold values are negative" do
+      let(:params) do
+        {
+          thresholds: [
+            {value: "100", recurring: "true"},
+            {value: "-100", recurring: "true"}
+          ]
+        }
+      end
+
+      it "returns a record validation failure result" do
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:value"]).to eq(["recurring_value_is_negative"])
+      end
+    end
+
+    context "with direction param" do
+      let(:alert) { create(:alert, thresholds: [1, 50], organization: organization, direction: "increasing") }
+      let(:params) { {direction: "decreasing"} }
+
+      it "ignores direction param and does not modify it" do
+        expect(result).to be_success
+        expect(alert.reload.direction).to eq("increasing")
+      end
+    end
   end
 end

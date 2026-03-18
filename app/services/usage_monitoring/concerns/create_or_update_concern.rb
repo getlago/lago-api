@@ -30,6 +30,15 @@ module UsageMonitoring
         thresholds.all? { |t| valid_numeric_value?(t[:value]) }
       end
 
+      def all_recurring_threshold_values_positive?(thresholds)
+        thresholds.all? do |t|
+          recurring = ActiveModel::Type::Boolean.new.cast(t[:recurring])
+          value = ActiveModel::Type::Decimal.new.cast(t[:value])
+
+          !recurring || value.positive?
+        end
+      end
+
       def valid_numeric_value?(value)
         case value
         when Numeric
