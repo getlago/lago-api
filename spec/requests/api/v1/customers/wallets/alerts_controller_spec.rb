@@ -143,7 +143,7 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
         expect(json).to eq({
           code: "validation_errors",
           error: "Unprocessable Entity",
-          error_details: {alert_type: ["value_is_invalid"]},
+          error_details: {alert_type: ["invalid_type"]},
           status: 422
         })
       end
@@ -169,7 +169,7 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
         expect(json).to eq({
           code: "validation_errors",
           error: "Unprocessable Entity",
-          error_details: {alert_type: ["value_is_mandatory"]},
+          error_details: {alert_type: ["value_is_mandatory", "value_is_invalid"]},
           status: 422
         })
       end
@@ -189,7 +189,7 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
         expect(json).to eq({
           code: "validation_errors",
           error: "Unprocessable Entity",
-          error_details: {alert_type: ["value_is_invalid"]},
+          error_details: {alert_type: ["invalid_type"]},
           status: 422
         })
       end
@@ -363,7 +363,7 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
         expect(json[:code]).to eq "validation_errors"
 
         expect(json[:error_details]).to match(
-          "1": match(params: params[:alerts][1], errors: include("value_is_invalid")),
+          "1": match(params: params[:alerts][1], errors: include("invalid_type")),
           "2": match(params: params[:alerts][2], errors: include("alert_already_exists"))
         )
       end

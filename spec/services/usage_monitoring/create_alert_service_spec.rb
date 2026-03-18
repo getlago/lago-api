@@ -105,7 +105,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
 
       it "returns a validation failure result" do
         expect(result).to be_failure
-        expect(result.error.messages[:alert_type]).to eq(%w[value_is_mandatory])
+        expect(result.error.messages[:alert_type]).to eq(%w[value_is_mandatory value_is_invalid])
       end
     end
 
@@ -231,7 +231,16 @@ RSpec.describe UsageMonitoring::CreateAlertService do
 
       it "returns a record validation failure result" do
         expect(result).to be_failure
-        expect(result.error.messages[:alert_type]).to eq(["value_is_invalid"])
+        expect(result.error.messages[:alert_type]).to include("invalid_type")
+      end
+    end
+
+    context "when wallet alert type is used" do
+      let(:params) { {alert_type: "wallet_balance_amount", thresholds:, code: "first"} }
+
+      it "returns a validation failure" do
+        expect(result).to be_failure
+        expect(result.error.messages[:alert_type]).to include("invalid_type")
       end
     end
 
@@ -359,7 +368,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
 
         it "returns a validation failure" do
           expect(result).to be_failure
-          expect(result.error.messages[:alert_type]).to eq(["value_is_invalid"])
+          expect(result.error.messages[:alert_type]).to include("invalid_type")
         end
       end
     end

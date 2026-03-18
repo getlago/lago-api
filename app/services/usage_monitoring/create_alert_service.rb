@@ -23,19 +23,19 @@ module UsageMonitoring
       end
 
       if params[:alert_type].blank?
-        return result.single_validation_failure!(field: :alert_type, error_code: "value_is_mandatory")
+        return result.validation_failure!(errors: {alert_type: %w[value_is_mandatory value_is_invalid]})
       end
 
       unless Alert::STI_MAPPING.key?(params[:alert_type])
-        return result.single_validation_failure!(field: :alert_type, error_code: "value_is_invalid")
+        return result.single_validation_failure!(field: :alert_type, error_code: "invalid_type")
       end
 
       if alertable.is_a?(Wallet) && !Alert::WALLET_TYPES.include?(params[:alert_type])
-        return result.single_validation_failure!(field: :alert_type, error_code: "value_is_invalid")
+        return result.single_validation_failure!(field: :alert_type, error_code: "invalid_type")
       end
 
       if alertable.is_a?(Subscription) && Alert::WALLET_TYPES.include?(params[:alert_type])
-        return result.single_validation_failure!(field: :alert_type, error_code: "value_is_invalid")
+        return result.single_validation_failure!(field: :alert_type, error_code: "invalid_type")
       end
 
       if params[:thresholds].blank?
@@ -92,7 +92,7 @@ module UsageMonitoring
 
       result
     rescue KeyError
-      result.single_validation_failure!(field: "alert_type", error_code: "value_is_invalid")
+      result.single_validation_failure!(field: :alert_type, error_code: "invalid_type")
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique => e
