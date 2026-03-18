@@ -49,27 +49,17 @@ module Fees
           )
           fee.precise_unit_amount = fee.unit_amount.to_f
 
-          unless customer_provider_taxation?
-            taxes_result = if tax_codes
-              Fees::ApplyTaxesService.call(fee:, tax_codes:)
-            else
-              Fees::ApplyTaxesService.call(fee:)
-            end
-
+          # Only apply explicit payload taxes here — they would be lost if deferred.
+          # Derived taxes (from customer/plan hierarchy) and provider taxes are applied
+          # later by ComputeTaxesAndTotalsService.
+          if tax_codes
+            taxes_result = Fees::ApplyTaxesService.call(fee:, tax_codes:)
             taxes_result.raise_if_error!
           end
 
           fee.save!
 
           fees_result << fee
-        end
-
-        if customer_provider_taxation?
-          fee_taxes_result = apply_provider_taxes(fees_result)
-
-          unless fee_taxes_result.success?
-            return result.service_failure!(code: "tax_error", message: fee_taxes_result.error.code) # rubocop:disable Rails/TransactionExitStatement
-          end
         end
       end
 
@@ -95,48 +85,6 @@ module Fees
 
     def add_on_identifier
       api_context? ? :add_on_code : :add_on_id
-    end
-
-    def customer_provider_taxation?
-      @apply_provider_taxes ||= customer.tax_customer
-    end
-
-    def apply_provider_taxes(fees_result)
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: fees_result)
-
-      unless taxes_result.success?
-        create_error_detail(taxes_result.error)
-
-        return taxes_result
-      end
-
-      result.fees_taxes = taxes_result.fees
-
-      fees_result.each do |fee|
-        fee_taxes = result.fees_taxes.find { |item| item.item_id == fee.id }
-
-        res = Fees::ApplyProviderTaxesService.call(fee:, fee_taxes:)
-        res.raise_if_error!
-        fee.save!
-      end
-
-      taxes_result
-    end
-
-    def create_error_detail(error)
-      error_result = ErrorDetails::CreateService.call(
-        owner: invoice,
-        organization: invoice.organization,
-        params: {
-          error_code: :tax_error,
-          details: {
-            tax_error: error.code
-          }.tap do |details|
-            details[:tax_error_message] = error.error_message if error.code == "validationError"
-          end
-        }
-      )
-      error_result.raise_if_error!
     end
 
     def valid_boundaries?(fee)
