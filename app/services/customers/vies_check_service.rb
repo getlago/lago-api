@@ -32,22 +32,14 @@ module Customers
       result.vies_check = vies_api_response.presence || error_vies_check
       delete_pending_vies_check_if_exists
       result
-    rescue Valvat::HTTPError => e
-      return handle_error(e) if service_unavailable_redirect_error?(e)
-
-      raise
-    rescue Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError, Valvat::InvalidRequester,
-      Valvat::ServiceUnavailable, Valvat::MemberStateUnavailable => e
+    rescue Valvat::HTTPError, Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError,
+      Valvat::InvalidRequester, Valvat::ServiceUnavailable, Valvat::MemberStateUnavailable => e
       handle_error(e)
     end
 
     private
 
     attr_reader :customer
-
-    def service_unavailable_redirect_error?(error)
-      error.is_a?(Valvat::HTTPError) && error.message.include?("307")
-    end
 
     def handle_error(e)
       pending_vies_check = create_or_update_pending_vies_check(e)
