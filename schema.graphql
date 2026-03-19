@@ -9652,6 +9652,29 @@ type Query {
   aiConversations(limit: Int): AiConversationCollection
 
   """
+  Query a single subscription alert
+  """
+  alert(
+    """
+    Unique ID of the alert
+    """
+    id: ID!
+  ): Alert
+
+  """
+  Query alerts of a subscription
+  """
+  alerts(
+    limit: Int
+    page: Int
+
+    """
+    External id of a subscription
+    """
+    subscriptionExternalId: String!
+  ): AlertCollection!
+
+  """
   Query the API key
   """
   apiKey(
