@@ -371,6 +371,7 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_subscription_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_organization_id;
+DROP INDEX IF EXISTS public.index_subscriptions_by_external_id;
 DROP INDEX IF EXISTS public.index_search_quantified_events;
 DROP INDEX IF EXISTS public.index_rtr_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_roles_on_organization_id;
@@ -8661,6 +8662,13 @@ CREATE INDEX index_search_quantified_events ON public.quantified_events USING bt
 
 
 --
+-- Name: index_subscriptions_by_external_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_subscriptions_by_external_id ON public.subscriptions USING btree (organization_id, external_id) WHERE (status = 1);
+
+
+--
 -- Name: index_subscriptions_invoice_custom_sections_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11376,6 +11384,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260311193001'),
 ('20260311121245'),
 ('20260306115902'),
 ('20260305165936'),
