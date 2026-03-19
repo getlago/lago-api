@@ -717,6 +717,7 @@ DROP INDEX IF EXISTS public.index_active_storage_attachments_on_blob_id;
 DROP INDEX IF EXISTS public.index_active_metric_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filter_values;
+DROP INDEX IF EXISTS public.idx_webhooks_on_endpoint_id_type_updated_at;
 DROP INDEX IF EXISTS public.idx_wallet_tx_consumptions_inbound_outbound;
 DROP INDEX IF EXISTS public.idx_wallet_transactions_available_inbound;
 DROP INDEX IF EXISTS public.idx_usage_thresholds_subscription_recurring;
@@ -6239,6 +6240,13 @@ CREATE UNIQUE INDEX idx_wallet_tx_consumptions_inbound_outbound ON public.wallet
 
 
 --
+-- Name: idx_webhooks_on_endpoint_id_type_updated_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_webhooks_on_endpoint_id_type_updated_at ON public.webhooks USING btree (webhook_endpoint_id, webhook_type, updated_at DESC);
+
+
+--
 -- Name: index_active_charge_filter_values; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11376,6 +11384,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260319125125'),
 ('20260311121245'),
 ('20260306115902'),
 ('20260305165936'),
