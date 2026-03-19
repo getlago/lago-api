@@ -7,6 +7,8 @@ module UsageMonitoring
     unique :until_executed, on_conflict: :log
 
     def perform(wallet)
+      return unless License.premium?
+
       ProcessWalletAlertsService.call!(wallet:)
     end
   end
