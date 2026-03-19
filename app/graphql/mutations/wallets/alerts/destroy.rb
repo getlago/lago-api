@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
 module Mutations
-  module UsageMonitoring
+  module Wallets
     module Alerts
       class Destroy < BaseMutation
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = "subscriptions:update"
+        REQUIRED_PERMISSION = "wallets:update"
 
-        graphql_name "DestroySubscriptionAlert"
+        graphql_name "DestroyCustomerWalletAlert"
         description "Deletes an alert"
 
         argument :id, ID, required: true
@@ -17,7 +17,7 @@ module Mutations
         type Types::UsageMonitoring::Alerts::Object
 
         def resolve(**args)
-          alert = current_organization.alerts.find_by(id: args[:id])
+          alert = current_organization.alerts.using_wallet.find_by(id: args[:id])
           result = ::UsageMonitoring::DestroyAlertService.call(alert:)
 
           result.success? ? result.alert : result_error(result)
