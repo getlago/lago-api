@@ -52,7 +52,7 @@ module Fees
           # Only apply explicit payload taxes here — they would be lost if deferred.
           # Derived taxes (from customer/plan hierarchy) and provider taxes are applied
           # later by ComputeTaxesAndTotalsService.
-          if tax_codes
+          if tax_codes.present?
             taxes_result = Fees::ApplyTaxesService.call(fee:, tax_codes:)
             taxes_result.raise_if_error!
           end
