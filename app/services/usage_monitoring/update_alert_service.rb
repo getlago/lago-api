@@ -54,7 +54,8 @@ module UsageMonitoring
         end
       end
 
-      track_subscription_activity
+      track_subscription_activity if alert.subscription_external_id?
+      process_wallet_alerts if alert.wallet_id?
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -74,6 +75,7 @@ module UsageMonitoring
     delegate :organization, to: :alert
 
     def track_subscription_activity
+      return unless alert.subscription_external_id?
       active_subscription = organization.subscriptions.active
         .find_by(external_id: alert.subscription_external_id)
       return unless active_subscription
@@ -83,6 +85,14 @@ module UsageMonitoring
         [{organization_id: organization.id, subscription_id: active_subscription.id}],
         unique_by: :idx_subscription_unique
       )
+    end
+
+    def process_wallet_alerts
+      return unless alert.wallet_id?
+      return unless License.premium?
+      return unless alert.wallet&.active?
+
+      UsageMonitoring::ProcessWalletAlertsJob.perform_later(alert.wallet)
     end
   end
 end

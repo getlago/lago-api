@@ -375,6 +375,31 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         expect(result.alert.direction).to eq("decreasing")
       end
 
+      it "does not create a subscription activity" do
+        expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+      end
+
+      context "when processing wallet alerts", :premium do
+        it "enqueues ProcessWalletAlertsJob" do
+          expect { result }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).with(wallet)
+        end
+
+        context "when license is not premium" do
+          it "does not enqueue ProcessWalletAlertsJob" do
+            allow(License).to receive(:premium?).and_return(false)
+            expect { result }.not_to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob)
+          end
+        end
+      end
+
+      context "when wallet is terminated" do
+        let(:wallet) { create(:wallet, :terminated, organization:) }
+
+        it "does not enqueue ProcessWalletAlertsJob" do
+          expect { result }.not_to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob)
+        end
+      end
+
       context "when direction param is passed" do
         let(:params) { {alert_type: "wallet_balance_amount", name: "Wallet Alert", thresholds:, code: "wallet1", direction: "increasing"} }
 

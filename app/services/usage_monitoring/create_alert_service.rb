@@ -91,6 +91,7 @@ module UsageMonitoring
       end
 
       track_subscription_activity if subscription
+      process_wallet_alerts if wallet
 
       result
     rescue KeyError
@@ -130,6 +131,13 @@ module UsageMonitoring
         [{organization_id: organization.id, subscription_id: subscription.id}],
         unique_by: :idx_subscription_unique
       )
+    end
+
+    def process_wallet_alerts
+      return unless License.premium?
+      return unless wallet.active?
+
+      UsageMonitoring::ProcessWalletAlertsJob.perform_later(wallet)
     end
   end
 end

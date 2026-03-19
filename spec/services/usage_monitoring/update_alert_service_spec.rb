@@ -212,5 +212,37 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
         end
       end
     end
+
+    context "when updating a wallet alert" do
+      let(:alert) { create(:wallet_balance_amount_alert, thresholds: [50], organization:) }
+      let(:params) { {name: "Updated Wallet Alert"} }
+
+      it "does not create a subscription activity" do
+        expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+      end
+
+      context "when processing wallet alerts", :premium do
+        it "enqueues ProcessWalletAlertsJob" do
+          expect { result }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).with(alert.wallet)
+        end
+
+        context "when license is not premium" do
+          it "does not enqueue ProcessWalletAlertsJob" do
+            allow(License).to receive(:premium?).and_return(false)
+            expect { result }.not_to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob)
+          end
+        end
+      end
+
+      context "when wallet is terminated" do
+        before do
+          alert.wallet.mark_as_terminated!
+        end
+
+        it "does not enqueue ProcessWalletAlertsJob" do
+          expect { result }.not_to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob)
+        end
+      end
+    end
   end
 end
