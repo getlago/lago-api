@@ -7,7 +7,7 @@ module Invoices
       @currency = currency || customer&.currency
       @fees = fees
       @timestamp = timestamp
-      @skip_psp = skip_psp
+      @skip_psp = skip_psp || false
       @voided_invoice_id = voided_invoice_id
       @payment_method_params = payment_method_params
       @invoice_custom_section = invoice_custom_section
@@ -45,6 +45,7 @@ module Invoices
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
         if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
           tax_deferred = true
+          store_payment_preferences!
           next
         end
         totals_result.raise_if_error!
@@ -99,6 +100,10 @@ module Invoices
 
     def create_one_off_fees(invoice)
       Fees::OneOffService.new(invoice:, fees:).call.raise_if_error!
+    end
+
+    def store_payment_preferences!
+      invoice.update!(payment_method: payment_method, skip_psp:)
     end
 
     def should_deliver_email?

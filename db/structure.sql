@@ -473,6 +473,7 @@ DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
+DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_id_and_sequential_id;
 DROP INDEX IF EXISTS public.index_invoices_by_cursor;
@@ -3384,6 +3385,8 @@ CREATE TABLE public.invoices (
     expected_finalization_date date,
     prepaid_granted_credit_amount_cents bigint,
     prepaid_purchased_credit_amount_cents bigint,
+    payment_method_id uuid,
+    skip_psp boolean DEFAULT false NOT NULL,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -8069,6 +8072,13 @@ CREATE INDEX index_invoices_on_number ON public.invoices USING btree (number);
 
 
 --
+-- Name: index_invoices_on_payment_method_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_payment_method_id ON public.invoices USING btree (payment_method_id);
+
+
+--
 -- Name: index_invoices_on_ready_to_be_refreshed; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11503,6 +11513,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260327140626'),
 ('20260326130631'),
 ('20260319125125'),
+('20260319103035'),
 ('20260317134100'),
 ('20260317132911'),
 ('20260317132747'),

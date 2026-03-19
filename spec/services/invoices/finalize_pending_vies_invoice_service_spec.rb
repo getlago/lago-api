@@ -184,7 +184,7 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
 
         finalize_service.call
 
-        expect(Invoices::Payments::CreateService).to have_received(:call_async).with(invoice:)
+        expect(Invoices::Payments::CreateService).to have_received(:call_async).with(invoice:, payment_method_params: {})
       end
 
       it "returns the invoice in result" do
@@ -344,6 +344,59 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
 
         expect(invoice.reload.wallet_transactions).to be_empty
       end
+
+      context "when invoice has a stored payment method" do
+        let(:payment_method) { create(:payment_method, customer:) }
+
+        let(:invoice) do
+          create(
+            :invoice,
+            :pending,
+            customer:,
+            billing_entity:,
+            organization:,
+            invoice_type: :one_off,
+            currency: "EUR",
+            tax_status: "pending",
+            issuing_date: Time.zone.at(timestamp).to_date,
+            payment_method:
+          )
+        end
+
+        it "passes payment_method_params to CreateService" do
+          allow(Invoices::Payments::CreateService).to receive(:call_async)
+
+          finalize_service.call
+
+          expect(Invoices::Payments::CreateService).to have_received(:call_async)
+            .with(invoice:, payment_method_params: {payment_method_id: payment_method.id})
+        end
+      end
+
+      context "when invoice has skip_psp set" do
+        let(:invoice) do
+          create(
+            :invoice,
+            :pending,
+            customer:,
+            billing_entity:,
+            organization:,
+            invoice_type: :one_off,
+            currency: "EUR",
+            tax_status: "pending",
+            issuing_date: Time.zone.at(timestamp).to_date,
+            skip_psp: true
+          )
+        end
+
+        it "does not create a payment" do
+          allow(Invoices::Payments::CreateService).to receive(:call_async)
+
+          finalize_service.call
+
+          expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
+        end
+      end
     end
 
     context "when invoice is pay-in-advance fixed charges" do
@@ -425,7 +478,7 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
 
         finalize_service.call
 
-        expect(Invoices::Payments::CreateService).to have_received(:call_async).with(invoice:)
+        expect(Invoices::Payments::CreateService).to have_received(:call_async).with(invoice:, payment_method_params: {})
       end
 
       it "updates issuing_date to current date (not keeping anchor for non-recurring)" do
