@@ -42,10 +42,12 @@ module Invoices
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
 
+        invoice.payment_method = payment_method
+        invoice.skip_psp = skip_psp
+
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
         if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
           tax_deferred = true
-          store_payment_preferences!
           next
         end
         totals_result.raise_if_error!
@@ -68,7 +70,7 @@ module Invoices
         GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
-        Invoices::Payments::CreateService.call_async(invoice:, payment_method_params:) unless skip_psp
+        Invoices::Payments::CreateService.call_async(invoice:, payment_method_params:) unless invoice.skip_psp?
       end
 
       result
@@ -100,10 +102,6 @@ module Invoices
 
     def create_one_off_fees(invoice)
       Fees::OneOffService.new(invoice:, fees:).call.raise_if_error!
-    end
-
-    def store_payment_preferences!
-      invoice.update!(payment_method: payment_method, skip_psp:)
     end
 
     def should_deliver_email?
