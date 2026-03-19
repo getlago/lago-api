@@ -392,7 +392,7 @@ GEM
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
     jmespath (1.6.2)
-    json (2.18.0)
+    json (2.19.2)
     jwt (2.8.2)
       base64
     kaminari-activerecord (1.2.2)
