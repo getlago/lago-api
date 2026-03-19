@@ -316,6 +316,7 @@ DROP INDEX IF EXISTS public.index_webhooks_on_webhook_endpoint_id;
 DROP INDEX IF EXISTS public.index_webhooks_on_organization_id;
 DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_status_and_timestamps;
 DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_and_timestamps;
+DROP INDEX IF EXISTS public.index_webhooks_for_query;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_webhook_url_and_organization_id;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
@@ -717,7 +718,6 @@ DROP INDEX IF EXISTS public.index_active_storage_attachments_on_blob_id;
 DROP INDEX IF EXISTS public.index_active_metric_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filter_values;
-DROP INDEX IF EXISTS public.idx_webhooks_on_endpoint_id_type_updated_at;
 DROP INDEX IF EXISTS public.idx_wallet_tx_consumptions_inbound_outbound;
 DROP INDEX IF EXISTS public.idx_wallet_transactions_available_inbound;
 DROP INDEX IF EXISTS public.idx_usage_thresholds_subscription_recurring;
@@ -6240,13 +6240,6 @@ CREATE UNIQUE INDEX idx_wallet_tx_consumptions_inbound_outbound ON public.wallet
 
 
 --
--- Name: idx_webhooks_on_endpoint_id_type_updated_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_webhooks_on_endpoint_id_type_updated_at ON public.webhooks USING btree (webhook_endpoint_id, webhook_type, updated_at DESC);
-
-
---
 -- Name: index_active_charge_filter_values; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9051,6 +9044,13 @@ CREATE INDEX index_webhook_endpoints_on_organization_id ON public.webhook_endpoi
 --
 
 CREATE UNIQUE INDEX index_webhook_endpoints_on_webhook_url_and_organization_id ON public.webhook_endpoints USING btree (webhook_url, organization_id);
+
+
+--
+-- Name: index_webhooks_for_query; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhooks_for_query ON public.webhooks USING btree (organization_id, webhook_endpoint_id, webhook_type, updated_at);
 
 
 --

@@ -9,7 +9,7 @@ class WebhooksQuery < BaseQuery
 
     webhooks = base_scope.result
     webhooks = paginate(webhooks)
-    webhooks = webhooks.order({updated_at: :desc})
+    webhooks = webhooks.order({updated_at: :desc, created_at: :desc})
 
     webhooks = with_statuses(webhooks) if filters.statuses.present?
     webhooks = with_event_types(webhooks) if filters.event_types.present?
