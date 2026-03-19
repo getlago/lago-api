@@ -281,6 +281,71 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
       end
     end
 
+    context "when invoice is one-off" do
+      let(:add_on) { create(:add_on, organization:, amount_cents: 5000) }
+
+      let(:invoice) do
+        create(
+          :invoice,
+          :pending,
+          customer:,
+          billing_entity:,
+          organization:,
+          invoice_type: :one_off,
+          currency: "EUR",
+          tax_status: "pending",
+          issuing_date: Time.zone.at(timestamp).to_date
+        )
+      end
+
+      let(:fee_subscription) { nil }
+      let(:fee_charge) { nil }
+
+      let(:fee_add_on) do
+        create(
+          :fee,
+          invoice:,
+          add_on:,
+          fee_type: :add_on,
+          invoiceable: add_on,
+          amount_cents: 5000
+        )
+      end
+
+      before do
+        fee_add_on
+        allow(SegmentTrackJob).to receive(:perform_later)
+      end
+
+      it "changes status from pending to finalized" do
+        expect { finalize_service.call }
+          .to change { invoice.reload.status }.from("pending").to("finalized")
+      end
+
+      it "enqueues SendWebhookJob with one_off webhook type" do
+        expect { finalize_service.call }
+          .to have_enqueued_job(SendWebhookJob).with("invoice.one_off_created", invoice)
+      end
+
+      it "produces an activity log with one_off action" do
+        finalize_service.call
+
+        expect(Utils::ActivityLog).to have_produced("invoice.one_off_created").with(invoice)
+      end
+
+      it "does not apply credit note credits" do
+        finalize_service.call
+
+        expect(invoice.reload.credits.credit_note_kind).to be_empty
+      end
+
+      it "does not apply prepaid credits" do
+        finalize_service.call
+
+        expect(invoice.reload.wallet_transactions).to be_empty
+      end
+    end
+
     context "when invoice is pay-in-advance fixed charges" do
       let(:add_on) { create(:add_on, organization:) }
       let(:fixed_charge) { create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"}) }

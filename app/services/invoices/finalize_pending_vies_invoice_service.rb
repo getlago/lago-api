@@ -38,8 +38,8 @@ module Invoices
 
       if invoice.finalized?
         after_commit do
-          SendWebhookJob.perform_later("invoice.created", invoice)
-          Utils::ActivityLog.produce(invoice, "invoice.created")
+          SendWebhookJob.perform_later(webhook_type, invoice)
+          Utils::ActivityLog.produce(invoice, webhook_type)
           GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -101,6 +101,10 @@ module Invoices
     def should_deliver_email?
       License.premium? &&
         invoice.billing_entity.email_settings.include?("invoice.finalized")
+    end
+
+    def webhook_type
+      invoice.one_off? ? "invoice.one_off_created" : "invoice.created"
     end
   end
 end
