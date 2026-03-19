@@ -55,7 +55,11 @@ describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
       ]})
     alert_on_bm = UsageMonitoring::Alert.find(json[:alert][:lago_id])
 
+    # NOTE: Creating alerts flags the subscription as active
+    expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
+    perform_usage_update
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
+
     send_event!(code: billable_metric.code, properties: {ops_count: 2}, external_subscription_id: subscription_external_id)
     # SubscriptionActivity is created by PostProcessEvents
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
