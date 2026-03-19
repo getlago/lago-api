@@ -260,8 +260,15 @@ describe "Add customer-specific taxes" do
         invoice = customer.invoices.sole
         expect_pending_invoice(invoice)
 
+        webhooks_sent.clear
         resolve_vies_check!(customer)
+        # Process webhook jobs enqueued via after_commit
+        perform_all_enqueued_jobs
         expect_finalized_invoice_with_reverse_charge(invoice)
+
+        # One-off invoices must use the one_off_created webhook type
+        expect(webhooks_sent.find { it["webhook_type"] == "invoice.one_off_created" }).to be_present
+        expect(webhooks_sent.find { it["webhook_type"] == "invoice.created" }).to be_nil
       end
     end
 
