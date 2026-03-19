@@ -132,7 +132,7 @@ module Invoices
       return @payment_method if defined? @payment_method
       return nil if payment_method_params.blank? || payment_method_params[:payment_method_id].blank?
 
-      @payment_method = PaymentMethod.find_by(id: payment_method_params[:payment_method_id], organization_id: customer.organization_id)
+      @payment_method = customer.payment_methods.find_by(id: payment_method_params[:payment_method_id])
     end
 
     def invoice_custom_section_ids
