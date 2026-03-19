@@ -49,10 +49,11 @@ module Fees
           )
           fee.precise_unit_amount = fee.unit_amount.to_f
 
-          # Only apply explicit payload taxes here — they would be lost if deferred.
-          # Derived taxes (from customer/plan hierarchy) and provider taxes are applied
-          # later by ComputeTaxesAndTotalsService.
-          if tax_codes.present?
+          # Apply explicit payload taxes only when there is no tax provider.
+          # Provider taxes take precedence and are handled async by ComputeTaxesAndTotalsService.
+          # Explicit tax_codes must be applied here because they are ephemeral payload data.
+          # Derived taxes (no tax_codes, no provider) are applied later by ComputeAmountsFromFees.
+          if tax_codes.present? && !customer_provider_taxation?
             taxes_result = Fees::ApplyTaxesService.call(fee:, tax_codes:)
             taxes_result.raise_if_error!
           end
@@ -85,6 +86,10 @@ module Fees
 
     def add_on_identifier
       api_context? ? :add_on_code : :add_on_id
+    end
+
+    def customer_provider_taxation?
+      @customer_provider_taxation ||= customer.tax_customer.present?
     end
 
     def valid_boundaries?(fee)
