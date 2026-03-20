@@ -140,11 +140,9 @@ RSpec.describe DailyUsages::ComputeAllService do
     context "when last_received_event_on is nil" do
       let(:subscriptions) { create_list(:subscription, 5, customer:, last_received_event_on: nil) }
 
-      it "enqueues a job to compute the daily usage" do
+      it "does not enqueue any job" do
         expect(compute_service.call).to be_success
-        subscriptions.each do |subscription|
-          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
-        end
+        expect(DailyUsages::ComputeJob).not_to have_been_enqueued
       end
     end
 

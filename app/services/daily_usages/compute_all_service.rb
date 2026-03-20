@@ -67,7 +67,7 @@ module DailyUsages
             Subscription.where(customer_id: customer_ids)
               .active
               .where.not(id: subscription_ids_with_daily_usage)
-              .where("last_received_event_on IS NULL OR last_received_event_on >= ?", timestamp.to_date - 1.day)
+              .where("last_received_event_on >= ?", timestamp.to_date - 1.day)
               .find_each do |subscription|
                 yield subscription
             end
