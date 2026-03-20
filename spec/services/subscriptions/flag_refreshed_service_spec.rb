@@ -9,6 +9,7 @@ RSpec.describe Subscriptions::FlagRefreshedService, :premium do
 
   before do
     allow(UsageMonitoring::TrackSubscriptionActivityService).to receive(:call).and_call_original
+    allow(Subscriptions::ChargeCacheService).to receive(:expire_for_subscription)
     create(:wallet, customer:, organization:)
   end
 
@@ -18,6 +19,11 @@ RSpec.describe Subscriptions::FlagRefreshedService, :premium do
     it "marks customer as awaiting wallet refresh" do
       expect { subject }.to change { customer.reload.awaiting_wallet_refresh }.from(false).to(true)
       expect(result).to be_success
+    end
+
+    it "expires the charge cache for the subscription" do
+      subject
+      expect(Subscriptions::ChargeCacheService).to have_received(:expire_for_subscription).with(subscription)
     end
 
     it "tracks subscription activity" do
