@@ -43,7 +43,7 @@ module Invoices
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
 
         invoice.payment_method = payment_method
-        invoice.skip_psp = skip_psp
+        invoice.skip_automatic_payment = skip_psp
 
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
         if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
@@ -70,7 +70,7 @@ module Invoices
         GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
-        Invoices::Payments::CreateService.call_async(invoice:, payment_method_params:) unless invoice.skip_psp?
+        Invoices::Payments::CreateService.call_async(invoice:, payment_method_params:) unless invoice.skip_automatic_payment?
       end
 
       result

@@ -108,7 +108,7 @@ module Invoices
     end
 
     def create_payment
-      return if invoice.skip_psp?
+      return if invoice.skip_automatic_payment?
 
       payment_method_params = if invoice.payment_method_id.present?
         {payment_method_id: invoice.payment_method_id}
