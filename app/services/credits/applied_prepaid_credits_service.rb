@@ -198,7 +198,11 @@ module Credits
     end
 
     def wallets
-      @wallets ||= customer.wallets.active.includes(:wallet_targets).with_positive_balance.in_application_order
+      @wallets ||= begin
+        scope = customer.wallets.active.includes(:wallet_targets).with_positive_balance
+        scope = scope.where(balance_currency: invoice.currency) if invoice.currency.present?
+        scope.in_application_order
+      end
     end
   end
 end
