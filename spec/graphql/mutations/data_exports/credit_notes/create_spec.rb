@@ -35,7 +35,8 @@ RSpec.describe Mutations::DataExports::CreditNotes::Create do
           issuingDateTo: "2024-07-01",
           reason: %w[duplicated_charge product_unsatisfactory],
           refundStatus: %w[pending succeeded],
-          searchTerm: "abc"
+          searchTerm: "abc",
+          types: %w[credit refund]
         }
       }
     }

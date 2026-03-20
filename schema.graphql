@@ -4849,6 +4849,7 @@ input DataExportCreditNoteFiltersInput {
   refundStatus: [CreditNoteRefundStatusEnum!]
   searchTerm: String
   selfBilled: Boolean
+  types: [CreditNoteTypeEnum!]
 }
 
 enum DataExportFormatTypeEnum {

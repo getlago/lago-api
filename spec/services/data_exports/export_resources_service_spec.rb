@@ -100,6 +100,28 @@ RSpec.describe DataExports::ExportResourcesService do
       end
     end
 
+    context "when resource type is credit_notes with types filter" do
+      let(:data_export) do
+        create(:data_export, resource_type: "credit_notes", format: "csv", resource_query: {"types" => ["credit"]})
+      end
+
+      let!(:credit_note_credit) do
+        create(:credit_note, organization:, credit_amount_cents: 100, refund_amount_cents: 0, offset_amount_cents: 0)
+      end
+
+      let!(:credit_note_refund) do
+        create(:credit_note, organization:, credit_amount_cents: 0, refund_amount_cents: 100, offset_amount_cents: 0)
+      end
+
+      it "only exports credit notes matching the types filter" do
+        expect(result).to be_success
+
+        part = data_export.data_export_parts.sole
+        expect(part.object_ids).to include(credit_note_credit.id)
+        expect(part.object_ids).not_to include(credit_note_refund.id)
+      end
+    end
+
     context "when resource type is not supported" do
       let(:data_export) { create :data_export, resource_type: "unknown" }
 
