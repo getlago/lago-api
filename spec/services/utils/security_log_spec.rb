@@ -271,5 +271,32 @@ RSpec.describe Utils::SecurityLog do
         end
       end
     end
+
+    [
+      {exception: WaterDrop::Errors::ProduceError, message: "#<Rdkafka::RdkafkaError: Local: Unknown topic (unknown_topic)>"},
+      {exception: WaterDrop::Errors::MessageInvalidError, message: "Message is too large"}
+    ].each do |error_context|
+      exception = error_context[:exception]
+      message = error_context[:message]
+      context "when producer raises #{exception}" do
+        before do
+          allow(karafka_producer).to receive(:produce_async).and_raise(exception.new(message))
+        end
+
+        context "when sentry is configured", :sentry do
+          it "captures the exception and returns false" do
+            expect(produce).to be false
+            expect(sentry_events).to include_sentry_event(exception: exception, message: message)
+          end
+        end
+
+        context "when sentry is not configured" do
+          it "re-raises the error" do
+            expect { produce }.to raise_error(exception, message)
+            expect(sentry_events).to be_empty
+          end
+        end
+      end
+    end
   end
 end
