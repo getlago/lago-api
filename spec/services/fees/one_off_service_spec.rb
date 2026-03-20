@@ -290,5 +290,33 @@ RSpec.describe Fees::OneOffService do
         expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
       end
     end
+
+    context "when customer has tax provider integration" do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+      before { integration_customer }
+
+      it "creates fees without taxes (deferred to provider)" do
+        result = one_off_service.call
+
+        expect(result).to be_success
+
+        result.fees.each do |fee|
+          expect(fee.applied_taxes).to be_empty
+          expect(fee.taxes_amount_cents).to eq 0
+        end
+      end
+
+      context "when explicit tax_codes are in the payload" do
+        it "skips explicit taxes in favor of provider" do
+          result = one_off_service.call
+
+          first_fee = result.fees[0]
+          expect(first_fee.applied_taxes).to be_empty
+          expect(first_fee.taxes_amount_cents).to eq 0
+        end
+      end
+    end
   end
 end
