@@ -14,8 +14,13 @@ RSpec.describe PaymentReceipts::GenerateDocumentsJob do
     allow(PaymentReceipts::GenerateXmlService).to receive(:call).with(payment_receipt:).and_return(result)
   end
 
-  it_behaves_like "a configurable queues", "pdfs", "SIDEKIQ_PDFS", "low_priority" do
+  it_behaves_like "a configurable queue", "pdfs", "SIDEKIQ_PDFS", "low_priority" do
     let(:arguments) { {payment_receipt:, notify:} }
+  end
+
+  it_behaves_like "a retryable on network errors job" do
+    let(:service_class) { PaymentReceipts::GenerateXmlService }
+    let(:job_arguments) { {payment_receipt:, notify:} }
   end
 
   it "generates the PDF" do
