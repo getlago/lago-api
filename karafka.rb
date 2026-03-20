@@ -41,6 +41,12 @@ class KarafkaApp < Karafka::App
     Sentry.capture_exception(event[:error])
   end
 
+  # Logs producer errors to Sentry.
+  Karafka.producer.monitor.subscribe "error.occurred" do |event|
+    Sentry.capture_exception(event[:error])
+    Rails.logger.error("Karafka producer error: #{event[:error].message}")
+  end
+
   if ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"].present?
     routes.draw do
       consumer_group :lago_events_charged_in_advance_consumer do
