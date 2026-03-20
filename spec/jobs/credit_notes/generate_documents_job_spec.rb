@@ -8,6 +8,10 @@ RSpec.describe CreditNotes::GenerateDocumentsJob do
   let(:generate_pdf_service) { instance_double(CreditNotes::GeneratePdfService) }
   let(:generate_xml_service) { instance_double(CreditNotes::GenerateXmlService) }
 
+  it_behaves_like "a configurable queues", "pdfs", "SIDEKIQ_PDFS", "invoices" do
+    let(:arguments) { credit_note }
+  end
+
   it "delegates to the Generate service" do
     allow(CreditNotes::GeneratePdfService).to receive(:new)
       .with(credit_note:, context: "api")

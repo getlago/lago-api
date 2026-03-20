@@ -14,6 +14,10 @@ RSpec.describe PaymentReceipts::GenerateDocumentsJob do
     allow(PaymentReceipts::GenerateXmlService).to receive(:call).with(payment_receipt:).and_return(result)
   end
 
+  it_behaves_like "a configurable queues", "pdfs", "SIDEKIQ_PDFS", "low_priority" do
+    let(:arguments) { {payment_receipt:, notify:} }
+  end
+
   it "generates the PDF" do
     subject
     expect(PaymentReceipts::GeneratePdfService).to have_received(:call)
