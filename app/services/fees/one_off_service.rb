@@ -89,7 +89,9 @@ module Fees
     end
 
     def customer_provider_taxation?
-      @customer_provider_taxation ||= customer.tax_customer.present?
+      return @customer_provider_taxation if defined?(@customer_provider_taxation)
+
+      @customer_provider_taxation = customer.tax_customer.present?
     end
 
     def valid_boundaries?(fee)
