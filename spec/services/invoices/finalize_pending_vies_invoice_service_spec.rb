@@ -373,7 +373,7 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
         end
       end
 
-      context "when invoice has skip_psp set" do
+      context "when invoice has skip_automatic_payment set" do
         let(:invoice) do
           create(
             :invoice,
@@ -385,7 +385,7 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
             currency: "EUR",
             tax_status: "pending",
             issuing_date: Time.zone.at(timestamp).to_date,
-            skip_psp: true
+            skip_automatic_payment: true
           )
         end
 
