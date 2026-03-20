@@ -290,6 +290,5 @@ RSpec.describe Fees::OneOffService do
         expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
       end
     end
-
   end
 end
