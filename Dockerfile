@@ -6,7 +6,7 @@ ARG PDFCPU_VERSION
 
 RUN go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@v${PDFCPU_VERSION}
 
-FROM ruby:4.0.1-slim AS build
+FROM ruby:4.0.2-slim AS build
 
 ARG BUNDLE_WITH
 
@@ -29,7 +29,7 @@ RUN --mount=type=secret,id=BUNDLE_GEMS__CONTRIBSYS__COM,env=BUNDLE_GEMS__CONTRIB
   bundle config set build.nokogiri --use-system-libraries &&\
   bundle install --jobs=3 --retry=3
 
-FROM ruby:4.0.1-slim
+FROM ruby:4.0.2-slim
 
 ARG BUNDLE_WITH
 

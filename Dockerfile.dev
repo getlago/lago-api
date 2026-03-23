@@ -7,7 +7,7 @@ ARG PDFCPU_VERSION
 
 RUN go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@v${PDFCPU_VERSION}
 
-FROM ruby:4.0.1-slim
+FROM ruby:4.0.2-slim
 
 WORKDIR /app
 ENV POSTGRES_VERSION=15
