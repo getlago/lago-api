@@ -54,13 +54,12 @@ module Integrations
 
           deliver_error_webhook(customer:, code:, message:)
 
-          return result unless [500, 424].include?(e.error_code.to_i)
-          return result if invalid_login_attempt_error?(e)
+          raise e if retryable_error?(e)
 
-          raise e
+          result.integration_non_retryable_failure!(code:, message:)
         rescue Integrations::Aggregator::BasePayload::Failure => e
           deliver_error_webhook(customer:, code: e.code, message: e.code.humanize)
-          result
+          result.integration_non_retryable_failure!(code: e.code, message: e.code.humanize)
         end
 
         def call_async
@@ -89,6 +88,11 @@ module Integrations
 
         def process_string_result(body)
           result.external_id = body
+        end
+
+        def retryable_error?(http_error)
+          server_error = http_error.error_code.to_i >= 500 || http_error.error_code.to_i == 424
+          server_error && !invalid_login_attempt_error?(http_error)
         end
 
         def invalid_login_attempt_error?(http_error)

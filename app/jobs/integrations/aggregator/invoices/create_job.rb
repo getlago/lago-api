@@ -14,6 +14,7 @@ module Integrations
         retry_on Net::ReadTimeout, wait: :polynomially_longer, attempts: 6
         retry_on RequestLimitError, wait: :polynomially_longer, attempts: 100
         retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
+        discard_on BaseService::IntegrationNonRetryableFailure
 
         def perform(invoice:)
           result = Integrations::Aggregator::Invoices::CreateService.call(invoice:)
