@@ -22,7 +22,7 @@ RSpec.describe DailyUsages::ComputeAllService do
     it "enqueues a job to compute the daily usage" do
       expect(compute_service.call).to be_success
       subscriptions.each do |subscription|
-        expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.minutes.from_now..30.minutes.from_now)
+        expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(a_value_between(0.minutes.from_now, 30.minutes.from_now))
       end
     end
 
@@ -32,7 +32,7 @@ RSpec.describe DailyUsages::ComputeAllService do
       it "uses the configured interval" do
         expect(compute_service.call).to be_success
         subscriptions.each do |subscription|
-          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.seconds.from_now..60.seconds.from_now)
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(a_value_between(0.seconds.from_now, 60.seconds.from_now))
         end
       end
     end
@@ -43,7 +43,7 @@ RSpec.describe DailyUsages::ComputeAllService do
       it "falls back to the default interval" do
         expect(compute_service.call).to be_success
         subscriptions.each do |subscription|
-          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.minutes.from_now..30.minutes.from_now)
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(a_value_between(0.minutes.from_now, 30.minutes.from_now))
         end
       end
     end
@@ -54,7 +54,7 @@ RSpec.describe DailyUsages::ComputeAllService do
       it "falls back to the default interval" do
         expect(compute_service.call).to be_success
         subscriptions.each do |subscription|
-          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.minutes.from_now..30.minutes.from_now)
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(a_value_between(0.minutes.from_now, 30.minutes.from_now))
         end
       end
     end
@@ -65,7 +65,7 @@ RSpec.describe DailyUsages::ComputeAllService do
       it "falls back to the default interval" do
         expect(compute_service.call).to be_success
         subscriptions.each do |subscription|
-          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.minutes.from_now..30.minutes.from_now)
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(a_value_between(0.minutes.from_now, 30.minutes.from_now))
         end
       end
     end
@@ -76,7 +76,7 @@ RSpec.describe DailyUsages::ComputeAllService do
       it "falls back to the default interval" do
         expect(compute_service.call).to be_success
         subscriptions.each do |subscription|
-          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.minutes.from_now..30.minutes.from_now)
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(a_value_between(0.minutes.from_now, 30.minutes.from_now))
         end
       end
     end
@@ -88,7 +88,7 @@ RSpec.describe DailyUsages::ComputeAllService do
         expect(compute_service.call).to be_success
         expect(DailyUsages::ComputeJob).not_to have_been_enqueued.with(subscriptions.first, timestamp:)
         subscriptions[1..].each do |subscription|
-          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.minutes.from_now..30.minutes.from_now)
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(a_value_between(0.minutes.from_now, 30.minutes.from_now))
         end
       end
     end
