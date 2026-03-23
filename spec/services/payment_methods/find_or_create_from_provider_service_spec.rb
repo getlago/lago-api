@@ -89,6 +89,24 @@ RSpec.describe PaymentMethods::FindOrCreateFromProviderService do
       end
     end
 
+    context "when a concurrent process creates the same PaymentMethod" do
+      it "rescues RecordNotUnique and returns the existing record" do
+        allow(PaymentMethods::CreateFromProviderService).to receive(:call).and_raise(ActiveRecord::RecordNotUnique)
+
+        existing_payment_method = create(
+          :payment_method,
+          customer:,
+          payment_provider_customer:,
+          provider_method_id:
+        )
+
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.payment_method).to eq(existing_payment_method)
+      end
+    end
+
     context "with set_as_default: true" do
       let(:set_as_default) { true }
 

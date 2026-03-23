@@ -90,6 +90,26 @@ RSpec.describe PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodSer
         expect(payment_method.details["expiration_month"]).to eq(12)
         expect(payment_method.details["expiration_year"]).to eq(2025)
       end
+
+      context "when payment method already exists in Lago" do
+        let!(:existing_payment_method) do
+          create(
+            :payment_method,
+            customer:,
+            payment_provider_customer: provider_customer,
+            provider_method_id: payment_method_id,
+            payment_provider: stripe_provider
+          )
+        end
+
+        it "returns the existing payment method without creating a duplicate" do
+          expect { service.call }.not_to change(PaymentMethod, :count)
+
+          result = service.call
+          expect(result).to be_success
+          expect(result.payment_method).to eq(existing_payment_method)
+        end
+      end
     end
   end
 end
