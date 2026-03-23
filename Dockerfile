@@ -1,3 +1,4 @@
+ARG PDFCPU_VERSION=0.11.1
 ARG GO_VERSION=1.25.8
 
 FROM golang:${GO_VERSION} AS pdfcpu-build
