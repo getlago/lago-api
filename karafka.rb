@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+# You can enable debug logging for Karafka by adding `debug: "topic"` to the `config.kafka` configuration. This will log
+# debug information about topics (unknown topics, topic metadata, etc.) which can be helpful for troubleshooting Kafka
+# connectivity issues locally.
+#
 class KarafkaApp < Karafka::App
   setup do |config|
     config.kafka = {
