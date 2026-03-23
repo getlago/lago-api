@@ -70,8 +70,10 @@ module Invoices
       end
 
       if customer.currency && customer.currency != subscription_currencies.first
-        result.single_validation_failure!(error_code: "customer_currency_does_not_match")
-        return false
+        if organization.feature_flag_disabled?(:multi_currency_subscriptions)
+          result.single_validation_failure!(error_code: "customer_currency_does_not_match")
+          return false
+        end
       end
 
       true

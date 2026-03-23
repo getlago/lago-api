@@ -98,5 +98,129 @@ RSpec.describe Customers::UpdateCurrencyService do
         expect(result.error.messages[:currency]).to eq(["value_is_invalid"])
       end
     end
+
+    context "when multi_currency_subscriptions flag is enabled" do
+      before { customer.organization.enable_feature_flag!(:multi_currency_subscriptions) }
+
+      context "when customer_update is false (billing object creation)" do
+        let(:customer_update) { false }
+
+        context "when customer has no currency" do
+          let(:customer) { create(:customer, currency: nil) }
+
+          it "sets the currency" do
+            result = currency_service.call
+
+            expect(result).to be_success
+            expect(customer.reload.currency).to eq(currency)
+          end
+        end
+
+        context "when customer already has a different currency" do
+          let(:customer) { create(:customer, currency: "EUR") }
+
+          it "returns success without updating customer currency" do
+            result = currency_service.call
+
+            expect(result).to be_success
+            expect(customer.reload.currency).to eq("EUR")
+          end
+        end
+      end
+
+      context "when customer_update is true (direct API update)" do
+        let(:customer_update) { true }
+        let(:customer) { create(:customer, currency: "EUR") }
+
+        context "when customer has no invoices" do
+          it "allows the currency update" do
+            result = currency_service.call
+
+            expect(result).to be_success
+            expect(customer.reload.currency).to eq(currency)
+          end
+        end
+
+        context "when customer has finalized invoices in a different currency" do
+          before { create(:invoice, customer:, currency: "EUR", status: :finalized) }
+
+          it "blocks the update" do
+            result = currency_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:currency]).to eq(["currencies_does_not_match"])
+          end
+        end
+
+        context "when customer has closed invoices in a different currency" do
+          before { create(:invoice, customer:, currency: "EUR", status: :closed) }
+
+          it "blocks the update" do
+            result = currency_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:currency]).to eq(["currencies_does_not_match"])
+          end
+        end
+
+        context "when customer has open invoices in a different currency" do
+          before { create(:invoice, customer:, currency: "EUR", status: :open) }
+
+          it "blocks the update" do
+            result = currency_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:currency]).to eq(["currencies_does_not_match"])
+          end
+        end
+
+        context "when customer has only draft invoices in a different currency" do
+          before { create(:invoice, customer:, currency: "EUR", status: :draft) }
+
+          it "allows the currency update" do
+            result = currency_service.call
+
+            expect(result).to be_success
+            expect(customer.reload.currency).to eq(currency)
+          end
+        end
+
+        context "when customer has only voided invoices in a different currency" do
+          before { create(:invoice, customer:, currency: "EUR", status: :voided) }
+
+          it "allows the currency update" do
+            result = currency_service.call
+
+            expect(result).to be_success
+            expect(customer.reload.currency).to eq(currency)
+          end
+        end
+
+        context "when customer has invoices in the target currency" do
+          before { create(:invoice, customer:, currency: "USD", status: :finalized) }
+
+          it "allows the currency update" do
+            result = currency_service.call
+
+            expect(result).to be_success
+            expect(customer.reload.currency).to eq(currency)
+          end
+        end
+
+        context "when customer is not editable but has no committed invoices in different currency" do
+          before { create(:subscription, customer:) }
+
+          it "allows the currency update" do
+            result = currency_service.call
+
+            expect(result).to be_success
+            expect(customer.reload.currency).to eq(currency)
+          end
+        end
+      end
+    end
   end
 end
