@@ -22,7 +22,7 @@ module UsageMonitoring
     CURRENT_USAGE_TYPES = %w[current_usage_amount billable_metric_current_usage_amount billable_metric_current_usage_units]
     BILLABLE_METRIC_TYPES = %w[billable_metric_current_usage_amount billable_metric_current_usage_units billable_metric_lifetime_usage_units]
     BILLABLE_METRIC_LIFETIME_USAGE_TYPES = %w[billable_metric_lifetime_usage_units]
-    SUBSCRIPTION_TYPES = %w[current_usage_amount billable_metric_current_usage_amount billable_metric_current_usage_units lifetime_usage_amount]
+    SUBSCRIPTION_TYPES = %w[current_usage_amount billable_metric_current_usage_amount billable_metric_current_usage_units lifetime_usage_amount billable_metric_lifetime_usage_units]
     WALLET_TYPES = %w[wallet_balance_amount wallet_credits_balance wallet_ongoing_balance_amount wallet_credits_ongoing_balance]
 
     DIRECTIONS = {increasing: "increasing", decreasing: "decreasing"}.freeze
