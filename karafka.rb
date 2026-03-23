@@ -3,7 +3,9 @@
 class KarafkaApp < Karafka::App
   setup do |config|
     config.kafka = {
-      "bootstrap.servers": ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"]
+      "bootstrap.servers": ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"],
+      "topic.metadata.propagation.max.ms": 5000,
+      debug: "topic"
     }
 
     if ENV["LAGO_KAFKA_SECURITY_PROTOCOL"].present?
