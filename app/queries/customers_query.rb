@@ -23,8 +23,6 @@ class CustomersQuery < BaseQuery
     return result unless validate_filters.success?
 
     customers = base_scope.result
-    customers = paginate(customers)
-    customers = apply_consistent_ordering(customers)
 
     customers = with_customer_type(customers) if filters.customer_type.present? || filters.key?(:has_customer_type)
     customers = with_account_type(customers) if filters.account_type.present?
@@ -36,6 +34,8 @@ class CustomersQuery < BaseQuery
     customers = with_metadata(customers) if filters.metadata.present?
 
     customers = customers.with_discarded if filters.with_deleted
+    customers = paginate(customers)
+    customers = apply_consistent_ordering(customers)
 
     result.customers = customers
     result
