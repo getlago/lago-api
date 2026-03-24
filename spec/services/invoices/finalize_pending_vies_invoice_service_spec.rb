@@ -369,7 +369,7 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
           finalize_service.call
 
           expect(Invoices::Payments::CreateService).to have_received(:call_async)
-            .with(invoice:, payment_method_params: { payment_method_id: payment_method.id })
+            .with(invoice:, payment_method_params: {payment_method_id: payment_method.id})
         end
       end
 

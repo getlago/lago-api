@@ -111,7 +111,7 @@ module Invoices
       return if invoice.skip_automatic_payment?
 
       payment_method_params = if invoice.payment_method_id.present?
-        { payment_method_id: invoice.payment_method_id }
+        {payment_method_id: invoice.payment_method_id}
       else
         {}
       end
