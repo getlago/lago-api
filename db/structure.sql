@@ -224,6 +224,7 @@ ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_33d169382f;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_32600e5a72;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_310fcb3585;
+ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_309d3a4412;
 ALTER TABLE IF EXISTS ONLY public.wallets_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_3092f5f2e0;
 ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_2ffeff5323;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_2fd7ee65e6;
@@ -1376,11 +1377,11 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'billable_metric_current_usage_amount',
     'billable_metric_current_usage_units',
     'lifetime_usage_amount',
+    'billable_metric_lifetime_usage_units',
     'wallet_balance_amount',
     'wallet_credits_balance',
     'wallet_ongoing_balance_amount',
-    'wallet_credits_ongoing_balance',
-    'billable_metric_lifetime_usage_units'
+    'wallet_credits_ongoing_balance'
 );
 
 
@@ -9784,6 +9785,14 @@ ALTER TABLE ONLY public.wallets_invoice_custom_sections
 
 
 --
+-- Name: invoices fk_rails_309d3a4412; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoices
+    ADD CONSTRAINT fk_rails_309d3a4412 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+
+
+--
 -- Name: credits fk_rails_310fcb3585; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11512,6 +11521,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260327140626'),
 ('20260326130631'),
+('20260324124033'),
 ('20260319125125'),
 ('20260319103035'),
 ('20260317134100'),
