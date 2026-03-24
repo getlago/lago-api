@@ -442,6 +442,176 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
     end
 
+    context "when grouping subscriptions by currency" do
+      let(:organization) { create(:organization, feature_flags: ["multi_currency"]) }
+      let(:interval) { :monthly }
+      let(:billing_time) { :anniversary }
+      let(:current_date) { subscription_at.next_month }
+
+      before { subscription.destroy }
+
+      context "when subscriptions have different currencies" do
+        let(:usd_plan) { create(:plan, organization:, interval:, amount_currency: "USD") }
+        let(:eur_plan) { create(:plan, organization:, interval:, amount_currency: "EUR") }
+
+        let(:usd_subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan: usd_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+        let(:eur_subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan: eur_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+
+        before do
+          usd_subscription
+          eur_subscription
+        end
+
+        it "produces separate billing jobs per currency" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([usd_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([eur_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+
+        context "without feature flag" do
+          let(:organization) { create(:organization) }
+
+          it "groups them into a single billing job" do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with(
+                contain_exactly(usd_subscription, eur_subscription),
+                current_date.to_i,
+                invoicing_reason: :subscription_periodic
+              )
+          end
+        end
+      end
+
+      context "when subscriptions share the same currency" do
+        let(:plan1) { create(:plan, organization:, interval:, amount_currency: "USD") }
+        let(:plan2) { create(:plan, organization:, interval:, amount_currency: "USD") }
+
+        let(:subscription1) do
+          create(
+            :subscription,
+            customer:,
+            plan: plan1,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+        let(:subscription2) do
+          create(
+            :subscription,
+            customer:,
+            plan: plan2,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+
+        before do
+          subscription1
+          subscription2
+        end
+
+        it "groups them into a single billing job" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(
+              contain_exactly(subscription1, subscription2),
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic
+            )
+        end
+      end
+
+      context "when combined with payment method grouping" do
+        let(:organization) { create(:organization, feature_flags: %w[multi_currency multiple_payment_methods]) }
+        let(:usd_plan) { create(:plan, organization:, interval:, amount_currency: "USD") }
+        let(:eur_plan) { create(:plan, organization:, interval:, amount_currency: "EUR") }
+
+        let(:usd_provider_subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan: usd_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+        let(:usd_manual_subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan: usd_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "manual"
+          )
+        end
+        let(:eur_provider_subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan: eur_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+
+        before do
+          usd_provider_subscription
+          usd_manual_subscription
+          eur_provider_subscription
+        end
+
+        it "produces separate billing jobs per payment method and currency" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([usd_provider_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([usd_manual_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([eur_provider_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+      end
+    end
+
     context "when grouping subscriptions by payment method" do
       let(:organization) { create(:organization, feature_flags: ["multiple_payment_methods"]) }
       let(:interval) { :monthly }
