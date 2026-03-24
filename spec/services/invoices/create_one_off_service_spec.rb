@@ -235,6 +235,12 @@ RSpec.describe Invoices::CreateOneOffService do
         expect(result.invoice.currency).to eq("EUR")
         expect(result.invoice.fees_amount_cents).to eq(2800) # 2400 + 400
       end
+
+      it "does not produce an activity log" do
+        result = described_class.call(**args)
+
+        expect(Utils::ActivityLog).not_to have_produced("invoice.one_off_created").with(result.invoice)
+      end
     end
 
     context "when invoice amount in cents is zero" do

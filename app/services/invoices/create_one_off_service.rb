@@ -17,7 +17,8 @@ module Invoices
 
     activity_loggable(
       action: "invoice.one_off_created",
-      record: -> { result.invoice }
+      record: -> { result.invoice },
+      condition: -> { result.invoice&.finalized? }
     )
 
     def call
