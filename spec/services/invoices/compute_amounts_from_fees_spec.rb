@@ -61,6 +61,27 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
     expect { compute_amounts.call }.to change(invoice, :total_amount_cents).from(0).to(559)
   end
 
+  context "when invoice is not persisted and have not persisted fees" do
+    let(:draft_invoice) { build(:invoice, organization:, customer:, fees: fees) }
+    let(:fees) do
+      [build(:fee, amount_cents: 132), build(:fee, amount_cents: 218, precise_coupons_amount_cents: 100)]
+    end
+
+    subject { described_class.new(invoice: draft_invoice) }
+
+    it "avoids persists fees" do
+      result = subject.call
+
+      expect(result.invoice.fees.first.id).to be_nil
+    end
+
+    it "calculates taxes amounts" do
+      result = subject.call
+
+      expect(result.invoice.taxes_rate).to eq(30)
+    end
+  end
+
   context "when taxes are fetched from external provider" do
     let(:integration) { create(:anrok_integration, organization:) }
     let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
