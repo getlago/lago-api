@@ -13,7 +13,7 @@ module Invoices
       invoice.fees.each do |fee|
         result = ::AdjustedFees::EstimateService.call(
           invoice: invoice,
-          params: {invoice_subscription_id: fee.subscription_id, fee_type: fee.fee_type, units: fee.units, unit_precise_amount: fee.amount.currency.subunit_to_unit}
+          params: {invoice_subscription_id: fee.subscription_id, fee_type: fee.fee_type, units: fee.units, unit_precise_amount: fee.amount.currency.subunit_to_unit, charge_id: fee.charge_id}
         )
         result.fee.id = fee.id
         result.fee.adjusted_fee = nil
