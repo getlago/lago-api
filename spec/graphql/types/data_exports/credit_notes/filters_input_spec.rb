@@ -19,5 +19,7 @@ RSpec.describe Types::DataExports::CreditNotes::FiltersInput do
     expect(subject).to accept_argument(:reason).of_type("[CreditNoteReasonEnum!]")
     expect(subject).to accept_argument(:refund_status).of_type("[CreditNoteRefundStatusEnum!]")
     expect(subject).to accept_argument(:search_term).of_type("String")
+    expect(subject).to accept_argument(:self_billed).of_type("Boolean")
+    expect(subject).to accept_argument(:types).of_type("[CreditNoteTypeEnum!]")
   end
 end

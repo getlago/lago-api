@@ -90,6 +90,9 @@ module UsageMonitoring
         result.alert = alert
       end
 
+      track_subscription_activity if subscription
+      process_wallet_alerts if wallet
+
       result
     rescue KeyError
       result.single_validation_failure!(field: :alert_type, error_code: "invalid_type")
@@ -118,6 +121,23 @@ module UsageMonitoring
 
     def direction_for_alert
       Alert::WALLET_TYPES.include?(params[:alert_type]) ? "decreasing" : "increasing"
+    end
+
+    def track_subscription_activity
+      return unless License.premium?
+      return unless subscription.active?
+
+      UsageMonitoring::SubscriptionActivity.insert_all( # rubocop:disable Rails/SkipsModelValidations
+        [{organization_id: organization.id, subscription_id: subscription.id}],
+        unique_by: :idx_subscription_unique
+      )
+    end
+
+    def process_wallet_alerts
+      return unless License.premium?
+      return unless wallet.active?
+
+      UsageMonitoring::ProcessWalletAlertsJob.perform_later(wallet)
     end
   end
 end

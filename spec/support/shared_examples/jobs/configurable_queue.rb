@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.shared_examples "a configurable queues" do |dedicated_queue, env_variable, default_queue = "default"|
+RSpec.shared_examples "a configurable queue" do |dedicated_queue, env_variable, default_queue = "default"|
   let(:arguments) { nil }
 
   context "when #{env_variable} is true" do

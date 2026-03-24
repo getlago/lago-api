@@ -15,8 +15,8 @@ module Types
     field :add_ons, resolver: Resolvers::AddOnsResolver
     field :ai_conversation, resolver: Resolvers::AiConversationResolver
     field :ai_conversations, resolver: Resolvers::AiConversationsResolver
-    field :alert, resolver: Resolvers::UsageMonitoring::AlertResolver
-    field :alerts, resolver: Resolvers::UsageMonitoring::SubscriptionAlertsResolver
+    field :alert, resolver: Resolvers::Subscriptions::AlertResolver
+    field :alerts, resolver: Resolvers::Subscriptions::AlertsResolver
     field :api_key, resolver: Resolvers::ApiKeyResolver
     field :api_keys, resolver: Resolvers::ApiKeysResolver
     field :api_log, resolver: Resolvers::ApiLogResolver
@@ -92,12 +92,16 @@ module Types
     field :security_log, resolver: Resolvers::SecurityLogResolver
     field :security_logs, resolver: Resolvers::SecurityLogsResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
+    field :subscription_alert, resolver: Resolvers::Subscriptions::AlertResolver
+    field :subscription_alerts, resolver: Resolvers::Subscriptions::AlertsResolver
     field :subscription_entitlement, resolver: Resolvers::Entitlement::SubscriptionEntitlementResolver
     field :subscription_entitlements, resolver: Resolvers::Entitlement::SubscriptionEntitlementsResolver
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver
     field :taxes, resolver: Resolvers::TaxesResolver
     field :wallet, resolver: Resolvers::WalletResolver
+    field :wallet_alert, resolver: Resolvers::Wallets::AlertResolver
+    field :wallet_alerts, resolver: Resolvers::Wallets::AlertsResolver
     field :wallet_transaction, resolver: Resolvers::WalletTransactionResolver
     field :wallet_transaction_consumptions, resolver: Resolvers::WalletTransactionConsumptionsResolver
     field :wallet_transaction_fundings, resolver: Resolvers::WalletTransactionFundingsResolver

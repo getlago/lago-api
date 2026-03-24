@@ -21,6 +21,7 @@ module Types
         argument :refund_status, [Types::CreditNotes::RefundStatusTypeEnum], required: false
         argument :search_term, String, required: false
         argument :self_billed, Boolean, required: false
+        argument :types, [Types::CreditNotes::TypeEnum], required: false
       end
     end
   end

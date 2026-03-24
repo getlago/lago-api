@@ -14,6 +14,15 @@ RSpec.describe Invoices::GenerateDocumentsJob do
     allow(Invoices::GenerateXmlService).to receive(:call).with(invoice:).and_return(result)
   end
 
+  it_behaves_like "a configurable queue", "pdfs", "SIDEKIQ_PDFS", "invoices" do
+    let(:arguments) { {invoice:, notify:} }
+  end
+
+  it_behaves_like "a retryable on network errors job" do
+    let(:service_class) { Invoices::GenerateXmlService }
+    let(:job_arguments) { {invoice:, notify:} }
+  end
+
   it "generates the PDF" do
     subject
     expect(Invoices::GeneratePdfService).to have_received(:call)

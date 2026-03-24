@@ -12,6 +12,8 @@ module Invoices
 
     retry_on LagoHttpClient::HttpError,
       Errno::ECONNREFUSED,
+      Errno::EHOSTUNREACH,
+      Net::OpenTimeout,
       Net::ReadTimeout,
       EOFError, wait: :polynomially_longer, attempts: 6
 

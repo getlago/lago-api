@@ -89,6 +89,27 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       it do
         expect(result).to be_success
       end
+
+      it "does not create a subscription activity" do
+        expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+      end
+    end
+
+    context "when tracking subscription activity", :premium do
+      it "creates a subscription activity record" do
+        expect { result }.to change(UsageMonitoring::SubscriptionActivity, :count).by(1)
+
+        activity = UsageMonitoring::SubscriptionActivity.last
+        expect(activity.organization_id).to eq(organization.id)
+        expect(activity.subscription_id).to eq(subscription.id)
+      end
+
+      context "when license is not premium" do
+        it "does not create a subscription activity" do
+          allow(License).to receive(:premium?).and_return(false)
+          expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+        end
+      end
     end
 
     context "when code is blank" do
@@ -352,6 +373,31 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       it "sets direction to decreasing for wallet alerts" do
         expect(result).to be_success
         expect(result.alert.direction).to eq("decreasing")
+      end
+
+      it "does not create a subscription activity" do
+        expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+      end
+
+      context "when processing wallet alerts", :premium do
+        it "enqueues ProcessWalletAlertsJob" do
+          expect { result }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).with(wallet)
+        end
+
+        context "when license is not premium" do
+          it "does not enqueue ProcessWalletAlertsJob" do
+            allow(License).to receive(:premium?).and_return(false)
+            expect { result }.not_to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob)
+          end
+        end
+      end
+
+      context "when wallet is terminated" do
+        let(:wallet) { create(:wallet, :terminated, organization:) }
+
+        it "does not enqueue ProcessWalletAlertsJob" do
+          expect { result }.not_to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob)
+        end
       end
 
       context "when direction param is passed" do

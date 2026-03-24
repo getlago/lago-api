@@ -10,7 +10,12 @@ module PaymentReceipts
       end
     end
 
-    retry_on LagoHttpClient::HttpError, Errno::ECONNREFUSED, EOFError, wait: :polynomially_longer, attempts: 6
+    retry_on LagoHttpClient::HttpError,
+      Errno::ECONNREFUSED,
+      Errno::EHOSTUNREACH,
+      Net::OpenTimeout,
+      Net::ReadTimeout,
+      EOFError, wait: :polynomially_longer, attempts: 6
 
     def perform(payment_receipt:, notify: false)
       PaymentReceipts::GenerateXmlService.call(payment_receipt:).raise_if_error!

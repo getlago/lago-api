@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Subscriptions::FlagRefreshedJob do
   let(:subscription_id) { SecureRandom.uuid }
 
-  it_behaves_like "a configurable queues", "events", "SIDEKIQ_EVENTS" do
+  it_behaves_like "a configurable queue", "events", "SIDEKIQ_EVENTS" do
     let(:arguments) { subscription_id }
   end
 

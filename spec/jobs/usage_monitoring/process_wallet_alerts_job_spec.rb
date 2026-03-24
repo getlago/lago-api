@@ -10,9 +10,18 @@ RSpec.describe UsageMonitoring::ProcessWalletAlertsJob do
       allow(UsageMonitoring::ProcessWalletAlertsService).to receive(:call!)
     end
 
-    it "calls the ProcessWalletAlertsService with the wallet" do
-      described_class.perform_now(wallet)
-      expect(UsageMonitoring::ProcessWalletAlertsService).to have_received(:call!).with(wallet:)
+    context "when premium", :premium do
+      it "calls the ProcessWalletAlertsService with the wallet" do
+        described_class.perform_now(wallet)
+        expect(UsageMonitoring::ProcessWalletAlertsService).to have_received(:call!).with(wallet:)
+      end
+    end
+
+    context "when freemium" do
+      it "does not call the ProcessWalletAlertsService with the wallet" do
+        described_class.perform_now(wallet)
+        expect(UsageMonitoring::ProcessWalletAlertsService).not_to have_received(:call!)
+      end
     end
   end
 end

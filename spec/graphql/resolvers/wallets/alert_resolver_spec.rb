@@ -2,12 +2,12 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::UsageMonitoring::AlertResolver do
-  let(:required_permission) { "subscriptions:view" }
+RSpec.describe Resolvers::Wallets::AlertResolver do
+  let(:required_permission) { "wallets:update" }
   let(:query) do
     <<~GQL
       query($alertId: ID!) {
-        alert(id: $alertId) {
+        walletAlert(id: $alertId) {
           id code name thresholds {code value recurring}
         }
       }
@@ -16,7 +16,7 @@ RSpec.describe Resolvers::UsageMonitoring::AlertResolver do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:alert) { create(:alert, organization:, recurring_threshold: 33, thresholds: [10, 20]) }
+  let(:alert) { create(:wallet_balance_amount_alert, organization:, recurring_threshold: 10, thresholds: [75, 50, 25]) }
 
   before do
     alert
@@ -24,7 +24,7 @@ RSpec.describe Resolvers::UsageMonitoring::AlertResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "subscriptions:view"
+  it_behaves_like "requires permission", "wallets:update"
 
   it "returns a single alert" do
     result = execute_graphql(
@@ -35,15 +35,16 @@ RSpec.describe Resolvers::UsageMonitoring::AlertResolver do
       variables: {alertId: alert.id}
     )
 
-    alert_response = result["data"]["alert"]
+    alert_response = result["data"]["walletAlert"]
 
     expect(alert_response["id"]).to eq(alert.id)
     expect(alert_response["code"]).to start_with("default")
     expect(alert_response["name"]).to eq("General Alert")
     expect(alert_response["thresholds"].map(&:symbolize_keys)).to contain_exactly(
-      {code: "warn10", value: "10.0", recurring: false},
-      {code: "warn20", value: "20.0", recurring: false},
-      {code: "rec", value: "33.0", recurring: true}
+      {code: "warn75", value: "75.0", recurring: false},
+      {code: "warn50", value: "50.0", recurring: false},
+      {code: "warn25", value: "25.0", recurring: false},
+      {code: "rec", value: "10.0", recurring: true}
     )
   end
 

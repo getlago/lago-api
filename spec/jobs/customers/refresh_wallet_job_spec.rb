@@ -47,15 +47,29 @@ RSpec.describe Customers::RefreshWalletJob do
       context "when refresh customer's wallets fails with a tax error" do
         let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: ["customerAddressCouldNotResolve"]}) }
 
-        it "creates a tax_error error_detail on the customer" do
-          expect { subject }.to change { customer.error_details.tax_error.count }.by(1)
+        context "when the error is related to the customer's address" do
+          it "creates a tax_error error_detail on the customer" do
+            expect { subject }.to change { customer.error_details.tax_error.count }.by(1)
+          end
+
+          it "does not re-raise the error" do
+            expect { subject }.not_to raise_error
+          end
         end
 
-        it "does not re-raise the error" do
-          expect { subject }.not_to raise_error
+        context "when the error is an out of memory error" do
+          let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: ["function_runtime_out_of_memory"]}) }
+
+          it "raises the error and retries the job" do
+            assert_performed_jobs(6, only: [described_class]) do
+              expect do
+                described_class.perform_later(customer)
+              end.to raise_error(Integrations::Aggregator::OutOfMemoryError)
+            end
+          end
         end
 
-        context "when the tax error is not related to the customer's address" do
+        context "when the tax error is an unknown failure" do
           let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: ["failure"]}) }
 
           it "does not create an error_detail and re-raises the error" do

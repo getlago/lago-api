@@ -3,28 +3,29 @@
 require "rails_helper"
 
 RSpec.describe CreditNotes::GenerateDocumentsJob do
+  subject { described_class.perform_now(credit_note) }
+
   let(:credit_note) { create(:credit_note) }
   let(:result) { BaseService::Result.new }
-  let(:generate_pdf_service) { instance_double(CreditNotes::GeneratePdfService) }
-  let(:generate_xml_service) { instance_double(CreditNotes::GenerateXmlService) }
+
+  before do
+    allow(CreditNotes::GeneratePdfService).to receive(:call).with(credit_note:, context: "api").and_return(result)
+    allow(CreditNotes::GenerateXmlService).to receive(:call).with(credit_note:, context: "api").and_return(result)
+  end
+
+  it_behaves_like "a configurable queue", "pdfs", "SIDEKIQ_PDFS", "invoices" do
+    let(:arguments) { credit_note }
+  end
+
+  it_behaves_like "a retryable on network errors job" do
+    let(:service_class) { CreditNotes::GenerateXmlService }
+    let(:job_arguments) { credit_note }
+  end
 
   it "delegates to the Generate service" do
-    allow(CreditNotes::GeneratePdfService).to receive(:new)
-      .with(credit_note:, context: "api")
-      .and_return(generate_pdf_service)
-    allow(CreditNotes::GenerateXmlService).to receive(:new)
-      .with(credit_note:, context: "api")
-      .and_return(generate_xml_service)
-    allow(generate_pdf_service).to receive(:call_with_middlewares)
-      .and_return(result)
-    allow(generate_xml_service).to receive(:call_with_middlewares)
-      .and_return(result)
+    subject
 
-    described_class.perform_now(credit_note)
-
-    expect(CreditNotes::GeneratePdfService).to have_received(:new)
-    expect(generate_pdf_service).to have_received(:call_with_middlewares)
-    expect(CreditNotes::GenerateXmlService).to have_received(:new)
-    expect(generate_xml_service).to have_received(:call_with_middlewares)
+    expect(CreditNotes::GeneratePdfService).to have_received(:call)
+    expect(CreditNotes::GenerateXmlService).to have_received(:call)
   end
 end
