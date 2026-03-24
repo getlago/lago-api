@@ -29,11 +29,6 @@ class InvoicesQuery < BaseQuery
 
     invoices = base_scope.result.includes(:customer).includes(file_attachment: :blob)
     invoices = with_customers_filter(invoices)
-    invoices = paginate(invoices)
-    invoices = apply_consistent_ordering(
-      invoices,
-      default_order: {issuing_date: :desc, created_at: :desc}
-    )
 
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
     invoices = with_currency(invoices) if filters.currency
@@ -52,6 +47,12 @@ class InvoicesQuery < BaseQuery
     invoices = with_self_billed(invoices) unless filters.self_billed.nil?
     invoices = with_subscription_id(invoices) if filters.subscription_id.present?
     invoices = with_settlements(invoices) if valid_settlements.present?
+
+    invoices = paginate(invoices)
+    invoices = apply_consistent_ordering(
+      invoices,
+      default_order: {issuing_date: :desc, created_at: :desc}
+    )
 
     result.invoices = invoices
     result
