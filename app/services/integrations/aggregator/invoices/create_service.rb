@@ -56,10 +56,10 @@ module Integrations
 
           raise e if retryable_error?(e)
 
-          result.integration_non_retryable_failure!(code:, message:)
+          result.non_retryable_failure!(code:, message:)
         rescue Integrations::Aggregator::BasePayload::Failure => e
           deliver_error_webhook(customer:, code: e.code, message: e.code.humanize)
-          result.integration_non_retryable_failure!(code: e.code, message: e.code.humanize)
+          result.non_retryable_failure!(code: e.code, message: e.code.humanize)
         end
 
         def call_async

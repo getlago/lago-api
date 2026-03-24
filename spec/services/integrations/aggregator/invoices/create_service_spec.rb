@@ -465,7 +465,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
         it "returns a failure result" do
           result = service_call
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::IntegrationNonRetryableFailure)
+          expect(result.error).to be_a(BaseService::NonRetryableFailure)
         end
 
         it "enqueues a SendWebhookJob" do
@@ -512,7 +512,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       it "returns a failure result" do
         result = service_call
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::IntegrationNonRetryableFailure)
+        expect(result.error).to be_a(BaseService::NonRetryableFailure)
       end
 
       it_behaves_like "throttles!", :anrok, :netsuite, :xero

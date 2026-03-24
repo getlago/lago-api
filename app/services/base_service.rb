@@ -83,7 +83,7 @@ class BaseService
     end
   end
 
-  class IntegrationNonRetryableFailure < ServiceFailure; end
+  class NonRetryableFailure < ServiceFailure; end
 
   class UnknownTaxFailure < FailedResult
     attr_reader :code, :error_message

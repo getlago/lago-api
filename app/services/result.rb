@@ -48,8 +48,8 @@ module Result
     fail_with_error!(BaseService::ServiceFailure.new(self, code:, error_message: message, original_error: error))
   end
 
-  def integration_non_retryable_failure!(code:, message:)
-    fail_with_error!(BaseService::IntegrationNonRetryableFailure.new(self, code:, error_message: message))
+  def non_retryable_failure!(code:, message:)
+    fail_with_error!(BaseService::NonRetryableFailure.new(self, code:, error_message: message))
   end
 
   def unknown_tax_failure!(code:, message:)
