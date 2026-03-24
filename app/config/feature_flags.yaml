@@ -13,3 +13,7 @@ enriched_events_aggregation:
 wallet_traceability:
   description: "Enable wallet traceability on newly created wallets"
   owners: ["@groyoh", "@D1353L"]
+
+multi_currency:
+  description: "Allow customers to have billing objects in multiple currencies"
+  owners: ["@feliperodrigues", "@mariohd", "@lovrocolic"]
