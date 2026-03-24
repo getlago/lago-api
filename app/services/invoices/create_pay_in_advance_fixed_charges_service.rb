@@ -38,7 +38,6 @@ module Invoices
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
         if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
           tax_deferred = true
-          deliver_fee_webhooks
           next
         end
         totals_result.raise_if_error!
@@ -54,7 +53,10 @@ module Invoices
 
       result.invoice = invoice
 
-      return result if tax_deferred
+      if tax_deferred
+        deliver_fee_webhooks
+        return result
+      end
 
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
