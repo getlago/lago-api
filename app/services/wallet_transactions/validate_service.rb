@@ -30,9 +30,9 @@ module WalletTransactions
     end
 
     def valid_wallet?
-      organization = args[:organization].presence || Organization.find_by(id: args[:organization_id])
+      scope = args[:customer].presence || args[:organization].presence || Organization.find_by(id: args[:organization_id])
 
-      result.current_wallet = organization.wallets.find_by(id: args[:wallet_id])
+      result.current_wallet = scope.wallets.find_by(id: args[:wallet_id])
 
       return add_error(field: :wallet_id, error_code: "wallet_not_found") unless result.current_wallet
       return add_error(field: :wallet_id, error_code: "wallet_is_terminated") if result.current_wallet.terminated?

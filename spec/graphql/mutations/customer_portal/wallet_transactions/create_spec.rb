@@ -60,6 +60,26 @@ RSpec.describe Mutations::CustomerPortal::WalletTransactions::Create do
     end
   end
 
+  context "when customer tries to top up another customer's wallet" do
+    let(:other_customer) { create(:customer, organization: wallet.customer.organization) }
+    let(:other_wallet) { create(:wallet, customer: other_customer, balance: 10.0, credits_balance: 10.0) }
+
+    it "returns an error" do
+      result = execute_graphql(
+        customer_portal_user: wallet.customer,
+        query: mutation,
+        variables: {
+          input: {
+            walletId: other_wallet.id,
+            paidCredits: "5.00"
+          }
+        }
+      )
+
+      expect_unprocessable_entity(result)
+    end
+  end
+
   context "without customer portal user" do
     it "returns an error" do
       result = execute_graphql(
