@@ -99,8 +99,8 @@ RSpec.describe Customers::UpdateCurrencyService do
       end
     end
 
-    context "when multi_currency_subscriptions flag is enabled" do
-      before { customer.organization.enable_feature_flag!(:multi_currency_subscriptions) }
+    context "when multi_currency flag is enabled" do
+      before { customer.organization.enable_feature_flag!(:multi_currency) }
 
       context "when customer_update is false (billing object creation)" do
         let(:customer_update) { false }

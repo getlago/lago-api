@@ -14,6 +14,6 @@ wallet_traceability:
   description: "Enable wallet traceability on newly created wallets"
   owners: ["@groyoh", "@D1353L"]
 
-multi_currency_subscriptions:
+multi_currency:
   description: "Allow customers to have billing objects in multiple currencies"
-  owners: ["@feliperodrigues"]
+  owners: ["@feliperodrigues", "@mariohd", "@lovrocolic"]

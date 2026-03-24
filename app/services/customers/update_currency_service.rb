@@ -31,7 +31,7 @@ module Customers
     attr_reader :customer, :currency, :customer_update
 
     def multi_currency_enabled?
-      customer.organization.feature_flag_enabled?(:multi_currency_subscriptions)
+      customer.organization.feature_flag_enabled?(:multi_currency)
     end
 
     def allowed_without_multi_currency?
