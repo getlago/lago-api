@@ -9,7 +9,7 @@ CREATE TABLE default.api_logs
     `request_response` Map(String, Nullable(String)),
     `request_path` String,
     `request_origin` String,
-    `http_method` Enum8('get' = 1, 'post' = 2, 'put' = 3, 'delete' = 4),
+    `http_method` Enum8('get' = 1, 'post' = 2, 'put' = 3, 'delete' = 4, 'patch' = 5),
     `http_status` UInt32,
     `logged_at` DateTime64(3),
     `created_at` DateTime64(3)
