@@ -76,6 +76,12 @@ RSpec.describe Customer do
       expect(normalized_customer.shipping_state).to eq("QuuuuxQuuuuux")
       expect(normalized_customer.shipping_country).to eq("QuuuuuxQuuuuuux")
     end
+
+    it "return nil for empty strings" do
+      described_class::ADDRESS_FIELDS.each do |field|
+        expect(described_class.normalize_value_for(field, "")).to be_nil
+      end
+    end
   end
 
   describe "validations" do
