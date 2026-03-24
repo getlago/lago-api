@@ -31,10 +31,14 @@ module Subscriptions
         fees.map do |fee|
           fee_attributes = fee.attributes
           if (pricing_unit_usage = fee.pricing_unit_usage).present?
-            pricing_unit_usage_attributes = compact_hash(pricing_unit_usage.attributes, COMPACTABLE_PRICING_UNIT_USAGE_ATTRIBUTES)
+            pricing_unit_usage_attributes = if compact_cache?
+              compact_hash(pricing_unit_usage.attributes, COMPACTABLE_PRICING_UNIT_USAGE_ATTRIBUTES)
+            else
+              pricing_unit_usage.attributes
+            end
             fee_attributes["pricing_unit_usage"] = pricing_unit_usage_attributes
           end
-          compact_fee(fee_attributes)
+          compact_cache? ? compact_fee(fee_attributes) : fee_attributes
         end.to_json
       end
 
@@ -115,6 +119,10 @@ module Subscriptions
 
     def compact_hash(object, compactable_keys)
       object.reject { |key, value| compactable_keys.include?(key) && value.nil? }
+    end
+
+    def compact_cache?
+      @compact_cache ||= subscription.organization.feature_flag_enabled?(:null_attributes_charge_cache_optimization)
     end
 
     def cache_expiration

@@ -75,6 +75,7 @@ RSpec.describe Subscriptions::ChargeCacheMiddleware, cache: :redis do
       "pay_in_advance" => false,
       "properties" => {"charges_from_datetime" => "2022-08-01",
                        "charges_to_datetime" => "2022-08-31",
+                       "charges_duration" => 31,
                        "from_datetime" => "2022-08-01",
                        "timestamp" => "2022-08-01",
                        "to_datetime" => "2022-08-31"},
@@ -216,7 +217,49 @@ RSpec.describe Subscriptions::ChargeCacheMiddleware, cache: :redis do
       end
     end
 
+    context "when null_attributes_charge_cache_optimization flag is disabled" do
+      it "caches fees without stripping nil attributes" do
+        result = middleware.call(charge_filter:) { fees }
+        expect_to_match_fees(result, fees)
+
+        cached = fetch_cache(charge_cache_key)
+        cached_fee = cached.first
+
+        # Nil compactable attributes should still be present in the cached payload
+        expect(cached_fee).to have_key("id")
+        expect(cached_fee["id"]).to be_nil
+        expect(cached_fee).to have_key("invoice_id")
+        expect(cached_fee["invoice_id"]).to be_nil
+        expect(cached_fee).to have_key("deleted_at")
+        expect(cached_fee["deleted_at"]).to be_nil
+
+        # Verify cache hit returns the same fees
+        result = middleware.call(charge_filter:) { other_fees }
+        expect_to_match_fees(result, fees)
+      end
+
+      context "with pricing unit usage" do
+        let(:fees) { [fee(amount_cents: 100, with_pricing_unit_usage: true)] }
+
+        it "caches pricing unit usage without stripping nil attributes" do
+          result = middleware.call(charge_filter:) { fees }
+          expect_to_match_fees(result, fees)
+
+          cached = fetch_cache(charge_cache_key)
+          pricing_unit_usage = cached.first["pricing_unit_usage"]
+
+          # Nil compactable PricingUnitUsage attributes should still be present
+          expect(pricing_unit_usage).to have_key("id")
+          expect(pricing_unit_usage["id"]).to be_nil
+          expect(pricing_unit_usage).to have_key("fee_id")
+          expect(pricing_unit_usage["fee_id"]).to be_nil
+        end
+      end
+    end
+
     context "when cache is enabled" do
+      before { organization.enable_feature_flag!(:null_attributes_charge_cache_optimization) }
+
       it "caches and returns the fees" do
         result = middleware.call(charge_filter:) { fees }
 
