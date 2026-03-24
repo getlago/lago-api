@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 module Subscriptions
+  # DEPRECATED: This service drains the legacy Redis SET (subscription_refreshed).
+  # New events are written to a sorted set (subscription_refreshed_v2) consumed by
+  # Subscriptions::ConsumeSubscriptionRefreshedQueueV2Service.
+  # Remove this service once the legacy key is fully drained after deployment.
   class ConsumeSubscriptionRefreshedQueueService < BaseService
     REDIS_STORE_NAME = "subscription_refreshed"
     BATCH_SIZE = 100

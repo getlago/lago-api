@@ -3,7 +3,11 @@
 class Clock::ConsumeSubscriptionRefreshedQueueJob < ClockJob
   unique :until_executed, on_conflict: :log
 
-  def perform
-    Subscriptions::ConsumeSubscriptionRefreshedQueueService.call!
+  def perform(version = "v1")
+    if version == "v1"
+      Subscriptions::ConsumeSubscriptionRefreshedQueueService.call!
+    else
+      Subscriptions::ConsumeSubscriptionRefreshedQueueV2Service.call!
+    end
   end
 end
