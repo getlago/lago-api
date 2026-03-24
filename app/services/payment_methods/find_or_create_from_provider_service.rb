@@ -23,6 +23,9 @@ module PaymentMethods
 
       result.payment_method = payment_method
       result
+    rescue ActiveRecord::RecordNotUnique
+      result.payment_method = find_payment_method
+      result
     end
 
     private
