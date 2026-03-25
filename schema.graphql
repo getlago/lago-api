@@ -4260,6 +4260,11 @@ type Customer {
   creditNotesBalanceAmountCents: BigInt!
 
   """
+  Credit notes credits balance available per customer per currency
+  """
+  creditNotesBalances: [CustomerCreditNotesBalance!]!
+
+  """
   Number of available credits from credit notes per customer
   """
   creditNotesCreditsAvailableCount: Int!
@@ -4394,6 +4399,11 @@ type CustomerCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type CustomerCreditNotesBalance {
+  amountCents: BigInt!
+  currency: CurrencyEnum!
 }
 
 type CustomerMetadata {
