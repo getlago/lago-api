@@ -3387,7 +3387,7 @@ CREATE TABLE public.invoices (
     prepaid_granted_credit_amount_cents bigint,
     prepaid_purchased_credit_amount_cents bigint,
     payment_method_id uuid,
-    skip_automatic_payment boolean DEFAULT false,
+    skip_automatic_payment boolean,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 

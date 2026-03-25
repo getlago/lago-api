@@ -5,7 +5,7 @@ class AddPaymentMethodIdAndSkipPspToInvoices < ActiveRecord::Migration[8.0]
 
   def change
     add_column :invoices, :payment_method_id, :uuid
-    add_column :invoices, :skip_automatic_payment, :boolean, default: false
+    add_column :invoices, :skip_automatic_payment, :boolean
     add_index :invoices, :payment_method_id, algorithm: :concurrently
   end
 end
