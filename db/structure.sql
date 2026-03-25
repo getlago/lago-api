@@ -1377,11 +1377,11 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'billable_metric_current_usage_amount',
     'billable_metric_current_usage_units',
     'lifetime_usage_amount',
+    'wallet_credits_ongoing_balance',
     'billable_metric_lifetime_usage_units',
     'wallet_balance_amount',
     'wallet_credits_balance',
-    'wallet_ongoing_balance_amount',
-    'wallet_credits_ongoing_balance'
+    'wallet_ongoing_balance_amount'
 );
 
 
