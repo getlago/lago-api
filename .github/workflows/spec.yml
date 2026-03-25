@@ -9,7 +9,7 @@ permissions: {}
 jobs:
   run-spec:
     name: Run Spec
-    runs-on: ubuntu-latest
+    runs-on: macos-26
     services:
       postgres:
         image: getlago/postgres-partman:15.0-alpine
