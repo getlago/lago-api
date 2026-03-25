@@ -10,7 +10,7 @@ class PlanProductItem < ApplicationRecord
   belongs_to :plan, -> { with_discarded }
   belongs_to :product_item, -> { with_discarded }
 
-  # has_many :rate_schedules
+  has_many :rate_schedules
 
   validates :product_item_id,
     uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :plan_id}
