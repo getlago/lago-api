@@ -61,4 +61,77 @@ RSpec.describe Mutations::Memberships::Update do
       before { result }
     end
   end
+
+  describe "self-promotion with custom role" do
+    subject(:result) do
+      execute_graphql(
+        current_organization: organization,
+        current_user: user,
+        current_membership: membership,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: membership.id,
+            roles: %w[admin]
+          }
+        }
+      )
+    end
+
+    let(:custom_role) do
+      create(:role, :custom,
+        organization: organization,
+        code: "accounting",
+        name: "Accounting",
+        permissions: %w[organization:members:update organization:view])
+    end
+
+    before do
+      admin_role
+      create(:membership_role, membership:, role: custom_role)
+    end
+
+    it "prevents a non-admin member from promoting themselves to admin" do
+      expect_graphql_error(result:, message: "cannot_grant_admin")
+    end
+  end
+
+  describe "non-admin promoting another member to admin" do
+    subject(:result) do
+      execute_graphql(
+        current_organization: organization,
+        current_user: user,
+        current_membership: membership,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: other_membership.id,
+            roles: %w[admin]
+          }
+        }
+      )
+    end
+
+    let(:other_membership) { create(:membership, organization:) }
+
+    let(:custom_role) do
+      create(:role, :custom,
+        organization: organization,
+        code: "accounting",
+        name: "Accounting",
+        permissions: %w[organization:members:update organization:view])
+    end
+
+    before do
+      admin_role
+      create(:membership_role, membership:, role: custom_role)
+      create(:membership_role, membership: other_membership, role: finance_role)
+    end
+
+    it "prevents a non-admin from promoting another member to admin" do
+      expect_graphql_error(result:, message: "cannot_grant_admin")
+    end
+  end
 end
