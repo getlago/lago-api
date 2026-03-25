@@ -102,7 +102,7 @@ module Invoices
     end
 
     def create_one_off_fees(invoice)
-      Fees::OneOffService.new(invoice:, fees:).call.raise_if_error!
+      Fees::OneOffService.call!(invoice:, fees:)
     end
 
     def should_deliver_email?
