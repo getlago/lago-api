@@ -32,6 +32,28 @@ RSpec.describe Memberships::UpdateService do
       end
     end
 
+    context "when admin grants admin role to another member" do
+      let(:acting_membership) { create(:membership, organization:) }
+      let(:acting_user) { acting_membership.user }
+      let(:params) { {roles: %w[admin]} }
+
+      before do
+        create(:membership_role, membership: acting_membership, role: admin_role)
+        create(:membership_role, membership:, role: manager_role)
+      end
+
+      it "updates the role" do
+        result = described_class.call(user: acting_user, membership:, params:)
+
+        expect(result).to be_success
+        expect(result.membership.roles).to eq([admin_role])
+      end
+
+      it_behaves_like "produces a security log", "user.role_edited" do
+        before { described_class.call(user: acting_user, membership:, params:) }
+      end
+    end
+
     context "when non-admin grants admin role to another member" do
       let(:params) { {roles: %w[admin]} }
 
