@@ -24,6 +24,7 @@ RSpec.describe ProductItem do
       expect(subject).to belong_to(:product)
       expect(subject).to belong_to(:add_on).optional
       expect(subject).to belong_to(:charge).optional
+      expect(subject).to have_many(:filters).class_name("ProductItemFilter").dependent(:destroy)
     end
 
     context "with fixed type" do

@@ -77,6 +77,7 @@ ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_b
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_bda048a8d9;
+ALTER TABLE IF EXISTS ONLY public.product_item_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bbe7738882;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_bacde7a063;
 ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS fk_rails_bacb46d2a3;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_ba128983c2;
@@ -97,6 +98,7 @@ ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_a7f20c73bb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
+ALTER TABLE IF EXISTS ONLY public.product_item_filter_values DROP CONSTRAINT IF EXISTS fk_rails_a32a8f7fc6;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_a2d2cb3819;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_9f22076477;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_9ea6759859;
@@ -110,6 +112,7 @@ ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_98980b326b;
 ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_9881e28151;
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_96fc54cd9a;
+ALTER TABLE IF EXISTS ONLY public.product_item_filters DROP CONSTRAINT IF EXISTS fk_rails_9687dd0c22;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_95df3194c5;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_94cc21031f;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_9298b8fdad;
@@ -237,6 +240,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_2ea4db
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_2dc6171f57;
 ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS fk_rails_2c06a74f41;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_2b35eef34b;
+ALTER TABLE IF EXISTS ONLY public.product_item_filters DROP CONSTRAINT IF EXISTS fk_rails_2a066c7180;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_2908dd8de5;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_28077d4aa2;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_27b55b8574;
@@ -268,6 +272,7 @@ ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_142809fee1;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_123667657c;
+ALTER TABLE IF EXISTS ONLY public.product_item_filters DROP CONSTRAINT IF EXISTS fk_rails_106be19061;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_103e187859;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_0f807322b1;
@@ -412,6 +417,13 @@ DROP INDEX IF EXISTS public.index_product_items_on_deleted_at;
 DROP INDEX IF EXISTS public.index_product_items_on_charge_id;
 DROP INDEX IF EXISTS public.index_product_items_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_product_items_on_add_on_id;
+DROP INDEX IF EXISTS public.index_product_item_filters_on_product_item_id;
+DROP INDEX IF EXISTS public.index_product_item_filters_on_organization_id;
+DROP INDEX IF EXISTS public.index_product_item_filters_on_deleted_at;
+DROP INDEX IF EXISTS public.index_product_item_filters_on_billable_metric_filter_id;
+DROP INDEX IF EXISTS public.index_product_item_filter_values_on_product_item_filter_id;
+DROP INDEX IF EXISTS public.index_product_item_filter_values_on_organization_id;
+DROP INDEX IF EXISTS public.index_product_item_filter_values_on_deleted_at;
 DROP INDEX IF EXISTS public.index_pricing_units_on_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_units_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_pricing_unit_id;
@@ -750,6 +762,8 @@ DROP INDEX IF EXISTS public.idx_unique_feature_removal_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_plan;
 DROP INDEX IF EXISTS public.idx_subscription_unique;
+DROP INDEX IF EXISTS public.idx_product_item_filters_on_item_and_bm_filter;
+DROP INDEX IF EXISTS public.idx_product_item_filter_values_on_filter_and_value;
 DROP INDEX IF EXISTS public.idx_privileges_code_unique_per_feature;
 DROP INDEX IF EXISTS public.idx_pay_in_advance_duplication_guard_charge_filter;
 DROP INDEX IF EXISTS public.idx_pay_in_advance_duplication_guard_charge;
@@ -833,6 +847,8 @@ ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sec
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS quantified_events_pkey;
 ALTER TABLE IF EXISTS ONLY public.products DROP CONSTRAINT IF EXISTS products_pkey;
 ALTER TABLE IF EXISTS ONLY public.product_items DROP CONSTRAINT IF EXISTS product_items_pkey;
+ALTER TABLE IF EXISTS ONLY public.product_item_filters DROP CONSTRAINT IF EXISTS product_item_filters_pkey;
+ALTER TABLE IF EXISTS ONLY public.product_item_filter_values DROP CONSTRAINT IF EXISTS product_item_filter_values_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS pricing_units_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS pricing_unit_usages_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_taxes_pkey;
@@ -949,6 +965,8 @@ DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.quantified_events;
 DROP TABLE IF EXISTS public.products;
 DROP TABLE IF EXISTS public.product_items;
+DROP TABLE IF EXISTS public.product_item_filters;
+DROP TABLE IF EXISTS public.product_item_filter_values;
 DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
 DROP TABLE IF EXISTS public.pending_vies_checks;
@@ -4511,6 +4529,36 @@ CREATE TABLE public.pricing_units (
 
 
 --
+-- Name: product_item_filter_values; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_item_filter_values (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    product_item_filter_id uuid NOT NULL,
+    value character varying NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: product_item_filters; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_item_filters (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    product_item_id uuid NOT NULL,
+    billable_metric_filter_id uuid NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: product_items; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5684,6 +5732,22 @@ ALTER TABLE ONLY public.pricing_units
 
 
 --
+-- Name: product_item_filter_values product_item_filter_values_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_item_filter_values
+    ADD CONSTRAINT product_item_filter_values_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: product_item_filters product_item_filters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_item_filters
+    ADD CONSTRAINT product_item_filters_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: product_items product_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6318,6 +6382,20 @@ CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge_filter ON public
 --
 
 CREATE UNIQUE INDEX idx_privileges_code_unique_per_feature ON public.entitlement_privileges USING btree (code, entitlement_feature_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_product_item_filter_values_on_filter_and_value; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_product_item_filter_values_on_filter_and_value ON public.product_item_filter_values USING btree (product_item_filter_id, value) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_product_item_filters_on_item_and_bm_filter; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_product_item_filters_on_item_and_bm_filter ON public.product_item_filters USING btree (product_item_id, billable_metric_filter_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -8691,6 +8769,55 @@ CREATE INDEX index_pricing_units_on_organization_id ON public.pricing_units USIN
 
 
 --
+-- Name: index_product_item_filter_values_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_item_filter_values_on_deleted_at ON public.product_item_filter_values USING btree (deleted_at);
+
+
+--
+-- Name: index_product_item_filter_values_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_item_filter_values_on_organization_id ON public.product_item_filter_values USING btree (organization_id);
+
+
+--
+-- Name: index_product_item_filter_values_on_product_item_filter_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_item_filter_values_on_product_item_filter_id ON public.product_item_filter_values USING btree (product_item_filter_id);
+
+
+--
+-- Name: index_product_item_filters_on_billable_metric_filter_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_item_filters_on_billable_metric_filter_id ON public.product_item_filters USING btree (billable_metric_filter_id);
+
+
+--
+-- Name: index_product_item_filters_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_item_filters_on_deleted_at ON public.product_item_filters USING btree (deleted_at);
+
+
+--
+-- Name: index_product_item_filters_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_item_filters_on_organization_id ON public.product_item_filters USING btree (organization_id);
+
+
+--
+-- Name: index_product_item_filters_on_product_item_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_item_filters_on_product_item_id ON public.product_item_filters USING btree (product_item_id);
+
+
+--
 -- Name: index_product_items_on_add_on_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9623,6 +9750,14 @@ ALTER TABLE ONLY public.applied_invoice_custom_sections
 
 
 --
+-- Name: product_item_filters fk_rails_106be19061; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_item_filters
+    ADD CONSTRAINT fk_rails_106be19061 FOREIGN KEY (billable_metric_filter_id) REFERENCES public.billable_metric_filters(id);
+
+
+--
 -- Name: entitlement_subscription_feature_removals fk_rails_123667657c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9868,6 +10003,14 @@ ALTER TABLE ONLY public.wallets
 
 ALTER TABLE ONLY public.usage_thresholds
     ADD CONSTRAINT fk_rails_2908dd8de5 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+
+
+--
+-- Name: product_item_filters fk_rails_2a066c7180; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_item_filters
+    ADD CONSTRAINT fk_rails_2a066c7180 FOREIGN KEY (product_item_id) REFERENCES public.product_items(id);
 
 
 --
@@ -10887,6 +11030,14 @@ ALTER TABLE ONLY public.entitlement_subscription_feature_removals
 
 
 --
+-- Name: product_item_filters fk_rails_9687dd0c22; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_item_filters
+    ADD CONSTRAINT fk_rails_9687dd0c22 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: pending_vies_checks fk_rails_96fc54cd9a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10988,6 +11139,14 @@ ALTER TABLE ONLY public.credit_note_items
 
 ALTER TABLE ONLY public.group_properties
     ADD CONSTRAINT fk_rails_a2d2cb3819 FOREIGN KEY (group_id) REFERENCES public.groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: product_item_filter_values fk_rails_a32a8f7fc6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_item_filter_values
+    ADD CONSTRAINT fk_rails_a32a8f7fc6 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -11148,6 +11307,14 @@ ALTER TABLE ONLY public.applied_coupons
 
 ALTER TABLE ONLY public.plans_taxes
     ADD CONSTRAINT fk_rails_bacde7a063 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
+
+
+--
+-- Name: product_item_filter_values fk_rails_bbe7738882; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_item_filter_values
+    ADD CONSTRAINT fk_rails_bbe7738882 FOREIGN KEY (product_item_filter_id) REFERENCES public.product_item_filters(id);
 
 
 --
@@ -11702,6 +11869,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260326130631'),
+('20260325153103'),
 ('20260325151414'),
 ('20260325144554'),
 ('20260319125125'),
