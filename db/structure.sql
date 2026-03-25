@@ -36,6 +36,7 @@ ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_e8bac9c5bb;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_e88403f4b9;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_e7c25e2403;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_e744efbe51;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_e711e8089e;
 ALTER TABLE IF EXISTS ONLY public.user_devices DROP CONSTRAINT IF EXISTS fk_rails_e700a96826;
@@ -614,6 +615,7 @@ DROP INDEX IF EXISTS public.index_fees_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_true_up_parent_fee_id;
+DROP INDEX IF EXISTS public.index_fees_on_subscription_rate_schedule_id;
 DROP INDEX IF EXISTS public.index_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_fees_on_pay_in_advance_event_transaction_id;
 DROP INDEX IF EXISTS public.index_fees_on_organization_id;
@@ -3146,7 +3148,8 @@ CREATE TABLE public.fees (
     billing_entity_id uuid NOT NULL,
     precise_credit_notes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     fixed_charge_id uuid,
-    duplicated_in_advance boolean DEFAULT false
+    duplicated_in_advance boolean DEFAULT false,
+    subscription_rate_schedule_id uuid
 );
 
 
@@ -7914,6 +7917,13 @@ CREATE INDEX index_fees_on_subscription_id ON public.fees USING btree (subscript
 
 
 --
+-- Name: index_fees_on_subscription_rate_schedule_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_subscription_rate_schedule_id ON public.fees USING btree (subscription_rate_schedule_id);
+
+
+--
 -- Name: index_fees_on_true_up_parent_fee_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12114,6 +12124,14 @@ ALTER TABLE ONLY public.subscriptions
 
 
 --
+-- Name: fees fk_rails_e7c25e2403; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_e7c25e2403 FOREIGN KEY (subscription_rate_schedule_id) REFERENCES public.subscription_rate_schedules(id);
+
+
+--
 -- Name: customers_taxes fk_rails_e86903e081; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12337,6 +12355,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260326130631'),
+('20260325160805'),
 ('20260325160312'),
 ('20260325155605'),
 ('20260325154819'),
