@@ -18,7 +18,7 @@ module Mutations
 
       def resolve(**args)
         membership = current_organization.memberships.find_by(id: args[:id])
-        result = ::Memberships::UpdateService.call(membership:, params: args)
+        result = ::Memberships::UpdateService.call(user: context[:current_user], membership:, params: args)
         result.success? ? result.membership : result_error(result)
       end
     end
