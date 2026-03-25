@@ -61,6 +61,47 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
     expect { compute_amounts.call }.to change(invoice, :total_amount_cents).from(0).to(559)
   end
 
+  context "when invoice is one_off" do
+    let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :one_off) }
+
+    it "applies taxes to fees regardless of invoice status" do
+      compute_amounts.call
+
+      expect(fee1.reload.applied_taxes.count).to eq(2)
+      expect(fee1.taxes_rate).to eq(30)
+    end
+
+    context "when invoice is pending (deferred tax resolution)" do
+      let(:invoice) { create(:invoice, :pending, organization:, customer:, invoice_type: :one_off) }
+
+      it "applies taxes to fees" do
+        compute_amounts.call
+
+        expect(fee1.reload.applied_taxes.count).to eq(2)
+      end
+    end
+
+    context "when invoice is failed" do
+      let(:invoice) { create(:invoice, :failed, organization:, customer:, invoice_type: :one_off) }
+
+      it "applies taxes to fees" do
+        compute_amounts.call
+
+        expect(fee1.reload.applied_taxes.count).to eq(2)
+      end
+    end
+  end
+
+  context "when invoice is advance_charges" do
+    let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :advance_charges) }
+
+    it "does not apply taxes to fees" do
+      compute_amounts.call
+
+      expect(fee1.reload.applied_taxes).to be_empty
+    end
+  end
+
   context "when taxes are fetched from external provider" do
     let(:integration) { create(:anrok_integration, organization:) }
     let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
