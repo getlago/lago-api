@@ -13,6 +13,8 @@ RSpec.describe Product do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to have_many(:product_items)
+      expect(subject).to have_many(:plan_products)
+      expect(subject).to have_many(:plans).through(:plan_products)
     end
   end
 
