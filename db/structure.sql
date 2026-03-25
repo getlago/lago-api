@@ -1377,11 +1377,11 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'billable_metric_current_usage_amount',
     'billable_metric_current_usage_units',
     'lifetime_usage_amount',
+    'billable_metric_lifetime_usage_units',
     'wallet_balance_amount',
     'wallet_credits_balance',
     'wallet_ongoing_balance_amount',
-    'wallet_credits_ongoing_balance',
-    'billable_metric_lifetime_usage_units'
+    'wallet_credits_ongoing_balance'
 );
 
 
@@ -9789,7 +9789,7 @@ ALTER TABLE ONLY public.wallets_invoice_custom_sections
 --
 
 ALTER TABLE ONLY public.invoices
-    ADD CONSTRAINT fk_rails_309d3a4412 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_309d3a4412 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
 
 
 --
@@ -11521,6 +11521,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260327140626'),
 ('20260326130631'),
+('20260325150808'),
 ('20260324124033'),
 ('20260319125125'),
 ('20260319103035'),
