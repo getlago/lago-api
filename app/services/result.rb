@@ -48,6 +48,10 @@ module Result
     fail_with_error!(BaseService::ServiceFailure.new(self, code:, error_message: message, original_error: error))
   end
 
+  def non_retryable_failure!(code:, message:)
+    fail_with_error!(BaseService::NonRetryableFailure.new(self, code:, error_message: message))
+  end
+
   def unknown_tax_failure!(code:, message:)
     fail_with_error!(BaseService::UnknownTaxFailure.new(self, code:, error_message: message))
   end
