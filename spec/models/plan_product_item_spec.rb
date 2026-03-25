@@ -14,6 +14,7 @@ RSpec.describe PlanProductItem do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:plan)
       expect(subject).to belong_to(:product_item)
+      expect(subject).to have_many(:rate_schedules)
     end
   end
 
