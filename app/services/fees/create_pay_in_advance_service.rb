@@ -114,10 +114,7 @@ module Fees
         # aggregates pre-existing fee taxes. They must have taxes applied now because
         # there is no ComputeTaxesAndTotalsService step for them.
         # Invoiceable fees get taxes applied later via ComputeTaxesAndTotalsService.
-        if !charge.invoiceable?
-          taxes_result = Fees::ApplyTaxesService.call(fee:)
-          taxes_result.raise_if_error!
-        end
+        Fees::ApplyTaxesService.call!(fee:) if !charge.invoiceable?
 
         fee.save! unless estimate
         fee
@@ -148,19 +145,15 @@ module Fees
     end
 
     def aggregate(properties:, charge_filter: nil)
-      aggregation_result = Charges::PayInAdvanceAggregationService.call(
+      Charges::PayInAdvanceAggregationService.call!(
         charge:, boundaries:, properties:, event:, charge_filter:
       )
-      aggregation_result.raise_if_error!
-      aggregation_result
     end
 
     def apply_charge_model(aggregation_result:, properties:)
-      charge_model_result = Charges::ApplyPayInAdvanceChargeModelService.call(
+      Charges::ApplyPayInAdvanceChargeModelService.call!(
         charge:, aggregation_result:, properties:
       )
-      charge_model_result.raise_if_error!
-      charge_model_result
     end
 
     def deliver_webhooks
