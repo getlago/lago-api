@@ -56,7 +56,8 @@ RSpec.shared_examples "an invoice index endpoint" do
         next_page: 2,
         prev_page: nil,
         total_pages: 2,
-        total_count: 2
+        total_count: 2,
+        cursor: be_a(String)
       )
     end
   end

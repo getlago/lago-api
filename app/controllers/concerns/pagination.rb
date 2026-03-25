@@ -8,7 +8,7 @@ module Pagination
   # The TTL for caching the number of records
   DEFAULT_TTL = 30.minutes.freeze
 
-  def pagination_metadata(records, **count_params)
+  def pagination_metadata(records, cursor: nil, **count_params)
     current_page = prev_page = next_page = total_pages = nil
     total_count = _count_total(**count_params) { records.total_count }
 
@@ -24,7 +24,8 @@ module Pagination
       "next_page" => next_page,
       "prev_page" => prev_page,
       "total_pages" => total_pages.to_i,
-      "total_count" => total_count
+      "total_count" => total_count,
+      "cursor" => cursor
     }
   end
 

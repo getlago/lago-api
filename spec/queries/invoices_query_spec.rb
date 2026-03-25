@@ -147,6 +147,86 @@ RSpec.describe InvoicesQuery do
     end
   end
 
+  context "with cursor" do
+    let(:pagination) { {page: 1, limit: 10, cursor: cursor_value} }
+
+    let(:cursor_value) do
+      Base64.strict_encode64({
+        issuing_date: invoice_first.issuing_date.iso8601,
+        created_at: invoice_first.created_at.iso8601(6),
+        id: invoice_first.id
+      }.to_json)
+    end
+
+    it "excludes the cursor record and all records before it" do
+      expect(result).to be_success
+      # invoice_first is the cursor — excluded
+      expect(returned_ids).not_to include(invoice_first.id)
+      # invoice_fourth/fifth/sixth have issuing_date = today (before cursor in DESC) — excluded
+      expect(returned_ids).not_to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
+      expect(returned_ids).not_to include(invoice_sixth.id)
+      # invoice_second/third have older issuing_date (after cursor in DESC) — included
+      expect(returned_ids).to match_array([invoice_second.id, invoice_third.id])
+    end
+
+    it "returns a cursor for the result set" do
+      expect(result.cursor).to be_present
+      decoded = JSON.parse(Base64.decode64(result.cursor))
+      expect(decoded.keys).to match_array(%w[issuing_date created_at id])
+    end
+
+    context "when combined with page > 1" do
+      let(:pagination) { {page: 1, limit: 1, cursor: cursor_value} }
+
+      it "paginates within the cursor-scoped set" do
+        expect(result).to be_success
+        expect(result.invoices.count).to eq(1)
+        expect(result.invoices.total_count).to eq(2)
+      end
+    end
+
+    context "when cursor records share the same issuing_date and created_at" do
+      let(:invoice_second) do
+        create(
+          :invoice,
+          organization:,
+          id: "00000000-0000-0000-0000-000000000000",
+          status: "finalized",
+          payment_status: "pending",
+          customer: customer_second,
+          number: "2222222222",
+          issuing_date: invoice_first.issuing_date,
+          created_at: invoice_first.created_at
+        )
+      end
+
+      it "uses id as a tiebreaker" do
+        expect(result).to be_success
+        # invoice_second has a smaller UUID than invoice_first,
+        # so in ASC id order it comes before the cursor — excluded
+        expect(returned_ids).not_to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+      end
+    end
+  end
+
+  context "when result set is not empty" do
+    it "returns a cursor" do
+      expect(result).to be_success
+      expect(result.cursor).to be_present
+    end
+  end
+
+  context "when result set is empty" do
+    let(:filters) { {customer_id: SecureRandom.uuid} }
+
+    it "returns nil cursor" do
+      expect(result).to be_success
+      expect(result.cursor).to be_nil
+    end
+  end
+
   context "when filtering by draft status" do
     let(:filters) { {status: "draft"} }
 
