@@ -49,6 +49,7 @@ class Organization < ApplicationRecord
   has_many :pricing_units
   has_many :customers
   has_many :subscriptions
+  has_many :subscription_rate_schedules
   has_many :invoices
   has_many :credit_notes
   has_many :fees
