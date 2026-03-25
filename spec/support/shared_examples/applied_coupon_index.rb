@@ -160,6 +160,8 @@ RSpec.shared_examples "a applied coupon index endpoint" do
       expect(json[:applied_coupons].last[:lago_id]).to eq(applied_coupon_1.id)
       expect(json[:applied_coupons].last[:coupon_code]).to eq(coupon_1.code)
       expect(json[:applied_coupons].last[:coupon_name]).to eq(coupon_1.name)
+      expect(json[:applied_coupons].last[:coupon_status]).to eq(coupon_1.status)
+      expect(json[:applied_coupons].last[:coupon_deleted_at]).to eq(coupon_1.deleted_at.iso8601)
     end
   end
 end
