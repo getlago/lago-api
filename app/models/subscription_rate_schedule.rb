@@ -13,6 +13,26 @@ class SubscriptionRateSchedule < ApplicationRecord
   enum :status, STATUSES, validate: true
 
   validates :intervals_billed, numericality: {greater_than_or_equal_to: 0}
+
+  def update_next_billing_date!
+    return if started_at.nil?
+
+    billing_start = started_at.to_date
+    count = (intervals_billed + 1) * rate_schedule.billing_interval_count
+
+    next_date = case rate_schedule.billing_interval_unit
+    when "day"
+      billing_start + count.days
+    when "week"
+      billing_start + count.weeks
+    when "month"
+      billing_start + count.months
+    when "year"
+      billing_start + count.years
+    end
+
+    update!(next_billing_date: next_date)
+  end
 end
 
 # == Schema Information
