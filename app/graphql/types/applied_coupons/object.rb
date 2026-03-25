@@ -6,7 +6,9 @@ module Types
       graphql_name "AppliedCoupon"
 
       field :coupon, Types::Coupons::Object, null: false
+      field :customer, Types::Customers::Object, null: false
       field :id, ID, null: false
+      field :status, Types::AppliedCoupons::StatusEnum, null: false
 
       field :amount_cents, GraphQL::Types::BigInt, null: true
       field :amount_currency, Types::CurrencyEnum, null: true
@@ -18,7 +20,7 @@ module Types
       field :percentage_rate, Float, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
-      field :terminated_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
 
       def amount_cents_remaining
         return nil if object.recurring?
