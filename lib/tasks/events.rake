@@ -31,6 +31,7 @@ namespace :events do
     subscription_ids = ENV["SUBSCRIPTION_IDS"].to_s.split(",").map(&:strip).reject(&:blank?)
     codes = ENV["BM_CODES"].to_s.split(",").map(&:strip).reject(&:blank?)
     dry_run = ENV.fetch("DRY_RUN", "true") != "false"
+    quiet = ENV.fetch("QUIET", "false") == "true"
 
     organization = Organization.find(organization_id)
     subscriptions = organization.subscriptions
@@ -44,16 +45,25 @@ namespace :events do
       duplicate_count = service.count_duplicates
 
       if dry_run
-        Rails.logger.info(
-          "events:deduplicate_enriched_expanded [DRY RUN] - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows would be removed"
-        )
+        if duplicate_count > 0 || !quiet
+          Rails.logger.info(
+            "events:deduplicate_enriched_expanded [DRY RUN] - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows would be removed"
+          )
+        end
       else
-        result = service.call
-        duplicate_count = result.removed_count
+        begin
+          result = service.call
+          duplicate_count = result.duplicated_count
 
-        Rails.logger.info(
-          "events:deduplicate_enriched_expanded - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows removed"
-        )
+          if duplicate_count > 0 || !quiet
+            Rails.logger.info(
+              "events:deduplicate_enriched_expanded - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows will be removed"
+            )
+          end
+        rescue => e
+          duplicate_count = 0
+          Rails.logger.error("events:deduplicate_enriched_expanded - Subscription #{subscription.external_id}: Error removing duplicates: #{e.message}")
+        end
       end
 
       total_duplicates += duplicate_count
@@ -70,7 +80,6 @@ namespace :events do
 
     organization_id = ENV.fetch("ORGANIZATION_ID")
     reprocess = ENV.fetch("REPROCESS", "false") == "true"
-    refresh = ENV.fetch("REFRESH", "false") == "true"
     batch_size = (ENV["BATCH_SIZE"] || 1000).to_i
     sleep_seconds = (ENV["SLEEP_SECONDS"] || 0.5).to_f
 

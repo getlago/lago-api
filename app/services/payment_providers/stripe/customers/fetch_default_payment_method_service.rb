@@ -21,13 +21,14 @@ module PaymentProviders
 
           return result unless payment_method_id
 
-          payment_method = PaymentMethods::CreateFromProviderService.call(
+          payment_method = PaymentMethods::FindOrCreateFromProviderService.call(
             customer: provider_customer.customer,
-            params: {provider_payment_methods: provider_customer.provider_payment_methods},
-            provider_method_id: payment_method_id,
-            payment_provider_id: provider_customer.payment_provider_id,
             payment_provider_customer: provider_customer,
-            details: payment_method_details(payment_method_id:)
+            provider_method_id: payment_method_id,
+            params: {
+              provider_payment_methods: provider_customer.provider_payment_methods,
+              details: payment_method_details(payment_method_id:)
+            }
           ).payment_method
 
           result.payment_method = payment_method

@@ -3,7 +3,7 @@
 require "spec_helper"
 
 RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedService, :clickhouse do
-  subject(:service) { described_class.new(subscription:, codes:) }
+  subject(:service) { described_class.new(subscription:, codes:, async:) }
 
   let(:organization) { create(:organization, clickhouse_events_store: true) }
   let(:customer) { create(:customer, organization:) }
@@ -13,6 +13,7 @@ RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedServic
   let(:charge) { create(:standard_charge, billable_metric:, plan:) }
   let(:charge_filter) { nil }
   let(:codes) { [] }
+  let(:async) { false }
 
   let(:transaction_id) { SecureRandom.uuid }
   let(:event_timestamp) { Time.current.change(usec: 0) }
@@ -103,6 +104,43 @@ RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedServic
 
         expect(result).to be_success
         expect(::Clickhouse::EventsEnrichedExpanded.where(code: other_metric.code).count).to eq(1)
+      end
+    end
+
+    context "when async" do
+      let(:async) { true }
+
+      let(:connection) { instance_double(ActiveRecord::ConnectionAdapters::AbstractAdapter) }
+
+      before do
+        allow(Events::Stores::Utils::ClickhouseConnection).to receive(:connection_with_retry).and_yield(connection)
+        allow(connection).to receive(:select_one).and_return({"duplicated_count" => 1})
+        allow(connection).to receive(:select_all).and_return(
+          [{
+            "transaction_id" => transaction_id,
+            "timestamp" => event_timestamp,
+            "charge_id" => charge.id,
+            "charge_filter_id" => "",
+            "max_enriched_at" => base_enriched_at + 2.minutes
+          }],
+          []
+        )
+        allow(connection).to receive(:execute)
+      end
+
+      it "does not include mutations_sync setting in the delete query" do
+        service.call
+
+        expect(connection).to have_received(:execute) do |sql|
+          expect(sql).not_to include("mutations_sync")
+        end
+      end
+
+      it "returns the removed count" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.duplicated_count).to eq(1)
       end
     end
 
