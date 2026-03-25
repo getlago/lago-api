@@ -94,12 +94,9 @@ module Invoices
     end
 
     def generate_fees
-      fee_result = Fees::CreatePayInAdvanceService.call(charge:, event:, estimate: true)
-      fee_result.raise_if_error!
-
-      result.invoice_id = fee_result.invoice_id
-
-      fee_result
+      Fees::CreatePayInAdvanceService.call!(charge:, event:, estimate: true).tap do |fee_result|
+        result.invoice_id = fee_result.invoice_id
+      end
     end
 
     def deliver_webhooks
