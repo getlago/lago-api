@@ -12,6 +12,8 @@ class ProductItem < ApplicationRecord
   belongs_to :add_on, -> { with_discarded }, optional: true
   belongs_to :charge, -> { with_discarded }, optional: true
 
+  has_many :filters, dependent: :destroy, class_name: "ProductItemFilter"
+
   ITEM_TYPES = {usage: "usage", fixed: "fixed", subscription: "subscription"}.freeze
 
   enum :item_type, ITEM_TYPES, validate: true
