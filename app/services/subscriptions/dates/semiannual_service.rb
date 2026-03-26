@@ -19,11 +19,13 @@ module Subscriptions
 
       private
 
+      # When computing current usage (not billing), boundaries are always needed.
       # if bill_charges_monthly=true, charge boundaries should be filled
       # else if bill_FIXED_charges_monthly=true, charge boundaries should be filled only for the first month of the period
-      # For semiannual plans with not billing charges and fixed charges mothly,
+      # For semiannual plans with not billing charges and fixed charges monthly,
       # boundaries are always filled
       def should_fill_charges_boundaries?
+        return true if current_usage
         return true if plan.bill_charges_monthly?
 
         return first_month_in_semiannual_period? if plan.bill_fixed_charges_monthly?
