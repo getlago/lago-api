@@ -48,20 +48,10 @@ module Customers
     end
 
     def allowed_with_multi_currency?
-      if customer_update && committed_invoices_in_different_currency?
-        result.single_validation_failure!(field: :currency, error_code: "currencies_does_not_match")
-        return false
-      elsif !customer_update && customer.currency.present?
+      if !customer_update && customer.currency.present?
         return false
       end
       true
-    end
-
-    def committed_invoices_in_different_currency?
-      customer.invoices
-        .where(status: %i[finalized open closed])
-        .where.not(currency:)
-        .exists?
     end
   end
 end
