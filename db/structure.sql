@@ -400,12 +400,12 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_subscription_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_organization_id;
-DROP INDEX IF EXISTS public.index_subscription_activation_rules_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscription_rate_schedules_on_subscription_id;
 DROP INDEX IF EXISTS public.index_subscription_rate_schedules_on_rate_schedule_id;
 DROP INDEX IF EXISTS public.index_subscription_rate_schedules_on_product_item_id;
 DROP INDEX IF EXISTS public.index_subscription_rate_schedules_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscription_rate_schedules_on_next_billing_date;
+DROP INDEX IF EXISTS public.index_subscription_activation_rules_on_organization_id;
 DROP INDEX IF EXISTS public.index_search_quantified_events;
 DROP INDEX IF EXISTS public.index_rtr_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_roles_on_organization_id;
@@ -875,8 +875,8 @@ ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRA
 ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS subscriptions_pkey;
 ALTER TABLE IF EXISTS ONLY public.subscriptions_invoice_custom_sections DROP CONSTRAINT IF EXISTS subscriptions_invoice_custom_sections_pkey;
-ALTER TABLE IF EXISTS ONLY public.subscription_activation_rules DROP CONSTRAINT IF EXISTS subscription_activation_rules_pkey;
 ALTER TABLE IF EXISTS ONLY public.subscription_rate_schedules DROP CONSTRAINT IF EXISTS subscription_rate_schedules_pkey;
+ALTER TABLE IF EXISTS ONLY public.subscription_activation_rules DROP CONSTRAINT IF EXISTS subscription_activation_rules_pkey;
 ALTER TABLE IF EXISTS ONLY public.schema_migrations DROP CONSTRAINT IF EXISTS schema_migrations_pkey;
 ALTER TABLE IF EXISTS ONLY public.roles DROP CONSTRAINT IF EXISTS roles_pkey;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS refunds_pkey;
@@ -997,8 +997,8 @@ DROP TABLE IF EXISTS public.usage_monitoring_subscription_activities;
 DROP TABLE IF EXISTS public.usage_monitoring_alerts;
 DROP TABLE IF EXISTS public.usage_monitoring_alert_thresholds;
 DROP TABLE IF EXISTS public.subscriptions_invoice_custom_sections;
-DROP TABLE IF EXISTS public.subscription_activation_rules;
 DROP TABLE IF EXISTS public.subscription_rate_schedules;
+DROP TABLE IF EXISTS public.subscription_activation_rules;
 DROP TABLE IF EXISTS public.schema_migrations;
 DROP TABLE IF EXISTS public.roles;
 DROP TABLE IF EXISTS public.refunds;
@@ -1343,36 +1343,6 @@ CREATE TYPE public.payment_type AS ENUM (
 
 
 --
--- Name: subscription_activation_rule_statuses; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.subscription_activation_rule_statuses AS ENUM (
-    'inactive',
-    'pending',
-    'satisfied',
-    'declined',
-    'failed',
-    'expired',
-    'not_applicable'
-);
-
-
---
--- Name: subscription_activation_rule_types; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.subscription_activation_rule_types AS ENUM (
-    'payment'
-);
-
-
---
--- Name: subscription_cancelation_reasons; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.subscription_cancelation_reasons AS ENUM (
-    'payment_failed',
-    'timeout'
 -- Name: product_item_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1417,6 +1387,40 @@ CREATE TYPE public.rate_schedule_charge_model AS ENUM (
 
 CREATE TYPE public.rate_schedule_regroup_paid_fees AS ENUM (
     'invoice'
+);
+
+
+--
+-- Name: subscription_activation_rule_statuses; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_activation_rule_statuses AS ENUM (
+    'inactive',
+    'pending',
+    'satisfied',
+    'declined',
+    'failed',
+    'expired',
+    'not_applicable'
+);
+
+
+--
+-- Name: subscription_activation_rule_types; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_activation_rule_types AS ENUM (
+    'payment'
+);
+
+
+--
+-- Name: subscription_cancelation_reasons; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_cancelation_reasons AS ENUM (
+    'payment_failed',
+    'timeout'
 );
 
 
@@ -3192,7 +3196,8 @@ CREATE TABLE public.subscriptions (
     progressive_billing_disabled boolean DEFAULT false NOT NULL,
     last_received_event_on date,
     cancelation_reason public.subscription_cancelation_reasons,
-    incompleted_at timestamp(6) without time zone
+    incompleted_at timestamp(6) without time zone,
+    anchor_date date
 );
 
 
@@ -4884,6 +4889,12 @@ CREATE TABLE public.subscription_activation_rules (
     timeout_hours integer DEFAULT 0 NOT NULL,
     status public.subscription_activation_rule_statuses DEFAULT 'inactive'::public.subscription_activation_rule_statuses NOT NULL,
     expires_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: subscription_rate_schedules; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6009,6 +6020,9 @@ ALTER TABLE ONLY public.schema_migrations
 
 ALTER TABLE ONLY public.subscription_activation_rules
     ADD CONSTRAINT subscription_activation_rules_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: subscription_rate_schedules subscription_rate_schedules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9356,6 +9370,8 @@ CREATE INDEX index_search_quantified_events ON public.quantified_events USING bt
 
 CREATE INDEX index_subscription_activation_rules_on_organization_id ON public.subscription_activation_rules USING btree (organization_id);
 
+
+--
 -- Name: index_subscription_rate_schedules_on_next_billing_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12337,6 +12353,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260326172913'),
 ('20260326130631'),
 ('20260325160805'),
 ('20260325160312'),
