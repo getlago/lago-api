@@ -3047,7 +3047,8 @@ CREATE TABLE public.subscriptions (
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     progressive_billing_disabled boolean DEFAULT false NOT NULL,
     last_received_event_on date,
-    cancelation_reason public.subscription_cancelation_reasons
+    cancelation_reason public.subscription_cancelation_reasons,
+    incompleted_at timestamp(6) without time zone
 );
 
 
@@ -11491,6 +11492,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260326130631'),
 ('20260319125125'),
 ('20260317134100'),
 ('20260317132911'),
