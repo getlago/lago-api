@@ -1114,4 +1114,17 @@ RSpec.shared_examples "a wallet index endpoint" do
       expect(json[:meta][:total_count]).to eq(2)
     end
   end
+
+  context "with currency filter" do
+    let!(:brl_wallet) { create(:wallet, customer:, currency: "BRL") }
+    let(:params) { {currency: "BRL"} }
+
+    it "returns only wallets with matching currency" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallets].count).to eq(1)
+      expect(json[:wallets].first[:lago_id]).to eq(brl_wallet.id)
+    end
+  end
 end
