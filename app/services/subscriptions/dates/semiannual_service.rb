@@ -208,7 +208,7 @@ module Subscriptions
         # In case of termination that is in the middle of the year, previous period anniversary date has to be returned
         elsif should_find_previous_billing_date?(date, billing_months, day)
           year = date.year
-          month = billing_months.reverse.find { |m| m < date.month }
+          month = billing_months.rfind { |m| m < date.month }
           day = Time.days_in_month(month, year) if last_day_of_month?(subscription_at)
         else
           year = date.year
