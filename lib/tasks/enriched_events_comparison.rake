@@ -156,7 +156,7 @@ namespace :enriched_events do
       parts << "agg=#{fee.billable_metric.aggregation_type}"
     end
     parts << "model=#{fee.charge&.charge_model}" if fee.charge
-    parts << "filter=#{fee.charge_filter.to_h}" if fee.charge_filter_id
+    parts << "filter=#{fee.charge_filter.to_h} filter_id=#{fee.charge_filter_id}" if fee.charge_filter_id
     grouped = fee.grouped_by.presence
     parts << "grouped_by=#{grouped}" if grouped
     parts.join(" ")
