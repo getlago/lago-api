@@ -105,8 +105,7 @@ RSpec.describe Mutations::Invites::Create do
       }
     )
 
-    expect(result["errors"].first["extensions"]["status"]).to eq(422)
-    expect(result["errors"].first["extensions"]["details"]["roles"]).to eq(["cannot_grant_admin"])
+    expect_forbidden_error(result)
   end
 
   it "creates an invite with custom role" do

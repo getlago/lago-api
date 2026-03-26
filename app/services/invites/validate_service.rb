@@ -6,7 +6,6 @@ module Invites
       valid_invite?
       valid_user?
       valid_roles?
-      valid_admin_grant?
 
       if errors?
         result.validation_failure!(errors:)
@@ -44,16 +43,6 @@ module Invites
       return true if missed.empty?
 
       add_error(field: :roles, error_code: "invalid_role")
-    end
-
-    def valid_admin_grant?
-      return true unless args[:roles]&.include?("admin")
-
-      organization = args[:current_organization]
-      acting_membership = organization.memberships.active.find_by(user: args[:user])
-      return true if acting_membership&.admin?
-
-      add_error(field: :roles, error_code: "cannot_grant_admin")
     end
   end
 end

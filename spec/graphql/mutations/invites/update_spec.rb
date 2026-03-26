@@ -69,7 +69,7 @@ RSpec.describe Mutations::Invites::Update do
           }
         )
 
-        expect_graphql_error(result:, message: "cannot_grant_admin")
+        expect_forbidden_error(result)
       end
     end
 

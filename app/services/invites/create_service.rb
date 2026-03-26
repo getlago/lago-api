@@ -8,6 +8,7 @@ module Invites
     end
 
     def call
+      return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
       return result unless valid?(args)
 
       result.invite = Invite.create!(
@@ -48,6 +49,14 @@ module Invites
 
     def valid?(args)
       Invites::ValidateService.new(result, **args).valid?
+    end
+
+    def granting_admin_without_being_admin?
+      return false unless args[:roles]&.include?("admin")
+      return false unless args[:user]
+
+      acting_membership = args[:current_organization].memberships.active.find_by(user: args[:user])
+      !acting_membership&.admin?
     end
 
     def build_invite_url(token)

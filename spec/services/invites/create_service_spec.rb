@@ -47,8 +47,8 @@ RSpec.describe Invites::CreateService do
         result = create_service.call
 
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:roles]).to eq(%w[cannot_grant_admin])
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("cannot_grant_admin")
       end
 
       it_behaves_like "does not produce a security log" do

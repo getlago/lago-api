@@ -16,7 +16,7 @@ module Memberships
       ActiveRecord::Base.transaction do
         return result.not_found_failure!(resource: "membership") unless membership
         return result.not_found_failure!(resource: "role") if new_roles.blank?
-        return result.not_allowed_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
+        return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
         return result.not_allowed_failure!(code: "last_admin") if last_admin_demotion?
 
         roles_to_remove = old_roles - new_roles
