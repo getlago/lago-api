@@ -18,11 +18,13 @@ module Subscriptions
 
       private
 
+      # When computing current usage (not billing), boundaries are always needed.
       # if bill_charges_monthly=true, charge boundaries should be filled
       # if bill_FIXED_charges_monthly=true, charge boundaries should be filled only for the first month of the period
       # For yearly plans with bill_charges_monthly=false, and bill_fixed_charges_monthly=false,
       # boundaries are always filled
       def should_fill_charges_boundaries?
+        return true if current_usage
         return true if plan.bill_charges_monthly?
 
         return first_month_in_yearly_period? if plan.bill_fixed_charges_monthly?

@@ -19,11 +19,13 @@ module Subscriptions
 
       private
 
+      # When computing current usage (not billing), boundaries are always needed.
       # if bill_charges_monthly=true, charge boundaries should be filled
       # else if bill_FIXED_charges_monthly=true, charge boundaries should be filled only for the first month of the period
-      # For semiannual plans with not billing charges and fixed charges mothly,
+      # For semiannual plans with not billing charges and fixed charges monthly,
       # boundaries are always filled
       def should_fill_charges_boundaries?
+        return true if current_usage
         return true if plan.bill_charges_monthly?
 
         return first_month_in_semiannual_period? if plan.bill_fixed_charges_monthly?
@@ -206,7 +208,7 @@ module Subscriptions
         # In case of termination that is in the middle of the year, previous period anniversary date has to be returned
         elsif should_find_previous_billing_date?(date, billing_months, day)
           year = date.year
-          month = billing_months.reverse.find { |m| m < date.month }
+          month = billing_months.rfind { |m| m < date.month }
           day = Time.days_in_month(month, year) if last_day_of_month?(subscription_at)
         else
           year = date.year
