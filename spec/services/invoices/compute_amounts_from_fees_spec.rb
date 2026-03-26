@@ -69,7 +69,7 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
       [build(:fee, amount_cents: 100), build(:fee, amount_cents: 150)]
     end
 
-    it "avoids persists fees" do
+    it "avoids persisting fees" do
       result = subject.call
 
       expect(result.invoice.fees.first.id).to be_nil
