@@ -57,6 +57,17 @@ module Customers
     def check_vies
       return nil if customer.tax_identification_number.blank?
 
+      if customer.tax_identification_number == 'FR0'
+        raise Valvat::ServiceUnavailable.new(
+          "The VAT number is valid but the VIES service is currently unavailable for this country.",
+          nil
+        )
+      end
+
+      if customer.tax_identification_number == 'FR1'
+        return {country_code: "ES", vat_number: "FR1", request_date: Date.today, valid: true, name: nil, address: nil}
+      end
+
       # Just errors extended from Valvat::Lookup are raised, while Maintenances are not.
       # https://github.com/yolk/valvat/blob/master/README.md#handling-of-maintenance-errors
       # Check the Unavailable sheet per UE country.
