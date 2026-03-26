@@ -77,7 +77,7 @@ module Invoices
     def create_fees
       subscription_rate_schedules.each do |srs|
         create_fee(srs)
-        srs.update_next_billing_date!
+        srs.update_next_billing_date!(billed: true)
       end
     end
 
