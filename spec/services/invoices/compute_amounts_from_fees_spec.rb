@@ -61,7 +61,7 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
     expect { compute_amounts.call }.to change(invoice, :total_amount_cents).from(0).to(559)
   end
 
-  context "when invoice is not persisted and have not persisted fees" do
+  context "when invoice is not persisted and has no persisted fees" do
     subject { described_class.new(invoice: draft_invoice) }
 
     let(:draft_invoice) { build(:invoice, organization:, customer:, fees: fees) }
