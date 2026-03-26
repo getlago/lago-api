@@ -50,6 +50,29 @@ RSpec.describe Mutations::Invites::Update do
       end
     end
 
+    context "when non-admin sets admin role on invite" do
+      let(:invite) { create(:invite, organization:, roles: %w[finance]) }
+
+      before { create(:role, :admin) }
+
+      it "returns an error" do
+        result = execute_graphql(
+          current_organization: organization,
+          current_user: user,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {
+              id: invite.id,
+              roles: %w[admin]
+            }
+          }
+        )
+
+        expect_graphql_error(result:, message: "cannot_grant_admin")
+      end
+    end
+
     context "when the invite accepted" do
       let(:invite) { create(:invite, organization:, status: :accepted) }
 

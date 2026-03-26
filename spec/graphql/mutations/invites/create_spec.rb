@@ -66,25 +66,15 @@ RSpec.describe Mutations::Invites::Create do
     end
   end
 
-  it "creates an invite with admin role using roles param" do
-    create(:role, :admin)
-
-    roles_mutation = <<~GQL
-      mutation($input: CreateInviteInput!) {
-        createInvite(input: $input) {
-          id
-          token
-          email
-          roles
-        }
-      }
-    GQL
+  it "creates an invite with admin role when acting user is admin" do
+    admin_role = create(:role, :admin)
+    create(:membership_role, membership:, role: admin_role)
 
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query: roles_mutation,
+      query: mutation,
       variables: {
         input: {
           email:,
@@ -97,6 +87,26 @@ RSpec.describe Mutations::Invites::Create do
 
     expect(data["email"]).to eq(email)
     expect(data["roles"]).to eq(["admin"])
+  end
+
+  it "prevents non-admin from creating an invite with admin role" do
+    create(:role, :admin)
+
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: mutation,
+      variables: {
+        input: {
+          email:,
+          roles: ["admin"]
+        }
+      }
+    )
+
+    expect(result["errors"].first["extensions"]["status"]).to eq(422)
+    expect(result["errors"].first["extensions"]["details"]["roles"]).to eq(["cannot_grant_admin"])
   end
 
   it "creates an invite with custom role" do

@@ -18,7 +18,7 @@ module Mutations
 
       def resolve(**args)
         invite = current_organization.invites.pending.find_by(id: args[:id])
-        result = ::Invites::UpdateService.call(invite:, params: {roles: args[:roles]})
+        result = ::Invites::UpdateService.call(user: context[:current_user], invite:, params: {roles: args[:roles]})
         result.success? ? result.invite : result_error(result)
       end
     end
