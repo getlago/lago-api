@@ -28,7 +28,7 @@ module RateSchedules
     def billable_subscription_rate_schedules
       organization.subscription_rate_schedules
         .active
-        .where(next_billing_date: ...billing_at.to_date)
+        .where(next_billing_date: ..billing_at.to_date)
         .includes(:subscription)
     end
   end
