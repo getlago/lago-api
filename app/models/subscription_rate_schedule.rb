@@ -17,8 +17,9 @@ class SubscriptionRateSchedule < ApplicationRecord
   def update_next_billing_date!
     return if started_at.nil?
 
+    new_intervals_billed = intervals_billed + 1
     billing_start = started_at.to_date
-    count = (intervals_billed + 1) * rate_schedule.billing_interval_count
+    count = new_intervals_billed * rate_schedule.billing_interval_count
 
     next_date = case rate_schedule.billing_interval_unit
     when "day"
@@ -31,7 +32,7 @@ class SubscriptionRateSchedule < ApplicationRecord
       billing_start + count.years
     end
 
-    update!(next_billing_date: next_date)
+    update!(intervals_billed: new_intervals_billed, next_billing_date: next_date)
   end
 end
 
