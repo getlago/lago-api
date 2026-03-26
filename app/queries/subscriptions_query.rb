@@ -9,7 +9,8 @@ class SubscriptionsQuery < BaseQuery
     :customer,
     :overriden, # overriden is a legacy typo kept for backward compatibility
     :overridden,
-    :exclude_next_subscriptions
+    :exclude_next_subscriptions,
+    :currency
   ]
 
   def call
@@ -30,6 +31,7 @@ class SubscriptionsQuery < BaseQuery
     subscriptions = with_external_customer(subscriptions) if filters.external_customer_id
     subscriptions = with_plan_code(subscriptions) if filters.plan_code
     subscriptions = with_overridden(subscriptions) unless overridden_filter.nil?
+    subscriptions = with_currency(subscriptions) if filters.currency
 
     result.subscriptions = subscriptions
     result
@@ -84,6 +86,10 @@ class SubscriptionsQuery < BaseQuery
     else
       scope.joins(:plan).where(plans: {parent_id: nil})
     end
+  end
+
+  def with_currency(scope)
+    scope.joins(:plan).where(plans: {amount_currency: filters.currency})
   end
 
   def with_excluded_next_subscriptions(scope)
