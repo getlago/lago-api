@@ -155,10 +155,8 @@ compute_plan = Plan.find_or_create_by!(organization:, code: "v2_compute_monthly"
   p.amount_currency = "EUR"
   p.pay_in_advance = false
 end
-
-compute_sub_ppi = nil
 wire_plan.call(plan: compute_plan, product: compute_product, items: [
-  {item: compute_sub_item,   interval_unit: :month, props: {"amount" => "49.99"}},
+  {item: compute_sub_item, interval_unit: :month, props: {"amount" => "49.99"}},
   {item: compute_fixed_item, interval_unit: :month, props: {"amount" => "19.99"}, units: 1},
   {item: compute_usage_item, interval_unit: :month, props: {"amount" => "0.10"}}
 ])
@@ -187,7 +185,7 @@ compute_daily_plan = Plan.find_or_create_by!(organization:, code: "v2_compute_da
 end
 
 wire_plan.call(plan: compute_daily_plan, product: compute_product, items: [
-  {item: compute_sub_item,   interval_unit: :day, props: {"amount" => "2.99"}},
+  {item: compute_sub_item, interval_unit: :day, props: {"amount" => "2.99"}},
   {item: compute_usage_item, interval_unit: :day, props: {"amount" => "0.05"}}
 ])
 
@@ -201,7 +199,7 @@ compute_advance_plan = Plan.find_or_create_by!(organization:, code: "v2_compute_
 end
 
 wire_plan.call(plan: compute_advance_plan, product: compute_product, items: [
-  {item: compute_sub_item,   interval_unit: :month, props: {"amount" => "59.99"}, pay_in_advance: true},
+  {item: compute_sub_item, interval_unit: :month, props: {"amount" => "59.99"}, pay_in_advance: true},
   {item: compute_fixed_item, interval_unit: :month, props: {"amount" => "29.99"}, pay_in_advance: true, units: 1}
 ])
 
@@ -255,7 +253,7 @@ networking_package_plan = Plan.find_or_create_by!(organization:, code: "v2_netwo
 end
 
 wire_plan.call(plan: networking_package_plan, product: networking_product, items: [
-  {item: networking_sub_item,   interval_unit: :month, props: {"amount" => "39.99"}},
+  {item: networking_sub_item, interval_unit: :month, props: {"amount" => "39.99"}},
   {item: networking_usage_item, interval_unit: :month, model: :package, props: {"amount" => "5.00", "package_size" => 100, "free_units" => 50}},
   {item: networking_fixed_item, interval_unit: :month, props: {"amount" => "4.99"}, units: 2}
 ])
@@ -288,7 +286,7 @@ compute_quarterly_plan = Plan.find_or_create_by!(organization:, code: "v2_comput
 end
 
 wire_plan.call(plan: compute_quarterly_plan, product: compute_product, items: [
-  {item: compute_sub_item,   interval_unit: :month, interval_count: 3, props: {"amount" => "129.99"}},
+  {item: compute_sub_item, interval_unit: :month, interval_count: 3, props: {"amount" => "129.99"}},
   {item: compute_usage_item, interval_unit: :month, interval_count: 3, props: {"amount" => "0.08"}}
 ])
 
@@ -302,7 +300,7 @@ compute_yearly_plan = Plan.find_or_create_by!(organization:, code: "v2_compute_y
 end
 
 wire_plan.call(plan: compute_yearly_plan, product: compute_product, items: [
-  {item: compute_sub_item,   interval_unit: :year, props: {"amount" => "499.99"}},
+  {item: compute_sub_item, interval_unit: :year, props: {"amount" => "499.99"}},
   {item: compute_usage_item, interval_unit: :year, props: {"amount" => "0.05"}},
   {item: compute_fixed_item, interval_unit: :year, props: {"amount" => "99.99"}, units: 1}
 ])
@@ -321,11 +319,11 @@ PlanProduct.find_or_create_by!(organization:, plan: multi_plan, product: storage
 PlanProduct.find_or_create_by!(organization:, plan: multi_plan, product: networking_product)
 
 [
-  [compute_sub_item,      {"amount" => "99.99"}],
-  [compute_usage_item,    {"amount" => "0.10"}],
-  [storage_sub_item,      {"amount" => "49.99"}],
-  [storage_usage_item,    {"amount" => "0.02"}],
-  [networking_sub_item,   {"amount" => "79.99"}],
+  [compute_sub_item, {"amount" => "99.99"}],
+  [compute_usage_item, {"amount" => "0.10"}],
+  [storage_sub_item, {"amount" => "49.99"}],
+  [storage_usage_item, {"amount" => "0.02"}],
+  [networking_sub_item, {"amount" => "79.99"}],
   [networking_usage_item, {"amount" => "0.03"}]
 ].each do |item, props|
   ppi = PlanProductItem.find_or_create_by!(organization:, plan: multi_plan, product_item: item)
@@ -359,27 +357,27 @@ end
 # Offsets from today — subscriptions started at (today - offset)
 # will have next_billing_date = today when the interval matches.
 BILLING_BRACKETS = [
-  {offset: 1.day,    billing_time: :calendar,    label: "daily"},
-  {offset: 1.week,   billing_time: :anniversary, label: "weekly"},
-  {offset: 1.month,  billing_time: :anniversary, label: "1mo ago (BILLS TODAY for monthly)"},
+  {offset: 1.day, billing_time: :calendar, label: "daily"},
+  {offset: 1.week, billing_time: :anniversary, label: "weekly"},
+  {offset: 1.month, billing_time: :anniversary, label: "1mo ago (BILLS TODAY for monthly)"},
   {offset: 2.months, billing_time: :anniversary, label: "2mo ago"},
   {offset: 3.months, billing_time: :anniversary, label: "3mo ago (BILLS TODAY for quarterly)"},
   {offset: 6.months, billing_time: :anniversary, label: "6mo ago"},
-  {offset: 1.year,   billing_time: :anniversary, label: "1yr ago (BILLS TODAY for yearly)"}
+  {offset: 1.year, billing_time: :anniversary, label: "1yr ago (BILLS TODAY for yearly)"}
 ].freeze
 
 all_plans = [
-  {plan: compute_plan,             label: "compute_monthly"},
-  {plan: compute_daily_plan,       label: "compute_daily"},
-  {plan: compute_advance_plan,     label: "compute_advance"},
+  {plan: compute_plan, label: "compute_monthly"},
+  {plan: compute_daily_plan, label: "compute_daily"},
+  {plan: compute_advance_plan, label: "compute_advance"},
   {plan: analytics_graduated_plan, label: "analytics_graduated"},
-  {plan: analytics_volume_plan,    label: "analytics_volume"},
-  {plan: networking_package_plan,  label: "networking_package"},
-  {plan: networking_pct_plan,      label: "networking_pct"},
-  {plan: compute_quarterly_plan,   label: "compute_quarterly"},
-  {plan: compute_yearly_plan,      label: "compute_yearly"},
-  {plan: multi_plan,               label: "multi_product"},
-  {plan: storage_plan,             label: "storage_weekly"}
+  {plan: analytics_volume_plan, label: "analytics_volume"},
+  {plan: networking_package_plan, label: "networking_package"},
+  {plan: networking_pct_plan, label: "networking_pct"},
+  {plan: compute_quarterly_plan, label: "compute_quarterly"},
+  {plan: compute_yearly_plan, label: "compute_yearly"},
+  {plan: multi_plan, label: "multi_product"},
+  {plan: storage_plan, label: "storage_weekly"}
 ]
 
 active_count = 0
