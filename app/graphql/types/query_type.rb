@@ -65,11 +65,11 @@ module Types
     field :invite, resolver: Resolvers::InviteResolver
     field :invites, resolver: Resolvers::InvitesResolver
     field :invoice, resolver: Resolvers::InvoiceResolver
-    field :invoice_draft, resolver: Resolvers::InvoiceDraftResolver
     field :invoice_collections, resolver: Resolvers::Analytics::InvoiceCollectionsResolver
     field :invoice_credit_notes, resolver: Resolvers::InvoiceCreditNotesResolver
     field :invoice_custom_section, resolver: Resolvers::InvoiceCustomSectionResolver
     field :invoice_custom_sections, resolver: Resolvers::InvoiceCustomSectionsResolver
+    field :invoice_draft, resolver: Resolvers::InvoiceDraftResolver
     field :invoiced_usages, resolver: Resolvers::Analytics::InvoicedUsagesResolver
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver

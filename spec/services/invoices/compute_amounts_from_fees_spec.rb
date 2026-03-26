@@ -62,12 +62,12 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
   end
 
   context "when invoice is not persisted and have not persisted fees" do
+    subject { described_class.new(invoice: draft_invoice) }
+
     let(:draft_invoice) { build(:invoice, organization:, customer:, fees: fees) }
     let(:fees) do
-      [build(:fee, amount_cents: 132), build(:fee, amount_cents: 218, precise_coupons_amount_cents: 100)]
+      [build(:fee, amount_cents: 100), build(:fee, amount_cents: 150)]
     end
-
-    subject { described_class.new(invoice: draft_invoice) }
 
     it "avoids persists fees" do
       result = subject.call

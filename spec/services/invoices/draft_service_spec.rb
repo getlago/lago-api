@@ -8,13 +8,20 @@ RSpec.describe Invoices::DraftService do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:, organization:, plan: plan) }
-  let!(:invoice) { create(:invoice, organization:, customer:, taxes_rate: 10) }
-  let!(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:) }
+  let(:invoice) { create(:invoice, organization:, customer:, taxes_rate: 10) }
+  let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:) }
   let(:plan) { create(:plan, organization: organization) }
 
-  describe "call" do
+  describe "#call" do
+    before do
+      invoice
+      invoice_subscription
+
+      allow(::AdjustedFees::EstimateService).to receive(:call).and_call_original
+    end
+
     context "with subscription fees" do
-      let!(:fee) do
+      let(:fee) do
         create(
           :fee,
           invoice:,
@@ -28,6 +35,8 @@ RSpec.describe Invoices::DraftService do
         )
       end
 
+      before { fee }
+
       it "creates a draft invoice with estimated fees" do
         result = draft_service.call
 
@@ -38,7 +47,9 @@ RSpec.describe Invoices::DraftService do
       end
 
       it "calls EstimateService for each fee" do
-        expect(::AdjustedFees::EstimateService).to receive(:call).with(
+        result = draft_service.call
+
+        expect(::AdjustedFees::EstimateService).to have_received(:call).with(
           invoice: invoice,
           params: {
             invoice_subscription_id: fee.subscription_id,
@@ -50,9 +61,7 @@ RSpec.describe Invoices::DraftService do
             fixed_charge_id: nil,
             invoice_display_name: "Subscription Fee"
           }
-        ).and_call_original
-
-        result = draft_service.call
+        )
 
         expect(result.invoice.fees.first.taxes_rate).to eq(0)
       end
@@ -96,7 +105,9 @@ RSpec.describe Invoices::DraftService do
       end
 
       it "calls EstimateService with charge fee parameters" do
-        expect(::AdjustedFees::EstimateService).to receive(:call).with(
+        result = draft_service.call
+
+        expect(::AdjustedFees::EstimateService).to have_received(:call).with(
           invoice: invoice,
           params: {
             invoice_subscription_id: fee.subscription_id,
@@ -108,9 +119,7 @@ RSpec.describe Invoices::DraftService do
             fixed_charge_id: nil,
             invoice_display_name: nil
           }
-        ).and_call_original
-
-        result = draft_service.call
+        )
 
         expect(result.invoice.fees.first.taxes_rate).to eq(0)
       end
@@ -132,7 +141,9 @@ RSpec.describe Invoices::DraftService do
       end
 
       it "calls EstimateService with fixed_charge fee parameters" do
-        expect(::AdjustedFees::EstimateService).to receive(:call).with(
+        result = draft_service.call
+
+        expect(::AdjustedFees::EstimateService).to have_received(:call).with(
           invoice: invoice,
           params: {
             invoice_subscription_id: fee.subscription_id,
@@ -144,9 +155,7 @@ RSpec.describe Invoices::DraftService do
             fixed_charge_id: fee.fixed_charge_id,
             invoice_display_name: fee.invoice_display_name
           }
-        ).and_call_original
-
-        result = draft_service.call
+        )
 
         expect(result.invoice.fees.first.taxes_rate).to eq(0)
       end
