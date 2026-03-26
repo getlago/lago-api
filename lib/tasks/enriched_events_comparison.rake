@@ -5,11 +5,13 @@ namespace :enriched_events do
   task :compare, [:subscription_id] => :environment do |_task, args|
     Rails.logger.level = Logger::Severity::ERROR
 
-    abort "Usage: [QUIET=true] rake enriched_events:compare[sub_id_1,sub_id_2,...]\n\n" unless args[:subscription_id]
+    abort "Usage: [QUIET=true] [DEDUPLICATE=true] rake enriched_events:compare[sub_id_1,sub_id_2,...]\n\n" unless args[:subscription_id]
     abort "[SKIP] Clickhouse is not enabled on this system" if ENV["LAGO_CLICKHOUSE_ENABLED"].blank?
 
+    quiet = ENV.fetch("QUIET", "false") == "true"
+    deduplicate = ENV.fetch("DEDUPLICATE", "false") == "true"
+
     subscription_ids = [args[:subscription_id]] + args.extras
-    quiet = ENV["QUIET"].present?
     total_diffs = 0
 
     subscription_ids.each do |sub_id|
@@ -39,6 +41,7 @@ namespace :enriched_events do
         ActiveRecord::Base.transaction do
           # Run with existing store (feature flag OFF)
           organization.disable_feature_flag!(:enriched_events_aggregation) if flag_was_enabled
+          organization.update!(clickhouse_deduplication_enabled: deduplicate)
           organization.reload
 
           puts "\nRunning legacy ClickhouseStore..."
@@ -61,6 +64,7 @@ namespace :enriched_events do
         ActiveRecord::Base.transaction do
           # Run with enriched store (feature flag ON)
           organization.enable_feature_flag!(:enriched_events_aggregation)
+          organization.update!(clickhouse_deduplication_enabled: deduplicate)
           organization.reload
 
           puts "Running enriched ClickhouseEnrichedStore..."
