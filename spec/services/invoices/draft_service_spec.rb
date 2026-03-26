@@ -66,7 +66,7 @@ RSpec.describe Invoices::DraftService do
         expect(result.invoice.fees.first.taxes_rate).to eq(0)
       end
 
-      context "when exists taxes" do
+      context "with taxes" do
         let(:tax) { create(:tax, organization:, rate: 12, applied_to_organization: false) }
         let(:applied_tax) { create(:plan_applied_tax, plan:, tax: tax) }
 
