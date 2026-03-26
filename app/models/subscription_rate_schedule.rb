@@ -24,6 +24,7 @@ end
 #  ended_at          :datetime
 #  intervals_billed  :integer          default(0), not null
 #  intervals_to_bill :integer
+#  next_billing_date :date
 #  started_at        :datetime
 #  status            :enum             not null
 #  created_at        :datetime         not null
@@ -35,10 +36,11 @@ end
 #
 # Indexes
 #
-#  index_subscription_rate_schedules_on_organization_id   (organization_id)
-#  index_subscription_rate_schedules_on_product_item_id   (product_item_id)
-#  index_subscription_rate_schedules_on_rate_schedule_id  (rate_schedule_id)
-#  index_subscription_rate_schedules_on_subscription_id   (subscription_id)
+#  index_subscription_rate_schedules_on_next_billing_date  (next_billing_date)
+#  index_subscription_rate_schedules_on_organization_id    (organization_id)
+#  index_subscription_rate_schedules_on_product_item_id    (product_item_id)
+#  index_subscription_rate_schedules_on_rate_schedule_id   (rate_schedule_id)
+#  index_subscription_rate_schedules_on_subscription_id    (subscription_id)
 #
 # Foreign Keys
 #
