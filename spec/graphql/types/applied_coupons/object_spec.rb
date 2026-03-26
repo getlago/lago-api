@@ -16,6 +16,6 @@ RSpec.describe Types::AppliedCoupons::Object do
     expect(subject).to have_field(:frequency_duration_remaining).of_type("Int")
     expect(subject).to have_field(:percentage_rate).of_type("Float")
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
-    expect(subject).to have_field(:terminated_at).of_type("ISO8601DateTime!")
+    expect(subject).to have_field(:terminated_at).of_type("ISO8601DateTime")
   end
 end
