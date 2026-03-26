@@ -19,7 +19,7 @@ class ProductItemFilterValue < ApplicationRecord
 
   def validate_value_inclusion
     return if value.blank?
-    return if product_item_filter&.billable_metric_filter&.values&.include?(value)
+    return if value.in?(product_item_filter&.billable_metric_filter&.values || [])
 
     errors.add(:value, :inclusion)
   end
