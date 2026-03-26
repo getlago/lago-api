@@ -37,7 +37,7 @@ RSpec.describe Invoices::DraftService do
 
       before { fee }
 
-      it "creates a draft invoice with estimated fees" do
+      it "builds a draft invoice with estimated fees" do
         result = draft_service.call
 
         expect(result).to be_success
