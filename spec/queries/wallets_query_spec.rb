@@ -66,6 +66,27 @@ RSpec.describe WalletsQuery do
     end
   end
 
+  context "when filtering by currency" do
+    let(:filters) { {currency: "USD"} }
+    let(:wallet_1) { create(:wallet, customer: customer_1, currency: "USD") }
+    let(:wallet_2) { create(:wallet, customer: customer_1, currency: "EUR") }
+
+    it "returns only wallets with matching currency" do
+      expect(result).to be_success
+      expect(returned_ids).to include(wallet_1.id)
+      expect(returned_ids).not_to include(wallet_2.id)
+    end
+
+    context "when no wallets match the currency" do
+      let(:filters) { {currency: "GBP"} }
+
+      it "returns no wallets" do
+        expect(result).to be_success
+        expect(result.wallets.count).to eq(0)
+      end
+    end
+  end
+
   context "when filtering by external_customer_id" do
     let(:filters) { {external_customer_id: customer_1.external_id} }
 
