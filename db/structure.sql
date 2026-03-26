@@ -281,6 +281,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_019e2289e5;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
+DROP TRIGGER IF EXISTS ensure_consistency ON public.subscriptions;
 DROP TRIGGER IF EXISTS ensure_consistency ON public.roles;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.flat_filters AS
@@ -1053,6 +1054,7 @@ DROP TABLE IF EXISTS public.active_storage_blobs;
 DROP TABLE IF EXISTS public.active_storage_attachments;
 DROP TABLE IF EXISTS partman.template_public_enriched_events;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
+DROP FUNCTION IF EXISTS public.ensure_subscription_consistency();
 DROP FUNCTION IF EXISTS public.ensure_role_consistency();
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_direction;
@@ -1345,6 +1347,15 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
 CREATE FUNCTION public.ensure_role_consistency() RETURNS trigger
     LANGUAGE plpgsql
     AS $$ BEGIN IF OLD.organization_id IS NULL THEN RAISE EXCEPTION 'Predefined role cannot be modified'; ELSIF OLD.organization_id IS DISTINCT FROM NEW.organization_id THEN RAISE EXCEPTION 'Custom role cannot be moved to another organization'; ELSIF OLD.code IS DISTINCT FROM NEW.code THEN RAISE EXCEPTION 'The code of the role cannot be changed'; ELSIF NEW.permissions != OLD.permissions THEN NEW.permissions := ARRAY(SELECT DISTINCT unnest(NEW.permissions) ORDER BY 1); END IF; RETURN NEW; END; $$;
+
+
+--
+-- Name: ensure_subscription_consistency(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.ensure_subscription_consistency() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$ BEGIN IF OLD.free_until IS NOT NULL AND OLD.free_until IS DISTINCT FROM NEW.free_until THEN RAISE EXCEPTION 'free_until cannot be changed once set'; END IF; RETURN NEW; END; $$;
 
 
 --
@@ -3002,7 +3013,10 @@ CREATE TABLE public.subscriptions (
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     progressive_billing_disabled boolean DEFAULT false NOT NULL,
-    last_received_event_on date
+    last_received_event_on date,
+    free_until timestamp with time zone,
+    CONSTRAINT free_until_should_be_after_start CHECK (((free_until IS NULL) OR (free_until >= started_at))),
+    CONSTRAINT free_until_should_be_before_end CHECK (((free_until IS NULL) OR (ending_at IS NULL) OR (free_until <= ending_at)))
 );
 
 
@@ -9202,6 +9216,13 @@ CREATE TRIGGER ensure_consistency BEFORE UPDATE ON public.roles FOR EACH ROW EXE
 
 
 --
+-- Name: subscriptions ensure_consistency; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER ensure_consistency BEFORE UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION public.ensure_subscription_consistency();
+
+
+--
 -- Name: payment_methods fk_rails_00e7a45b0b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11386,6 +11407,8 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260319125125'),
 ('20260311121245'),
+('20260310153444'),
+('20260310153443'),
 ('20260306115902'),
 ('20260305165936'),
 ('20260305161303'),
