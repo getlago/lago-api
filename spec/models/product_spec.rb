@@ -43,7 +43,7 @@ RSpec.describe Product do
       end
 
       it "allows same code when existing record is soft deleted" do
-        Product.find_by(organization:, code:).discard
+        described_class.find_by(organization:, code:).discard
         product = build(:product, organization:, code:)
         expect(product).to be_valid
       end
