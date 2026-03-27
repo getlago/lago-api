@@ -119,6 +119,10 @@ module Fees
       # Preserve preloaded billable_metric on all fees (including cached ones) to avoid N+1 queries
       fees.each { |fee| fee.association(:billable_metric).target = billable_metric }
 
+      if charge.presentation_group_keys_values.present?
+        compute_presentation_breakdowns(fees.compact, charge_filter:)
+      end
+
       result.fees.concat(fees.compact)
     end
 
@@ -358,6 +362,45 @@ module Fees
           aggregation.current_amount = aggregation_result.custom_aggregation&.[](:amount)
           aggregation.save!
         end
+      end
+    end
+
+    def compute_presentation_breakdowns(fees, charge_filter:)
+      presentation_keys = charge.presentation_group_keys_values
+
+      combined_filters = aggregation_filters(charge_filter:)
+      combined_keys = ((combined_filters[:grouped_by] || []) + presentation_keys).uniq
+      combined_filters[:grouped_by] = combined_keys
+
+      combined_aggregator = BillableMetrics::AggregationFactory.new_instance(
+        charge:,
+        current_usage:,
+        subscription:,
+        boundaries: {
+          from_datetime: boundaries.charges_from_datetime,
+          to_datetime: boundaries.charges_to_datetime,
+          charges_duration: boundaries.charges_duration,
+          max_timestamp: boundaries.max_timestamp
+        },
+        filters: combined_filters
+      )
+      combined_result = combined_aggregator.aggregate(options: {})
+      return unless combined_result.success?
+
+      fees.each do |fee|
+        matching = (combined_result.aggregations || []).select do |agg|
+          fee.grouped_by.blank? || fee.grouped_by.all? { |k, v| agg.grouped_by[k] == v }
+        end
+
+        breakdowns = matching.map do |agg|
+          presentation_by = presentation_keys.index_with { |k| agg.grouped_by[k] }
+          {presentation_by:, units: agg.aggregation.to_s}
+        end
+
+        fee.build_presentation_breakdown(
+          organization_id: fee.organization_id,
+          breakdowns:
+        )
       end
     end
 
