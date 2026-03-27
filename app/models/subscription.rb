@@ -278,6 +278,7 @@ end
 # Database name: primary
 #
 #  id                           :uuid             not null, primary key
+#  anchor_date                  :date
 #  billing_time                 :integer          default("calendar"), not null
 #  cancelation_reason           :enum
 #  canceled_at                  :datetime
