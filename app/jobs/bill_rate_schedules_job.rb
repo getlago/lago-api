@@ -11,6 +11,9 @@ class BillRateSchedulesJob < ApplicationJob
 
   unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 
+  retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
+  retry_on Sequenced::SequenceError, ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
+
   def perform(subscription_rate_schedule_ids, timestamp)
     subscription_rate_schedules = SubscriptionRateSchedule
       .where(id: subscription_rate_schedule_ids)
