@@ -176,9 +176,10 @@ RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :c
     end
 
     context "with timestamp precision" do
-      # 229ms is deliberately chosen: to_f.to_s returns "...2289999" for this value
-      # (float representation issue), while strftime("%s.%3N") returns the correct "...229"
-      let(:timestamp) { subscription.started_at + 1.day + BigDecimal("0.229").seconds }
+      let(:timestamp) do
+        time = subscription.started_at.dup
+        time + 3.days + 0.299.seconds
+      end
 
       let!(:event) do
         create(
