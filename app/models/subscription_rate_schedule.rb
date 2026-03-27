@@ -14,6 +14,23 @@ class SubscriptionRateSchedule < ApplicationRecord
 
   validates :intervals_billed, numericality: {greater_than_or_equal_to: 0}
 
+  # Computes and persists the next billing date for this rate schedule.
+  #
+  # Two billing modes determine when invoices are generated:
+  #
+  # Anniversary (anchor_date nil, prorated: false, or daily interval):
+  #   Billing dates are relative to the subscription's started_at.
+  #   started_at is NOT a billing date, so the first billing is one full period later.
+  #   Signup Mar 15, monthly → Apr 15, May 15, Jun 15 ...
+  #
+  # Calendar (anchor_date present + prorated: true + non-daily interval):
+  #   Billing dates align to the anchor. The anchor IS the first billing date (stub).
+  #   Date arithmetic preserves the anchor's relevant component:
+  #     weekly  → same day of week as anchor
+  #     monthly → same day of month as anchor
+  #     yearly  → same month + day as anchor
+  #   Signup Mar 15, anchor Mar 20, monthly → Mar 20 (stub), Apr 20, May 20 ...
+  #
   def update_next_billing_date!(billed: false)
     return if started_at.nil?
 
@@ -25,26 +42,23 @@ class SubscriptionRateSchedule < ApplicationRecord
   private
 
   def compute_next_billing_date
-    unit = rate_schedule.billing_interval_unit
-    anchor = subscription&.anchor_date
-
-    if anchor && rate_schedule.prorated && unit != "day"
-      # Calendar mode: anchor_date carries the alignment
-      #   weekly  → same day of week as anchor
-      #   monthly → same day of month as anchor
-      #   yearly  → same month + day as anchor
+    if calendar_mode?
       offset = intervals_billed * rate_schedule.billing_interval_count
-      add_interval(anchor, unit, offset)
+      add_interval(subscription.anchor_date, offset)
     else
-      # Anniversary mode (no anchor, anchor+not prorated, or daily):
-      #   bills from started_at
       offset = (intervals_billed + 1) * rate_schedule.billing_interval_count
-      add_interval(started_at.to_date, unit, offset)
+      add_interval(started_at.to_date, offset)
     end
   end
 
-  def add_interval(date, unit, count)
-    case unit
+  def calendar_mode?
+    subscription&.anchor_date.present? &&
+      rate_schedule.prorated &&
+      rate_schedule.billing_interval_unit != "day"
+  end
+
+  def add_interval(date, count)
+    case rate_schedule.billing_interval_unit
     when "day" then date + count.days
     when "week" then date + count.weeks
     when "month" then date + count.months
