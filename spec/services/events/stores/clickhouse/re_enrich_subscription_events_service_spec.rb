@@ -174,5 +174,58 @@ RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :c
         expect(kafka_producer).to have_received(:produce_many_async).twice
       end
     end
+
+    context "with timestamp precision" do
+      let(:timestamp) do
+        time = subscription.started_at.dup
+        time + 3.days + 0.299.seconds
+      end
+
+      let!(:event) do
+        create(
+          :clickhouse_events_raw,
+          organization:,
+          subscription:,
+          billable_metric:,
+          external_customer_id: customer.external_id,
+          timestamp:,
+          properties: {"key" => "value"},
+          precise_total_amount_cents: "12.5"
+        )
+      end
+
+      it "produces Kafka messages with expected payload structure" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.events_count).to eq(1)
+        expect(result.batch_count).to eq(1)
+
+        expect(kafka_producer).to have_received(:produce_many_async) do |messages|
+          expect(messages.size).to eq(1)
+
+          message = messages.first
+          expect(message[:topic]).to eq("test-topic")
+          expect(message[:key]).to eq("#{organization.id}-#{subscription.external_id}")
+
+          payload = JSON.parse(message[:payload])
+          expect(payload).to include(
+            "organization_id" => organization.id,
+            "external_customer_id" => customer.external_id,
+            "external_subscription_id" => subscription.external_id,
+            "transaction_id" => event.transaction_id,
+            "timestamp" => timestamp.strftime("%s.%3N"),
+            "code" => billable_metric.code,
+            "precise_total_amount_cents" => "12.5",
+            "properties" => {"key" => "value"},
+            "source" => Events::KafkaProducerService::EVENT_SOURCE,
+            "source_metadata" => {
+              "reprocess" => true,
+              "api_post_processed" => true
+            }
+          )
+        end
+      end
+    end
   end
 end

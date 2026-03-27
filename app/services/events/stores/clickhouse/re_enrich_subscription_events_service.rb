@@ -75,7 +75,7 @@ module Events
             external_customer_id: event.external_customer_id,
             external_subscription_id: event.external_subscription_id,
             transaction_id: event.transaction_id,
-            timestamp: event.timestamp.to_f.to_s,
+            timestamp: event.timestamp.strftime("%s.%3N"),
             code: event.code,
             precise_total_amount_cents: event.precise_total_amount_cents.present? ? event.precise_total_amount_cents.to_s : "0.0",
             properties:,
