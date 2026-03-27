@@ -14,7 +14,22 @@ class SubscriptionRateSchedule < ApplicationRecord
 
   validates :intervals_billed, numericality: {greater_than_or_equal_to: 0}
 
-  # Computes and persists the next billing date for this rate schedule.
+  # Returns the start date of the current billing period.
+  def current_period_started_at
+    billing_date_for(intervals_billed)
+  end
+
+  def update_next_billing_date!(billed: false)
+    return if started_at.nil?
+
+    self.intervals_billed += 1 if billed
+
+    update!(intervals_billed:, next_billing_date: billing_date_for(intervals_billed + 1))
+  end
+
+  private
+
+  # Returns the nth billing boundary date.
   #
   # Two billing modes determine when invoices are generated:
   #
@@ -30,24 +45,13 @@ class SubscriptionRateSchedule < ApplicationRecord
   #     monthly → same day of month as anchor
   #     yearly  → same month + day as anchor
   #   Signup Mar 15, anchor Mar 20, monthly → Mar 20 (stub), Apr 20, May 20 ...
-  #
-  def update_next_billing_date!(billed: false)
-    return if started_at.nil?
-
-    self.intervals_billed += 1 if billed
-
-    update!(intervals_billed:, next_billing_date: compute_next_billing_date)
-  end
-
-  private
-
-  def compute_next_billing_date
+  def billing_date_for(n)
     if calendar_mode?
-      offset = intervals_billed * rate_schedule.billing_interval_count
-      add_interval(subscription.anchor_date, offset)
+      return started_at if n.zero?
+
+      add_interval(subscription.anchor_date, (n - 1) * rate_schedule.billing_interval_count)
     else
-      offset = (intervals_billed + 1) * rate_schedule.billing_interval_count
-      add_interval(started_at.to_date, offset)
+      add_interval(started_at.to_date, n * rate_schedule.billing_interval_count)
     end
   end
 
