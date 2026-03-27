@@ -2,7 +2,7 @@
 
 module Invoices
   class CreatePayInAdvanceChargeService < BaseService
-    Result = BaseResult[:invoice, :fees_taxes, :invoice_id]
+    Result = BaseResult[:invoice, :invoice_id]
 
     def initialize(charge:, event:, timestamp:)
       @charge = charge
@@ -17,6 +17,8 @@ module Invoices
       fees = fee_result.fees
       return result if fees.none?
 
+      tax_deferred = false
+
       ApplicationRecord.transaction do
         create_generating_invoice
         fees.each { |f| f.update!(invoice:) }
@@ -25,15 +27,13 @@ module Invoices
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
         Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
-        if tax_error?(fee_result)
-          invoice.failed!
-          invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
-          create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
-          Utils::ActivityLog.produce(invoice, "invoice.failed")
+        totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
+        if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
+          tax_deferred = true
           next
         end
+        totals_result.raise_if_error!
 
-        Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
         create_credit_note_credit
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
@@ -42,9 +42,13 @@ module Invoices
         Invoices::TransitionToFinalStatusService.call(invoice:)
         invoice.save!
       end
-      return fee_result if tax_error?(fee_result)
 
       result.invoice = invoice
+
+      if tax_deferred
+        deliver_fee_webhooks
+        return result
+      end
 
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
@@ -90,18 +94,18 @@ module Invoices
     end
 
     def generate_fees
-      fee_result = Fees::CreatePayInAdvanceService.call(charge:, event:, estimate: true)
-      fee_result.raise_if_error! unless tax_error?(fee_result)
-
-      result.fees_taxes = fee_result.fees_taxes
-      result.invoice_id = fee_result.invoice_id
-
-      fee_result
+      Fees::CreatePayInAdvanceService.call!(charge:, event:, estimate: true).tap do |fee_result|
+        result.invoice_id = fee_result.invoice_id
+      end
     end
 
     def deliver_webhooks
-      invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
+      deliver_fee_webhooks
       SendWebhookJob.perform_later("invoice.created", invoice)
+    end
+
+    def deliver_fee_webhooks
+      invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
     end
 
     def should_deliver_email?
@@ -126,26 +130,6 @@ module Invoices
 
     def refresh_amounts(credit_amount_cents:)
       invoice.total_amount_cents -= credit_amount_cents
-    end
-
-    def tax_error?(result)
-      return false unless result.error.is_a?(BaseService::ValidationFailure)
-
-      result.error&.messages&.dig(:tax_error).present?
-    end
-
-    def create_error_detail(code)
-      error_result = ErrorDetails::CreateService.call(
-        owner: invoice,
-        organization: invoice.organization,
-        params: {
-          error_code: :tax_error,
-          details: {
-            tax_error: code
-          }
-        }
-      )
-      error_result.raise_if_error!
     end
   end
 end

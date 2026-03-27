@@ -7,7 +7,7 @@ module Invoices
       @currency = currency || customer&.currency
       @fees = fees
       @timestamp = timestamp
-      @skip_psp = skip_psp
+      @skip_psp = skip_psp || false
       @voided_invoice_id = voided_invoice_id
       @payment_method_params = payment_method_params
       @invoice_custom_section = invoice_custom_section
@@ -17,7 +17,8 @@ module Invoices
 
     activity_loggable(
       action: "invoice.one_off_created",
-      record: -> { result.invoice }
+      record: -> { result.invoice },
+      condition: -> { result.invoice&.finalized? }
     )
 
     def call
@@ -25,6 +26,8 @@ module Invoices
       return result.not_found_failure!(resource: "fees") if fees.blank?
       return result.not_found_failure!(resource: "add_on") unless add_ons.count == add_on_identifiers.count
       return result unless valid_payment_method?
+
+      tax_deferred = false
 
       ActiveRecord::Base.transaction do
         Customers::UpdateCurrencyService
@@ -35,20 +38,20 @@ module Invoices
 
         result.invoice = invoice
 
-        fees_result = create_one_off_fees(invoice)
-        if tax_error?(fees_result)
-          invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
-          invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
-          invoice.failed!
-          Utils::ActivityLog.produce(invoice, "invoice.failed")
+        create_one_off_fees(invoice)
 
-          # TODO: Refactor this return by using a next method
-          # rubocop:disable Rails/TransactionExitStatement
-          return result
-          # rubocop:enable Rails/TransactionExitStatement
+        invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+
+        invoice.payment_method = payment_method
+        invoice.skip_automatic_payment = skip_psp
+
+        totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
+        if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
+          tax_deferred = true
+          next
         end
-
-        Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
+        totals_result.raise_if_error!
 
         unless skip_custom_sections?
           Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, custom_section_ids: invoice_custom_section_ids)
@@ -60,13 +63,15 @@ module Invoices
         invoice.save!
       end
 
+      return result if tax_deferred
+
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
         SendWebhookJob.perform_later("invoice.one_off_created", invoice)
         GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
-        Invoices::Payments::CreateService.call_async(invoice:, payment_method_params:) unless skip_psp
+        Invoices::Payments::CreateService.call_async(invoice:, payment_method_params:) unless invoice.skip_automatic_payment?
       end
 
       result
@@ -97,12 +102,7 @@ module Invoices
     end
 
     def create_one_off_fees(invoice)
-      fees_result = Fees::OneOffService.new(invoice:, fees:).call
-      fees_result.raise_if_error! unless tax_error?(fees_result)
-
-      result.fees_taxes = fees_result.fees_taxes
-
-      fees_result
+      Fees::OneOffService.call!(invoice:, fees:)
     end
 
     def should_deliver_email?
@@ -121,10 +121,6 @@ module Invoices
       fees.pluck(identifier).uniq
     end
 
-    def tax_error?(fee_result)
-      !fee_result.success? && fee_result.error.respond_to?(:code) && fee_result&.error&.code == "tax_error"
-    end
-
     def valid_payment_method?
       result.payment_method = payment_method
 
@@ -135,7 +131,7 @@ module Invoices
       return @payment_method if defined? @payment_method
       return nil if payment_method_params.blank? || payment_method_params[:payment_method_id].blank?
 
-      @payment_method = PaymentMethod.find_by(id: payment_method_params[:payment_method_id], organization_id: customer.organization_id)
+      @payment_method = customer.payment_methods.find_by(id: payment_method_params[:payment_method_id])
     end
 
     def invoice_custom_section_ids

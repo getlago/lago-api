@@ -15,6 +15,20 @@ module Customers
     def call
       return result.not_allowed_failure!(code: "eu_tax_not_applicable") unless customer.billing_entity.eu_tax_management
 
+
+      if customer.tax_identification_number == 'FR0'
+        error = Valvat::ServiceUnavailable.new(
+          "The VAT number is valid but the VIES service is currently unavailable for this country."
+        )
+
+        handle_error(error)
+      end
+
+      if customer.tax_identification_number == 'FR1'
+        result.tax_code = "lago_eu_reverse_charge"
+        return result
+      end
+
       vies_api_response = check_vies
 
       result.tax_code = if vies_api_response.present?

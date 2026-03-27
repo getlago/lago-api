@@ -89,11 +89,11 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         unit_amount_cents: 1,
         precise_unit_amount: 0.01111111111,
 
-        taxes_rate: 20.0,
-        taxes_amount_cents: 2,
-        taxes_precise_amount_cents: 2.0
+        taxes_rate: 0,
+        taxes_amount_cents: 0,
+        taxes_precise_amount_cents: 0.0
       )
-      expect(result.fees.first.applied_taxes.count).to eq(1)
+      expect(result.fees.first.applied_taxes.count).to eq(0)
     end
 
     it "does not create pricing unit usage" do
@@ -105,100 +105,6 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
       expect(SendWebhookJob).to have_been_enqueued
         .with("fee.created", Fee)
-    end
-
-    context "when there is tax provider integration" do
-      let(:integration) { create(:anrok_integration, organization:) }
-      let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
-      let(:response) { instance_double(Net::HTTPOK) }
-      let(:lago_client) { instance_double(LagoHttpClient::Client) }
-      let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
-      let(:body) do
-        p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
-        File.read(p)
-      end
-      let(:integration_collection_mapping) do
-        create(
-          :netsuite_collection_mapping,
-          integration:,
-          mapping_type: :fallback_item,
-          settings: {external_id: "1", external_account_code: "11", external_name: ""}
-        )
-      end
-
-      before do
-        integration_collection_mapping
-        integration_customer
-
-        allow(LagoHttpClient::Client).to receive(:new)
-          .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
-          .and_return(lago_client)
-        allow(lago_client).to receive(:post_with_response).and_return(response)
-        allow(response).to receive(:body).and_return(body)
-        allow_any_instance_of(Fee).to receive(:id).and_return("lago_fee_id") # rubocop:disable RSpec/AnyInstance
-      end
-
-      it "creates fees" do
-        result = fee_service.call
-
-        expect(result).to be_success
-
-        expect(result.fees.count).to eq(1)
-        expect(result.fees.first).to have_attributes(
-          subscription:,
-          charge:,
-          organization_id: organization.id,
-          billing_entity_id: billing_entity.id,
-          amount_cents: 10,
-          precise_amount_cents: 10.0,
-          amount_currency: "EUR",
-          fee_type: "charge",
-          pay_in_advance: true,
-          invoiceable: charge,
-          units: 9,
-          properties: Hash,
-          events_count: 1,
-          charge_filter: nil,
-          pay_in_advance_event_id: event.id,
-          pay_in_advance_event_transaction_id: event.transaction_id,
-          payment_status: "pending",
-          unit_amount_cents: 1,
-          precise_unit_amount: 0.01111111111,
-          taxes_rate: 10.0,
-          taxes_amount_cents: 1,
-          taxes_precise_amount_cents: 1.0
-        )
-        expect(result.fees.first.applied_taxes.count).to eq(2)
-      end
-
-      context "when there is error received from the provider" do
-        let(:body) do
-          p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
-          File.read(p)
-        end
-
-        it "returns tax error" do
-          result = fee_service.call
-
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
-          expect(charge.reload.fees.count).to eq(1)
-        end
-
-        context "when invoiceable is false" do
-          let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:, invoiceable: false) }
-
-          it "returns tax error and fee is not being stored" do
-            result = fee_service.call
-
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
-            expect(charge.reload.fees.count).to eq(0)
-          end
-        end
-      end
     end
 
     context "when aggregation fails" do
@@ -292,11 +198,11 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           unit_amount_cents: 1,
           precise_unit_amount: 0.01111111111,
 
-          taxes_rate: 20.0,
-          taxes_amount_cents: 2,
-          taxes_precise_amount_cents: 2.0
+          taxes_rate: 0,
+          taxes_amount_cents: 0,
+          taxes_precise_amount_cents: 0.0
         )
-        expect(result.fees.first.applied_taxes.count).to eq(1)
+        expect(result.fees.first.applied_taxes.count).to eq(0)
       end
 
       context "when charge filter has pricing_group_keys defined" do
@@ -336,11 +242,11 @@ RSpec.describe Fees::CreatePayInAdvanceService do
             precise_unit_amount: 0.01111111111,
             grouped_by: {"group_key" => "group_value"},
 
-            taxes_rate: 20.0,
-            taxes_amount_cents: 2,
-            taxes_precise_amount_cents: 2.0
+            taxes_rate: 0,
+            taxes_amount_cents: 0,
+            taxes_precise_amount_cents: 0.0
           )
-          expect(result.fees.first.applied_taxes.count).to eq(1)
+          expect(result.fees.first.applied_taxes.count).to eq(0)
         end
       end
 
@@ -381,11 +287,11 @@ RSpec.describe Fees::CreatePayInAdvanceService do
             precise_unit_amount: 0.01111111111,
             grouped_by: {"group_key" => "group_value"},
 
-            taxes_rate: 20.0,
-            taxes_amount_cents: 2,
-            taxes_precise_amount_cents: 2.0
+            taxes_rate: 0,
+            taxes_amount_cents: 0,
+            taxes_precise_amount_cents: 0.0
           )
-          expect(result.fees.first.applied_taxes.count).to eq(1)
+          expect(result.fees.first.applied_taxes.count).to eq(0)
         end
       end
 
@@ -425,11 +331,11 @@ RSpec.describe Fees::CreatePayInAdvanceService do
             unit_amount_cents: 1,
             precise_unit_amount: 0.01111111111,
 
-            taxes_rate: 20.0,
-            taxes_amount_cents: 2,
-            taxes_precise_amount_cents: 2.0
+            taxes_rate: 0,
+            taxes_amount_cents: 0,
+            taxes_precise_amount_cents: 0.0
           )
-          expect(result.fees.first.applied_taxes.count).to eq(1)
+          expect(result.fees.first.applied_taxes.count).to eq(0)
         end
       end
     end
@@ -479,11 +385,11 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           precise_unit_amount: 0.01111111111,
           grouped_by: {"operator" => "foo"},
 
-          taxes_rate: 20.0,
-          taxes_amount_cents: 2,
-          taxes_precise_amount_cents: 2.0
+          taxes_rate: 0,
+          taxes_amount_cents: 0,
+          taxes_precise_amount_cents: 0.0
         )
-        expect(result.fees.first.applied_taxes.count).to eq(1)
+        expect(result.fees.first.applied_taxes.count).to eq(0)
       end
     end
 
@@ -526,94 +432,11 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           unit_amount_cents: 1,
           precise_unit_amount: 0.01111111111,
 
-          taxes_rate: 20.0,
-          taxes_amount_cents: 2,
-          taxes_precise_amount_cents: 2.0
+          taxes_rate: 0,
+          taxes_amount_cents: 0,
+          taxes_precise_amount_cents: 0.0
         )
-        expect(result.fees.first.applied_taxes.size).to eq(1)
-      end
-
-      context "when customer has a tax customer" do
-        let(:integration) { create(:anrok_integration, organization:) }
-        let(:integration_customer) { create(:anrok_customer, integration:, customer:, organization:) }
-        let(:anrok_response_body) do
-          p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
-          anrok_response_body = File.read(p)
-          # Replace placeholder lago_fee_id with billable_metric.id
-          anrok_response_body.gsub("lago_fee_id", billable_metric.id)
-        end
-        let(:anrok_request_body) do
-          [
-            {
-              "issuing_date" => Time.zone.today.to_s,
-              "currency" => "EUR",
-              "contact" => {
-                "external_id" => integration_customer.external_customer_id,
-                "name" => customer.name,
-                "address_line_1" => customer.address_line1,
-                "city" => customer.city,
-                "zip" => customer.zipcode,
-                "country" => customer.country,
-                "taxable" => false,
-                "tax_number" => nil
-              },
-              "fees" => [
-                {
-                  "item_key" => a_kind_of(Integer),
-                  "item_id" => billable_metric.id,
-                  "item_code" => nil,
-                  "amount_cents" => 10
-                }
-              ],
-              "tax_date" => Time.zone.today.to_s,
-              "id" => a_kind_of(String)
-            }
-          ]
-        end
-
-        def mock_anrok_request
-          stub_request(:post, "https://api.nango.dev/v1/anrok/finalized_invoices")
-            .with(body: anrok_request_body)
-            .to_return(status: 200, body: anrok_response_body)
-        end
-
-        before do
-          integration_customer
-
-          mock_anrok_request
-        end
-
-        it "calculates taxes" do
-          result = fee_service.call
-
-          expect(result).to be_success
-
-          expect(result.fees.count).to eq(1)
-          expect(result.fees.first).to have_attributes(
-            subscription:,
-            charge:,
-            organization_id: organization.id,
-            billing_entity_id: billing_entity.id,
-            amount_cents: 10,
-            precise_amount_cents: 10.0,
-            amount_currency: "EUR",
-            fee_type: "charge",
-            pay_in_advance: true,
-            invoiceable: charge,
-            units: 9,
-            properties: Hash,
-            events_count: 1,
-            charge_filter: nil,
-            pay_in_advance_event_id: event.id,
-            pay_in_advance_event_transaction_id: event.transaction_id,
-            payment_status: "pending",
-            unit_amount_cents: 1,
-            precise_unit_amount: 0.01111111111,
-            taxes_rate: 10.0,
-            taxes_amount_cents: 1,
-            taxes_precise_amount_cents: 1.0
-          )
-        end
+        expect(result.fees.first.applied_taxes.size).to eq(0)
       end
 
       it "does not deliver a webhook" do
@@ -667,13 +490,13 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           pay_in_advance_event_transaction_id: event.transaction_id,
           payment_status: "pending",
           unit_amount_cents: 0,
-          taxes_rate: 20.0,
-          taxes_amount_cents: 1
+          taxes_rate: 0,
+          taxes_amount_cents: 0
         )
         expect(fee.precise_amount_cents.to_f).to eq(5.0)
         expect(fee.precise_unit_amount.to_f).to eq(0.005)
-        expect(fee.taxes_precise_amount_cents.to_f).to eq(1.0)
-        expect(result.fees.first.applied_taxes.count).to eq(1)
+        expect(fee.taxes_precise_amount_cents.to_f).to eq(0.0)
+        expect(result.fees.first.applied_taxes.count).to eq(0)
       end
 
       it "creates pricing unit usage" do
