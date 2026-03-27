@@ -144,9 +144,8 @@ module Wallets
       params[:currency]
     end
 
-    # TODO: Replace :wallet_traceability with the proper multi_currency feature flag
     def multi_currency_enabled?
-      customer.organization.feature_flag_enabled?(:wallet_traceability)
+      customer.organization.feature_flag_enabled?(:multi_currency)
     end
 
     def valid?
