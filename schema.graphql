@@ -5705,6 +5705,7 @@ Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
   enriched_events_aggregation
+  multi_currency
   multiple_payment_methods
   postgres_enriched_events
   wallet_traceability

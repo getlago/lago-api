@@ -98,5 +98,69 @@ RSpec.describe Customers::UpdateCurrencyService do
         expect(result.error.messages[:currency]).to eq(["value_is_invalid"])
       end
     end
+
+    context "when multi_currency flag is enabled" do
+      before { customer.organization.enable_feature_flag!(:multi_currency) }
+
+      context "when customer_update is false (billing object creation)" do
+        let(:customer_update) { false }
+
+        context "when customer has no currency" do
+          let(:customer) { create(:customer, currency: nil) }
+
+          it "sets the currency" do
+            result = currency_service.call
+
+            expect(result).to be_success
+            expect(customer.reload.currency).to eq(currency)
+          end
+        end
+
+        context "when customer already has a different currency" do
+          let(:customer) { create(:customer, currency: "EUR") }
+
+          it "returns success without updating customer currency" do
+            result = currency_service.call
+
+            expect(result).to be_success
+            expect(customer.reload.currency).to eq("EUR")
+          end
+        end
+      end
+
+      context "when customer_update is true (direct API update)" do
+        let(:customer_update) { true }
+        let(:customer) { create(:customer, currency: "EUR") }
+
+        it "allows the currency update" do
+          result = currency_service.call
+
+          expect(result).to be_success
+          expect(customer.reload.currency).to eq(currency)
+        end
+
+        context "when customer has invoices in a different currency" do
+          before { create(:invoice, customer:, currency: "EUR", status: :finalized) }
+
+          it "allows the currency update" do
+            result = currency_service.call
+
+            expect(result).to be_success
+            expect(customer.reload.currency).to eq(currency)
+          end
+        end
+
+        context "when customer is not editable" do
+          before { create(:subscription, customer:) }
+
+          it "allows the currency update" do
+            result = currency_service.call
+
+            expect(result).to be_success
+            expect(customer.reload.currency).to eq(currency)
+          end
+        end
+      end
+    end
   end
 end
