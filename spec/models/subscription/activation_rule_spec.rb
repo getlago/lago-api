@@ -1,0 +1,107 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe Subscription::ActivationRule do
+  subject(:activation_rule) { create(:subscription_activation_rule) }
+
+  describe "enums" do
+    it do
+      expect(subject).to define_enum_for(:status)
+        .backed_by_column_of_type(:enum)
+        .validating
+        .with_values(
+          inactive: "inactive",
+          pending: "pending",
+          satisfied: "satisfied",
+          declined: "declined",
+          failed: "failed",
+          expired: "expired",
+          not_applicable: "not_applicable"
+        )
+      expect(subject).to define_enum_for(:type)
+        .backed_by_column_of_type(:enum)
+        .validating
+        .with_values(payment: "payment")
+    end
+  end
+
+  describe "associations" do
+    it do
+      expect(subject).to belong_to(:subscription)
+      expect(subject).to belong_to(:organization)
+    end
+  end
+
+  describe "validations" do
+    it do
+      expect(subject).to validate_presence_of(:type)
+      expect(subject).to validate_inclusion_of(:type).in_array(Subscription::ActivationRule::STI_MAPPING.keys)
+    end
+  end
+
+  describe "Scopes" do
+    describe ".pending" do
+      let(:pending_rule) { create(:subscription_activation_rule, status: "pending") }
+
+      before do
+        pending_rule
+        create(:subscription_activation_rule, status: "inactive")
+      end
+
+      it "returns only pending rules" do
+        expect(described_class.pending).to eq([pending_rule])
+      end
+    end
+
+    describe ".expired" do
+      let(:expired_rule) { create(:subscription_activation_rule, status: "expired") }
+
+      before do
+        expired_rule
+        create(:subscription_activation_rule, status: "pending")
+      end
+
+      it "returns only expired rules" do
+        expect(described_class.expired).to eq([expired_rule])
+      end
+    end
+
+    describe ".expirable" do
+      let(:expirable_rule) { create(:subscription_activation_rule, status: "pending", expires_at: 1.hour.ago) }
+
+      before do
+        expirable_rule
+        create(:subscription_activation_rule, status: "pending", expires_at: 1.hour.from_now)
+        create(:subscription_activation_rule, status: "inactive", expires_at: 1.hour.ago)
+      end
+
+      it "returns only pending rules past their expiry" do
+        expect(described_class.expirable).to eq([expirable_rule])
+      end
+    end
+  end
+
+  describe ".find_sti_class" do
+    it "resolves payment to Subscription::ActivationRule::Payment" do
+      expect(described_class.find_sti_class("payment")).to eq(Subscription::ActivationRule::Payment)
+    end
+
+    it "raises KeyError for unknown type" do
+      expect { described_class.find_sti_class("unknown") }.to raise_error(KeyError)
+    end
+  end
+
+  describe ".sti_name" do
+    it "returns payment for Subscription::ActivationRule::Payment" do
+      expect(Subscription::ActivationRule::Payment.sti_name).to eq("payment")
+    end
+  end
+
+  describe "#applicable?" do
+    it "raises NotImplementedError on the base class" do
+      rule = described_class.new
+      expect { rule.applicable? }.to raise_error(NotImplementedError)
+    end
+  end
+end
