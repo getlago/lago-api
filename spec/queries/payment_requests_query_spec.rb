@@ -76,6 +76,26 @@ RSpec.describe PaymentRequestsQuery do
     end
   end
 
+  context "when filtering by currency" do
+    let(:filters) { {currency: "BRL"} }
+    let(:payment_request_first) { create(:payment_request, organization:, amount_currency: "BRL") }
+    let(:payment_request_second) { create(:payment_request, organization:, customer:, amount_currency: "EUR") }
+
+    it "returns only payment requests with matching currency" do
+      expect(result).to be_success
+      expect(result.payment_requests.pluck(:id)).to eq([payment_request_first.id])
+    end
+
+    context "when no payment requests match the currency" do
+      let(:filters) { {currency: "GBP"} }
+
+      it "returns no payment requests" do
+        expect(result).to be_success
+        expect(result.payment_requests.count).to eq(0)
+      end
+    end
+  end
+
   context "when filtering by payment_status" do
     context "when pending status" do
       let(:filters) { {payment_status: :pending} }
