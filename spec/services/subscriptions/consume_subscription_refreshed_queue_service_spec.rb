@@ -3,22 +3,31 @@
 require "rails_helper"
 
 RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
-  subject(:flag_service) { described_class.new }
+  subject(:service) { described_class.new }
 
   let(:redis_client) { instance_double(Redis) }
+  let(:redis_url) { "localhost:6379" }
 
-  let(:values) { ["#{SecureRandom.uuid}:#{SecureRandom.uuid}", "#{SecureRandom.uuid}:#{SecureRandom.uuid}"] }
+  let(:bucket) do
+    (
+      (Time.current.to_i - 20) / described_class::CLICKHOUSE_MERGE_DELAY
+    ) * described_class::CLICKHOUSE_MERGE_DELAY
+  end
+  let(:values) do
+    [
+      "#{SecureRandom.uuid}:#{subscription_id1}|#{bucket}",
+      "#{SecureRandom.uuid}:#{subscription_id2}|#{bucket}"
+    ]
+  end
   let(:loop_values) { [values, []] }
 
-  let(:redis_url) { "localhost:6379" }
+  let(:subscription_id1) { SecureRandom.uuid }
+  let(:subscription_id2) { SecureRandom.uuid }
 
   before do
     allow(Redis).to receive(:new).and_return(redis_client)
-    allow(redis_client).to receive(:srandmember)
-      .with(described_class::REDIS_STORE_NAME, described_class::BATCH_SIZE)
-      .and_return(*loop_values)
-
-    allow(redis_client).to receive(:srem)
+    allow(redis_client).to receive(:zrangebyscore).and_return(*loop_values)
+    allow(redis_client).to receive(:zrem)
 
     allow(ENV).to receive(:[]).and_call_original
     allow(ENV).to receive(:[]).with("LAGO_REDIS_STORE_URL").and_return(redis_url)
@@ -26,17 +35,36 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
 
   describe "#call" do
     it "flags all subscriptions as refreshed" do
-      result = flag_service.call
+      result = service.call
 
       expect(result).to be_success
-      expect(Subscriptions::FlagRefreshedJob).to have_been_enqueued.twice
+      expect(Subscriptions::FlagRefreshedJob).to have_been_enqueued.with(subscription_id1)
+      expect(Subscriptions::FlagRefreshedJob).to have_been_enqueued.with(subscription_id2)
+    end
+
+    it "queries with the correct threshold" do
+      freeze_time do
+        threshold = (Time.current - described_class::CLICKHOUSE_MERGE_DELAY).to_i
+
+        service.call
+
+        expect(redis_client).to have_received(:zrangebyscore)
+          .with(described_class::REDIS_STORE_NAME, "-inf", threshold, limit: [0, described_class::BATCH_SIZE])
+          .at_least(:once)
+      end
+    end
+
+    it "removes processed values with zrem" do
+      service.call
+
+      expect(redis_client).to have_received(:zrem).with(described_class::REDIS_STORE_NAME, values)
     end
 
     context "with multiple batches" do
       let(:loop_values) { [values, values, []] }
 
       it "flags all subscriptions as refreshed" do
-        result = flag_service.call
+        result = service.call
 
         expect(result).to be_success
         expect(Subscriptions::FlagRefreshedJob).to have_been_enqueued.exactly(4).times
@@ -47,7 +75,7 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
       let(:loop_values) { [[]] }
 
       it "does not flag any subscriptions as refreshed" do
-        result = flag_service.call
+        result = service.call
 
         expect(result).to be_success
         expect(Subscriptions::FlagRefreshedJob).not_to have_been_enqueued
@@ -64,8 +92,8 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
         )
       end
 
-      it "flags all subscriptions as refreshed" do
-        result = flag_service.call
+      it "stops processing" do
+        result = service.call
 
         expect(result).to be_success
         expect(Subscriptions::FlagRefreshedJob).not_to have_been_enqueued
@@ -76,7 +104,7 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
       let(:redis_url) { nil }
 
       it "does not flag any subscriptions as refreshed" do
-        result = flag_service.call
+        result = service.call
 
         expect(result).to be_success
         expect(Subscriptions::FlagRefreshedJob).not_to have_been_enqueued
@@ -87,10 +115,12 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
       let(:redis_url) { "redis://localhost:6379" }
 
       it "flags all subscriptions as refreshed" do
-        result = flag_service.call
+        result = service.call
 
         expect(result).to be_success
         expect(Subscriptions::FlagRefreshedJob).to have_been_enqueued.twice
+
+        expect(Redis).to have_received(:new).with(hash_including(url: redis_url))
       end
     end
 
@@ -98,10 +128,12 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
       let(:redis_url) { "rediss://localhost:6379" }
 
       it "flags all subscriptions as refreshed" do
-        result = flag_service.call
+        result = service.call
 
         expect(result).to be_success
         expect(Subscriptions::FlagRefreshedJob).to have_been_enqueued.twice
+
+        expect(Redis).to have_received(:new).with(hash_including(url: redis_url))
       end
     end
   end

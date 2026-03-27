@@ -3,11 +3,8 @@
 class Clock::ConsumeSubscriptionRefreshedQueueJob < ClockJob
   unique :until_executed, on_conflict: :log
 
-  def perform(version = "v1")
-    if version == "v1"
-      Subscriptions::ConsumeSubscriptionRefreshedQueueService.call!
-    else
-      Subscriptions::ConsumeSubscriptionRefreshedQueueV2Service.call!
-    end
+  # DEPRECATED: legacy version argument is kept for compatibility
+  def perform(version = "v2")
+    Subscriptions::ConsumeSubscriptionRefreshedQueueService.call!
   end
 end
