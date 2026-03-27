@@ -28,9 +28,15 @@ module RateSchedules
     def billable_subscription_rate_schedules
       organization.subscription_rate_schedules
         .active
-        .where(next_billing_date: ..billing_at.to_date)
-        .where("intervals_to_bill IS NULL OR intervals_billed < intervals_to_bill")
-        .includes(:subscription)
+        .joins(subscription: {customer: :billing_entity})
+        .where(
+          "subscription_rate_schedules.next_billing_date <= DATE(:billing_at::timestamptz "\
+          "AT TIME ZONE COALESCE(customers.timezone, billing_entities.timezone, 'UTC'))",
+          billing_at:
+        )
+        .where("subscription_rate_schedules.intervals_to_bill IS NULL "\
+          "OR subscription_rate_schedules.intervals_billed < subscription_rate_schedules.intervals_to_bill")
+        .includes(subscription: :customer)
     end
   end
 end
