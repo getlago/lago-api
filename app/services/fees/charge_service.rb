@@ -369,7 +369,9 @@ module Fees
       if charge.accepts_target_wallet && !grouped_by_keys.include?("target_wallet_code")
         grouped_by_keys << "target_wallet_code"
       end
+
       filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present? && !usage_filters.skip_grouping
+      filters[:presentation_grouped_by] = model.presentation_group_keys
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)

@@ -30,6 +30,44 @@ module BillableMetrics
         result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
+      def compute_grouped_by_with_breakdown(options: {})
+        aggregations = event_store.grouped_sum_with_breakdown
+        return empty_results if aggregations.empty?
+
+        # NOTE: This is a copy from compute_grouped_by_aggregation to keep backward compability
+        # Check if the count (num rows per aggregation_property) can be retrieved in the same query (CTE)
+        counts = event_store.grouped_count
+
+        merged_hash = {}
+        aggregations.each do |aggregation|
+          merged_hash[aggregation[:groups]] = {aggregation: aggregation[:value]}
+        end
+        counts.each do |count|
+          next unless merged_hash[count[:groups]]
+          merged_hash[count[:groups]] = merged_hash[count[:groups]].merge({count: count[:value]})
+        end
+
+        result.aggregations = merged_hash.map do |groups, merged_aggregation_count|
+          group_result = BaseService::Result.new
+          group_result.grouped_by = groups
+
+          aggregation_value = merged_aggregation_count[:aggregation]
+
+          if options[:is_pay_in_advance] && options[:is_current_usage]
+            handle_in_advance_current_usage(aggregation_value, target_result: group_result)
+          else
+            group_result.aggregation = aggregation_value
+          end
+
+          group_result.count = merged_aggregation_count[:count] || 0
+          group_result.options = {running_total: running_total(options, grouped_by_values: group_result.grouped_by)}
+          group_result
+        end
+        result
+      rescue ActiveRecord::StatementInvalid => e
+        result.service_failure!(code: "aggregation_failure", message: e.message)
+      end
+
       # NOTE: Apply the grouped_by filter to the aggregation
       #       Result will have an aggregations attribute
       #       containing the aggregation result of each group.

@@ -72,6 +72,10 @@ class Charge < ApplicationRecord
     charge_model == charge.charge_model && properties == charge.properties
   end
 
+  def presentation_group_keys
+    ["department_id", "workspace_id"]
+  end
+
   def equal_applied_pricing_unit_rate?(another_charge)
     return false unless applied_pricing_unit && another_charge.applied_pricing_unit
 

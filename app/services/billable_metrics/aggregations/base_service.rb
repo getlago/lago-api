@@ -43,6 +43,7 @@ module BillableMetrics
         @charge_filter = filters[:charge_filter]
         @event = filters[:event]
         @grouped_by = filters[:grouped_by]
+        @presentation_grouped_by = filters[:presentation_grouped_by]
         @grouped_by_values = filters[:grouped_by_values]
 
         @boundaries = boundaries
@@ -54,6 +55,9 @@ module BillableMetrics
       end
 
       def aggregate(options: {})
+        # NOTE: What about charge.dynamic?
+        return compute_grouped_by_with_breakdown(options:) if presentation_grouped_by.present?
+
         if grouped_by.present?
           compute_grouped_by_aggregation(options:)
           if charge.dynamic?
@@ -111,6 +115,7 @@ module BillableMetrics
         :event,
         :boundaries,
         :grouped_by,
+        :presentation_grouped_by,
         :grouped_by_values,
         :bypass_aggregation
 

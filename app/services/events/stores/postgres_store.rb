@@ -229,6 +229,36 @@ module Events
         prepare_grouped_result(results)
       end
 
+      def grouped_sum_with_breakdown
+        columns = []
+        columns.concat(sanitized_grouped_by.map.with_index { |c, index| [c, "AS #{grouped_by[index]}"].join(" ") })
+
+        if filters[:presentation_grouped_by]
+          columns.concat(filters[:presentation_grouped_by].map do |column|
+            "#{sanitized_property_name(column)} AS #{column}"
+          end)
+        end
+
+        columns.concat([sanitized_property_name + " AS aggregation_property"])
+
+        base_sql = events.select(columns).to_sql
+        breakdown_sql = "SELECT instance_id, location_id, department_id, workspace_id, SUM(aggregation_property::numeric) AS breakdown_sum FROM base GROUP BY instance_id, location_id, department_id, workspace_id"
+
+        sql = "WITH base AS(#{base_sql}), breakdown AS (#{breakdown_sql}) SELECT instance_id, location_id, workspace_id, department_id, breakdown_sum, SUM(breakdown_sum) OVER (PARTITION BY instance_id, location_id) AS group_total FROM breakdown"
+
+        connection.execute(Arel.sql(sql))
+          .to_a
+          .group_by { |row|
+            [row["instance_id"], row["location_id"]] # NOTE: Make this dynamic because it can have multiple grouped_by columns
+          }
+          .map { |(instance_id, location_id), rows|
+            {
+              groups: {"instance_id" => instance_id, "location_id" => location_id}, # NOTE: Same here, it needs to be dynamic due the N grouped_by columns
+              value: rows.first["group_total"]
+            }
+          }
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
