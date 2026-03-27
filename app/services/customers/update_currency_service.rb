@@ -14,12 +14,26 @@ module Customers
       return result.not_found_failure!(resource: "customer") unless customer
       return result if customer.currency == currency
 
-      if multi_currency_enabled?
-        # When multi-currency is enabled, only set currency if customer has none;
-        # direct API updates always go through.
-        return result if !customer_update && customer.currency.present?
-      else
-        return result unless allowed_without_multi_currency?
+      # Multi-currency: customer.currency becomes a default preference, not a constraint.
+      if customer.organization.feature_flag_enabled?(:multi_currency)
+        customer.update!(currency:) if customer_update || customer.currency.blank?
+        return result
+      end
+
+      if customer_update
+        # NOTE: direct update of the customer currency
+        unless customer.editable?
+          return result.single_validation_failure!(
+            field: :currency,
+            error_code: "currencies_does_not_match"
+          )
+        end
+      elsif customer.currency.present? || !customer.editable?
+        # NOTE: Assign currency from another resource
+        return result.single_validation_failure!(
+          field: :currency,
+          error_code: "currencies_does_not_match"
+        )
       end
 
       customer.update!(currency:)
@@ -31,22 +45,5 @@ module Customers
     private
 
     attr_reader :customer, :currency, :customer_update
-
-    def multi_currency_enabled?
-      customer.organization.feature_flag_enabled?(:multi_currency)
-    end
-
-    def allowed_without_multi_currency?
-      if customer_update
-        unless customer.editable?
-          result.single_validation_failure!(field: :currency, error_code: "currencies_does_not_match")
-          return false
-        end
-      elsif customer.currency.present? || !customer.editable?
-        result.single_validation_failure!(field: :currency, error_code: "currencies_does_not_match")
-        return false
-      end
-      true
-    end
   end
 end
