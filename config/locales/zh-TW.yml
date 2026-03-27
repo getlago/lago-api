@@ -10,6 +10,7 @@ zh-TW:
     - 週五
     - 週六
     abbr_month_names:
+    -
     - 一月
     - 二月
     - 三月
@@ -31,8 +32,9 @@ zh-TW:
     - 星期五
     - 星期六
     formats:
-      default: "%b. %d, %Y"
+      default: "%Y年%-m月%-d日"
     month_names:
+    -
     - 一月
     - 二月
     - 三月
