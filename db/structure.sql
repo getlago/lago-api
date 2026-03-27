@@ -642,6 +642,7 @@ DROP INDEX IF EXISTS public.index_coupon_targets_on_coupon_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_organization_id;
+DROP INDEX IF EXISTS public.index_commitments_taxes_on_commitment_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_commitment_id;
 DROP INDEX IF EXISTS public.index_commitments_on_plan_id;
 DROP INDEX IF EXISTS public.index_commitments_on_organization_id;
@@ -6878,6 +6879,13 @@ CREATE INDEX index_commitments_taxes_on_commitment_id ON public.commitments_taxe
 
 
 --
+-- Name: index_commitments_taxes_on_commitment_id_and_tax_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_commitments_taxes_on_commitment_id_and_tax_id ON public.commitments_taxes USING btree (commitment_id, tax_id);
+
+
+--
 -- Name: index_commitments_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11492,6 +11500,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260327140626'),
 ('20260326130631'),
 ('20260319125125'),
 ('20260317134100'),
