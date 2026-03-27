@@ -9,8 +9,11 @@ RSpec.describe EventsChargedInAdvanceConsumer do
 
   before { karafka.produce(event.to_json) }
 
-  it "enqueues a pay in advance job" do
-    expect { consumer.consume }.to have_enqueued_job(Events::PayInAdvanceJob)
-      .with(event.as_json)
+  it "enqueues a pay in advance job with a delay" do
+    freeze_time do
+      expect { consumer.consume }.to have_enqueued_job(Events::PayInAdvanceJob)
+        .with(event.as_json)
+        .at(Events::Stores::ClickhouseStore::CLICKHOUSE_MERGE_DELAY.from_now)
+    end
   end
 end

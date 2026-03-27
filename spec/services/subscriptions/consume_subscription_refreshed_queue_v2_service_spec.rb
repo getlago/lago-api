@@ -10,8 +10,8 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueV2Service do
 
   let(:bucket) do
     (
-      (Time.current.to_i - 20) / described_class::CLICKHOUSE_MERGE_DELAY
-    ) * described_class::CLICKHOUSE_MERGE_DELAY
+      (Time.current.to_i - 20) / Events::Stores::ClickhouseStore::CLICKHOUSE_MERGE_DELAY
+    ) * Events::Stores::ClickhouseStore::CLICKHOUSE_MERGE_DELAY
   end
   let(:values) do
     [
@@ -44,7 +44,7 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueV2Service do
 
     it "queries with the correct threshold" do
       freeze_time do
-        threshold = (Time.current - described_class::CLICKHOUSE_MERGE_DELAY).to_i
+        threshold = (Time.current - Events::Stores::ClickhouseStore::CLICKHOUSE_MERGE_DELAY).to_i
 
         service.call
 
