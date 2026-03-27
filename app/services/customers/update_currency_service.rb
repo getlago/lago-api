@@ -15,7 +15,9 @@ module Customers
       return result if customer.currency == currency
 
       if multi_currency_enabled?
-        return result unless allowed_with_multi_currency?
+        # When multi-currency is enabled, only set currency if customer has none;
+        # direct API updates always go through.
+        return result if !customer_update && customer.currency.present?
       else
         return result unless allowed_without_multi_currency?
       end
@@ -42,13 +44,6 @@ module Customers
         end
       elsif customer.currency.present? || !customer.editable?
         result.single_validation_failure!(field: :currency, error_code: "currencies_does_not_match")
-        return false
-      end
-      true
-    end
-
-    def allowed_with_multi_currency?
-      if !customer_update && customer.currency.present?
         return false
       end
       true
