@@ -3,6 +3,7 @@
 class QuoteOwner < ApplicationRecord
   belongs_to :quote
   belongs_to :user
+  belongs_to :organization
 end
 
 # == Schema Information
