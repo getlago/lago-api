@@ -391,6 +391,10 @@ class Invoice < ApplicationRecord
     finalized? || voided?
   end
 
+  def gated?
+    open? && subscriptions.any?(&:gated?)
+  end
+
   def voidable?
     if payment_dispute_lost_at? || total_paid_amount_cents > 0 || credit_notes.where.not(credit_status: :voided).any?
       return false
@@ -676,6 +680,7 @@ end
 #  ready_for_payment_processing            :boolean          default(TRUE), not null
 #  ready_to_be_refreshed                   :boolean          default(FALSE), not null
 #  self_billed                             :boolean          default(FALSE), not null
+#  skip_automatic_payment                  :boolean
 #  skip_charges                            :boolean          default(FALSE), not null
 #  status                                  :integer          default("finalized"), not null
 #  sub_total_excluding_taxes_amount_cents  :bigint           default(0), not null
@@ -696,6 +701,7 @@ end
 #  customer_id                             :uuid
 #  organization_id                         :uuid             not null
 #  organization_sequential_id              :integer          default(0), not null
+#  payment_method_id                       :uuid
 #  sequential_id                           :integer
 #  voided_invoice_id                       :uuid
 #
@@ -707,6 +713,7 @@ end
 #  index_invoices_by_cursor                                        (organization_id,issuing_date DESC,created_at DESC,id)
 #  index_invoices_on_customer_id_and_sequential_id                 (customer_id,sequential_id) UNIQUE
 #  index_invoices_on_number                                        (number)
+#  index_invoices_on_payment_method_id                             (payment_method_id)
 #  index_invoices_on_ready_to_be_refreshed                         (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)
 #  index_invoices_on_voided_invoice_id                             (voided_invoice_id)
 #
@@ -715,4 +722,5 @@ end
 #  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (payment_method_id => payment_methods.id)
 #

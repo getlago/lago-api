@@ -1111,6 +1111,38 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#gated?" do
+    let(:subscription) { create(:subscription) }
+    let(:invoice) { create(:invoice, organization: subscription.organization, customer: subscription.customer) }
+
+    before { create(:invoice_subscription, invoice:, subscription:) }
+
+    context "when invoice is open and subscription is gated" do
+      before do
+        subscription.update!(status: :incomplete, started_at: Time.current)
+        create(:subscription_activation_rule, subscription:, status: "pending")
+      end
+
+      it "returns true" do
+        invoice.open!
+        expect(invoice.gated?).to be(true)
+      end
+    end
+
+    context "when invoice is open but subscription is not gated" do
+      it "returns false" do
+        invoice.open!
+        expect(invoice.gated?).to be(false)
+      end
+    end
+
+    context "when invoice is not open" do
+      it "returns false" do
+        expect(invoice.gated?).to be(false)
+      end
+    end
+  end
+
   describe "#voidable?" do
     subject(:voidable) { invoice.voidable? }
 
