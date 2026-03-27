@@ -29,6 +29,7 @@ module RateSchedules
       organization.subscription_rate_schedules
         .active
         .where(next_billing_date: ..billing_at.to_date)
+        .where("intervals_to_bill IS NULL OR intervals_billed < intervals_to_bill")
         .includes(:subscription)
     end
   end
