@@ -356,9 +356,8 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
-    # TODO: Replace :wallet_traceability with the proper multi_currency feature flag
     context "when multi currency is enabled" do
-      before { organization.update!(feature_flags: ["wallet_traceability"]) }
+      before { organization.update!(feature_flags: ["multi_currency"]) }
 
       context "when customer does not have a currency" do
         let(:customer_currency) { nil }
