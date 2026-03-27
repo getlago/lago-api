@@ -29,6 +29,13 @@ module PaymentProviders
 
           payment_intent = create_payment_intent
 
+          if payment_intent.status == "requires_action"
+            return result.single_validation_failure!(
+              field: :payment_intent,
+              error_code: "authorization_requires_action"
+            )
+          end
+
           result.stripe_payment_intent = payment_intent
 
           result

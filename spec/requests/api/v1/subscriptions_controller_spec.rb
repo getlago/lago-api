@@ -476,6 +476,25 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
             })
           end
         end
+
+        context "when the authorization requires 3D Secure" do
+          let(:stripe_pi) do
+            {
+              id: "pi_12345",
+              amount: "100",
+              amount_capturable: "0",
+              status: "requires_action"
+            }
+          end
+
+          it "returns an error and does not create the subscription" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to include(payment_intent: ["authorization_requires_action"])
+            expect(Subscription.count).to eq(0)
+          end
+        end
       end
     end
 
