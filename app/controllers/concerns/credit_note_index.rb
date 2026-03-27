@@ -27,7 +27,7 @@ module CreditNoteIndex
           :customer
         ]
       },
-      customer: [:billing_entity, :metadata, :stripe_customer, :gocardless_customer, :cashfree_customer, :adyen_customer, :moneyhash_customer]
+      customer: [:billing_entity, :metadata, :stripe_customer, :gocardless_customer, :cashfree_customer, :adyen_customer, :moneyhash_customer, :integration_customers]
     ]
 
     result = CreditNotesQuery.call(
@@ -62,7 +62,7 @@ module CreditNoteIndex
           ::V1::CreditNoteSerializer,
           collection_name: "credit_notes",
           meta: pagination_metadata(result.credit_notes),
-          includes: %i[items applied_taxes error_details customer]
+          includes: [:items, :applied_taxes, :error_details, {customer: [:integration_customers]}]
         )
       )
     else

@@ -16,7 +16,7 @@ module Api
             json: ::V1::CreditNoteSerializer.new(
               result.credit_note,
               root_name: "credit_note",
-              includes: %i[customer items applied_taxes]
+              includes: include_in_serializer
             )
           )
         else
@@ -32,7 +32,7 @@ module Api
           json: ::V1::CreditNoteSerializer.new(
             credit_note,
             root_name: "credit_note",
-            includes: [:items, :applied_taxes, :error_details, {customer: [:integration_customers]}]
+            includes: include_in_serializer
           )
         )
       end
@@ -48,7 +48,7 @@ module Api
             json: ::V1::CreditNoteSerializer.new(
               result.credit_note,
               root_name: "credit_note",
-              includes: %i[customer items applied_taxes]
+              includes: include_in_serializer
             )
           )
         else
@@ -103,7 +103,7 @@ module Api
             json: ::V1::CreditNoteSerializer.new(
               credit_note,
               root_name: "credit_note",
-              includes: %i[customer items applied_taxes]
+              includes: include_in_serializer
             )
           )
         else
@@ -155,6 +155,10 @@ module Api
       end
 
       private
+
+      def include_in_serializer
+        [:items, :applied_taxes, :error_details, {customer: [:integration_customers]}]
+      end
 
       def input_params
         @input_params ||= params.require(:credit_note)
