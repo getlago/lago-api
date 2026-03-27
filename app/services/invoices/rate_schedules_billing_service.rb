@@ -131,7 +131,7 @@ module Invoices
 
     def fee_properties(srs)
       {
-        from_datetime: srs.started_at&.iso8601,
+        from_datetime: srs.current_period_started_at&.iso8601,
         to_datetime: srs.next_billing_date&.iso8601
       }
     end
