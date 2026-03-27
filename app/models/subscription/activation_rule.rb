@@ -11,7 +11,7 @@ class Subscription::ActivationRule < ApplicationRecord
     inactive: "inactive",
     pending: "pending",
     satisfied: "satisfied",
-    declined: "declined",
+    declined: "declined", # rule was applicable but declined (e.g., declined after undergoing a manual approval process)
     failed: "failed",
     expired: "expired",
     not_applicable: "not_applicable"
