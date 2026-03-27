@@ -10226,7 +10226,7 @@ type Query {
   """
   Query payment requests of an organization
   """
-  paymentRequests(externalCustomerId: String, limit: Int, page: Int, paymentStatus: InvoicePaymentStatusTypeEnum): PaymentRequestCollection!
+  paymentRequests(currency: String, externalCustomerId: String, limit: Int, page: Int, paymentStatus: InvoicePaymentStatusTypeEnum): PaymentRequestCollection!
 
   """
   Query payments of an organization
