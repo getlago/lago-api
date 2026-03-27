@@ -12,7 +12,7 @@ module RateSchedules
 
     unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 
-    def perform(organization:)
+    def perform(organization)
       RateSchedules::OrganizationBillingService.call!(organization:)
     end
   end
