@@ -13,11 +13,12 @@ class Order < ApplicationRecord
     start_without_invoices: 1
   }.freeze
 
-  ORDER_TYPES = {
+  SUBSCRIPTION_TYPES = {
     subscription_creation: 0,
-    subscription_amendment: 1,
-    one_off: 2
+    subscription_amendment: 1
   }.freeze
+
+  ORDER_TYPES = SUBSCRIPTION_TYPES.merge(one_off: 2).freeze
 
   EXECUTION_MODES = {
     execute_in_lago: 0,
