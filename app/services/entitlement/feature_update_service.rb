@@ -38,7 +38,7 @@ module Entitlement
 
       # NOTE: The webhooks are sent even if there was no actual change
       after_commit do
-        ActiveJob.perform_all_later(jobs)
+        ApplicationJob.perform_all_later(jobs)
         SendWebhookJob.perform_later("feature.updated", feature)
       end
 

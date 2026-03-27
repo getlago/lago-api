@@ -16,7 +16,7 @@ module FixedCharges
             )
           end
 
-          ActiveJob.perform_all_later(jobs)
+          ApplicationJob.perform_all_later(jobs)
       end
     end
   end

@@ -17,6 +17,8 @@ require:
   - ./dev/cops/discard_all_cop.rb
   - ./dev/cops/no_drop_column_or_table_cop.rb
   - ./dev/cops/lago_premium_around_cop.rb
+  - ./dev/cops/active_job_perform_all_later_cop.rb
+  - ./dev/cops/stub_perform_all_later_cop.rb
 
 inherit_gem:
   standard: config/base.yml
