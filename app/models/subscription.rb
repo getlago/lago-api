@@ -31,6 +31,9 @@ class Subscription < ApplicationRecord
     class_name: "Clickhouse::ActivityLog",
     foreign_key: :external_subscription_id,
     primary_key: :external_id
+  has_many :activation_rules,
+    class_name: "Subscription::ActivationRule",
+    dependent: :destroy
   has_many :applied_invoice_custom_sections,
     class_name: "Subscription::AppliedInvoiceCustomSection",
     dependent: :destroy
@@ -50,8 +53,11 @@ class Subscription < ApplicationRecord
     :pending,
     :active,
     :terminated,
-    :canceled
+    :canceled,
+    :incomplete
   ].freeze
+
+  CANCELATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout"}.freeze
 
   BILLING_TIME = %i[
     calendar
@@ -65,8 +71,10 @@ class Subscription < ApplicationRecord
   enum :billing_time, BILLING_TIME
   enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES, prefix: true
   enum :on_termination_invoice, ON_TERMINATION_INVOICES, prefix: true
+  enum :cancelation_reason, CANCELATION_REASONS
 
   validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
+  validates :started_at, presence: true, if: -> { active? || incomplete? }
 
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
 
@@ -109,6 +117,20 @@ class Subscription < ApplicationRecord
   def mark_as_canceled!
     self.canceled_at ||= Time.current
     canceled!
+  end
+
+  def mark_as_incomplete!(timestamp = Time.current)
+    self.started_at ||= timestamp
+    self.incompleted_at ||= timestamp
+    incomplete!
+  end
+
+  def pending_rules?
+    activation_rules.pending.any?
+  end
+
+  def gated?
+    pending_rules? && incomplete?
   end
 
   def upgraded?
@@ -166,10 +188,9 @@ class Subscription < ApplicationRecord
   end
 
   def validate_external_id
-    return unless active?
-    return unless organization.subscriptions.active.exists?(external_id:)
+    return unless active? || incomplete?
+    return unless organization.subscriptions.where(status: [:active, :incomplete]).exists?(external_id:)
 
-    # NOTE: We want unique external id per organization.
     errors.add(:external_id, :value_already_exist)
   end
 
