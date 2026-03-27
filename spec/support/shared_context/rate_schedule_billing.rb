@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.shared_context "rate schedule billing" do
+RSpec.shared_context "with rate schedule billing" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, currency: "EUR") }
 

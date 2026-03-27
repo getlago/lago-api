@@ -3,7 +3,7 @@
 require "rails_helper"
 
 describe "Rate Schedules Calendar Billing" do
-  include_context "rate schedule billing"
+  include_context "with rate schedule billing"
 
   let(:prorated) { true }
 
