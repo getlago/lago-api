@@ -47,7 +47,7 @@ class SubscriptionRateSchedule < ApplicationRecord
   #   Signup Mar 15, anchor Mar 20, monthly → Mar 20 (stub), Apr 20, May 20 ...
   def billing_date_for(n)
     if calendar_mode?
-      return started_at if n.zero?
+      return started_at.to_date if n.zero?
 
       add_interval(subscription.anchor_date, (n - 1) * rate_schedule.billing_interval_count)
     else
