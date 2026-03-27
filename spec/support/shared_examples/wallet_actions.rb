@@ -49,7 +49,7 @@ RSpec.shared_examples "a wallet create endpoint" do
     expect(json[:wallet][:payment_method][:payment_method_id]).to eq(payment_method.id)
 
     expect(Validators::WalletTransactionAmountLimitsValidator).to have_received(:new).with(
-      BaseService::LegacyResult,
+      Wallets::CreateService::Result,
       wallet: Wallet,
       credits_amount: "10",
       ignore_validation: "true"

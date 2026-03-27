@@ -3,6 +3,8 @@
 module Wallets
   module Balance
     class UpdateOngoingService < BaseService
+      Result = BaseResult[:wallet]
+
       def initialize(wallet:, update_params:, skip_single_wallet_update: false)
         super
 

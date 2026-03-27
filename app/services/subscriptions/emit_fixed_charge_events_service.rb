@@ -2,6 +2,8 @@
 
 module Subscriptions
   class EmitFixedChargeEventsService < BaseService
+    Result = BaseResult
+
     def initialize(subscriptions:, timestamp: Time.current)
       @subscriptions = subscriptions
       @timestamp = timestamp

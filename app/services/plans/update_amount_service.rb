@@ -2,6 +2,8 @@
 
 module Plans
   class UpdateAmountService < BaseService
+    Result = BaseResult[:plan]
+
     def initialize(plan:, amount_cents:, expected_amount_cents:)
       @plan = plan
       @amount_cents = amount_cents

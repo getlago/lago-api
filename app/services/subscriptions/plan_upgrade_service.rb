@@ -2,6 +2,8 @@
 
 module Subscriptions
   class PlanUpgradeService < BaseService
+    Result = BaseResult[:subscription]
+
     def initialize(current_subscription:, plan:, params:)
       @current_subscription = current_subscription
       @plan = plan

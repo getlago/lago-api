@@ -2,6 +2,8 @@
 
 module Subscriptions
   class ConsumeSubscriptionRefreshedQueueV2Service < BaseService
+    Result = BaseResult
+
     REDIS_STORE_NAME = "subscription_refreshed_v2"
     BATCH_SIZE = 100
     PROCESSING_TIMEOUT = 1.minute

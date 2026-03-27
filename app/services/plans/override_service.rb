@@ -2,6 +2,8 @@
 
 module Plans
   class OverrideService < BaseService
+    Result = BaseResult[:plan]
+
     def initialize(plan:, params:, subscription: nil)
       @plan = plan
       @params = params

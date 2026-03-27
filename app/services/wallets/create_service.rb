@@ -2,6 +2,8 @@
 
 module Wallets
   class CreateService < BaseService
+    Result = BaseResult[:wallet, :billable_metric_identifiers, :billable_metrics, :payment_method]
+
     def initialize(params:)
       @params = params
       super

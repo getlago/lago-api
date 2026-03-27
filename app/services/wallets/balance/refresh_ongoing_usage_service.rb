@@ -3,6 +3,8 @@
 module Wallets
   module Balance
     class RefreshOngoingUsageService < BaseService
+      Result = BaseResult[:wallet]
+
       def initialize(wallet:, usage_amount_cents:, current_usage_fees:, draft_invoices_fees:, progressive_billing_fees:, pay_in_advance_fees:, skip_single_wallet_update: false)
         @wallet = wallet
         @usage_amount_cents = usage_amount_cents
