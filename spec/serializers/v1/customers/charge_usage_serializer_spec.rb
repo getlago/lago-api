@@ -44,7 +44,8 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         aggregation_type: billable_metric.aggregation_type,
         grouped_by: {"card_type" => "visa"},
         charge_filter: nil,
-        pricing_unit_usage:
+        pricing_unit_usage:,
+        presentation_breakdown: nil
       )
     ]
   end
@@ -81,9 +82,11 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           "units" => "10.0",
           "total_aggregated_units" => "10.0",
           "grouped_by" => {"card_type" => "visa"},
-          "filters" => []
+          "filters" => [],
+          "presentation_breakdown" => []
         }
-      ]
+      ],
+      "presentation_breakdown" => []
     )
   end
 
@@ -128,9 +131,11 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             "units" => "10.0",
             "total_aggregated_units" => "10.0",
             "grouped_by" => {"card_type" => "visa"},
-            "filters" => []
+            "filters" => [],
+            "presentation_breakdown" => []
           }
-        ]
+        ],
+        "presentation_breakdown" => []
       )
     end
   end
@@ -157,7 +162,8 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           grouped_by: {"card_type" => "visa"},
           charge_filter:,
           charge_filter_id: charge_filter.id,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdown: nil
         )
       end
     end

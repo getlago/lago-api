@@ -366,7 +366,15 @@ module Fees
     end
 
     def compute_presentation_breakdowns(fees, charge_filter:)
-      presentation_keys = charge.presentation_group_keys_values
+      all_presentation_keys = charge.presentation_group_keys_values
+
+      presentation_keys = if usage_filters.filter_by_presentation.present?
+        all_presentation_keys & usage_filters.filter_by_presentation
+      else
+        all_presentation_keys
+      end
+
+      return if presentation_keys.blank?
 
       combined_filters = aggregation_filters(charge_filter:)
       combined_keys = ((combined_filters[:grouped_by] || []) + presentation_keys).uniq
