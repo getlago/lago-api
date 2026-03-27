@@ -42,18 +42,25 @@ RSpec.describe SubscriptionRateSchedule do
 
     let(:rate_schedule) { create(:rate_schedule, billing_interval_unit: "month", billing_interval_count: 1) }
 
-    it "increments intervals_billed and sets next_billing_date" do
+    it "sets next_billing_date without incrementing when billed is false" do
       srs.update_next_billing_date!
 
-      expect(srs.intervals_billed).to eq(1)
+      expect(srs.intervals_billed).to eq(0)
       expect(srs.next_billing_date).to eq(Date.new(2026, 2, 1))
     end
 
+    it "increments intervals_billed and advances next_billing_date when billed" do
+      srs.update_next_billing_date!(billed: true)
+
+      expect(srs.intervals_billed).to eq(1)
+      expect(srs.next_billing_date).to eq(Date.new(2026, 3, 1))
+    end
+
     it "computes correctly after multiple billings" do
-      3.times { srs.update_next_billing_date! }
+      3.times { srs.update_next_billing_date!(billed: true) }
 
       expect(srs.intervals_billed).to eq(3)
-      expect(srs.next_billing_date).to eq(Date.new(2026, 4, 1))
+      expect(srs.next_billing_date).to eq(Date.new(2026, 5, 1))
     end
 
     context "when billing_interval_unit is week" do
@@ -90,10 +97,10 @@ RSpec.describe SubscriptionRateSchedule do
       let(:rate_schedule) { create(:rate_schedule, billing_interval_unit: "month", billing_interval_count: 3) }
 
       it "advances by multiple intervals" do
-        srs.update_next_billing_date!
+        srs.update_next_billing_date!(billed: true)
 
         expect(srs.intervals_billed).to eq(1)
-        expect(srs.next_billing_date).to eq(Date.new(2026, 4, 1))
+        expect(srs.next_billing_date).to eq(Date.new(2026, 7, 1))
       end
     end
 

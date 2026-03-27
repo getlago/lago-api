@@ -31,7 +31,7 @@ RSpec.describe RateSchedules::OrganizationBillingService do
     end
 
     context "when intervals_to_bill is reached" do
-      let!(:srs) do
+      before do
         create(:subscription_rate_schedule,
           organization:,
           subscription:,
@@ -67,7 +67,7 @@ RSpec.describe RateSchedules::OrganizationBillingService do
     end
 
     context "when next_billing_date is in the future" do
-      let!(:srs) do
+      before do
         create(:subscription_rate_schedule,
           organization:,
           subscription:,
@@ -84,7 +84,7 @@ RSpec.describe RateSchedules::OrganizationBillingService do
     end
 
     context "when subscription_rate_schedule is terminated" do
-      let!(:srs) do
+      before do
         create(:subscription_rate_schedule,
           organization:,
           subscription:,
