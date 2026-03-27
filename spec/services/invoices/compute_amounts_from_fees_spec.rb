@@ -72,7 +72,8 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
     it "avoids persisting fees" do
       result = subject.call
 
-      expect(result.invoice.fees.first.id).to be_nil
+      expect(result.invoice.fees.length).to eq(2)
+      expect(result.invoice.fees.map(&:id)).to eq([nil, nil])
     end
 
     it "calculates taxes amounts" do
