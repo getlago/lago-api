@@ -19,21 +19,37 @@ class SubscriptionRateSchedule < ApplicationRecord
 
     self.intervals_billed += 1 if billed
 
-    billing_start = started_at.to_date
-    count = (intervals_billed + 1) * rate_schedule.billing_interval_count
+    update!(intervals_billed:, next_billing_date: compute_next_billing_date)
+  end
 
-    next_date = case rate_schedule.billing_interval_unit
-    when "day"
-      billing_start + count.days
-    when "week"
-      billing_start + count.weeks
-    when "month"
-      billing_start + count.months
-    when "year"
-      billing_start + count.years
+  private
+
+  def compute_next_billing_date
+    unit = rate_schedule.billing_interval_unit
+    anchor = subscription&.anchor_date
+
+    if anchor && rate_schedule.prorated && unit != "day"
+      # Calendar mode: anchor_date carries the alignment
+      #   weekly  → same day of week as anchor
+      #   monthly → same day of month as anchor
+      #   yearly  → same month + day as anchor
+      offset = intervals_billed * rate_schedule.billing_interval_count
+      add_interval(anchor, unit, offset)
+    else
+      # Anniversary mode (no anchor, anchor+not prorated, or daily):
+      #   bills from started_at
+      offset = (intervals_billed + 1) * rate_schedule.billing_interval_count
+      add_interval(started_at.to_date, unit, offset)
     end
+  end
 
-    update!(intervals_billed:, next_billing_date: next_date)
+  def add_interval(date, unit, count)
+    case unit
+    when "day" then date + count.days
+    when "week" then date + count.weeks
+    when "month" then date + count.months
+    when "year" then date + count.years
+    end
   end
 end
 
