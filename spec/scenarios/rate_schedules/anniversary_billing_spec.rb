@@ -3,7 +3,7 @@
 require "rails_helper"
 
 describe "Rate Schedules Anniversary Billing" do
-  include_context "rate schedule billing"
+  include_context "with rate schedule billing"
 
   context "with daily billing interval" do
     let(:billing_interval_unit) { "day" }

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 describe "Rate Schedules Timezone Billing" do
-  include_context "rate schedule billing"
+  include_context "with rate schedule billing"
 
   let(:customer) { create(:customer, organization:, currency: "EUR", timezone:) }
 
