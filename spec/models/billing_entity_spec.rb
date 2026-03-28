@@ -180,6 +180,17 @@ RSpec.describe BillingEntity do
       expect(billing_entity).not_to be_valid
     end
 
+    it "validates skip_automatic_pdf_generation values" do
+      billing_entity.skip_automatic_pdf_generation = ["invoices"]
+      expect(billing_entity).to be_valid
+
+      billing_entity.skip_automatic_pdf_generation = []
+      expect(billing_entity).to be_valid
+
+      billing_entity.skip_automatic_pdf_generation = ["unsupported"]
+      expect(billing_entity).not_to be_valid
+    end
+
     it "validates subscription_invoice_issuing_date_anchor" do
       billing_entity.subscription_invoice_issuing_date_anchor = nil
       expect(billing_entity).not_to be_valid
@@ -366,6 +377,18 @@ RSpec.describe BillingEntity do
       it "returns the billing_entity email" do
         expect(from_email_address).to eq(billing_entity.email)
       end
+    end
+  end
+
+  describe "#skip_automatic_invoice_pdf_generation?" do
+    it "returns true when skip_automatic_pdf_generation includes invoices" do
+      billing_entity.skip_automatic_pdf_generation = ["invoices"]
+      expect(billing_entity.skip_automatic_invoice_pdf_generation?).to be true
+    end
+
+    it "returns false when skip_automatic_pdf_generation is empty" do
+      billing_entity.skip_automatic_pdf_generation = []
+      expect(billing_entity.skip_automatic_invoice_pdf_generation?).to be false
     end
   end
 

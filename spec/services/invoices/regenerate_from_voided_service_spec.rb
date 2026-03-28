@@ -94,6 +94,16 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
     end
 
+    context "when billing entity skips automatic invoice pdf generation" do
+      before { customer.billing_entity.update!(skip_automatic_pdf_generation: ["invoices"]) }
+
+      it "does not enqueue GenerateDocumentsJob" do
+        expect do
+          regenerate_result
+        end.not_to have_enqueued_job(Invoices::GenerateDocumentsJob)
+      end
+    end
+
     it_behaves_like "syncs invoice" do
       let(:service_call) { regenerate_result }
     end

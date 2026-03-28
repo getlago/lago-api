@@ -95,7 +95,8 @@ module Api
             :invoice_grace_period,
             :subscription_invoice_issuing_date_anchor,
             :subscription_invoice_issuing_date_adjustment,
-            :document_locale
+            :document_locale,
+            skip_automatic_pdf_generation: []
           ]
         )
       end
@@ -128,7 +129,8 @@ module Api
             :invoice_grace_period,
             :subscription_invoice_issuing_date_anchor,
             :subscription_invoice_issuing_date_adjustment,
-            :document_locale
+            :document_locale,
+            skip_automatic_pdf_generation: []
           ],
           tax_codes: [],
           invoice_custom_section_codes: []

@@ -57,7 +57,8 @@ module Types
           invoice_footer: object&.invoice_footer,
           invoice_grace_period: object&.invoice_grace_period,
           subscription_invoice_issuing_date_anchor: object&.subscription_invoice_issuing_date_anchor,
-          subscription_invoice_issuing_date_adjustment: object&.subscription_invoice_issuing_date_adjustment
+          subscription_invoice_issuing_date_adjustment: object&.subscription_invoice_issuing_date_adjustment,
+          skip_automatic_pdf_generation: object&.skip_automatic_pdf_generation
         }
       end
     end
