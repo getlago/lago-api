@@ -90,6 +90,10 @@ class Charge < ApplicationRecord
     next_subscription_charges.pluck(:billable_metric_id).include?(billable_metric_id)
   end
 
+  def pricing_group_agnostic?
+    charge_model == "standard" && filters.empty?
+  end
+
   private
 
   def validate_properties
