@@ -2,6 +2,11 @@ multiple_payment_methods:
   description: "Allow multiple payment methods per customer"
   owners: ["@lovrocolic", "@mariohd"]
 
+null_attributes_charge_cache_optimization:
+  description: "Optimize current usage cache by stripping nil attributes from cached fees"
+  owners: ["@groyoh"]
+  backend_only: true
+
 postgres_enriched_events:
   description: "Turn on events pre-enrichement for organizations using the PG event store"
   owners: ["@vincent-pochet"]
