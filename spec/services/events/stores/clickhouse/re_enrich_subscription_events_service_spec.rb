@@ -151,6 +151,53 @@ RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :c
       end
     end
 
+    context "with duplicated events" do
+      let(:event_timestamp) { 2.weeks.ago }
+      let(:shared_transaction_id) { SecureRandom.uuid }
+
+      let!(:event) do
+        create(
+          :clickhouse_events_raw,
+          organization:,
+          subscription:,
+          billable_metric:,
+          external_customer_id: customer.external_id,
+          transaction_id: shared_transaction_id,
+          timestamp: event_timestamp,
+          ingested_at: 2.days.ago,
+          properties: {"key" => "old_value"}
+        )
+      end
+
+      before do
+        create(
+          :clickhouse_events_raw,
+          organization:,
+          subscription:,
+          billable_metric:,
+          external_customer_id: customer.external_id,
+          transaction_id: shared_transaction_id,
+          timestamp: event_timestamp,
+          ingested_at: 1.day.ago,
+          properties: {"key" => "new_value"}
+        )
+      end
+
+      it "only produces one message for the most recently ingested event" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.events_count).to eq(1)
+
+        expect(kafka_producer).to have_received(:produce_many_async) do |messages|
+          expect(messages.size).to eq(1)
+
+          payload = JSON.parse(messages.first[:payload])
+          expect(payload["properties"]).to eq({"key" => "new_value"})
+        end
+      end
+    end
+
     context "with multiple batches" do
       let(:batch_size) { 1 }
 

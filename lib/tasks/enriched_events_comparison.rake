@@ -159,6 +159,8 @@ namespace :enriched_events do
     parts << "filter=#{fee.charge_filter.to_h} filter_id=#{fee.charge_filter_id}" if fee.charge_filter_id
     grouped = fee.grouped_by.presence
     parts << "grouped_by=#{grouped}" if grouped
+    parts << "from=#{fee.properties["charges_from_datetime"]}" if fee.properties["charges_from_datetime"]
+    parts << "to=#{fee.properties["charges_to_datetime"]}" if fee.properties["charges_to_datetime"]
     parts.join(" ")
   end
 
