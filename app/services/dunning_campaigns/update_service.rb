@@ -68,8 +68,7 @@ module DunningCampaigns
         .includes(:invoices)
         .where(invoices: {payment_overdue: true}).find_each do |customer|
           threshold_matches = dunning_campaign.thresholds.any? do |threshold|
-            threshold.currency == customer.currency &&
-              customer.overdue_balance_cents >= threshold.amount_cents
+            customer.overdue_balance_cents(threshold.currency) >= threshold.amount_cents
           end
 
           unless threshold_matches

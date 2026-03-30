@@ -1106,6 +1106,63 @@ RSpec.describe Customer do
         expect(customer.overdue_balance_cents).to eq 2_00
       end
     end
+
+    context "when an explicit currency parameter is provided" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 4_00)
+        create(:invoice, customer: customer, payment_overdue: true, currency: "EUR", total_amount_cents: 7_00)
+      end
+
+      it "returns overdue balance for the specified currency" do
+        expect(customer.overdue_balance_cents("EUR")).to eq 7_00
+        expect(customer.overdue_balance_cents("USD")).to eq 4_00
+      end
+    end
+  end
+
+  describe "#overdue_balances" do
+    let(:customer) { create(:customer, currency: "USD") }
+
+    context "when there are no overdue invoices" do
+      it "returns an empty hash" do
+        expect(customer.overdue_balances).to eq({})
+      end
+    end
+
+    context "when there are overdue invoices in multiple currencies" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 2_00)
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 3_00)
+        create(:invoice, customer: customer, payment_overdue: true, currency: "EUR", total_amount_cents: 10_00)
+      end
+
+      it "returns per-currency breakdown" do
+        expect(customer.overdue_balances).to eq("USD" => 5_00, "EUR" => 10_00)
+      end
+    end
+
+    context "when there are non-overdue invoices" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 2_00)
+        create(:invoice, customer: customer, payment_overdue: false, currency: "USD", total_amount_cents: 5_00)
+        create(:invoice, customer: customer, payment_overdue: false, currency: "EUR", total_amount_cents: 8_00)
+      end
+
+      it "only includes overdue invoices" do
+        expect(customer.overdue_balances).to eq("USD" => 2_00)
+      end
+    end
+
+    context "when invoices are self billed" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 2_00)
+        create(:invoice, :self_billed, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 3_00)
+      end
+
+      it "ignores self billed invoices" do
+        expect(customer.overdue_balances).to eq("USD" => 2_00)
+      end
+    end
   end
 
   describe "#reset_dunning_campaign!" do
