@@ -392,7 +392,7 @@ class Invoice < ApplicationRecord
     finalized? || voided?
   end
 
-  def gated?
+  def subscription_gated?
     open? && subscriptions.any?(&:gated?)
   end
 

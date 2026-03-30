@@ -1112,8 +1112,8 @@ RSpec.describe Invoice do
     end
   end
 
-  describe "#gated?" do
-    subject(:gated?) { invoice.gated? }
+  describe "#subscription_gated?" do
+    subject(:subscription_gated?) { invoice.subscription_gated? }
 
     let(:subscription) { create(:subscription) }
     let(:invoice) { create(:invoice, organization: subscription.organization, customer: subscription.customer) }
