@@ -33,10 +33,16 @@ module Invoices
         preview_invoice.fees << result.fee
       end
 
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: preview_invoice.fees.to_a)
-      taxes_result.raise_if_error!
+      if invoice.customer.tax_customer
+        taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: preview_invoice.fees.to_a)
+        taxes_result.raise_if_error!
 
-      result = Invoices::ComputeAmountsFromFees.call(invoice: preview_invoice, provider_taxes: taxes_result.fees)
+        provider_taxes = taxes_result.fees
+      else
+        provider_taxes = nil
+      end
+
+      result = Invoices::ComputeAmountsFromFees.call(invoice: preview_invoice, provider_taxes: provider_taxes)
       result.raise_if_error!
 
       result.invoice.id = invoice.id

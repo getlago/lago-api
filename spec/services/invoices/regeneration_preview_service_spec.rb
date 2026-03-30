@@ -2,6 +2,9 @@
 
 require "rails_helper"
 
+TaxBreakdown = Data.define(:name, :type, :rate, :tax_amount)
+FeeTaxes = Data.define(:item_id, :tax_amount_cents, :tax_breakdown)
+
 RSpec.describe Invoices::RegenerationPreviewService do
   subject(:draft_service) { described_class.new(invoice:) }
 
@@ -11,6 +14,17 @@ RSpec.describe Invoices::RegenerationPreviewService do
   let(:invoice) { create(:invoice, organization:, customer:, taxes_rate: 10) }
   let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:) }
   let(:plan) { create(:plan, organization: organization) }
+  let(:integration_result) { instance_double("Integrations::Aggregator::Taxes::Invoices::CreateDraftService::Result", success?: true, fees: [fee_taxes], raise_if_error!: nil) }
+  let(:fee_taxes) do
+    FeeTaxes.new(
+      item_id: fee.id,
+      tax_amount_cents: 170,
+      tax_breakdown: [
+        TaxBreakdown.new(name: "tax 2", type: "type2", rate: "0.12", tax_amount: 120),
+        TaxBreakdown.new(name: "tax 3", type: "type3", rate: "0.05", tax_amount: 50)
+      ]
+    )
+  end
 
   describe "#call" do
     before do
@@ -18,7 +32,7 @@ RSpec.describe Invoices::RegenerationPreviewService do
       invoice_subscription
 
       allow(::AdjustedFees::EstimateService).to receive(:call).and_call_original
-      allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
+      allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_return(integration_result)
     end
 
     context "with subscription fees" do
@@ -67,11 +81,21 @@ RSpec.describe Invoices::RegenerationPreviewService do
         expect(result.invoice.fees.first.taxes_rate).to eq(0)
       end
 
-      it "calls CreateDraftService with estimated fees" do
+      it "skips CreateDraftService" do
         draft_service.call
 
-        expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
-          .once.with(invoice: an_instance_of(Invoice), fees: an_instance_of(Array))
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).not_to have_received(:call)
+      end
+
+      context "when customer has integration" do
+        let(:customer) { create(:customer, :with_tax_integration, organization:) }
+
+        it "calls CreateDraftService" do
+          draft_service.call
+
+          expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
+            .once.with(invoice: an_instance_of(Invoice), fees: an_instance_of(Array))
+        end
       end
 
       context "with taxes" do
@@ -133,13 +157,23 @@ RSpec.describe Invoices::RegenerationPreviewService do
 
         expect(result.invoice.fees.first.taxes_rate).to eq(0)
       end
-    end
 
-    it "calls CreateDraftService with estimated fees" do
-      draft_service.call
+      it "skips CreateDraftService" do
+        draft_service.call
 
-      expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
-        .once.with(invoice: an_instance_of(Invoice), fees: an_instance_of(Array))
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).not_to have_received(:call)
+      end
+
+      context "when customer has integration defined" do
+        let(:customer) { create(:customer, :with_tax_integration, organization:) }
+
+        it "calls CreateDraftService" do
+          draft_service.call
+
+          expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
+            .once.with(invoice: an_instance_of(Invoice), fees: an_instance_of(Array))
+        end
+      end
     end
 
     context "with fixed_charge fees" do
@@ -179,11 +213,21 @@ RSpec.describe Invoices::RegenerationPreviewService do
         expect(result.invoice.fees.first.taxes_rate).to eq(0)
       end
 
-      it "calls CreateDraftService with estimated fees" do
+      it "skips CreateDraftService" do
         draft_service.call
 
-        expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
-          .once.with(invoice: an_instance_of(Invoice), fees: an_instance_of(Array))
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).not_to have_received(:call)
+      end
+
+      context "when customer has integration defined" do
+        let(:customer) { create(:customer, :with_tax_integration, organization:) }
+
+        it "calls CreateDraftService" do
+          draft_service.call
+
+          expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
+            .once.with(invoice: an_instance_of(Invoice), fees: an_instance_of(Array))
+        end
       end
     end
   end
