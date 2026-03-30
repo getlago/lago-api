@@ -53,5 +53,32 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
         expect(null_result.count).to eq(0)
       end
     end
+
+    context "with apply_aggregation and grouped_by_keys" do
+      let(:args) { {grouped_by_keys: %w[region], apply_aggregation: true} }
+
+      it "wraps a null result inside aggregations" do
+        expect(null_result.aggregations.size).to eq(1)
+
+        inner = null_result.aggregations.first
+        expect(inner.grouped_by).to eq({"region" => nil})
+        expect(inner.aggregation).to eq(0)
+        expect(inner.count).to eq(0)
+        expect(inner.current_usage_units).to eq(0)
+        expect(inner.options).to eq({running_total: []})
+      end
+    end
+
+    context "with apply_aggregation and no grouped_by_keys" do
+      let(:args) { {apply_aggregation: true} }
+
+      it "returns a flat null result without aggregations wrapper" do
+        expect(null_result.aggregation).to eq(0)
+        expect(null_result.count).to eq(0)
+        expect(null_result.current_usage_units).to eq(0)
+        expect(null_result.options).to eq({running_total: []})
+        expect(null_result.grouped_by).to be_nil
+      end
+    end
   end
 end
