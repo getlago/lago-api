@@ -54,19 +54,21 @@ describe "One-off invoices" do
 
     context "with customer-specific taxes" do
       let(:customer_tax) { create(:tax, organization:, code: "customer_vat", name: "Customer VAT", rate: 8.0) }
+      let(:billing_entity_tax) { create(:tax, organization:, code: "be_default", name: "BE Default", rate: 25.0) }
 
       before do
-        create(:tax, organization:, code: "default_tax", name: "Default", rate: 25.0, applied_to_organization: true)
+        create(:billing_entity_applied_tax, billing_entity: customer.billing_entity, tax: billing_entity_tax)
         create(:customer_applied_tax, customer:, tax: customer_tax)
       end
 
-      it "applies customer taxes when no explicit tax_codes are provided" do
+      it "applies customer taxes over billing entity taxes when no explicit tax_codes are provided" do
         create_one_off_invoice(customer, [addon])
 
         invoice = customer.invoices.sole
         fee = invoice.fees.sole
         expect(fee.applied_taxes.sole.tax_code).to eq "customer_vat"
         expect(fee.taxes_amount_cents).to eq 800
+        expect(invoice.taxes_amount_cents).to eq 800
       end
 
       it "applies explicit tax_codes over customer taxes when provided" do
