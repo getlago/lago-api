@@ -15,8 +15,15 @@ class BillRateSchedulesJob < ApplicationJob
   retry_on Sequenced::SequenceError, ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
 
   def perform(subscription_rate_schedule_ids, timestamp)
+    billing_date = Time.zone.at(timestamp).to_date
+
+    # Re-validate billability for idempotency on job retries.
+    # After a successful billing, intervals_billed advances and next_billing_date
+    # moves forward — the SRS won't match these conditions on retry.
     subscription_rate_schedules = SubscriptionRateSchedule
       .where(id: subscription_rate_schedule_ids)
+      .where(next_billing_date: ..billing_date)
+      .where("intervals_to_bill IS NULL OR intervals_billed < intervals_to_bill")
       .includes(:subscription, :rate_schedule, :product_item)
     return if subscription_rate_schedules.empty?
 
