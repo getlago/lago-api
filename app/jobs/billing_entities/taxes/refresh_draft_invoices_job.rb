@@ -10,7 +10,9 @@ module BillingEntities
         return unless billing_entity
 
         billing_entity.invoices.draft
-          .update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+          .in_batches do |batch|
+            batch.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+          end
       end
     end
   end
