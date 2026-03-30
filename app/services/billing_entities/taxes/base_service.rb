@@ -8,9 +8,7 @@ module BillingEntities
       attr_reader :billing_entity
 
       def refresh_draft_invoices
-        draft_invoice_ids = billing_entity.invoices.draft.pluck(:id)
-
-        Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+        BillingEntities::Taxes::RefreshDraftInvoicesJob.perform_later(billing_entity.id)
       end
     end
   end

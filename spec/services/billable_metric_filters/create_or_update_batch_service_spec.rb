@@ -52,6 +52,11 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
       ]
     end
 
+    it "enqueues the refresh draft invoices job" do
+      expect { service }.to have_enqueued_job(BillableMetricFilters::RefreshDraftInvoicesJob)
+        .with(billable_metric.id)
+    end
+
     it "creates the filters" do
       expect { service }.to change(BillableMetricFilter, :count).by(2)
 
