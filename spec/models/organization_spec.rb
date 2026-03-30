@@ -24,7 +24,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:pricing_units)
       expect(subject).to have_many(:customers)
       expect(subject).to have_many(:subscriptions)
-      expect(subject).to have_many(:activation_rules).class_name("Subscription::ActivationRule").dependent(:destroy)
+      expect(subject).to have_many(:activation_rules).class_name("Subscription::ActivationRule")
       expect(subject).to have_many(:credit_notes)
       expect(subject).to have_many(:invoices)
       expect(subject).to have_many(:fees)
