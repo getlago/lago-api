@@ -52,7 +52,6 @@ RSpec.describe Invoices::RefreshDraftService do
       :one_off,
       :add_on,
       :credit,
-      :advance_charges,
       :progressive_billing
     ].each do |invoice_type|
       context "when invoice is #{invoice_type}" do

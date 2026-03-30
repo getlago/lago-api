@@ -476,5 +476,70 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
         end
       end
     end
+
+    context "with advance_charges invoice" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+
+      let(:charge) do
+        create(
+          :standard_charge,
+          pay_in_advance: true,
+          invoiceable: false,
+          regroup_paid_fees: "invoice",
+          billable_metric:,
+          plan:,
+          properties: {amount: "30"}
+        )
+      end
+
+      let(:original_invoice) do
+        travel_to(DateTime.new(2023, 1, 15)) { perform_billing }
+        invoice = subscription.invoices.first
+        invoice.update!(invoice_type: :advance_charges)
+
+        create(
+          :charge_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          amount_cents: 3000,
+          precise_amount_cents: 3000.0,
+          units: 1,
+          unit_amount_cents: 3000,
+          precise_unit_amount: 30,
+          properties: {
+            charges_from_datetime: subscription.started_at.beginning_of_day,
+            charges_to_datetime: subscription.started_at.end_of_month.end_of_day
+          }
+        )
+
+        invoice.update!(status: :voided)
+        invoice
+      end
+
+      let(:advance_charge_fee) { original_invoice.fees.find_by(charge_id: charge.id) }
+
+      let(:fees_params) do
+        [
+          {
+            id: advance_charge_fee.id,
+            subscription_id: subscription.id,
+            units: 2,
+            unit_amount_cents: 40
+          }
+        ]
+      end
+
+      it "regenerates advance_charges invoice with adjusted fees" do
+        result = regenerate_result
+
+        expect(result.invoice.invoice_type).to eq "advance_charges"
+
+        regenerated_fee = result.invoice.fees.find_by(charge_id: charge.id)
+        expect(regenerated_fee.units).to eq 2
+        expect(regenerated_fee.unit_amount_cents).to eq 4000
+        expect(regenerated_fee.amount_cents).to eq 8000
+      end
+    end
   end
 end

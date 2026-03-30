@@ -21,7 +21,7 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         create_regenerated_invoice
-        create_invoice_subscriptions if regenerated_invoice.invoice_type == "subscription"
+        create_invoice_subscriptions if %w[subscription advance_charges].include?(regenerated_invoice.invoice_type)
         process_fees
         adjust_fees
         Invoices::ApplyInvoiceCustomSectionsService.call!(invoice: regenerated_invoice)
