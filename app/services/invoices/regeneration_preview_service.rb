@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 module Invoices
-  class DraftService < BaseService
+  class RegenerationPreviewService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(invoice:)
       @invoice = invoice
 
@@ -24,14 +26,17 @@ module Invoices
             invoice_display_name: fee.invoice_display_name
           }
         )
+        result.raise_if_error!
+
         result.fee.id = fee.id
         result.fee.adjusted_fee = nil
         draft_invoice.fees << result.fee
       end
 
       result = Invoices::ComputeAmountsFromFees.call(invoice: draft_invoice, provider_taxes: nil)
-      result.invoice.id = invoice.id
+      result.raise_if_error!
 
+      result.invoice.id = invoice.id
       result.invoice.applied_taxes.each do |applied_tax|
         applied_tax.invoice_id = invoice.id
         applied_tax.id = SecureRandom.uuid

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::DraftService do
+RSpec.describe Invoices::RegenerationPreviewService do
   subject(:draft_service) { described_class.new(invoice:) }
 
   let(:organization) { create(:organization) }
@@ -90,7 +90,7 @@ RSpec.describe Invoices::DraftService do
 
     context "with charge fees" do
       let(:charge) { create(:standard_charge, plan: subscription.plan) }
-      let!(:fee) do
+      let(:fee) do
         create(
           :charge_fee,
           invoice:,
@@ -103,6 +103,8 @@ RSpec.describe Invoices::DraftService do
           invoice_display_name: nil
         )
       end
+
+      before { fee }
 
       it "calls EstimateService with charge fee parameters" do
         result = draft_service.call
@@ -127,7 +129,7 @@ RSpec.describe Invoices::DraftService do
 
     context "with fixed_charge fees" do
       let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
-      let!(:fee) do
+      let(:fee) do
         create(
           :fixed_charge_fee,
           invoice:,
@@ -139,6 +141,8 @@ RSpec.describe Invoices::DraftService do
           amount_cents: 750
         )
       end
+
+      before { fee }
 
       it "calls EstimateService with fixed_charge fee parameters" do
         result = draft_service.call

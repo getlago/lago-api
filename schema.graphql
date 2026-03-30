@@ -10143,9 +10143,9 @@ type Query {
   invoiceCustomSections(limit: Int, page: Int): InvoiceCustomSectionCollection
 
   """
-  Build a draft of a single Invoice of an organization.
+  Build a preview of a single Invoice of an organization for regeneration.
   """
-  invoiceDraft(
+  invoiceRegenerationPreview(
     """
     Uniq ID of the invoice
     """
