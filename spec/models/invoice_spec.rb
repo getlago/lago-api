@@ -1113,6 +1113,8 @@ RSpec.describe Invoice do
   end
 
   describe "#gated?" do
+    subject(:gated?) { invoice.gated? }
+
     let(:subscription) { create(:subscription) }
     let(:invoice) { create(:invoice, organization: subscription.organization, customer: subscription.customer) }
 
@@ -1120,27 +1122,22 @@ RSpec.describe Invoice do
 
     context "when invoice is open and subscription is gated" do
       before do
-        subscription.update!(status: :incomplete, started_at: Time.current)
+        subscription.update!(status: :incomplete, incompleted_at: Time.current)
         create(:subscription_activation_rule, subscription:, status: "pending")
+        invoice.open!
       end
 
-      it "returns true" do
-        invoice.open!
-        expect(invoice.gated?).to be(true)
-      end
+      it { is_expected.to be(true) }
     end
 
     context "when invoice is open but subscription is not gated" do
-      it "returns false" do
-        invoice.open!
-        expect(invoice.gated?).to be(false)
-      end
+      before { invoice.open! }
+
+      it { is_expected.to be(false) }
     end
 
     context "when invoice is not open" do
-      it "returns false" do
-        expect(invoice.gated?).to be(false)
-      end
+      it { is_expected.to be(false) }
     end
   end
 
