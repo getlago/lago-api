@@ -48,7 +48,7 @@ module Integrations
             result.fees = fees.map do |fee|
               taxes_to_pay = fee["tax_amount_cents"]
 
-              OpenStruct.new(
+              TaxResult.new(
                 item_key: fee["item_key"],
                 item_id: fee["item_id"],
                 item_code: fee["item_code"],
@@ -75,7 +75,7 @@ module Integrations
         def tax_breakdown(breakdown, taxes_to_pay)
           breakdown.map do |b|
             if SPECIAL_TAXATION_TYPES.include?(b["type"])
-              OpenStruct.new(
+              TaxResult::TaxBreakdownItem.new(
                 name: humanize_tax_name(b["reason"].presence || b["type"]),
                 rate: "0.00",
                 tax_amount: 0,
@@ -84,14 +84,14 @@ module Integrations
             elsif b["rate"]
               # If there are taxes, that client shouldn't pay, we nullify the taxes
               if taxes_to_pay.zero? && b["tax_amount"].positive?
-                OpenStruct.new(
+                TaxResult::TaxBreakdownItem.new(
                   name: "Tax",
                   rate: "0.00",
                   tax_amount: 0,
                   type: "tax"
                 )
               else
-                OpenStruct.new(
+                TaxResult::TaxBreakdownItem.new(
                   name: b["name"],
                   rate: b["rate"],
                   tax_amount: b["tax_amount"],
@@ -99,7 +99,7 @@ module Integrations
                 )
               end
             else
-              OpenStruct.new(
+              TaxResult::TaxBreakdownItem.new(
                 name: humanize_tax_name(b["reason"].presence || b["type"] || "unknown_taxation"),
                 rate: "0.00",
                 tax_amount: 0,
