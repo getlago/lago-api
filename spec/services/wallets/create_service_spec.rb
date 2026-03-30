@@ -300,6 +300,11 @@ RSpec.describe Wallets::CreateService do
         expect(customer.reload.currency).to eq("EUR")
       end
 
+      it "sets the wallet currency from customer" do
+        wallet = service_result.wallet
+        expect(wallet.currency).to eq(customer.reload.currency)
+      end
+
       context "when no currency is provided" do
         let(:params) do
           {
@@ -317,6 +322,79 @@ RSpec.describe Wallets::CreateService do
         it "returns an error" do
           expect(service_result).not_to be_success
           expect(service_result.error.messages[:currency]).to eq(["value_is_invalid"])
+        end
+      end
+    end
+
+    context "when customer already has a different currency" do
+      let(:customer_currency) { "USD" }
+
+      it "returns a currency mismatch error" do
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:currency]).to eq(["currencies_does_not_match"])
+      end
+
+      it "does not update the customer currency" do
+        service_result
+        expect(customer.reload.currency).to eq("USD")
+      end
+    end
+
+    context "when customer already has the same currency" do
+      let(:customer_currency) { "EUR" }
+
+      it "creates the wallet successfully" do
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.currency).to eq("EUR")
+      end
+
+      it "does not change the customer currency" do
+        service_result
+        expect(customer.reload.currency).to eq("EUR")
+      end
+    end
+
+    context "when multi currency is enabled" do
+      before { organization.update!(feature_flags: ["multi_currency"]) }
+
+      context "when customer does not have a currency" do
+        let(:customer_currency) { nil }
+
+        it "applies the currency to the customer" do
+          service_result
+          expect(customer.reload.currency).to eq("EUR")
+        end
+
+        it "sets the wallet currency from params" do
+          wallet = service_result.wallet
+          expect(wallet.currency).to eq("EUR")
+        end
+      end
+
+      context "when customer already has a different currency" do
+        let(:customer_currency) { "USD" }
+
+        it "does not update the customer currency" do
+          service_result
+          expect(customer.reload.currency).to eq("USD")
+        end
+
+        it "sets the wallet currency from params" do
+          wallet = service_result.wallet
+          expect(wallet.currency).to eq("EUR")
+        end
+      end
+
+      context "when customer already has the same currency" do
+        let(:customer_currency) { "EUR" }
+
+        it "creates the wallet successfully" do
+          expect(service_result).to be_success
+
+          wallet = service_result.wallet
+          expect(wallet.currency).to eq("EUR")
         end
       end
     end

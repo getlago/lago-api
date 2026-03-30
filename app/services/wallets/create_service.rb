@@ -61,11 +61,11 @@ module Wallets
       wallet = Wallet.new(attributes)
 
       ActiveRecord::Base.transaction do
-        if params[:currency].present?
-          Customers::UpdateCurrencyService.call!(customer: customer, currency: params[:currency])
+        if currency.present? && (!multi_currency_enabled? || customer.currency.blank?)
+          Customers::UpdateCurrencyService.call!(customer: customer, currency:)
         end
 
-        wallet.currency = wallet.customer.currency
+        wallet.currency = multi_currency_enabled? ? currency : wallet.customer.currency
         wallet.save!
 
         validate_wallet_initial_amount! wallet
@@ -138,6 +138,14 @@ module Wallets
 
     def organization_id
       params[:organization_id]
+    end
+
+    def currency
+      params[:currency]
+    end
+
+    def multi_currency_enabled?
+      customer.organization.feature_flag_enabled?(:multi_currency)
     end
 
     def valid?
