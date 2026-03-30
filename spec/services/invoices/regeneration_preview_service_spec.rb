@@ -18,6 +18,7 @@ RSpec.describe Invoices::RegenerationPreviewService do
       invoice_subscription
 
       allow(::AdjustedFees::EstimateService).to receive(:call).and_call_original
+      allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
     end
 
     context "with subscription fees" do
@@ -64,6 +65,13 @@ RSpec.describe Invoices::RegenerationPreviewService do
         )
 
         expect(result.invoice.fees.first.taxes_rate).to eq(0)
+      end
+
+      it "calls CreateDraftService with estimated fees" do
+        draft_service.call
+
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
+          .once.with(invoice: an_instance_of(Invoice), fees: an_instance_of(Array))
       end
 
       context "with taxes" do
@@ -127,6 +135,13 @@ RSpec.describe Invoices::RegenerationPreviewService do
       end
     end
 
+    it "calls CreateDraftService with estimated fees" do
+      draft_service.call
+
+      expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
+        .once.with(invoice: an_instance_of(Invoice), fees: an_instance_of(Array))
+    end
+
     context "with fixed_charge fees" do
       let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
       let(:fee) do
@@ -162,6 +177,13 @@ RSpec.describe Invoices::RegenerationPreviewService do
         )
 
         expect(result.invoice.fees.first.taxes_rate).to eq(0)
+      end
+
+      it "calls CreateDraftService with estimated fees" do
+        draft_service.call
+
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
+          .once.with(invoice: an_instance_of(Invoice), fees: an_instance_of(Array))
       end
     end
   end

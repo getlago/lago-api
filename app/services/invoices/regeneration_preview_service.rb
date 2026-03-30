@@ -11,7 +11,7 @@ module Invoices
     end
 
     def call
-      draft_invoice = invoice.dup
+      preview_invoice = invoice.dup
       invoice.fees.each do |fee|
         result = ::AdjustedFees::EstimateService.call(
           invoice: invoice,
@@ -30,10 +30,13 @@ module Invoices
 
         result.fee.id = fee.id
         result.fee.adjusted_fee = nil
-        draft_invoice.fees << result.fee
+        preview_invoice.fees << result.fee
       end
 
-      result = Invoices::ComputeAmountsFromFees.call(invoice: draft_invoice, provider_taxes: nil)
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: preview_invoice.fees.to_a)
+      taxes_result.raise_if_error!
+
+      result = Invoices::ComputeAmountsFromFees.call(invoice: preview_invoice, provider_taxes: taxes_result.fees)
       result.raise_if_error!
 
       result.invoice.id = invoice.id
