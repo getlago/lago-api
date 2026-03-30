@@ -358,6 +358,22 @@ RSpec.shared_examples "a credit note index endpoint" do
     end
   end
 
+  context "with integration_customers in response" do
+    let(:customer) { create(:customer, :with_tax_integration, organization:) }
+
+    before do
+      create(:credit_note, customer:)
+    end
+
+    it "includes integration_customers in the customer payload" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:credit_notes].first[:customer][:integration_customers].count).to eq(1)
+      expect(json[:credit_notes].first[:customer][:integration_customers].first[:lago_id]).to eq(customer.anrok_customer.id)
+    end
+  end
+
   context "with credit notes containing all associations", :with_bullet do
     before do
       # NOTE: Bullet cannot track ActiveStorage's internal blob access through the attachment proxy
@@ -375,6 +391,7 @@ RSpec.shared_examples "a credit note index endpoint" do
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :cashfree_customer)
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :adyen_customer)
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :moneyhash_customer)
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :integration_customers)
 
       invoices = create_list(:invoice, 3, organization:, customer:)
       invoices.each do |invoice|
@@ -419,6 +436,7 @@ RSpec.shared_examples "a credit note index endpoint" do
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :cashfree_customer)
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :adyen_customer)
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :moneyhash_customer)
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :integration_customers)
 
       invoices = create_list(:invoice, 3, organization:, customer:)
       invoices.each do |invoice|
