@@ -4334,6 +4334,11 @@ type Customer {
   name: String
   netPaymentTerm: Int
   netsuiteCustomer: NetsuiteCustomer
+
+  """
+  Overdue balance per currency
+  """
+  overdueBalances: [CustomerOverdueBalance!]!
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   phone: String
@@ -4437,6 +4442,11 @@ input CustomerMetadataInput {
   id: ID
   key: String!
   value: String!
+}
+
+type CustomerOverdueBalance {
+  amountCents: BigInt!
+  currency: CurrencyEnum!
 }
 
 type CustomerPortalCustomer {
