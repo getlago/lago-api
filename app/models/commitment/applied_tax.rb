@@ -24,9 +24,10 @@ end
 #
 # Indexes
 #
-#  index_commitments_taxes_on_commitment_id    (commitment_id)
-#  index_commitments_taxes_on_organization_id  (organization_id)
-#  index_commitments_taxes_on_tax_id           (tax_id)
+#  index_commitments_taxes_on_commitment_id             (commitment_id)
+#  index_commitments_taxes_on_commitment_id_and_tax_id  (commitment_id,tax_id) UNIQUE
+#  index_commitments_taxes_on_organization_id           (organization_id)
+#  index_commitments_taxes_on_tax_id                    (tax_id)
 #
 # Foreign Keys
 #

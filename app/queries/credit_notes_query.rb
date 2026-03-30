@@ -26,8 +26,6 @@ class CreditNotesQuery < BaseQuery
 
   def call
     credit_notes = base_scope.result
-    credit_notes = paginate(credit_notes)
-    credit_notes = apply_consistent_ordering(credit_notes)
 
     credit_notes = with_billing_entity_ids(credit_notes) if filters.billing_entity_ids.present?
     credit_notes = with_currency(credit_notes) if filters.currency.present?
@@ -41,6 +39,9 @@ class CreditNotesQuery < BaseQuery
     credit_notes = with_issuing_date_range(credit_notes) if filters.issuing_date_from || filters.issuing_date_to
     credit_notes = with_amount_range(credit_notes) if filters.amount_from.present? || filters.amount_to.present?
     credit_notes = with_self_billed_invoice(credit_notes) unless filters.self_billed.nil?
+
+    credit_notes = paginate(credit_notes)
+    credit_notes = apply_consistent_ordering(credit_notes)
 
     result.credit_notes = credit_notes
     result

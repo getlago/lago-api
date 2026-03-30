@@ -44,6 +44,34 @@ RSpec.describe WalletTransactions::ValidateService do
       end
     end
 
+    context "when customer is provided" do
+      let(:args) do
+        {
+          wallet_id:,
+          customer:,
+          organization:,
+          paid_credits:,
+          granted_credits:,
+          voided_credits:
+        }
+      end
+
+      it "returns true when wallet belongs to the customer" do
+        expect(validate_service).to be_valid
+      end
+
+      context "when wallet belongs to another customer" do
+        let(:other_customer) { create(:customer, organization:) }
+        let(:other_wallet) { create(:wallet, customer: other_customer) }
+        let(:wallet_id) { other_wallet.id }
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:wallet_id]).to eq(["wallet_not_found"])
+        end
+      end
+    end
+
     context "with invalid paid_credits" do
       let(:paid_credits) { "foobar" }
 

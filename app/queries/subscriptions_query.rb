@@ -14,7 +14,6 @@ class SubscriptionsQuery < BaseQuery
 
   def call
     subscriptions = base_scope.result
-    subscriptions = paginate(subscriptions)
     # FE pulls next_subscription through Graphql object, which creates additional cases to handle when
     # next_subscription should be excluded from the result to avoid duplicates.
     subscriptions = with_excluded_next_subscriptions(subscriptions) if filters.exclude_next_subscriptions
@@ -30,6 +29,8 @@ class SubscriptionsQuery < BaseQuery
     subscriptions = with_external_customer(subscriptions) if filters.external_customer_id
     subscriptions = with_plan_code(subscriptions) if filters.plan_code
     subscriptions = with_overridden(subscriptions) unless overridden_filter.nil?
+
+    subscriptions = paginate(subscriptions)
 
     result.subscriptions = subscriptions
     result

@@ -2,6 +2,8 @@
 
 module Wallets
   class ApplyPaidCreditsService < BaseService
+    Result = BaseResult[:wallet_transaction]
+
     def initialize(wallet_transaction:)
       @wallet_transaction = wallet_transaction
       super

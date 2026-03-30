@@ -641,12 +641,34 @@ type AppliedCoupon {
   amountCurrency: CurrencyEnum
   coupon: Coupon!
   createdAt: ISO8601DateTime!
+  customer: Customer!
   frequency: CouponFrequency!
   frequencyDuration: Int
   frequencyDurationRemaining: Int
   id: ID!
   percentageRate: Float
-  terminatedAt: ISO8601DateTime!
+  status: AppliedCouponStatusEnum!
+  terminatedAt: ISO8601DateTime
+}
+
+"""
+AppliedCouponCollection type
+"""
+type AppliedCouponCollection {
+  """
+  A collection of paginated AppliedCouponCollection
+  """
+  collection: [AppliedCoupon!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+enum AppliedCouponStatusEnum {
+  active
+  terminated
 }
 
 type AppliedPricingUnit {
@@ -5683,6 +5705,7 @@ Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
   enriched_events_aggregation
+  multi_currency
   multiple_payment_methods
   postgres_enriched_events
   wallet_traceability
@@ -9704,6 +9727,11 @@ type Query {
   Query api logs of an organization
   """
   apiLogs(apiKeyIds: [String!], fromDate: ISO8601Date, fromDatetime: ISO8601DateTime, httpMethods: [HttpMethodEnum!], httpStatuses: [HttpStatus!], limit: Int, page: Int, requestIds: [String!], requestPaths: [String!], toDate: ISO8601Date, toDatetime: ISO8601DateTime): ApiLogCollection
+
+  """
+  Query applied coupons of an organization
+  """
+  appliedCoupons(couponCode: [String!], externalCustomerId: String, limit: Int, page: Int, status: AppliedCouponStatusEnum): AppliedCouponCollection!
 
   """
   Query a single billable metric of an organization

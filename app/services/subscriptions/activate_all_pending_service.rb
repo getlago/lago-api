@@ -1,14 +1,16 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  class ActivateService < BaseService
+  class ActivateAllPendingService < BaseService
+    Result = BaseResult
+
     def initialize(timestamp:)
       @timestamp = timestamp
 
-      super(nil)
+      super
     end
 
-    def activate_all_pending
+    def call
       Subscription
         .joins(customer: :billing_entity)
         .pending
@@ -40,6 +42,8 @@ module Subscriptions
             Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, fixed_charge_timestamp)
           end
         end
+
+      result
     end
 
     private

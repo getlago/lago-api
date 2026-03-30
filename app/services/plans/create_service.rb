@@ -2,6 +2,8 @@
 
 module Plans
   class CreateService < BaseService
+    Result = BaseResult[:plan]
+
     def initialize(args)
       @args = args
       super

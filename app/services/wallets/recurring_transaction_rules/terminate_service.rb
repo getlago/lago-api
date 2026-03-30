@@ -3,6 +3,8 @@
 module Wallets
   module RecurringTransactionRules
     class TerminateService < BaseService
+      Result = BaseResult[:recurring_transaction_rule]
+
       def initialize(recurring_transaction_rule:)
         @recurring_transaction_rule = recurring_transaction_rule
         super

@@ -310,7 +310,10 @@ describe Clockwork do
       expect(Clockwork::Test.times_run(job)).to eq(1)
 
       Clockwork::Test.block_for(job).call
-      expect(Clock::ConsumeSubscriptionRefreshedQueueJob).to have_been_enqueued
+      # DEPRECATED
+      expect(Clock::ConsumeSubscriptionRefreshedQueueJob).to have_been_enqueued.twice
+
+      expect(Clock::ConsumeSubscriptionRefreshedQueueJob).to have_been_enqueued.with("v2")
     end
   end
 end

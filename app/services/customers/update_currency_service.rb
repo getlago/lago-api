@@ -14,6 +14,12 @@ module Customers
       return result.not_found_failure!(resource: "customer") unless customer
       return result if customer.currency == currency
 
+      # Multi-currency: customer.currency becomes a default preference, not a constraint.
+      if customer.organization.feature_flag_enabled?(:multi_currency)
+        customer.update!(currency:) if customer_update || customer.currency.blank?
+        return result
+      end
+
       if customer_update
         # NOTE: direct update of the customer currency
         unless customer.editable?

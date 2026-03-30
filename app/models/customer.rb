@@ -165,7 +165,7 @@ class Customer < ApplicationRecord
 
   ADDRESS_FIELDS.each do |attribute|
     # NOTE: Null byte injection. Prevent 500 errors.
-    normalizes attribute, with: ->(value) { value.delete("\u0000") }
+    normalizes attribute, with: ->(value) { value.delete("\u0000").presence }
   end
 
   def self.ransackable_attributes(_auth_object = nil)

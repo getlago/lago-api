@@ -2,6 +2,8 @@
 
 module Subscriptions
   class OrganizationBillingService < BaseService
+    Result = BaseResult
+
     def initialize(organization:, billing_at: Time.current)
       @organization = organization
       @today = billing_at

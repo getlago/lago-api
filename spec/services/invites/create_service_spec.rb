@@ -7,16 +7,18 @@ RSpec.describe Invites::CreateService do
 
   include_context "with mocked security logger"
 
-  before { create(:role, :admin) }
-
+  let(:admin_role) { create(:role, :admin) }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+
+  before { create(:membership_role, membership:, role: admin_role) }
 
   describe "#call" do
     let(:create_args) do
       {
         email: Faker::Internet.email,
         current_organization: organization,
+        user: membership.user,
         roles: %w[admin]
       }
     end
@@ -30,10 +32,35 @@ RSpec.describe Invites::CreateService do
       before { create_service.call }
     end
 
+    context "when non-admin invites with admin role" do
+      let(:non_admin_membership) { create(:membership, organization:) }
+      let(:create_args) do
+        {
+          email: Faker::Internet.email,
+          current_organization: organization,
+          user: non_admin_membership.user,
+          roles: %w[admin]
+        }
+      end
+
+      it "returns an error" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("cannot_grant_admin")
+      end
+
+      it_behaves_like "does not produce a security log" do
+        before { create_service.call }
+      end
+    end
+
     context "with validation error" do
       let(:create_args) do
         {
           current_organization: organization,
+          user: membership.user,
           roles: %w[admin]
         }
       end
@@ -55,7 +82,8 @@ RSpec.describe Invites::CreateService do
       let(:create_args) do
         {
           email: Faker::Internet.email,
-          current_organization: organization
+          current_organization: organization,
+          user: membership.user
         }
       end
 
@@ -77,6 +105,7 @@ RSpec.describe Invites::CreateService do
         {
           email: Faker::Internet.email,
           current_organization: organization,
+          user: membership.user,
           roles: %w[nonexistent_role]
         }
       end

@@ -2,6 +2,8 @@
 
 module Subscriptions
   class CreateService < BaseService
+    Result = BaseResult[:subscription, :payment_method]
+
     def initialize(customer:, plan:, params:)
       super
 

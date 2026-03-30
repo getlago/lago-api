@@ -6,6 +6,10 @@ module Events
       include Events::Stores::Utils::QueryHelpers
       include Events::Stores::Utils::ClickhouseSqlHelpers
 
+      # Give ClickHouse time to consume and merge the `events_enriched` event
+      # processed on the events processor side
+      CLICKHOUSE_MERGE_DELAY = 15.seconds
+
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = if deduplicate

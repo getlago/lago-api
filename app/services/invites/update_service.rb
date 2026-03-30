@@ -2,7 +2,8 @@
 
 module Invites
   class UpdateService < BaseService
-    def initialize(invite:, params:)
+    def initialize(user:, invite:, params:)
+      @user = user
       @invite = invite
       @params = params
 
@@ -13,6 +14,7 @@ module Invites
       return result.not_found_failure!(resource: "invite") unless invite
       return result.forbidden_failure!(code: "cannot_update_accepted_invite") if invite.accepted?
       return result.forbidden_failure!(code: "cannot_update_revoked_invite") if invite.revoked?
+      return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
       return result unless valid_roles?
 
       invite.update!(roles: params[:roles])
@@ -25,7 +27,14 @@ module Invites
 
     private
 
-    attr_reader :invite, :params
+    attr_reader :user, :invite, :params
+
+    def granting_admin_without_being_admin?
+      return false unless params[:roles]&.include?("admin")
+
+      acting_membership = invite.organization.memberships.active.find_by(user:)
+      !acting_membership&.admin?
+    end
 
     def valid_roles?
       roles = params[:roles]

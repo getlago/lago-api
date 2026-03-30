@@ -420,6 +420,14 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
           it "does not return charges_from_datetime" do
             expect(result).to eq("")
           end
+
+          context "when current_usage is true" do
+            let(:current_usage) { true }
+
+            it "returns charges_from_datetime" do
+              expect(result).to eq("2023-01-01 00:00:00 UTC")
+            end
+          end
         end
       end
 
@@ -569,6 +577,14 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
 
           it "does not return charges_to_datetime" do
             expect(result).to eq("")
+          end
+
+          context "when current_usage is true" do
+            let(:current_usage) { true }
+
+            it "returns charges_to_datetime" do
+              expect(result).to eq("2023-06-30 23:59:59 UTC")
+            end
           end
         end
       end

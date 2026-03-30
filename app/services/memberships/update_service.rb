@@ -4,7 +4,8 @@ module Memberships
   class UpdateService < BaseService
     Result = BaseResult[:membership]
 
-    def initialize(membership:, params:)
+    def initialize(user:, membership:, params:)
+      @user = user
       @membership = membership
       @params = params
 
@@ -15,6 +16,7 @@ module Memberships
       ActiveRecord::Base.transaction do
         return result.not_found_failure!(resource: "membership") unless membership
         return result.not_found_failure!(resource: "role") if new_roles.blank?
+        return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
         return result.not_allowed_failure!(code: "last_admin") if last_admin_demotion?
 
         roles_to_remove = old_roles - new_roles
@@ -32,7 +34,7 @@ module Memberships
 
     private
 
-    attr_reader :membership, :params
+    attr_reader :user, :membership, :params
 
     def register_security_log
       old_codes = old_roles.map(&:code)
@@ -64,6 +66,14 @@ module Memberships
 
     def old_roles
       @old_roles ||= membership.roles
+    end
+
+    def acting_membership
+      @acting_membership ||= organization.memberships.active.find_by(user:)
+    end
+
+    def granting_admin_without_being_admin?
+      new_roles.any?(&:admin?) && !acting_membership&.admin?
     end
 
     def last_admin_demotion?

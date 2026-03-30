@@ -13,7 +13,7 @@ module Events
     unique :until_executed, on_conflict: :log
 
     def perform(event)
-      Events::PayInAdvanceService.call(event:).raise_if_error!
+      Events::PayInAdvanceService.call!(event:)
     end
 
     def lock_key_arguments
