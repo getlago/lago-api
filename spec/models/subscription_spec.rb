@@ -245,7 +245,7 @@ RSpec.describe Subscription do
       it { is_expected.to be(false) }
     end
 
-    context "when rules are satisfied " do
+    context "when activation rules are satisfied" do
       before do
         create(:subscription_activation_rule, subscription:, status: :satisfied)
       end
