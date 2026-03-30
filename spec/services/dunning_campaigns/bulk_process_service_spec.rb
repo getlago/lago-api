@@ -437,6 +437,81 @@ RSpec.describe DunningCampaigns::BulkProcessService do
       end
     end
 
+    context "when customer has overdue invoices in multiple currencies" do
+      let(:dunning_campaign) { create :dunning_campaign, organization: }
+
+      let(:usd_threshold) do
+        create(
+          :dunning_campaign_threshold,
+          dunning_campaign:,
+          currency: "USD",
+          amount_cents: 40_00
+        )
+      end
+
+      let(:eur_threshold) do
+        create(
+          :dunning_campaign_threshold,
+          dunning_campaign:,
+          currency: "EUR",
+          amount_cents: 20_00
+        )
+      end
+
+      let(:customer) { create :customer, organization:, billing_entity:, currency: "USD" }
+
+      before do
+        usd_threshold
+        eur_threshold
+        billing_entity.update!(applied_dunning_campaign: dunning_campaign)
+      end
+
+      context "when both currencies exceed their thresholds" do
+        before do
+          create(:invoice, organization:, customer:, currency: "USD", payment_overdue: true, total_amount_cents: 50_00)
+          create(:invoice, organization:, customer:, currency: "EUR", payment_overdue: true, total_amount_cents: 25_00)
+        end
+
+        it "enqueues a ProcessAttemptJob for each currency" do
+          result
+          expect(DunningCampaigns::ProcessAttemptJob)
+            .to have_been_enqueued.with(customer:, dunning_campaign_threshold: usd_threshold)
+          expect(DunningCampaigns::ProcessAttemptJob)
+            .to have_been_enqueued.with(customer:, dunning_campaign_threshold: eur_threshold)
+        end
+      end
+
+      context "when only one currency exceeds its threshold" do
+        before do
+          create(:invoice, organization:, customer:, currency: "USD", payment_overdue: true, total_amount_cents: 50_00)
+          create(:invoice, organization:, customer:, currency: "EUR", payment_overdue: true, total_amount_cents: 15_00)
+        end
+
+        it "enqueues a ProcessAttemptJob only for the matching currency" do
+          result
+          expect(DunningCampaigns::ProcessAttemptJob)
+            .to have_been_enqueued.with(customer:, dunning_campaign_threshold: usd_threshold)
+          expect(DunningCampaigns::ProcessAttemptJob)
+            .not_to have_been_enqueued.with(customer:, dunning_campaign_threshold: eur_threshold)
+        end
+      end
+
+      context "when overdue invoices exist in a currency without a threshold" do
+        before do
+          create(:invoice, organization:, customer:, currency: "USD", payment_overdue: true, total_amount_cents: 50_00)
+          create(:invoice, organization:, customer:, currency: "GBP", payment_overdue: true, total_amount_cents: 100_00)
+        end
+
+        it "only enqueues for currencies with matching thresholds" do
+          result
+          expect(DunningCampaigns::ProcessAttemptJob)
+            .to have_been_enqueued.with(customer:, dunning_campaign_threshold: usd_threshold)
+          expect(DunningCampaigns::ProcessAttemptJob)
+            .to have_been_enqueued.once
+        end
+      end
+    end
+
     context "when organization has multiple billing entities with different applied dunning campaigns" do
       let(:billing_entity_1) { create :billing_entity, organization:, applied_dunning_campaign: dunning_campaign_1 }
       let(:billing_entity_2) { create :billing_entity, organization:, applied_dunning_campaign: dunning_campaign_2 }

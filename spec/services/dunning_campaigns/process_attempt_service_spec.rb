@@ -212,6 +212,36 @@ RSpec.describe DunningCampaigns::ProcessAttemptService do
       end
     end
 
+    context "when customer has overdue invoices in multiple currencies" do
+      let(:usd_invoice) do
+        create :invoice, organization:, customer:, currency: "USD", payment_overdue: true, total_amount_cents: 200_00
+      end
+
+      let(:eur_invoice) do
+        create :invoice, organization:, customer:, currency:, payment_overdue: true, total_amount_cents: 150_00
+      end
+
+      let(:dunning_campaign_threshold) do
+        create :dunning_campaign_threshold, dunning_campaign:, currency:, amount_cents: 100_00
+      end
+
+      before do
+        usd_invoice
+        eur_invoice
+      end
+
+      it "creates a payment request with only invoices matching the threshold currency" do
+        result
+        expect(PaymentRequests::CreateService).to have_received(:call) do |args|
+          expect(args[:organization]).to eq(organization)
+          expect(args[:dunning_campaign]).to eq(dunning_campaign)
+          expect(args[:params][:external_customer_id]).to eq(customer.external_id)
+          expect(args[:params][:lago_invoice_ids]).to include(eur_invoice.id)
+          expect(args[:params][:lago_invoice_ids]).not_to include(usd_invoice.id)
+        end
+      end
+    end
+
     context "when a customer has invoices that are not ready for payment processing" do
       let(:invoice_5) { create :invoice, organization:, customer:, currency:, payment_overdue: true, ready_for_payment_processing: false, total_amount_cents: 99_00 }
 
