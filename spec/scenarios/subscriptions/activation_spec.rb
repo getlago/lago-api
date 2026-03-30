@@ -42,7 +42,7 @@ describe "Subscriptions Activation Scenario" do
     end
 
     travel_to(subscription_at) do
-      Subscriptions::ActivateService.new(timestamp: Time.current.to_i).activate_all_pending
+      Subscriptions::ActivateAllPendingService.call!(timestamp: Time.current.to_i)
 
       expect(subscription.reload).to be_active
     end
@@ -67,7 +67,7 @@ describe "Subscriptions Activation Scenario" do
     end
 
     travel_to(subscription_at) do
-      Subscriptions::ActivateService.new(timestamp: Time.current.to_i).activate_all_pending
+      Subscriptions::ActivateAllPendingService.call!(timestamp: Time.current.to_i)
       perform_enqueued_jobs
 
       expect(subscription.reload).to be_active

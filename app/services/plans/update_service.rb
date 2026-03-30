@@ -2,6 +2,8 @@
 
 module Plans
   class UpdateService < BaseService
+    Result = BaseResult[:plan]
+
     def initialize(plan:, params:, partial_metadata: false)
       @plan = plan
       @params = params

@@ -2,6 +2,8 @@
 
 module Wallets
   class UpdateService < BaseService
+    Result = BaseResult[:wallet, :billable_metrics, :billable_metric_identifiers, :payment_method]
+
     def initialize(wallet:, params:, partial_metadata: false)
       @wallet = wallet
       @params = params

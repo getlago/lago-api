@@ -2,6 +2,8 @@
 
 module Subscriptions
   class FreeTrialBillingService < BaseService
+    Result = BaseResult
+
     def initialize(timestamp: Time.current)
       @timestamp = timestamp
 
@@ -31,6 +33,8 @@ module Subscriptions
           Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
         end
       end
+
+      result
     end
 
     private

@@ -2,6 +2,8 @@
 
 module Plans
   class ApplyTaxesService < BaseService
+    Result = BaseResult[:applied_taxes]
+
     def initialize(plan:, tax_codes:)
       @plan = plan
       @tax_codes = tax_codes

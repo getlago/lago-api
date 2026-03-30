@@ -6,6 +6,8 @@ module Subscriptions
   # Subscriptions::ConsumeSubscriptionRefreshedQueueV2Service.
   # Remove this service once the legacy key is fully drained after deployment.
   class ConsumeSubscriptionRefreshedQueueService < BaseService
+    Result = BaseResult
+
     REDIS_STORE_NAME = "subscription_refreshed"
     BATCH_SIZE = 100
     PROCESSING_TIMEOUT = 1.minute

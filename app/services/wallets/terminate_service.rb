@@ -2,6 +2,8 @@
 
 module Wallets
   class TerminateService < BaseService
+    Result = BaseResult[:wallet]
+
     def initialize(wallet:)
       @wallet = wallet
       super

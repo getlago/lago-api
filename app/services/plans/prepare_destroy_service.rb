@@ -2,6 +2,8 @@
 
 module Plans
   class PrepareDestroyService < BaseService
+    Result = BaseResult[:plan]
+
     def initialize(plan:)
       @plan = plan
       super

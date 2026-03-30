@@ -2,19 +2,19 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::ActivateService, clickhouse: true do
+RSpec.describe Subscriptions::ActivateAllPendingService, clickhouse: true do
   subject(:activate_service) { described_class.new(timestamp: timestamp.to_i) }
 
   let(:timestamp) { Time.current }
 
-  describe ".activate_all_pending" do
+  describe ".call" do
     it "activates all pending subscriptions with subscription date set to today" do
       create(:subscription)
       create_list(:subscription, 2, :pending, subscription_at: timestamp)
       create(:subscription, :pending, subscription_at: timestamp, plan: create(:plan, pay_in_advance: true))
       create_list(:subscription, 2, :pending, subscription_at: (timestamp + 10.days))
 
-      expect { activate_service.activate_all_pending }
+      expect { activate_service.call }
         .to change(Subscription.pending, :count).by(-3)
         .and change(Subscription.active, :count).by(3)
         .and have_enqueued_job(SendWebhookJob).exactly(3).times
@@ -34,7 +34,7 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
       end
 
       it "creates fixed charge events for the new subscription" do
-        expect { activate_service.activate_all_pending }.to change(FixedChargeEvent, :count).by(1)
+        expect { activate_service.call }.to change(FixedChargeEvent, :count).by(1)
         expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp)).to match_array(
           [
             [fixed_charge_1.id, be_within(5.seconds).of(Time.current)]
@@ -43,14 +43,14 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
       end
 
       it "schedules BillSubscriptionJob" do
-        expect { activate_service.activate_all_pending }.to have_enqueued_job(BillSubscriptionJob)
+        expect { activate_service.call }.to have_enqueued_job(BillSubscriptionJob)
       end
 
       context "when fixed charge is pay in advance" do
         let(:fixed_charge_1) { create(:fixed_charge, plan:, pay_in_advance: true) }
 
         it "does not schedule Invoices::CreatePayInAdvanceFixedChargesJob" do
-          expect { activate_service.activate_all_pending }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          expect { activate_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
         end
       end
 
@@ -58,7 +58,7 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
         let(:fixed_charge_1) { create(:fixed_charge, plan:, pay_in_advance: false) }
 
         it "does not schedule Invoices::CreatePayInAdvanceFixedChargesJob" do
-          expect { activate_service.activate_all_pending }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          expect { activate_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
         end
       end
     end
@@ -74,7 +74,7 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
       end
 
       it "creates fixed charge events for the new subscription" do
-        expect { activate_service.activate_all_pending }.to change(FixedChargeEvent, :count).by(1)
+        expect { activate_service.call }.to change(FixedChargeEvent, :count).by(1)
         expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp)).to match_array(
           [
             [fixed_charge_1.id, be_within(5.seconds).of(Time.current)]
@@ -83,14 +83,14 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
       end
 
       it "does not schedule BillSubscriptionJob" do
-        expect { activate_service.activate_all_pending }.not_to have_enqueued_job(BillSubscriptionJob)
+        expect { activate_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
       end
 
       context "when fixed charge is pay in advance" do
         let(:fixed_charge_1) { create(:fixed_charge, plan:, pay_in_advance: true) }
 
         it "schedules Invoices::CreatePayInAdvanceFixedChargesJob" do
-          expect { activate_service.activate_all_pending }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          expect { activate_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
         end
       end
 
@@ -98,7 +98,7 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
         let(:fixed_charge_1) { create(:fixed_charge, plan:, pay_in_advance: false) }
 
         it "does not schedule Invoices::CreatePayInAdvanceFixedChargesJob" do
-          expect { activate_service.activate_all_pending }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          expect { activate_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
         end
       end
     end
@@ -117,13 +117,13 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
 
       it "enqueues Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob" do
         allow(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to receive(:perform_later)
-        activate_service.activate_all_pending
+        activate_service.call
         expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
           .to have_received(:perform_later).with(subscription: pending_subscription)
       end
 
       it "takes timezone into account" do
-        activate_service.activate_all_pending
+        activate_service.call
         expect(pending_subscription.reload).to be_active
       end
     end
@@ -143,7 +143,7 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
       end
 
       it do
-        expect { activate_service.activate_all_pending }
+        expect { activate_service.call }
           .to change(Subscription.pending, :count).by(-2)
           .and change(Subscription.active, :count).by(2)
           .and have_enqueued_job(SendWebhookJob).exactly(2).times
@@ -151,7 +151,7 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
       end
 
       it "enqueues CreatePayInAdvanceFixedChargesJob for pay-in-advance fixed charges even during trial" do
-        expect { activate_service.activate_all_pending }
+        expect { activate_service.call }
           .to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob).once
       end
     end

@@ -5,7 +5,7 @@ module Clock
     unique :until_executed, on_conflict: :log
 
     def perform
-      Subscriptions::ActivateService.new(timestamp: Time.current.to_i).activate_all_pending
+      Subscriptions::ActivateAllPendingService.call!(timestamp: Time.current.to_i)
     end
   end
 end
