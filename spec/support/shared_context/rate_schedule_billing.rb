@@ -11,7 +11,7 @@ RSpec.shared_context "with rate schedule billing" do
   let(:plan_product_item) { create(:plan_product_item, organization:, plan:, product_item: subscription_item) }
   let(:billing_interval_count) { 1 }
   let(:prorated) { false }
-  let(:anchor_date) { nil }
+  let(:billing_anchor_date) { nil }
   let(:rate_schedule) do
     create(
       :rate_schedule,
@@ -42,7 +42,7 @@ RSpec.shared_context "with rate schedule billing" do
       external_id:,
       started_at:,
       subscription_at: started_at,
-      anchor_date:,
+      billing_anchor_date:,
       status: :active,
       billing_time: :calendar
     )

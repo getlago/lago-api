@@ -132,7 +132,7 @@ describe "Rate Schedules Timezone Billing" do
     context "with UTC+ timezone (Europe/Paris, +01:00)" do
       let(:timezone) { "Europe/Paris" }
       let(:subscription_time) { DateTime.new(2024, 2, 15) }
-      let(:anchor_date) { Date.new(2024, 3, 1) }
+      let(:billing_anchor_date) { Date.new(2024, 3, 1) }
 
       let(:before_billing_times) do
         [DateTime.new(2024, 2, 29, 22, 0)] # Feb 29 22:00 UTC = Feb 29 23:00 CET
@@ -150,7 +150,7 @@ describe "Rate Schedules Timezone Billing" do
     context "with UTC- timezone (America/Bogota, -05:00)" do
       let(:timezone) { "America/Bogota" }
       let(:subscription_time) { DateTime.new(2024, 2, 15) }
-      let(:anchor_date) { Date.new(2024, 3, 1) }
+      let(:billing_anchor_date) { Date.new(2024, 3, 1) }
 
       let(:before_billing_times) do
         [DateTime.new(2024, 3, 1, 4, 0)] # Mar 1 04:00 UTC = Feb 29 23:00 COT
@@ -174,7 +174,7 @@ describe "Rate Schedules Timezone Billing" do
     context "with UTC+ timezone (Asia/Kolkata, +05:30)" do
       let(:timezone) { "Asia/Kolkata" }
       let(:subscription_time) { DateTime.new(2024, 2, 1) }
-      let(:anchor_date) { Date.new(2024, 4, 1) }
+      let(:billing_anchor_date) { Date.new(2024, 4, 1) }
 
       # next_billing_date = Apr 1
       let(:before_billing_times) do
