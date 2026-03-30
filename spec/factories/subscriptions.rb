@@ -12,7 +12,9 @@ FactoryBot.define do
 
     trait :pending do
       status { :pending }
+      subscription_at { nil }
       started_at { nil }
+      incompleted_at { nil }
     end
 
     trait :canceled do
@@ -24,6 +26,13 @@ FactoryBot.define do
       status { :terminated }
       started_at { 1.month.ago }
       terminated_at { Time.zone.now }
+    end
+
+    trait :incomplete do
+      status { :incomplete }
+      subscription_at { nil }
+      started_at { nil }
+      incompleted_at { Time.current }
     end
 
     trait :calendar do

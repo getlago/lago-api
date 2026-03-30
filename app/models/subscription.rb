@@ -72,7 +72,7 @@ class Subscription < ApplicationRecord
   enum :cancelation_reason, CANCELATION_REASONS
 
   validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
-  validates :started_at, presence: true, if: -> { active? || incomplete? }
+  validates :started_at, presence: true, if: -> { active? }
 
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
 
@@ -118,7 +118,6 @@ class Subscription < ApplicationRecord
   end
 
   def mark_as_incomplete!(timestamp = Time.current)
-    self.started_at ||= timestamp
     self.incompleted_at ||= timestamp
     incomplete!
   end
