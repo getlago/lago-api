@@ -70,6 +70,8 @@ RSpec.describe Mutations::Invites::Update do
         )
 
         expect_forbidden_error(result)
+        error = result["errors"].first
+        expect(error["extensions"]["code"]).to eq("cannot_grant_admin")
       end
     end
 
