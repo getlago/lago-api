@@ -294,6 +294,56 @@ RSpec.describe DunningCampaigns::UpdateService do
           end
         end
 
+        context "when customer has overdue invoices in a non-default currency matching a threshold" do
+          let(:dunning_campaign) { create(:dunning_campaign, organization:) }
+          let(:dunning_campaign_threshold) { create(:dunning_campaign_threshold, dunning_campaign:, currency: "EUR") }
+
+          let(:usd_threshold) do
+            create(:dunning_campaign_threshold, dunning_campaign:, currency: "USD", amount_cents: 50_00)
+          end
+
+          let(:thresholds_input) do
+            [
+              {
+                id: dunning_campaign_threshold.id,
+                amount_cents: dunning_campaign_threshold.amount_cents,
+                currency: "EUR"
+              },
+              {
+                id: usd_threshold.id,
+                amount_cents: 40_00,
+                currency: "USD"
+              }
+            ]
+          end
+
+          let(:multi_currency_customer) do
+            create(
+              :customer,
+              currency: "EUR",
+              applied_dunning_campaign: dunning_campaign,
+              last_dunning_campaign_attempt: 3,
+              last_dunning_campaign_attempt_at: 1.day.ago,
+              organization:,
+              billing_entity:
+            )
+          end
+
+          before do
+            usd_threshold
+            create(
+              :invoice,
+              organization:,
+              customer: multi_currency_customer,
+              payment_overdue: true,
+              total_amount_cents: 45_00,
+              currency: "USD"
+            )
+          end
+
+          include_examples "does not reset customer last dunning campaign attempt fields", :multi_currency_customer
+        end
+
         context "when threshold currency changes but it still applies to the customer" do
           let(:thresholds_input) do
             [
