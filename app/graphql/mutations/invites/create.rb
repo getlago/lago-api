@@ -19,6 +19,7 @@ module Mutations
       def resolve(**args)
         result = ::Invites::CreateService.call(
           current_organization:,
+          user: context[:current_user],
           email: args[:email],
           roles: args[:roles]
         )

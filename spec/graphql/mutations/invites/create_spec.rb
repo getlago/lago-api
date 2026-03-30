@@ -66,129 +66,139 @@ RSpec.describe Mutations::Invites::Create do
     end
   end
 
-  it "creates an invite with admin role using roles param" do
-    create(:role, :admin)
+  context "when creating an invite with admin role" do
+    it "creates an invite with admin role when acting user is admin" do
+      admin_role = create(:role, :admin)
+      create(:membership_role, membership:, role: admin_role)
 
-    roles_mutation = <<~GQL
-      mutation($input: CreateInviteInput!) {
-        createInvite(input: $input) {
-          id
-          token
-          email
-          roles
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            email:,
+            roles: ["admin"]
+          }
         }
-      }
-    GQL
+      )
 
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: required_permission,
-      query: roles_mutation,
-      variables: {
-        input: {
-          email:,
-          roles: ["admin"]
+      data = result["data"]["createInvite"]
+
+      expect(data["email"]).to eq(email)
+      expect(data["roles"]).to eq(["admin"])
+    end
+
+    it "prevents non-admin from creating an invite with admin role" do
+      create(:role, :admin)
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            email:,
+            roles: ["admin"]
+          }
         }
-      }
-    )
+      )
 
-    data = result["data"]["createInvite"]
-
-    expect(data["email"]).to eq(email)
-    expect(data["roles"]).to eq(["admin"])
+      expect_forbidden_error(result)
+      error = result["errors"].first
+      expect(error["extensions"]["code"]).to eq("cannot_grant_admin")
+    end
   end
 
-  it "creates an invite with custom role" do
-    create(:role, code: "developer", name: "Developer", organization:, permissions: %w[organization:view])
+  context "when creating an invite with custom role" do
+    it "creates an invite" do
+      create(:role, code: "developer", name: "Developer", organization:, permissions: %w[organization:view])
 
-    roles_mutation = <<~GQL
-      mutation($input: CreateInviteInput!) {
-        createInvite(input: $input) {
-          id
-          token
-          email
-          roles
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            email:,
+            roles: ["developer"]
+          }
         }
-      }
-    GQL
+      )
 
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: required_permission,
-      query: roles_mutation,
-      variables: {
-        input: {
-          email:,
-          roles: ["developer"]
-        }
-      }
-    )
+      data = result["data"]["createInvite"]
 
-    data = result["data"]["createInvite"]
-
-    expect(data["email"]).to eq(email)
-    expect(data["roles"]).to eq(["developer"])
+      expect(data["email"]).to eq(email)
+      expect(data["roles"]).to eq(["developer"])
+    end
   end
 
-  it "creates an invite for a revoked user" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          email: revoked_membership.user.email,
-          roles:
+  context "when creating an invite for a revoked user" do
+    it "creates an invite" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            email: revoked_membership.user.email,
+            roles:
+          }
         }
-      }
-    )
+      )
 
-    data = result["data"]["createInvite"]
+      data = result["data"]["createInvite"]
 
-    expect(data["email"]).to eq(revoked_membership.user.email)
-    expect(data["token"]).to be_present
+      expect(data["email"]).to eq(revoked_membership.user.email)
+      expect(data["token"]).to be_present
+    end
   end
 
-  it "returns an error if invite already exists" do
-    create(:invite, email:, recipient: membership, organization: membership.organization)
+  context "when invite already exists" do
+    it "returns an error" do
+      create(:invite, email:, recipient: membership, organization: membership.organization)
 
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          email:,
-          roles:
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            email:,
+            roles:
+          }
         }
-      }
-    )
+      )
 
-    expect(result["errors"].first["extensions"]["status"]).to eq(422)
-    expect(result["errors"].first["extensions"]["code"]).to eq("unprocessable_entity")
-    expect(result["errors"].first["extensions"]["details"]["invite"]).to eq(["invite_already_exists"])
+      expect(result["errors"].first["extensions"]["status"]).to eq(422)
+      expect(result["errors"].first["extensions"]["code"]).to eq("unprocessable_entity")
+      expect(result["errors"].first["extensions"]["details"]["invite"]).to eq(["invite_already_exists"])
+    end
   end
 
-  it "returns an error if email already attached to a user of the organization" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          email: membership.user.email,
-          roles:
+  context "when email already attached to a user of the organization" do
+    it "returns an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            email: membership.user.email,
+            roles:
+          }
         }
-      }
-    )
+      )
 
-    expect(result["errors"].first["extensions"]["status"]).to eq(422)
-    expect(result["errors"].first["extensions"]["code"]).to eq("unprocessable_entity")
-    expect(result["errors"].first["extensions"]["details"]["email"]).to eq(["email_already_used"])
+      expect(result["errors"].first["extensions"]["status"]).to eq(422)
+      expect(result["errors"].first["extensions"]["code"]).to eq("unprocessable_entity")
+      expect(result["errors"].first["extensions"]["details"]["email"]).to eq(["email_already_used"])
+    end
   end
 end

@@ -93,7 +93,9 @@ RSpec.describe Mutations::Memberships::Update do
     end
 
     it "prevents a non-admin member from promoting themselves to admin" do
-      expect_graphql_error(result:, message: "cannot_grant_admin")
+      expect_forbidden_error(result)
+      error = result["errors"].first
+      expect(error["extensions"]["code"]).to eq("cannot_grant_admin")
     end
   end
 
@@ -131,7 +133,9 @@ RSpec.describe Mutations::Memberships::Update do
     end
 
     it "prevents a non-admin from promoting another member to admin" do
-      expect_graphql_error(result:, message: "cannot_grant_admin")
+      expect_forbidden_error(result)
+      error = result["errors"].first
+      expect(error["extensions"]["code"]).to eq("cannot_grant_admin")
     end
   end
 end

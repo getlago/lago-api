@@ -66,6 +66,7 @@ RSpec.describe Memberships::UpdateService do
         result = described_class.call(user: acting_user, membership:, params:)
 
         expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("cannot_grant_admin")
       end
 
