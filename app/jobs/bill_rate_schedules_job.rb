@@ -20,6 +20,14 @@ class BillRateSchedulesJob < ApplicationJob
       .includes(:subscription, :rate_schedule, :product_item)
     return if subscription_rate_schedules.empty?
 
+    customer = subscription_rate_schedules.first.subscription.customer
+    billing_date = Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
+
+    subscription_rate_schedules = subscription_rate_schedules
+      .where(next_billing_date: ..billing_date)
+      .where("intervals_to_bill IS NULL OR intervals_billed < intervals_to_bill")
+    return if subscription_rate_schedules.empty?
+
     Invoices::RateSchedulesBillingService.call!(
       subscription_rate_schedules:,
       timestamp:

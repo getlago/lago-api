@@ -8,6 +8,8 @@ class SubscriptionRateSchedule < ApplicationRecord
   belongs_to :product_item, -> { with_discarded }
   belongs_to :rate_schedule, -> { with_discarded }
 
+  has_many :cycles, class_name: "SubscriptionRateScheduleCycle", dependent: :delete_all
+
   STATUSES = {pending: "pending", active: "active", terminated: "terminated"}.freeze
 
   enum :status, STATUSES, validate: true

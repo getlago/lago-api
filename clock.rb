@@ -68,6 +68,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.hour, "schedule:generate_rate_schedule_cycles", at: "*:05") do
+    Clock::RateSchedulesGenerateCyclesJob
+      .set(sentry: {"slug" => "lago_generate_rate_schedule_cycles", "cron" => "5 */1 * * *"})
+      .perform_later
+  end
+
   every(1.hour, "schedule:bill_rate_schedules", at: "*:10") do
     Clock::RateSchedulesBillerJob
       .set(sentry: {"slug" => "lago_bill_rate_schedules", "cron" => "10 */1 * * *"})

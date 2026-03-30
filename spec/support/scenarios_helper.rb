@@ -411,6 +411,9 @@ module ScenariosHelper
 
   def perform_rate_schedules_billing
     clock_job do
+      Clock::RateSchedulesGenerateCyclesJob.perform_later
+    end
+    clock_job do
       Clock::RateSchedulesBillerJob.perform_later
     end
   end

@@ -11,16 +11,21 @@ RSpec.describe RateSchedules::OrganizationBillingService do
   describe "#call" do
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, organization:, customer:) }
+    let(:rate_schedule) do
+      create(:rate_schedule,
+        organization:,
+        billing_interval_unit: :month,
+        billing_interval_count: 1)
+    end
 
-    context "when subscription_rate_schedule is billable" do
+    context "when first billing period has elapsed" do
       let!(:srs) do
         create(:subscription_rate_schedule,
           organization:,
           subscription:,
+          rate_schedule:,
           status: :active,
-          next_billing_date: billing_at.to_date,
-          intervals_billed: 0,
-          intervals_to_bill: nil)
+          started_at: 2.months.ago)
       end
 
       it "enqueues a BillRateSchedulesJob" do
@@ -30,50 +35,14 @@ RSpec.describe RateSchedules::OrganizationBillingService do
       end
     end
 
-    context "when intervals_to_bill is reached" do
-      before do
-        create(:subscription_rate_schedule,
-          organization:,
-          subscription:,
-          status: :active,
-          next_billing_date: billing_at.to_date,
-          intervals_billed: 6,
-          intervals_to_bill: 6)
-      end
-
-      it "does not enqueue a BillRateSchedulesJob" do
-        billing_service.call
-
-        expect(BillRateSchedulesJob).not_to have_been_enqueued
-      end
-    end
-
-    context "when intervals_to_bill is not yet reached" do
+    context "when first billing period has not elapsed yet" do
       let!(:srs) do
         create(:subscription_rate_schedule,
           organization:,
           subscription:,
+          rate_schedule:,
           status: :active,
-          next_billing_date: billing_at.to_date,
-          intervals_billed: 5,
-          intervals_to_bill: 6)
-      end
-
-      it "enqueues a BillRateSchedulesJob" do
-        billing_service.call
-
-        expect(BillRateSchedulesJob).to have_been_enqueued.with([srs.id], billing_at.to_i)
-      end
-    end
-
-    context "when next_billing_date is in the future" do
-      before do
-        create(:subscription_rate_schedule,
-          organization:,
-          subscription:,
-          status: :active,
-          next_billing_date: billing_at.to_date + 1.day,
-          intervals_billed: 0)
+          started_at: 1.day.ago)
       end
 
       it "does not enqueue a BillRateSchedulesJob" do
@@ -88,9 +57,9 @@ RSpec.describe RateSchedules::OrganizationBillingService do
         create(:subscription_rate_schedule,
           organization:,
           subscription:,
+          rate_schedule:,
           status: :terminated,
-          next_billing_date: billing_at.to_date,
-          intervals_billed: 0)
+          started_at: 2.months.ago)
       end
 
       it "does not enqueue a BillRateSchedulesJob" do
