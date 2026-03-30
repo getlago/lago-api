@@ -4,6 +4,7 @@ module Quotes
   class BillingItemsValidator < BaseValidator
     def valid?
       validate_format
+      validate_schema
       validate_keys_for_order_type
       validate_no_duplicates
       validate_subscription_external_ids
@@ -38,6 +39,21 @@ module Quotes
 
     def validate_format
       add_error(field: :billing_items, error_code: "invalid_format") unless billing_items.is_a?(Hash)
+    end
+
+    def validate_schema
+      return if invalid_format?
+
+      schema_validator = Validators::JsonSchemaValidator.new(
+        billing_items,
+        schema: BillingItemsSchema::BILLING_ITEMS_SCHEMA
+      )
+
+      return if schema_validator.valid?
+
+      schema_validator.errors.each do |err|
+        add_error(field: :billing_items, error_code: "invalid_schema_at_#{err[:path]}")
+      end
     end
 
     def validate_keys_for_order_type

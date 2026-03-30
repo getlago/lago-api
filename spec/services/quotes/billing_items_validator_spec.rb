@@ -310,5 +310,91 @@ RSpec.describe Quotes::BillingItemsValidator do
         expect(validator).to be_valid
       end
     end
+
+    context "with schema validation" do
+      context "when unknown top-level key is present" do
+        let(:billing_items) do
+          {
+            "plan" => {
+              "id" => SecureRandom.uuid,
+              "position" => 1,
+              "plan_id" => SecureRandom.uuid,
+              "plan_name" => "Plan"
+            },
+            "coupons" => [],
+            "wallet_credits" => [],
+            "bogus_key" => "unexpected"
+          }
+        end
+
+        it "returns false with schema error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages[:billing_items]).to include("invalid_schema_at_bogus_key")
+        end
+      end
+
+      context "when coupons has wrong type" do
+        let(:billing_items) do
+          {
+            "plan" => {
+              "id" => SecureRandom.uuid,
+              "position" => 1,
+              "plan_id" => SecureRandom.uuid,
+              "plan_name" => "Plan"
+            },
+            "coupons" => "not_an_array",
+            "wallet_credits" => []
+          }
+        end
+
+        it "returns false with schema error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages[:billing_items]).to include("invalid_schema_at_coupons")
+        end
+      end
+
+      context "when nested plan has unknown key" do
+        let(:billing_items) do
+          {
+            "plan" => {
+              "id" => SecureRandom.uuid,
+              "position" => 1,
+              "plan_id" => SecureRandom.uuid,
+              "plan_name" => "Plan",
+              "unexpected_field" => true
+            },
+            "coupons" => [],
+            "wallet_credits" => []
+          }
+        end
+
+        it "returns false with schema error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages[:billing_items]).to include("invalid_schema_at_plan.unexpected_field")
+        end
+      end
+
+      context "when add_on item has wrong type for position" do
+        let(:order_type) { "one_off" }
+        let(:billing_items) do
+          {
+            "add_ons" => [
+              {
+                "id" => SecureRandom.uuid,
+                "position" => "not_an_integer",
+                "add_on_id" => SecureRandom.uuid,
+                "name" => "Setup fee",
+                "amount_cents" => 100
+              }
+            ]
+          }
+        end
+
+        it "returns false with schema error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages[:billing_items]).to include("invalid_schema_at_add_ons[0].position")
+        end
+      end
+    end
   end
 end
