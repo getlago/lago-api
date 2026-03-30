@@ -56,12 +56,10 @@ module Invoices
     end
 
     def create_invoice_subscriptions
-      @invoice_subscriptions_by_subscription = {}
-
-      subscription_rate_schedules.group_by(&:subscription_id).each do |_subscription_id, srs_group|
+      subscription_rate_schedules.group_by(&:subscription_id).each_value do |srs_group|
         subscription = srs_group.first.subscription
 
-        invoice_subscription = InvoiceSubscription.create!(
+        InvoiceSubscription.create!(
           organization: subscription.organization,
           invoice:,
           subscription:,
@@ -69,14 +67,12 @@ module Invoices
           recurring: true,
           invoicing_reason: :subscription_periodic
         )
-
-        @invoice_subscriptions_by_subscription[subscription.id] = invoice_subscription
       end
     end
 
     def create_fees
       subscription_rate_schedules.each do |srs|
-        create_fee(srs)
+        create_fee(srs) # Must run before update_next_billing_date! — fee_properties reads current boundaries
         srs.update_next_billing_date!(billed: true)
       end
     end
@@ -126,6 +122,8 @@ module Invoices
       when "usage"
         # TODO: Aggregation + charge model pipeline (reuses v1 layers via Chargeable interface)
         [0, BigDecimal("0")]
+      else
+        raise "Unknown item_type: #{pi.item_type}"
       end
     end
 
