@@ -31,9 +31,7 @@ class Subscription < ApplicationRecord
     class_name: "Clickhouse::ActivityLog",
     foreign_key: :external_subscription_id,
     primary_key: :external_id
-  has_many :activation_rules,
-    class_name: "Subscription::ActivationRule",
-    dependent: :destroy
+  has_many :activation_rules, class_name: "Subscription::ActivationRule"
   has_many :applied_invoice_custom_sections,
     class_name: "Subscription::AppliedInvoiceCustomSection",
     dependent: :destroy

@@ -61,7 +61,7 @@ RSpec.describe Subscription do
       expect(subject).to have_many(:entitlements).class_name("Entitlement::Entitlement")
       expect(subject).to have_many(:entitlement_removals).class_name("Entitlement::SubscriptionFeatureRemoval")
       expect(subject).to have_many(:alerts).class_name("UsageMonitoring::Alert")
-      expect(subject).to have_many(:activation_rules).class_name("Subscription::ActivationRule").dependent(:destroy)
+      expect(subject).to have_many(:activation_rules).class_name("Subscription::ActivationRule")
     end
   end
 
