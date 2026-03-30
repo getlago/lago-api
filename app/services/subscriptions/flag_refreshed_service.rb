@@ -12,6 +12,7 @@ module Subscriptions
     def call
       customer = subscription.customer
       customer.flag_wallets_for_refresh
+      Subscriptions::ChargeCacheService.expire_for_subscription(subscription)
       date = Time.current.in_time_zone(customer.applicable_timezone).to_date
       UsageMonitoring::TrackSubscriptionActivityService.call(subscription:, date:)
 
