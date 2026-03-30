@@ -152,8 +152,45 @@ RSpec.describe Subscription do
 
         before { subscription.incomplete! }
 
-        it "raises validation error" do
+        it "allows an active subscription with the same external_id" do
+          expect(new_subscription).to be_valid
+        end
+      end
+
+      context "when an active and incomplete subscription both exist with the same external_id" do
+        let(:external_id) { subscription.external_id }
+
+        before do
+          create(
+            :subscription,
+            plan:,
+            status: :incomplete,
+            started_at: Time.current,
+            external_id:,
+            customer: create(:customer, organization:)
+          )
+        end
+
+        it "rejects a second active subscription" do
           expect(new_subscription).not_to be_valid
+        end
+      end
+
+      context "when creating an incomplete subscription and one already exists" do
+        let(:external_id) { subscription.external_id }
+
+        before { subscription.incomplete! }
+
+        it "rejects a second incomplete subscription" do
+          incomplete_sub = build(
+            :subscription,
+            plan:,
+            status: :incomplete,
+            started_at: Time.current,
+            external_id:,
+            customer: create(:customer, organization:)
+          )
+          expect(incomplete_sub).not_to be_valid
         end
       end
     end
@@ -203,6 +240,13 @@ RSpec.describe Subscription do
     context "when there are no pending activation rules" do
       before do
         create(:subscription_activation_rule, subscription:, status: :inactive)
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when rules are satisfied " do
+      before do
         create(:subscription_activation_rule, subscription:, status: :satisfied)
       end
 

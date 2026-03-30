@@ -188,7 +188,7 @@ class Subscription < ApplicationRecord
 
   def validate_external_id
     return unless active? || incomplete?
-    return unless organization.subscriptions.where(status: [:active, :incomplete]).exists?(external_id:)
+    return unless organization.subscriptions.where(status:).exists?(external_id:)
 
     errors.add(:external_id, :value_already_exist)
   end
