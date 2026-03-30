@@ -141,6 +141,20 @@ RSpec.shared_examples "a subscription index endpoint" do
     end
   end
 
+  context "with currency filter" do
+    let(:brl_plan) { create(:plan, organization:, amount_currency: "BRL") }
+    let!(:brl_subscription) { create(:subscription, customer:, plan: brl_plan) }
+    let(:params) { {currency: brl_plan.amount_currency} }
+
+    it "returns only subscriptions with matching currency" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:subscriptions].count).to eq(1)
+      expect(json[:subscriptions].first[:lago_id]).to eq(brl_subscription.id)
+    end
+  end
+
   context "with N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
     before do
       create(:subscription, customer:, plan: create(:plan, organization:))
