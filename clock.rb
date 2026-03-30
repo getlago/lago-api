@@ -68,6 +68,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.hour, "schedule:bill_rate_schedules", at: "*:10") do
+    Clock::RateSchedulesBillerJob
+      .set(sentry: {"slug" => "lago_bill_rate_schedules", "cron" => "10 */1 * * *"})
+      .perform_later
+  end
+
   every(1.hour, "schedule:api_keys_track_usage", at: "*:15") do
     Clock::ApiKeys::TrackUsageJob
       .set(sentry: {"slug" => "lago_api_keys_track_usage", "cron" => "15 */1 * * *"})
