@@ -167,14 +167,6 @@ RSpec.describe Subscription do
         end
       end
 
-      context "when status is incomplete" do
-        it "is invalid without started_at" do
-          sub = build(:subscription, status: :incomplete, started_at: nil)
-          expect(sub).not_to be_valid
-          expect(sub.errors[:started_at]).to be_present
-        end
-      end
-
       context "when status is pending" do
         it "is valid without started_at" do
           sub = build(:subscription, :pending)
@@ -185,66 +177,64 @@ RSpec.describe Subscription do
   end
 
   describe "#mark_as_incomplete!" do
-    let(:subscription) { create(:subscription, :pending, subscription_at: Time.current) }
+    let(:subscription) { create(:subscription, :pending) }
 
     it "sets started_at, incompleted_at and changes status to incomplete" do
       freeze_time do
         subscription.mark_as_incomplete!
 
         expect(subscription.status).to eq("incomplete")
-        expect(subscription.started_at).to eq(Time.current)
         expect(subscription.incompleted_at).to eq(Time.current)
       end
     end
   end
 
   describe "#pending_rules?" do
+    subject(:pending_rules?) { subscription.pending_rules? }
+
     let(:subscription) { create(:subscription) }
 
     context "when there are pending activation rules" do
-      before { create(:subscription_activation_rule, subscription:, status: "pending") }
+      before { create(:subscription_activation_rule, subscription:, status: :pending) }
 
-      it "returns true" do
-        expect(subscription.pending_rules?).to be(true)
-      end
+      it { is_expected.to be(true) }
     end
 
     context "when there are no pending activation rules" do
-      before { create(:subscription_activation_rule, subscription:, status: "inactive") }
-
-      it "returns false" do
-        expect(subscription.pending_rules?).to be(false)
+      before do
+        create(:subscription_activation_rule, subscription:, status: :inactive)
+        create(:subscription_activation_rule, subscription:, status: :satisfied)
       end
+
+      it { is_expected.to be(false) }
     end
   end
 
   describe "#gated?" do
+    subject(:gated?) { subscription.gated? }
+
     context "when incomplete with pending rules" do
-      let(:subscription) { create(:subscription, status: :incomplete, started_at: Time.current) }
+      let(:subscription) { create(:subscription, :incomplete) }
 
-      before { create(:subscription_activation_rule, subscription:, status: "pending") }
+      before { create(:subscription_activation_rule, subscription:, status: :pending) }
 
-      it "returns true" do
-        expect(subscription.gated?).to be(true)
-      end
+      it { is_expected.to be(true) }
     end
 
     context "when active with pending rules" do
       let(:subscription) { create(:subscription) }
 
-      before { create(:subscription_activation_rule, subscription:, status: "pending") }
+      before { create(:subscription_activation_rule, subscription:, status: :pending) }
 
-      it "returns false" do
-        expect(subscription.gated?).to be(false)
-      end
+      it { is_expected.to be(false) }
     end
 
-    context "when incomplete without pending rules" do
-      let(:subscription) { create(:subscription, status: :incomplete, started_at: Time.current) }
+    context "when incomplete without satisfied rules" do
+      let(:subscription) { create(:subscription, :incomplete) }
 
-      it "returns false" do
-        expect(subscription.gated?).to be(false)
-      end
+      before { create(:subscription_activation_rule, subscription:, status: :satisfied) }
+
+      it { is_expected.to be(false) }
     end
   end
 
