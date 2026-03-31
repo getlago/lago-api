@@ -33,6 +33,19 @@ module BillableMetrics
       ]
       PerEventAggregationResult = BaseResult[:event_aggregation]
 
+      def self.null_result(result = BaseService::Result.new, grouped_by_keys: nil, apply_aggregation: false)
+        if apply_aggregation && grouped_by_keys.present?
+          result.aggregations = [null_result(grouped_by_keys: grouped_by_keys)]
+        else
+          result.grouped_by = grouped_by_keys.index_with { nil } if grouped_by_keys
+          result.aggregation = 0
+          result.count = 0
+          result.current_usage_units = 0
+          result.options = {running_total: []}
+        end
+        result
+      end
+
       def initialize(event_store_class:, charge:, subscription:, boundaries:, filters: {}, bypass_aggregation: false)
         super(nil)
         @event_store_class = event_store_class
@@ -179,22 +192,11 @@ module BillableMetrics
       end
 
       def empty_result
-        result.aggregation = 0
-        result.count = 0
-        result.current_usage_units = 0
-        result.options = {running_total: []}
-        result
+        self.class.null_result(result)
       end
 
       def empty_results
-        empty_result = BaseService::Result.new
-        empty_result.grouped_by = grouped_by.index_with { nil }
-        empty_result.aggregation = 0
-        empty_result.count = 0
-        empty_result.current_usage_units = 0
-        empty_result.options = {running_total: []}
-
-        result.aggregations = [empty_result]
+        self.class.null_result(result, grouped_by_keys: grouped_by, apply_aggregation: true)
         result
       end
 
