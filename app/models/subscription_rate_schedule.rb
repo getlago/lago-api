@@ -14,6 +14,18 @@ class SubscriptionRateSchedule < ApplicationRecord
 
   validates :intervals_billed, numericality: {greater_than_or_equal_to: 0}
 
+  def exhausted?
+    intervals_to_bill.present? && intervals_billed >= intervals_to_bill
+  end
+
+  # The date after which this rate schedule has no more cycles to bill.
+  # Returns nil if there is no cycle limit (intervals_to_bill is nil).
+  def end_date
+    return nil if intervals_to_bill.nil? || started_at.nil?
+
+    billing_date_for(intervals_to_bill)
+  end
+
   # Returns the start date of the current billing period.
   def current_period_started_at
     billing_date_for(intervals_billed)

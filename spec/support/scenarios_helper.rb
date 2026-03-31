@@ -415,6 +415,12 @@ module ScenariosHelper
     end
   end
 
+  def perform_rate_schedules_activation
+    clock_job do
+      Clock::RateSchedulesActivateJob.perform_later
+    end
+  end
+
   def perform_invoices_refresh
     clock_job do
       Clock::RefreshDraftInvoicesJob.perform_later
