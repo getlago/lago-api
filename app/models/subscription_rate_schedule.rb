@@ -39,12 +39,12 @@ class SubscriptionRateSchedule < ApplicationRecord
   #   Signup Mar 15, monthly → Apr 15, May 15, Jun 15 ...
   #
   # Calendar (billing_anchor_date present + prorated: true + non-daily interval):
-  #   Billing dates align to the anchor. The anchor IS the first billing date (stub).
-  #   Date arithmetic preserves the anchor's relevant component:
-  #     weekly  → same day of week as anchor
-  #     monthly → same day of month as anchor
-  #     yearly  → same month + day as anchor
-  #   Signup Mar 15, anchor Mar 20, monthly → Mar 20 (stub), Apr 20, May 20 ...
+  #   Billing dates align to the billing_anchor_date. The billing_anchor_date IS the first billing date (stub).
+  #   Date arithmetic preserves the billing_anchor_date's relevant component:
+  #     weekly  → same day of week as billing_anchor_date
+  #     monthly → same day of month as billing_anchor_date
+  #     yearly  → same month + day as billing_anchor_date
+  #   Signup Mar 15, billing_anchor_date Mar 20, monthly → Mar 20 (stub), Apr 20, May 20 ...
   def billing_date_for(n)
     if calendar_mode?
       return started_at.to_date if n.zero?
