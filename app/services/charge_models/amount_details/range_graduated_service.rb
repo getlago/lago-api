@@ -3,10 +3,11 @@
 module ChargeModels
   module AmountDetails
     class RangeGraduatedService < ::BaseService
-      def initialize(range:, total_units:)
+      def initialize(range:, total_units:, adjacent_model: false)
         super
         @range = range
         @total_units = total_units
+        @adjacent_model = adjacent_model
       end
 
       def call
@@ -55,16 +56,16 @@ module ChargeModels
 
       # NOTE: compute how many units to bill in the range
       def units
-        # NOTE: total_units is higher than the to_value of the range
-        if to_value && total_units >= to_value
-          return to_value - (from_value.zero? ? 1 : from_value) + 1
+        effective_total = if to_value && BigDecimal(total_units.to_s) >= BigDecimal(to_value.to_s)
+          BigDecimal(to_value.to_s)
+        else
+          BigDecimal(total_units.to_s)
         end
 
-        return to_value - from_value if to_value && total_units >= to_value
-        return total_units if from_value.zero?
+        return effective_total if BigDecimal(from_value.to_s).zero?
 
-        # NOTE: total_units is in the range
-        total_units - from_value + 1
+        diff = effective_total - BigDecimal(from_value.to_s)
+        @adjacent_model ? diff : diff + 1
       end
     end
   end

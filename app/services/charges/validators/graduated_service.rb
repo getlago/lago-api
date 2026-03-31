@@ -17,7 +17,7 @@ module Charges
               add_error(field: :graduated_ranges, error_code: "invalid_graduated_ranges")
             end
 
-            next_from_value = (range[:to_value] || 0) + 1
+            next_from_value = range[:to_value] || 0
           end
         end
 

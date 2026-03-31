@@ -226,6 +226,78 @@ RSpec.describe ChargeModels::GraduatedService do
     end
   end
 
+  context "with decimal adjacent ranges" do
+    let(:charge) do
+      create(
+        :graduated_charge,
+        properties: {
+          graduated_ranges: [
+            {from_value: 0, to_value: 0.1, per_unit_amount: "10", flat_amount: "0"},
+            {from_value: 0.1, to_value: 1, per_unit_amount: "5", flat_amount: "0"},
+            {from_value: 1, to_value: nil, per_unit_amount: "2", flat_amount: "0"}
+          ]
+        }
+      )
+    end
+
+    context "when aggregation is within first tier (0.05)" do
+      let(:aggregation) { 0.05 }
+
+      it "returns expected amount" do
+        expect(apply_graduated_service.amount).to eq(0.5)
+        expect(apply_graduated_service.amount_details).to eq(
+          {
+            graduated_ranges: [
+              {
+                flat_unit_amount: 0,
+                from_value: 0,
+                to_value: 0.1,
+                per_unit_amount: 10,
+                per_unit_total_amount: 0.5,
+                total_with_flat_amount: 0.5,
+                units: "0.05"
+              }
+            ]
+          }
+        )
+      end
+    end
+
+    context "when aggregation spans two tiers (0.5)" do
+      let(:aggregation) { 0.5 }
+
+      it "returns expected amount" do
+        # First tier: 0.1 units * 10 = 1.0
+        # Second tier: 0.4 units * 5 = 2.0
+        expect(apply_graduated_service.amount).to eq(3.0)
+        expect(apply_graduated_service.amount_details).to eq(
+          {
+            graduated_ranges: [
+              {
+                flat_unit_amount: 0,
+                from_value: 0,
+                to_value: 0.1,
+                per_unit_amount: 10,
+                per_unit_total_amount: 1.0,
+                total_with_flat_amount: 1.0,
+                units: "0.1"
+              },
+              {
+                flat_unit_amount: 0,
+                from_value: 0.1,
+                to_value: 1,
+                per_unit_amount: 5,
+                per_unit_total_amount: 2.0,
+                total_with_flat_amount: 2.0,
+                units: "0.4"
+              }
+            ]
+          }
+        )
+      end
+    end
+  end
+
   context "when charge is a fixed charge" do
     let(:aggregation) { 21 }
     let(:charge) do
