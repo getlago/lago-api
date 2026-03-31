@@ -409,6 +409,12 @@ module ScenariosHelper
     perform_usage_update
   end
 
+  def perform_rate_schedules_billing
+    clock_job do
+      Clock::RateSchedulesBillerJob.perform_later
+    end
+  end
+
   def perform_invoices_refresh
     clock_job do
       Clock::RefreshDraftInvoicesJob.perform_later
