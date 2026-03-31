@@ -2,8 +2,8 @@
 
 module Clock
   class WebhooksCleanupJob < ClockJob
-    class_attribute :batch_size, default: 1_000
-    class_attribute :retention_period, default: 90.days
+    class_attribute :batch_size, default: 1_000 # rubocop:disable ThreadSafety/ClassAndModuleAttributes
+    class_attribute :retention_period, default: 90.days # rubocop:disable ThreadSafety/ClassAndModuleAttributes
 
     def perform
       loop do
