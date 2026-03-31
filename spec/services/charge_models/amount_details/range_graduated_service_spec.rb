@@ -58,7 +58,7 @@ RSpec.describe ChargeModels::AmountDetails::RangeGraduatedService do
     subject(:service) { described_class.new(range:, total_units:, adjacent_model: true) }
 
     context "when total units exhaust the tier" do
-      let(:total_units) { 0.5 }
+      let(:total_units) { 1.5 }
       let(:range) do
         {from_value: 0.1, to_value: 1, per_unit_amount: "5", flat_amount: "0"}
       end
