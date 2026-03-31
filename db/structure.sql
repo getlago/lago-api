@@ -316,6 +316,7 @@ SELECT
 DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
 DROP INDEX IF EXISTS public.index_wt_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_webhooks_on_webhook_endpoint_id;
+DROP INDEX IF EXISTS public.index_webhooks_on_updated_at_for_cleanup;
 DROP INDEX IF EXISTS public.index_webhooks_on_organization_id;
 DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_status_and_timestamps;
 DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_and_timestamps;
@@ -9187,6 +9188,13 @@ CREATE INDEX index_webhooks_on_organization_id ON public.webhooks USING btree (o
 
 
 --
+-- Name: index_webhooks_on_updated_at_for_cleanup; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhooks_on_updated_at_for_cleanup ON public.webhooks USING btree (updated_at) INCLUDE (id);
+
+
+--
 -- Name: index_webhooks_on_webhook_endpoint_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11520,6 +11528,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260331122448'),
 ('20260331103301'),
 ('20260327140626'),
 ('20260326130631'),
