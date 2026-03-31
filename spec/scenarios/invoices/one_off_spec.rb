@@ -12,9 +12,11 @@ describe "One-off invoices" do
     context "with explicit tax_codes in the payload" do
       let(:tax1) { create(:tax, organization:, code: "vat_20", name: "VAT 20%", rate: 20.0) }
       let(:tax2) { create(:tax, organization:, code: "vat_10", name: "VAT 10%", rate: 10.0) }
-      let(:org_default_tax) { create(:tax, organization:, code: "default_tax", name: "Default", rate: 25.0, applied_to_organization: true) }
+      let(:default_tax) { create(:tax, organization:, code: "default_tax", name: "Default", rate: 25.0) }
 
-      before { org_default_tax }
+      before do
+        create(:billing_entity_applied_tax, tax: default_tax, billing_entity: customer.billing_entity)
+      end
 
       it "applies the explicit taxes instead of derived taxes" do
         create_one_off_invoice(customer, [addon], taxes: [tax1.code, tax2.code])
@@ -79,6 +81,31 @@ describe "One-off invoices" do
         fee = invoice.fees.sole
         expect(fee.applied_taxes.sole.tax_code).to eq "explicit_vat"
         expect(fee.taxes_amount_cents).to eq 500
+      end
+    end
+
+    context "when customer belongs to not default billing entity" do
+      let(:secondary_billing_entity) { create(:billing_entity, organization:) }
+      let(:tax_1) { create(:tax, organization:, code: "default_tax", name: "Default", rate: 20.0) }
+      let(:tax_2) { create(:tax, organization:, code: "secondary_vat", name: "Secondary VAT", rate: 12.0) }
+      let(:customer) { create(:customer, organization:, billing_entity: secondary_billing_entity) }
+      let(:addon) { create(:add_on, organization:, amount_cents: 10_000) }
+
+      before do
+        create(:billing_entity_applied_tax, billing_entity: organization.default_billing_entity, tax: tax_1)
+        create(:billing_entity_applied_tax, billing_entity: secondary_billing_entity, tax: tax_2)
+      end
+
+      it "applies the customer billing entity's tax rate" do
+        create_one_off_invoice(customer, [addon])
+
+        invoice = customer.invoices.sole
+        expect(invoice.status).to eq "finalized"
+
+        fee = invoice.fees.sole
+        expect(fee.applied_taxes.sole.tax_code).to eq "secondary_vat"
+        expect(fee.taxes_amount_cents).to eq 1_200 # 10_000 * 12%
+        expect(invoice.taxes_amount_cents).to eq 1_200
       end
     end
   end
