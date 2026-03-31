@@ -241,7 +241,7 @@ module Fees
         new_fee.pay_in_advance = charge.pay_in_advance?
       end
 
-      if (adjusted = adjusted_fee(charge_filter:, grouped_by: amount_result.grouped_by))&.adjusted_display_name?
+      if !current_usage && (adjusted = adjusted_fee(charge_filter:, grouped_by: amount_result.grouped_by))&.adjusted_display_name?
         new_fee.invoice_display_name = adjusted.invoice_display_name
       end
 
