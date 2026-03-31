@@ -51,7 +51,7 @@ module BillableMetricFilters
         end
       end
 
-      refresh_draft_invoices
+      BillableMetricFilters::RefreshDraftInvoicesJob.perform_later(billable_metric.id)
 
       result
     end
@@ -87,14 +87,6 @@ module BillableMetricFilters
       return if filter_value.charge_filter.values.where.not(id: filter_value.id).exists?
 
       filter_value.charge_filter.discard! unless filter_value.charge_filter.discarded?
-    end
-
-    def refresh_draft_invoices
-      draft_invoices = Invoice.draft.joins(plans: [:billable_metrics])
-        .where(billable_metrics: {id: billable_metric.id})
-        .distinct
-
-      draft_invoices.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end
