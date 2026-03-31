@@ -49,27 +49,18 @@ module Fees
           )
           fee.precise_unit_amount = fee.unit_amount.to_f
 
-          unless customer_provider_taxation?
-            taxes_result = if tax_codes
-              Fees::ApplyTaxesService.call(fee:, tax_codes:)
-            else
-              Fees::ApplyTaxesService.call(fee:)
-            end
-
+          # Apply explicit payload taxes only when there is no tax provider.
+          # Provider taxes take precedence and are handled async by ComputeTaxesAndTotalsService.
+          # Explicit tax_codes must be applied here because they are ephemeral payload data.
+          # Derived taxes (no tax_codes, no provider) are applied later by ComputeAmountsFromFees.
+          if tax_codes.present? && !customer_provider_taxation?
+            taxes_result = Fees::ApplyTaxesService.call(fee:, tax_codes:)
             taxes_result.raise_if_error!
           end
 
           fee.save!
 
           fees_result << fee
-        end
-
-        if customer_provider_taxation?
-          fee_taxes_result = apply_provider_taxes(fees_result)
-
-          unless fee_taxes_result.success?
-            return result.service_failure!(code: "tax_error", message: fee_taxes_result.error.code) # rubocop:disable Rails/TransactionExitStatement
-          end
         end
       end
 
@@ -98,45 +89,9 @@ module Fees
     end
 
     def customer_provider_taxation?
-      @apply_provider_taxes ||= customer.tax_customer
-    end
+      return @customer_provider_taxation if defined?(@customer_provider_taxation)
 
-    def apply_provider_taxes(fees_result)
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: fees_result)
-
-      unless taxes_result.success?
-        create_error_detail(taxes_result.error)
-
-        return taxes_result
-      end
-
-      result.fees_taxes = taxes_result.fees
-
-      fees_result.each do |fee|
-        fee_taxes = result.fees_taxes.find { |item| item.item_id == fee.id }
-
-        res = Fees::ApplyProviderTaxesService.call(fee:, fee_taxes:)
-        res.raise_if_error!
-        fee.save!
-      end
-
-      taxes_result
-    end
-
-    def create_error_detail(error)
-      error_result = ErrorDetails::CreateService.call(
-        owner: invoice,
-        organization: invoice.organization,
-        params: {
-          error_code: :tax_error,
-          details: {
-            tax_error: error.code
-          }.tap do |details|
-            details[:tax_error_message] = error.error_message if error.code == "validationError"
-          end
-        }
-      )
-      error_result.raise_if_error!
+      @customer_provider_taxation = customer.tax_customer.present?
     end
 
     def valid_boundaries?(fee)

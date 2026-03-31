@@ -2,7 +2,7 @@
 
 module Invoices
   class CreatePayInAdvanceFixedChargesService < BaseService
-    Result = BaseResult[:invoice, :fees_taxes]
+    Result = BaseResult[:invoice]
 
     def initialize(subscription:, timestamp:)
       @subscription = subscription
@@ -22,8 +22,7 @@ module Invoices
       # Invoice without fees should be created if there are no fees to bill
       # return result if fees.empty?
 
-      tax_error = false
-      vies_check_failed = false
+      tax_deferred = false
 
       ActiveRecord::Base.transaction do
         create_generating_invoice
@@ -36,26 +35,13 @@ module Invoices
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
         Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
-        if customer_provider_taxation?
-          taxes_result = apply_provider_taxes
-          unless taxes_result.success?
-            tax_error = taxes_result.error.code
-            invoice.failed!
-            deliver_fee_webhooks
-            create_error_detail(tax_error)
-            Utils::ActivityLog.produce(invoice, "invoice.failed")
-            next
-          end
-        else
-          vies_check_failed = Invoices::EnsureCompletedViesCheckService.call(invoice:).failure?
-          if vies_check_failed
-            deliver_fee_webhooks
-            Utils::ActivityLog.produce(invoice, "invoice.pending")
-            next
-          end
+        totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
+        if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
+          tax_deferred = true
+          next
         end
+        totals_result.raise_if_error!
 
-        Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
         create_credit_note_credit
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
@@ -67,9 +53,10 @@ module Invoices
 
       result.invoice = invoice
 
-      return result.validation_failure!(errors: {tax_error: [tax_error]}) if tax_error
-
-      return result if vies_check_failed
+      if tax_deferred
+        deliver_fee_webhooks
+        return result
+      end
 
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
@@ -180,38 +167,6 @@ module Invoices
 
     def refresh_amounts(credit_amount_cents:)
       invoice.total_amount_cents -= credit_amount_cents
-    end
-
-    def customer_provider_taxation?
-      @customer_provider_taxation ||= customer.tax_customer.present?
-    end
-
-    def apply_provider_taxes
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
-      return taxes_result unless taxes_result.success?
-
-      result.fees_taxes = taxes_result.fees
-
-      invoice.fees.each do |fee|
-        fee_taxes = result.fees_taxes.find { |item| item.item_id == fee.id }
-        Fees::ApplyProviderTaxesService.call!(fee:, fee_taxes:)
-        fee.save!
-      end
-
-      taxes_result
-    end
-
-    def create_error_detail(code)
-      ErrorDetails::CreateService.call!(
-        owner: invoice,
-        organization: invoice.organization,
-        params: {
-          error_code: :tax_error,
-          details: {
-            tax_error: code
-          }
-        }
-      )
     end
   end
 end
