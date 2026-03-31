@@ -33,12 +33,12 @@ class SubscriptionRateSchedule < ApplicationRecord
   #
   # Two billing modes determine when invoices are generated:
   #
-  # Anniversary (anchor_date nil, prorated: false, or daily interval):
+  # Anniversary (billing_anchor_date nil, prorated: false, or daily interval):
   #   Billing dates are relative to the subscription's started_at.
   #   started_at is NOT a billing date, so the first billing is one full period later.
   #   Signup Mar 15, monthly → Apr 15, May 15, Jun 15 ...
   #
-  # Calendar (anchor_date present + prorated: true + non-daily interval):
+  # Calendar (billing_anchor_date present + prorated: true + non-daily interval):
   #   Billing dates align to the anchor. The anchor IS the first billing date (stub).
   #   Date arithmetic preserves the anchor's relevant component:
   #     weekly  → same day of week as anchor
@@ -49,14 +49,14 @@ class SubscriptionRateSchedule < ApplicationRecord
     if calendar_mode?
       return started_at.to_date if n.zero?
 
-      add_interval(subscription.anchor_date, (n - 1) * rate_schedule.billing_interval_count)
+      add_interval(subscription.billing_anchor_date, (n - 1) * rate_schedule.billing_interval_count)
     else
       add_interval(started_at.to_date, n * rate_schedule.billing_interval_count)
     end
   end
 
   def calendar_mode?
-    subscription&.anchor_date.present? &&
+    subscription&.billing_anchor_date.present? &&
       rate_schedule.prorated &&
       rate_schedule.billing_interval_unit != "day"
   end
