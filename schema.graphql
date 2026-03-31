@@ -5707,6 +5707,7 @@ enum FeatureFlagEnum {
   enriched_events_aggregation
   multi_currency
   multiple_payment_methods
+  non_persistable_charge_cache_optimization
   postgres_enriched_events
   wallet_traceability
 }

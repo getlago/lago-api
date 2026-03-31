@@ -220,61 +220,26 @@ RSpec.describe Invoices::CreateOneOffService do
         end
       end
 
-      it "produces an activity log" do
-        invoice = described_class.call(**args).invoice
-
-        expect(Utils::ActivityLog).to have_produced("invoice.one_off_created").after_commit.with(invoice)
-      end
-
-      it "creates an invoice" do
+      it "creates a pending invoice for async tax resolution" do
         result = described_class.call(**args)
 
         expect(result).to be_success
 
         expect(result.invoice.issuing_date.to_date).to eq(timestamp)
         expect(result.invoice.invoice_type).to eq("one_off")
-        expect(result.invoice.payment_status).to eq("pending")
+        expect(result.invoice.status).to eq("pending")
+        expect(result.invoice.tax_status).to eq("pending")
         expect(result.invoice.fees.where(fee_type: :add_on).count).to eq(2)
         expect(result.invoice.fees.pluck(:description)).to contain_exactly("desc-123", add_on_second.description)
 
         expect(result.invoice.currency).to eq("EUR")
         expect(result.invoice.fees_amount_cents).to eq(2800) # 2400 + 400
-
-        expect(result.invoice.taxes_amount_cents).to eq(300) # (2400 * 0.1) + (400 * 0.15)
-        expect(result.invoice.taxes_rate).to eq(10.71429)
-        expect(result.invoice.applied_taxes.count).to eq(2)
-
-        expect(result.invoice.total_amount_cents).to eq(3100)
-
-        expect(result.invoice).to be_finalized
-
-        expect(result.invoice.reload.error_details.count).to eq(0)
       end
 
-      it "saves applies taxes on fees and on invoice" do
+      it "does not produce an activity log" do
         result = described_class.call(**args)
-        invoice = result.invoice.reload
 
-        expect(invoice.applied_taxes.count).to eq(2)
-        expect(invoice.fees.map(&:applied_taxes).flatten.count).to eq(2)
-        expect(invoice.fees.map(&:taxes_rate).sort).to eq([10.0, 15.0])
-      end
-
-      context "when there is error received from the provider" do
-        let(:body) do
-          p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
-          File.read(p)
-        end
-
-        it "returns tax error" do
-          result = described_class.call(**args)
-
-          expect(result).to be_success
-          expect(result.invoice.status).to eq("failed")
-          expect(result.invoice.error_details.count).to eq(1)
-          expect(result.invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
-          expect(Utils::ActivityLog).to have_produced("invoice.failed").with(result.invoice)
-        end
+        expect(Utils::ActivityLog).not_to have_produced("invoice.one_off_created").with(result.invoice)
       end
     end
 
@@ -463,50 +428,6 @@ RSpec.describe Invoices::CreateOneOffService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.message).to eq("add_on_not_found")
-      end
-    end
-  end
-
-  describe "#tax_error?" do
-    subject(:method_call) { described_class.new(**args).__send__(:tax_error?, result) }
-
-    let(:result) { BaseService::Result.new }
-
-    context "when the fee result is successful" do
-      it "returns false" do
-        expect(subject).to be false
-      end
-    end
-
-    context "when the fee result is not successful" do
-      context "when the fee result error code is tax_error" do
-        before do
-          result.service_failure!(code: "tax_error", message: "Tax error")
-        end
-
-        it "returns true" do
-          expect(subject).to be true
-        end
-      end
-
-      context "when the fee result error does not respond to code" do
-        before do
-          result.validation_failure!(errors: [{message: "error"}])
-        end
-
-        it "returns false" do
-          expect(subject).to be false
-        end
-      end
-
-      context "when the fee result error code is not tax_error" do
-        before do
-          result.service_failure!(code: "code1", message: "Code1 error")
-        end
-
-        it "returns false" do
-          expect(subject).to be false
-        end
       end
     end
   end

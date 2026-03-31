@@ -29,6 +29,7 @@ RSpec.describe Invoice do
   end
 
   it { is_expected.to belong_to(:billing_entity).optional }
+  it { is_expected.to belong_to(:payment_method).optional }
 
   it "has fixed status mapping" do
     expect(described_class::VISIBLE_STATUS).to match(draft: 0, finalized: 1, voided: 2, failed: 4, pending: 7)

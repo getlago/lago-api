@@ -4,6 +4,8 @@ class Subscription < ApplicationRecord
   include PaperTrailTraceable
   include RansackUuidSearch
 
+  self.ignored_columns += %w[incompleted_at]
+
   belongs_to :customer, -> { with_discarded }
   belongs_to :plan, -> { with_discarded }
   belongs_to :previous_subscription, class_name: "Subscription", optional: true
@@ -278,11 +280,11 @@ end
 # Database name: primary
 #
 #  id                           :uuid             not null, primary key
+#  activated_at                 :datetime
 #  billing_time                 :integer          default("calendar"), not null
 #  cancelation_reason           :enum
 #  canceled_at                  :datetime
 #  ending_at                    :datetime
-#  incompleted_at               :datetime
 #  last_received_event_on       :date
 #  name                         :string
 #  on_termination_credit_note   :enum
