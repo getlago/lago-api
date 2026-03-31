@@ -5,6 +5,9 @@ module Clock
     class_attribute :batch_size, default: 1_000 # rubocop:disable ThreadSafety/ClassAndModuleAttributes
     class_attribute :retention_period, default: 90.days # rubocop:disable ThreadSafety/ClassAndModuleAttributes
 
+    # NOTE: Manual batching is used instead of `in_batches` because the table can contain
+    #   millions of rows. `in_batches` adds `ORDER BY id` which prevents PostgreSQL from
+    #   using the covering index on `(updated_at) INCLUDE (id)`.
     def perform
       loop do
         result = Webhook.where(
