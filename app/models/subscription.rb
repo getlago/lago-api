@@ -4,6 +4,8 @@ class Subscription < ApplicationRecord
   include PaperTrailTraceable
   include RansackUuidSearch
 
+  self.ignored_columns += %w[incompleted_at]
+
   belongs_to :customer, -> { with_discarded }
   belongs_to :plan, -> { with_discarded }
   belongs_to :previous_subscription, class_name: "Subscription", optional: true
