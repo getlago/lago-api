@@ -25,3 +25,7 @@ multi_currency:
 payment_gated_subscriptions:
   description: "Enable payment-gated subscription activation rules"
   owners: ["@osmarluz", "@ancorcruz"]
+
+order_forms:
+  description: "Enable quotes, order forms and orders"
+  owners: ["@murparreira", "@toommz", "@rinasergeeva"]

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class QuoteOwner < ApplicationRecord
+  belongs_to :organization
   belongs_to :quote
   belongs_to :user
 end

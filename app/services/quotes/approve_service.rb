@@ -1,0 +1,46 @@
+# frozen_string_literal: true
+
+module Quotes
+  class ApproveService < BaseService
+    attr_reader :quote
+
+    Result = BaseResult[:quote]
+
+    def initialize(quote:)
+      @quote = quote
+      super
+    end
+
+    def call
+      return result.forbidden_failure! unless License.premium?
+      return result.not_found_failure!(resource: "quote") unless quote
+      return result.forbidden_failure! unless quote.organization.feature_flag_enabled?(:order_forms)
+      return result.not_allowed_failure!(code: "inappropriate_state") unless approvable?
+      validation_errors = validate
+      return result.validation_failure!(errors: {quote: validation_errors}) if validation_errors.any?
+
+      quote.update!(
+        status: :approved,
+        approved_at: Time.current
+      )
+
+      # TODO: SendWebhookJob.perform_after_commit("quote.approved", quote)
+
+      result.quote = quote
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
+    end
+
+    private
+
+    def approvable?
+      quote.draft?
+    end
+
+    def validate
+      []
+      # TODO: payload checks
+    end
+  end
+end
