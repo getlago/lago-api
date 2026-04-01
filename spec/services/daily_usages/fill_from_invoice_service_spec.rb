@@ -49,6 +49,32 @@ RSpec.describe DailyUsages::FillFromInvoiceService do
       end
     end
 
+    context "when invoice_subscription has nil charges_from_datetime" do
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription:,
+          invoice:,
+          timestamp:,
+          from_datetime: Time.parse("2025-06-06 04:00:00.000000000 +0000"),
+          to_datetime: Time.parse("2025-07-01 03:59:59.999999000 +0000"),
+          charges_from_datetime: nil,
+          charges_to_datetime: nil
+        )
+      end
+
+      before do
+        charge = create(:standard_charge, plan: subscription.plan)
+        create(:charge_fee, invoice:, charge:, units: 12, amount_cents: 1200, subscription:)
+      end
+
+      it "skips the invoice_subscription" do
+        travel_to(timestamp) do
+          expect { fill_service.call }.not_to change(DailyUsage, :count)
+        end
+      end
+    end
+
     context "when there is usage" do
       before do
         charge = create(:standard_charge, plan: subscription.plan)
