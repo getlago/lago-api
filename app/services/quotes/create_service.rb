@@ -62,7 +62,7 @@ module Quotes
     def build_owners(quote)
       return unless params[:owner_ids].is_a?(Array)
 
-      organization.users.where(id: params[:owner_ids]).map do |user|
+      organization.users.where(id: params[:owner_ids]).each do |user|
         quote.quote_owners.build(user:, organization:)
       end
     end

@@ -25,7 +25,7 @@ module Validators
 
       schema.each do |key, rules|
         value = hash[key]
-        next if value.blank?
+        next if value.nil?
 
         full_path = build_path(path, key)
 

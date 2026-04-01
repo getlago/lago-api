@@ -107,7 +107,6 @@ module Quotes
     def validate_positions
       return if invalid_format?
 
-      check_position_uniqueness(billing_items["plans"], "plans")
       check_position_uniqueness(billing_items["coupons"], "coupons")
       check_position_uniqueness(billing_items["wallet_credits"], "wallet_credits")
       check_position_uniqueness(billing_items["add_ons"], "add_ons")
@@ -128,7 +127,7 @@ module Quotes
       add_ons = billing_items["add_ons"]
       return unless add_ons.is_a?(Array)
 
-      add_ons.each_with_index do |add_on, index|
+      add_ons.each do |add_on|
         if add_on["name"].blank?
           add_error(field: :billing_items, error_code: "add_on_missing_name")
         end

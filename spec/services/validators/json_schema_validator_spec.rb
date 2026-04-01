@@ -62,6 +62,40 @@ RSpec.describe Validators::JsonSchemaValidator do
       end
     end
 
+    context "with empty string for a String field" do
+      let(:data) { {"name" => ""} }
+
+      it "returns true because empty string is still a String" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "with empty string for a non-String field" do
+      let(:data) { {"age" => ""} }
+
+      it "returns false with invalid_type error" do
+        expect(validator).not_to be_valid
+        expect(validator.errors).to include({path: "age", error: "invalid_type"})
+      end
+    end
+
+    context "with empty hash for a Hash field" do
+      let(:data) { {"address" => {}} }
+
+      it "returns true because empty hash is still a Hash" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "with empty hash for a non-Hash field" do
+      let(:data) { {"name" => {}} }
+
+      it "returns false with invalid_type error" do
+        expect(validator).not_to be_valid
+        expect(validator.errors).to include({path: "name", error: "invalid_type"})
+      end
+    end
+
     context "with empty arrays" do
       let(:data) { {"tags" => []} }
 

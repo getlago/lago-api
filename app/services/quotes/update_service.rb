@@ -63,9 +63,9 @@ module Quotes
       existing_ids = quote.quote_owners.pluck(:user_id)
       return if existing_ids.to_set == params[:owner_ids].to_set
 
-      quote.quote_owners.delete_all
+      quote.quote_owners.destroy_all
 
-      organization.users.where(id: params[:owner_ids]).map do |user|
+      organization.users.where(id: params[:owner_ids]).each do |user|
         quote.quote_owners.build(user:, organization:)
       end
     end

@@ -264,6 +264,42 @@ RSpec.describe Quotes::BillingItemsValidator do
       end
     end
 
+    context "when duplicate positions in coupons" do
+      let(:billing_items) do
+        {
+          "plan" => {"id" => SecureRandom.uuid, "position" => 1, "plan_id" => SecureRandom.uuid, "plan_name" => "Plan"},
+          "coupons" => [
+            {"id" => SecureRandom.uuid, "position" => 1, "coupon_id" => SecureRandom.uuid},
+            {"id" => SecureRandom.uuid, "position" => 1, "coupon_id" => SecureRandom.uuid}
+          ],
+          "wallet_credits" => []
+        }
+      end
+
+      it "returns false with duplicate_position error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages[:billing_items]).to include("duplicate_position_in_coupons")
+      end
+    end
+
+    context "when duplicate positions in wallet_credits" do
+      let(:billing_items) do
+        {
+          "plan" => {"id" => SecureRandom.uuid, "position" => 1, "plan_id" => SecureRandom.uuid, "plan_name" => "Plan"},
+          "coupons" => [],
+          "wallet_credits" => [
+            {"id" => SecureRandom.uuid, "position" => 1},
+            {"id" => SecureRandom.uuid, "position" => 1}
+          ]
+        }
+      end
+
+      it "returns false with duplicate_position error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages[:billing_items]).to include("duplicate_position_in_wallet_credits")
+      end
+    end
+
     context "when add_on entry missing name" do
       let(:order_type) { "one_off" }
       let(:billing_items) do
