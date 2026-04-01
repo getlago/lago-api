@@ -72,9 +72,11 @@ class Subscription < ApplicationRecord
   enum :cancelation_reason, CANCELATION_REASONS
 
   validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
-  validates :started_at, presence: true, if: -> { active? }
+  validates :started_at, presence: true, if: -> { incomplete? || active? }
+  validates :activated_at, presence: true, if: -> { active? }
 
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
+  scope :expirable, -> { incomplete.joins(:activation_rules).merge(Subscription::ActivationRule.expirable) }
 
   # NOTE: SQL query to get subscription_at into customer timezone
   def self.subscription_at_in_timezone_sql
@@ -102,6 +104,7 @@ class Subscription < ApplicationRecord
 
   def mark_as_active!(timestamp = Time.current)
     self.started_at ||= timestamp
+    self.activated_at ||= timestamp
     self.lifetime_usage ||= previous_subscription&.lifetime_usage || build_lifetime_usage(organization:)
     self.lifetime_usage.recalculate_invoiced_usage = true
     active!
@@ -118,7 +121,7 @@ class Subscription < ApplicationRecord
   end
 
   def mark_as_incomplete!(timestamp = Time.current)
-    self.incompleted_at ||= timestamp
+    self.started_at ||= timestamp
     incomplete!
   end
 
