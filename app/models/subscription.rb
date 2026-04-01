@@ -72,8 +72,7 @@ class Subscription < ApplicationRecord
   enum :cancelation_reason, CANCELATION_REASONS
 
   validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
-  validates :started_at, presence: true, if: -> { incomplete? || active? }
-  validates :activated_at, presence: true, if: -> { active? }
+  validates :started_at, presence: true, if: -> { incomplete? }
 
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
   scope :expirable, -> { incomplete.joins(:activation_rules).merge(Subscription::ActivationRule.expirable) }

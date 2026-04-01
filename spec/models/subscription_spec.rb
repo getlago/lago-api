@@ -224,16 +224,15 @@ RSpec.describe Subscription do
 
     describe "started_at validation" do
       context "when status is active" do
-        it "is invalid without started_at" do
-          sub = build(:subscription, status: :active, started_at: nil)
-          expect(sub).not_to be_valid
-          expect(sub.errors[:started_at]).to be_present
+        it "is valid without started_at" do
+          sub = build(:subscription, started_at: nil)
+          expect(sub).to be_valid
         end
       end
 
       context "when status is incomplete" do
         it "is invalid without started_at" do
-          sub = build(:subscription, status: :incomplete, started_at: nil, activated_at: nil)
+          sub = build(:subscription, :incomplete, started_at: nil)
           expect(sub).not_to be_valid
           expect(sub.errors[:started_at]).to be_present
         end
@@ -241,30 +240,6 @@ RSpec.describe Subscription do
 
       context "when status is pending" do
         it "is valid without started_at" do
-          sub = build(:subscription, :pending)
-          expect(sub).to be_valid
-        end
-      end
-    end
-
-    describe "activated_at validation" do
-      context "when status is active" do
-        it "is invalid without activated_at" do
-          sub = build(:subscription, status: :active, activated_at: nil)
-          expect(sub).not_to be_valid
-          expect(sub.errors[:activated_at]).to be_present
-        end
-      end
-
-      context "when status is incomplete" do
-        it "is valid without activated_at" do
-          sub = build(:subscription, :incomplete)
-          expect(sub).to be_valid
-        end
-      end
-
-      context "when status is pending" do
-        it "is valid without activated_at" do
           sub = build(:subscription, :pending)
           expect(sub).to be_valid
         end
