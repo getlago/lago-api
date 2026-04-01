@@ -38,7 +38,16 @@ RSpec.describe Subscriptions::Dates::QuarterlyService do
       end
 
       context "when subscription is not yet started" do
-        let(:started_at) { nil }
+        let(:subscription) do
+          create(
+            :subscription,
+            :pending,
+            plan:,
+            customer:,
+            subscription_at:,
+            billing_time:
+          )
+        end
 
         it "returns nil" do
           expect(date_service.from_datetime).to be_nil
@@ -204,7 +213,16 @@ RSpec.describe Subscriptions::Dates::QuarterlyService do
       end
 
       context "when subscription is not yet started" do
-        let(:started_at) { nil }
+        let(:subscription) do
+          create(
+            :subscription,
+            :pending,
+            plan:,
+            customer:,
+            subscription_at:,
+            billing_time:
+          )
+        end
 
         it "returns nil" do
           expect(date_service.to_datetime).to be_nil
@@ -329,7 +347,16 @@ RSpec.describe Subscriptions::Dates::QuarterlyService do
       end
 
       context "when subscription is not yet started" do
-        let(:started_at) { nil }
+        let(:subscription) do
+          create(
+            :subscription,
+            :pending,
+            plan:,
+            customer:,
+            subscription_at:,
+            billing_time:
+          )
+        end
 
         it "returns nil" do
           expect(date_service.charges_from_datetime).to be_nil
@@ -422,7 +449,16 @@ RSpec.describe Subscriptions::Dates::QuarterlyService do
       end
 
       context "when subscription is not yet started" do
-        let(:started_at) { nil }
+        let(:subscription) do
+          create(
+            :subscription,
+            :pending,
+            plan:,
+            customer:,
+            subscription_at:,
+            billing_time:
+          )
+        end
 
         it "returns nil" do
           expect(date_service.charges_to_datetime).to be_nil
@@ -500,7 +536,16 @@ RSpec.describe Subscriptions::Dates::QuarterlyService do
       end
 
       context "when subscription is not yet started" do
-        let(:started_at) { nil }
+        let(:subscription) do
+          create(
+            :subscription,
+            :pending,
+            plan:,
+            customer:,
+            subscription_at:,
+            billing_time:
+          )
+        end
 
         it "returns nil" do
           expect(result).to be_nil
@@ -621,7 +666,16 @@ RSpec.describe Subscriptions::Dates::QuarterlyService do
       end
 
       context "when subscription is not yet started" do
-        let(:started_at) { nil }
+        let(:subscription) do
+          create(
+            :subscription,
+            :pending,
+            plan:,
+            customer:,
+            subscription_at:,
+            billing_time:
+          )
+        end
 
         it "returns nil" do
           expect(result).to be_nil
