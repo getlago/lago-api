@@ -128,7 +128,7 @@ RSpec.describe CreditNotes::ValidateItemService do
 
     context "with credit invoices and wallets" do
       let(:wallet) { create(:wallet, customer:, balance_cents: 1000) }
-      let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: 1000) }
       let(:fee) { create(:fee, invoice:, fee_type: :credit, invoiceable: wallet_transaction, amount_cents: 1000) }
 
       before { wallet }
@@ -152,17 +152,17 @@ RSpec.describe CreditNotes::ValidateItemService do
       it "allows offsetting full amount with succeeded payment" do
         invoice.update!(invoice_type: :credit, total_amount_cents: 500, payment_status: :succeeded)
         fee.update!(amount_cents: 500)
-        wallet.update!(balance_cents: 500)
+        wallet_transaction.update!(remaining_amount_cents: 500)
         create(:credit_note, invoice:, customer:,
           credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 500, status: :finalized)
         item.amount_cents = 500
         expect(validator).to be_valid
       end
 
-      it "rejects amount exceeding wallet balance" do
+      it "rejects amount exceeding remaining amount" do
         invoice.update!(invoice_type: :credit, total_amount_cents: 2000, payment_status: :succeeded)
         fee.update!(amount_cents: 2000)
-        wallet.update!(balance_cents: 800)
+        wallet_transaction.update!(remaining_amount_cents: 800)
         item.amount_cents = 1500
 
         expect(validator).not_to be_valid
@@ -170,21 +170,20 @@ RSpec.describe CreditNotes::ValidateItemService do
         expect(result.error.messages[:amount_cents]).to eq(["higher_than_wallet_balance"])
       end
 
-      context "with traceable wallet" do
-        let(:wallet) { create(:wallet, customer:, balance_cents: 2000, traceable: true) }
-        let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: 500) }
-        let(:fee) { create(:fee, invoice:, fee_type: :credit, invoiceable: wallet_transaction, amount_cents: 1000) }
+      context "when wallet is not traceable" do
+        let(:wallet) { create(:wallet, customer:, balance_cents: 1000, traceable: false) }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: nil) }
 
-        it "allows offsetting up to remaining amount" do
+        it "allows offsetting up to wallet balance" do
           invoice.update!(invoice_type: :credit, total_amount_cents: 1000, payment_status: :succeeded)
-          item.amount_cents = 500
-
+          item.amount_cents = 1000
           expect(validator).to be_valid
         end
 
-        it "rejects amount exceeding remaining amount" do
-          invoice.update!(invoice_type: :credit, total_amount_cents: 1000, payment_status: :succeeded)
-          item.amount_cents = 700
+        it "rejects amount exceeding wallet balance" do
+          invoice.update!(invoice_type: :credit, total_amount_cents: 2000, payment_status: :succeeded)
+          fee.update!(amount_cents: 2000)
+          item.amount_cents = 1500
 
           expect(validator).not_to be_valid
           expect(result.error).to be_a(BaseService::ValidationFailure)

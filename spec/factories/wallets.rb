@@ -13,6 +13,7 @@ FactoryBot.define do
     balance_cents { 0 }
     consumed_credits { 0 }
     invoice_requires_successful_payment { false }
+    traceable { true }
 
     trait :terminated do
       status { "terminated" }

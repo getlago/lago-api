@@ -30,7 +30,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
     }
 
     wallet = create_wallet(params, as: :model)
-    expect(wallet.traceable).to eq(false)
+    wallet.update!(traceable: false)
     wallet
   end
 
@@ -1126,7 +1126,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
         }
 
         wallet = create_wallet(params, as: :model)
-        expect(wallet.traceable).to eq(false)
+        wallet.update!(traceable: false)
         wallet
       end
 
@@ -1392,7 +1392,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
         wallet2 = create(:wallet, customer:, organization:, traceable: false, currency: "EUR", rate_amount: "1.00")
         inbound = create(:wallet_transaction, wallet: wallet2, organization:,
           transaction_type: :inbound, status: :settled, amount: "10.00", credit_amount: "10.00",
-          transaction_status: :granted)
+          transaction_status: :granted, remaining_amount_cents: nil)
         create(:wallet_transaction, wallet: wallet2, organization:,
           transaction_type: :outbound, status: :settled, amount: "50.00", credit_amount: "50.00",
           transaction_status: :invoiced, created_at: inbound.created_at + 1.hour)
@@ -1559,7 +1559,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
         wallet = create(:wallet, customer:, organization:, traceable: false, currency: "EUR", rate_amount: "1.00")
         inbound = create(:wallet_transaction, wallet:, organization:,
           transaction_type: :inbound, status: :settled, amount: "10.00", credit_amount: "10.00",
-          transaction_status: :granted)
+          transaction_status: :granted, remaining_amount_cents: nil)
         create(:wallet_transaction, wallet:, organization:,
           transaction_type: :outbound, status: :settled, amount: "50.00", credit_amount: "50.00",
           transaction_status: :invoiced, created_at: inbound.created_at + 1.hour)

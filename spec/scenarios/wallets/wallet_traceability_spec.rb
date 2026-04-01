@@ -27,6 +27,21 @@ describe "Wallet Traceability Scenarios" do
     wallet
   end
 
+  def create_non_traceable_wallet(rate_amount: "1")
+    params = {
+      external_customer_id: customer.external_id,
+      rate_amount:,
+      name: "Non-Traceable Wallet",
+      currency: "EUR",
+      granted_credits: "0",
+      invoice_requires_successful_payment: false
+    }
+
+    wallet = create_wallet(params, as: :model)
+    wallet.update!(traceable: false)
+    wallet
+  end
+
   def top_up_wallet(wallet, granted_credits: nil, paid_credits: nil)
     params = {wallet_id: wallet.id}
     params[:granted_credits] = granted_credits if granted_credits
@@ -649,18 +664,20 @@ describe "Wallet Traceability Scenarios" do
         rate_amount: "1",
         name: "Wallet",
         currency: "EUR",
-        granted_credits:,
         invoice_requires_successful_payment: false,
         applies_to:
       }
+      if traceable
+        params[:granted_credits] = granted_credits
+      end
 
       wallet = create_wallet(params, as: :model)
-      if traceable
-        wallet.update!(traceable: true)
-        # Set remaining_amount_cents on inbound transactions since traceable was set after creation
-        wallet.wallet_transactions.inbound.each do |tx|
-          tx.update!(remaining_amount_cents: tx.amount_cents)
-        end
+      if !traceable
+        wallet.update!(traceable: false)
+        create_wallet_transaction({
+          wallet_id: wallet.id,
+          granted_credits: granted_credits
+        })
       end
       wallet
     end
@@ -907,6 +924,110 @@ describe "Wallet Traceability Scenarios" do
 
         expect(tx1.reload.remaining_amount_cents).to eq(0)
         expect(tx2.reload.remaining_amount_cents).to eq(2000)
+      end
+    end
+  end
+
+  describe "Non-traceable wallet scenarios (self-hosted pre-migration)" do
+    # These tests ensure non-traceable wallets still work correctly for
+    # self-hosted instances that have not yet run the traceability migration.
+
+    describe "Invoice consumption with non-traceable wallet" do
+      it "deducts from wallet without creating consumption records or prepaid breakdown" do
+        time_0 = DateTime.new(2022, 12, 1)
+        wallet = nil
+        subscription = nil
+        invoice = nil
+
+        travel_to(time_0) do
+          wallet = create_non_traceable_wallet
+          top_up_wallet(wallet, granted_credits: "100")
+
+          subscription = setup_subscription
+        end
+
+        travel_to(time_0 + 5.days) do
+          ingest_usage(subscription, 40)
+        end
+
+        travel_to(time_0 + 1.month) do
+          perform_billing
+          invoice = subscription.invoices.subscription.first
+        end
+
+        expect(invoice.prepaid_credit_amount_cents).to eq(4000)
+        expect(invoice.prepaid_granted_credit_amount_cents).to be_nil
+        expect(invoice.prepaid_purchased_credit_amount_cents).to be_nil
+
+        tx = wallet.wallet_transactions.outbound.where(transaction_status: :invoiced).first
+        expect(tx).to be_present
+        expect(tx.amount_cents).to eq(4000)
+        expect(tx.fundings).to be_empty
+
+        expect(wallet.reload.balance_cents).to eq(6000)
+      end
+    end
+
+    describe "Voiding credits with non-traceable wallet" do
+      it "voids credits without creating consumption records" do
+        wallet = create_non_traceable_wallet
+        top_up_wallet(wallet, granted_credits: "100")
+
+        create_wallet_transaction({
+          wallet_id: wallet.id,
+          voided_credits: "40"
+        })
+
+        tx = wallet.wallet_transactions.outbound.where(transaction_status: :voided).first
+        expect(tx).to be_present
+        expect(tx.amount_cents).to eq(4000)
+        expect(tx.fundings).to be_empty
+
+        expect(wallet.reload.balance_cents).to eq(6000)
+      end
+    end
+
+    describe "Multiple billing periods with non-traceable wallet" do
+      it "deducts across billing periods without consumption tracking" do
+        time_0 = DateTime.new(2022, 12, 1)
+        wallet = nil
+        subscription = nil
+
+        travel_to(time_0) do
+          wallet = create_non_traceable_wallet
+          top_up_wallet(wallet, granted_credits: "100")
+
+          subscription = setup_subscription
+        end
+
+        # First billing period - $25 usage
+        travel_to(time_0 + 5.days) do
+          ingest_usage(subscription, 25)
+        end
+
+        travel_to(time_0 + 1.month) do
+          perform_billing
+        end
+
+        invoice1 = subscription.invoices.subscription.first
+        expect(invoice1.prepaid_credit_amount_cents).to eq(2500)
+        expect(invoice1.prepaid_granted_credit_amount_cents).to be_nil
+
+        # Second billing period - $35 usage
+        travel_to(time_0 + 1.month + 5.days) do
+          ingest_usage(subscription, 35)
+        end
+
+        travel_to(time_0 + 2.months) do
+          perform_billing
+        end
+
+        invoice2 = subscription.invoices.subscription.order(created_at: :desc).first
+        expect(invoice2.prepaid_credit_amount_cents).to eq(3500)
+        expect(invoice2.prepaid_granted_credit_amount_cents).to be_nil
+
+        expect(wallet.reload.balance_cents).to eq(4000)
+        expect(WalletTransactionConsumption.where(organization_id: organization.id).count).to eq(0)
       end
     end
   end
