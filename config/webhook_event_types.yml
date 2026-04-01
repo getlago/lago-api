@@ -173,6 +173,26 @@ integration_provider_error:
   description: An error was encountered while processing data on an integration
   category: Integrations
   deprecated: false
+order_created:
+  name: order.created
+  description: An Order has been created
+  category: Order
+  deprecated: false
+order_form_expired:
+  name: order_form.expired
+  description: An OrderForm has been expired
+  category: Order Forms
+  deprecated: false
+order_form_signed:
+  name: order_form.signed
+  description: An OrderForm has been signed
+  category: Order Forms
+  deprecated: false
+order_form_voided:
+  name: order_form.voided
+  description: An OrderForm has been voided
+  category: Order Forms
+  deprecated: false
 payment_succeeded:
   name: payment.succeeded
   description: A payment has been successfully processed by the payment provider
