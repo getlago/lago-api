@@ -187,6 +187,137 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV.delete("BATCH_SIZE")
     end
 
+    it "cursor skips customers before the given customer_id" do
+      other_customer = create(:customer, organization:, billing_entity:)
+      wallet1 = create_non_traceable_wallet
+      top_up_wallet(wallet1, granted_credits: "50")
+
+      # Create wallet for other_customer
+      params = {
+        external_customer_id: other_customer.external_id,
+        rate_amount: "1",
+        name: "Other Wallet",
+        currency: "EUR",
+        granted_credits: "0",
+        invoice_requires_successful_payment: false
+      }
+      api_call { post_with_token(organization, "/api/v1/wallets", {wallet: params}) }
+      wallet2 = Wallet.find(json[:wallet][:lago_id])
+      api_call do
+        post_with_token(organization, "/api/v1/wallet_transactions", {
+          wallet_transaction: {wallet_id: wallet2.id, granted_credits: "30"}
+        })
+      end
+
+      first_id, _ = [customer.id, other_customer.id].sort
+      ENV["DRY_RUN"] = "false"
+      ENV["CURSOR"] = first_id
+      task.reenable
+      task.invoke
+
+      first_wallet = (customer.id == first_id) ? wallet1 : wallet2
+      second_wallet = (customer.id == first_id) ? wallet2 : wallet1
+
+      expect(first_wallet.reload.traceable).to eq(false)
+      expect(second_wallet.reload.traceable).to eq(true)
+    ensure
+      ENV.delete("DRY_RUN")
+      ENV.delete("CURSOR")
+    end
+
+    it "prints next cursor when limit is set and more records exist" do
+      other_customer = create(:customer, organization:, billing_entity:)
+      create_non_traceable_wallet
+      params = {
+        external_customer_id: other_customer.external_id,
+        rate_amount: "1",
+        name: "Other Wallet",
+        currency: "EUR",
+        granted_credits: "0",
+        invoice_requires_successful_payment: false
+      }
+      api_call { post_with_token(organization, "/api/v1/wallets", {wallet: params}) }
+
+      ENV["ORGANIZATION_ID"] = organization.id
+      ENV["LIMIT"] = "1"
+      task.reenable
+
+      first_customer_id = [customer.id, other_customer.id].min
+      expect { task.invoke }.to output(a_string_including("Next cursor: #{first_customer_id}")).to_stdout
+    ensure
+      ENV.delete("ORGANIZATION_ID")
+      ENV.delete("LIMIT")
+    end
+
+    it "does not print next cursor when all records fit within limit" do
+      create_non_traceable_wallet
+
+      ENV["ORGANIZATION_ID"] = organization.id
+      ENV["LIMIT"] = "100"
+      task.reenable
+
+      expect { task.invoke }.to output(a_string_including("Next cursor: none (all records fit within limit)")).to_stdout
+    ensure
+      ENV.delete("ORGANIZATION_ID")
+      ENV.delete("LIMIT")
+    end
+
+    it "prints next cursor accounting for cursor offset" do
+      other_customer = create(:customer, organization:, billing_entity:)
+      third_customer = create(:customer, organization:, billing_entity:)
+      create_non_traceable_wallet
+      [other_customer, third_customer].each do |c|
+        params = {
+          external_customer_id: c.external_id,
+          rate_amount: "1",
+          name: "Wallet",
+          currency: "EUR",
+          granted_credits: "0",
+          invoice_requires_successful_payment: false
+        }
+        api_call { post_with_token(organization, "/api/v1/wallets", {wallet: params}) }
+      end
+
+      sorted_ids = [customer.id, other_customer.id, third_customer.id].sort
+      ENV["ORGANIZATION_ID"] = organization.id
+      ENV["CURSOR"] = sorted_ids.first
+      ENV["LIMIT"] = "1"
+      task.reenable
+
+      expect { task.invoke }.to output(a_string_including("Next cursor: #{sorted_ids[1]}")).to_stdout
+    ensure
+      ENV.delete("ORGANIZATION_ID")
+      ENV.delete("CURSOR")
+      ENV.delete("LIMIT")
+    end
+
+    it "processes nothing when cursor is past all customer_ids" do
+      wallet = create_non_traceable_wallet
+      top_up_wallet(wallet, granted_credits: "50")
+
+      # Use a UUID that sorts after all real customer_ids
+      ENV["DRY_RUN"] = "false"
+      ENV["CURSOR"] = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+      task.reenable
+      task.invoke
+
+      expect(wallet.reload.traceable).to eq(false)
+    ensure
+      ENV.delete("DRY_RUN")
+      ENV.delete("CURSOR")
+    end
+
+    it "does not print next cursor line when limit is not set" do
+      create_non_traceable_wallet
+
+      ENV["ORGANIZATION_ID"] = organization.id
+      task.reenable
+
+      expect { task.invoke }.not_to output(a_string_including("Next cursor:")).to_stdout
+    ensure
+      ENV.delete("ORGANIZATION_ID")
+    end
+
     it "defaults to dry-run even when dry_run is set to any value other than 'false'" do
       wallet = create_non_traceable_wallet
       top_up_wallet(wallet, granted_credits: "100")

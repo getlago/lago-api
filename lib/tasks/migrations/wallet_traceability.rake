@@ -5,7 +5,7 @@ require "parallel"
 
 class WalletMigration
   def initialize(dry_run: true, limit: nil, batch_size: 1000, output_limit: 50,
-    thread_count: 0, output_file: nil, scope: Wallet.where(traceable: false))
+    thread_count: 0, output_file: nil, cursor: nil, scope: Wallet.where(traceable: false))
     @scope = scope
     @dry_run = dry_run
     @limit = limit
@@ -13,11 +13,13 @@ class WalletMigration
     @output_limit = output_limit
     @thread_count = thread_count
     @output_file = output_file
+    @cursor = cursor
   end
 
   def run
     puts "Wallet migration — mode: #{@dry_run ? "DRY-RUN (validation only)" : "BACKFILL (writing data)"}"
     puts "Limit: #{@limit || "all"}, Batch size: #{@batch_size}, Threads: #{@thread_count.zero? ? "sequential" : @thread_count}"
+    print_next_cursor
     puts "=" * 60
 
     if @dry_run
@@ -30,6 +32,23 @@ class WalletMigration
   private
 
   attr_reader :scope
+
+  def print_next_cursor
+    return unless @limit
+
+    query = scope
+    query = query.where(Wallet.arel_table[:customer_id].gt(@cursor)) if @cursor
+    # Use ORDER + OFFSET + LIMIT 1 to get the Nth distinct customer_id without loading all IDs.
+    # OFFSET is 0-based, so @limit - 1 gives us the last customer in the window.
+    last_customer_id = query.order(:customer_id).select(:customer_id).distinct
+      .offset(@limit - 1).limit(1).pick(:customer_id)
+
+    if last_customer_id.nil?
+      puts "Next cursor: none (all records fit within limit)"
+    else
+      puts "Next cursor: #{last_customer_id}"
+    end
+  end
 
   # ---------------------------------------------------------------------------
   # Dry-run: validate without writing
@@ -387,7 +406,7 @@ class WalletMigration
   # are always processed atomically.
   def iterate_customers_in_batches
     wallets_processed = 0
-    last_customer_id = nil
+    last_customer_id = @cursor
 
     loop do
       break if @limit && wallets_processed >= @limit
@@ -436,6 +455,7 @@ namespace :migrations do
     options[:output_limit] = ENV["OUTPUT_LIMIT"].to_i if ENV["OUTPUT_LIMIT"].present?
     options[:thread_count] = ENV["THREAD_COUNT"].to_i if ENV["THREAD_COUNT"].present?
     options[:output_file] = ENV["OUTPUT_FILE"] if ENV["OUTPUT_FILE"].present?
+    options[:cursor] = ENV["CURSOR"] if ENV["CURSOR"].present?
 
     WalletMigration.new(**options).run
   end
