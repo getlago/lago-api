@@ -299,6 +299,32 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
       end
     end
 
+    describe "#generate_checkout_url currency fallback" do
+      let(:lago_client) { instance_double(LagoHttpClient::Client) }
+      let(:checkout_url_response) { JSON.parse(File.read(Rails.root.join("spec/fixtures/moneyhash/checkout_url_response.json"))) }
+      let(:response) { instance_double(Net::HTTPOK) }
+
+      before do
+        allow(LagoHttpClient::Client).to receive(:new)
+          .with("#{PaymentProviders::MoneyhashProvider.api_base_url}/api/v1.1/payments/intent/")
+          .and_return(lago_client)
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(checkout_url_response.to_json)
+      end
+
+      context "when customer has no currency" do
+        let(:customer) { create(:customer, name: customer_name, organization:, currency: nil) }
+
+        it "falls back to the organization default currency" do
+          moneyhash_service.generate_checkout_url(send_webhook: false)
+          expect(lago_client).to have_received(:post_with_response).with(
+            hash_including(amount_currency: organization.default_currency),
+            anything
+          )
+        end
+      end
+    end
+
     describe "#delete_payment_method" do
       let(:custom_fields) do
         {

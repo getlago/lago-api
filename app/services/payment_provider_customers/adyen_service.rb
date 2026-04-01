@@ -115,7 +115,7 @@ module PaymentProviderCustomers
         reference: "authorization customer #{customer.external_id}",
         amount: {
           value: 0, # pre-authorization
-          currency: customer.currency.presence || "USD"
+          currency: customer.currency.presence || customer.organization_default_currency
         },
         merchantAccount: adyen_payment_provider.merchant_account,
         returnUrl: success_redirect_url,

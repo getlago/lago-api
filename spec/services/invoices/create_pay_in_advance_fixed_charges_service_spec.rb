@@ -61,7 +61,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
         unit_amount_cents: 1000,
         precise_unit_amount: 10.0
       )
-      expect(result.invoice.currency).to eq(customer.currency)
+      expect(result.invoice.currency).to eq(subscription.plan_amount_currency)
       expect(result.invoice.fees_amount_cents).to eq(10000)
       expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(10000)
       expect(result.invoice.taxes_amount_cents).to eq(2000) # factory default 20% tax

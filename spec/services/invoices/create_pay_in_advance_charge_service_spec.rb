@@ -102,7 +102,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         precise_unit_amount: 0.01111111111
       )
 
-      expect(result.invoice.currency).to eq(customer.currency)
+      expect(result.invoice.currency).to eq(subscription.plan_amount_currency)
       expect(result.invoice.fees_amount_cents).to eq(10)
 
       expect(result.invoice.taxes_amount_cents).to eq(2)

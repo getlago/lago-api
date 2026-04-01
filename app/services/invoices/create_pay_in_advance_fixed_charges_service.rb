@@ -115,7 +115,7 @@ module Invoices
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :subscription,
-        currency: customer.currency,
+        currency: subscription.plan_amount_currency,
         datetime: Time.zone.at(timestamp),
         charge_in_advance: true
       ) do |inv|
