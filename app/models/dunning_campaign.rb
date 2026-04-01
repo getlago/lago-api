@@ -41,6 +41,7 @@ class DunningCampaign < ApplicationRecord
   def reset_customers_last_attempt
     # NOTE: Reset last attempt on customers with the campaign applied explicitly
     customers.update_all( # rubocop:disable Rails/SkipsModelValidations
+      dunning_currency_attempts: {},
       last_dunning_campaign_attempt: 0,
       last_dunning_campaign_attempt_at: nil
     )

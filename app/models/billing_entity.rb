@@ -148,6 +148,7 @@ class BillingEntity < ApplicationRecord
     customers
       .falling_back_to_default_dunning_campaign
       .update_all( # rubocop:disable Rails/SkipsModelValidations
+        dunning_currency_attempts: {},
         last_dunning_campaign_attempt: 0,
         last_dunning_campaign_attempt_at: nil
       )

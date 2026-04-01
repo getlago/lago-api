@@ -66,66 +66,10 @@ RSpec.describe DunningCampaigns::ProcessAttemptService do
         )
     end
 
-    it "updates customer last dunning attempt data" do
-      freeze_time do
-        expect { result && customer.reload }
-          .to change(customer, :last_dunning_campaign_attempt).by(1)
-          .and change(customer, :last_dunning_campaign_attempt_at).to(Time.zone.now)
-      end
-    end
-
-    context "when dunning campaign max attempt is reached" do
-      let(:customer) do
-        create(
-          :customer,
-          organization:,
-          currency:,
-          last_dunning_campaign_attempt: dunning_campaign.max_attempts,
-          last_dunning_campaign_attempt_at: dunning_campaign.days_between_attempts.days.ago
-        )
-      end
-
-      it "does nothing" do
-        result
-        expect(PaymentRequests::CreateService).not_to have_received(:call)
-      end
-    end
-
-    context "when max attempts is reached after processing" do
-      let(:customer) do
-        create(
-          :customer,
-          organization:,
-          currency:,
-          last_dunning_campaign_attempt: dunning_campaign.max_attempts - 1
-        )
-      end
-
-      it "sends the campaign finished webhook" do
-        expect { result }.to have_enqueued_job(SendWebhookJob)
-          .with("dunning_campaign.finished", customer, {dunning_campaign_code: dunning_campaign.code})
-      end
-
-      it "still creates a payment request" do
-        result
-        expect(PaymentRequests::CreateService).to have_received(:call)
-      end
-    end
-
-    context "when max attempts is not yet reached after processing" do
-      let(:customer) do
-        create(
-          :customer,
-          organization:,
-          currency:,
-          last_dunning_campaign_attempt: 0
-        )
-      end
-
-      it "does not send the campaign finished webhook" do
-        result
-        expect(SendWebhookJob).not_to have_been_enqueued
-      end
+    it "does not update customer dunning attempt counters" do
+      expect { result && customer.reload }
+        .to not_change(customer, :last_dunning_campaign_attempt)
+        .and not_change { customer.dunning_currency_attempts }
     end
 
     context "when the campaign threshold is not reached" do
@@ -171,44 +115,13 @@ RSpec.describe DunningCampaigns::ProcessAttemptService do
       end
     end
 
-    context "when days between attempts has not passed" do
-      let(:customer) do
-        create(
-          :customer,
-          organization:,
-          currency:,
-          last_dunning_campaign_attempt_at: 9.days.ago
-        )
-      end
-
-      let(:dunning_campaign) do
-        create(
-          :dunning_campaign,
-          organization:,
-          days_between_attempts: 10
-        )
-      end
-
-      before do
-        billing_entity.update!(applied_dunning_campaign: dunning_campaign)
-      end
-
-      it "does nothing" do
-        result
-        expect(PaymentRequests::CreateService).not_to have_received(:call)
-      end
-    end
-
     context "when payment request creation fails" do
       before do
         payment_request_result.service_failure!(code: "error", message: "failure")
       end
 
-      it "does not update customer last dunning campaign attempt data" do
-        expect { result }
-          .to not_change(customer.reload, :last_dunning_campaign_attempt)
-          .and not_change(customer.reload, :last_dunning_campaign_attempt_at)
-          .and raise_error(BaseService::ServiceFailure)
+      it "raises an error" do
+        expect { result }.to raise_error(BaseService::ServiceFailure)
       end
     end
 

@@ -1170,7 +1170,8 @@ RSpec.describe Customer do
       create(
         :customer,
         last_dunning_campaign_attempt: 5,
-        last_dunning_campaign_attempt_at: 1.day.ago
+        last_dunning_campaign_attempt_at: 1.day.ago,
+        dunning_currency_attempts: {"EUR" => 3, "USD" => 2}
       )
     end
 
@@ -1178,6 +1179,7 @@ RSpec.describe Customer do
       expect { customer.reset_dunning_campaign! && customer.reload }
         .to change(customer, :last_dunning_campaign_attempt).to(0)
         .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+        .and change(customer, :dunning_currency_attempts).to({})
     end
   end
 
