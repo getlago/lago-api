@@ -11,6 +11,13 @@ module Validators
     end
 
     def valid?
+      @errors = []
+
+      unless @data.is_a?(Hash)
+        @errors << {path: "", error: "invalid_type", expected: Hash, actual: @data.class}
+        return false
+      end
+
       validate_hash(@data, @schema, path: "")
       @errors.empty?
     end
@@ -25,12 +32,15 @@ module Validators
 
       schema.each do |key, rules|
         value = hash[key]
-        next if value.nil?
-
         full_path = build_path(path, key)
 
+        if value.nil?
+          @errors << {path: full_path, error: "required"} if rules[:required]
+          next
+        end
+
         unless value.is_a?(rules[:type])
-          @errors << {path: full_path, error: "invalid_type"}
+          @errors << {path: full_path, error: "invalid_type", expected: rules[:type], actual: value.class}
           next
         end
 
@@ -49,7 +59,7 @@ module Validators
         item_path = "#{path}[#{index}]"
 
         if item_rules[:type] && !item.is_a?(item_rules[:type])
-          @errors << {path: item_path, error: "invalid_type"}
+          @errors << {path: item_path, error: "invalid_type", expected: item_rules[:type], actual: item.class}
         elsif item_rules[:schema] && item.is_a?(Hash)
           validate_hash(item, item_rules[:schema], path: item_path)
         end

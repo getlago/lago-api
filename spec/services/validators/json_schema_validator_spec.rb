@@ -75,7 +75,7 @@ RSpec.describe Validators::JsonSchemaValidator do
 
       it "returns false with invalid_type error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to include({path: "age", error: "invalid_type"})
+        expect(validator.errors).to include(hash_including(path: "age", error: "invalid_type", expected: Integer, actual: String))
       end
     end
 
@@ -92,7 +92,7 @@ RSpec.describe Validators::JsonSchemaValidator do
 
       it "returns false with invalid_type error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to include({path: "name", error: "invalid_type"})
+        expect(validator.errors).to include(hash_including(path: "name", error: "invalid_type", expected: String, actual: Hash))
       end
     end
 
@@ -118,7 +118,7 @@ RSpec.describe Validators::JsonSchemaValidator do
 
       it "returns false with invalid_type error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to include({path: "name", error: "invalid_type"})
+        expect(validator.errors).to include(hash_including(path: "name", error: "invalid_type", expected: String, actual: Integer))
       end
     end
 
@@ -127,7 +127,7 @@ RSpec.describe Validators::JsonSchemaValidator do
 
       it "returns false with invalid_type error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to include({path: "address", error: "invalid_type"})
+        expect(validator.errors).to include(hash_including(path: "address", error: "invalid_type", expected: Hash, actual: String))
       end
     end
 
@@ -145,7 +145,7 @@ RSpec.describe Validators::JsonSchemaValidator do
 
       it "returns false with invalid_type error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to include({path: "address.street", error: "invalid_type"})
+        expect(validator.errors).to include(hash_including(path: "address.street", error: "invalid_type", expected: String, actual: Integer))
       end
     end
 
@@ -154,7 +154,7 @@ RSpec.describe Validators::JsonSchemaValidator do
 
       it "returns false with invalid_type error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to include({path: "tags", error: "invalid_type"})
+        expect(validator.errors).to include(hash_including(path: "tags", error: "invalid_type", expected: Array, actual: String))
       end
     end
 
@@ -163,7 +163,7 @@ RSpec.describe Validators::JsonSchemaValidator do
 
       it "returns false with invalid_type error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to include({path: "tags[0]", error: "invalid_type"})
+        expect(validator.errors).to include(hash_including(path: "tags[0]", error: "invalid_type", expected: Hash, actual: String))
       end
     end
 
@@ -181,7 +181,7 @@ RSpec.describe Validators::JsonSchemaValidator do
 
       it "returns false with invalid_type error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to include({path: "tags[0].priority", error: "invalid_type"})
+        expect(validator.errors).to include(hash_including(path: "tags[0].priority", error: "invalid_type", expected: Integer, actual: String))
       end
     end
 
@@ -191,6 +191,77 @@ RSpec.describe Validators::JsonSchemaValidator do
       it "collects all errors" do
         expect(validator).not_to be_valid
         expect(validator.errors.length).to eq(2)
+      end
+    end
+
+    context "when data is not a Hash" do
+      let(:data) { "not a hash" }
+
+      it "returns false with invalid_type error" do
+        expect(validator).not_to be_valid
+        expect(validator.errors).to eq([{path: "", error: "invalid_type", expected: Hash, actual: String}])
+      end
+    end
+
+    context "when data is nil" do
+      let(:data) { nil }
+
+      it "returns false with invalid_type error" do
+        expect(validator).not_to be_valid
+        expect(validator.errors).to eq([{path: "", error: "invalid_type", expected: Hash, actual: NilClass}])
+      end
+    end
+
+    context "when calling valid? multiple times" do
+      let(:data) { {"name" => 123} }
+
+      it "does not duplicate errors" do
+        validator.valid?
+        validator.valid?
+        expect(validator.errors.length).to eq(1)
+      end
+    end
+
+    context "with required fields" do
+      let(:schema) do
+        {
+          "name" => {type: String, required: true},
+          "age" => {type: Integer}
+        }
+      end
+
+      context "when required field is present" do
+        let(:data) { {"name" => "Alice"} }
+
+        it "returns true" do
+          expect(validator).to be_valid
+        end
+      end
+
+      context "when required field is nil" do
+        let(:data) { {"name" => nil} }
+
+        it "returns false with required error" do
+          expect(validator).not_to be_valid
+          expect(validator.errors).to eq([{path: "name", error: "required"}])
+        end
+      end
+
+      context "when required field is absent" do
+        let(:data) { {"age" => 30} }
+
+        it "returns false with required error" do
+          expect(validator).not_to be_valid
+          expect(validator.errors).to eq([{path: "name", error: "required"}])
+        end
+      end
+
+      context "when optional field is absent" do
+        let(:data) { {"name" => "Alice", "age" => nil} }
+
+        it "returns true" do
+          expect(validator).to be_valid
+        end
       end
     end
   end
