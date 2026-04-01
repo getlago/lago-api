@@ -35,10 +35,22 @@ module DunningCampaigns
       def call
         return result unless dunning_campaign
         return result unless days_between_attempts_satisfied?
-        return result if max_attempts_reached?
 
-        applicable_dunning_campaign_thresholds.each do |threshold|
+        thresholds = applicable_dunning_campaign_thresholds
+        return result if thresholds.empty?
+
+        increment_per_currency_attempts(thresholds)
+
+        thresholds.each do |threshold|
           DunningCampaigns::ProcessAttemptJob.perform_later(customer:, dunning_campaign_threshold: threshold)
+        end
+
+        if applicable_dunning_campaign_thresholds.empty?
+          SendWebhookJob.perform_later(
+            "dunning_campaign.finished",
+            customer,
+            dunning_campaign_code: dunning_campaign.code
+          )
         end
 
         result
@@ -53,7 +65,10 @@ module DunningCampaigns
       end
 
       def applicable_dunning_campaign_thresholds
+        attempts = customer.dunning_currency_attempts
         customer.overdue_balances.filter_map do |currency, amount_cents|
+          next if (attempts[currency] || 0) >= dunning_campaign.max_attempts
+
           dunning_campaign
             .thresholds
             .where(currency:)
@@ -61,8 +76,14 @@ module DunningCampaigns
         end
       end
 
-      def max_attempts_reached?
-        customer.last_dunning_campaign_attempt >= dunning_campaign.max_attempts
+      def increment_per_currency_attempts(thresholds)
+        attempts = customer.dunning_currency_attempts.dup
+        thresholds.each do |threshold|
+          attempts[threshold.currency] = (attempts[threshold.currency] || 0) + 1
+        end
+        customer.dunning_currency_attempts = attempts
+        customer.last_dunning_campaign_attempt_at = Time.zone.now
+        customer.save!
       end
 
       def days_between_attempts_satisfied?

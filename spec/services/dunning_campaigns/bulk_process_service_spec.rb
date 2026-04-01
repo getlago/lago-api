@@ -65,6 +65,14 @@ RSpec.describe DunningCampaigns::BulkProcessService do
             .with(customer:, dunning_campaign_threshold:)
         end
 
+        it "increments the per-currency attempt counter" do
+          freeze_time do
+            expect { result && customer.reload }
+              .to change { customer.dunning_currency_attempts[currency] }.from(nil).to(1)
+              .and change(customer, :last_dunning_campaign_attempt_at).to(Time.zone.now)
+          end
+        end
+
         context "when organization does not have auto_dunning feature enabled" do
           let(:organization) { create(:organization, premium_integrations: []) }
 
@@ -74,8 +82,11 @@ RSpec.describe DunningCampaigns::BulkProcessService do
           end
         end
 
-        context "when maximum attempts are reached" do
-          let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt: 5 }
+        context "when maximum attempts are reached for the currency" do
+          let(:customer) do
+            create :customer, organization:, billing_entity:,
+              dunning_currency_attempts: {currency => 5}
+          end
 
           let(:dunning_campaign) do
             create(
@@ -322,8 +333,11 @@ RSpec.describe DunningCampaigns::BulkProcessService do
           end
         end
 
-        context "when maximum attempts are reached" do
-          let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt: 5 }
+        context "when maximum attempts are reached for the currency" do
+          let(:customer) do
+            create :customer, organization:, billing_entity:,
+              dunning_currency_attempts: {currency => 5}
+          end
 
           let(:dunning_campaign) do
             create(
@@ -479,6 +493,12 @@ RSpec.describe DunningCampaigns::BulkProcessService do
           expect(DunningCampaigns::ProcessAttemptJob)
             .to have_been_enqueued.with(customer:, dunning_campaign_threshold: eur_threshold)
         end
+
+        it "increments per-currency counters independently" do
+          result
+          customer.reload
+          expect(customer.dunning_currency_attempts).to eq("USD" => 1, "EUR" => 1)
+        end
       end
 
       context "when only one currency exceeds its threshold" do
@@ -567,7 +587,7 @@ RSpec.describe DunningCampaigns::BulkProcessService do
       end
     end
 
-    context "when maximum attempts are reached" do
+    context "when maximum attempts are reached for the currency" do
       let(:dunning_campaign) do
         create(
           :dunning_campaign,
@@ -591,7 +611,7 @@ RSpec.describe DunningCampaigns::BulkProcessService do
           organization:,
           billing_entity:,
           currency:,
-          last_dunning_campaign_attempt: 3,
+          dunning_currency_attempts: {currency => 3},
           last_dunning_campaign_attempt_at:
       end
 
@@ -622,6 +642,87 @@ RSpec.describe DunningCampaigns::BulkProcessService do
           result
           expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
         end
+      end
+    end
+
+    context "when max attempts reached after processing sends finished webhook" do
+      let(:dunning_campaign) do
+        create(
+          :dunning_campaign,
+          organization:,
+          max_attempts: 1
+        )
+      end
+
+      let(:dunning_campaign_threshold) do
+        create(
+          :dunning_campaign_threshold,
+          dunning_campaign:,
+          currency:,
+          amount_cents: 500
+        )
+      end
+
+      before do
+        dunning_campaign_threshold
+        billing_entity.update!(applied_dunning_campaign: dunning_campaign)
+        create(:invoice, organization:, customer:, currency:, payment_overdue: true, total_amount_cents: 600)
+      end
+
+      it "sends the campaign finished webhook" do
+        expect { result }.to have_enqueued_job(SendWebhookJob)
+          .with("dunning_campaign.finished", customer, {dunning_campaign_code: dunning_campaign.code})
+      end
+
+      it "still enqueues the process attempt job" do
+        result
+        expect(DunningCampaigns::ProcessAttemptJob)
+          .to have_been_enqueued.with(customer:, dunning_campaign_threshold:)
+      end
+    end
+
+    context "when one currency is maxed but another is not" do
+      let(:dunning_campaign) { create :dunning_campaign, organization:, max_attempts: 2 }
+
+      let(:usd_threshold) do
+        create(:dunning_campaign_threshold, dunning_campaign:, currency: "USD", amount_cents: 40_00)
+      end
+
+      let(:eur_threshold) do
+        create(:dunning_campaign_threshold, dunning_campaign:, currency: "EUR", amount_cents: 20_00)
+      end
+
+      let(:customer) do
+        create :customer, organization:, billing_entity:, currency: "USD",
+          dunning_currency_attempts: {"USD" => 2}
+      end
+
+      before do
+        usd_threshold
+        eur_threshold
+        billing_entity.update!(applied_dunning_campaign: dunning_campaign)
+        create(:invoice, organization:, customer:, currency: "USD", payment_overdue: true, total_amount_cents: 50_00)
+        create(:invoice, organization:, customer:, currency: "EUR", payment_overdue: true, total_amount_cents: 25_00)
+      end
+
+      it "only enqueues for the currency that has not reached max attempts" do
+        result
+        expect(DunningCampaigns::ProcessAttemptJob)
+          .not_to have_been_enqueued.with(customer:, dunning_campaign_threshold: usd_threshold)
+        expect(DunningCampaigns::ProcessAttemptJob)
+          .to have_been_enqueued.with(customer:, dunning_campaign_threshold: eur_threshold)
+      end
+
+      it "only increments the non-maxed currency counter" do
+        result
+        customer.reload
+        expect(customer.dunning_currency_attempts["USD"]).to eq(2)
+        expect(customer.dunning_currency_attempts["EUR"]).to eq(1)
+      end
+
+      it "does not send the campaign finished webhook" do
+        result
+        expect(SendWebhookJob).not_to have_been_enqueued
       end
     end
   end

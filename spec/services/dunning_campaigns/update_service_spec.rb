@@ -86,6 +86,7 @@ RSpec.describe DunningCampaigns::UpdateService do
             applied_dunning_campaign: nil,
             last_dunning_campaign_attempt: 4,
             last_dunning_campaign_attempt_at: 1.day.ago,
+            dunning_currency_attempts: {dunning_campaign_threshold.currency => 4},
             organization: organization,
             billing_entity: billing_entity
           )
@@ -97,6 +98,7 @@ RSpec.describe DunningCampaigns::UpdateService do
             applied_dunning_campaign: dunning_campaign,
             last_dunning_campaign_attempt: 4,
             last_dunning_campaign_attempt_at: 1.day.ago,
+            dunning_currency_attempts: {dunning_campaign_threshold.currency => 4},
             organization: organization,
             billing_entity: billing_entity
           )
@@ -108,6 +110,7 @@ RSpec.describe DunningCampaigns::UpdateService do
             applied_dunning_campaign: nil,
             last_dunning_campaign_attempt: 4,
             last_dunning_campaign_attempt_at: 1.day.ago,
+            dunning_currency_attempts: {dunning_campaign_threshold.currency => 4},
             organization: organization,
             billing_entity: billing_entity_2
           )
@@ -154,6 +157,7 @@ RSpec.describe DunningCampaigns::UpdateService do
             expect { result && customer.reload }
               .to change(customer, :last_dunning_campaign_attempt).to(0)
               .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+              .and change(customer, :dunning_currency_attempts).to({})
 
             expect(result).to be_success
           end
@@ -168,6 +172,7 @@ RSpec.describe DunningCampaigns::UpdateService do
             expect { result && customer.reload }
               .to not_change { customer.last_dunning_campaign_attempt }
               .and not_change { customer.last_dunning_campaign_attempt_at&.to_i }
+              .and not_change { customer.dunning_currency_attempts }
 
             expect(result).to be_success
           end
@@ -324,6 +329,7 @@ RSpec.describe DunningCampaigns::UpdateService do
               applied_dunning_campaign: dunning_campaign,
               last_dunning_campaign_attempt: 3,
               last_dunning_campaign_attempt_at: 1.day.ago,
+              dunning_currency_attempts: {"EUR" => 3},
               organization:,
               billing_entity:
             )
