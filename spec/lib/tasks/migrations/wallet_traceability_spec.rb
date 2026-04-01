@@ -63,12 +63,12 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
 
   def run_migration(dry_run: nil, include_terminated: false)
     env_vars = {
-      "organization_id" => organization.id,
-      "batch_size" => "100",
-      "output_limit" => "50"
+      "ORGANIZATION_ID" => organization.id,
+      "BATCH_SIZE" => "100",
+      "OUTPUT_LIMIT" => "50"
     }
-    env_vars["dry_run"] = "false" if dry_run == false
-    env_vars["include_terminated"] = "true" if include_terminated
+    env_vars["DRY_RUN"] = "false" if dry_run == false
+    env_vars["INCLUDE_TERMINATED"] = "true" if include_terminated
 
     env_vars.each { |k, v| ENV[k] = v }
     task.reenable
@@ -82,13 +82,13 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       wallet = create_non_traceable_wallet
       top_up_wallet(wallet, granted_credits: "100")
 
-      ENV["organization_id"] = organization.id
+      ENV["ORGANIZATION_ID"] = organization.id
       task.reenable
       task.invoke
 
       expect(wallet.reload.traceable).to eq(false)
     ensure
-      ENV.delete("organization_id")
+      ENV.delete("ORGANIZATION_ID")
     end
 
     it "processes all organizations when organization_id is not set" do
@@ -115,45 +115,45 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
         })
       end
 
-      ENV["dry_run"] = "false"
+      ENV["DRY_RUN"] = "false"
       task.reenable
       task.invoke
 
       expect(wallet1.reload.traceable).to eq(true)
       expect(wallet2.reload.traceable).to eq(true)
     ensure
-      ENV.delete("dry_run")
+      ENV.delete("DRY_RUN")
     end
 
     it "passes thread_count env var to migration" do
       wallet = create_non_traceable_wallet
       top_up_wallet(wallet, granted_credits: "100")
 
-      ENV["organization_id"] = organization.id
-      ENV["thread_count"] = "4"
+      ENV["ORGANIZATION_ID"] = organization.id
+      ENV["THREAD_COUNT"] = "4"
       task.reenable
 
       expect { task.invoke }.to output(a_string_including("Threads: 4")).to_stdout
 
       expect(wallet.reload.traceable).to eq(false)
     ensure
-      ENV.delete("organization_id")
-      ENV.delete("thread_count")
+      ENV.delete("ORGANIZATION_ID")
+      ENV.delete("THREAD_COUNT")
     end
 
     it "defaults to dry-run even when dry_run is set to any value other than 'false'" do
       wallet = create_non_traceable_wallet
       top_up_wallet(wallet, granted_credits: "100")
 
-      ENV["dry_run"] = "true"
-      ENV["organization_id"] = organization.id
+      ENV["DRY_RUN"] = "true"
+      ENV["ORGANIZATION_ID"] = organization.id
       task.reenable
       task.invoke
 
       expect(wallet.reload.traceable).to eq(false)
     ensure
-      ENV.delete("dry_run")
-      ENV.delete("organization_id")
+      ENV.delete("DRY_RUN")
+      ENV.delete("ORGANIZATION_ID")
     end
   end
 
@@ -200,10 +200,10 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
 
         Tempfile.create(["problematic_wallets", ".csv"]) do |tmpfile|
           env_vars = {
-            "organization_id" => organization.id,
-            "batch_size" => "100",
-            "output_limit" => "50",
-            "output_file" => tmpfile.path
+            "ORGANIZATION_ID" => organization.id,
+            "BATCH_SIZE" => "100",
+            "OUTPUT_LIMIT" => "50",
+            "OUTPUT_FILE" => tmpfile.path
           }
           env_vars.each { |k, v| ENV[k] = v }
           task.reenable
@@ -983,11 +983,11 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
 
         Tempfile.create(["backfill_errors", ".csv"]) do |tmpfile|
           env_vars = {
-            "organization_id" => organization.id,
-            "batch_size" => "100",
-            "output_limit" => "50",
-            "dry_run" => "false",
-            "output_file" => tmpfile.path
+            "ORGANIZATION_ID" => organization.id,
+            "BATCH_SIZE" => "100",
+            "OUTPUT_LIMIT" => "50",
+            "DRY_RUN" => "false",
+            "OUTPUT_FILE" => tmpfile.path
           }
           env_vars.each { |k, v| ENV[k] = v }
           task.reenable
