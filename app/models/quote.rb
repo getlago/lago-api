@@ -17,6 +17,7 @@ class Quote < ApplicationRecord
   }.freeze
 
   before_save :ensure_number
+  before_save :ensure_share_token
 
   belongs_to :organization
   belongs_to :customer
@@ -41,6 +42,21 @@ class Quote < ApplicationRecord
     instance_methods: false,
     validate: {allow_nil: true}
 
+  validates :share_token,
+    on: :update,
+    presence: true,
+    if: -> { draft? || approved? }
+
+  validates :void_reason, :voided_at,
+    on: :update,
+    presence: true,
+    if: -> { voided? }
+
+  validates :approved_at,
+    on: :update,
+    presence: true,
+    if: -> { approved? }
+
   sequenced(
     scope: ->(quote) { quote.organization.quotes },
     lock_key: ->(quote) { quote.organization_id }
@@ -55,6 +71,12 @@ class Quote < ApplicationRecord
     time = created_at || Time.current
     formatted_sequential_id = format("%04d", sequential_id)
     self.number = "QT-#{time.strftime("%Y")}-#{formatted_sequential_id}"
+  end
+
+  def ensure_share_token
+    return if voided?
+
+    self.share_token ||= SecureRandom.uuid
   end
 end
 
