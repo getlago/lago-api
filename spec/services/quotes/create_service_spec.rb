@@ -86,7 +86,7 @@ RSpec.describe Quotes::CreateService do
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:billing_items]).to include("add_ons_not_allowed_for_subscription")
+        expect(result.error.messages[:billing_items]).to include("invalid_schema_at_add_ons")
       end
 
       it "does not create a quote" do

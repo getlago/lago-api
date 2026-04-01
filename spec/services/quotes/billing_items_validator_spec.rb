@@ -76,9 +76,9 @@ RSpec.describe Quotes::BillingItemsValidator do
         }
       end
 
-      it "returns false with add_ons_not_allowed error" do
+      it "returns false with schema error for unknown key" do
         expect(validator).not_to be_valid
-        expect(result.error.messages[:billing_items]).to include("add_ons_not_allowed_for_subscription")
+        expect(result.error.messages[:billing_items]).to include("invalid_schema_at_add_ons")
       end
     end
 
@@ -91,9 +91,9 @@ RSpec.describe Quotes::BillingItemsValidator do
         }
       end
 
-      it "returns false with add_ons_not_allowed error" do
+      it "returns false with schema error for unknown key" do
         expect(validator).not_to be_valid
-        expect(result.error.messages[:billing_items]).to include("add_ons_not_allowed_for_subscription")
+        expect(result.error.messages[:billing_items]).to include("invalid_schema_at_add_ons")
       end
     end
 
@@ -106,9 +106,9 @@ RSpec.describe Quotes::BillingItemsValidator do
         }
       end
 
-      it "returns false with plan_not_allowed error" do
+      it "returns false with schema error for unknown key" do
         expect(validator).not_to be_valid
-        expect(result.error.messages[:billing_items]).to include("plan_not_allowed_for_one_off")
+        expect(result.error.messages[:billing_items]).to include("invalid_schema_at_plan")
       end
     end
 
@@ -121,9 +121,9 @@ RSpec.describe Quotes::BillingItemsValidator do
         }
       end
 
-      it "returns false with coupons_not_allowed error" do
+      it "returns false with schema error for unknown key" do
         expect(validator).not_to be_valid
-        expect(result.error.messages[:billing_items]).to include("coupons_not_allowed_for_one_off")
+        expect(result.error.messages[:billing_items]).to include("invalid_schema_at_coupons")
       end
     end
 
@@ -136,9 +136,9 @@ RSpec.describe Quotes::BillingItemsValidator do
         }
       end
 
-      it "returns false with wallet_credits_not_allowed error" do
+      it "returns false with schema error for unknown key" do
         expect(validator).not_to be_valid
-        expect(result.error.messages[:billing_items]).to include("wallet_credits_not_allowed_for_one_off")
+        expect(result.error.messages[:billing_items]).to include("invalid_schema_at_wallet_credits")
       end
     end
 
@@ -205,9 +205,9 @@ RSpec.describe Quotes::BillingItemsValidator do
         }
       end
 
-      it "returns false with missing_subscription_external_id error" do
+      it "returns false with schema required error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages[:billing_items]).to include("missing_subscription_external_id")
+        expect(result.error.messages[:billing_items]).to include("invalid_schema_at_plan.subscription_external_id")
       end
     end
 

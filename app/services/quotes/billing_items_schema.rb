@@ -33,11 +33,30 @@ module Quotes
       "total_amount_cents" => {type: Integer}
     }.freeze
 
-    BILLING_ITEMS_SCHEMA = {
-      "plan" => {type: Hash, schema: PLAN_SCHEMA},
+    PLAN_AMENDMENT_SCHEMA = PLAN_SCHEMA.merge(
+      "subscription_external_id" => {type: String, required: true}
+    ).freeze
+
+    SUBSCRIPTION_CREATION_SCHEMA = {
+      "plan" => {type: Hash, schema: PLAN_SCHEMA, required: true},
       "coupons" => {type: Array, items: {type: Hash, schema: COUPON_SCHEMA}},
-      "wallet_credits" => {type: Array, items: {type: Hash, schema: WALLET_CREDIT_SCHEMA}},
-      "add_ons" => {type: Array, items: {type: Hash, schema: ADD_ON_SCHEMA}}
+      "wallet_credits" => {type: Array, items: {type: Hash, schema: WALLET_CREDIT_SCHEMA}}
+    }.freeze
+
+    SUBSCRIPTION_AMENDMENT_SCHEMA = {
+      "plan" => {type: Hash, schema: PLAN_AMENDMENT_SCHEMA, required: true},
+      "coupons" => {type: Array, items: {type: Hash, schema: COUPON_SCHEMA}},
+      "wallet_credits" => {type: Array, items: {type: Hash, schema: WALLET_CREDIT_SCHEMA}}
+    }.freeze
+
+    ONE_OFF_SCHEMA = {
+      "add_ons" => {type: Array, items: {type: Hash, schema: ADD_ON_SCHEMA}, required: true}
+    }.freeze
+
+    SCHEMAS_BY_ORDER_TYPE = {
+      subscription_creation: SUBSCRIPTION_CREATION_SCHEMA,
+      subscription_amendment: SUBSCRIPTION_AMENDMENT_SCHEMA,
+      one_off: ONE_OFF_SCHEMA
     }.freeze
   end
 end

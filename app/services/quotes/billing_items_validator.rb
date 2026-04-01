@@ -5,9 +5,7 @@ module Quotes
     def valid?
       validate_format
       validate_schema
-      validate_keys_for_order_type
       validate_no_duplicates
-      validate_subscription_external_ids
       validate_positions
       validate_add_on_entries
 
@@ -33,10 +31,6 @@ module Quotes
       args[:order_type].to_sym
     end
 
-    def subscription_type?
-      Order::SUBSCRIPTION_TYPES.key?(order_type)
-    end
-
     def validate_format
       add_error(field: :billing_items, error_code: "invalid_format") unless billing_items.is_a?(Hash)
     end
@@ -44,35 +38,13 @@ module Quotes
     def validate_schema
       return if invalid_format?
 
-      schema_validator = Validators::JsonSchemaValidator.new(
-        billing_items,
-        schema: BillingItemsSchema::BILLING_ITEMS_SCHEMA
-      )
+      schema = BillingItemsSchema::SCHEMAS_BY_ORDER_TYPE[order_type]
+      schema_validator = Validators::JsonSchemaValidator.new(billing_items, schema:)
 
       return if schema_validator.valid?
 
       schema_validator.errors.each do |err|
         add_error(field: :billing_items, error_code: "invalid_schema_at_#{err[:path]}")
-      end
-    end
-
-    def validate_keys_for_order_type
-      return if invalid_format?
-
-      if subscription_type?
-        if billing_items["add_ons"].present?
-          add_error(field: :billing_items, error_code: "add_ons_not_allowed_for_subscription")
-        end
-      elsif order_type == :one_off
-        if billing_items["plan"].present?
-          add_error(field: :billing_items, error_code: "plan_not_allowed_for_one_off")
-        end
-        if billing_items["coupons"].present?
-          add_error(field: :billing_items, error_code: "coupons_not_allowed_for_one_off")
-        end
-        if billing_items["wallet_credits"].present?
-          add_error(field: :billing_items, error_code: "wallet_credits_not_allowed_for_one_off")
-        end
       end
     end
 
@@ -89,18 +61,6 @@ module Quotes
       ids = items.filter_map { |item| item[id_field] }
       if ids.length != ids.uniq.length
         add_error(field: :billing_items, error_code:)
-      end
-    end
-
-    def validate_subscription_external_ids
-      return if invalid_format?
-      return unless order_type == :subscription_amendment
-
-      plan = billing_items["plan"]
-      return if plan.blank?
-
-      if plan["subscription_external_id"].blank?
-        add_error(field: :billing_items, error_code: "missing_subscription_external_id")
       end
     end
 
