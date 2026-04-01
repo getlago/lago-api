@@ -65,7 +65,7 @@ module Quotes
 
       quote.quote_owners.destroy_all
 
-      organization.users.where(id: params[:owner_ids]).each do |user|
+      organization.users.where(id: params[:owner_ids]).find_each do |user|
         quote.quote_owners.build(user:, organization:)
       end
     end
