@@ -3,7 +3,6 @@
 module Quotes
   class BillingItemsValidator < BaseValidator
     def valid?
-      validate_format
       validate_schema
       validate_no_duplicates
       validate_positions
@@ -20,7 +19,7 @@ module Quotes
     private
 
     def invalid_format?
-      errors? && errors[:billing_items]&.include?("invalid_format")
+      !billing_items.is_a?(Hash)
     end
 
     def billing_items
@@ -31,12 +30,11 @@ module Quotes
       args[:order_type].to_sym
     end
 
-    def validate_format
-      add_error(field: :billing_items, error_code: "invalid_format") unless billing_items.is_a?(Hash)
-    end
-
     def validate_schema
-      return if invalid_format?
+      if invalid_format?
+        add_error(field: :billing_items, error_code: "invalid_format")
+        return
+      end
 
       schema = BillingItemsSchema::SCHEMAS_BY_ORDER_TYPE[order_type]
       schema_validator = Validators::JsonSchemaValidator.new(billing_items, schema:)
