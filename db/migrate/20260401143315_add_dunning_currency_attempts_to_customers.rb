@@ -15,8 +15,4 @@ class AddDunningCurrencyAttemptsToCustomers < ActiveRecord::Migration[8.0]
       SQL
     end
   end
-
-  def down
-    safety_assured { remove_column :customers, :dunning_currency_attempts }
-  end
 end
