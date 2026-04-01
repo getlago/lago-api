@@ -86,6 +86,78 @@ describe "Dunning Campaign v1", :premium do
     end
   end
 
+  it "handles multi-currency dunning with per-currency attempt tracking" do
+    # Campaign: max_attempts=2, days_between_attempts=2
+    # EUR threshold: 150 EUR (from let)
+    # USD threshold: 100 USD
+    create(:dunning_campaign_threshold, dunning_campaign:, amount_cents: 100_00, currency: "USD")
+
+    # Create overdue invoices directly — multi-currency subscription API not yet shipped
+    travel_to(DateTime.new(2025, 1, 1, 10)) do
+      create(:invoice, organization:, customer:, currency: "EUR",
+        payment_overdue: true, total_amount_cents: 149_00, ready_for_payment_processing: true)
+      create(:invoice, organization:, customer:, currency: "USD",
+        payment_overdue: true, total_amount_cents: 120_00, ready_for_payment_processing: true)
+    end
+
+    # Day 3: EUR below threshold (149 < 150), only USD dunned (120 >= 100)
+    travel_to(DateTime.new(2025, 1, 3, 10)) do
+      perform_dunning
+
+      customer.reload
+      expect(customer.dunning_currency_attempts).to eq("USD" => 1)
+      expect(customer.payment_requests.count).to eq(1)
+      expect(customer.payment_requests.last.amount_currency).to eq("USD")
+    end
+
+    # Day 4-5: within days_between_attempts, nothing happens
+    travel_to(DateTime.new(2025, 1, 5, 10)) do
+      perform_dunning
+
+      customer.reload
+      expect(customer.dunning_currency_attempts).to eq("USD" => 1)
+      expect(customer.payment_requests.count).to eq(1)
+    end
+
+    # Push EUR over threshold with another overdue invoice
+    travel_to(DateTime.new(2025, 1, 5, 18)) do
+      create(:invoice, organization:, customer:, currency: "EUR",
+        payment_overdue: true, total_amount_cents: 10_00, ready_for_payment_processing: true)
+    end
+
+    # Day 6: > 2 days since day 3. Both currencies now exceed thresholds.
+    travel_to(DateTime.new(2025, 1, 6, 10)) do
+      perform_dunning
+
+      customer.reload
+      expect(customer.dunning_currency_attempts).to eq("USD" => 2, "EUR" => 1)
+      expect(customer.payment_requests.count).to eq(3) # 1 prev USD + 1 USD + 1 EUR
+      expect(customer.payment_requests.where(amount_currency: "USD").count).to eq(2)
+      expect(customer.payment_requests.where(amount_currency: "EUR").count).to eq(1)
+    end
+
+    # Day 9: USD at max (2). Only EUR should be dunned.
+    travel_to(DateTime.new(2025, 1, 9, 10)) do
+      perform_dunning
+
+      customer.reload
+      expect(customer.dunning_currency_attempts).to eq("USD" => 2, "EUR" => 2)
+      expect(customer.payment_requests.where(amount_currency: "USD").count).to eq(2)
+      expect(customer.payment_requests.where(amount_currency: "EUR").count).to eq(2)
+    end
+
+    # Day 12: Both currencies at max. No more attempts. Finished webhook sent on day 9.
+    travel_to(DateTime.new(2025, 1, 12, 10)) do
+      perform_dunning
+
+      customer.reload
+      expect(customer.payment_requests.count).to eq(4) # unchanged
+
+      finished_webhooks = webhooks_sent.select { |w| w["webhook_type"] == "dunning_campaign.finished" }
+      expect(finished_webhooks.count).to eq(1)
+    end
+  end
+
   it "retries overdue invoices" do
     travel_to(DateTime.new(2025, 1, 1, 10)) do
       create_subscription(

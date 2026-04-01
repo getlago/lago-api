@@ -91,7 +91,7 @@ module DunningCampaigns
 
         next_attempt_date = customer.last_dunning_campaign_attempt_at + dunning_campaign.days_between_attempts.days
 
-        Time.zone.now >= next_attempt_date
+        Time.zone.now > next_attempt_date
       end
     end
   end
