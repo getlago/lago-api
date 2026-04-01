@@ -19,34 +19,34 @@ class WalletMigration
   def run
     puts "Wallet migration — mode: #{@dry_run ? "DRY-RUN (validation only)" : "BACKFILL (writing data)"}"
     puts "Limit: #{@limit || "all"}, Batch size: #{@batch_size}, Threads: #{@thread_count.zero? ? "sequential" : @thread_count}"
-    print_next_cursor
     puts "=" * 60
 
-    if @dry_run
+    last_cursor = if @dry_run
       run_validation
     else
       run_backfill
     end
+
+    print_next_cursor(last_cursor)
   end
 
   private
 
   attr_reader :scope
 
-  def print_next_cursor
+  def print_next_cursor(last_cursor)
     return unless @limit
 
-    query = scope
-    query = query.where(Wallet.arel_table[:customer_id].gt(@cursor)) if @cursor
-    # Use ORDER + OFFSET + LIMIT 1 to get the Nth distinct customer_id without loading all IDs.
-    # OFFSET is 0-based, so @limit - 1 gives us the last customer in the window.
-    last_customer_id = query.order(:customer_id).select(:customer_id).distinct
-      .offset(@limit - 1).limit(1).pick(:customer_id)
-
-    if last_customer_id.nil?
-      puts "Next cursor: none (all records fit within limit)"
+    has_more = if last_cursor
+      scope.where(Wallet.arel_table[:customer_id].gt(last_cursor)).exists?
     else
-      puts "Next cursor: #{last_customer_id}"
+      false
+    end
+
+    if has_more
+      puts "Next cursor: #{last_cursor}"
+    else
+      puts "Next cursor: none (all records fit within limit)"
     end
   end
 
@@ -61,9 +61,7 @@ class WalletMigration
     problematic_wallets = []
     wallet_count = scope.count
 
-    iterate_customers_in_batches do |customer_ids|
-      batch_wallet_count = 0
-
+    last_cursor = iterate_customers_in_batches do |customer_ids|
       Parallel.each(customer_ids, in_threads: @thread_count) do |customer_id|
         ActiveRecord::Base.connection_pool.with_connection do
           wallets = scope.where(customer_id: customer_id).includes(:customer, :organization, :wallet_transactions).to_a
@@ -71,7 +69,6 @@ class WalletMigration
             issues = validate_wallet(wallet)
             mutex.synchronize do
               total_wallets += 1
-              batch_wallet_count += 1
               if issues.empty?
                 migratable_wallets += 1
               else
@@ -90,11 +87,11 @@ class WalletMigration
         end
       end
       mutex.synchronize { print_progress("Validating", total_wallets, wallet_count) }
-      batch_wallet_count
     end
 
     clear_progress
     print_validation_summary(total_wallets, migratable_wallets, problematic_wallets)
+    last_cursor
   end
 
   def settled_inbound(wallet)
@@ -262,9 +259,7 @@ class WalletMigration
     errors = []
     wallet_count = scope.count
 
-    iterate_customers_in_batches do |customer_ids|
-      batch_wallet_count = 0
-
+    last_cursor = iterate_customers_in_batches do |customer_ids|
       Parallel.each(customer_ids, in_threads: @thread_count) do |customer_id|
         ActiveRecord::Base.connection_pool.with_connection do
           ApplicationRecord.transaction do
@@ -278,7 +273,6 @@ class WalletMigration
 
               mutex.synchronize do
                 wallets_processed += wallets.size
-                batch_wallet_count += wallets.size
                 customers_processed += 1
               end
             rescue => e
@@ -289,11 +283,11 @@ class WalletMigration
         end
       end
       mutex.synchronize { print_progress("Backfilling", wallets_processed + errors.size, wallet_count) }
-      batch_wallet_count
     end
 
     clear_progress
     print_backfill_summary(customers_processed, wallets_processed, errors)
+    last_cursor
   end
 
   def backfill_wallet_transactions(wallet)
@@ -400,27 +394,29 @@ class WalletMigration
   # ---------------------------------------------------------------------------
 
   # Iterates distinct customer IDs in batches using cursor-based pagination.
-  # The block must return the number of wallets processed in that batch.
-  # The limit is best-effort: we stop fetching new customer batches once the
-  # cumulative wallet count reaches @limit, but all wallets for a customer
-  # are always processed atomically.
+  # The limit caps the number of distinct customers processed (not wallets).
+  # Returns the last customer_id processed (usable as cursor for the next run).
   def iterate_customers_in_batches
-    wallets_processed = 0
+    customers_processed = 0
     last_customer_id = @cursor
 
     loop do
-      break if @limit && wallets_processed >= @limit
+      remaining = @limit ? @limit - customers_processed : @batch_size
+      break if remaining <= 0
 
+      batch = [remaining, @batch_size].min
       query = scope
       query = query.where(Wallet.arel_table[:customer_id].gt(last_customer_id)) if last_customer_id
-      customer_ids = query.order(:customer_id).distinct.limit(@batch_size).pluck(:customer_id)
+      customer_ids = query.order(:customer_id).distinct.limit(batch).pluck(:customer_id)
       break if customer_ids.empty?
 
       last_customer_id = customer_ids.last
+      customers_processed += customer_ids.size
 
-      batch_wallet_count = yield(customer_ids)
-      wallets_processed += batch_wallet_count
+      yield(customer_ids)
     end
+
+    last_customer_id
   end
 
   def print_progress(label, current, total)
