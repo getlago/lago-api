@@ -318,6 +318,20 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV.delete("ORGANIZATION_ID")
     end
 
+    it "does not print next cursor line when only cursor is set without limit" do
+      wallet = create_non_traceable_wallet
+      top_up_wallet(wallet, granted_credits: "50")
+
+      ENV["DRY_RUN"] = "false"
+      ENV["CURSOR"] = "00000000-0000-0000-0000-000000000000"
+      task.reenable
+
+      expect { task.invoke }.not_to output(a_string_including("Next cursor:")).to_stdout
+    ensure
+      ENV.delete("DRY_RUN")
+      ENV.delete("CURSOR")
+    end
+
     it "defaults to dry-run even when dry_run is set to any value other than 'false'" do
       wallet = create_non_traceable_wallet
       top_up_wallet(wallet, granted_credits: "100")

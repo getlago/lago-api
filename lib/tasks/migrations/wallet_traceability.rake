@@ -35,7 +35,7 @@ class WalletMigration
   attr_reader :scope
 
   def print_next_cursor(last_cursor)
-    return unless @limit || @cursor
+    return unless @limit
 
     has_more = if last_cursor
       scope.where(Wallet.arel_table[:customer_id].gt(last_cursor)).exists?
