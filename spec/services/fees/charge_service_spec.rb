@@ -2537,6 +2537,8 @@ RSpec.describe Fees::ChargeService, :premium do
             )
 
             charge.update!(min_amount_cents: 1000)
+
+            allow(AdjustedFee).to receive(:where).and_call_original
           end
 
           it "initializes fees" do
@@ -2555,6 +2557,12 @@ RSpec.describe Fees::ChargeService, :premium do
             expect(usage_fee.taxes_precise_amount_cents).to eq(0.0)
             expect(usage_fee.amount_currency).to eq("EUR")
             expect(usage_fee.units).to eq(0)
+          end
+
+          it "does not load adjusted fees" do
+            charge_subscription_service.call
+
+            expect(AdjustedFee).not_to have_received(:where)
           end
         end
       end
