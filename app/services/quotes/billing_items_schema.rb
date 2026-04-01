@@ -28,7 +28,7 @@ module Quotes
       "add_on_id" => {type: String},
       "add_on_code" => {type: String},
       "name" => {type: String},
-      "units" => {type: Integer},
+      "units" => {type: Numeric},
       "amount_cents" => {type: Integer},
       "total_amount_cents" => {type: Integer}
     }.freeze
