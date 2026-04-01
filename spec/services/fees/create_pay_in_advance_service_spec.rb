@@ -408,7 +408,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         )
       end
 
-      it "does not persist the fee" do
+      it "does not persist the fee and defers taxes to the caller" do
         result = fee_service.call
 
         expect(result).to be_success
