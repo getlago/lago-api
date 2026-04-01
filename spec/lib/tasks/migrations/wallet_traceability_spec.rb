@@ -150,7 +150,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV["BATCH_SIZE"] = "100"
       task.reenable
 
-      expect { task.invoke }.to output(a_string_including("Limit: 5, Batch size: 5")).to_stdout
+      expect { task.invoke }.to output(a_string_including("Customer limit: 5, Batch size: 5")).to_stdout
     ensure
       ENV.delete("ORGANIZATION_ID")
       ENV.delete("LIMIT")
@@ -166,7 +166,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV["BATCH_SIZE"] = "10"
       task.reenable
 
-      expect { task.invoke }.to output(a_string_including("Limit: 100, Batch size: 10")).to_stdout
+      expect { task.invoke }.to output(a_string_including("Customer limit: 100, Batch size: 10")).to_stdout
     ensure
       ENV.delete("ORGANIZATION_ID")
       ENV.delete("LIMIT")
@@ -181,7 +181,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV["BATCH_SIZE"] = "500"
       task.reenable
 
-      expect { task.invoke }.to output(a_string_including("Limit: all, Batch size: 500")).to_stdout
+      expect { task.invoke }.to output(a_string_including("Customer limit: all, Batch size: 500")).to_stdout
     ensure
       ENV.delete("ORGANIZATION_ID")
       ENV.delete("BATCH_SIZE")
@@ -256,7 +256,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV["LIMIT"] = "100"
       task.reenable
 
-      expect { task.invoke }.to output(a_string_including("Next cursor: none (all records fit within limit)")).to_stdout
+      expect { task.invoke }.to output(a_string_including("Next cursor: none (all remaining records processed)")).to_stdout
     ensure
       ENV.delete("ORGANIZATION_ID")
       ENV.delete("LIMIT")

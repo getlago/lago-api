@@ -18,7 +18,7 @@ class WalletMigration
 
   def run
     puts "Wallet migration — mode: #{@dry_run ? "DRY-RUN (validation only)" : "BACKFILL (writing data)"}"
-    puts "Limit: #{@limit || "all"}, Batch size: #{@batch_size}, Threads: #{@thread_count.zero? ? "sequential" : @thread_count}"
+    puts "Customer limit: #{@limit || "all"}, Batch size: #{@batch_size}, Threads: #{@thread_count.zero? ? "sequential" : @thread_count}"
     puts "=" * 60
 
     last_cursor = if @dry_run
@@ -35,7 +35,7 @@ class WalletMigration
   attr_reader :scope
 
   def print_next_cursor(last_cursor)
-    return unless @limit
+    return unless @limit || @cursor
 
     has_more = if last_cursor
       scope.where(Wallet.arel_table[:customer_id].gt(last_cursor)).exists?
@@ -46,7 +46,7 @@ class WalletMigration
     if has_more
       puts "Next cursor: #{last_cursor}"
     else
-      puts "Next cursor: none (all records fit within limit)"
+      puts "Next cursor: none (all remaining records processed)"
     end
   end
 
@@ -57,9 +57,10 @@ class WalletMigration
   def run_validation
     mutex = Mutex.new
     total_wallets = 0
+    customers_validated = 0
     migratable_wallets = 0
     problematic_wallets = []
-    wallet_count = cursor_scoped_count
+    progress_total = progress_count
 
     last_cursor = iterate_customers_in_batches do |customer_ids|
       Parallel.each(customer_ids, in_threads: @thread_count) do |customer_id|
@@ -84,9 +85,10 @@ class WalletMigration
               end
             end
           end
+          mutex.synchronize { customers_validated += 1 }
         end
       end
-      mutex.synchronize { print_progress("Validating", total_wallets, wallet_count) }
+      mutex.synchronize { print_progress("Validating", customers_validated, progress_total) }
     end
 
     clear_progress
@@ -257,7 +259,7 @@ class WalletMigration
     customers_processed = 0
     wallets_processed = 0
     errors = []
-    wallet_count = cursor_scoped_count
+    progress_total = progress_count
 
     last_cursor = iterate_customers_in_batches do |customer_ids|
       Parallel.each(customer_ids, in_threads: @thread_count) do |customer_id|
@@ -282,7 +284,7 @@ class WalletMigration
           end
         end
       end
-      mutex.synchronize { print_progress("Backfilling", wallets_processed + errors.size, wallet_count) }
+      mutex.synchronize { print_progress("Backfilling", customers_processed + errors.size, progress_total) }
     end
 
     clear_progress
@@ -393,10 +395,11 @@ class WalletMigration
   # Shared helpers
   # ---------------------------------------------------------------------------
 
-  def cursor_scoped_count
+  def progress_count
     query = scope
     query = query.where(Wallet.arel_table[:customer_id].gt(@cursor)) if @cursor
-    query.count
+    total = query.select(:customer_id).distinct.count
+    @limit ? [total, @limit].min : total
   end
 
   # Iterates distinct customer IDs in batches using cursor-based pagination.
@@ -457,7 +460,12 @@ namespace :migrations do
     options[:output_limit] = ENV["OUTPUT_LIMIT"].to_i if ENV["OUTPUT_LIMIT"].present?
     options[:thread_count] = ENV["THREAD_COUNT"].to_i if ENV["THREAD_COUNT"].present?
     options[:output_file] = ENV["OUTPUT_FILE"] if ENV["OUTPUT_FILE"].present?
-    options[:cursor] = ENV["CURSOR"] if ENV["CURSOR"].present?
+
+    if ENV["CURSOR"].present?
+      raise "Invalid CURSOR format: #{ENV["CURSOR"]}" unless ENV["CURSOR"].match?(/\A[0-9a-f-]{36}\z/i)
+
+      options[:cursor] = ENV["CURSOR"]
+    end
 
     WalletMigration.new(**options).run
   end
