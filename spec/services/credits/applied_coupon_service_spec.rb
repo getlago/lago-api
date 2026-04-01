@@ -353,7 +353,7 @@ RSpec.describe Credits::AppliedCouponService do
         end
       end
 
-      context "when currencies does not matches" do
+      context "when currencies does not match" do
         let(:applied_coupon) do
           create(
             :applied_coupon,
@@ -368,6 +368,27 @@ RSpec.describe Credits::AppliedCouponService do
 
           expect(result).to be_success
           expect(result.credit).to be_nil
+        end
+
+        context "when coupon is percentage" do
+          let(:coupon) { create(:coupon, organization:, coupon_type: :percentage, percentage_rate: 10) }
+          let(:applied_coupon) do
+            create(
+              :applied_coupon,
+              coupon:,
+              customer:,
+              percentage_rate: 10,
+              amount_currency: "NOK"
+            )
+          end
+
+          it "creates a credit regardless of currency" do
+            result = credit_service.call
+
+            expect(result).to be_success
+            expect(result.credit).to be_present
+            expect(result.credit.amount_currency).to eq("EUR")
+          end
         end
       end
 
