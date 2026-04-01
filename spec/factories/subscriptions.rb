@@ -13,7 +13,6 @@ FactoryBot.define do
 
     trait :pending do
       status { :pending }
-      subscription_at { nil }
       started_at { nil }
       activated_at { nil }
     end
