@@ -420,22 +420,22 @@ class WalletMigration
 end
 
 namespace :migrations do
-  desc "Migrate wallets to traceable (dry_run=true by default)"
+  desc "Migrate wallets to traceable (DRY_RUN=true by default)"
   task wallet_traceability: :environment do
     Rails.logger.level = :info
 
-    dry_run = ENV.fetch("dry_run", "true") != "false"
-    include_terminated = ENV["include_terminated"] == "true"
+    dry_run = ENV.fetch("DRY_RUN", "true") != "false"
+    include_terminated = ENV["INCLUDE_TERMINATED"] == "true"
     scope = Wallet.where(traceable: false)
     scope = scope.active unless include_terminated
-    scope = scope.where(organization_id: ENV["organization_id"]) if ENV["organization_id"].present?
+    scope = scope.where(organization_id: ENV["ORGANIZATION_ID"]) if ENV["ORGANIZATION_ID"].present?
 
     options = {scope:, dry_run:}
-    options[:limit] = ENV["limit"].to_i if ENV["limit"].present?
-    options[:batch_size] = ENV["batch_size"].to_i if ENV["batch_size"].present?
-    options[:output_limit] = ENV["output_limit"].to_i if ENV["output_limit"].present?
-    options[:thread_count] = ENV["thread_count"].to_i if ENV["thread_count"].present?
-    options[:output_file] = ENV["output_file"] if ENV["output_file"].present?
+    options[:limit] = ENV["LIMIT"].to_i if ENV["LIMIT"].present?
+    options[:batch_size] = ENV["BATCH_SIZE"].to_i if ENV["BATCH_SIZE"].present?
+    options[:output_limit] = ENV["OUTPUT_LIMIT"].to_i if ENV["OUTPUT_LIMIT"].present?
+    options[:thread_count] = ENV["THREAD_COUNT"].to_i if ENV["THREAD_COUNT"].present?
+    options[:output_file] = ENV["OUTPUT_FILE"] if ENV["OUTPUT_FILE"].present?
 
     WalletMigration.new(**options).run
   end
