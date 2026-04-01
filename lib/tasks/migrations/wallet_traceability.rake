@@ -9,7 +9,7 @@ class WalletMigration
     @scope = scope
     @dry_run = dry_run
     @limit = limit
-    @batch_size = batch_size
+    @batch_size = limit ? [batch_size, limit].min : batch_size
     @output_limit = output_limit
     @thread_count = thread_count
     @output_file = output_file
@@ -59,7 +59,7 @@ class WalletMigration
     total_wallets = 0
     migratable_wallets = 0
     problematic_wallets = []
-    wallet_count = scope.count
+    wallet_count = cursor_scoped_count
 
     last_cursor = iterate_customers_in_batches do |customer_ids|
       Parallel.each(customer_ids, in_threads: @thread_count) do |customer_id|
@@ -257,7 +257,7 @@ class WalletMigration
     customers_processed = 0
     wallets_processed = 0
     errors = []
-    wallet_count = scope.count
+    wallet_count = cursor_scoped_count
 
     last_cursor = iterate_customers_in_batches do |customer_ids|
       Parallel.each(customer_ids, in_threads: @thread_count) do |customer_id|
@@ -393,6 +393,12 @@ class WalletMigration
   # Shared helpers
   # ---------------------------------------------------------------------------
 
+  def cursor_scoped_count
+    query = scope
+    query = query.where(Wallet.arel_table[:customer_id].gt(@cursor)) if @cursor
+    query.count
+  end
+
   # Iterates distinct customer IDs in batches using cursor-based pagination.
   # The limit caps the number of distinct customers processed (not wallets).
   # Returns the last customer_id processed (usable as cursor for the next run).
@@ -447,7 +453,7 @@ namespace :migrations do
 
     options = {scope:, dry_run:}
     options[:limit] = ENV["LIMIT"].to_i if ENV["LIMIT"].present?
-    options[:batch_size] = [ENV["BATCH_SIZE"].to_i, options[:limit]].compact.min if ENV["BATCH_SIZE"].present?
+    options[:batch_size] = ENV["BATCH_SIZE"].to_i if ENV["BATCH_SIZE"].present?
     options[:output_limit] = ENV["OUTPUT_LIMIT"].to_i if ENV["OUTPUT_LIMIT"].present?
     options[:thread_count] = ENV["THREAD_COUNT"].to_i if ENV["THREAD_COUNT"].present?
     options[:output_file] = ENV["OUTPUT_FILE"] if ENV["OUTPUT_FILE"].present?
