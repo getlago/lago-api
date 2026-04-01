@@ -432,7 +432,7 @@ namespace :migrations do
 
     options = {scope:, dry_run:}
     options[:limit] = ENV["LIMIT"].to_i if ENV["LIMIT"].present?
-    options[:batch_size] = ENV["BATCH_SIZE"].to_i if ENV["BATCH_SIZE"].present?
+    options[:batch_size] = [ENV["BATCH_SIZE"].to_i, options[:limit]].compact.min if ENV["BATCH_SIZE"].present?
     options[:output_limit] = ENV["OUTPUT_LIMIT"].to_i if ENV["OUTPUT_LIMIT"].present?
     options[:thread_count] = ENV["THREAD_COUNT"].to_i if ENV["THREAD_COUNT"].present?
     options[:output_file] = ENV["OUTPUT_FILE"] if ENV["OUTPUT_FILE"].present?

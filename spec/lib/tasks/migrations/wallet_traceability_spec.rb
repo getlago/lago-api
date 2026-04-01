@@ -141,6 +141,52 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV.delete("THREAD_COUNT")
     end
 
+    it "caps batch_size to limit when both are set and batch_size exceeds limit" do
+      wallet = create_non_traceable_wallet
+      top_up_wallet(wallet, granted_credits: "100")
+
+      ENV["ORGANIZATION_ID"] = organization.id
+      ENV["LIMIT"] = "5"
+      ENV["BATCH_SIZE"] = "100"
+      task.reenable
+
+      expect { task.invoke }.to output(a_string_including("Limit: 5, Batch size: 5")).to_stdout
+    ensure
+      ENV.delete("ORGANIZATION_ID")
+      ENV.delete("LIMIT")
+      ENV.delete("BATCH_SIZE")
+    end
+
+    it "keeps batch_size when it is smaller than limit" do
+      wallet = create_non_traceable_wallet
+      top_up_wallet(wallet, granted_credits: "100")
+
+      ENV["ORGANIZATION_ID"] = organization.id
+      ENV["LIMIT"] = "100"
+      ENV["BATCH_SIZE"] = "10"
+      task.reenable
+
+      expect { task.invoke }.to output(a_string_including("Limit: 100, Batch size: 10")).to_stdout
+    ensure
+      ENV.delete("ORGANIZATION_ID")
+      ENV.delete("LIMIT")
+      ENV.delete("BATCH_SIZE")
+    end
+
+    it "does not cap batch_size when limit is not set" do
+      wallet = create_non_traceable_wallet
+      top_up_wallet(wallet, granted_credits: "100")
+
+      ENV["ORGANIZATION_ID"] = organization.id
+      ENV["BATCH_SIZE"] = "500"
+      task.reenable
+
+      expect { task.invoke }.to output(a_string_including("Limit: all, Batch size: 500")).to_stdout
+    ensure
+      ENV.delete("ORGANIZATION_ID")
+      ENV.delete("BATCH_SIZE")
+    end
+
     it "defaults to dry-run even when dry_run is set to any value other than 'false'" do
       wallet = create_non_traceable_wallet
       top_up_wallet(wallet, granted_credits: "100")
