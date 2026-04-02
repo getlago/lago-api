@@ -51,6 +51,29 @@ RSpec.describe UsageThreshold do
     end
   end
 
+  describe "#currency" do
+    let(:organization) { create(:organization, default_currency: "USD") }
+
+    context "when threshold belongs to a plan" do
+      let(:plan) { create(:plan, organization:, amount_currency: "GBP") }
+      let(:threshold) { build(:usage_threshold, organization:, plan:, subscription: nil) }
+
+      it "returns the plan amount_currency" do
+        expect(threshold.currency).to eq("GBP")
+      end
+    end
+
+    context "when threshold belongs to a subscription" do
+      let(:plan) { create(:plan, organization:, amount_currency: "JPY") }
+      let(:subscription) { create(:subscription, organization:, plan:) }
+      let(:threshold) { build(:usage_threshold, organization:, plan: nil, subscription:) }
+
+      it "returns the subscription plan amount_currency" do
+        expect(threshold.currency).to eq("JPY")
+      end
+    end
+  end
+
   describe "invoice_name" do
     subject(:usage_threshold) { build(:usage_threshold, threshold_display_name:) }
 

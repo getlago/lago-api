@@ -114,6 +114,8 @@ class Customer < ApplicationRecord
   has_one :default_payment_method, -> { where(is_default: true) }, class_name: "PaymentMethod"
   has_one :pending_vies_check
 
+  delegate :default_currency, to: :organization, prefix: true
+
   PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash].freeze
 
   default_scope -> { kept }
