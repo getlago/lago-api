@@ -19,11 +19,11 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
     task.reenable
   end
 
-  def create_non_traceable_wallet(rate_amount: "1")
+  def create_non_traceable_wallet(for_customer: customer, rate_amount: "1", name: "Non-Traceable Wallet")
     params = {
-      external_customer_id: customer.external_id,
+      external_customer_id: for_customer.external_id,
       rate_amount:,
-      name: "Non-Traceable Wallet",
+      name:,
       currency: "EUR",
       granted_credits: "0",
       invoice_requires_successful_payment: false
@@ -202,22 +202,8 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       wallet1 = create_non_traceable_wallet
       top_up_wallet(wallet1, granted_credits: "50")
 
-      # Create wallet for other_customer
-      params = {
-        external_customer_id: other_customer.external_id,
-        rate_amount: "1",
-        name: "Other Wallet",
-        currency: "EUR",
-        granted_credits: "0",
-        invoice_requires_successful_payment: false
-      }
-      api_call { post_with_token(organization, "/api/v1/wallets", {wallet: params}) }
-      wallet2 = Wallet.find(json[:wallet][:lago_id])
-      api_call do
-        post_with_token(organization, "/api/v1/wallet_transactions", {
-          wallet_transaction: {wallet_id: wallet2.id, granted_credits: "30"}
-        })
-      end
+      wallet2 = create_non_traceable_wallet(for_customer: other_customer, name: "Other Wallet")
+      top_up_wallet(wallet2, granted_credits: "30")
 
       _, second_id = [customer.id, other_customer.id].sort
       ENV["DRY_RUN"] = "false"
@@ -238,15 +224,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
     it "prints next cursor when limit is set and more records exist" do
       other_customer = create(:customer, organization:, billing_entity:)
       create_non_traceable_wallet
-      params = {
-        external_customer_id: other_customer.external_id,
-        rate_amount: "1",
-        name: "Other Wallet",
-        currency: "EUR",
-        granted_credits: "0",
-        invoice_requires_successful_payment: false
-      }
-      api_call { post_with_token(organization, "/api/v1/wallets", {wallet: params}) }
+      create_non_traceable_wallet(for_customer: other_customer, name: "Other Wallet")
 
       ENV["ORGANIZATION_ID"] = organization.id
       ENV["LIMIT"] = "1"
@@ -276,17 +254,8 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       other_customer = create(:customer, organization:, billing_entity:)
       third_customer = create(:customer, organization:, billing_entity:)
       create_non_traceable_wallet
-      [other_customer, third_customer].each do |c|
-        params = {
-          external_customer_id: c.external_id,
-          rate_amount: "1",
-          name: "Wallet",
-          currency: "EUR",
-          granted_credits: "0",
-          invoice_requires_successful_payment: false
-        }
-        api_call { post_with_token(organization, "/api/v1/wallets", {wallet: params}) }
-      end
+      create_non_traceable_wallet(for_customer: other_customer, name: "Wallet")
+      create_non_traceable_wallet(for_customer: third_customer, name: "Wallet")
 
       sorted_ids = [customer.id, other_customer.id, third_customer.id].sort
       ENV["ORGANIZATION_ID"] = organization.id
@@ -308,21 +277,8 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       wallet1 = create_non_traceable_wallet
       top_up_wallet(wallet1, granted_credits: "50")
 
-      params = {
-        external_customer_id: other_customer.external_id,
-        rate_amount: "1",
-        name: "Other Wallet",
-        currency: "EUR",
-        granted_credits: "0",
-        invoice_requires_successful_payment: false
-      }
-      api_call { post_with_token(organization, "/api/v1/wallets", {wallet: params}) }
-      wallet2 = Wallet.find(json[:wallet][:lago_id])
-      api_call do
-        post_with_token(organization, "/api/v1/wallet_transactions", {
-          wallet_transaction: {wallet_id: wallet2.id, granted_credits: "30"}
-        })
-      end
+      wallet2 = create_non_traceable_wallet(for_customer: other_customer, name: "Other Wallet")
+      top_up_wallet(wallet2, granted_credits: "30")
 
       first_id, second_id = [customer.id, other_customer.id].sort
       first_wallet = (customer.id == first_id) ? wallet1 : wallet2
@@ -365,37 +321,11 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       wallet1 = create_non_traceable_wallet
       top_up_wallet(wallet1, granted_credits: "50")
 
-      wallet_b_params = {
-        external_customer_id: customer_b.external_id,
-        rate_amount: "1",
-        name: "Wallet B",
-        currency: "EUR",
-        granted_credits: "0",
-        invoice_requires_successful_payment: false
-      }
-      api_call { post_with_token(organization, "/api/v1/wallets", {wallet: wallet_b_params}) }
-      wallet2 = Wallet.find(json[:wallet][:lago_id])
-      api_call do
-        post_with_token(organization, "/api/v1/wallet_transactions", {
-          wallet_transaction: {wallet_id: wallet2.id, granted_credits: "30"}
-        })
-      end
+      wallet2 = create_non_traceable_wallet(for_customer: customer_b, name: "Wallet B")
+      top_up_wallet(wallet2, granted_credits: "30")
 
-      wallet_c_params = {
-        external_customer_id: customer_c.external_id,
-        rate_amount: "1",
-        name: "Wallet C",
-        currency: "EUR",
-        granted_credits: "0",
-        invoice_requires_successful_payment: false
-      }
-      api_call { post_with_token(organization, "/api/v1/wallets", {wallet: wallet_c_params}) }
-      wallet3 = Wallet.find(json[:wallet][:lago_id])
-      api_call do
-        post_with_token(organization, "/api/v1/wallet_transactions", {
-          wallet_transaction: {wallet_id: wallet3.id, granted_credits: "20"}
-        })
-      end
+      wallet3 = create_non_traceable_wallet(for_customer: customer_c, name: "Wallet C")
+      top_up_wallet(wallet3, granted_credits: "20")
 
       first_id, second_id, third_id = [customer.id, customer_b.id, customer_c.id].sort
       wallets_by_customer = {customer.id => wallet1, customer_b.id => wallet2, customer_c.id => wallet3}
@@ -656,7 +586,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
           balance_cents: 0, credits_balance: 0)
         create(:wallet_transaction, wallet:, organization:,
           transaction_type: :inbound, status: :settled, amount: "-10.00", credit_amount: "-10.00",
-          transaction_status: :granted)
+          transaction_status: :granted, remaining_amount_cents: nil)
 
         expect {
           run_migration(silent: false)
@@ -1421,7 +1351,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
         wallet = create(:wallet, customer:, organization:, traceable: false, currency: "EUR", rate_amount: "1.00")
         inbound = create(:wallet_transaction, wallet:, organization:,
           transaction_type: :inbound, status: :settled, amount: "10.00", credit_amount: "10.00",
-          transaction_status: :granted)
+          transaction_status: :granted, remaining_amount_cents: nil)
         create(:wallet_transaction, wallet:, organization:,
           transaction_type: :outbound, status: :settled, amount: "50.00", credit_amount: "50.00",
           transaction_status: :invoiced, created_at: inbound.created_at + 1.hour)
@@ -1455,7 +1385,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
           balance_cents: 0, credits_balance: 0)
         inbound = create(:wallet_transaction, wallet:, organization:,
           transaction_type: :inbound, status: :settled, amount: "-10.00", credit_amount: "-10.00",
-          transaction_status: :granted)
+          transaction_status: :granted, remaining_amount_cents: nil)
 
         expect {
           run_migration(dry_run: false, silent: false)
