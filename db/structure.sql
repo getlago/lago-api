@@ -371,9 +371,12 @@ DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_quotes_on_share_token;
 DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_sequentialid_version;
+DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_number;
 DROP INDEX IF EXISTS public.index_unique_quote_owners_on_quote_and_user;
 DROP INDEX IF EXISTS public.index_unique_orders_on_organization_sequentialid;
+DROP INDEX IF EXISTS public.index_unique_orders_on_organization_number;
 DROP INDEX IF EXISTS public.index_unique_order_forms_on_organization_sequentialid;
+DROP INDEX IF EXISTS public.index_unique_order_forms_on_organization_number;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
 DROP INDEX IF EXISTS public.index_uniq_wallet_code_per_customer;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_fixed_charges_boundaries;
@@ -9188,10 +9191,24 @@ CREATE UNIQUE INDEX index_unique_applied_to_organization_per_organization ON pub
 
 
 --
+-- Name: index_unique_order_forms_on_organization_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_order_forms_on_organization_number ON public.order_forms USING btree (organization_id, number);
+
+
+--
 -- Name: index_unique_order_forms_on_organization_sequentialid; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX index_unique_order_forms_on_organization_sequentialid ON public.order_forms USING btree (organization_id, sequential_id);
+
+
+--
+-- Name: index_unique_orders_on_organization_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_orders_on_organization_number ON public.orders USING btree (organization_id, number);
 
 
 --
@@ -9206,6 +9223,13 @@ CREATE UNIQUE INDEX index_unique_orders_on_organization_sequentialid ON public.o
 --
 
 CREATE UNIQUE INDEX index_unique_quote_owners_on_quote_and_user ON public.quote_owners USING btree (quote_id, user_id);
+
+
+--
+-- Name: index_unique_quotes_on_organization_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_quotes_on_organization_number ON public.quotes USING btree (organization_id, number);
 
 
 --
