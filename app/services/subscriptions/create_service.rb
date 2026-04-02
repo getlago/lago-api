@@ -19,7 +19,19 @@ module Subscriptions
     end
 
     def call
-      return result unless valid?(customer:, plan:, subscription_at:, ending_at: params[:ending_at], payment_method: params[:payment_method])
+      @current_subscription = editable_subscriptions
+        .find_by("id = ? OR external_id = ?", params[:subscription_id], external_id)
+
+      return result unless valid?(
+        customer:,
+        plan:,
+        subscription_at:,
+        ending_at: params[:ending_at],
+        payment_method: params[:payment_method],
+        activation_rules: params[:activation_rules],
+        subscription_type: subscription_type,
+        subscription: current_subscription
+      )
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
       return result.validation_failure!(errors: {external_customer_id: ["value_is_mandatory"]}) if params[:external_customer_id].blank? && api_context?
 
@@ -137,10 +149,12 @@ module Subscriptions
 
       if new_subscription.subscription_at > Time.current
         new_subscription.pending!
+        apply_activation_rules(new_subscription)
       elsif new_subscription.subscription_at < Time.current
         new_subscription.mark_as_active!(new_subscription.subscription_at)
       else
         new_subscription.mark_as_active!
+        apply_activation_rules(new_subscription)
       end
 
       if new_subscription.active?
@@ -264,8 +278,17 @@ module Subscriptions
       end
     end
 
+    def apply_activation_rules(subscription)
+      return unless params.key?(:activation_rules)
+
+      Subscriptions::ActivationRules::ApplyService.call!(
+        subscription:,
+        activation_rules: params[:activation_rules]
+      )
+    end
+
     def editable_subscriptions
-      return nil unless customer
+      return Subscription.none unless customer
 
       @editable_subscriptions ||= customer.subscriptions.active
         .or(customer.subscriptions.starting_in_the_future)

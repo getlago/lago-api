@@ -1311,5 +1311,138 @@ RSpec.describe Subscriptions::CreateService do
         end
       end
     end
+
+    context "with activation_rules" do
+      let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          activation_rules: [{type: "payment", timeout_hours: 48}]
+        }
+      end
+
+      context "when subscription_at is current date" do
+        it "creates subscription with activation rules" do
+          travel_to(Time.current) do
+            result = create_service.call
+
+            expect(result).to be_success
+            subscription = result.subscription
+            expect(subscription.activation_rules.count).to eq(1)
+            expect(subscription.activation_rules.first).to have_attributes(
+              type: "payment",
+              timeout_hours: 48,
+              status: "inactive"
+            )
+          end
+        end
+      end
+
+      context "when subscription_at is in the future" do
+        let(:subscription_at) { (Time.current + 5.days).iso8601 }
+
+        it "creates pending subscription with activation rules" do
+          result = create_service.call
+
+          expect(result).to be_success
+          subscription = result.subscription
+          expect(subscription).to be_pending
+          expect(subscription.activation_rules.count).to eq(1)
+          expect(subscription.activation_rules.first).to have_attributes(
+            type: "payment",
+            timeout_hours: 48,
+            status: "inactive"
+          )
+        end
+      end
+
+      context "when subscription_at is in the past" do
+        let(:subscription_at) { (Time.current - 5.days).iso8601 }
+
+        it "creates active subscription without activation rules" do
+          result = create_service.call
+
+          expect(result).to be_success
+          subscription = result.subscription
+          expect(subscription).to be_active
+          expect(subscription.activation_rules.count).to eq(0)
+        end
+      end
+
+      context "with invalid activation rule type" do
+        let(:params) do
+          {
+            external_customer_id:,
+            plan_code:,
+            name:,
+            external_id:,
+            billing_time:,
+            subscription_at:,
+            subscription_id:,
+            activation_rules: [{type: "unknown"}]
+          }
+        end
+
+        it "returns validation error" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:activation_rules]).to include("invalid_type")
+        end
+      end
+
+      context "with negative timeout_hours" do
+        let(:params) do
+          {
+            external_customer_id:,
+            plan_code:,
+            name:,
+            external_id:,
+            billing_time:,
+            subscription_at:,
+            subscription_id:,
+            activation_rules: [{type: "payment", timeout_hours: -1}]
+          }
+        end
+
+        it "returns validation error" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:timeout_hours]).to include("value_must_be_positive_or_zero")
+        end
+      end
+
+      context "when activation_rules is nil" do
+        let(:params) do
+          {
+            external_customer_id:,
+            plan_code:,
+            name:,
+            external_id:,
+            billing_time:,
+            subscription_at:,
+            subscription_id:,
+            activation_rules: nil
+          }
+        end
+
+        it "creates subscription without activation rules" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.activation_rules.count).to eq(0)
+        end
+      end
+    end
   end
 end

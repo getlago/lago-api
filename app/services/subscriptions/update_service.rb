@@ -27,7 +27,10 @@ module Subscriptions
         ending_at: params[:ending_at],
         on_termination_credit_note: params[:on_termination_credit_note],
         on_termination_invoice: params[:on_termination_invoice],
-        payment_method: params[:payment_method]
+        payment_method: params[:payment_method],
+        activation_rules: params[:activation_rules],
+        subscription_type: "update",
+        subscription: subscription
       )
         return result
       end
@@ -64,6 +67,13 @@ module Subscriptions
 
         if params.key?(:usage_thresholds)
           UpdateUsageThresholdsService.call!(subscription:, usage_thresholds_params: params[:usage_thresholds], partial: false)
+        end
+
+        if params.key?(:activation_rules) && subscription.pending?
+          Subscriptions::ActivationRules::ApplyService.call!(
+            subscription:,
+            activation_rules: params[:activation_rules]
+          )
         end
 
         if subscription.starting_in_the_future? && params.key?(:subscription_at)
@@ -105,6 +115,13 @@ module Subscriptions
 
     def process_subscription_at_change(subscription)
       if subscription.subscription_at <= Time.current
+        if subscription.subscription_at < Time.current
+          Subscriptions::ActivationRules::ApplyService.call!(
+            subscription:,
+            activation_rules: []
+          )
+        end
+
         subscription.mark_as_active!(subscription.subscription_at)
 
         EmitFixedChargeEventsService.call!(
