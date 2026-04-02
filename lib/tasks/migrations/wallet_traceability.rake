@@ -13,41 +13,50 @@ class WalletMigration
     @output_limit = output_limit
     @thread_count = thread_count
     @output_file = output_file
-    @cursor = cursor
+    parse_cursor(cursor)
   end
 
   def run
     puts "Wallet migration — mode: #{@dry_run ? "DRY-RUN (validation only)" : "BACKFILL (writing data)"}"
     puts "Customer limit: #{@limit || "all"}, Batch size: #{@batch_size}, Threads: #{@thread_count.zero? ? "sequential" : @thread_count}"
+    puts "Cursor: #{@cursor_start}"
+    if @limit
+      puts "Next cursor: #{@next_cursor_start || "none (all remaining records fit within limit)"}"
+    end
     puts "=" * 60
 
-    last_cursor = if @dry_run
+    if @dry_run
       run_validation
     else
       run_backfill
     end
-
-    print_next_cursor(last_cursor)
   end
 
   private
 
   attr_reader :scope
 
-  def print_next_cursor(last_cursor)
+  UUID_REGEX = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+
+  def parse_cursor(cursor)
+    if cursor
+      raise "Invalid CURSOR format: #{cursor}" unless cursor.match?(UUID_REGEX)
+
+      @cursor_start = cursor
+    else
+      @cursor_start = scope.order(:customer_id).pick(:customer_id)
+    end
+
+    @next_cursor_start = compute_next_cursor
+  end
+
+  def compute_next_cursor
     return unless @limit
 
-    has_more = if last_cursor
-      scope.where(Wallet.arel_table[:customer_id].gt(last_cursor)).exists?
-    else
-      false
-    end
-
-    if has_more
-      puts "Next cursor: #{last_cursor}"
-    else
-      puts "Next cursor: none (all remaining records processed)"
-    end
+    query = scope
+    query = query.where(Wallet.arel_table[:customer_id].gteq(@cursor_start)) if @cursor_start
+    query.order(:customer_id).select(:customer_id).distinct
+      .offset(@limit).limit(1).pick(:customer_id)
   end
 
   # ---------------------------------------------------------------------------
@@ -62,7 +71,7 @@ class WalletMigration
     problematic_wallets = []
     progress_total = progress_count
 
-    last_cursor = iterate_customers_in_batches do |customer_ids|
+    iterate_customers_in_batches do |customer_ids|
       Parallel.each(customer_ids, in_threads: @thread_count) do |customer_id|
         ActiveRecord::Base.connection_pool.with_connection do
           wallets = scope.where(customer_id: customer_id).includes(:customer, :organization, :wallet_transactions).to_a
@@ -93,7 +102,6 @@ class WalletMigration
 
     clear_progress
     print_validation_summary(total_wallets, migratable_wallets, problematic_wallets)
-    last_cursor
   end
 
   def settled_inbound(wallet)
@@ -261,7 +269,7 @@ class WalletMigration
     errors = []
     progress_total = progress_count
 
-    last_cursor = iterate_customers_in_batches do |customer_ids|
+    iterate_customers_in_batches do |customer_ids|
       Parallel.each(customer_ids, in_threads: @thread_count) do |customer_id|
         ActiveRecord::Base.connection_pool.with_connection do
           ApplicationRecord.transaction do
@@ -289,7 +297,6 @@ class WalletMigration
 
     clear_progress
     print_backfill_summary(customers_processed, wallets_processed, errors)
-    last_cursor
   end
 
   def backfill_wallet_transactions(wallet)
@@ -395,37 +402,32 @@ class WalletMigration
   # Shared helpers
   # ---------------------------------------------------------------------------
 
-  def progress_count
+  def windowed_scope
     query = scope
-    query = query.where(Wallet.arel_table[:customer_id].gt(@cursor)) if @cursor
-    total = query.select(:customer_id).distinct.count
-    @limit ? [total, @limit].min : total
+    query = query.where(Wallet.arel_table[:customer_id].gteq(@cursor_start)) if @cursor_start
+    query = query.where(Wallet.arel_table[:customer_id].lt(@next_cursor_start)) if @next_cursor_start
+    query
+  end
+
+  def progress_count
+    windowed_scope.select(:customer_id).distinct.count
   end
 
   # Iterates distinct customer IDs in batches using cursor-based pagination.
-  # The limit caps the number of distinct customers processed (not wallets).
-  # Returns the last customer_id processed (usable as cursor for the next run).
+  # The window is bounded by @cursor_start (inclusive) and @next_cursor_start (exclusive).
   def iterate_customers_in_batches
-    customers_processed = 0
-    last_customer_id = @cursor
+    last_customer_id = nil
 
     loop do
-      remaining = @limit ? @limit - customers_processed : @batch_size
-      break if remaining <= 0
-
-      batch = [remaining, @batch_size].min
-      query = scope
+      query = windowed_scope
       query = query.where(Wallet.arel_table[:customer_id].gt(last_customer_id)) if last_customer_id
-      customer_ids = query.order(:customer_id).distinct.limit(batch).pluck(:customer_id)
+      customer_ids = query.order(:customer_id).distinct.limit(@batch_size).pluck(:customer_id)
       break if customer_ids.empty?
 
       last_customer_id = customer_ids.last
-      customers_processed += customer_ids.size
 
       yield(customer_ids)
     end
-
-    last_customer_id
   end
 
   def print_progress(label, current, total)
@@ -461,11 +463,7 @@ namespace :migrations do
     options[:thread_count] = ENV["THREAD_COUNT"].to_i if ENV["THREAD_COUNT"].present?
     options[:output_file] = ENV["OUTPUT_FILE"] if ENV["OUTPUT_FILE"].present?
 
-    if ENV["CURSOR"].present?
-      raise "Invalid CURSOR format: #{ENV["CURSOR"]}" unless ENV["CURSOR"].match?(/\A[0-9a-f-]{36}\z/i)
-
-      options[:cursor] = ENV["CURSOR"]
-    end
+    options[:cursor] = ENV["CURSOR"] if ENV["CURSOR"].present?
 
     WalletMigration.new(**options).run
   end

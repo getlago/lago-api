@@ -61,7 +61,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
     perform_usage_update
   end
 
-  def run_migration(dry_run: nil, include_terminated: false)
+  def run_migration(dry_run: nil, include_terminated: false, silent: true)
     env_vars = {
       "ORGANIZATION_ID" => organization.id,
       "BATCH_SIZE" => "100",
@@ -72,7 +72,17 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
 
     env_vars.each { |k, v| ENV[k] = v }
     task.reenable
-    task.invoke
+    if silent
+      original_stdout = $stdout
+      $stdout = StringIO.new
+      begin
+        task.invoke
+      ensure
+        $stdout = original_stdout
+      end
+    else
+      task.invoke
+    end
   ensure
     env_vars&.each_key { |k| ENV.delete(k) }
   end
@@ -84,7 +94,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
 
       ENV["ORGANIZATION_ID"] = organization.id
       task.reenable
-      task.invoke
+      expect { task.invoke }.to output(anything).to_stdout
 
       expect(wallet.reload.traceable).to eq(false)
     ensure
@@ -117,7 +127,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
 
       ENV["DRY_RUN"] = "false"
       task.reenable
-      task.invoke
+      expect { task.invoke }.to output(anything).to_stdout
 
       expect(wallet1.reload.traceable).to eq(true)
       expect(wallet2.reload.traceable).to eq(true)
@@ -187,7 +197,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV.delete("BATCH_SIZE")
     end
 
-    it "cursor skips customers before the given customer_id" do
+    it "cursor processes customers from the given customer_id (inclusive)" do
       other_customer = create(:customer, organization:, billing_entity:)
       wallet1 = create_non_traceable_wallet
       top_up_wallet(wallet1, granted_credits: "50")
@@ -209,17 +219,17 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
         })
       end
 
-      first_id, _ = [customer.id, other_customer.id].sort
+      _, second_id = [customer.id, other_customer.id].sort
       ENV["DRY_RUN"] = "false"
-      ENV["CURSOR"] = first_id
+      ENV["CURSOR"] = second_id
       task.reenable
-      task.invoke
+      expect { task.invoke }.to output(anything).to_stdout
 
-      first_wallet = (customer.id == first_id) ? wallet1 : wallet2
-      second_wallet = (customer.id == first_id) ? wallet2 : wallet1
+      first_wallet = (customer.id == second_id) ? wallet1 : wallet2
+      second_wallet = (customer.id == second_id) ? wallet2 : wallet1
 
-      expect(first_wallet.reload.traceable).to eq(false)
-      expect(second_wallet.reload.traceable).to eq(true)
+      expect(first_wallet.reload.traceable).to eq(true)
+      expect(second_wallet.reload.traceable).to eq(false)
     ensure
       ENV.delete("DRY_RUN")
       ENV.delete("CURSOR")
@@ -242,8 +252,8 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV["LIMIT"] = "1"
       task.reenable
 
-      first_customer_id = [customer.id, other_customer.id].min
-      expect { task.invoke }.to output(a_string_including("Next cursor: #{first_customer_id}")).to_stdout
+      second_customer_id = [customer.id, other_customer.id].max
+      expect { task.invoke }.to output(a_string_including("Next cursor: #{second_customer_id}")).to_stdout
     ensure
       ENV.delete("ORGANIZATION_ID")
       ENV.delete("LIMIT")
@@ -256,7 +266,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV["LIMIT"] = "100"
       task.reenable
 
-      expect { task.invoke }.to output(a_string_including("Next cursor: none (all remaining records processed)")).to_stdout
+      expect { task.invoke }.to output(a_string_including("Next cursor: none (all remaining records fit within limit)")).to_stdout
     ensure
       ENV.delete("ORGANIZATION_ID")
       ENV.delete("LIMIT")
@@ -280,13 +290,148 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
 
       sorted_ids = [customer.id, other_customer.id, third_customer.id].sort
       ENV["ORGANIZATION_ID"] = organization.id
-      ENV["CURSOR"] = sorted_ids.first
+      ENV["CURSOR"] = sorted_ids[1]
       ENV["LIMIT"] = "1"
       task.reenable
 
-      expect { task.invoke }.to output(a_string_including("Next cursor: #{sorted_ids[1]}")).to_stdout
+      expect { task.invoke }.to output(
+        a_string_including("Cursor: #{sorted_ids[1]}").and(a_string_including("Next cursor: #{sorted_ids[2]}"))
+      ).to_stdout
     ensure
       ENV.delete("ORGANIZATION_ID")
+      ENV.delete("CURSOR")
+      ENV.delete("LIMIT")
+    end
+
+    it "re-running a cursor window after next cursor was processed is a no-op" do
+      other_customer = create(:customer, organization:, billing_entity:)
+      wallet1 = create_non_traceable_wallet
+      top_up_wallet(wallet1, granted_credits: "50")
+
+      params = {
+        external_customer_id: other_customer.external_id,
+        rate_amount: "1",
+        name: "Other Wallet",
+        currency: "EUR",
+        granted_credits: "0",
+        invoice_requires_successful_payment: false
+      }
+      api_call { post_with_token(organization, "/api/v1/wallets", {wallet: params}) }
+      wallet2 = Wallet.find(json[:wallet][:lago_id])
+      api_call do
+        post_with_token(organization, "/api/v1/wallet_transactions", {
+          wallet_transaction: {wallet_id: wallet2.id, granted_credits: "30"}
+        })
+      end
+
+      first_id, second_id = [customer.id, other_customer.id].sort
+      first_wallet = (customer.id == first_id) ? wallet1 : wallet2
+      second_wallet = (customer.id == first_id) ? wallet2 : wallet1
+
+      # Run first window: processes first customer only
+      ENV["DRY_RUN"] = "false"
+      ENV["CURSOR"] = first_id
+      ENV["LIMIT"] = "1"
+      task.reenable
+      expect { task.invoke }.to output(anything).to_stdout
+
+      expect(first_wallet.reload.traceable).to eq(true)
+      expect(second_wallet.reload.traceable).to eq(false)
+
+      # Run second window: processes second customer
+      ENV["CURSOR"] = second_id
+      ENV.delete("LIMIT")
+      task.reenable
+      expect { task.invoke }.to output(anything).to_stdout
+
+      expect(second_wallet.reload.traceable).to eq(true)
+
+      # Re-run first window: should be a no-op since wallets are already traceable
+      ENV["CURSOR"] = first_id
+      ENV["LIMIT"] = "1"
+      task.reenable
+
+      expect { task.invoke }.to output(a_string_including("Customers processed: 0")).to_stdout
+    ensure
+      ENV.delete("DRY_RUN")
+      ENV.delete("CURSOR")
+      ENV.delete("LIMIT")
+    end
+
+    it "re-running a cursor window processes remaining non-traceable wallets" do
+      customer_b = create(:customer, organization:, billing_entity:)
+      customer_c = create(:customer, organization:, billing_entity:)
+
+      wallet1 = create_non_traceable_wallet
+      top_up_wallet(wallet1, granted_credits: "50")
+
+      wallet_b_params = {
+        external_customer_id: customer_b.external_id,
+        rate_amount: "1",
+        name: "Wallet B",
+        currency: "EUR",
+        granted_credits: "0",
+        invoice_requires_successful_payment: false
+      }
+      api_call { post_with_token(organization, "/api/v1/wallets", {wallet: wallet_b_params}) }
+      wallet2 = Wallet.find(json[:wallet][:lago_id])
+      api_call do
+        post_with_token(organization, "/api/v1/wallet_transactions", {
+          wallet_transaction: {wallet_id: wallet2.id, granted_credits: "30"}
+        })
+      end
+
+      wallet_c_params = {
+        external_customer_id: customer_c.external_id,
+        rate_amount: "1",
+        name: "Wallet C",
+        currency: "EUR",
+        granted_credits: "0",
+        invoice_requires_successful_payment: false
+      }
+      api_call { post_with_token(organization, "/api/v1/wallets", {wallet: wallet_c_params}) }
+      wallet3 = Wallet.find(json[:wallet][:lago_id])
+      api_call do
+        post_with_token(organization, "/api/v1/wallet_transactions", {
+          wallet_transaction: {wallet_id: wallet3.id, granted_credits: "20"}
+        })
+      end
+
+      first_id, second_id, third_id = [customer.id, customer_b.id, customer_c.id].sort
+      wallets_by_customer = {customer.id => wallet1, customer_b.id => wallet2, customer_c.id => wallet3}
+
+      # Run first window: processes first customer only
+      ENV["DRY_RUN"] = "false"
+      ENV["CURSOR"] = first_id
+      ENV["LIMIT"] = "1"
+      task.reenable
+      expect { task.invoke }.to output(anything).to_stdout
+
+      expect(wallets_by_customer[first_id].reload.traceable).to eq(true)
+      expect(wallets_by_customer[second_id].reload.traceable).to eq(false)
+      expect(wallets_by_customer[third_id].reload.traceable).to eq(false)
+
+      # Run second window: processes second customer only
+      ENV["CURSOR"] = second_id
+      ENV["LIMIT"] = "1"
+      task.reenable
+      expect { task.invoke }.to output(anything).to_stdout
+
+      expect(wallets_by_customer[second_id].reload.traceable).to eq(true)
+      expect(wallets_by_customer[third_id].reload.traceable).to eq(false)
+
+      # Re-run first cursor: the traceable: false scope shifts the window,
+      # so the third customer (still non-traceable) falls into the LIMIT=1 window
+      ENV["CURSOR"] = first_id
+      ENV["LIMIT"] = "1"
+      task.reenable
+
+      expect { task.invoke }.to output(
+        a_string_including("Customers processed: 1").and(a_string_including("Wallets processed: 1"))
+      ).to_stdout
+      expect(wallets_by_customer[third_id].reload.traceable).to eq(true)
+    ensure
+      ENV.delete("DRY_RUN")
       ENV.delete("CURSOR")
       ENV.delete("LIMIT")
     end
@@ -299,12 +444,36 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV["DRY_RUN"] = "false"
       ENV["CURSOR"] = "ffffffff-ffff-ffff-ffff-ffffffffffff"
       task.reenable
-      task.invoke
+      expect { task.invoke }.to output(anything).to_stdout
 
       expect(wallet.reload.traceable).to eq(false)
     ensure
       ENV.delete("DRY_RUN")
       ENV.delete("CURSOR")
+    end
+
+    it "displays current cursor in header" do
+      create_non_traceable_wallet
+
+      ENV["ORGANIZATION_ID"] = organization.id
+      ENV["CURSOR"] = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+      task.reenable
+
+      expect { task.invoke }.to output(a_string_including("Cursor: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")).to_stdout
+    ensure
+      ENV.delete("ORGANIZATION_ID")
+      ENV.delete("CURSOR")
+    end
+
+    it "defaults cursor to the first customer_id when not set" do
+      create_non_traceable_wallet
+
+      ENV["ORGANIZATION_ID"] = organization.id
+      task.reenable
+
+      expect { task.invoke }.to output(a_string_including("Cursor: #{customer.id}")).to_stdout
+    ensure
+      ENV.delete("ORGANIZATION_ID")
     end
 
     it "does not print next cursor line when limit is not set" do
@@ -339,7 +508,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV["DRY_RUN"] = "true"
       ENV["ORGANIZATION_ID"] = organization.id
       task.reenable
-      task.invoke
+      expect { task.invoke }.to output(anything).to_stdout
 
       expect(wallet.reload.traceable).to eq(false)
     ensure
@@ -398,7 +567,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
           }
           env_vars.each { |k, v| ENV[k] = v }
           task.reenable
-          task.invoke
+          expect { task.invoke }.to output(anything).to_stdout
 
           csv_content = File.read(tmpfile.path)
           expect(csv_content).to include("wallet_id,customer_id,customer_name,organization_id,organization_name,created_at,issues")
@@ -411,7 +580,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
     end
 
     describe "wallet with balance drift" do
-      it "detects balance drift and reports it as problematic" do
+      it "detects balance drift >= 1 unit and reports it as problematic" do
         wallet = create_non_traceable_wallet
         top_up_wallet(wallet, granted_credits: "100")
 
@@ -419,9 +588,88 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
         Wallet.where(id: wallet.id).update_all(balance_cents: 5000, credits_balance: 50) # rubocop:disable Rails/SkipsModelValidations
 
         expect {
-          run_migration
+          run_migration(silent: false)
         }.to output(
           a_string_including("Problematic: 1").and(a_string_including("Balance drift >= 1 unit"))
+        ).to_stdout
+        expect(wallet.reload.traceable).to eq(false)
+      end
+
+      it "detects balance drift < 1 unit as likely rounding" do
+        wallet = create_non_traceable_wallet
+        top_up_wallet(wallet, granted_credits: "100")
+
+        # Small drift (50 cents) — below 100 cent threshold
+        Wallet.where(id: wallet.id).update_all(balance_cents: 10050, credits_balance: 100.50) # rubocop:disable Rails/SkipsModelValidations
+
+        expect {
+          run_migration(silent: false)
+        }.to output(
+          a_string_including("Problematic: 1").and(a_string_including("Balance drift < 1 unit"))
+            .and(a_string_including("likely rounding"))
+        ).to_stdout
+        expect(wallet.reload.traceable).to eq(false)
+      end
+    end
+
+    describe "negative wallet balance" do
+      it "detects negative wallet balance as problematic" do
+        wallet = create_non_traceable_wallet
+
+        Wallet.where(id: wallet.id).update_all(balance_cents: -500, credits_balance: -5) # rubocop:disable Rails/SkipsModelValidations
+
+        expect {
+          run_migration(silent: false)
+        }.to output(
+          a_string_including("Problematic: 1").and(a_string_including("Negative wallet balance"))
+        ).to_stdout
+        expect(wallet.reload.traceable).to eq(false)
+      end
+    end
+
+    describe "missing inbound transactions" do
+      it "detects outbound without any inbound as problematic" do
+        wallet = create(:wallet, customer:, organization:, traceable: false, currency: "EUR", rate_amount: "1.00")
+        create(:wallet_transaction, wallet:, organization:,
+          transaction_type: :outbound, status: :settled, amount: "10.00", credit_amount: "10.00",
+          transaction_status: :invoiced)
+
+        expect {
+          run_migration(silent: false)
+        }.to output(
+          a_string_including("Problematic: 1").and(a_string_including("missing transaction history"))
+        ).to_stdout
+        expect(wallet.reload.traceable).to eq(false)
+      end
+    end
+
+    describe "negative transaction amount" do
+      it "detects negative amount_cents on inbound transaction" do
+        wallet = create(:wallet, customer:, organization:, traceable: false, currency: "EUR", rate_amount: "1.00",
+          balance_cents: 0, credits_balance: 0)
+        create(:wallet_transaction, wallet:, organization:,
+          transaction_type: :inbound, status: :settled, amount: "-10.00", credit_amount: "-10.00",
+          transaction_status: :granted)
+
+        expect {
+          run_migration(silent: false)
+        }.to output(
+          a_string_including("Problematic: 1").and(a_string_including("Negative amount_cents on inbound"))
+        ).to_stdout
+        expect(wallet.reload.traceable).to eq(false)
+      end
+
+      it "detects negative amount_cents on outbound transaction" do
+        wallet = create(:wallet, customer:, organization:, traceable: false, currency: "EUR", rate_amount: "1.00",
+          balance_cents: 0, credits_balance: 0)
+        create(:wallet_transaction, wallet:, organization:,
+          transaction_type: :outbound, status: :settled, amount: "-10.00", credit_amount: "-10.00",
+          transaction_status: :invoiced)
+
+        expect {
+          run_migration(silent: false)
+        }.to output(
+          a_string_including("Problematic: 1").and(a_string_including("Negative amount_cents on outbound"))
         ).to_stdout
         expect(wallet.reload.traceable).to eq(false)
       end
@@ -1161,6 +1409,61 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       end
     end
 
+    describe "backfill error reporting" do
+      it "reports errors in the summary output" do
+        wallet = create(:wallet, customer:, organization:, traceable: false, currency: "EUR", rate_amount: "1.00")
+        inbound = create(:wallet_transaction, wallet:, organization:,
+          transaction_type: :inbound, status: :settled, amount: "10.00", credit_amount: "10.00",
+          transaction_status: :granted)
+        create(:wallet_transaction, wallet:, organization:,
+          transaction_type: :outbound, status: :settled, amount: "50.00", credit_amount: "50.00",
+          transaction_status: :invoiced, created_at: inbound.created_at + 1.hour)
+
+        expect {
+          run_migration(dry_run: false, silent: false)
+        }.to output(
+          a_string_including("Errors: 1")
+            .and(a_string_including("Could not fully consume outbound"))
+        ).to_stdout
+        expect(wallet.reload.traceable).to eq(false)
+      end
+
+      it "continues processing other customers when one customer errors" do
+        other_customer = create(:customer, organization:, billing_entity:)
+
+        # Healthy wallet for other_customer
+        healthy_wallet_params = {
+          external_customer_id: other_customer.external_id,
+          rate_amount: "1",
+          name: "Healthy Wallet",
+          currency: "EUR",
+          granted_credits: "0",
+          invoice_requires_successful_payment: false
+        }
+        api_call { post_with_token(organization, "/api/v1/wallets", {wallet: healthy_wallet_params}) }
+        healthy_wallet = Wallet.find(json[:wallet][:lago_id])
+        api_call do
+          post_with_token(organization, "/api/v1/wallet_transactions", {
+            wallet_transaction: {wallet_id: healthy_wallet.id, granted_credits: "30"}
+          })
+        end
+
+        # Broken wallet for customer (outbound > inbound)
+        broken_wallet = create(:wallet, customer:, organization:, traceable: false, currency: "EUR", rate_amount: "1.00")
+        inbound = create(:wallet_transaction, wallet: broken_wallet, organization:,
+          transaction_type: :inbound, status: :settled, amount: "10.00", credit_amount: "10.00",
+          transaction_status: :granted)
+        create(:wallet_transaction, wallet: broken_wallet, organization:,
+          transaction_type: :outbound, status: :settled, amount: "50.00", credit_amount: "50.00",
+          transaction_status: :invoiced, created_at: inbound.created_at + 1.hour)
+
+        run_migration(dry_run: false)
+
+        expect(healthy_wallet.reload.traceable).to eq(true)
+        expect(broken_wallet.reload.traceable).to eq(false)
+      end
+    end
+
     describe "CSV export on backfill errors" do
       it "exports errors to CSV when output_file is set" do
         # Create wallet with inconsistent state: outbound > inbound
@@ -1182,7 +1485,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
           }
           env_vars.each { |k, v| ENV[k] = v }
           task.reenable
-          task.invoke
+          expect { task.invoke }.to output(anything).to_stdout
 
           csv_content = File.read(tmpfile.path)
           expect(csv_content).to include("customer_id,error")
@@ -1229,6 +1532,26 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
         expect(consumption.consumed_amount_cents).to eq(3000)
         expect(tx1.reload.remaining_amount_cents).to eq(2000)
       end
+    end
+  end
+
+  describe "invalid CURSOR" do
+    it "raises an error for non-UUID values" do
+      ENV["CURSOR"] = "not-a-uuid"
+      task.reenable
+
+      expect { task.invoke }.to raise_error(RuntimeError, /Invalid CURSOR format: not-a-uuid/)
+    ensure
+      ENV.delete("CURSOR")
+    end
+
+    it "raises an error for pipe-separated values" do
+      ENV["CURSOR"] = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa|bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+      task.reenable
+
+      expect { task.invoke }.to raise_error(RuntimeError, /Invalid CURSOR format/)
+    ensure
+      ENV.delete("CURSOR")
     end
   end
 end
