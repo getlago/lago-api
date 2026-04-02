@@ -395,6 +395,29 @@ RSpec.describe Wallets::CreateService do
           expect(wallet.currency).to eq("EUR")
         end
       end
+
+      context "when currency param is nil and customer has a currency" do
+        let(:customer_currency) { "USD" }
+        let(:params) do
+          {
+            name: "New Wallet",
+            customer:,
+            organization_id: organization.id,
+            currency: nil,
+            rate_amount: "1.00",
+            expiration_at:,
+            paid_credits: "0.00",
+            granted_credits: "0.00"
+          }
+        end
+
+        it "falls back to the customer currency" do
+          expect(service_result).to be_success
+
+          wallet = service_result.wallet
+          expect(wallet.currency).to eq("USD")
+        end
+      end
     end
 
     context "when wallet have transaction metadata" do

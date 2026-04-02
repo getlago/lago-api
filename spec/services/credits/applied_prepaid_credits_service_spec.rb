@@ -664,10 +664,10 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     context "when wallet currency does not match invoice currency" do
       let(:wallets) { [eur_wallet, usd_wallet] }
       let(:eur_wallet) do
-        create(:wallet, name: "eur wallet", customer:, balance_cents: 1000, currency: "EUR")
+        create(:wallet, :with_inbound_transaction, name: "eur wallet", customer:, balance_cents: 1000, currency: "EUR")
       end
       let(:usd_wallet) do
-        create(:wallet, name: "usd wallet", customer:, balance_cents: 1000, currency: "USD")
+        create(:wallet, :with_inbound_transaction, name: "usd wallet", customer:, balance_cents: 1000, currency: "USD")
       end
 
       it "only applies credits from wallets matching the invoice currency" do
