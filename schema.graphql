@@ -5806,10 +5806,10 @@ type FeeAmountDetailsGraduatedPercentageRange {
 
 type FeeAmountDetailsGraduatedRange {
   flatUnitAmount: String
-  fromValue: BigInt
+  fromValue: Float
   perUnitAmount: String
   perUnitTotalAmount: String
-  toValue: BigInt
+  toValue: Float
   totalWithFlatAmount: String
   units: String
 }
@@ -6170,30 +6170,30 @@ input GoogleRegisterUserInput {
 
 type GraduatedPercentageRange {
   flatAmount: String!
-  fromValue: BigInt!
+  fromValue: Float!
   rate: String!
-  toValue: BigInt
+  toValue: Float
 }
 
 input GraduatedPercentageRangeInput {
   flatAmount: String!
-  fromValue: BigInt!
+  fromValue: Float!
   rate: String!
-  toValue: BigInt
+  toValue: Float
 }
 
 type GraduatedRange {
   flatAmount: String!
-  fromValue: BigInt!
+  fromValue: Float!
   perUnitAmount: String!
-  toValue: BigInt
+  toValue: Float
 }
 
 input GraduatedRangeInput {
   flatAmount: String!
-  fromValue: BigInt!
+  fromValue: Float!
   perUnitAmount: String!
-  toValue: BigInt
+  toValue: Float
 }
 
 type GraphqlSubscription {

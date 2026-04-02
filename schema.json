@@ -28687,7 +28687,7 @@
               "args": [],
               "type": {
                 "kind": "SCALAR",
-                "name": "BigInt",
+                "name": "Float",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -28723,7 +28723,7 @@
               "args": [],
               "type": {
                 "kind": "SCALAR",
-                "name": "BigInt",
+                "name": "Float",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -31162,7 +31162,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "BigInt",
+                  "name": "Float",
                   "ofType": null
                 }
               },
@@ -31191,7 +31191,7 @@
               "args": [],
               "type": {
                 "kind": "SCALAR",
-                "name": "BigInt",
+                "name": "Float",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -31217,7 +31217,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "BigInt",
+                  "name": "Float",
                   "ofType": null
                 }
               },
@@ -31230,7 +31230,7 @@
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "BigInt",
+                "name": "Float",
                 "ofType": null
               },
               "defaultValue": null,
@@ -31304,7 +31304,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "BigInt",
+                  "name": "Float",
                   "ofType": null
                 }
               },
@@ -31333,7 +31333,7 @@
               "args": [],
               "type": {
                 "kind": "SCALAR",
-                "name": "BigInt",
+                "name": "Float",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -31359,7 +31359,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "BigInt",
+                  "name": "Float",
                   "ofType": null
                 }
               },
@@ -31372,7 +31372,7 @@
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "BigInt",
+                "name": "Float",
                 "ofType": null
               },
               "defaultValue": null,
