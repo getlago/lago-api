@@ -3281,6 +3281,7 @@ input CreateSubscriptionChargeFilterInput {
 Create Subscription input arguments
 """
 input CreateSubscriptionInput {
+  activationRules: [SubscriptionActivationRuleInput!]
   billingTime: BillingTimeEnum!
 
   """
@@ -11069,8 +11070,11 @@ type StripeProvider {
 }
 
 type Subscription {
+  activatedAt: ISO8601DateTime
+  activationRules: [SubscriptionActivationRule!]!
   activityLogs: [ActivityLog!]
   billingTime: BillingTimeEnum
+  cancelationReason: String
   canceledAt: ISO8601DateTime
   charges: [Charge!]
   createdAt: ISO8601DateTime!
@@ -11104,6 +11108,21 @@ type Subscription {
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
   usageThresholds: [UsageThreshold!]!
+}
+
+type SubscriptionActivationRule {
+  createdAt: ISO8601DateTime!
+  expiresAt: ISO8601DateTime
+  lagoId: ID!
+  status: String!
+  timeoutHours: Int
+  type: String!
+  updatedAt: ISO8601DateTime!
+}
+
+input SubscriptionActivationRuleInput {
+  timeoutHours: Int
+  type: String!
 }
 
 """
@@ -12921,6 +12940,8 @@ input UpdateSubscriptionFixedChargeInput {
 Update Subscription input arguments
 """
 input UpdateSubscriptionInput {
+  activationRules: [SubscriptionActivationRuleInput!]
+
   """
   A unique identifier for the client performing the mutation.
   """
