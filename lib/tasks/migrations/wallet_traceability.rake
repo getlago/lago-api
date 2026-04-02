@@ -275,8 +275,9 @@ class WalletMigration
     iterate_customers_in_batches do |customer_ids|
       Parallel.each(customer_ids, in_threads: @thread_count) do |customer_id|
         ActiveRecord::Base.connection_pool.with_connection do
+          customer = Customer.find(customer_id)
           ApplicationRecord.transaction do
-            ApplicationRecord.with_advisory_lock!("customer-#{customer_id}", timeout_seconds: 10, transaction: true) do
+            Customers::LockService.new(customer:, scope: :prepaid_credit, timeout_seconds: 10).call do
               wallets = scope.where(customer_id: customer_id).includes(:customer, :organization, wallet_transactions: :fundings).to_a
               next if wallets.empty?
 
