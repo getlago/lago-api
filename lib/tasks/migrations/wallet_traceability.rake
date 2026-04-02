@@ -277,7 +277,7 @@ class WalletMigration
         ActiveRecord::Base.connection_pool.with_connection do
           customer = Customer.find(customer_id)
           ApplicationRecord.transaction do
-            Customers::LockService.new(customer:, scope: :prepaid_credit, timeout_seconds: 10).call do
+            Customers::LockService.call!(customer:, scope: :prepaid_credit) do
               wallets = scope.where(customer_id: customer_id).includes(:customer, :organization, wallet_transactions: :fundings).to_a
               next if wallets.empty?
 
@@ -298,12 +298,12 @@ class WalletMigration
                 wallets_processed += wallets.size
                 customers_processed += 1
               end
-            rescue => e
-              mutex.synchronize do
-                errored_wallets << build_wallet_error(current_wallet, [e.message])
-              end
-              raise ActiveRecord::Rollback
             end
+          rescue => e
+            mutex.synchronize do
+              errored_wallets << build_wallet_error(current_wallet, [e.message])
+            end
+            raise ActiveRecord::Rollback
           end
         end
       end
