@@ -136,7 +136,8 @@ describe "Dunning Campaign v1", :premium do
       expect(customer.payment_requests.where(amount_currency: "EUR").count).to eq(1)
     end
 
-    # Day 9: USD at max (2). Only EUR should be dunned.
+    # Day 9: USD already at max (2). Only EUR dunned, reaching max too.
+    # Campaign finished webhook fires because all thresholds are now exhausted.
     travel_to(DateTime.new(2025, 1, 9, 10)) do
       perform_dunning
 
@@ -144,9 +145,12 @@ describe "Dunning Campaign v1", :premium do
       expect(customer.dunning_currency_attempts).to eq("USD" => 2, "EUR" => 2)
       expect(customer.payment_requests.where(amount_currency: "USD").count).to eq(2)
       expect(customer.payment_requests.where(amount_currency: "EUR").count).to eq(2)
+
+      finished_webhooks = webhooks_sent.select { |w| w["webhook_type"] == "dunning_campaign.finished" }
+      expect(finished_webhooks.count).to eq(1)
     end
 
-    # Day 12: Both currencies at max. No more attempts. Finished webhook sent on day 9.
+    # Day 12: Both currencies at max. No more attempts, no additional webhooks.
     travel_to(DateTime.new(2025, 1, 12, 10)) do
       perform_dunning
 
@@ -154,7 +158,7 @@ describe "Dunning Campaign v1", :premium do
       expect(customer.payment_requests.count).to eq(4) # unchanged
 
       finished_webhooks = webhooks_sent.select { |w| w["webhook_type"] == "dunning_campaign.finished" }
-      expect(finished_webhooks.count).to eq(1)
+      expect(finished_webhooks.count).to eq(1) # still just the one from day 9
     end
   end
 
