@@ -21,7 +21,8 @@ module Events
           events_count = 0
           batches = 0
 
-          each_deduplicated_batch do |events|
+          deduplicated_scope.in_batches(of: batch_size, cursor: [:timestamp, :transaction_id]) do |batch|
+            events = batch.to_a
             messages = events.map { |event| build_message(event) }
 
             Karafka.producer.produce_many_async(messages)
@@ -53,11 +54,9 @@ module Events
           scope
         end
 
-        def each_deduplicated_batch
+        def deduplicated_scope
           deduplicated_sql = base_scope.to_sql + " ORDER BY ingested_at DESC LIMIT 1 BY transaction_id, timestamp"
           ::Clickhouse::EventsRaw.from("(#{deduplicated_sql}) AS events_raw")
-            .order(timestamp: :asc, transaction_id: :asc)
-            .each_slice(batch_size) { |events| yield events }
         end
 
         def topic
