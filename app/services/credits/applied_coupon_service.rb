@@ -63,7 +63,7 @@ module Credits
     delegate :customer, to: :invoice
 
     def matches_currency?
-      return true unless applied_coupon.coupon.fixed_amount?
+      return true if coupon.percentage?
 
       applied_coupon.amount_currency == invoice.currency
     end
