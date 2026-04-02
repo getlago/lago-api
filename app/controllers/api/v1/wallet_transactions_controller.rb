@@ -59,7 +59,8 @@ module Api
         render(
           json: ::V1::WalletTransactionSerializer.new(
             wallet_transaction,
-            root_name: "wallet_transaction"
+            root_name: "wallet_transaction",
+            includes: %i[applied_invoice_custom_sections]
           )
         )
       end

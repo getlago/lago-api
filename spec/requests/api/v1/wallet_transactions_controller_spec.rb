@@ -372,6 +372,17 @@ RSpec.describe Api::V1::WalletTransactionsController do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context "with applied_invoice_custom_sections in response" do
+      before { create(:wallet_transaction_applied_invoice_custom_section, wallet_transaction:) }
+
+      it "includes applied_invoice_custom_sections in the serialized response" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transaction][:applied_invoice_custom_sections].count).to eq(1)
+      end
+    end
   end
 
   describe "POST /api/v1/wallet_transactions/:id/payment_url" do

@@ -611,6 +611,17 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         expect(subscription.progressive_billing_disabled).to be(true)
       end
     end
+
+    context "with applied_invoice_custom_sections in response" do
+      it "includes applied_invoice_custom_sections in the serialized response" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(json[:subscription][:applied_invoice_custom_sections].count).to eq(subscription.applied_invoice_custom_sections.count)
+      end
+    end
   end
 
   describe "DELETE /api/v1/subscriptions/:external_id" do
@@ -767,6 +778,17 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       it "returns a not found error" do
         subject
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "with applied_invoice_custom_sections in response" do
+      before { create(:subscription_applied_invoice_custom_section, subscription:) }
+
+      it "includes applied_invoice_custom_sections in the serialized response" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:applied_invoice_custom_sections].count).to eq(1)
       end
     end
   end
@@ -1462,6 +1484,20 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         end
       end
     end
+
+    context "with applied_invoice_custom_sections in response" do
+      let(:update_params) { {name: "updated"} }
+      let(:subscription) { create(:subscription, customer:, plan:) }
+
+      before { create(:subscription_applied_invoice_custom_section, subscription:) }
+
+      it "includes applied_invoice_custom_sections in the serialized response" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:applied_invoice_custom_sections].count).to eq(1)
+      end
+    end
   end
 
   describe "GET /api/v1/subscriptions/:external_id" do
@@ -1581,6 +1617,17 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           lago_id: matching_subscription.id,
           external_id: matching_subscription.external_id
         )
+      end
+    end
+
+    context "with applied_invoice_custom_sections in response" do
+      before { create(:subscription_applied_invoice_custom_section, subscription:) }
+
+      it "includes applied_invoice_custom_sections in the serialized response" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:applied_invoice_custom_sections].count).to eq(1)
       end
     end
   end

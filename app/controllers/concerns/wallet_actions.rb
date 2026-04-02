@@ -64,7 +64,7 @@ module WalletActions
           ::V1::WalletSerializer,
           collection_name: "wallets",
           meta: pagination_metadata(result.wallets),
-          includes: %i[recurring_transaction_rules limitations]
+          includes: %i[recurring_transaction_rules limitations applied_invoice_custom_sections]
         )
       )
     else
@@ -193,7 +193,7 @@ module WalletActions
       json: ::V1::WalletSerializer.new(
         wallet,
         root_name: "wallet",
-        includes: %i[recurring_transaction_rules limitations]
+        includes: %i[recurring_transaction_rules limitations applied_invoice_custom_sections]
       )
     )
   end

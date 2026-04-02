@@ -85,7 +85,7 @@ module Api
           preload_subscription(result.subscription)
 
           response[:subscription] = ::V1::SubscriptionSerializer.new(
-            result.subscription, includes: %i[plan entitlements applicable_usage_thresholds]
+            result.subscription, includes: %i[plan entitlements applicable_usage_thresholds applied_invoice_custom_sections]
           ).serialize
 
           render(json: response)
@@ -134,7 +134,7 @@ module Api
         )
 
         if result.success?
-          render_subscription(result.subscription, includes: %i[plan applicable_usage_thresholds])
+          render_subscription(result.subscription, includes: %i[plan applicable_usage_thresholds applied_invoice_custom_sections])
         else
           render_error_response(result)
         end
@@ -149,7 +149,7 @@ module Api
           )
         return not_found_error(resource: "subscription") unless subscription
 
-        render_subscription(subscription, includes: %i[plan entitlements applicable_usage_thresholds])
+        render_subscription(subscription, includes: %i[plan entitlements applicable_usage_thresholds applied_invoice_custom_sections])
       end
 
       def index
@@ -263,7 +263,7 @@ module Api
         ]
       end
 
-      def render_subscription(subscription, includes: %i[plan])
+      def render_subscription(subscription, includes: %i[plan applied_invoice_custom_sections])
         preload_subscription(subscription)
 
         render(
