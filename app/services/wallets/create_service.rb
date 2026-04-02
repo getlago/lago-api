@@ -65,7 +65,7 @@ module Wallets
           Customers::UpdateCurrencyService.call!(customer: customer, currency:)
         end
 
-        wallet.currency = multi_currency_enabled? ? currency : wallet.customer.currency
+        wallet.currency = multi_currency_enabled? ? (currency || wallet.customer.currency) : wallet.customer.currency
         wallet.save!
 
         validate_wallet_initial_amount! wallet
