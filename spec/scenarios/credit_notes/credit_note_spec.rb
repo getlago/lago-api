@@ -1035,8 +1035,16 @@ describe "Create credit note Scenarios", :premium do
       expect(wallet_transaction.credit_note_id).to eq(credit_note.id)
       expect(wallet.reload.balance_cents).to eq(1000)
 
+      # Void most of the remaining balance to leave only 5 cents
+      # Balance is 1000 cents (= 10 credits), void 9.95 credits to leave 5 cents
+      create_wallet_transaction({
+        wallet_id: wallet.id,
+        voided_credits: "9.95"
+      })
+      perform_all_enqueued_jobs
+      expect(wallet.reload.balance_cents).to eq(5)
+
       # when estimating a credit note with amount higher than the remaining balance, it throws an error
-      wallet.update(balance_cents: 5)
       estimate_credit_note({
         invoice_id: invoice.id,
         items: [

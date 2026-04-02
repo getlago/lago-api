@@ -198,7 +198,7 @@ module Wallets
     end
 
     def traceable?
-      customer.organization.feature_flag_enabled?(:wallet_traceability) && customer.wallets.active.where(traceable: false).none?
+      customer.wallets.active.where(traceable: false).none?
     end
   end
 end

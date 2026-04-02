@@ -30,7 +30,7 @@ RSpec.describe Wallet do
 
     before do
       create(:wallet, balance_cents: 0)
-      create(:wallet, balance_cents: -rand(1..1000))
+      create(:wallet, balance_cents: -rand(1..1000), traceable: false)
     end
 
     it "returns wallets with positive balance cents" do
