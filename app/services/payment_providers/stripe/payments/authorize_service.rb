@@ -29,6 +29,10 @@ module PaymentProviders
 
           payment_intent = create_payment_intent
 
+          # TODO: Skip pre-auth for Indian customers — RBI mandates 3DS on every transaction,
+          #       which cannot be completed in a synchronous server-side flow.
+          #       The card will be validated on the first actual invoice charge instead.
+
           if payment_intent.status == "requires_action"
             return result.single_validation_failure!(
               field: :payment_intent,
@@ -67,6 +71,7 @@ module PaymentProviders
               amount:,
               currency: currency.downcase,
               confirm: true,
+              off_session: true,
               payment_method_options: {
                 card: {
                   capture_method: "manual"
