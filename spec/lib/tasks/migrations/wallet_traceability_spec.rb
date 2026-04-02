@@ -65,7 +65,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
     env_vars = {
       "ORGANIZATION_ID" => organization.id,
       "BATCH_SIZE" => "100",
-      "OUTPUT_LIMIT" => "50"
+      "ERROR_DISPLAY_LIMIT" => "50"
     }
     env_vars["DRY_RUN"] = "false" if dry_run == false
     env_vars["INCLUDE_TERMINATED"] = "true" if include_terminated
@@ -562,8 +562,8 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
           env_vars = {
             "ORGANIZATION_ID" => organization.id,
             "BATCH_SIZE" => "100",
-            "OUTPUT_LIMIT" => "50",
-            "OUTPUT_FILE" => tmpfile.path
+            "ERROR_DISPLAY_LIMIT" => "50",
+            "ERROR_LOG_FILE" => tmpfile.path
           }
           env_vars.each { |k, v| ENV[k] = v }
           task.reenable
@@ -1479,9 +1479,9 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
           env_vars = {
             "ORGANIZATION_ID" => organization.id,
             "BATCH_SIZE" => "100",
-            "OUTPUT_LIMIT" => "50",
+            "ERROR_DISPLAY_LIMIT" => "50",
             "DRY_RUN" => "false",
-            "OUTPUT_FILE" => tmpfile.path
+            "ERROR_LOG_FILE" => tmpfile.path
           }
           env_vars.each { |k, v| ENV[k] = v }
           task.reenable
@@ -1552,6 +1552,17 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       expect { task.invoke }.to raise_error(RuntimeError, /Invalid CURSOR format/)
     ensure
       ENV.delete("CURSOR")
+    end
+  end
+
+  describe "invalid ERROR_LOG_FILE" do
+    it "raises an error at startup when the file path is not writable" do
+      ENV["ERROR_LOG_FILE"] = "/nonexistent/directory/errors.csv"
+      task.reenable
+
+      expect { task.invoke }.to raise_error(RuntimeError, /Cannot write to error log file/)
+    ensure
+      ENV.delete("ERROR_LOG_FILE")
     end
   end
 end

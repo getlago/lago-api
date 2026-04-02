@@ -4,15 +4,16 @@ require "csv"
 require "parallel"
 
 class WalletMigration
-  def initialize(dry_run: true, limit: nil, batch_size: 1000, output_limit: 50,
-    thread_count: 0, output_file: nil, cursor: nil, scope: Wallet.where(traceable: false))
+  def initialize(dry_run: true, limit: nil, batch_size: 1000, error_display_limit: 50,
+    thread_count: 0, error_log_file: nil, cursor: nil, scope: Wallet.where(traceable: false))
     @scope = scope
     @dry_run = dry_run
     @limit = limit
     @batch_size = limit ? [batch_size, limit].min : batch_size
-    @output_limit = output_limit
+    @error_display_limit = error_display_limit
     @thread_count = thread_count
-    @output_file = output_file
+    @error_log_file = error_log_file || self.class.default_error_log_file
+    validate_error_log_file!
     parse_cursor(cursor)
   end
 
@@ -35,6 +36,16 @@ class WalletMigration
   private
 
   attr_reader :scope
+
+  def self.default_error_log_file
+    File.join(Dir.tmpdir, "wallet_migration_errors_#{Time.current.strftime("%Y%m%d%H%M%S")}.csv")
+  end
+
+  def validate_error_log_file!
+    FileUtils.touch(@error_log_file)
+  rescue SystemCallError => e
+    raise "Cannot write to error log file #{@error_log_file}: #{e.message}"
+  end
 
   UUID_REGEX = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
 
@@ -232,8 +243,8 @@ class WalletMigration
 
     if problematic_wallets.any?
       puts "\n" + "=" * 60
-      puts "PROBLEMATIC WALLETS (first #{@output_limit}):"
-      problematic_wallets.first(@output_limit).each do |pw|
+      puts "PROBLEMATIC WALLETS (first #{@error_display_limit}):"
+      problematic_wallets.first(@error_display_limit).each do |pw|
         puts "  Wallet #{pw[:wallet_id]}:"
         puts "    - Customer: #{pw[:customer_name]} (#{pw[:customer_id]})"
         puts "    - Org: #{pw[:organization_name]} (#{pw[:organization_id]})"
@@ -243,7 +254,7 @@ class WalletMigration
         remaining = pw[:issues].size - 3
         puts "      - ... and #{remaining} more issues" if remaining > 0
       end
-      hidden = problematic_wallets.size - @output_limit
+      hidden = problematic_wallets.size - @error_display_limit
       puts "  ... and #{hidden} more problematic wallets" if hidden > 0
     end
 
@@ -251,7 +262,7 @@ class WalletMigration
     percentage = (total_wallets > 0) ? (migratable_wallets.to_f / total_wallets * 100).round(2) : 0
     puts "Migration readiness: #{percentage}%"
 
-    if @output_file && problematic_wallets.any?
+    if @error_log_file && problematic_wallets.any?
       export_csv(problematic_wallets, headers: %w[wallet_id customer_id customer_name organization_id organization_name created_at issues]) do |pw|
         [pw[:wallet_id], pw[:customer_id], pw[:customer_name], pw[:organization_id], pw[:organization_name], pw[:created_at].to_date, pw[:issues].join(" | ")]
       end
@@ -373,13 +384,13 @@ class WalletMigration
     puts "Errors: #{errors.size}"
 
     if errors.any?
-      puts "\nErrors (first 20):"
-      errors.first(20).each do |e|
+      puts "\nErrors (first #{@error_display_limit}):"
+      errors.first(@error_display_limit).each do |e|
         puts "  Customer #{e[:customer_id]}: #{e[:error]}"
       end
     end
 
-    if @output_file && errors.any?
+    if @error_log_file && errors.any?
       export_csv(errors, headers: %w[customer_id error]) do |e|
         [e[:customer_id], e[:error]]
       end
@@ -391,11 +402,11 @@ class WalletMigration
   # ---------------------------------------------------------------------------
 
   def export_csv(records, headers:)
-    CSV.open(@output_file, "w") do |csv|
+    CSV.open(@error_log_file, "w") do |csv|
       csv << headers
       records.each { |record| csv << yield(record) }
     end
-    puts "CSV exported to #{@output_file} (#{records.size} records)"
+    puts "CSV exported to #{@error_log_file} (#{records.size} records)"
   end
 
   # ---------------------------------------------------------------------------
@@ -459,9 +470,9 @@ namespace :migrations do
     options = {scope:, dry_run:}
     options[:limit] = ENV["LIMIT"].to_i if ENV["LIMIT"].present?
     options[:batch_size] = ENV["BATCH_SIZE"].to_i if ENV["BATCH_SIZE"].present?
-    options[:output_limit] = ENV["OUTPUT_LIMIT"].to_i if ENV["OUTPUT_LIMIT"].present?
+    options[:error_display_limit] = ENV["ERROR_DISPLAY_LIMIT"].to_i if ENV["ERROR_DISPLAY_LIMIT"].present?
     options[:thread_count] = ENV["THREAD_COUNT"].to_i if ENV["THREAD_COUNT"].present?
-    options[:output_file] = ENV["OUTPUT_FILE"] if ENV["OUTPUT_FILE"].present?
+    options[:error_log_file] = ENV["ERROR_LOG_FILE"] if ENV["ERROR_LOG_FILE"].present?
 
     options[:cursor] = ENV["CURSOR"] if ENV["CURSOR"].present?
 
