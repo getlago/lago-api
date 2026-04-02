@@ -68,7 +68,7 @@ RSpec.describe Api::V1::WalletTransactionsController do
     end
 
     context "with voided credits" do
-      let(:wallet) { create(:wallet, customer:, credits_balance: 20, balance_cents: 2000) }
+      let(:wallet) { create(:wallet, :with_inbound_transaction, customer:, credits_balance: 20, balance_cents: 2000) }
       let(:params) do
         {
           wallet_id:,

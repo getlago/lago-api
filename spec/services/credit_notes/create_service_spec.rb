@@ -488,7 +488,7 @@ RSpec.describe CreditNotes::CreateService do
           payment_status: :succeeded
         )
       end
-      let(:wallet) { create(:wallet, customer:, balance_cents: 1200, rate_amount:, credits_balance: 1) }
+      let(:wallet) { create(:wallet, customer:, balance_cents: 1200, rate_amount:, credits_balance: 1, traceable: false) }
       let(:rate_amount) { 10 }
       let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
       let(:fee1) { create(:credit_fee, invoice:, invoiceable: wallet_transaction, amount_cents: 1000, taxes_rate: 20) }

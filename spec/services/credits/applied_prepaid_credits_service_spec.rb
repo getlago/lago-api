@@ -20,27 +20,27 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
   let(:fee_amount_cents) { 100 }
 
   let(:normal_wallet) do
-    create(:wallet, name: "normal", customer:, balance_cents: 1000, credits_balance: 10.0)
+    create(:wallet, :with_inbound_transaction, name: "normal", customer:, balance_cents: 1000, credits_balance: 10.0)
   end
 
   let(:priority_wallet) do
-    create(:wallet, name: "priority", customer:, balance_cents: 1000, credits_balance: 10.0, priority: 49)
+    create(:wallet, :with_inbound_transaction, name: "priority", customer:, balance_cents: 1000, credits_balance: 10.0, priority: 49)
   end
 
   let(:limited_charge_wallet) do
-    create(:wallet, name: "limited charge", customer:, balance_cents: 1000, credits_balance: 10.0, allowed_fee_types: %w[charge])
+    create(:wallet, :with_inbound_transaction, name: "limited charge", customer:, balance_cents: 1000, credits_balance: 10.0, allowed_fee_types: %w[charge])
   end
 
   let(:priority_limited_charge_wallet) do
-    create(:wallet, name: "priority limited charge", customer:, balance_cents: 1000, credits_balance: 10.0, priority: 49, allowed_fee_types: %w[charge])
+    create(:wallet, :with_inbound_transaction, name: "priority limited charge", customer:, balance_cents: 1000, credits_balance: 10.0, priority: 49, allowed_fee_types: %w[charge])
   end
 
   let(:limited_subscription_wallet) do
-    create(:wallet, name: "limited subscription", customer:, balance_cents: 1000, credits_balance: 10.0, allowed_fee_types: %w[subscription])
+    create(:wallet, :with_inbound_transaction, name: "limited subscription", customer:, balance_cents: 1000, credits_balance: 10.0, allowed_fee_types: %w[subscription])
   end
 
   let(:priority_limited_subscription_wallet) do
-    create(:wallet, name: "priority limited subscription", customer:, balance_cents: 1000, credits_balance: 10.0, priority: 49, allowed_fee_types: %w[subscription])
+    create(:wallet, :with_inbound_transaction, name: "priority limited subscription", customer:, balance_cents: 1000, credits_balance: 10.0, priority: 49, allowed_fee_types: %w[subscription])
   end
   let(:wallets) do
     [
@@ -250,10 +250,10 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
     context "with billable metric limitations" do
       let(:limited_bm_wallet) do
-        create(:wallet, name: "limited bm wallet", customer:, balance_cents: 1000, credits_balance: 10.0)
+        create(:wallet, :with_inbound_transaction, name: "limited bm wallet", customer:, balance_cents: 1000, credits_balance: 10.0)
       end
       let(:priority_limited_bm_wallet) do
-        create(:wallet, name: "priority limited bm wallet", customer:, balance_cents: 1000, credits_balance: 10.0, priority: 49)
+        create(:wallet, :with_inbound_transaction, name: "priority limited bm wallet", customer:, balance_cents: 1000, credits_balance: 10.0, priority: 49)
       end
       let(:wallets) do
         [
@@ -395,7 +395,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
       let(:wallet_limited_billable_metric) { create(:billable_metric, organization: customer.organization) }
       let(:wallet) do
-        create(:wallet, customer:, balance_cents: 6600, credits_balance: 66.0)
+        create(:wallet, :with_inbound_transaction, customer:, balance_cents: 6600, credits_balance: 66.0)
       end
       let(:wallet_target) { create(:wallet_target, wallet: wallet, billable_metric: wallet_limited_billable_metric) }
       let(:wallets) { [wallet] }
@@ -638,7 +638,9 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     end
 
     context "when precise tax rounding causes fee caps to be slightly below invoice total" do
-      let(:normal_wallet) { create(:wallet, name: "normal", customer:, balance_cents: 200_000, credits_balance: 2000.0) }
+      let(:normal_wallet) do
+        create(:wallet, :with_inbound_transaction, name: "normal", customer:, balance_cents: 200_000, credits_balance: 2000.0)
+      end
       let(:wallets) { [normal_wallet] }
       let(:amount_cents) { 106_826 }
       let(:fee) { nil }

@@ -282,9 +282,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
     end
 
     context "with active wallet" do
-      let(:wallet) do
-        create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0)
-      end
+      let(:wallet) { create(:wallet, :with_inbound_transaction, customer:, balance_cents: 1000, credits_balance: 10.0) }
 
       before { wallet }
 

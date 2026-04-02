@@ -6,165 +6,347 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
   subject { described_class }
 
   describe ".perform" do
-    let(:ending_at) { (Time.current + 2.months + 15.days).beginning_of_day }
-    let(:subscription1) { create(:subscription, ending_at:) }
-    let(:subscription2) { create(:subscription, ending_at: ending_at + 1.year) }
-    let(:subscription3) { create(:subscription, ending_at: nil) }
-    let(:webhook_started1) do
-      create(:webhook, :succeeded, object: subscription1, webhook_type: "subscription.started")
-    end
-    let(:webhook_started2) do
-      create(:webhook, :succeeded, object: subscription2, webhook_type: "subscription.started")
-    end
-    let(:webhook_started3) do
-      create(:webhook, :succeeded, object: subscription3, webhook_type: "subscription.started")
-    end
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let!(:webhook_endpoint) { create(:webhook_endpoint, organization:) }
+    let(:current_date) { DateTime.parse("2026-06-01") }
+    let(:ending_at_15_days) { (current_date + 15.days).beginning_of_day }
+    let(:ending_at_45_days) { (current_date + 45.days).beginning_of_day }
 
-    before do
-      subscription1
-      subscription2
-      subscription3
-      webhook_started1
-      webhook_started2
-      webhook_started3
-    end
-
-    it "sends webhook that subscription is going to be terminated for the right subscriptions" do
-      current_date = Time.current + 2.months
+    it "enqueues SendWebhookJob for subscriptions ending in 15 days" do
+      subscription = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+      create(:subscription, customer:, organization:, ending_at: ending_at_15_days + 1.year)
 
       travel_to(current_date) do
-        expect do
-          described_class.perform_now
-        end
-          .to have_enqueued_job(SendWebhookJob)
-          .with("subscription.termination_alert", Subscription)
+        described_class.perform_now
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with("subscription.termination_alert", subscription)
           .exactly(:once)
       end
     end
 
-    context "when current date is 45 before subscription ending_at" do
-      it "sends webhook that subscription is going to be terminated for the right subscriptions" do
-        current_date = ending_at - 45.days
+    it "enqueues SendWebhookJob for subscriptions ending in 45 days" do
+      subscription = create(:subscription, customer:, organization:, ending_at: ending_at_45_days)
+
+      travel_to(current_date) do
+        described_class.perform_now
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with("subscription.termination_alert", subscription)
+          .exactly(:once)
+      end
+    end
+
+    it "does not enqueue for subscriptions without ending_at" do
+      create(:subscription, customer:, organization:, ending_at: nil)
+
+      travel_to(current_date) do
+        described_class.perform_now
+
+        expect(SendWebhookJob).not_to have_been_enqueued
+          .with("subscription.termination_alert", anything)
+      end
+    end
+
+    it "does not enqueue for subscriptions with non-matching ending_at" do
+      create(:subscription, customer:, organization:, ending_at: current_date + 10.days)
+
+      travel_to(current_date) do
+        described_class.perform_now
+
+        expect(SendWebhookJob).not_to have_been_enqueued
+          .with("subscription.termination_alert", anything)
+      end
+    end
+
+    context "with non-active subscriptions" do
+      it "does not enqueue for pending subscriptions" do
+        create(:subscription, :pending, customer:, organization:, ending_at: ending_at_15_days)
 
         travel_to(current_date) do
-          expect do
-            described_class.perform_now
-          end
-            .to have_enqueued_job(SendWebhookJob)
-            .with("subscription.termination_alert", Subscription)
+          described_class.perform_now
+
+          expect(SendWebhookJob).not_to have_been_enqueued
+            .with("subscription.termination_alert", anything)
+        end
+      end
+
+      it "does not enqueue for terminated subscriptions" do
+        create(:subscription, :terminated, customer:, organization:, ending_at: ending_at_15_days)
+
+        travel_to(current_date) do
+          described_class.perform_now
+
+          expect(SendWebhookJob).not_to have_been_enqueued
+            .with("subscription.termination_alert", anything)
+        end
+      end
+
+      it "does not enqueue for canceled subscriptions" do
+        create(:subscription, :canceled, customer:, organization:, ending_at: ending_at_15_days)
+
+        travel_to(current_date) do
+          described_class.perform_now
+
+          expect(SendWebhookJob).not_to have_been_enqueued
+            .with("subscription.termination_alert", anything)
+        end
+      end
+    end
+
+    context "with multiple matching subscriptions at different windows" do
+      it "enqueues for both subscriptions" do
+        sub_15 = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+        sub_45 = create(:subscription, customer:, organization:, ending_at: ending_at_45_days)
+
+        travel_to(current_date) do
+          described_class.perform_now
+
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", sub_15)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", sub_45)
+        end
+      end
+    end
+
+    context "when termination_alert webhook was already sent today" do
+      it "does not enqueue" do
+        subscription = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+
+        travel_to(current_date) do
+          create(
+            :webhook,
+            :succeeded,
+            webhook_endpoint:,
+            object: subscription,
+            webhook_type: "subscription.termination_alert",
+            created_at: current_date
+          )
+
+          described_class.perform_now
+
+          expect(SendWebhookJob).not_to have_been_enqueued
+            .with("subscription.termination_alert", anything)
+        end
+      end
+    end
+
+    context "when termination_alert webhook was sent yesterday" do
+      it "enqueues the alert" do
+        subscription = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+        create(
+          :webhook,
+          :succeeded,
+          webhook_endpoint:,
+          object: subscription,
+          webhook_type: "subscription.termination_alert",
+          created_at: current_date - 1.day
+        )
+
+        travel_to(current_date) do
+          described_class.perform_now
+
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", subscription)
             .exactly(:once)
         end
       end
     end
 
-    context "when current date is 1 day before subscription ending_at" do
-      it "sends webhook that subscription is going to be terminated but only if config is overridden" do
-        current_date = ending_at - 1.day
+    context "when termination_alert webhook was sent 30 days ago" do
+      it "enqueues the alert" do
+        subscription = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+        create(
+          :webhook,
+          :succeeded,
+          webhook_endpoint:,
+          object: subscription,
+          webhook_type: "subscription.termination_alert",
+          created_at: current_date - 30.days
+        )
 
         travel_to(current_date) do
-          # First validate that with default config nothing is sent
-          expect { described_class.perform_now }.not_to have_enqueued_job(SendWebhookJob)
+          described_class.perform_now
 
-          # Now validate that with custom config, it is actually sent
-          ENV["LAGO_SUBSCRIPTION_TERMINATION_ALERT_SENT_AT_DAYS"] = "1,15,45"
-          expect { described_class.perform_now }
-            .to have_enqueued_job(SendWebhookJob)
-            .with("subscription.termination_alert", Subscription)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", subscription)
             .exactly(:once)
         end
       end
     end
 
-    context "when the same alert webhook had been already triggered on the same day" do
-      let(:webhook_alert1) do
-        create(
-          :webhook,
-          :succeeded,
-          object: subscription1,
-          webhook_type: "subscription.termination_alert",
-          created_at: Time.current + 2.months
-        )
-      end
-
-      before { webhook_alert1 }
-
-      it "does not send any webhook" do
-        current_date = Time.current + 2.months
+    context "when a different webhook type was sent today" do
+      it "still enqueues the termination alert" do
+        subscription = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
 
         travel_to(current_date) do
-          expect do
-            described_class.perform_now
-          end
-            .to have_enqueued_job(SendWebhookJob)
-            .with("subscription.termination_alert", Subscription)
-            .exactly(0).times
-        end
-      end
-    end
+          create(
+            :webhook,
+            :succeeded,
+            webhook_endpoint:,
+            object: subscription,
+            webhook_type: "subscription.started",
+            created_at: current_date
+          )
 
-    context "when the same alert webhook has already been triggered 30 days ago" do
-      let(:webhook_alert1) do
-        create(
-          :webhook,
-          :succeeded,
-          object: subscription1,
-          webhook_type: "subscription.termination_alert",
-          created_at: ending_at - 45.days
-        )
-      end
+          described_class.perform_now
 
-      before { webhook_alert1 }
-
-      it "sends webhook that subscription is going to be terminated for the right subscriptions" do
-        current_date = ending_at - 15.days
-
-        travel_to(current_date) do
-          expect do
-            described_class.perform_now
-          end
-            .to have_enqueued_job(SendWebhookJob)
-            .with("subscription.termination_alert", Subscription)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", subscription)
             .exactly(:once)
         end
       end
     end
 
-    context "when the organization has multiple endpoints and the webhook has already been sent" do
-      let(:webhook_alert1) do
-        create(
-          :webhook,
-          :succeeded,
-          object: subscription1,
-          webhook_type: "subscription.termination_alert",
-          created_at: ending_at - 45.days
-        )
-      end
-
-      let(:webhook_alert2) do
-        create(
-          :webhook,
-          :succeeded,
-          object: subscription1,
-          webhook_type: "subscription.termination_alert",
-          created_at: ending_at - 45.days
-        )
-      end
-
-      before do
-        webhook_alert1
-        webhook_alert2
-      end
-
-      it "sends webhook that subscription is going to be terminated for the right subscriptions" do
-        current_date = ending_at - 15.days
+    context "when a pending termination_alert webhook exists for today" do
+      it "does not enqueue" do
+        subscription = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
 
         travel_to(current_date) do
-          expect do
-            described_class.perform_now
-          end
-            .to have_enqueued_job(SendWebhookJob)
-            .with("subscription.termination_alert", Subscription)
+          create(
+            :webhook,
+            :pending,
+            webhook_endpoint:,
+            object: subscription,
+            webhook_type: "subscription.termination_alert",
+            created_at: current_date
+          )
+
+          described_class.perform_now
+
+          expect(SendWebhookJob).not_to have_been_enqueued
+            .with("subscription.termination_alert", anything)
+        end
+      end
+    end
+
+    context "when a failed termination_alert webhook exists for today" do
+      it "does not enqueue" do
+        subscription = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+
+        travel_to(current_date) do
+          create(
+            :webhook,
+            :failed,
+            webhook_endpoint:,
+            object: subscription,
+            webhook_type: "subscription.termination_alert",
+            created_at: current_date
+          )
+
+          described_class.perform_now
+
+          expect(SendWebhookJob).not_to have_been_enqueued
+            .with("subscription.termination_alert", anything)
+        end
+      end
+    end
+
+    context "with multiple webhook endpoints having webhooks today" do
+      it "does not enqueue" do
+        subscription = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+        webhook_endpoint2 = create(:webhook_endpoint, organization:)
+
+        travel_to(current_date) do
+          create(
+            :webhook,
+            :succeeded,
+            webhook_endpoint:,
+            object: subscription,
+            webhook_type: "subscription.termination_alert",
+            created_at: current_date
+          )
+          create(
+            :webhook,
+            :succeeded,
+            webhook_endpoint: webhook_endpoint2,
+            object: subscription,
+            webhook_type: "subscription.termination_alert",
+            created_at: current_date
+          )
+
+          described_class.perform_now
+
+          expect(SendWebhookJob).not_to have_been_enqueued
+            .with("subscription.termination_alert", anything)
+        end
+      end
+    end
+
+    context "with multiple webhook endpoints having webhooks from a past day" do
+      it "enqueues exactly once" do
+        subscription = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+        webhook_endpoint2 = create(:webhook_endpoint, organization:)
+        create(
+          :webhook,
+          :succeeded,
+          webhook_endpoint:,
+          object: subscription,
+          webhook_type: "subscription.termination_alert",
+          created_at: current_date - 30.days
+        )
+        create(
+          :webhook,
+          :succeeded,
+          webhook_endpoint: webhook_endpoint2,
+          object: subscription,
+          webhook_type: "subscription.termination_alert",
+          created_at: current_date - 30.days
+        )
+
+        travel_to(current_date) do
+          described_class.perform_now
+
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", subscription)
             .exactly(:once)
+        end
+      end
+    end
+
+    context "with custom LAGO_SUBSCRIPTION_TERMINATION_ALERT_SENT_AT_DAYS" do
+      around do |test|
+        old_value = ENV["LAGO_SUBSCRIPTION_TERMINATION_ALERT_SENT_AT_DAYS"]
+        ENV["LAGO_SUBSCRIPTION_TERMINATION_ALERT_SENT_AT_DAYS"] = "1,15,45"
+        test.run
+      ensure
+        if old_value
+          ENV["LAGO_SUBSCRIPTION_TERMINATION_ALERT_SENT_AT_DAYS"] = old_value
+        else
+          ENV.delete("LAGO_SUBSCRIPTION_TERMINATION_ALERT_SENT_AT_DAYS")
+        end
+      end
+
+      it "uses custom day intervals" do
+        ending_at_1_day = (current_date + 1.day).beginning_of_day
+        sub_1 = create(:subscription, customer:, organization:, ending_at: ending_at_1_day)
+        sub_15 = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+        sub_45 = create(:subscription, customer:, organization:, ending_at: ending_at_45_days)
+
+        travel_to(current_date) do
+          described_class.perform_now
+
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", sub_1)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", sub_15)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", sub_45)
+        end
+      end
+
+      it "does not enqueue for default-only intervals not in custom config" do
+        # 15 and 45 are in custom config, but 30 is not
+        ending_at_30_days = (current_date + 30.days).beginning_of_day
+        create(:subscription, customer:, organization:, ending_at: ending_at_30_days)
+
+        travel_to(current_date) do
+          described_class.perform_now
+
+          expect(SendWebhookJob).not_to have_been_enqueued
+            .with("subscription.termination_alert", anything)
         end
       end
     end

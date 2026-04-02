@@ -2006,7 +2006,7 @@ RSpec.describe Invoices::CalculateFeesService do
 
     context "with applied prepaid credits" do
       let(:timestamp) { Time.zone.now.beginning_of_month }
-      let(:wallet) { create(:wallet, customer: subscription.customer, balance: "0.30", credits_balance: "0.30") }
+      let(:wallet) { create(:wallet, :with_inbound_transaction, customer: subscription.customer, balance: "0.30", credits_balance: "0.30") }
 
       let(:plan) do
         create(:plan, interval: "monthly")
@@ -2074,7 +2074,9 @@ RSpec.describe Invoices::CalculateFeesService do
       let(:coupon1) { create(:coupon, organization:, coupon_type: "percentage", limited_billable_metrics: true, percentage_rate: 50.00) }
       let(:coupon2) { create(:coupon, organization:) }
       let(:coupon_target) { create(:coupon_billable_metric, coupon: coupon1, billable_metric: billable_metric1) }
-      let(:wallet) { create(:wallet, organization:, customer: subscription.customer, balance: "50_000", credits_balance: "50_000", allowed_fee_types: %w[charge]) }
+      let(:wallet) do
+        create(:wallet, :with_inbound_transaction, organization:, customer: subscription.customer, balance: "50_000", credits_balance: "50_000", allowed_fee_types: %w[charge])
+      end
       let(:applied_coupon) do
         create(
           :applied_coupon,

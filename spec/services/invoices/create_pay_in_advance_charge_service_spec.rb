@@ -256,7 +256,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
     end
 
     context "when customer has wallet with positive balance" do
-      before { create(:wallet, customer:, balance_cents: 100, credits_balance: 100) }
+      before { create(:wallet, :with_inbound_transaction, customer:, balance_cents: 100, credits_balance: 100) }
 
       it "uses the prepaid credits" do
         allow(Credits::AppliedPrepaidCreditsService).to receive(:call).and_call_original

@@ -513,7 +513,7 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
       end
 
       context "with active wallet" do
-        let(:wallet) { create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0) }
+        let(:wallet) { create(:wallet, :with_inbound_transaction, customer:, balance_cents: 1000, credits_balance: 10.0) }
 
         before { wallet }
 
