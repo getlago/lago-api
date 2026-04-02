@@ -1423,9 +1423,91 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
           run_migration(dry_run: false, silent: false)
         }.to output(
           a_string_including("Errors: 1")
-            .and(a_string_including("Could not fully consume outbound"))
+            .and(a_string_including("insufficient inbound to consume"))
         ).to_stdout
         expect(wallet.reload.traceable).to eq(false)
+        expect(inbound.reload.remaining_amount_cents).to be_nil
+        expect(WalletTransactionConsumption.where(inbound_wallet_transaction_id: inbound.id).count).to eq(0)
+      end
+
+      it "rejects wallet with negative balance" do
+        wallet = create_non_traceable_wallet
+        Wallet.where(id: wallet.id).update_all(balance_cents: -500, credits_balance: -5) # rubocop:disable Rails/SkipsModelValidations
+
+        expect {
+          run_migration(dry_run: false, silent: false)
+        }.to output(
+          a_string_including("Errors: 1")
+            .and(a_string_including("Negative wallet balance"))
+        ).to_stdout
+        expect(wallet.reload.traceable).to eq(false)
+      end
+
+      it "rejects wallet with negative amount_cents on inbound transaction" do
+        wallet = create(:wallet, customer:, organization:, traceable: false, currency: "EUR", rate_amount: "1.00",
+          balance_cents: 0, credits_balance: 0)
+        inbound = create(:wallet_transaction, wallet:, organization:,
+          transaction_type: :inbound, status: :settled, amount: "-10.00", credit_amount: "-10.00",
+          transaction_status: :granted)
+
+        expect {
+          run_migration(dry_run: false, silent: false)
+        }.to output(
+          a_string_including("Errors: 1")
+            .and(a_string_including("Negative amount_cents on inbound"))
+        ).to_stdout
+        expect(wallet.reload.traceable).to eq(false)
+        expect(inbound.reload.remaining_amount_cents).to be_nil
+      end
+
+      it "rejects wallet with negative amount_cents on outbound transaction" do
+        wallet = create(:wallet, customer:, organization:, traceable: false, currency: "EUR", rate_amount: "1.00",
+          balance_cents: 0, credits_balance: 0)
+        outbound = create(:wallet_transaction, wallet:, organization:,
+          transaction_type: :outbound, status: :settled, amount: "-10.00", credit_amount: "-10.00",
+          transaction_status: :invoiced)
+
+        expect {
+          run_migration(dry_run: false, silent: false)
+        }.to output(
+          a_string_including("Errors: 1")
+            .and(a_string_including("Negative amount_cents on outbound"))
+        ).to_stdout
+        expect(wallet.reload.traceable).to eq(false)
+        expect(WalletTransactionConsumption.where(outbound_wallet_transaction_id: outbound.id).count).to eq(0)
+      end
+
+      it "rejects wallet with outbound but no inbound transactions" do
+        wallet = create(:wallet, customer:, organization:, traceable: false, currency: "EUR", rate_amount: "1.00")
+        outbound = create(:wallet_transaction, wallet:, organization:,
+          transaction_type: :outbound, status: :settled, amount: "10.00", credit_amount: "10.00",
+          transaction_status: :invoiced)
+
+        expect {
+          run_migration(dry_run: false, silent: false)
+        }.to output(
+          a_string_including("Errors: 1")
+            .and(a_string_including("missing transaction history"))
+        ).to_stdout
+        expect(wallet.reload.traceable).to eq(false)
+        expect(WalletTransactionConsumption.where(outbound_wallet_transaction_id: outbound.id).count).to eq(0)
+      end
+
+      it "rejects wallet with balance drift" do
+        wallet = create_non_traceable_wallet
+        top_up_wallet(wallet, granted_credits: "100")
+        inbound = wallet.wallet_transactions.inbound.first
+        Wallet.where(id: wallet.id).update_all(balance_cents: 5000, credits_balance: 50) # rubocop:disable Rails/SkipsModelValidations
+
+        expect {
+          run_migration(dry_run: false, silent: false)
+        }.to output(
+          a_string_including("Errors: 1")
+            .and(a_string_including("Balance drift"))
+        ).to_stdout
+        expect(wallet.reload.traceable).to eq(false)
+        expect(inbound.reload.remaining_amount_cents).to be_nil
+        expect(WalletTransactionConsumption.where(inbound_wallet_transaction_id: inbound.id).count).to eq(0)
       end
 
       it "continues processing other customers when one customer errors" do

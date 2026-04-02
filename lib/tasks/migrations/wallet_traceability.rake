@@ -4,6 +4,10 @@ require "csv"
 require "parallel"
 
 class WalletMigration
+  def self.default_error_log_file
+    File.join(Dir.tmpdir, "wallet_migration_errors_#{Time.current.strftime("%Y%m%d%H%M%S")}.csv")
+  end
+
   def initialize(dry_run: true, limit: nil, batch_size: 1000, error_display_limit: 50,
     thread_count: 0, error_log_file: nil, cursor: nil, scope: Wallet.where(traceable: false))
     @scope = scope
@@ -37,9 +41,6 @@ class WalletMigration
 
   attr_reader :scope
 
-  def self.default_error_log_file
-    File.join(Dir.tmpdir, "wallet_migration_errors_#{Time.current.strftime("%Y%m%d%H%M%S")}.csv")
-  end
 
   def validate_error_log_file!
     FileUtils.touch(@error_log_file)
@@ -285,10 +286,17 @@ class WalletMigration
         ActiveRecord::Base.connection_pool.with_connection do
           ApplicationRecord.transaction do
             ApplicationRecord.with_advisory_lock!("customer-#{customer_id}", timeout_seconds: 10, transaction: true) do
-              wallets = scope.where(customer_id: customer_id).includes(wallet_transactions: :fundings).to_a
+              wallets = scope.where(customer_id: customer_id).includes(:customer, :organization, wallet_transactions: :fundings).to_a
               next if wallets.empty?
 
-              wallets.each { |wallet| backfill_wallet_transactions(wallet) }
+              wallets.each do |wallet|
+                issues = validate_wallet(wallet)
+                if issues.any?
+                  raise "Wallet #{wallet.id}: #{issues.join("; ")}"
+                end
+
+                backfill_wallet_transactions(wallet)
+              end
 
               Wallet.where(id: wallets.map(&:id)).update_all(traceable: true) # rubocop:disable Rails/SkipsModelValidations
 
