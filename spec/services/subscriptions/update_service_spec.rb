@@ -935,5 +935,99 @@ RSpec.describe Subscriptions::UpdateService do
         expect(result.error.error_code).to eq("plan_not_found")
       end
     end
+
+    context "with activation_rules" do
+      context "when subscription is pending" do
+        let(:subscription) { create(:subscription, :pending) }
+        let(:params) { {activation_rules: [{type: "payment", timeout_hours: 24}]} }
+
+        it "persists activation rules" do
+          result = update_service.call
+
+          expect(result).to be_success
+          rules = subscription.activation_rules.reload
+          expect(rules.count).to eq(1)
+          expect(rules.first).to have_attributes(
+            type: "payment",
+            timeout_hours: 24,
+            status: "inactive"
+          )
+        end
+
+        context "when rules are replaced" do
+          let(:subscription) { create(:subscription, :pending, :with_activation_rules, activation_rules_config: [{type: "payment", timeout_hours: 48}]) }
+          let(:params) { {activation_rules: [{type: "payment", timeout_hours: 12}]} }
+
+          it "replaces existing rules" do
+            result = update_service.call
+
+            expect(result).to be_success
+            rules = subscription.activation_rules.reload
+            expect(rules.count).to eq(1)
+            expect(rules.first.timeout_hours).to eq(12)
+          end
+        end
+
+        context "when activation_rules is empty array" do
+          let(:subscription) { create(:subscription, :pending, :with_activation_rules) }
+          let(:params) { {activation_rules: []} }
+
+          it "removes all activation rules" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(subscription.activation_rules.reload).to be_empty
+          end
+        end
+      end
+
+      context "when subscription is active" do
+        let(:subscription) { create(:subscription) }
+        let(:params) { {activation_rules: [{type: "payment", timeout_hours: 24}]} }
+
+        it "returns validation error" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:activation_rules]).to include("subscription_not_pending")
+        end
+      end
+
+      context "when subscription is incomplete" do
+        let(:subscription) { create(:subscription, :incomplete) }
+
+        context "when trying to update any attribute" do
+          let(:params) { {name: "new name"} }
+
+          it "returns validation error" do
+            result = update_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:subscription]).to include("not_editable")
+          end
+        end
+      end
+    end
+
+    context "when subscription_at changes to past and has activation rules" do
+      let(:subscription) { create(:subscription, :pending, :with_activation_rules, subscription_at: Time.current + 5.days) }
+      let(:params) { {subscription_at: (Time.current - 5.days).iso8601} }
+
+      it "deletes activation rules" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(subscription.activation_rules.reload).to be_empty
+      end
+
+      it "activates the subscription" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.subscription).to be_active
+      end
+    end
   end
 end
