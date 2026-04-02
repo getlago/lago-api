@@ -275,13 +275,13 @@ class WalletMigration
     iterate_customers_in_batches do |customer_ids|
       Parallel.each(customer_ids, in_threads: @thread_count) do |customer_id|
         ActiveRecord::Base.connection_pool.with_connection do
-          customer = Customer.find(customer_id)
+          customer = Customer.new(id: customer_id).freeze
+          current_wallet = nil
           ApplicationRecord.transaction do
-            Customers::LockService.call!(customer:, scope: :prepaid_credit) do
+            Customers::LockService.call(customer:, scope: :prepaid_credit) do
               wallets = scope.where(customer_id: customer_id).includes(:customer, :organization, wallet_transactions: :fundings).to_a
               next if wallets.empty?
 
-              current_wallet = nil
               wallets.each do |wallet|
                 current_wallet = wallet
                 issues = validate_wallet(wallet)
