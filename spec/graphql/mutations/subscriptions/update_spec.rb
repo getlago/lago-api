@@ -147,4 +147,68 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
       ])
     end
   end
+
+  context "with activation rules" do
+    let(:query) do
+      <<~GQL
+        mutation($input: UpdateSubscriptionInput!) {
+          updateSubscription(input: $input) {
+            id
+            activationRules {
+              lagoId
+              type
+              timeoutHours
+              status
+              expiresAt
+            }
+          }
+        }
+      GQL
+    end
+
+    context "when subscription is pending" do
+      let(:subscription) { create(:subscription, :pending, organization:, plan:, subscription_at: Time.current + 3.days) }
+      let(:input) do
+        {
+          id: subscription.id,
+          activationRules: [
+            {type: "payment", timeoutHours: 24}
+          ]
+        }
+      end
+
+      it "persists and returns activation rules" do
+        result = subject
+
+        result_data = result["data"]["updateSubscription"]
+
+        expect(result_data["activationRules"].size).to eq(1)
+        expect(result_data["activationRules"].first).to include(
+          "lagoId" => String,
+          "type" => "payment",
+          "timeoutHours" => 24,
+          "status" => "inactive",
+          "expiresAt" => nil
+        )
+      end
+    end
+
+    context "when subscription is active" do
+      let(:subscription) { create(:subscription, organization:, plan:) }
+      let(:input) do
+        {
+          id: subscription.id,
+          activationRules: [
+            {type: "payment", timeoutHours: 24}
+          ]
+        }
+      end
+
+      it "returns a validation error" do
+        result = subject
+
+        expect(result["errors"].first.dig("extensions", "details", "activationRules")).to include("subscription_not_pending")
+      end
+    end
+  end
 end
