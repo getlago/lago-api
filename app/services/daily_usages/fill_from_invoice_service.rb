@@ -103,7 +103,7 @@ module DailyUsages
       return false if invoice_subscription.charges_from_datetime.nil?
       return false if invoice_subscription.charges_to_datetime.nil?
 
-      invoice_subscription.charges_from_datetime < invoice_subscription.charges_to_datetime
+      invoice_subscription.charges_from_datetime <= invoice_subscription.charges_to_datetime
     end
 
     def usage_date(invoice_subscription)
