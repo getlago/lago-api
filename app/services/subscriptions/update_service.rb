@@ -69,7 +69,7 @@ module Subscriptions
           UpdateUsageThresholdsService.call!(subscription:, usage_thresholds_params: params[:usage_thresholds], partial: false)
         end
 
-        if params.key?(:activation_rules) && subscription.pending?
+        if params.key?(:activation_rules)
           Subscriptions::ActivationRules::ApplyService.call!(
             subscription:,
             activation_rules: params[:activation_rules]
