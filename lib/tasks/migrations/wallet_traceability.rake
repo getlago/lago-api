@@ -492,14 +492,32 @@ namespace :migrations do
     scope = scope.where(organization_id: ENV["ORGANIZATION_ID"]) if ENV["ORGANIZATION_ID"].present?
 
     options = {scope:, dry_run:}
-    options[:limit] = ENV["LIMIT"].to_i if ENV["LIMIT"].present?
-    options[:batch_size] = ENV["BATCH_SIZE"].to_i if ENV["BATCH_SIZE"].present?
-    options[:error_display_limit] = ENV["ERROR_DISPLAY_LIMIT"].to_i if ENV["ERROR_DISPLAY_LIMIT"].present?
-    options[:thread_count] = ENV["THREAD_COUNT"].to_i if ENV["THREAD_COUNT"].present?
+    options[:limit] = parse_positive_integer("LIMIT") if ENV["LIMIT"].present?
+    options[:batch_size] = parse_positive_integer("BATCH_SIZE") if ENV["BATCH_SIZE"].present?
+    options[:error_display_limit] = parse_positive_integer("ERROR_DISPLAY_LIMIT") if ENV["ERROR_DISPLAY_LIMIT"].present?
+    options[:thread_count] = parse_non_negative_integer("THREAD_COUNT") if ENV["THREAD_COUNT"].present?
     options[:error_log_file] = ENV["ERROR_LOG_FILE"] if ENV["ERROR_LOG_FILE"].present?
 
     options[:cursor] = ENV["CURSOR"] if ENV["CURSOR"].present?
 
     WalletMigration.new(**options).run
+  end
+
+  def parse_positive_integer(name)
+    value = ENV[name]
+    integer = Integer(value)
+    raise "#{name} must be a positive integer, got: #{value}" unless integer > 0
+    integer
+  rescue ArgumentError
+    raise "#{name} must be a positive integer, got: #{value}"
+  end
+
+  def parse_non_negative_integer(name)
+    value = ENV[name]
+    integer = Integer(value)
+    raise "#{name} must be a non-negative integer, got: #{value}" unless integer >= 0
+    integer
+  rescue ArgumentError
+    raise "#{name} must be a non-negative integer, got: #{value}"
   end
 end

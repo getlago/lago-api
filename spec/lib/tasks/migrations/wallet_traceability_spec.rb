@@ -1662,4 +1662,53 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV.delete("ERROR_LOG_FILE")
     end
   end
+
+  describe "invalid numeric ENV vars" do
+    %w[LIMIT BATCH_SIZE ERROR_DISPLAY_LIMIT].each do |var|
+      it "raises an error when #{var} is not numeric" do
+        ENV[var] = "abc"
+        task.reenable
+
+        expect { task.invoke }.to raise_error(RuntimeError, /#{var} must be a positive integer, got: abc/)
+      ensure
+        ENV.delete(var)
+      end
+
+      it "raises an error when #{var} is zero" do
+        ENV[var] = "0"
+        task.reenable
+
+        expect { task.invoke }.to raise_error(RuntimeError, /#{var} must be a positive integer, got: 0/)
+      ensure
+        ENV.delete(var)
+      end
+
+      it "raises an error when #{var} is negative" do
+        ENV[var] = "-1"
+        task.reenable
+
+        expect { task.invoke }.to raise_error(RuntimeError, /#{var} must be a positive integer, got: -1/)
+      ensure
+        ENV.delete(var)
+      end
+    end
+
+    it "raises an error when THREAD_COUNT is not numeric" do
+      ENV["THREAD_COUNT"] = "abc"
+      task.reenable
+
+      expect { task.invoke }.to raise_error(RuntimeError, /THREAD_COUNT must be a non-negative integer, got: abc/)
+    ensure
+      ENV.delete("THREAD_COUNT")
+    end
+
+    it "raises an error when THREAD_COUNT is negative" do
+      ENV["THREAD_COUNT"] = "-1"
+      task.reenable
+
+      expect { task.invoke }.to raise_error(RuntimeError, /THREAD_COUNT must be a non-negative integer, got: -1/)
+    ensure
+      ENV.delete("THREAD_COUNT")
+    end
+  end
 end
