@@ -11,6 +11,8 @@ module Subscriptions
       valid_on_termination_credit_note?
       valid_on_termination_invoice?
       valid_payment_method?
+      valid_subscription_status?
+      valid_activation_rules?
 
       if errors?
         result.validation_failure!(errors:)
@@ -99,6 +101,48 @@ module Subscriptions
       return true if PaymentMethods::ValidateService.new(result, **args).valid?
 
       add_error(field: :payment_method, error_code: "invalid_payment_method")
+
+      false
+    end
+
+    def valid_subscription_status?
+      subscription = args[:subscription]
+      subscription_type = args[:subscription_type]
+      return true if subscription.nil?
+
+      case subscription_type
+      when "update"
+        if subscription.incomplete?
+          add_error(field: :subscription, error_code: "not_editable")
+          return false
+        end
+      when "upgrade", "downgrade"
+        return true if subscription.starting_in_the_future?
+        return true if subscription.active? && !subscription.next_subscription&.incomplete?
+
+        add_error(field: :subscription, error_code: "plan_change_not_allowed")
+        return false
+      end
+
+      true
+    end
+
+    def valid_activation_rules?
+      return true unless args[:activation_rules]
+
+      validator = Subscriptions::ActivationRules::ValidateService.new(
+        result,
+        activation_rules: args[:activation_rules],
+        subscription: args[:subscription],
+        subscription_type: args[:subscription_type],
+        payment_method: args[:payment_method],
+        customer: args[:customer]
+      )
+      return true if validator.valid?
+
+      validator.errors.each do |field, codes|
+        codes.each { |code| add_error(field:, error_code: code) }
+      end
 
       false
     end
