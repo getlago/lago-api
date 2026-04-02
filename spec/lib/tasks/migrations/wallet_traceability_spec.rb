@@ -569,10 +569,17 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
           task.reenable
           expect { task.invoke }.to output(anything).to_stdout
 
-          csv_content = File.read(tmpfile.path)
-          expect(csv_content).to include("wallet_id,customer_id,customer_name,organization_id,organization_name,created_at,issues")
-          expect(csv_content).to include(wallet.id)
-          expect(csv_content).to include("Balance drift")
+          rows = CSV.read(tmpfile.path, headers: true)
+          expect(rows.headers).to eq(%w[wallet_id customer_id customer_name organization_id organization_name created_at issues])
+          expect(rows.size).to eq(1)
+          row = rows.first
+          expect(row["wallet_id"]).to eq(wallet.id)
+          expect(row["customer_id"]).to eq(customer.id)
+          expect(row["customer_name"]).to eq(customer.name)
+          expect(row["organization_id"]).to eq(organization.id)
+          expect(row["organization_name"]).to eq(organization.name)
+          expect(row["created_at"]).to eq(wallet.created_at.to_date.to_s)
+          expect(row["issues"]).to include("Balance drift")
         ensure
           env_vars&.each_key { |k| ENV.delete(k) }
         end
@@ -1569,9 +1576,17 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
           task.reenable
           expect { task.invoke }.to output(anything).to_stdout
 
-          csv_content = File.read(tmpfile.path)
-          expect(csv_content).to include("customer_id,error")
-          expect(csv_content).to include(customer.id)
+          rows = CSV.read(tmpfile.path, headers: true)
+          expect(rows.headers).to eq(%w[wallet_id customer_id customer_name organization_id organization_name created_at issues])
+          expect(rows.size).to eq(1)
+          row = rows.first
+          expect(row["wallet_id"]).to eq(wallet.id)
+          expect(row["customer_id"]).to eq(customer.id)
+          expect(row["customer_name"]).to eq(customer.name)
+          expect(row["organization_id"]).to eq(organization.id)
+          expect(row["organization_name"]).to eq(organization.name)
+          expect(row["created_at"]).to eq(wallet.created_at.to_date.to_s)
+          expect(row["issues"]).to include("insufficient inbound to consume")
         ensure
           env_vars&.each_key { |k| ENV.delete(k) }
         end

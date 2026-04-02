@@ -41,7 +41,6 @@ class WalletMigration
 
   attr_reader :scope
 
-
   def validate_error_log_file!
     FileUtils.touch(@error_log_file)
   rescue SystemCallError => e
@@ -94,15 +93,7 @@ class WalletMigration
               if issues.empty?
                 migratable_wallets += 1
               else
-                problematic_wallets << {
-                  wallet_id: wallet.id,
-                  customer_id: wallet.customer_id,
-                  customer_name: wallet.customer.name,
-                  organization_id: wallet.organization_id,
-                  organization_name: wallet.organization.name,
-                  created_at: wallet.created_at,
-                  issues: issues
-                }
+                problematic_wallets << build_wallet_error(wallet, issues)
               end
             end
           end
@@ -278,7 +269,7 @@ class WalletMigration
     mutex = Mutex.new
     customers_processed = 0
     wallets_processed = 0
-    errors = []
+    errored_wallets = []
     progress_total = progress_count
 
     iterate_customers_in_batches do |customer_ids|
@@ -289,10 +280,12 @@ class WalletMigration
               wallets = scope.where(customer_id: customer_id).includes(:customer, :organization, wallet_transactions: :fundings).to_a
               next if wallets.empty?
 
+              current_wallet = nil
               wallets.each do |wallet|
+                current_wallet = wallet
                 issues = validate_wallet(wallet)
                 if issues.any?
-                  raise "Wallet #{wallet.id}: #{issues.join("; ")}"
+                  raise issues.join("; ")
                 end
 
                 backfill_wallet_transactions(wallet)
@@ -305,17 +298,19 @@ class WalletMigration
                 customers_processed += 1
               end
             rescue => e
-              mutex.synchronize { errors << {customer_id: customer_id, error: e.message} }
+              mutex.synchronize do
+                errored_wallets << build_wallet_error(current_wallet, [e.message])
+              end
               raise ActiveRecord::Rollback
             end
           end
         end
       end
-      mutex.synchronize { print_progress("Backfilling", customers_processed + errors.size, progress_total) }
+      mutex.synchronize { print_progress("Backfilling", customers_processed + errored_wallets.size, progress_total) }
     end
 
     clear_progress
-    print_backfill_summary(customers_processed, wallets_processed, errors)
+    print_backfill_summary(customers_processed, wallets_processed, errored_wallets)
   end
 
   def backfill_wallet_transactions(wallet)
@@ -385,22 +380,43 @@ class WalletMigration
     end
   end
 
-  def print_backfill_summary(customers_processed, wallets_processed, errors)
+  def build_wallet_error(wallet, issues)
+    {
+      wallet_id: wallet&.id || "unknown",
+      customer_id: wallet&.customer_id || "unknown",
+      customer_name: wallet&.customer&.name || "unknown",
+      organization_id: wallet&.organization_id || "unknown",
+      organization_name: wallet&.organization&.name || "unknown",
+      created_at: wallet&.created_at,
+      issues: issues
+    }
+  end
+
+  def print_backfill_summary(customers_processed, wallets_processed, errored_wallets)
     puts "\n" + "=" * 60
     puts "Customers processed: #{customers_processed}"
     puts "Wallets processed: #{wallets_processed}"
-    puts "Errors: #{errors.size}"
+    puts "Errors: #{errored_wallets.size}"
 
-    if errors.any?
+    if errored_wallets.any?
       puts "\nErrors (first #{@error_display_limit}):"
-      errors.first(@error_display_limit).each do |e|
-        puts "  Customer #{e[:customer_id]}: #{e[:error]}"
+      errored_wallets.first(@error_display_limit).each do |pw|
+        puts "  Wallet #{pw[:wallet_id]}:"
+        puts "    - Customer: #{pw[:customer_name]} (#{pw[:customer_id]})"
+        puts "    - Org: #{pw[:organization_name]} (#{pw[:organization_id]})"
+        puts "    - Created At: #{pw[:created_at]&.to_date}"
+        puts "    - Issues:"
+        pw[:issues].first(3).each { |issue| puts "      - #{issue}" }
+        remaining = pw[:issues].size - 3
+        puts "      - ... and #{remaining} more issues" if remaining > 0
       end
+      hidden = errored_wallets.size - @error_display_limit
+      puts "  ... and #{hidden} more errored wallets" if hidden > 0
     end
 
-    if @error_log_file && errors.any?
-      export_csv(errors, headers: %w[customer_id error]) do |e|
-        [e[:customer_id], e[:error]]
+    if @error_log_file && errored_wallets.any?
+      export_csv(errored_wallets, headers: %w[wallet_id customer_id customer_name organization_id organization_name created_at issues]) do |pw|
+        [pw[:wallet_id], pw[:customer_id], pw[:customer_name], pw[:organization_id], pw[:organization_name], pw[:created_at]&.to_date, pw[:issues].join(" | ")]
       end
     end
   end
