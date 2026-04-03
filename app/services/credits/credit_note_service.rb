@@ -73,6 +73,7 @@ module Credits
       customer.credit_notes
         .finalized
         .available
+        .where(total_amount_currency: invoice.currency)
         .where.not(invoice_id: invoice.id)
         .order(created_at: :asc)
         .to_a
