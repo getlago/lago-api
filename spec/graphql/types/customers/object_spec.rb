@@ -77,6 +77,7 @@ RSpec.describe Types::Customers::Object do
     expect(subject).to have_field(:has_active_wallet).of_type("Boolean!")
     expect(subject).to have_field(:has_credit_notes).of_type("Boolean!")
     expect(subject).to have_field(:has_overdue_invoices).of_type("Boolean!")
+    expect(subject).to have_field(:overdue_balances).of_type("[CustomerOverdueBalance!]!")
 
     expect(subject).to have_field(:can_edit_attributes).of_type("Boolean!")
     expect(subject).to have_field(:finalize_zero_amount_invoice).of_type("FinalizeZeroAmountInvoiceEnum")
