@@ -40,7 +40,7 @@ describe "Coupons breakdown Spec", :premium do
         create_tax({name: "Banking rates 1", code: "banking_rates1", rate: 10.0})
         create_tax({name: "Banking rates 2", code: "banking_rates2", rate: 20.0})
 
-        create_or_update_customer({external_id: "customer-12345"})
+        create_or_update_customer({ external_id: "customer-12345" })
 
         create_plan(
           {
@@ -330,7 +330,7 @@ describe "Coupons breakdown Spec", :premium do
     context "when coupon is single use" do
       it "applies the coupon, calculating the remaining amount", transaction: false do
         # Create billable metric
-        create_metric(name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1")
+        create_metric({name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1"})
         bm = organization.billable_metrics.find_by(code: "bm1")
 
         # Create plan with pay_in_advance charge
@@ -400,7 +400,7 @@ describe "Coupons breakdown Spec", :premium do
         )
 
         # Create customer and subscriptions
-        create_or_update_customer(external_id: "customer-12345")
+        create_or_update_customer({ external_id: "customer-12345" })
         customer = organization.customers.find_by(external_id: "customer-12345")
 
         # Apply coupon to customer
@@ -581,7 +581,7 @@ describe "Coupons breakdown Spec", :premium do
       context "when recurring once" do
         it "applies the coupon only during one billing period, calculating the remaining amount", transaction: false do
           # Create billable metric
-          create_metric(name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1")
+          create_metric({ name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1" })
           bm = organization.billable_metrics.find_by(code: "bm1")
 
           # Create plan with pay_in_advance charge
@@ -652,7 +652,7 @@ describe "Coupons breakdown Spec", :premium do
           )
 
           # Create customer and subscriptions
-          create_or_update_customer(external_id: "customer-12345")
+          create_or_update_customer({ external_id: "customer-12345" })
           customer = organization.customers.find_by(external_id: "customer-12345")
 
           # Apply coupon to customer
@@ -831,7 +831,7 @@ describe "Coupons breakdown Spec", :premium do
 
         it "does not terminate if nothing was billed" do
           # Create billable metric
-          create_metric(name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1")
+          create_metric({ name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1" })
           bm = organization.billable_metrics.find_by(code: "bm1")
 
           # Create plan with pay_in_advance charge
@@ -869,7 +869,7 @@ describe "Coupons breakdown Spec", :premium do
             }
           )
 
-          create_or_update_customer(external_id: "customer-12345")
+          create_or_update_customer({ external_id: "customer-12345" })
           customer = organization.customers.find_by(external_id: "customer-12345")
 
           # Apply coupon to customer
@@ -904,7 +904,7 @@ describe "Coupons breakdown Spec", :premium do
       context "when recurring multiple times" do
         it "applies the coupon multiple times, calculating the remaining amount", transaction: false do
           # Create billable metric
-          create_metric(name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1")
+          create_metric({ name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1" })
           bm = organization.billable_metrics.find_by(code: "bm1")
 
           # Create plan with pay_in_advance charge
@@ -975,7 +975,7 @@ describe "Coupons breakdown Spec", :premium do
           )
 
           # Create customer and subscriptions
-          create_or_update_customer(external_id: "customer-12345")
+          create_or_update_customer({ external_id: "customer-12345" })
           customer = organization.customers.find_by(external_id: "customer-12345")
 
           # Apply coupon to customer
@@ -1209,7 +1209,7 @@ describe "Coupons breakdown Spec", :premium do
       context "when recurring forever" do
         it "applies the coupon multiple times, calculating the remaining amount", transaction: false do
           # Create billable metric
-          create_metric(name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1")
+          create_metric({ name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1" })
           bm = organization.billable_metrics.find_by(code: "bm1")
 
           # Create plan with pay_in_advance charge
@@ -1284,7 +1284,7 @@ describe "Coupons breakdown Spec", :premium do
           )
 
           # Create customer and subscriptions
-          create_or_update_customer(external_id: "customer-12345")
+          create_or_update_customer({ external_id: "customer-12345" })
           customer = organization.customers.find_by(external_id: "customer-12345")
 
           # Apply coupon to customer

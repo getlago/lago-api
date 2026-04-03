@@ -42,11 +42,11 @@ class AppliedCoupon < ApplicationRecord
   end
 
   def credits_sum_for_invoice_subscription(invoice_subscription, invoice)
-    # unfortunately it's a known issue that when we create an invoice_subscription for paid_in_advance fees,
-    # the boundaries are taken from the prev billing period, while fees have correct boundaries
+    # The most correct boundaries are defined on a fee and not on an invoice_subscription
     boundaries = invoice.fees.where(subscription_id: invoice_subscription.subscription_id).first&.properties ||
       {"charges_from_datetime" => invoice_subscription.charges_from_datetime, "charges_to_datetime" => invoice_subscription.charges_to_datetime}
 
+    # invoices issued within this invoice_subscription's boundaries
     invoice_ids = Fee.where(organization_id: invoice.organization_id,
       billing_entity_id: invoice.billing_entity_id,
       subscription_id: invoice_subscription.subscription_id)
@@ -63,6 +63,8 @@ class AppliedCoupon < ApplicationRecord
     end.sum > 0
   end
 
+  # coupon defines the amount that can be deducted during a billing_period. So if a coupon lasts n billing periods with m discount,
+  # during each billing period the maximum discount is m
   def remaining_amount_for_this_subscription_billing_period(invoice:)
     @remaining_amount_for_this_subscription_billing_period ||= {}
     return @remaining_amount_for_this_subscription_billing_period[invoice.id] if @remaining_amount_for_this_subscription_billing_period[invoice.id].present?

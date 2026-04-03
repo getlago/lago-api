@@ -2887,6 +2887,7 @@ RSpec.describe Invoices::CalculateFeesService do
 
       context "when it's a subscription invoice with total 0" do
         let(:event) { nil }
+        let(:fixed_charge_event) { nil }
         let(:plan) { create(:plan, organization:, amount_cents: 0) }
 
         context "when no credits were used in this billing period" do
