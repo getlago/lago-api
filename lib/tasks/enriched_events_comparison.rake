@@ -79,7 +79,7 @@ namespace :enriched_events do
         ActiveRecord::Base.transaction do
           # Run with enriched store (feature flag ON)
           organization.enable_feature_flag!(:enriched_events_aggregation)
-          organization.update!(clickhouse_deduplication_enabled: deduplicate)
+          organization.update!(clickhouse_deduplication_enabled: deduplicate, pre_filter_events: true)
           organization.reload
 
           log.call("Running enriched ClickhouseEnrichedStore...")

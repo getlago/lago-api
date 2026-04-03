@@ -32,6 +32,7 @@ namespace :events do
     codes = ENV["BM_CODES"].to_s.split(",").map(&:strip).reject(&:blank?)
     dry_run = ENV.fetch("DRY_RUN", "true") != "false"
     quiet = ENV.fetch("QUIET", "false") == "true"
+    timeout = ENV["TIMEOUT"].presence
 
     organization = Organization.find(organization_id)
     subscriptions = organization.subscriptions
@@ -40,7 +41,7 @@ namespace :events do
     total_duplicates = 0
 
     subscriptions.find_each do |subscription|
-      service = Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedService.new(subscription:, codes:)
+      service = Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedService.new(subscription:, codes:, timeout: timeout.to_i.positive? ? timeout.to_i : nil)
 
       duplicate_count = service.count_duplicates
 
@@ -56,9 +57,20 @@ namespace :events do
           duplicate_count = result.duplicated_count
 
           if duplicate_count > 0 || !quiet
+            message = "duplicate rows will be removed"
+            message = "#{duplicate_count} have to be removed" if result.queries.present?
+
             Rails.logger.info(
-              "events:deduplicate_enriched_expanded - Subscription #{subscription.external_id}: #{duplicate_count} duplicate rows will be removed"
+              "events:deduplicate_enriched_expanded - Subscription #{subscription.external_id}: #{duplicate_count} #{message}"
             )
+          end
+
+          if result.queries.present?
+            Rails.logger.warn(
+              "events:deduplicate_enriched_expanded - Subscription #{subscription.external_id}: " \
+              "#{result.queries.size} batch(es) timed out. Run manually:"
+            )
+            result.queries.each { |q| Rails.logger.warn(q) }
           end
         rescue => e
           duplicate_count = 0
