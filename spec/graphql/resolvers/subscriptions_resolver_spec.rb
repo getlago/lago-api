@@ -54,4 +54,34 @@ RSpec.describe Resolvers::SubscriptionsResolver do
     expect(response["metadata"]["currentPage"]).to eq(1)
     expect(response["metadata"]["totalCount"]).to eq(2)
   end
+
+  context "with currency filter" do
+    let(:brl_plan) { create(:plan, organization:, amount_currency: "BRL") }
+    let!(:brl_subscription) { create(:subscription, customer:, plan: brl_plan) }
+
+    let(:query) do
+      <<~GQL
+        query {
+          subscriptions(limit: 5, currency: "#{brl_plan.amount_currency}") {
+            collection { id }
+            metadata { totalCount }
+          }
+        }
+      GQL
+    end
+
+    it "returns only subscriptions with matching currency" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+      response = result["data"]["subscriptions"]
+
+      expect(response["collection"].count).to eq(1)
+      expect(response["collection"].first["id"]).to eq(brl_subscription.id)
+      expect(response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
 end
