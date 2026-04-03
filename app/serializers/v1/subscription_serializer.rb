@@ -37,7 +37,7 @@ module V1
       payload = payload.merge(plan:) if include?(:plan)
       payload = payload.merge(usage_threshold:) if include?(:usage_threshold)
       payload = payload.merge(applicable_usage_thresholds) if include?(:applicable_usage_thresholds)
-      payload = payload.merge(applied_invoice_custom_sections:) if include?(:applied_invoice_custom_sections)
+      payload = payload.merge(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
 
       payload
     end

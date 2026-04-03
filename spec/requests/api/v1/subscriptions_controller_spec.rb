@@ -619,6 +619,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         expect(response).to have_http_status(:success)
 
         subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(json[:subscription][:applied_invoice_custom_sections]).to be_an(Array)
         expect(json[:subscription][:applied_invoice_custom_sections].count).to eq(subscription.applied_invoice_custom_sections.count)
       end
     end
@@ -784,10 +785,11 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
     context "with applied_invoice_custom_sections in response" do
       before { create(:subscription_applied_invoice_custom_section, subscription:) }
 
-      it "includes applied_invoice_custom_sections in the serialized response" do
+      it "includes applied_invoice_custom_sections as an array in the serialized response" do
         subject
 
         expect(response).to have_http_status(:success)
+        expect(json[:subscription][:applied_invoice_custom_sections]).to be_an(Array)
         expect(json[:subscription][:applied_invoice_custom_sections].count).to eq(1)
       end
     end
@@ -1491,10 +1493,11 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
       before { create(:subscription_applied_invoice_custom_section, subscription:) }
 
-      it "includes applied_invoice_custom_sections in the serialized response" do
+      it "includes applied_invoice_custom_sections as an array in the serialized response" do
         subject
 
         expect(response).to have_http_status(:success)
+        expect(json[:subscription][:applied_invoice_custom_sections]).to be_an(Array)
         expect(json[:subscription][:applied_invoice_custom_sections].count).to eq(1)
       end
     end
@@ -1623,10 +1626,11 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
     context "with applied_invoice_custom_sections in response" do
       before { create(:subscription_applied_invoice_custom_section, subscription:) }
 
-      it "includes applied_invoice_custom_sections in the serialized response" do
+      it "includes applied_invoice_custom_sections as an array in the serialized response" do
         subject
 
         expect(response).to have_http_status(:success)
+        expect(json[:subscription][:applied_invoice_custom_sections]).to be_an(Array)
         expect(json[:subscription][:applied_invoice_custom_sections].count).to eq(1)
       end
     end
