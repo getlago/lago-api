@@ -12,6 +12,7 @@ module V1
         backdated_billing: model.backdated_billing,
         billing_snapshot: model.billing_snapshot,
         currency: model.currency,
+        execution_record: model.execution_record,
         executed_at: model.executed_at&.iso8601,
         lago_organization_id: model.organization_id,
         lago_customer_id: model.customer_id,
