@@ -156,6 +156,7 @@ module Events
       Fee.where(subscription_id: previous_sub_ids, fee_type: :charge)
         .joins(charge: :billable_metric)
         .where(billable_metrics: {id: bm_ids})
+        .positive_units
         .distinct
         .pluck(:billable_metric_id)
         .to_set
@@ -179,6 +180,7 @@ module Events
         .joins(charge: :billable_metric)
         .where(charges: {plan_id: plan.id, deleted_at: nil})
         .where(billable_metrics: {recurring: true})
+        .positive_units
         .distinct
         .pluck(:charge_id, :charge_filter_id)
     end
