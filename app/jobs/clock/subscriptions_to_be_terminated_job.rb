@@ -4,18 +4,21 @@ module Clock
   class SubscriptionsToBeTerminatedJob < ClockJob
     def perform
       Subscription
-        .joins(customer: :organization)
-        .joins("left join webhooks on subscriptions.id = webhooks.object_id and " \
-               "webhooks.webhook_type = 'subscription.termination_alert'")
         .active
-        .where(
-          "DATE(subscriptions.ending_at::timestamptz) IN (?)",
-          sent_at_dates
-        )
-        .where("webhooks.id IS NULL OR webhooks.created_at::date != ?", Time.current.to_date)
-        .distinct
-        .find_each do |subscription|
-          SendWebhookJob.perform_later("subscription.termination_alert", subscription)
+        .where("DATE(ending_at::timestamptz) IN (?)", sent_at_dates)
+        .in_batches do |subscriptions|
+          subscriptions = subscriptions.to_a
+          subscription_ids_already_alerted = Webhook.where(
+            webhook_type: "subscription.termination_alert",
+            object_type: "Subscription",
+            object_id: subscriptions.map(&:id)
+          )
+            .where("created_at::date = ?", Time.current.to_date)
+            .pluck(:object_id)
+          subscriptions.filter { |subscription| subscription_ids_already_alerted.exclude?(subscription.id) }
+            .each do |subscription|
+              SendWebhookJob.perform_later("subscription.termination_alert", subscription)
+            end
         end
     end
 
