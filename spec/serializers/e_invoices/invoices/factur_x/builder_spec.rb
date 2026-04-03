@@ -315,6 +315,22 @@ RSpec.describe EInvoices::Invoices::FacturX::Builder do
           expect(subject).to contains_xml_node("#{root}[3]/ram:CategoryTradeTax/ram:RateApplicablePercent").with_value("10.00")
         end
       end
+
+      context "when all fees have zero precise_amount_cents" do
+        let(:invoice) { create(:invoice, coupons_amount_cents: 100, invoice_type:) }
+        let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 0, taxes_precise_amount_cents: 0) }
+        let(:invoice_fee2) { nil }
+        let(:invoice_fee3) { nil }
+        let(:invoice_fee4) { nil }
+
+        it "does not raise an error" do
+          expect { subject }.not_to raise_error
+        end
+
+        it "does not contain SpecifiedTradeAllowanceCharge tags" do
+          expect(subject.xpath(root).length).to eq(0)
+        end
+      end
     end
 
     context "when SpecifiedTradePaymentTerms tag" do
