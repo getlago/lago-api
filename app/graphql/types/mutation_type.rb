@@ -66,6 +66,9 @@ module Types
     field :terminate_coupon, mutation: Mutations::Coupons::Terminate
     field :update_coupon, mutation: Mutations::Coupons::Update
 
+    field :mark_order_form_as_signed, mutation: Mutations::OrderForms::MarkAsSigned
+    field :void_order_form, mutation: Mutations::OrderForms::Void
+
     field :create_add_on, mutation: Mutations::AddOns::Create
     field :create_applied_coupon, mutation: Mutations::AppliedCoupons::Create
     field :destroy_add_on, mutation: Mutations::AddOns::Destroy
