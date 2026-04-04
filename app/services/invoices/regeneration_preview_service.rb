@@ -1,0 +1,61 @@
+# frozen_string_literal: true
+
+module Invoices
+  class RegenerationPreviewService < BaseService
+    Result = BaseResult[:invoice]
+
+    def initialize(invoice:)
+      @invoice = invoice
+
+      super
+    end
+
+    def call
+      preview_invoice = invoice.dup
+      invoice.fees.each do |fee|
+        result = ::AdjustedFees::EstimateService.call(
+          invoice: invoice,
+          params: {
+            invoice_subscription_id: fee.subscription_id,
+            fee_type: fee.fee_type,
+            units: fee.units,
+            unit_precise_amount: fee.amount.currency.subunit_to_unit,
+            charge_id: fee.charge_id,
+            charge_filter_id: fee.charge_filter_id,
+            fixed_charge_id: fee.fixed_charge_id,
+            invoice_display_name: fee.invoice_display_name
+          }
+        )
+        result.raise_if_error!
+
+        result.fee.id = fee.id
+        result.fee.adjusted_fee = nil
+        preview_invoice.fees << result.fee
+      end
+
+      if invoice.customer.tax_customer
+        taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: preview_invoice.fees.to_a)
+        taxes_result.raise_if_error!
+
+        provider_taxes = taxes_result.fees
+      else
+        provider_taxes = nil
+      end
+
+      result = Invoices::ComputeAmountsFromFees.call(invoice: preview_invoice, provider_taxes: provider_taxes)
+      result.raise_if_error!
+
+      result.invoice.id = invoice.id
+      result.invoice.applied_taxes.each do |applied_tax|
+        applied_tax.invoice_id = invoice.id
+        applied_tax.id = SecureRandom.uuid
+      end
+
+      result
+    end
+
+    private
+
+    attr_reader :invoice
+  end
+end

@@ -10144,6 +10144,16 @@ type Query {
   invoiceCustomSections(limit: Int, page: Int): InvoiceCustomSectionCollection
 
   """
+  Build a preview of a single Invoice of an organization for regeneration.
+  """
+  invoiceRegenerationPreview(
+    """
+    Uniq ID of the invoice
+    """
+    id: ID!
+  ): Invoice
+
+  """
   Query invoiced usage of an organization
   """
   invoicedUsages(billingEntityId: ID, currency: CurrencyEnum): InvoicedUsageCollection!
