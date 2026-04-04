@@ -21,6 +21,10 @@ FactoryBot.define do
       status { :draft }
     end
 
+    trait :open do
+      status { :open }
+    end
+
     trait :credit do
       invoice_type { :credit }
     end
