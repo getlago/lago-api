@@ -51270,6 +51270,18 @@
               "description": "Query customer portal subscriptions",
               "args": [
                 {
+                  "name": "currency",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "limit",
                   "description": null,
                   "type": {
@@ -54799,6 +54811,18 @@
               "description": "Query payment requests of an organization",
               "args": [
                 {
+                  "name": "currency",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "externalCustomerId",
                   "description": null,
                   "type": {
@@ -55552,6 +55576,18 @@
               "name": "subscriptions",
               "description": "Query subscriptions of an organization",
               "args": [
+                {
+                  "name": "currency",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
                 {
                   "name": "externalCustomerId",
                   "description": null,
