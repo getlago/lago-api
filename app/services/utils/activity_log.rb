@@ -85,7 +85,7 @@ module Utils
       return unless self.class.available?
 
       current_time = Time.current.iso8601[...-1]
-      Karafka.producer.produce_async(
+      KafkaProducer.produce_async(
         topic: ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"],
         key: "#{organization_id}--#{activity_id}",
         payload: {
@@ -105,11 +105,6 @@ module Utils
           external_subscription_id: external_subscription_id
         }.to_json
       )
-    rescue WaterDrop::Errors::MessageInvalidError => e
-      raise if ENV["SENTRY_DSN"].blank?
-
-      # Avoid raising error up to the end-user
-      Sentry.capture_exception(e)
     end
 
     def activity_source

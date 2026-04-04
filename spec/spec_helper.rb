@@ -19,6 +19,8 @@ else
   require "debug"
 end
 
+require "sentry/test_helper"
+require "sentry/rspec"
 require "webmock/rspec"
 require "simplecov"
 require "money-rails/test_helpers"
@@ -60,6 +62,13 @@ end
 
 ENV["STRIPE_API_VERSION"] ||= "2020-08-27"
 
+Sentry.init do |config|
+  config.dsn = "https://fake@sentry.io/123"
+  config.enabled_environments = ["production"]
+  config.environment = :test
+  config.transport.transport_class = Sentry::DummyTransport
+end
+
 RSpec.configure do |config|
   config.include ActiveJob::TestHelper
   config.include FactoryBot::Syntax::Methods
@@ -77,6 +86,7 @@ RSpec.configure do |config|
   config.include ActiveStorageValidations::Matchers
   config.include Karafka::Testing::RSpec::Helpers
   config.include GraphQL::Testing::Helpers.for(LagoApiSchema)
+  config.include Sentry::TestHelper
 
   # NOTE: these files make real API calls and should be excluded from build
   #       run them manually when needed
@@ -214,11 +224,23 @@ RSpec.configure do |config|
     end
   end
 
-  config.around do |example|
-    if example.metadata[:premium]
-      lago_premium!(&example)
+  config.around(:each, :premium) do |example|
+    lago_premium!(&example)
+  end
+
+  config.around(:each, :sentry) do |example|
+    present = ENV.key?("SENTRY_DSN")
+    value = ENV["SENTRY_DSN"]
+    ENV["SENTRY_DSN"] = "https://fake@sentry.io/123"
+
+    setup_sentry_test
+    example.run
+  ensure
+    teardown_sentry_test
+    if !present
+      ENV.delete("SENTRY_DSN")
     else
-      example.run
+      ENV["SENTRY_DSN"] = value
     end
   end
 end
