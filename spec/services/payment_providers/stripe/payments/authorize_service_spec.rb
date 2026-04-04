@@ -45,7 +45,8 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
     context "with provider_method_id" do
       let(:payment_intent) do
         Stripe::PaymentIntent.construct_from(
-          id: "pi_#{SecureRandom.hex(6)}"
+          id: "pi_#{SecureRandom.hex(6)}",
+          status: "requires_capture"
         )
       end
 
@@ -62,6 +63,30 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
         subject.call
 
         expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_been_enqueued
+      end
+
+      context "when payment intent requires 3D Secure authentication" do
+        let(:payment_intent) do
+          Stripe::PaymentIntent.construct_from(
+            id: "pi_#{SecureRandom.hex(6)}",
+            status: "requires_action",
+            amount_capturable: 0
+          )
+        end
+
+        it "returns a failure" do
+          result = subject.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to include(payment_intent: ["authorization_requires_action"])
+        end
+
+        it "cancels the payment intent" do
+          subject.call
+
+          expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_been_enqueued
+        end
       end
     end
   end
