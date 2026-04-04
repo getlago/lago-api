@@ -612,6 +612,22 @@ RSpec.describe Api::V1::EventsController do
       expect(fee[:events_count]).to eq(1)
     end
 
+    context "with taxes applied to the billing entity" do
+      let(:tax) { create(:tax, :applied_to_billing_entity, organization:, billing_entity: customer.billing_entity, rate: 20.0) }
+
+      it "returns fees with tax information" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        fee = json[:fees].first
+        expect(fee[:taxes_amount_cents]).to be_positive
+        expect(fee[:taxes_rate]).to eq(20.0)
+        expect(fee[:applied_taxes].count).to eq(1)
+        expect(fee[:applied_taxes].first[:tax_rate]).to eq(20.0)
+      end
+    end
+
     context "with missing customer id" do
       let(:event_params) do
         {
