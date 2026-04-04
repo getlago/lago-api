@@ -310,12 +310,18 @@ class Customer < ApplicationRecord
       country.blank?
   end
 
-  def overdue_balance_cents
-    invoices.non_self_billed.payment_overdue.where(currency:).sum(:total_amount_cents)
+  def overdue_balance_cents(for_currency = currency)
+    invoices.non_self_billed.payment_overdue.where(currency: for_currency).sum(:total_amount_cents)
+  end
+
+  def overdue_balances
+    invoices.non_self_billed.payment_overdue
+      .group(:currency).sum(:total_amount_cents)
   end
 
   def reset_dunning_campaign!
     update!(
+      dunning_currency_attempts: {},
       last_dunning_campaign_attempt: 0,
       last_dunning_campaign_attempt_at: nil
     )
@@ -362,6 +368,7 @@ end
 #  customer_type                                :enum
 #  deleted_at                                   :datetime
 #  document_locale                              :string
+#  dunning_currency_attempts                    :jsonb            not null
 #  email                                        :string
 #  exclude_from_dunning_campaign                :boolean          default(FALSE), not null
 #  finalize_zero_amount_invoice                 :integer          default("inherit"), not null
