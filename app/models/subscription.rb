@@ -283,6 +283,7 @@ end
 #
 #  id                           :uuid             not null, primary key
 #  activated_at                 :datetime
+#  billing_anchor_date          :date
 #  billing_time                 :integer          default("calendar"), not null
 #  cancelation_reason           :enum
 #  canceled_at                  :datetime
