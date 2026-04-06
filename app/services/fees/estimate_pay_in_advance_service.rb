@@ -99,41 +99,13 @@ module Fees
     end
 
     def apply_taxes(fees)
-      if customer_provider_taxation?
-        apply_provider_taxes(fees)
+      if customer&.tax_customer.present?
+        Fees::ApplyProviderTaxesToStandaloneFeesService.call!(
+          customer:, fees:, currency: subscriptions.first.plan.amount_currency
+        )
       else
         fees.each { |fee| Fees::ApplyTaxesService.call!(fee:) }
       end
-    end
-
-    def customer_provider_taxation?
-      return @customer_provider_taxation if defined?(@customer_provider_taxation)
-
-      @customer_provider_taxation = customer.tax_customer.present?
-    end
-
-    def apply_provider_taxes(fees)
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(
-        invoice: fake_invoice, fees:
-      )
-      return unless taxes_result.success?
-
-      fees.each do |fee|
-        fee_taxes = taxes_result.fees.find { |item| item.item_id == fee.id }
-        Fees::ApplyProviderTaxesService.call!(fee:, fee_taxes:)
-      end
-    end
-
-    FakeInvoice = Data.define(:id, :issuing_date, :currency, :customer, :billing_entity)
-
-    def fake_invoice
-      FakeInvoice.new(
-        id: SecureRandom.uuid,
-        issuing_date: Time.current.in_time_zone(customer.applicable_timezone).to_date,
-        currency: subscriptions.first.plan.amount_currency,
-        customer:,
-        billing_entity: customer.billing_entity
-      )
     end
   end
 end
