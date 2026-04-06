@@ -47,7 +47,7 @@ module ChargeFilters
             if parent_filter.blank? || normalize_properties(parent_filter_properties(parent_filter)) != normalize_properties(filter.properties)
               # Make sure that pricing group keys are cascaded even if properties are overridden
               cascade_pricing_group_keys(filter, filter_param)
-              filter.save!
+              filter.save! if filter.changed?
 
               PaperTrail.request.disable_model(filter.class)
               # NOTE: Make sure update_at is touched even if not changed to keep the order

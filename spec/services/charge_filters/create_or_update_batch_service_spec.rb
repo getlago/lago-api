@@ -433,6 +433,30 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
               properties: {"amount" => "20"}
             )
           end
+
+          it "does not re-persist the drifted value on subsequent cascades" do
+            # First cascade: parent properties unchanged, child has drifted value
+            # Without normalization this would skip the cascade and re-save the drifted value
+            unchanged_filters_params = [
+              {
+                values: {
+                  card_location_filter.key => ["domestic"],
+                  scheme_filter.key => ["visa"]
+                },
+                invoice_display_name: nil,
+                properties: {amount: "0.00115740741"}
+              }
+            ]
+
+            described_class.call(charge:, filters_params: unchanged_filters_params, cascade_options:)
+
+            # The filter should not have been touched — properties stay as they were
+            # because the cascade recognized them as equivalent and applied the update
+            expect(filter.reload).to have_attributes(
+              invoice_display_name: nil,
+              properties: {"amount" => "0.00115740741"}
+            )
+          end
         end
       end
 
