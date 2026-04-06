@@ -415,6 +415,25 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
             expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
           end
         end
+
+        context "when child filter has float-drifted property values" do
+          let(:filter) do
+            create(:charge_filter, charge:, properties: {"amount" => "0.0011574074099999999"})
+          end
+          let(:filter_parent) do
+            create(:charge_filter, properties: {"amount" => "0.00115740741"}, charge: charge_parent)
+          end
+          let(:pricing_group_keys) { {} }
+
+          it "treats them as equal and applies the cascade update" do
+            expect { service }.not_to change(ChargeFilter, :count)
+
+            expect(filter.reload).to have_attributes(
+              invoice_display_name: "New display name",
+              properties: {"amount" => "20"}
+            )
+          end
+        end
       end
 
       context "when changing filter values" do
