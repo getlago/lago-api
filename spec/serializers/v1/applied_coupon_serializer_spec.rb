@@ -18,6 +18,7 @@ RSpec.describe ::V1::AppliedCouponSerializer do
     expect(result["applied_coupon"]["lago_coupon_id"]).to eq(applied_coupon.coupon.id)
     expect(result["applied_coupon"]["coupon_code"]).to eq(applied_coupon.coupon.code)
     expect(result["applied_coupon"]["coupon_name"]).to eq(applied_coupon.coupon.name)
+    expect(result["applied_coupon"]["coupon_description"]).to eq(applied_coupon.coupon.description)
     expect(result["applied_coupon"]["coupon_status"]).to eq(applied_coupon.coupon.status)
     expect(result["applied_coupon"]["coupon_deleted_at"]).to eq(applied_coupon.coupon.deleted_at&.iso8601)
     expect(result["applied_coupon"]["lago_customer_id"]).to eq(applied_coupon.customer.id)
