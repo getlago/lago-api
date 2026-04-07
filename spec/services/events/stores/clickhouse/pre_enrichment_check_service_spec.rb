@@ -32,7 +32,7 @@ RSpec.describe Events::Stores::Clickhouse::PreEnrichmentCheckService do
     context "with recurring BM subscriptions" do
       let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, code: "recurring_metric") }
 
-      before { create(:standard_charge, plan:, billable_metric:, organization:) }
+      before { create(:standard_charge, plan:, billable_metric:, organization:, created_at: started_at - 1.month) }
 
       context "when subscription started before cutoff and has active subscription with same external_id" do
         let(:started_at) { Time.zone.parse("2025-11-01") }
@@ -79,7 +79,8 @@ RSpec.describe Events::Stores::Clickhouse::PreEnrichmentCheckService do
           plan:,
           billable_metric:,
           organization:,
-          properties: {amount: "100", pricing_group_keys: ["region"]}
+          properties: {amount: "100", pricing_group_keys: ["region"]},
+          created_at: started_at - 1.month
         )
       end
 
@@ -117,9 +118,99 @@ RSpec.describe Events::Stores::Clickhouse::PreEnrichmentCheckService do
           expect(result.subscriptions_to_reprocess).to eq({})
         end
       end
+
+      context "when pricing_group_keys is on charge_filter but not on charge" do
+        let(:started_at) { Time.zone.parse("2026-03-01") }
+        let(:billable_metric) { create(:billable_metric, organization:, code: "filter_grouped_metric") }
+
+        let(:charge) do
+          create(:standard_charge, plan:, billable_metric:, organization:, created_at: started_at - 1.month)
+        end
+
+        before do
+          create(:charge_filter, charge:, properties: {amount: "50", pricing_group_keys: ["zone"]}, created_at: started_at - 1.day)
+        end
+
+        it "includes the subscription" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.subscriptions_to_reprocess).to eq({subscription.id => ["filter_grouped_metric"]})
+        end
+      end
     end
 
-    context "when subscription matches both criteria" do
+    context "with new_charge_or_filters subscriptions" do
+      let(:billable_metric) { create(:billable_metric, organization:, code: "new_charge_metric") }
+      let(:charge) { create(:standard_charge, plan:, billable_metric:, organization:, created_at: started_at + 1.month) }
+
+      before { charge }
+
+      context "when charge was created after subscription started" do
+        it "includes the subscription" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.subscriptions_to_reprocess).to eq({subscription.id => ["new_charge_metric"]})
+        end
+      end
+
+      context "when charge was created before subscription started" do
+        let(:charge) { create(:standard_charge, plan:, billable_metric:, organization:, created_at: started_at - 1.month) }
+
+        it "excludes the subscription" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.subscriptions_to_reprocess).to eq({})
+        end
+      end
+
+      context "when subscription is terminated" do
+        let(:subscription) do
+          create(:subscription, :terminated, organization:, customer:, plan:, started_at:)
+        end
+
+        it "excludes the subscription" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.subscriptions_to_reprocess).to eq({})
+        end
+      end
+
+      context "when charge_filter was created after subscription started" do
+        let(:charge) { create(:standard_charge, plan:, billable_metric:, organization:, created_at: started_at - 1.month) }
+
+        before do
+          create(:charge_filter, charge:, created_at: started_at + 1.day)
+        end
+
+        it "includes the subscription" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.subscriptions_to_reprocess).to eq({subscription.id => ["new_charge_metric"]})
+        end
+      end
+
+      context "when charge_filter was created before subscription started" do
+        let(:charge) { create(:standard_charge, plan:, billable_metric:, organization:, created_at: started_at - 1.month) }
+
+        before do
+          create(:charge_filter, charge:, created_at: started_at - 1.day)
+        end
+
+        it "excludes the subscription" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.subscriptions_to_reprocess).to eq({})
+        end
+      end
+    end
+
+    context "when subscription matches multiple criteria" do
       let(:recurring_metric) { create(:sum_billable_metric, :recurring, organization:, code: "recurring_metric") }
       let(:grouped_metric) { create(:billable_metric, organization:, code: "grouped_metric") }
       let(:shared_metric) { create(:sum_billable_metric, :recurring, organization:, code: "shared_metric") }
