@@ -147,16 +147,11 @@ module Subscriptions
         new_subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
-      if new_subscription.subscription_at > Time.current
-        new_subscription.pending!
-        apply_activation_rules(new_subscription)
-      elsif new_subscription.subscription_at < Time.current
-        new_subscription.mark_as_active!(new_subscription.subscription_at)
-      elsif params.key?(:activation_rules) && params[:activation_rules].present?
+      if new_subscription.subscription_at > Time.current || (new_subscription.subscription_at.today? && activation_rules?)
         new_subscription.pending!
         apply_activation_rules(new_subscription)
       else
-        new_subscription.mark_as_active!
+        new_subscription.mark_as_active!(new_subscription.subscription_at)
       end
 
       if new_subscription.active?
@@ -278,6 +273,10 @@ module Subscriptions
       if current_subscription.should_sync_hubspot_subscription?
         Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: current_subscription)
       end
+    end
+
+    def activation_rules?
+      params.key?(:activation_rules) && params[:activation_rules].present?
     end
 
     def apply_activation_rules(subscription)

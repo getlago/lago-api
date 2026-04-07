@@ -1328,24 +1328,6 @@ RSpec.describe Subscriptions::CreateService do
         }
       end
 
-      context "when subscription_at is current date" do
-        it "creates pending subscription with activation rules" do
-          travel_to(Time.current) do
-            result = create_service.call
-
-            expect(result).to be_success
-            subscription = result.subscription
-            expect(subscription).to be_pending
-            expect(subscription.activation_rules.count).to eq(1)
-            expect(subscription.activation_rules.first).to have_attributes(
-              type: "payment",
-              timeout_hours: 48,
-              status: "inactive"
-            )
-          end
-        end
-      end
-
       context "when subscription_at is in the future" do
         let(:subscription_at) { (Time.current + 5.days).iso8601 }
 
@@ -1374,6 +1356,19 @@ RSpec.describe Subscriptions::CreateService do
           subscription = result.subscription
           expect(subscription).to be_active
           expect(subscription.activation_rules.count).to eq(0)
+        end
+      end
+
+      context "when subscription_at is earlier today" do
+        let(:subscription_at) { Time.current.beginning_of_day.iso8601 }
+
+        it "creates pending subscription with activation rules" do
+          result = create_service.call
+
+          expect(result).to be_success
+          subscription = result.subscription
+          expect(subscription).to be_pending
+          expect(subscription.activation_rules.count).to eq(1)
         end
       end
 
