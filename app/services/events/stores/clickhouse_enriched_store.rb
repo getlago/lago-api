@@ -751,6 +751,7 @@ module Events
           arel_table[:external_subscription_id].eq(subscription.external_id)
             .and(arel_table[:organization_id].eq(subscription.organization_id))
             .and(with_charge_id_condition)
+            .and(arel_table[:code].eq(code))
         ).then { with_charge_filter_id(it) }
         query = with_timestamp_boundaries(query, from_datetime, to_datetime)
         query = apply_arel_grouped_by_values(query) if grouped_by_values?

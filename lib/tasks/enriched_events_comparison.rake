@@ -164,7 +164,7 @@ namespace :enriched_events do
 
           if diffs.empty?
             log.call("  [MATCH] #{label}") unless quiet
-            if format_json
+            if format_json && !quiet
               fee_details << {
                 charge_id: key[0], charge_filter_id: key[1], grouped_by: key[2], label: label,
                 status: "match", legacy: fee_values(legacy_fee), enriched: fee_values(enriched_fee), diffs: {}
