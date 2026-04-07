@@ -60,6 +60,15 @@ RSpec.describe Organizations::UpdateService do
       expect(result.organization.document_locale).to eq("fr")
     end
 
+    context "with email containing unicode lookalike characters" do
+      let(:params) { {email: "hello@something\u2013other.com"} }
+
+      it "sanitizes the email before saving" do
+        result = update_service.call
+        expect(result.organization.email).to eq("hello@something-other.com")
+      end
+    end
+
     it "updates default billing_entity" do
       result = update_service.call
 

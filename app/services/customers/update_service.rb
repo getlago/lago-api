@@ -47,7 +47,7 @@ module Customers
         customer.address_line2 = args[:address_line2] if args.key?(:address_line2)
         customer.state = args[:state] if args.key?(:state)
         customer.zipcode = args[:zipcode] if args.key?(:zipcode)
-        customer.email = args[:email] if args.key?(:email)
+        customer.email = EmailSanitizer.call(args[:email]) if args.key?(:email)
         customer.city = args[:city] if args.key?(:city)
         customer.url = args[:url] if args.key?(:url)
         customer.phone = args[:phone] if args.key?(:phone)
