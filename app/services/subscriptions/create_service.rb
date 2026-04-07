@@ -152,9 +152,11 @@ module Subscriptions
         apply_activation_rules(new_subscription)
       elsif new_subscription.subscription_at < Time.current
         new_subscription.mark_as_active!(new_subscription.subscription_at)
+      elsif params.key?(:activation_rules) && params[:activation_rules].present?
+        new_subscription.pending!
+        apply_activation_rules(new_subscription)
       else
         new_subscription.mark_as_active!
-        apply_activation_rules(new_subscription)
       end
 
       if new_subscription.active?

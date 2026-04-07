@@ -1329,12 +1329,13 @@ RSpec.describe Subscriptions::CreateService do
       end
 
       context "when subscription_at is current date" do
-        it "creates subscription with activation rules" do
+        it "creates pending subscription with activation rules" do
           travel_to(Time.current) do
             result = create_service.call
 
             expect(result).to be_success
             subscription = result.subscription
+            expect(subscription).to be_pending
             expect(subscription.activation_rules.count).to eq(1)
             expect(subscription.activation_rules.first).to have_attributes(
               type: "payment",
