@@ -18,7 +18,7 @@ module Integrations
                 "lago_customer_external_id" => customer.external_id,
                 "lago_billing_email" => customer.email,
                 "lago_customer_link" => customer_url
-              }
+          }.compact_blank
             }
           end
 
@@ -33,7 +33,7 @@ module Integrations
                   "phone" => customer.phone,
                   "company" => customer.legal_name,
                   "website" => clean_url(customer.url)
-                }
+          }.compact_blank
               }
             }
           end
