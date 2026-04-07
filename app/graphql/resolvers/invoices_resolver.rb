@@ -82,7 +82,9 @@ module Resolvers
         }
       )
 
-      result.invoices.includes(file_attachment: :blob, xml_file_attachment: :blob)
+      invoices = result.invoices.includes(file_attachment: :blob, xml_file_attachment: :blob).load
+      Invoice.preload_offset_amounts(invoices)
+      invoices
     end
   end
 end

@@ -59,9 +59,12 @@ module InvoiceIndex
     )
 
     if result.success?
+      invoices = result.invoices.includes(:metadata, :applied_taxes, :billing_entity, :applied_usage_thresholds, file_attachment: :blob, xml_file_attachment: :blob)
+      Invoice.preload_offset_amounts(invoices)
+
       render(
         json: ::CollectionSerializer.new(
-          result.invoices.includes(:metadata, :applied_taxes, :billing_entity, :applied_usage_thresholds, file_attachment: :blob, xml_file_attachment: :blob),
+          invoices,
           ::V1::InvoiceSerializer,
           collection_name: "invoices",
           meta: pagination_metadata(
