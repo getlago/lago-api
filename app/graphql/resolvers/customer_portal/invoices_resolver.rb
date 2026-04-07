@@ -25,7 +25,7 @@ module Resolvers
           }
         )
 
-        result.invoices
+        result.invoices.includes(file_attachment: :blob, xml_file_attachment: :blob)
       rescue ActiveRecord::RecordNotFound
         not_found_error(resource: "customer")
       end

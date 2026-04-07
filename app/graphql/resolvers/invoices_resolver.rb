@@ -82,7 +82,7 @@ module Resolvers
         }
       )
 
-      result.invoices
+      result.invoices.includes(file_attachment: :blob, xml_file_attachment: :blob)
     end
   end
 end
