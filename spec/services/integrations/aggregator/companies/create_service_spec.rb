@@ -70,7 +70,6 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
               "lago_customer_id" => customer.id,
               "lago_customer_external_id" => customer.external_id,
               "lago_billing_email" => customer.email,
-              "lago_tax_identification_number" => customer.tax_identification_number,
               "lago_customer_link" => anything
             }
           }
@@ -113,7 +112,6 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
               "lago_customer_id" => customer.id,
               "lago_customer_external_id" => customer.external_id,
               "lago_billing_email" => customer.email,
-              "lago_tax_identification_number" => customer.tax_identification_number,
               "lago_customer_link" => anything
             }
           }
@@ -178,7 +176,6 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
             "lago_customer_id" => customer.id,
             "lago_customer_external_id" => customer.external_id,
             "lago_billing_email" => customer.email,
-            "lago_tax_identification_number" => customer.tax_identification_number,
             "lago_customer_link" => anything
           }
         }
