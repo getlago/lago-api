@@ -15,7 +15,7 @@ module Integrations
                 "lago_billing_email" => customer.email,
                 "lago_tax_identification_number" => customer.tax_identification_number,
                 "lago_customer_link" => customer_url
-          }.compact_blank
+              }.compact_blank
             }
           end
 
@@ -31,7 +31,7 @@ module Integrations
                   "lago_billing_email" => customer.email,
                   "lago_tax_identification_number" => customer.tax_identification_number,
                   "lago_customer_link" => customer_url
-          }.compact_blank
+                }.compact_blank
               }
             }
           end
