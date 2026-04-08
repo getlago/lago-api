@@ -141,6 +141,23 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
       end
     end
 
+    context "when invoice was finalized by a concurrent job" do
+      before do
+        allow(invoice).to receive(:reload).and_wrap_original do |method|
+          method.call
+          invoice.update(status: "finalized")
+          invoice
+        end
+      end
+
+      it "returns early without emitting webhook or activity log" do
+        result = pull_taxes_service.call
+
+        expect(result).to be_success
+        expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
+      end
+    end
+
     context "when taxes are fetched successfully" do
       it "marks the invoice as finalized" do
         expect { pull_taxes_service.call }

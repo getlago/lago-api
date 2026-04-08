@@ -34,6 +34,9 @@ module Invoices
         provider_taxes = taxes_result.fees
 
         ActiveRecord::Base.transaction do
+          invoice.reload
+          return result if invoice.finalized? || invoice.voided? || invoice.closed?
+
           unless invoice.draft?
             invoice.issuing_date = issuing_date
             invoice.payment_due_date = payment_due_date
