@@ -19,6 +19,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
   let(:ratio) { days_passed.to_f / charges_duration }
 
   let(:pricing_unit_usage) { nil }
+  let(:presentation_breakdowns) { [] }
 
   let(:usage) do
     [
@@ -44,7 +45,8 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         aggregation_type: billable_metric.aggregation_type,
         grouped_by: {"card_type" => "visa"},
         charge_filter: nil,
-        pricing_unit_usage:
+        pricing_unit_usage:,
+        presentation_breakdowns: presentation_breakdowns
       )
     ]
   end
@@ -73,6 +75,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         "aggregation_type" => billable_metric.aggregation_type
       },
       "filters" => [],
+      "presentation_breakdowns" => [],
       "grouped_usage" => [
         {
           "amount_cents" => 100,
@@ -81,10 +84,68 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           "units" => "10.0",
           "total_aggregated_units" => "10.0",
           "grouped_by" => {"card_type" => "visa"},
-          "filters" => []
+          "filters" => [],
+          "presentation_breakdowns" => []
         }
       ]
     )
+  end
+
+  context "when contains presentation breakdowns" do
+    let(:presentation_breakdowns) do
+      presentation_breakdown_class = Struct.new(:presentation_by, :units, keyword_init: true)
+
+      [
+        presentation_breakdown_class.new(presentation_by: "card_type", units: "7"),
+        presentation_breakdown_class.new(presentation_by: "country", units: "3")
+      ]
+    end
+
+    let(:usage) do
+      [
+        OpenStruct.new(
+          charge_id: charge.id,
+          subscription: subscription,
+          billable_metric: billable_metric,
+          charge: charge,
+          units: "10",
+          total_aggregated_units: "10",
+          events_count: 12,
+          amount_cents: 100,
+          amount_currency: "EUR",
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
+          invoice_display_name: charge.invoice_display_name,
+          lago_id: billable_metric.id,
+          name: billable_metric.name,
+          code: billable_metric.code,
+          aggregation_type: billable_metric.aggregation_type,
+          grouped_by: {"card_type" => "visa"},
+          charge_filter: nil,
+          pricing_unit_usage:,
+          presentation_breakdowns:
+        )
+      ]
+    end
+
+    it "serializes the breakdowns" do
+      expect(result["charges"].first["presentation_breakdowns"]).to eq(
+        [
+          {"presentation_by" => "card_type", "units" => "7"},
+          {"presentation_by" => "country", "units" => "3"}
+        ]
+      )
+
+      expect(result["charges"].first["grouped_usage"].first["presentation_breakdowns"]).to eq(
+        [
+          {"presentation_by" => "card_type", "units" => "7"},
+          {"presentation_by" => "country", "units" => "3"}
+        ]
+      )
+    end
   end
 
   context "when charge configured to use pricing units" do
@@ -116,6 +177,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           "aggregation_type" => billable_metric.aggregation_type
         },
         "filters" => [],
+        "presentation_breakdowns" => [],
         "grouped_usage" => [
           {
             "amount_cents" => 100,
@@ -128,7 +190,8 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             "units" => "10.0",
             "total_aggregated_units" => "10.0",
             "grouped_by" => {"card_type" => "visa"},
-            "filters" => []
+            "filters" => [],
+            "presentation_breakdowns" => []
           }
         ]
       )
@@ -157,7 +220,8 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           grouped_by: {"card_type" => "visa"},
           charge_filter:,
           charge_filter_id: charge_filter.id,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdowns: presentation_breakdowns
         )
       end
     end

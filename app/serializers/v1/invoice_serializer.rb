@@ -90,6 +90,7 @@ module V1
             :customer,
             :charge,
             :billable_metric,
+            :presentation_breakdowns,
             {charge_filter: {values: :billable_metric_filter}}
           ]
         ),

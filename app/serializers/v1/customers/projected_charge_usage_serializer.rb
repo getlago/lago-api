@@ -15,7 +15,8 @@ module V1
             charge: charge_data(fee),
             billable_metric: billable_metric_data(fee),
             filters: cached_filters(fees),
-            grouped_usage: cached_grouped_usage(fees)
+            grouped_usage: cached_grouped_usage(fees),
+            presentation_breakdowns: presentation_breakdowns(fees)
           }
         end
       end
@@ -32,7 +33,7 @@ module V1
 
       def current_usage_data(fees)
         totals = fees.each_with_object({
-          units: BigDecimal("0"),
+          units: BigDecimal(0),
           events_count: 0,
           amount_cents: 0
         }) do |fee, acc|
@@ -208,7 +209,8 @@ module V1
         {
           **usage_data.except(:amount_currency),
           grouped_by: grouped_fees.first.grouped_by,
-          filters: filters(grouped_fees)
+          filters: filters(grouped_fees),
+          presentation_breakdowns: presentation_breakdowns(grouped_fees)
         }
       end
 
@@ -217,6 +219,17 @@ module V1
           by_charge_filter: model.group_by { |f| f.charge_filter&.id },
           by_grouped_by: model.group_by(&:grouped_by)
         }
+      end
+
+      def presentation_breakdowns(fees)
+        fees.flat_map do |fee|
+          Array(fee.presentation_breakdowns).map do |breakdown|
+            {
+              presentation_by: breakdown.presentation_by,
+              units: breakdown.units
+            }
+          end
+        end
       end
 
       def memoized_projection(fees)
