@@ -58,7 +58,6 @@ class Charge < ApplicationRecord
   validate :validate_custom_model
   validate :validate_invoiceable_unless_pay_in_advance
   validate :validate_accepts_target_wallet, if: -> { accepts_target_wallet_changed? }
-  validate :validate_presentation_group_keys
 
   default_scope -> { kept }
 
@@ -179,21 +178,6 @@ class Charge < ApplicationRecord
     return unless accepts_target_wallet
 
     errors.add(:accepts_target_wallet, :feature_unavailable) unless organization.events_targeting_wallets_enabled?
-  end
-
-  def validate_presentation_group_keys
-    return if properties.is_a?(Array)
-
-    raw_keys = properties["presentation_group_keys"]
-    return if raw_keys.blank?
-
-    unless raw_keys.is_a?(Array) && raw_keys.all? { |k| k.is_a?(Hash) && k.key?("value") }
-      return errors.add(:properties, "presentation_group_keys must be an array of hashes with a 'value' key")
-    end
-
-    if raw_keys.size > 2
-      errors.add(:properties, "presentation_group_keys have a maximum of 2 elements")
-    end
   end
 end
 

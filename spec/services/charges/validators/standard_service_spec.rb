@@ -47,5 +47,9 @@ RSpec.describe Charges::Validators::StandardService do
     it_behaves_like "pricing_group_keys property validation" do
       let(:properties) { {"amount" => "12"}.merge(grouping_properties) }
     end
+
+    it_behaves_like "presentation_group_keys property validation" do
+      let(:properties) { {"amount" => "12"}.merge(grouping_properties) }
+    end
   end
 end

@@ -15,6 +15,7 @@ module Charges
         # NOTE: override and add validation rules
 
         validate_pricing_group_keys
+        validate_presentation_group_keys
 
         if errors?
           result.validation_failure!(errors:)
@@ -49,6 +50,19 @@ module Charges
         end
 
         add_error(field: grouped_key, error_code: "invalid_type")
+      end
+
+      def validate_presentation_group_keys
+        raw_keys = properties["presentation_group_keys"]
+        return if raw_keys.blank?
+
+        unless raw_keys.is_a?(Array) && raw_keys.all? { |k| k.is_a?(Hash) && k.key?("value") }
+          return add_error(field: "presentation_group_keys", error_code: "presentation_group_keys must be an array of hashes with a 'value' key")
+        end
+
+        if raw_keys.size > 2
+          add_error(field: "presentation_group_keys", error_code: "presentation_group_keys have a maximum of 2 elements")
+        end
       end
     end
   end

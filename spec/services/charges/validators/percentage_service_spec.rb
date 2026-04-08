@@ -340,5 +340,14 @@ RSpec.describe Charges::Validators::PercentageService do
         }.merge(grouping_properties)
       end
     end
+
+    it_behaves_like "presentation_group_keys property validation" do
+      let(:percentage_properties) do
+        {
+          rate: "0.25",
+          fixed_amount: "2"
+        }.merge(grouping_properties)
+      end
+    end
   end
 end
