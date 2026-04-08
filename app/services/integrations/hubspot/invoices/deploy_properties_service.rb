@@ -42,7 +42,7 @@ module Integrations
 
         def payload
           {
-            objectType: "LagoInvoices",
+            objectType: integration.invoices_object_type_id,
             inputs: [
               {
                 groupName: "lagoinvoices_information",
