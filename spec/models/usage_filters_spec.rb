@@ -10,6 +10,7 @@ RSpec.describe UsageFilters do
       expect(filters.filter_by_charge_id).to be_nil
       expect(filters.filter_by_charge_code).to be_nil
       expect(filters.filter_by_group).to be_nil
+      expect(filters.filter_by_presentation).to be_nil
       expect(filters.skip_grouping).to be(false)
       expect(filters.full_usage).to be(false)
     end
@@ -31,6 +32,7 @@ RSpec.describe UsageFilters do
         filter_by_charge_id: "charge-id",
         filter_by_charge_code: "charge-code",
         filter_by_group: {"cloud" => ["aws"]},
+        filter_by_presentation: ["region"],
         skip_grouping: true,
         full_usage: true
       )
@@ -38,6 +40,7 @@ RSpec.describe UsageFilters do
       expect(filters.filter_by_charge_id).to eq("charge-id")
       expect(filters.filter_by_charge_code).to eq("charge-code")
       expect(filters.filter_by_group).to eq({"cloud" => ["aws"]})
+      expect(filters.filter_by_presentation).to eq(["region"])
       expect(filters.skip_grouping).to be(true)
       expect(filters.full_usage).to be(true)
     end
@@ -49,6 +52,7 @@ RSpec.describe UsageFilters do
         filter_by_charge_id: "charge-id",
         filter_by_charge_code: "charge-code",
         filter_by_group: {cloud: "aws"},
+        filter_by_presentation: ["compact"],
         skip_grouping: "true",
         full_usage: "true"
       }
@@ -58,8 +62,21 @@ RSpec.describe UsageFilters do
       expect(filters.filter_by_charge_id).to eq("charge-id")
       expect(filters.filter_by_charge_code).to eq("charge-code")
       expect(filters.filter_by_group).to eq({cloud: ["aws"]})
+      expect(filters.filter_by_presentation).to eq(["compact"])
       expect(filters.skip_grouping).to be(true)
       expect(filters.full_usage).to be(true)
+    end
+
+    it "parses filter_by_presentation from JSON" do
+      filters = described_class.init_from_params(filter_by_presentation: '["department","region"]')
+
+      expect(filters.filter_by_presentation).to eq(["department", "region"])
+    end
+
+    it "keeps an empty filter_by_presentation array" do
+      filters = described_class.init_from_params(filter_by_presentation: [])
+
+      expect(filters.filter_by_presentation).to eq([])
     end
 
     it "handles missing params with defaults" do
@@ -70,6 +87,7 @@ RSpec.describe UsageFilters do
       expect(filters.filter_by_charge_id).to be_nil
       expect(filters.filter_by_charge_code).to be_nil
       expect(filters.filter_by_group).to be_nil
+      expect(filters.filter_by_presentation).to be_nil
       expect(filters.skip_grouping).to be_nil
       expect(filters.full_usage).to be_nil
     end
@@ -81,6 +99,7 @@ RSpec.describe UsageFilters do
       expect(described_class::NONE.filter_by_charge_id).to be_nil
       expect(described_class::NONE.filter_by_charge_code).to be_nil
       expect(described_class::NONE.filter_by_group).to be_nil
+      expect(described_class::NONE.filter_by_presentation).to be_nil
       expect(described_class::NONE.skip_grouping).to be(false)
       expect(described_class::NONE.full_usage).to be(false)
     end
