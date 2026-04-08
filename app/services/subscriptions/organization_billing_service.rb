@@ -18,7 +18,7 @@ module Subscriptions
           if subscription.next_subscription&.pending?
             # NOTE: In case of downgrade, subscription remain active until the end of the period,
             #       a next subscription is pending, the current one must be terminated
-            Subscriptions::TerminateJob.perform_later(subscription, today.to_i)
+            Subscriptions::TerminateDowngradedJob.perform_later(subscription, today.to_i)
           else
             billing_subscriptions << subscription
           end
