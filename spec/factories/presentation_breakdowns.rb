@@ -6,17 +6,12 @@ FactoryBot.define do
     fee factory: :charge_fee
     units { 60.0 }
     presentation_by do
-      [
-        {department: "engineering"}
-      ]
+      {department: "engineering"}
     end
 
     trait :with_composite_presentation_by do
       presentation_by do
-        [
-          {department: "engineering"},
-          {region: "eu"}
-        ]
+        {department: "engineering", region: "eu"}
       end
     end
   end
