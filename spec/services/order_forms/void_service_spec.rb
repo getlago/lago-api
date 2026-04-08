@@ -11,47 +11,59 @@ RSpec.describe OrderForms::VoidService do
   let(:order_form) { create(:order_form, customer:, organization:, quote:) }
 
   describe "#call" do
-    context "when order_form is nil" do
-      let(:order_form) { nil }
-
-      it "returns a not found failure" do
+    context "without premium license" do
+      it "returns a forbidden failure" do
         result = service.call
 
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(result.error.resource).to eq("order_form")
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("feature_unavailable")
       end
     end
 
-    context "when order_form is not generated" do
-      let(:order_form) { create(:order_form, :signed, customer:, organization:, quote:) }
+    context "with premium license", :premium do
+      context "when order_form is nil" do
+        let(:order_form) { nil }
 
-      it "returns a not allowed failure" do
-        result = service.call
+        it "returns a not found failure" do
+          result = service.call
 
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("not_voidable")
-      end
-    end
-
-    context "when order_form is generated" do
-      it "transitions the order form to voided" do
-        result = service.call
-
-        expect(result).to be_success
-        expect(result.order_form).to be_voided
-        expect(result.order_form.voided_at).to be_present
-        expect(result.order_form.void_reason).to eq("manual")
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("order_form")
+        end
       end
 
-      it "enqueues a webhook" do
-        expect { service.call }
-          .to have_enqueued_job(SendWebhookJob).with("order_form.voided", order_form)
+      context "when order_form is not generated" do
+        let(:order_form) { create(:order_form, :signed, customer:, organization:, quote:) }
+
+        it "returns a not allowed failure" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("not_voidable")
+        end
       end
 
-      # TODO: Test Quote cascade when Quotes::VoidService is implemented
-      pending "cascades void to parent quote"
+      context "when order_form is generated" do
+        it "transitions the order form to voided" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.order_form).to be_voided
+          expect(result.order_form.voided_at).to be_present
+          expect(result.order_form.void_reason).to eq("manual")
+        end
+
+        it "enqueues a webhook" do
+          expect { service.call }
+            .to have_enqueued_job(SendWebhookJob).with("order_form.voided", order_form)
+        end
+
+        # TODO: Test Quote cascade when Quotes::VoidService is implemented
+        pending "cascades void to parent quote"
+      end
     end
   end
 end

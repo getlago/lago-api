@@ -11,6 +11,7 @@ module OrderForms
     end
 
     def call
+      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "order_form") unless order_form
 
       return result.not_allowed_failure!(code: "order_form_is_voided") if order_form.voided?
