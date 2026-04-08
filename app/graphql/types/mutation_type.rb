@@ -184,6 +184,8 @@ module Types
 
     field :create_okta_integration, mutation: Mutations::Integrations::Okta::Create
     field :update_okta_integration, mutation: Mutations::Integrations::Okta::Update
+    field :create_entra_id_integration, mutation: Mutations::Integrations::EntraId::Create
+    field :update_entra_id_integration, mutation: Mutations::Integrations::EntraId::Update
 
     field :create_anrok_integration, mutation: Mutations::Integrations::Anrok::Create
     field :update_anrok_integration, mutation: Mutations::Integrations::Anrok::Update
@@ -205,6 +207,9 @@ module Types
     field :okta_accept_invite, mutation: Mutations::Auth::Okta::AcceptInvite
     field :okta_authorize, mutation: Mutations::Auth::Okta::Authorize
     field :okta_login, mutation: Mutations::Auth::Okta::Login
+    field :entra_id_accept_invite, mutation: Mutations::Auth::EntraId::AcceptInvite
+    field :entra_id_authorize, mutation: Mutations::Auth::EntraId::Authorize
+    field :entra_id_login, mutation: Mutations::Auth::EntraId::Login
 
     field :create_dunning_campaign, mutation: Mutations::DunningCampaigns::Create
     field :destroy_dunning_campaign, mutation: Mutations::DunningCampaigns::Destroy
