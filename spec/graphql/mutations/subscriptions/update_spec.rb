@@ -155,7 +155,7 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
           updateSubscription(input: $input) {
             id
             activationRules {
-              lagoId
+              id
               type
               timeoutHours
               status
@@ -184,9 +184,54 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
 
         expect(result_data["activationRules"].size).to eq(1)
         expect(result_data["activationRules"].first).to include(
-          "lagoId" => String,
+          "id" => String,
           "type" => "payment",
           "timeoutHours" => 24,
+          "status" => "inactive",
+          "expiresAt" => nil
+        )
+      end
+    end
+
+    context "when removing activation rules with empty array" do
+      let(:subscription) { create(:subscription, :pending, :with_activation_rules, organization:, plan:, subscription_at: Time.current + 3.days) }
+      let(:input) do
+        {
+          id: subscription.id,
+          activationRules: []
+        }
+      end
+
+      it "removes all activation rules" do
+        result = subject
+
+        result_data = result["data"]["updateSubscription"]
+
+        expect(result_data["activationRules"]).to be_empty
+      end
+    end
+
+    context "when updating existing activation rules" do
+      let(:subscription) { create(:subscription, :pending, :with_activation_rules, organization:, plan:, subscription_at: Time.current + 3.days) }
+      let(:input) do
+        {
+          id: subscription.id,
+          activationRules: [
+            {type: "payment", timeoutHours: 72}
+          ]
+        }
+      end
+
+      it "replaces activation rules with new values" do
+        result = subject
+
+        result_data = result["data"]["updateSubscription"]
+
+        expect(result_data["activationRules"].size).to eq(1)
+        expect(result_data["activationRules"].first).to include(
+          "id" => String,
+          "type" => "payment",
+          "timeoutHours" => 72,
           "status" => "inactive",
           "expiresAt" => nil
         )

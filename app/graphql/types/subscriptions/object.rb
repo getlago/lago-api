@@ -53,7 +53,7 @@ module Types
 
       field :activated_at, GraphQL::Types::ISO8601DateTime, null: true
       field :activation_rules, [Types::Subscriptions::ActivationRuleType], null: false
-      field :cancelation_reason, String, null: true
+      field :cancelation_reason, Types::Subscriptions::CancelationReasonEnum, null: true
 
       def next_plan
         object.next_subscription&.plan

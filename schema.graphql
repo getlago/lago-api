@@ -21,6 +21,20 @@ input AcceptInviteInput {
   token: String!
 }
 
+enum ActivationRuleStatusEnum {
+  declined
+  expired
+  failed
+  inactive
+  not_applicable
+  pending
+  satisfied
+}
+
+enum ActivationRuleTypeEnum {
+  payment
+}
+
 """
 Base activity log
 """
@@ -964,6 +978,11 @@ input BillingEntityUpdateAppliedDunningCampaignInput {
 enum BillingTimeEnum {
   anniversary
   calendar
+}
+
+enum CancelationReasonEnum {
+  payment_failed
+  timeout
 }
 
 type CashfreeProvider {
@@ -11074,7 +11093,7 @@ type Subscription {
   activationRules: [SubscriptionActivationRule!]!
   activityLogs: [ActivityLog!]
   billingTime: BillingTimeEnum
-  cancelationReason: String
+  cancelationReason: CancelationReasonEnum
   canceledAt: ISO8601DateTime
   charges: [Charge!]
   createdAt: ISO8601DateTime!
@@ -11113,16 +11132,17 @@ type Subscription {
 type SubscriptionActivationRule {
   createdAt: ISO8601DateTime!
   expiresAt: ISO8601DateTime
-  lagoId: ID!
-  status: String!
+  id: ID!
+  status: ActivationRuleStatusEnum!
   timeoutHours: Int
-  type: String!
+  type: ActivationRuleTypeEnum!
   updatedAt: ISO8601DateTime!
 }
 
 input SubscriptionActivationRuleInput {
+  id: ID
   timeoutHours: Int
-  type: String!
+  type: ActivationRuleTypeEnum!
 }
 
 """

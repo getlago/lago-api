@@ -137,7 +137,7 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
             status
             cancelationReason
             activationRules {
-              lagoId
+              id
               type
               timeoutHours
               status
@@ -171,15 +171,19 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
 
       result_data = result["data"]["createSubscription"]
 
-      expect(result_data["status"]).to eq("pending")
-      expect(result_data["cancelationReason"]).to be_nil
+      expect(result_data).to include(
+        "status" => "pending",
+        "cancelationReason" => nil
+      )
       expect(result_data["activationRules"].size).to eq(1)
       expect(result_data["activationRules"].first).to include(
-        "lagoId" => String,
+        "id" => String,
         "type" => "payment",
         "timeoutHours" => 48,
         "status" => "inactive",
-        "expiresAt" => nil
+        "createdAt" => String,
+        "expiresAt" => nil,
+        "updatedAt" => String
       )
     end
   end
