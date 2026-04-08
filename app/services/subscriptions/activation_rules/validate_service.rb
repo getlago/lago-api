@@ -14,7 +14,6 @@ module Subscriptions
       private
 
       def valid_activation_rules_format?
-        return true if args[:activation_rules].nil?
         return true if args[:activation_rules].is_a?(Array)
 
         add_error(field: :activation_rules, error_code: "invalid_format")
@@ -22,7 +21,6 @@ module Subscriptions
 
       def valid_subscription_status?
         return true unless args[:subscription_type] == "update"
-        return true if args[:subscription].nil?
         return true if args[:subscription].pending?
 
         add_error(field: :activation_rules, error_code: "subscription_not_pending")

@@ -25,13 +25,6 @@ RSpec.describe Subscriptions::ActivationRules::ValidateService do
   end
 
   describe "#valid?" do
-    context "when activation_rules is nil" do
-      let(:activation_rules) { nil }
-
-      it "returns true" do
-        expect(validate_service).to be_valid
-      end
-    end
 
     context "when activation_rules is an empty array" do
       let(:activation_rules) { [] }
@@ -86,6 +79,7 @@ RSpec.describe Subscriptions::ActivationRules::ValidateService do
 
       context "when subscription is pending" do
         let(:subscription) { create(:subscription, :pending, customer:, plan:, organization:) }
+        let(:activation_rules) { [{type: "payment"}] }
 
         it "returns true" do
           expect(validate_service).to be_valid
@@ -111,12 +105,10 @@ RSpec.describe Subscriptions::ActivationRules::ValidateService do
       end
     end
 
-    context "when subscription_type is create" do
-      let(:subscription_type) { "create" }
-      let(:subscription) { create(:subscription, customer:, plan:, organization:) }
+    context "when subscription is nil" do
       let(:activation_rules) { [{type: "payment", timeout_hours: 24}] }
 
-      it "does not check subscription status" do
+      it "returns true" do
         expect(validate_service).to be_valid
       end
     end
