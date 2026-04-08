@@ -8,6 +8,7 @@ RSpec.describe Fee do
   it { is_expected.to belong_to(:add_on).optional }
   it { is_expected.to belong_to(:charge).optional }
   it { is_expected.to belong_to(:fixed_charge).optional }
+  it { is_expected.to have_many(:presentation_breakdowns) }
   it { is_expected.to have_one(:fixed_charge_add_on).through(:fixed_charge) }
   it { is_expected.to have_one(:adjusted_fee).dependent(:nullify) }
   it { is_expected.to have_one(:billable_metric).through(:charge) }
