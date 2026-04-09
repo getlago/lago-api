@@ -45,6 +45,8 @@ module V1
         description: model.description,
         precise_unit_amount: model.precise_unit_amount,
         precise_coupons_amount_cents: model.precise_coupons_amount_cents,
+        sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents.round,
+        sub_total_excluding_taxes_precise_amount_cents: model.sub_total_excluding_taxes_precise_amount_cents,
         events_count: model.events_count,
         payment_status: model.payment_status,
         created_at: model.created_at&.iso8601,
