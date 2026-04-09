@@ -236,5 +236,92 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
         end
       end
     end
+
+    context "when wallet_currencies is present in allocation rules" do
+      let(:usd_wallet_id) { SecureRandom.uuid }
+      let(:eur_wallet_id) { SecureRandom.uuid }
+
+      let(:allocation_rules) do
+        {
+          bm_map: {},
+          type_map: {},
+          unrestricted: [eur_wallet_id, usd_wallet_id],
+          wallet_currencies: {
+            eur_wallet_id => "EUR",
+            usd_wallet_id => "USD"
+          }
+        }
+      end
+
+      context "when fee currency matches a wallet" do
+        let(:fee) { create(:add_on_fee, amount_currency: "USD") }
+
+        it "returns the wallet matching the fee currency" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to eq(usd_wallet_id)
+        end
+      end
+
+      context "when fee currency matches the higher-priority wallet" do
+        let(:fee) { create(:add_on_fee, amount_currency: "EUR") }
+
+        it "returns the higher-priority wallet" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to eq(eur_wallet_id)
+        end
+      end
+
+      context "when fee currency does not match any wallet" do
+        let(:fee) { create(:add_on_fee, amount_currency: "GBP") }
+
+        it "returns nil" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to be_nil
+        end
+      end
+
+      context "when filtering applies to billable metric wallets" do
+        let(:fee) { create(:charge_fee, amount_currency: "USD") }
+        let(:bm_id) { fee.charge.billable_metric_id }
+
+        let(:allocation_rules) do
+          {
+            bm_map: {bm_id => [eur_wallet_id, usd_wallet_id]},
+            type_map: {},
+            unrestricted: [],
+            wallet_currencies: {
+              eur_wallet_id => "EUR",
+              usd_wallet_id => "USD"
+            }
+          }
+        end
+
+        it "returns the wallet matching the fee currency" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to eq(usd_wallet_id)
+        end
+      end
+
+      context "when filtering applies to fee type wallets" do
+        let(:fee) { create(:charge_fee, amount_currency: "USD") }
+
+        let(:allocation_rules) do
+          {
+            bm_map: {},
+            type_map: {"charge" => [eur_wallet_id, usd_wallet_id]},
+            unrestricted: [],
+            wallet_currencies: {
+              eur_wallet_id => "EUR",
+              usd_wallet_id => "USD"
+            }
+          }
+        end
+
+        it "returns the wallet matching the fee currency" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to eq(usd_wallet_id)
+        end
+      end
+    end
   end
 end

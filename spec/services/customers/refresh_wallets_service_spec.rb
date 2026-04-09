@@ -312,5 +312,108 @@ RSpec.describe Customers::RefreshWalletsService do
         expect(unrestricted_wallet.credits_ongoing_balance).to eq(15.0)
       end
     end
+
+    context "when customer has multi-currency subscriptions" do
+      subject(:result) { described_class.call(customer: mc_customer, include_generating_invoices: false) }
+
+      let(:mc_org) { create(:organization) }
+      let(:mc_customer) { create(:customer, organization: mc_org, awaiting_wallet_refresh: true) }
+      let(:mc_billable_metric) { create(:billable_metric, organization: mc_org, aggregation_type: "count_agg") }
+      let(:mc_pia_billable_metric) { create(:billable_metric, organization: mc_org, aggregation_type: "count_agg") }
+
+      let(:usd_plan) { create(:plan, organization: mc_org, amount_cents: 10_000, amount_currency: "USD") }
+      let(:eur_plan) { create(:plan, organization: mc_org, amount_cents: 10_000, amount_currency: "EUR") }
+
+      let(:usd_subscription) { create(:subscription, organization: mc_org, customer: mc_customer, plan: usd_plan, started_at: Time.zone.now - 1.year) }
+      let(:eur_subscription) { create(:subscription, organization: mc_org, customer: mc_customer, plan: eur_plan, started_at: Time.zone.now - 1.year) }
+
+      let!(:usd_wallet) do
+        create(
+          :wallet,
+          customer: mc_customer,
+          organization: mc_org,
+          currency: "USD",
+          balance_cents: 10_000,
+          ongoing_balance_cents: 10_000,
+          ongoing_usage_balance_cents: 0,
+          credits_balance: 100.0,
+          credits_ongoing_balance: 100.0,
+          credits_ongoing_usage_balance: 0
+        )
+      end
+
+      let!(:eur_wallet) do
+        create(
+          :wallet,
+          customer: mc_customer,
+          organization: mc_org,
+          currency: "EUR",
+          balance_cents: 10_000,
+          ongoing_balance_cents: 10_000,
+          ongoing_usage_balance_cents: 0,
+          credits_balance: 100.0,
+          credits_ongoing_balance: 100.0,
+          credits_ongoing_usage_balance: 0
+        )
+      end
+
+      before do
+        # In-arrears charges
+        create(:standard_charge, plan: usd_plan, billable_metric: mc_billable_metric, properties: {amount: "3"})
+        create(:standard_charge, plan: eur_plan, billable_metric: mc_billable_metric, properties: {amount: "5"})
+
+        # Pay-in-advance charges
+        create(:standard_charge, plan: usd_plan, billable_metric: mc_pia_billable_metric, properties: {amount: "2"}, pay_in_advance: true, invoiceable: true)
+        create(:standard_charge, plan: eur_plan, billable_metric: mc_pia_billable_metric, properties: {amount: "4"}, pay_in_advance: true, invoiceable: true)
+
+        # 2 events for USD in-arrears -> 2 * $3 = 600 cents
+        create_list(
+          :event, 2,
+          organization: mc_org,
+          subscription: usd_subscription,
+          customer: mc_customer,
+          code: mc_billable_metric.code
+        )
+
+        # 3 events for EUR in-arrears -> 3 * €5 = 1500 cents
+        create_list(
+          :event, 3,
+          organization: mc_org,
+          subscription: eur_subscription,
+          customer: mc_customer,
+          code: mc_billable_metric.code
+        )
+
+        # 1 event for USD PIA -> 1 * $2 = 200 cents (included in total usage, subtracted as billed)
+        create(
+          :event,
+          organization: mc_org,
+          subscription: usd_subscription,
+          customer: mc_customer,
+          code: mc_pia_billable_metric.code
+        )
+
+        # 1 event for EUR PIA -> 1 * €4 = 400 cents (included in total usage, subtracted as billed)
+        create(
+          :event,
+          organization: mc_org,
+          subscription: eur_subscription,
+          customer: mc_customer,
+          code: mc_pia_billable_metric.code
+        )
+      end
+
+      it "calculates ongoing balance separately per currency" do
+        expect(result).to be_success
+
+        # USD: in-arrears 600 + PIA 200 = 800 total usage, minus 200 PIA billed = 600 ongoing usage
+        expect(usd_wallet.reload.ongoing_usage_balance_cents).to eq(600)
+        expect(usd_wallet.ongoing_balance_cents).to eq(9400)
+
+        # EUR: in-arrears 1500 + PIA 400 = 1900 total usage, minus 400 PIA billed = 1500 ongoing usage
+        expect(eur_wallet.reload.ongoing_usage_balance_cents).to eq(1500)
+        expect(eur_wallet.ongoing_balance_cents).to eq(8500)
+      end
+    end
   end
 end
