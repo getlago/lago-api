@@ -229,6 +229,21 @@ module Events
         prepare_grouped_result(results)
       end
 
+      def presentation_breakdown_sum
+        # FIXME: Cover when the same column is appearing in grouped_by and presentation_by
+        # hypothesis: drop the duplicated key in presentation_by because the key is already part of group_by
+        group_columns = []
+        group_columns.concat(sanitized_grouped_by) if grouped_by.present?
+        group_columns.concat(sanitized_presentation_by) if presentation_by.present?
+
+        results = events
+          .group(group_columns)
+          .sum("(#{sanitized_property_name})::numeric")
+          .map { |group, value| [group, value].flatten }
+
+        prepare_presentation_result(results)
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
@@ -401,6 +416,10 @@ module Events
         grouped_by.map { sanitized_property_name(it) }
       end
 
+      def sanitized_presentation_by
+        presentation_by.map { sanitized_property_name(it) }
+      end
+
       delegate :connection, to: :Event
 
       delegate :select_all, to: :connection
@@ -434,6 +453,32 @@ module Events
 
           result
         end
+      end
+
+      def prepare_presentation_result(rows)
+        grouped_by_count = grouped_by&.size || 0
+        presentation_by_count = presentation_by&.size || 0
+
+        outer_map = {}
+
+        rows.each do |row|
+          grouped_attrs = {}
+          grouped_by&.each_with_index do |field, i|
+            grouped_attrs[field] = row[i]
+          end
+
+          presentation_attrs = {}
+          presentation_by.each_with_index do |field, i|
+            presentation_attrs[field] = row[grouped_by_count + i]
+          end
+
+          units = row[grouped_by_count + presentation_by_count]
+
+          result = outer_map[grouped_attrs.hash] ||= {groups: grouped_attrs, breakdowns: []}
+          result[:breakdowns] << {presentation_by: presentation_attrs, units: units}
+        end
+
+        outer_map.values
       end
 
       def operation_type_sql
