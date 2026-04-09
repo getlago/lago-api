@@ -82,7 +82,9 @@ module Resolvers
         }
       )
 
-      result.invoices
+      invoices = result.invoices
+      Invoice.preload_offset_amounts(invoices)
+      invoices
     end
   end
 end
