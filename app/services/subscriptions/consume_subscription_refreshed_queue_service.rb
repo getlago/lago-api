@@ -1,23 +1,17 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  # DEPRECATED: This service drains the legacy Redis SET (subscription_refreshed).
-  # New events are written to a sorted set (subscription_refreshed_v2) consumed by
-  # Subscriptions::ConsumeSubscriptionRefreshedQueueV2Service.
-  # Remove this service once the legacy key is fully drained after deployment.
   class ConsumeSubscriptionRefreshedQueueService < BaseService
     Result = BaseResult
 
-    REDIS_STORE_NAME = "subscription_refreshed"
+    REDIS_STORE_NAME = "subscription_refreshed_v2"
     BATCH_SIZE = 100
     PROCESSING_TIMEOUT = 1.minute
 
-    # In events-processor, cache is set to expire 5 seconds after the start of the processing
-    # to give time to Clickhouse to fully merge the new event.
-    # On API, the subscription refresh is processed by a clock every 1 minute, but we have to make sure that the cache
-    # is fully expired before computing the new usage.
-    # To handle the worst case scenario, we are adding 5 more seconds before processing the subscription.
-    REFRESH_WAIT_TIME = 5.seconds
+    # Events-processor writes to a sorted set with ZADD, using the event timestamp as score
+    # and a bucketed member key (org_id:sub_id|bucket). Members are only eligible for consumption
+    # once their score has aged past CLICKHOUSE_MERGE_DELAY, giving ClickHouse time to merge.
+    CLICKHOUSE_MERGE_DELAY = 15
 
     def call
       return result if ENV["LAGO_REDIS_STORE_URL"].blank?
@@ -26,18 +20,21 @@ module Subscriptions
 
       loop do
         if Time.current - start_time > PROCESSING_TIMEOUT
-          # Avoid looping for ever if the producer is quicker than this consumer
           break
         end
 
-        values = redis_client.srandmember(REDIS_STORE_NAME, BATCH_SIZE)
+        threshold = (Time.current - CLICKHOUSE_MERGE_DELAY).to_i
+        values = redis_client.zrangebyscore(REDIS_STORE_NAME, "-inf", threshold, limit: [0, BATCH_SIZE])
         break if values.blank?
 
         values.each do |value|
-          Subscriptions::FlagRefreshedJob.set(wait: REFRESH_WAIT_TIME).perform_later(value.split(":").last)
+          # Extract the subscription_id from the bucketed member key (org_id:sub_id|bucket)
+          subscription_id = value.split("|").first.split(":").last
+
+          Subscriptions::FlagRefreshedJob.perform_later(subscription_id)
         end
 
-        redis_client.srem(REDIS_STORE_NAME, values) if values.present?
+        redis_client.zrem(REDIS_STORE_NAME, values)
       end
 
       result
@@ -48,7 +45,7 @@ module Subscriptions
     def redis_client
       return @redis_client if defined? @redis_client
 
-      url = if ENV["LAGO_REDIS_STORE_URL"].start_with?("redis://")
+      url = if ENV["LAGO_REDIS_STORE_URL"].start_with?(/rediss?:\/\//)
         ENV["LAGO_REDIS_STORE_URL"]
       else
         "redis://#{ENV["LAGO_REDIS_STORE_URL"]}"
