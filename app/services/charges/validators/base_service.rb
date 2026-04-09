@@ -56,8 +56,26 @@ module Charges
         raw_keys = properties["presentation_group_keys"]
         return if raw_keys.blank?
 
-        unless raw_keys.is_a?(Array) && raw_keys.all? { |k| k.is_a?(Hash) && k.key?("value") }
-          return add_error(field: "presentation_group_keys", error_code: "presentation_group_keys must be an array of hashes with a 'value' key")
+        valid_presentation_group_keys = raw_keys.is_a?(Array) && raw_keys.all? do |key|
+          next false unless key.is_a?(Hash)
+
+          # NOTE: Support hashes with strings and symbols as keys to avoid issues with different formats
+          value_key_present = key.key?("value") || key.key?(:value)
+          options_key_valid = !key.key?("options") && !key.key?(:options)
+
+          if key.key?("options") || key.key?(:options)
+            options = key["options"] || key[:options]
+            options_key_valid = options.is_a?(Hash)
+          end
+
+          value_key_present && options_key_valid
+        end
+
+        unless valid_presentation_group_keys
+          return add_error(
+            field: "presentation_group_keys",
+            error_code: "presentation_group_keys must be an array of hashes with a 'value' key"
+          )
         end
 
         if raw_keys.size > 2

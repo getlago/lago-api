@@ -38,6 +38,19 @@ RSpec.shared_examples "presentation_group_keys property validation" do
     end
   end
 
+  context "when presentation_group_keys has options" do
+    let(:presentation_group_keys) do
+      [
+        {"value" => "region", "options" => {"display_in_invoice" => true}},
+        {"value" => "country", "options" => {"display_in_invoice" => false}}
+      ]
+    end
+
+    it "is valid" do
+      expect(validation_service).to be_valid
+    end
+  end
+
   context "when presentation_group_keys has more than 2 elements" do
     let(:presentation_group_keys) do
       [
