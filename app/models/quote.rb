@@ -9,6 +9,8 @@ class Quote < ApplicationRecord
     one_off: "one_off"
   }.freeze
 
+  QUOTE_NUMBER_REGEX = /\AQT-\d{4}-\d{4,}\z/
+
   before_save :ensure_number
 
   belongs_to :organization
