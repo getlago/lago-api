@@ -139,6 +139,13 @@ module Types
     field :update_invoice, mutation: Mutations::Invoices::Update
     field :void_invoice, mutation: Mutations::Invoices::Void
 
+    field :approve_quote, mutation: Mutations::Quotes::Approve
+    field :clone_quote, mutation: Mutations::Quotes::Clone
+    field :create_quote, mutation: Mutations::Quotes::Create
+    field :destroy_quote, mutation: Mutations::Quotes::Destroy
+    field :update_quote, mutation: Mutations::Quotes::Update
+    field :void_quote, mutation: Mutations::Quotes::Void
+
     field :download_payment_receipt, mutation: Mutations::PaymentReceipts::Download
     field :download_xml_payment_receipt, mutation: Mutations::PaymentReceipts::DownloadXml
     field :resend_payment_receipt_email, mutation: Mutations::PaymentReceipts::ResendEmail
