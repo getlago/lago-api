@@ -28,7 +28,9 @@ RSpec.describe Resolvers::Customers::UsageResolver do
               eventsCount
               groupedBy
               filters { id units amountCents pricingUnitAmountCents invoiceDisplayName values eventsCount }
+              presentationBreakdowns { presentationBy units }
             }
+            presentationBreakdowns { presentationBy units }
           }
         }
       }
@@ -77,7 +79,7 @@ RSpec.describe Resolvers::Customers::UsageResolver do
       billable_metric: sum_metric,
       properties: {
         amount: 1.to_s,
-        grouped_by: ["agent_name"]
+        pricing_group_keys: ["agent_name"]
       }
     )
   end
@@ -182,6 +184,72 @@ RSpec.describe Resolvers::Customers::UsageResolver do
     expect(grouped_usage["units"]).to eq(4.0)
     expect(grouped_usage["eventsCount"]).to eq(4)
     expect(grouped_usage["groupedBy"]).to eq({"agent_name" => "frodo"})
+  end
+
+  context "with presentation group keys" do
+    let(:properties) do
+      {
+        amount: 1.to_s,
+        presentation_group_keys: [{value: "cloud"}]
+      }
+    end
+    let(:standard_charge) do
+      create(
+        :standard_charge,
+        plan: subscription.plan,
+        billable_metric: sum_metric,
+        properties: properties
+      )
+    end
+
+    it "returns the presentation breakdowns" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          customerId: customer.id,
+          subscriptionId: subscription.id
+        }
+      )
+
+      charges_usage = result["data"]["customerUsage"]["chargesUsage"]
+      expect(charges_usage.first["presentationBreakdowns"]).to be_empty
+      expect(charges_usage.second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+    end
+
+    context "with pricing group keys" do
+      let(:properties) do
+        {
+          amount: 1.to_s,
+          pricing_group_keys: ["item_id"],
+          presentation_group_keys: [{value: "cloud"}]
+        }
+      end
+
+      it "returns the presentation breakdowns" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {
+            customerId: customer.id,
+            subscriptionId: subscription.id
+          }
+        )
+
+        # FIXME: Confirm if we need to skip the presentation breakdowns when we have grouped usages
+        charges_usage = result["data"]["customerUsage"]["chargesUsage"]
+        expect(charges_usage.first["presentationBreakdowns"]).to be_empty
+        expect(charges_usage.second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+
+        grouped_usage = charges_usage.second["groupedUsage"]
+        expect(grouped_usage.first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+        expect(grouped_usage.second["presentationBreakdowns"]).to be_empty
+      end
+    end
   end
 
   context "with filters" do

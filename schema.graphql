@@ -1156,6 +1156,7 @@ type ChargeUsage {
   filters: [ChargeFilterUsage!]
   groupedUsage: [GroupedChargeUsage!]!
   id: ID!
+  presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitAmountCents: BigInt
   units: Float!
 }
@@ -5763,6 +5764,7 @@ type Fee implements InvoiceItem {
   itemType: String!
   offsettableAmountCents: BigInt!
   preciseUnitAmount: Float!
+  presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitUsage: PricingUnitUsage
   properties: FeeProperties
   subscription: Subscription
@@ -6228,6 +6230,7 @@ type GroupedChargeUsage {
   filters: [ChargeFilterUsage!]
   groupedBy: JSON
   id: ID!
+  presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitAmountCents: BigInt
   units: Float!
 }
@@ -9428,6 +9431,29 @@ enum PremiumIntegrationTypeEnum {
   xero
 }
 
+type PresentationBreakdownUsage {
+  presentationBy: JSON!
+  units: String!
+}
+
+type PresentationGroupKey {
+  options: PresentationGroupKeyOptions
+  value: String!
+}
+
+input PresentationGroupKeyInput {
+  options: PresentationGroupKeyOptionsInput
+  value: String!
+}
+
+type PresentationGroupKeyOptions {
+  displayInInvoice: Boolean
+}
+
+input PresentationGroupKeyOptionsInput {
+  displayInInvoice: Boolean
+}
+
 """
 Create Adjusted Fee Input
 """
@@ -9575,6 +9601,7 @@ type Properties {
   packageSize: BigInt
   perTransactionMaxAmount: String
   perTransactionMinAmount: String
+  presentationGroupKeys: [PresentationGroupKey!]
   pricingGroupKeys: [String!]
   rate: String
   volumeRanges: [VolumeRange!]
@@ -9592,6 +9619,7 @@ input PropertiesInput {
   packageSize: BigInt
   perTransactionMaxAmount: String
   perTransactionMinAmount: String
+  presentationGroupKeys: [PresentationGroupKeyInput!]
   pricingGroupKeys: [String!]
   rate: String
   volumeRanges: [VolumeRangeInput!]

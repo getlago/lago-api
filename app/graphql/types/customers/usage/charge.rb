@@ -16,6 +16,7 @@ module Types
         field :charge, Types::Charges::Object, null: false
         field :filters, [Types::Customers::Usage::ChargeFilter], null: true
         field :grouped_usage, [Types::Customers::Usage::GroupedUsage], null: false
+        field :presentation_breakdowns, [Types::Customers::Usage::PresentationBreakdown], null: true
 
         def id
           SecureRandom.uuid
@@ -57,6 +58,17 @@ module Types
           return [] unless object.any? { |f| f.grouped_by.present? }
 
           object.group_by(&:grouped_by).values
+        end
+
+        def presentation_breakdowns
+          object.flat_map do |fee|
+            fee.presentation_breakdowns.map do |breakdown|
+              {
+                presentation_by: breakdown.presentation_by,
+                units: breakdown.units
+              }
+            end
+          end
         end
       end
     end

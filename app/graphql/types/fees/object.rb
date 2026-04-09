@@ -40,6 +40,7 @@ module Types
       field :adjusted_fee_type, Types::AdjustedFees::AdjustedFeeTypeEnum, null: true
 
       field :charge_filter, Types::ChargeFilters::Object, null: true
+      field :presentation_breakdowns, [Types::Customers::Usage::PresentationBreakdown], null: true
       field :pricing_unit_usage, Types::PricingUnitUsages::Object, null: true
       field :properties, Types::Fees::Properties, null: true, method: :itself
 
@@ -68,6 +69,15 @@ module Types
         return nil if object.adjusted_fee.adjusted_display_name?
 
         object.adjusted_fee.adjusted_units? ? "adjusted_units" : "adjusted_amount"
+      end
+
+      def presentation_breakdowns
+        object.presentation_breakdowns.map do |breakdown|
+          {
+            presentation_by: breakdown.presentation_by,
+            units: breakdown.units
+          }
+        end
       end
     end
   end

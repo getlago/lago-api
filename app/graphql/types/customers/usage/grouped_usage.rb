@@ -14,6 +14,7 @@ module Types
 
         field :filters, [Types::Customers::Usage::ChargeFilter], null: true
         field :grouped_by, GraphQL::Types::JSON, null: true
+        field :presentation_breakdowns, [Types::Customers::Usage::PresentationBreakdown], null: true
 
         def id
           SecureRandom.uuid
@@ -45,6 +46,17 @@ module Types
           return [] unless object.first.has_charge_filters?
 
           object.sort_by { |f| f.charge_filter&.display_name.to_s }
+        end
+
+        def presentation_breakdowns
+          object.flat_map do |fee|
+            fee.presentation_breakdowns.map do |breakdown|
+              {
+                presentation_by: breakdown.presentation_by,
+                units: breakdown.units
+              }
+            end
+          end
         end
       end
     end
