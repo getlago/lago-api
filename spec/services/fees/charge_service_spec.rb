@@ -3920,6 +3920,152 @@ RSpec.describe Fees::ChargeService, :premium do
       end
     end
 
+    context "with filter_by_presentation" do
+      subject(:charge_subscription_service) do
+        described_class.new(
+          invoice:,
+          charge:,
+          subscription:,
+          boundaries:,
+          context: :current_usage,
+          apply_taxes: false,
+          filtered_aggregations: nil,
+          usage_filters: UsageFilters.new(filter_by_presentation: filter_by_presentation)
+        )
+      end
+
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          billable_metric:,
+          properties: properties
+        )
+      end
+      let(:properties) do
+        {
+          amount: "10",
+          presentation_group_keys: presentation_group_keys
+        }
+      end
+      let(:presentation_group_keys) { [{value: "department"}, {value: "region"}] }
+      let(:filter_by_presentation) { nil }
+      let(:aggregator) { instance_double("Aggregator") }
+      let(:aggregation_result) { BaseService::Result.new }
+
+      before do
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+      end
+
+      it "calls aggregation factory with presentation_by containing all charge presentation keys" do
+        charge_subscription_service.call
+
+        expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
+          hash_including(
+            filters: hash_including(
+              presentation_by: ["department", "region"]
+            )
+          )
+        )
+      end
+
+      context "when presentation_group_keys is empty" do
+        let(:presentation_group_keys) { [] }
+
+        it "calls aggregation factory without presentation_by" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
+            hash_including(
+              filters: hash_including(
+                charge_id: charge.id
+              )
+            )
+          )
+        end
+      end
+
+      context "when filter_by_presentation is empty" do
+        let(:filter_by_presentation) { [] }
+
+        it "calls aggregation factory with presentation_by as empty array" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
+            hash_including(
+              filters: hash_including(
+                presentation_by: []
+              )
+            )
+          )
+        end
+
+        context "when presentation_group_keys is empty" do
+          let(:presentation_group_keys) { [] }
+
+          it "calls aggregation factory without presentation_by" do
+            charge_subscription_service.call
+
+            expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
+              hash_including(
+                filters: hash_including(
+                  charge_id: charge.id
+                )
+              )
+            )
+          end
+        end
+      end
+
+      context "when filter_by_presentation values overlaps charge presentation keys" do
+        let(:filter_by_presentation) { ["region"] }
+
+        it "calls aggregation factory with presentation_by containing only overlapping keys" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
+            hash_including(
+              filters: hash_including(
+                presentation_by: ["region"]
+              )
+            )
+          )
+        end
+
+        context "when presentation_group_keys is empty" do
+          let(:presentation_group_keys) { [] }
+
+          it "calls aggregation factory without presentation_by" do
+            charge_subscription_service.call
+
+            expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
+              hash_including(
+                filters: hash_including(
+                  charge_id: charge.id
+                )
+              )
+            )
+          end
+        end
+      end
+
+      context "when filter_by_presentation values are not present in presention keys" do
+        let(:filter_by_presentation) { ["other_name"] }
+
+        it "calls aggregation factory with empty presentation keys" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
+            hash_including(
+              filters: hash_including(
+                presentation_by: []
+              )
+            )
+          )
+        end
+      end
+    end
+
     context "with skip_grouping" do
       subject(:charge_subscription_service) do
         described_class.new(

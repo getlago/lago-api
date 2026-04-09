@@ -102,7 +102,7 @@ module Fees
 
     def init_charge_fees(properties:, charge_filter: nil)
       fees = cache_middleware.call(charge_filter:) do
-        charge_model_result = apply_aggregation_and_charge_model(properties:, charge_filter:)
+        breakdowns, charge_model_result = apply_aggregation_and_charge_model(properties:, charge_filter:)
 
         unless charge_model_result.success?
           result.fail_with_error!(charge_model_result.error)
@@ -110,6 +110,17 @@ module Fees
         end
 
         charge_fees = fees_from_charge_model_result(charge_model_result, properties:, charge_filter:)
+
+        # FIXME: Move this to a proper place after adding to the charge_model_result or find a better solution
+        empty_breakdown = {breakdowns: []}.freeze
+        breakdowns_indexed_by_group = breakdowns&.index_by { |e| e[:groups] }
+        if breakdowns_indexed_by_group.present?
+          charge_fees.each do |fee|
+            breakdowns_indexed_by_group.fetch(fee.grouped_by, empty_breakdown)[:breakdowns].each do |breakdown|
+              fee.presentation_breakdowns.build(breakdown.merge(organization_id: charge.organization_id))
+            end
+          end
+        end
 
         filter_non_persistable_fees_for_caching(charge_fees)
       end
@@ -312,13 +323,14 @@ module Fees
         persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter)
       end
 
-      ChargeModels::Factory.new_instance(
+      # FIXME: This is not good, the breakdowns should be associated with charge model result or be accomodated in another way
+      [aggregation_result.breakdowns, ChargeModels::Factory.new_instance(
         chargeable: charge,
         aggregation_result:,
         properties:,
         period_ratio: calculate_period_ratio,
         calculate_projected_usage:
-      ).apply
+      ).apply]
     end
 
     def options(properties)
@@ -410,6 +422,12 @@ module Fees
 
       grouped_by_keys = grouped_by_keys(charge_filter:)
       filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present?
+
+      # FIXME: Add an option to skip presentation keys when the usage_filters have such option to ignore the computation
+      presentation_group_keys_values = charge.presentation_group_keys_values
+      if presentation_group_keys_values.present?
+        filters[:presentation_by] = presentation_group_keys_values & (usage_filters.filter_by_presentation || presentation_group_keys_values)
+      end
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
