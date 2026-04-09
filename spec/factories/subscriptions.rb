@@ -8,11 +8,13 @@ FactoryBot.define do
     status { :active }
     external_id { SecureRandom.uuid }
     started_at { 1.day.ago }
+    activated_at { 1.day.ago }
     subscription_at { 1.day.ago }
 
     trait :pending do
       status { :pending }
       started_at { nil }
+      activated_at { nil }
     end
 
     trait :canceled do
@@ -23,7 +25,14 @@ FactoryBot.define do
     trait :terminated do
       status { :terminated }
       started_at { 1.month.ago }
+      activated_at { 1.month.ago }
       terminated_at { Time.zone.now }
+    end
+
+    trait :incomplete do
+      status { :incomplete }
+      started_at { Time.current }
+      activated_at { nil }
     end
 
     trait :calendar do
