@@ -501,6 +501,14 @@ RSpec.describe SendWebhookJob do
       let(:options) { {usage_threshold: create(:usage_threshold)} }
 
       it_behaves_like "a webhook service",
+        "subscription.canceled",
+        Webhooks::Subscriptions::CanceledService
+
+      it_behaves_like "a webhook service",
+        "subscription.incomplete",
+        Webhooks::Subscriptions::IncompleteService
+
+      it_behaves_like "a webhook service",
         "subscription.started",
         Webhooks::Subscriptions::StartedService
 
