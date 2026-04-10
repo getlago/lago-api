@@ -9569,6 +9569,7 @@ type ProjectedChargeUsage {
   filters: [ProjectedChargeFilterUsage!]
   groupedUsage: [ProjectedGroupedChargeUsage!]!
   id: ID!
+  presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
@@ -9582,6 +9583,7 @@ type ProjectedGroupedChargeUsage {
   filters: [ProjectedChargeFilterUsage!]
   groupedBy: JSON
   id: ID!
+  presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!

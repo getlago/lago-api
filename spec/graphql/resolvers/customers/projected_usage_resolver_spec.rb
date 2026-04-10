@@ -34,7 +34,9 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
               eventsCount
               groupedBy
               filters { id units amountCents pricingUnitAmountCents invoiceDisplayName values eventsCount }
+              presentationBreakdowns { presentationBy units }
             }
+            presentationBreakdowns { presentationBy units }
           }
         }
       }
@@ -83,7 +85,7 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
       billable_metric: sum_metric,
       properties: {
         amount: 1.to_s,
-        grouped_by: ["agent_name"]
+        pricing_group_keys: ["agent_name"]
       }
     )
   end
@@ -308,6 +310,52 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
         expect(google_filter_data["units"]).to eq(1)
         expect(google_filter_data["amountCents"]).to eq("400")
         expect(google_filter_data["pricingUnitAmountCents"]).to eq("2000")
+      end
+    end
+  end
+
+  context "with presentation group keys" do
+    let(:standard_charge) do
+      create(
+        :standard_charge,
+        plan: subscription.plan,
+        billable_metric: sum_metric,
+        properties: {
+          amount: 1.to_s,
+          pricing_group_keys: ["agent_name"],
+          presentation_group_keys: [{value: "cloud"}]
+        }
+      )
+    end
+
+    it "returns the presentation breakdowns" do
+      travel_to(Time.parse("2025-07-15T10:00:00Z")) do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {
+            customerId: customer.id,
+            subscriptionId: subscription.id
+          }
+        )
+
+        charges_usage = result["data"]["customerProjectedUsage"]["chargesUsage"]
+
+        graduated_charge_usage = charges_usage.find { |usage| usage["charge"]["chargeModel"] == "graduated" }
+        expect(graduated_charge_usage["presentationBreakdowns"]).to be_empty
+
+        standard_charge_usage = charges_usage.find { |usage| usage["charge"]["chargeModel"] == "standard" }
+        expect(standard_charge_usage["presentationBreakdowns"]).to eq([
+          {"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}
+        ])
+
+        grouped_usage = standard_charge_usage["groupedUsage"]
+        expect(grouped_usage.first["presentationBreakdowns"]).to eq([
+          {"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}
+        ])
+        expect(grouped_usage.second["presentationBreakdowns"]).to be_empty
       end
     end
   end
