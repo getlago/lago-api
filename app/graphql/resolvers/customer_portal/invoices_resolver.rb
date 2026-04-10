@@ -25,6 +25,8 @@ module Resolvers
           }
         )
 
+        return result_error(result) unless result.success?
+
         invoices = result.invoices
         Invoice.preload_offset_amounts(invoices)
         invoices

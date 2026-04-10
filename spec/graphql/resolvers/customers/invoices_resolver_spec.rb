@@ -94,6 +94,24 @@ RSpec.describe Resolvers::Customers::InvoicesResolver do
     end
   end
 
+  context "when query fails" do
+    it "returns an error" do
+      allow(InvoicesQuery).to receive(:call).and_return(
+        BaseService::Result.new.tap { |r| r.validation_failure!(errors: {base: ["test_error"]}) }
+      )
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {customerId: customer.id}
+      )
+
+      expect_graphql_error(result:, message: "Unprocessable Entity")
+    end
+  end
+
   context "when customer does not exists" do
     it "returns no results" do
       result = execute_graphql(
