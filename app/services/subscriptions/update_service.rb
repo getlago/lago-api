@@ -126,7 +126,7 @@ module Subscriptions
         return
       end
 
-      if !subscription.subscription_at.today?
+      if subscription.activation_rules.any?
         Subscriptions::ActivationRules::ApplyService.call!(
           subscription:,
           activation_rules: []
