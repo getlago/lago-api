@@ -169,13 +169,13 @@ module Subscriptions
 
         #
         if async
-          Invoices::RateScheduleBillingJob.perform_after_commit(
+          Invoices::RateSchedulesBillingJob.perform_after_commit(
             [subscription.current_rate_schedule],
             subscription.terminated_at,
             invoicing_reason: :subscription_terminating
           )
         else
-          Invoices::RateScheduleBillingService.new(
+          Invoices::RateSchedulesBillingService.new(
             [subscription.current_rate_schedule],
             subscription.terminated_at,
             invoicing_reason: :subscription_terminating

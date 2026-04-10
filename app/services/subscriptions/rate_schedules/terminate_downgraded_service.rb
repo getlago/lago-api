@@ -68,7 +68,7 @@ module Subscriptions
       end
 
       def bill_subscriptions
-        Invoices::RateScheduleBillingService.new(
+        Invoices::RateSchedulesBillingJob.perform_later(
           [billable_rate_schedule],
           timestamp,
           invoicing_reason: :upgrading
