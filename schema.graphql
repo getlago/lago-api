@@ -8863,6 +8863,49 @@ enum OrderByEnum {
   net_revenue_amount_cents
 }
 
+type OrderForm {
+  billingSnapshot: JSON!
+  createdAt: ISO8601DateTime!
+  customer: Customer!
+  expiresAt: ISO8601DateTime
+  id: ID!
+  number: String!
+  signedAt: ISO8601DateTime
+  signedByUserId: ID
+  status: OrderFormStatusEnum!
+  updatedAt: ISO8601DateTime!
+  voidReason: OrderFormVoidReasonEnum
+  voidedAt: ISO8601DateTime
+}
+
+"""
+OrderFormCollection type
+"""
+type OrderFormCollection {
+  """
+  A collection of paginated OrderFormCollection
+  """
+  collection: [OrderForm!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+enum OrderFormStatusEnum {
+  expired
+  generated
+  signed
+  voided
+}
+
+enum OrderFormVoidReasonEnum {
+  expired
+  invalid
+  manual
+}
+
 """
 Safe Organization Type
 """
@@ -10218,6 +10261,21 @@ type Query {
   Query MRR of an organization
   """
   mrrs(billingEntityId: ID, currency: CurrencyEnum): MrrCollection!
+
+  """
+  Query a single order form
+  """
+  orderForm(
+    """
+    Uniq ID of the order form
+    """
+    id: ID!
+  ): OrderForm
+
+  """
+  Query order forms
+  """
+  orderForms(externalCustomerId: ID, limit: Int, page: Int, searchTerm: String, status: [OrderFormStatusEnum!]): OrderFormCollection!
 
   """
   Query the current organization

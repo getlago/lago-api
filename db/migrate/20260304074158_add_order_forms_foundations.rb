@@ -52,6 +52,9 @@ class AddOrderFormsFoundations < ActiveRecord::Migration[8.0]
         unique: true,
         order: {version: :desc},
         name: "index_unique_quotes_on_organization_sequentialid_version"
+      t.index [:organization_id, :number],
+        unique: true,
+        name: "index_unique_quotes_on_organization_number"
       t.index :share_token,
         unique: true,
         name: "index_unique_quotes_on_share_token"
@@ -104,6 +107,9 @@ class AddOrderFormsFoundations < ActiveRecord::Migration[8.0]
       t.index [:organization_id, :sequential_id],
         unique: true,
         name: "index_unique_order_forms_on_organization_sequentialid"
+      t.index [:organization_id, :number],
+        unique: true,
+        name: "index_unique_order_forms_on_organization_number"
     end
 
     create_enum :order_status, %w[created executed]
@@ -146,6 +152,9 @@ class AddOrderFormsFoundations < ActiveRecord::Migration[8.0]
       t.index [:organization_id, :sequential_id],
         unique: true,
         name: "index_unique_orders_on_organization_sequentialid"
+      t.index [:organization_id, :number],
+        unique: true,
+        name: "index_unique_orders_on_organization_number"
     end
 
     create_table :quote_owners do |t|
