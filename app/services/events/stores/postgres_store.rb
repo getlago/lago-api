@@ -230,14 +230,8 @@ module Events
       end
 
       def presentation_breakdown_sum
-        # FIXME: Cover when the same column is appearing in grouped_by and presentation_by
-        # hypothesis: drop the duplicated key in presentation_by because the key is already part of group_by
-        group_columns = []
-        group_columns.concat(sanitized_grouped_by) if grouped_by.present?
-        group_columns.concat(sanitized_presentation_by) if presentation_by.present?
-
         results = events
-          .group(group_columns)
+          .group(sanitized_grouped_by_and_presentation_by)
           .sum("(#{sanitized_property_name})::numeric")
           .map { |group, value| [group, value].flatten }
 
@@ -416,8 +410,8 @@ module Events
         grouped_by.map { sanitized_property_name(it) }
       end
 
-      def sanitized_presentation_by
-        presentation_by.map { sanitized_property_name(it) }
+      def sanitized_grouped_by_and_presentation_by
+        grouped_and_presentation_columns.values.flatten.map { |c| sanitized_property_name(c) }
       end
 
       delegate :connection, to: :Event
@@ -456,19 +450,19 @@ module Events
       end
 
       def prepare_presentation_result(rows)
-        grouped_by_count = grouped_by&.size || 0
-        presentation_by_count = presentation_by&.size || 0
+        grouped_by_count = grouped_and_presentation_columns[:grouped_by].size
+        presentation_by_count = grouped_and_presentation_columns[:presentation_by].size
 
         outer_map = {}
 
         rows.each do |row|
           grouped_attrs = {}
-          grouped_by&.each_with_index do |field, i|
+          grouped_and_presentation_columns[:grouped_by].each_with_index do |field, i|
             grouped_attrs[field] = row[i]
           end
 
           presentation_attrs = {}
-          presentation_by.each_with_index do |field, i|
+          grouped_and_presentation_columns[:presentation_by].each_with_index do |field, i|
             presentation_attrs[field] = row[grouped_by_count + i]
           end
 
@@ -479,6 +473,10 @@ module Events
         end
 
         outer_map.values
+      end
+
+      def grouped_and_presentation_columns
+        @grouped_and_presentation_columns ||= {grouped_by: grouped_by || [], presentation_by: presentation_by.difference(grouped_by || [])}
       end
 
       def operation_type_sql
