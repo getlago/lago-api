@@ -30,6 +30,8 @@ class OrderForm < ApplicationRecord
     instance_methods: false,
     validate: {allow_nil: true}
 
+  scope :expirable, -> { generated.where.not(expires_at: nil).where("expires_at < ?", Time.current) }
+
   validates :billing_snapshot, presence: true
 
   sequenced(

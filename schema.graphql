@@ -5615,6 +5615,7 @@ enum EventCategoryEnum {
   FEATURES
   INTEGRATIONS
   INVOICES
+  ORDER_FORMS
   PAYMENTS
   PAYMENT_RECEIPTS
   PLANS
@@ -5674,6 +5675,7 @@ enum EventTypeEnum {
   invoice_payment_status_updated
   invoice_resynced
   invoice_voided
+  order_form_expired
   payment_provider_error
   payment_receipt_created
   payment_receipt_generated

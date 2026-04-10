@@ -46,6 +46,7 @@ class SendWebhookJob < ApplicationJob
     "credit_note.generated" => Webhooks::CreditNotes::GeneratedService,
     "credit_note.provider_refund_failure" => Webhooks::CreditNotes::PaymentProviderRefundFailureService,
     "integration.provider_error" => Webhooks::Integrations::ProviderErrorService,
+    "order_form.expired" => Webhooks::OrderForms::ExpiredService,
     "payment.requires_action" => Webhooks::Payments::RequiresActionService,
     "payment.succeeded" => Webhooks::Payments::SucceededService,
     "payment_provider.error" => Webhooks::PaymentProviders::ErrorService,
