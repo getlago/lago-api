@@ -122,7 +122,7 @@ module Subscriptions
 
     def process_subscription_at_change(subscription)
       if subscription.subscription_at.future? || (subscription.subscription_at.today? && subscription.activation_rules.any?)
-        subscription.save!
+        subscription.pending!
         return
       end
 

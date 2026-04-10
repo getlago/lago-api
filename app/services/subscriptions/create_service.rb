@@ -19,9 +19,6 @@ module Subscriptions
     end
 
     def call
-      @current_subscription = editable_subscriptions
-        .find_by("id = ? OR external_id = ?", params[:subscription_id], external_id)
-
       return result unless valid?(
         customer:,
         plan:,
@@ -29,8 +26,7 @@ module Subscriptions
         ending_at: params[:ending_at],
         payment_method: params[:payment_method],
         activation_rules: params[:activation_rules],
-        subscription_type:,
-        subscription: current_subscription
+        subscription_type:
       )
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
       return result.validation_failure!(errors: {external_customer_id: ["value_is_mandatory"]}) if params[:external_customer_id].blank? && api_context?
@@ -147,11 +143,13 @@ module Subscriptions
         new_subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
-      if new_subscription.subscription_at.future? || (new_subscription.subscription_at.today? && params[:activation_rules]&.present?)
+      if new_subscription.subscription_at > Time.current
         new_subscription.pending!
         apply_activation_rules(new_subscription)
-      else
+      elsif new_subscription.subscription_at < Time.current
         new_subscription.mark_as_active!(new_subscription.subscription_at)
+      else
+        new_subscription.mark_as_active!
       end
 
       if new_subscription.active?
@@ -288,6 +286,7 @@ module Subscriptions
       return Subscription.none unless customer
 
       @editable_subscriptions ||= customer.subscriptions.active
+        .where.not(id: customer.subscriptions.incomplete.select(:previous_subscription_id))
         .or(customer.subscriptions.starting_in_the_future)
         .order(started_at: :desc)
     end

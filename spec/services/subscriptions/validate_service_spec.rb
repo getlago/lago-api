@@ -298,74 +298,16 @@ RSpec.describe Subscriptions::ValidateService do
 
     context "when subscription_type is upgrade" do
       let(:subscription_type) { "upgrade" }
+      let(:subscription) { create(:subscription, customer:, plan:, organization:) }
 
-      context "when subscription is starting in the future" do
-        let(:subscription) { create(:subscription, :pending, customer:, plan:, organization:) }
-
-        it { is_expected.to be_valid }
-      end
-
-      context "when subscription is active" do
-        let(:subscription) { create(:subscription, customer:, plan:, organization:) }
-
-        context "with no incomplete next_subscription" do
-          it { is_expected.to be_valid }
-        end
-
-        context "with incomplete next_subscription" do
-          let(:next_plan) { create(:plan, organization:) }
-
-          before do
-            create(
-              :subscription,
-              :incomplete,
-              customer:,
-              plan: next_plan,
-              organization:,
-              previous_subscription: subscription,
-              external_id: subscription.external_id
-            )
-          end
-
-          it "is invalid with subscription plan_change_not_allowed error" do
-            expect(validate_service).not_to be_valid
-            expect(result.error.messages[:subscription]).to eq(["plan_change_not_allowed"])
-          end
-        end
-      end
+      it { is_expected.to be_valid }
     end
 
     context "when subscription_type is downgrade" do
       let(:subscription_type) { "downgrade" }
+      let(:subscription) { create(:subscription, customer:, plan:, organization:) }
 
-      context "when subscription is active" do
-        let(:subscription) { create(:subscription, customer:, plan:, organization:) }
-
-        context "with no incomplete next_subscription" do
-          it { is_expected.to be_valid }
-        end
-
-        context "with incomplete next_subscription" do
-          let(:next_plan) { create(:plan, organization:) }
-
-          before do
-            create(
-              :subscription,
-              :incomplete,
-              customer:,
-              plan: next_plan,
-              organization:,
-              previous_subscription: subscription,
-              external_id: subscription.external_id
-            )
-          end
-
-          it "is invalid with subscription plan_change_not_allowed error" do
-            expect(validate_service).not_to be_valid
-            expect(result.error.messages[:subscription]).to eq(["plan_change_not_allowed"])
-          end
-        end
-      end
+      it { is_expected.to be_valid }
     end
 
     context "with activation_rules" do

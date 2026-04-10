@@ -106,23 +106,11 @@ module Subscriptions
     end
 
     def valid_subscription_status?
-      subscription = args[:subscription]
-      subscription_type = args[:subscription_type]
-      return true if subscription.nil?
+      return true if args[:subscription].nil?
+      return true unless args[:subscription_type] == "update"
+      return true unless args[:subscription].incomplete?
 
-      case subscription_type
-      when "update"
-        if subscription.incomplete?
-          return add_error(field: :subscription, error_code: "not_editable")
-        end
-      when "upgrade", "downgrade"
-        return true if subscription.starting_in_the_future?
-        return true if subscription.active? && !subscription.next_subscription&.incomplete?
-
-        return add_error(field: :subscription, error_code: "plan_change_not_allowed")
-      end
-
-      true
+      add_error(field: :subscription, error_code: "not_editable")
     end
 
     def valid_activation_rules?

@@ -1118,6 +1118,30 @@ RSpec.describe Subscriptions::CreateService do
               expect(next_subscription.reload).to be_canceled
             end
           end
+
+          context "with incomplete next subscription" do
+            let(:next_plan) { create(:plan, organization:) }
+
+            before do
+              create(
+                :subscription,
+                :incomplete,
+                customer:,
+                plan: next_plan,
+                organization:,
+                previous_subscription: subscription,
+                external_id: subscription.external_id
+              )
+            end
+
+            it "excludes subscription from editable scope and fails to create" do
+              result = create_service.call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages[:external_id]).to eq(["value_already_exist"])
+            end
+          end
         end
 
         context "when we downgrade the plan" do
@@ -1308,6 +1332,30 @@ RSpec.describe Subscriptions::CreateService do
               expect(next_subscription.reload).to be_canceled
             end
           end
+
+          context "with incomplete next subscription" do
+            let(:next_plan) { create(:plan, organization:) }
+
+            before do
+              create(
+                :subscription,
+                :incomplete,
+                customer:,
+                plan: next_plan,
+                organization:,
+                previous_subscription: subscription,
+                external_id: subscription.external_id
+              )
+            end
+
+            it "excludes subscription from editable scope and fails to create" do
+              result = create_service.call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages[:external_id]).to eq(["value_already_exist"])
+            end
+          end
         end
       end
     end
@@ -1343,13 +1391,14 @@ RSpec.describe Subscriptions::CreateService do
         context "when subscription_at is today" do
           let(:subscription_at) { Time.current.beginning_of_day.iso8601 }
 
-          it "creates pending subscription with activation rules" do
+          # TODO: The final version of this flow will set the subscription to pending and create the activation rules
+          it "creates active subscription without activation rules" do
             result = create_service.call
 
             expect(result).to be_success
             subscription = result.subscription
-            expect(subscription).to be_pending
-            expect(subscription.activation_rules.count).to eq(1)
+            expect(subscription).to be_active
+            expect(subscription.activation_rules.count).to eq(0)
           end
         end
       end
