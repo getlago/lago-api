@@ -37,8 +37,11 @@ module Wallets
       bm_map = Hash.new { |h, k| h[k] = [] }
       type_map = Hash.new { |h, k| h[k] = [] }
       unrestricted = []
+      wallet_currencies = {}
 
       wallets.each do |wallet|
+        wallet_currencies[wallet.id] = wallet.balance_currency
+
         if wallet.wallet_targets.any?
           handle_billable_metric_wallet(wallet, bm_map, type_map, unrestricted)
         elsif wallet.allowed_fee_types.present?
@@ -48,7 +51,7 @@ module Wallets
         end
       end
 
-      result.allocation_rules = {bm_map:, type_map:, unrestricted:}
+      result.allocation_rules = {bm_map:, type_map:, unrestricted:, wallet_currencies:}
       result
     end
 

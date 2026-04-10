@@ -11,6 +11,8 @@ RSpec.describe Wallets::BuildAllocationRulesService do
     let(:type_map) { allocation_rules[:type_map] }
     let(:unrestricted) { allocation_rules[:unrestricted] }
 
+    let(:wallet_currencies) { allocation_rules[:wallet_currencies] }
+
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
 
@@ -21,6 +23,7 @@ RSpec.describe Wallets::BuildAllocationRulesService do
         expect(bm_map).to eq({})
         expect(type_map).to eq({})
         expect(unrestricted).to eq([])
+        expect(wallet_currencies).to eq({})
       end
     end
 
@@ -28,12 +31,12 @@ RSpec.describe Wallets::BuildAllocationRulesService do
       let(:bm1) { create(:billable_metric, organization:) }
       let(:bm2) { create(:billable_metric, organization:) }
 
-      let!(:w_bm2) { create(:wallet, customer:, organization:, priority: 6) }
-      let!(:w_charge) { create(:wallet, customer:, organization:, priority: 2, allowed_fee_types: ["charge"]) }
-      let!(:w_bm1) { create(:wallet, customer:, organization:, priority: 4) }
-      let!(:w_subscription) { create(:wallet, customer:, organization:, priority: 3, allowed_fee_types: ["subscription"]) }
-      let!(:w_unres_low) { create(:wallet, customer:, organization:, priority: 5) }
-      let!(:w_unres_high) { create(:wallet, customer:, organization:, priority: 1) }
+      let!(:w_bm2) { create(:wallet, customer:, organization:, currency: "USD", priority: 6) }
+      let!(:w_charge) { create(:wallet, customer:, organization:, currency: "EUR", priority: 2, allowed_fee_types: ["charge"]) }
+      let!(:w_bm1) { create(:wallet, customer:, organization:, currency: "USD", priority: 4) }
+      let!(:w_subscription) { create(:wallet, customer:, organization:, currency: "EUR", priority: 3, allowed_fee_types: ["subscription"]) }
+      let!(:w_unres_low) { create(:wallet, customer:, organization:, currency: "EUR", priority: 5) }
+      let!(:w_unres_high) { create(:wallet, customer:, organization:, currency: "USD", priority: 1) }
 
       before do
         create(:wallet_target, wallet: w_bm1, billable_metric: bm1, organization:)
@@ -57,6 +60,16 @@ RSpec.describe Wallets::BuildAllocationRulesService do
 
         expect(bm_map[bm1.id]).to eq([w_unres_high.id, w_charge.id, w_bm1.id, w_unres_low.id])
         expect(bm_map[bm2.id]).to eq([w_unres_high.id, w_charge.id, w_unres_low.id, w_bm2.id])
+
+        # Wallet currencies map all active wallets to their currency
+        expect(wallet_currencies).to eq(
+          w_unres_high.id => w_unres_high.balance_currency,
+          w_charge.id => w_charge.balance_currency,
+          w_subscription.id => w_subscription.balance_currency,
+          w_bm1.id => w_bm1.balance_currency,
+          w_unres_low.id => w_unres_low.balance_currency,
+          w_bm2.id => w_bm2.balance_currency
+        )
       end
     end
 
@@ -78,6 +91,13 @@ RSpec.describe Wallets::BuildAllocationRulesService do
             wallet_priority_5_newer.id,
             wallet_priority_50.id
           ]
+        )
+
+        expect(wallet_currencies).to eq(
+          wallet_priority_1.id => wallet_priority_1.balance_currency,
+          wallet_priority_5_older.id => wallet_priority_5_older.balance_currency,
+          wallet_priority_5_newer.id => wallet_priority_5_newer.balance_currency,
+          wallet_priority_50.id => wallet_priority_50.balance_currency
         )
       end
     end
