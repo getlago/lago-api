@@ -113,15 +113,13 @@ module Subscriptions
       case subscription_type
       when "update"
         if subscription.incomplete?
-          add_error(field: :subscription, error_code: "not_editable")
-          return false
+          return add_error(field: :subscription, error_code: "not_editable")
         end
       when "upgrade", "downgrade"
         return true if subscription.starting_in_the_future?
         return true if subscription.active? && !subscription.next_subscription&.incomplete?
 
-        add_error(field: :subscription, error_code: "plan_change_not_allowed")
-        return false
+        return add_error(field: :subscription, error_code: "plan_change_not_allowed")
       end
 
       true

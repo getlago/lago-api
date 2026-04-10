@@ -8,7 +8,12 @@ module Subscriptions
           valid_timeout_hours?
           valid_payment_method?
 
-          !errors?
+          if errors?
+            result.validation_failure!(errors:)
+            return false
+          end
+
+          true
         end
 
         private
@@ -21,22 +26,12 @@ module Subscriptions
         end
 
         def valid_payment_method?
-          if args[:payment_method].present? && args[:payment_method][:payment_method_type] == PaymentMethod::PAYMENT_METHOD_TYPES[:manual]
-            add_error(field: :payment_method, error_code: "invalid_for_activation_rules")
-            return false
-          end
+          return true if args[:payment_method].present? && args[:payment_method][:payment_method_type] == PaymentMethod::PAYMENT_METHOD_TYPES[:provider]
+          return true if args[:payment_method].blank? && args[:subscription]&.payment_method_type == PaymentMethod::PAYMENT_METHOD_TYPES[:provider]
+          return true if args[:payment_method].blank? && args[:subscription].nil? && args[:customer]&.payment_provider.present?
 
-          if args[:subscription]&.payment_method_type == PaymentMethod::PAYMENT_METHOD_TYPES[:manual]
-            add_error(field: :payment_method, error_code: "invalid_for_activation_rules")
-            return false
-          end
-
-          if args[:subscription].nil? && args[:payment_method].blank? && args[:customer]&.payment_provider.blank?
-            add_error(field: :payment_method, error_code: "no_linked_payment_provider")
-            return false
-          end
-
-          true
+          return add_error(field: :payment_method, error_code: "no_linked_payment_provider") if args[:payment_method].blank? && args[:subscription].nil?
+          add_error(field: :payment_method, error_code: "invalid_for_activation_rules")
         end
       end
     end

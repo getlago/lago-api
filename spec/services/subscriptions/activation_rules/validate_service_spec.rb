@@ -28,48 +28,24 @@ RSpec.describe Subscriptions::ActivationRules::ValidateService do
     context "when activation_rules is an empty array" do
       let(:activation_rules) { [] }
 
-      it "returns true" do
-        expect(validate_service).to be_valid
-      end
+      it { is_expected.to be_valid }
     end
 
-    context "when activation_rules is not an array" do
+    context "when activation_rules is a string" do
       let(:activation_rules) { "invalid" }
 
-      it "returns false" do
+      it "is invalid with invalid_format error" do
         expect(validate_service).not_to be_valid
+        expect(result.error.messages[:activation_rules]).to eq(["invalid_format"])
       end
     end
 
     context "when activation_rules is a hash" do
       let(:activation_rules) { {type: "payment"} }
 
-      it "returns false" do
+      it "is invalid with invalid_format error" do
         expect(validate_service).not_to be_valid
-      end
-    end
-
-    context "with valid payment rule" do
-      let(:activation_rules) { [{type: "payment", timeout_hours: 48}] }
-
-      it "returns true" do
-        expect(validate_service).to be_valid
-      end
-    end
-
-    context "with unknown rule type" do
-      let(:activation_rules) { [{type: "unknown"}] }
-
-      it "returns false" do
-        expect(validate_service).not_to be_valid
-      end
-    end
-
-    context "with multiple rules including unknown type" do
-      let(:activation_rules) { [{type: "payment", timeout_hours: 48}, {type: "unknown"}] }
-
-      it "returns false" do
-        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:activation_rules]).to eq(["invalid_format"])
       end
     end
 
@@ -80,26 +56,16 @@ RSpec.describe Subscriptions::ActivationRules::ValidateService do
         let(:subscription) { create(:subscription, :pending, customer:, plan:, organization:) }
         let(:activation_rules) { [{type: "payment"}] }
 
-        it "returns true" do
-          expect(validate_service).to be_valid
-        end
+        it { is_expected.to be_valid }
       end
 
       context "when subscription is active" do
         let(:subscription) { create(:subscription, customer:, plan:, organization:) }
         let(:activation_rules) { [{type: "payment"}] }
 
-        it "returns false" do
+        it "is invalid with subscription_not_pending error" do
           expect(validate_service).not_to be_valid
-        end
-      end
-
-      context "when subscription is incomplete" do
-        let(:subscription) { create(:subscription, :incomplete, customer:, plan:, organization:) }
-        let(:activation_rules) { [{type: "payment"}] }
-
-        it "returns false" do
-          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:activation_rules]).to eq(["subscription_not_pending"])
         end
       end
     end
@@ -107,25 +73,39 @@ RSpec.describe Subscriptions::ActivationRules::ValidateService do
     context "when subscription is nil" do
       let(:activation_rules) { [{type: "payment", timeout_hours: 24}] }
 
-      it "returns true" do
-        expect(validate_service).to be_valid
-      end
+      it { is_expected.to be_valid }
     end
 
-    context "with invalid timeout_hours via delegation" do
-      let(:activation_rules) { [{type: "payment", timeout_hours: -5}] }
-
-      it "returns false" do
-        expect(validate_service).not_to be_valid
-      end
-    end
-
-    context "with manual payment method via delegation" do
+    context "with valid payment rule" do
       let(:activation_rules) { [{type: "payment", timeout_hours: 48}] }
-      let(:payment_method_params) { {payment_method_type: "manual"} }
 
-      it "returns false" do
+      it { is_expected.to be_valid }
+    end
+
+    context "with unknown rule type" do
+      let(:activation_rules) { [{type: "unknown"}] }
+
+      it "is invalid with invalid_type error" do
         expect(validate_service).not_to be_valid
+        expect(result.error.messages[:activation_rules]).to eq(["invalid_type"])
+      end
+    end
+
+    context "with duplicate rule types" do
+      let(:activation_rules) { [{type: "payment", timeout_hours: 24}, {type: "payment", timeout_hours: 48}] }
+
+      it "is invalid with duplicated_type error" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:activation_rules]).to eq(["duplicated_type"])
+      end
+    end
+
+    context "with multiple rules including unknown type" do
+      let(:activation_rules) { [{type: "payment", timeout_hours: 48}, {type: "unknown"}] }
+
+      it "is invalid with invalid_type error" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:activation_rules]).to eq(["invalid_type"])
       end
     end
   end

@@ -11,6 +11,18 @@ RSpec.describe Subscriptions::ActivationRules::ApplyService do
   let(:subscription) { create(:subscription, :pending, customer:, plan:, organization:) }
 
   describe "#call" do
+    context "when subscription is not pending" do
+      let(:subscription) { create(:subscription, customer:, plan:, organization:) }
+      let(:activation_rules) { [{type: "payment", timeout_hours: 48}] }
+
+      it "returns a validation failure" do
+        result = apply_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:activation_rules]).to eq(["subscription_not_pending"])
+      end
+    end
+
     context "when activation_rules is nil" do
       let(:subscription) { create(:subscription, :pending, :with_activation_rules, customer:, plan:, organization:) }
       let(:activation_rules) { nil }
@@ -31,7 +43,7 @@ RSpec.describe Subscriptions::ActivationRules::ApplyService do
         result = apply_service.call
 
         expect(result).to be_success
-        expect(subscription.activation_rules.reload).to be_empty
+        expect(result.activation_rules).to be_empty
       end
     end
 
@@ -42,9 +54,8 @@ RSpec.describe Subscriptions::ActivationRules::ApplyService do
         result = apply_service.call
 
         expect(result).to be_success
-        rules = subscription.activation_rules.reload
-        expect(rules.count).to eq(1)
-        expect(rules.first).to have_attributes(
+        expect(result.activation_rules.count).to eq(1)
+        expect(result.activation_rules.first).to have_attributes(
           type: "payment",
           timeout_hours: 48,
           status: "inactive",
@@ -58,15 +69,14 @@ RSpec.describe Subscriptions::ActivationRules::ApplyService do
       let(:activation_rules) { [{type: "payment", timeout_hours: 24}] }
 
       it "deletes old rules and creates new ones" do
-        old_rule_id = subscription.activation_rules.first.id
+        old_activation_rules = subscription.activation_rules.to_a
 
         result = apply_service.call
 
         expect(result).to be_success
-        expect(Subscription::ActivationRule.find_by(id: old_rule_id)).to be_nil
-        rules = subscription.activation_rules.reload
-        expect(rules.count).to eq(1)
-        expect(rules.first.timeout_hours).to eq(24)
+        expect(old_activation_rules).to all(be_destroyed)
+        expect(result.activation_rules.count).to eq(1)
+        expect(result.activation_rules.first.timeout_hours).to eq(24)
       end
     end
 
@@ -77,18 +87,7 @@ RSpec.describe Subscriptions::ActivationRules::ApplyService do
         result = apply_service.call
 
         expect(result).to be_success
-        expect(subscription.activation_rules.reload.first.timeout_hours).to eq(0)
-      end
-    end
-
-    context "when no existing rules and activation_rules is empty" do
-      let(:activation_rules) { [] }
-
-      it "returns success with no rules" do
-        result = apply_service.call
-
-        expect(result).to be_success
-        expect(subscription.activation_rules.reload).to be_empty
+        expect(result.activation_rules.first.timeout_hours).to eq(0)
       end
     end
   end

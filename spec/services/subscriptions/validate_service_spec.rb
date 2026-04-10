@@ -20,12 +20,16 @@ RSpec.describe Subscriptions::ValidateService do
       subscription_at:,
       ending_at:,
       on_termination_credit_note:,
-      on_termination_invoice:
+      on_termination_invoice:,
+      subscription:,
+      subscription_type:
     }
   end
 
   let(:on_termination_credit_note) { nil }
   let(:on_termination_invoice) { nil }
+  let(:subscription) { nil }
+  let(:subscription_type) { "create" }
 
   describe "#ending_at" do
     subject(:method_call) { validate_service.__send__(:ending_at) }
@@ -267,7 +271,104 @@ RSpec.describe Subscriptions::ValidateService do
       end
     end
 
-    context "with subscription_status validation" do
+    context "when subscription_type is update" do
+      let(:subscription_type) { "update" }
+
+      context "when subscription is incomplete" do
+        let(:subscription) { create(:subscription, :incomplete, customer:, plan:, organization:) }
+
+        it "is invalid with subscription not_editable error" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:subscription]).to eq(["not_editable"])
+        end
+      end
+
+      context "when subscription is active" do
+        let(:subscription) { create(:subscription, customer:, plan:, organization:) }
+
+        it { is_expected.to be_valid }
+      end
+
+      context "when subscription is pending" do
+        let(:subscription) { create(:subscription, :pending, customer:, plan:, organization:) }
+
+        it { is_expected.to be_valid }
+      end
+    end
+
+    context "when subscription_type is upgrade" do
+      let(:subscription_type) { "upgrade" }
+
+      context "when subscription is starting in the future" do
+        let(:subscription) { create(:subscription, :pending, customer:, plan:, organization:) }
+
+        it { is_expected.to be_valid }
+      end
+
+      context "when subscription is active" do
+        let(:subscription) { create(:subscription, customer:, plan:, organization:) }
+
+        context "with no incomplete next_subscription" do
+          it { is_expected.to be_valid }
+        end
+
+        context "with incomplete next_subscription" do
+          let(:next_plan) { create(:plan, organization:) }
+
+          before do
+            create(
+              :subscription,
+              :incomplete,
+              customer:,
+              plan: next_plan,
+              organization:,
+              previous_subscription: subscription,
+              external_id: subscription.external_id
+            )
+          end
+
+          it "is invalid with subscription plan_change_not_allowed error" do
+            expect(validate_service).not_to be_valid
+            expect(result.error.messages[:subscription]).to eq(["plan_change_not_allowed"])
+          end
+        end
+      end
+    end
+
+    context "when subscription_type is downgrade" do
+      let(:subscription_type) { "downgrade" }
+
+      context "when subscription is active" do
+        let(:subscription) { create(:subscription, customer:, plan:, organization:) }
+
+        context "with no incomplete next_subscription" do
+          it { is_expected.to be_valid }
+        end
+
+        context "with incomplete next_subscription" do
+          let(:next_plan) { create(:plan, organization:) }
+
+          before do
+            create(
+              :subscription,
+              :incomplete,
+              customer:,
+              plan: next_plan,
+              organization:,
+              previous_subscription: subscription,
+              external_id: subscription.external_id
+            )
+          end
+
+          it "is invalid with subscription plan_change_not_allowed error" do
+            expect(validate_service).not_to be_valid
+            expect(result.error.messages[:subscription]).to eq(["plan_change_not_allowed"])
+          end
+        end
+      end
+    end
+
+    context "with activation_rules" do
       let(:args) do
         {
           customer:,
@@ -277,154 +378,25 @@ RSpec.describe Subscriptions::ValidateService do
           on_termination_credit_note:,
           on_termination_invoice:,
           subscription:,
-          subscription_type:
+          subscription_type:,
+          activation_rules:
         }
       end
 
-      context "when subscription_type is update" do
-        let(:subscription_type) { "update" }
-
-        context "when subscription is incomplete" do
-          let(:subscription) { create(:subscription, :incomplete, customer:, plan:, organization:) }
-
-          it "returns false" do
-            expect(validate_service).not_to be_valid
-            expect(result.error.messages[:subscription]).to eq(["not_editable"])
-          end
-        end
-
-        context "when subscription is active" do
-          let(:subscription) { create(:subscription, customer:, plan:, organization:) }
-
-          it "returns true" do
-            expect(validate_service).to be_valid
-          end
-        end
-
-        context "when subscription is pending" do
-          let(:subscription) { create(:subscription, :pending, customer:, plan:, organization:) }
-
-          it "returns true" do
-            expect(validate_service).to be_valid
-          end
-        end
-      end
-
-      context "when subscription_type is upgrade" do
-        let(:subscription_type) { "upgrade" }
-
-        context "when subscription is starting_in_the_future" do
-          let(:subscription) { create(:subscription, :pending, customer:, plan:, organization:) }
-
-          it "returns true" do
-            expect(validate_service).to be_valid
-          end
-        end
-
-        context "when subscription is active with no incomplete next_subscription" do
-          let(:subscription) { create(:subscription, customer:, plan:, organization:) }
-
-          it "returns true" do
-            expect(validate_service).to be_valid
-          end
-        end
-
-        context "when subscription is active with incomplete next_subscription" do
-          let(:subscription) { create(:subscription, customer:, plan:, organization:) }
-          let(:next_plan) { create(:plan, organization:) }
-
-          before do
-            create(
-              :subscription,
-              :incomplete,
-              customer:,
-              plan: next_plan,
-              organization:,
-              previous_subscription: subscription,
-              external_id: "next_sub_ext_id"
-            )
-          end
-
-          it "returns false" do
-            expect(validate_service).not_to be_valid
-            expect(result.error.messages[:subscription]).to eq(["plan_change_not_allowed"])
-          end
-        end
-      end
-
-      context "when subscription_type is downgrade" do
-        let(:subscription_type) { "downgrade" }
-
-        context "when subscription is active with incomplete next_subscription" do
-          let(:subscription) { create(:subscription, customer:, plan:, organization:) }
-          let(:next_plan) { create(:plan, organization:) }
-
-          before do
-            create(
-              :subscription,
-              :incomplete,
-              customer:,
-              plan: next_plan,
-              organization:,
-              previous_subscription: subscription,
-              external_id: "next_sub_ext_id"
-            )
-          end
-
-          it "returns false" do
-            expect(validate_service).not_to be_valid
-            expect(result.error.messages[:subscription]).to eq(["plan_change_not_allowed"])
-          end
-        end
-      end
-
-      context "when subscription is nil" do
-        let(:subscription) { nil }
-        let(:subscription_type) { "update" }
-
-        it "returns true" do
-          expect(validate_service).to be_valid
-        end
-      end
-    end
-
-    context "with activation_rules validation" do
-      let(:args) do
-        {
-          customer:,
-          plan:,
-          subscription_at:,
-          ending_at:,
-          on_termination_credit_note:,
-          on_termination_invoice:,
-          activation_rules:,
-          subscription_type: "create"
-        }
-      end
-
-      context "when activation_rules is nil" do
-        let(:activation_rules) { nil }
-
-        it "returns true" do
-          expect(validate_service).to be_valid
-        end
-      end
+      let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
 
       context "when activation_rules contains valid payment rule" do
-        let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
         let(:activation_rules) { [{type: "payment", timeout_hours: 48}] }
 
-        it "returns true" do
-          expect(validate_service).to be_valid
-        end
+        it { is_expected.to be_valid }
       end
 
-      context "when activation_rules contains invalid type" do
-        let(:activation_rules) { [{type: "unknown"}] }
+      context "when activation_rules contains invalid payment rule" do
+        let(:activation_rules) { [{type: "unknown", timeout_hours: 48}] }
 
-        it "returns false" do
+        it "is invalid with invalid_type error" do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[:activation_rules]).to include("invalid_type")
+          expect(result.error.messages[:activation_rules]).to eq(["invalid_type"])
         end
       end
     end

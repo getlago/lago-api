@@ -30,7 +30,7 @@ module Subscriptions
         payment_method: params[:payment_method],
         activation_rules: params[:activation_rules],
         subscription_type: "update",
-        subscription: subscription
+        subscription:
       )
         return result
       end
@@ -69,7 +69,7 @@ module Subscriptions
           UpdateUsageThresholdsService.call!(subscription:, usage_thresholds_params: params[:usage_thresholds], partial: false)
         end
 
-        if params.key?(:activation_rules)
+        if params.key?(:activation_rules) && !subscription_at_changing_to_past?
           Subscriptions::ActivationRules::ApplyService.call!(
             subscription:,
             activation_rules: params[:activation_rules]
@@ -113,31 +113,39 @@ module Subscriptions
       subscription.plan.pay_in_advance?
     end
 
+    def subscription_at_changing_to_past?
+      return false unless subscription.starting_in_the_future?
+      return false unless params.key?(:subscription_at)
+
+      DateTime.parse(params[:subscription_at]).to_date < Date.current
+    end
+
     def process_subscription_at_change(subscription)
-      if subscription.subscription_at <= Time.current
-        if subscription.subscription_at < Time.current
-          Subscriptions::ActivationRules::ApplyService.call!(
-            subscription:,
-            activation_rules: []
-          )
-        end
-
-        subscription.mark_as_active!(subscription.subscription_at)
-
-        EmitFixedChargeEventsService.call!(
-          subscriptions: [subscription],
-          timestamp: subscription.started_at + 1.second
-        )
-
-        if subscription.subscription_at.today?
-          if subscription.plan.pay_in_advance?
-            BillSubscriptionJob.perform_after_commit([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
-          elsif subscription.fixed_charges.pay_in_advance.any?
-            Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, subscription.started_at + 1.second)
-          end
-        end
-      else
+      if subscription.subscription_at.future? || (subscription.subscription_at.today? && subscription.activation_rules.any?)
         subscription.save!
+        return
+      end
+
+      if !subscription.subscription_at.today?
+        Subscriptions::ActivationRules::ApplyService.call!(
+          subscription:,
+          activation_rules: []
+        )
+      end
+
+      subscription.mark_as_active!(subscription.subscription_at)
+
+      EmitFixedChargeEventsService.call!(
+        subscriptions: [subscription],
+        timestamp: subscription.started_at + 1.second
+      )
+
+      if subscription.subscription_at.today?
+        if subscription.plan.pay_in_advance?
+          BillSubscriptionJob.perform_after_commit([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
+        elsif subscription.fixed_charges.pay_in_advance.any?
+          Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, subscription.started_at + 1.second)
+        end
       end
     end
 

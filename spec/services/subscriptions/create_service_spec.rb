@@ -1328,6 +1328,32 @@ RSpec.describe Subscriptions::CreateService do
         }
       end
 
+      context "when subscription_at is in the past" do
+        let(:subscription_at) { (Time.current - 5.days).iso8601 }
+
+        it "creates active subscription without activation rules" do
+          result = create_service.call
+
+          expect(result).to be_success
+          subscription = result.subscription
+          expect(subscription).to be_active
+          expect(subscription.activation_rules.count).to eq(0)
+        end
+
+        context "when subscription_at is today" do
+          let(:subscription_at) { Time.current.beginning_of_day.iso8601 }
+
+          it "creates pending subscription with activation rules" do
+            result = create_service.call
+
+            expect(result).to be_success
+            subscription = result.subscription
+            expect(subscription).to be_pending
+            expect(subscription.activation_rules.count).to eq(1)
+          end
+        end
+      end
+
       context "when subscription_at is in the future" do
         let(:subscription_at) { (Time.current + 5.days).iso8601 }
 
@@ -1343,32 +1369,6 @@ RSpec.describe Subscriptions::CreateService do
             timeout_hours: 48,
             status: "inactive"
           )
-        end
-      end
-
-      context "when subscription_at is in the past" do
-        let(:subscription_at) { (Time.current - 5.days).iso8601 }
-
-        it "creates active subscription without activation rules" do
-          result = create_service.call
-
-          expect(result).to be_success
-          subscription = result.subscription
-          expect(subscription).to be_active
-          expect(subscription.activation_rules.count).to eq(0)
-        end
-      end
-
-      context "when subscription_at is earlier today" do
-        let(:subscription_at) { Time.current.beginning_of_day.iso8601 }
-
-        it "creates pending subscription with activation rules" do
-          result = create_service.call
-
-          expect(result).to be_success
-          subscription = result.subscription
-          expect(subscription).to be_pending
-          expect(subscription.activation_rules.count).to eq(1)
         end
       end
 
@@ -1395,6 +1395,37 @@ RSpec.describe Subscriptions::CreateService do
         end
       end
 
+      context "when timeout_hours is omitted" do
+        let(:subscription_at) { (Time.current + 5.days).iso8601 }
+
+        let(:params) do
+          {
+            external_customer_id:,
+            plan_code:,
+            name:,
+            external_id:,
+            billing_time:,
+            subscription_at:,
+            subscription_id:,
+            activation_rules: [{type: "payment"}]
+          }
+        end
+
+        it "creates activation rule with timeout_hours defaulting to 0" do
+          result = create_service.call
+
+          expect(result).to be_success
+          subscription = result.subscription
+          expect(subscription).to be_pending
+          expect(subscription.activation_rules.count).to eq(1)
+          expect(subscription.activation_rules.first).to have_attributes(
+            type: "payment",
+            timeout_hours: 0,
+            status: "inactive"
+          )
+        end
+      end
+
       context "with negative timeout_hours" do
         let(:params) do
           {
@@ -1417,27 +1448,49 @@ RSpec.describe Subscriptions::CreateService do
           expect(result.error.messages[:timeout_hours]).to include("value_must_be_positive_or_zero")
         end
       end
+    end
 
-      context "when activation_rules is nil" do
-        let(:params) do
-          {
-            external_customer_id:,
-            plan_code:,
-            name:,
-            external_id:,
-            billing_time:,
-            subscription_at:,
-            subscription_id:,
-            activation_rules: nil
-          }
-        end
+    context "when activation_rules is nil" do
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          activation_rules: nil
+        }
+      end
 
-        it "creates subscription without activation rules" do
-          result = create_service.call
+      it "creates subscription without activation rules" do
+        result = create_service.call
 
-          expect(result).to be_success
-          expect(result.subscription.activation_rules.count).to eq(0)
-        end
+        expect(result).to be_success
+        expect(result.subscription.activation_rules.count).to eq(0)
+      end
+    end
+
+    context "when activation_rules is empty" do
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          activation_rules: []
+        }
+      end
+
+      it "creates subscription without activation rules" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.activation_rules.count).to eq(0)
       end
     end
   end

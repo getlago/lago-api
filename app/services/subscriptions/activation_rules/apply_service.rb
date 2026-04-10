@@ -3,6 +3,8 @@
 module Subscriptions
   module ActivationRules
     class ApplyService < BaseService
+      Result = BaseResult[:activation_rules]
+
       def initialize(subscription:, activation_rules:)
         @subscription = subscription
         @activation_rules = activation_rules
@@ -12,22 +14,19 @@ module Subscriptions
 
       def call
         return result if activation_rules.nil?
+        return result.single_validation_failure!(field: :activation_rules, error_code: "subscription_not_pending") unless subscription.pending?
 
         subscription.activation_rules.destroy_all
 
-        return result if activation_rules.empty?
-
         activation_rules.each do |rule_params|
-          attrs = {
+          subscription.activation_rules.create!(
             organization_id: subscription.organization_id,
-            type: rule_params[:type],
-            status: :inactive
-          }
-          attrs[:timeout_hours] = rule_params[:timeout_hours] if rule_params.key?(:timeout_hours)
-
-          subscription.activation_rules.create!(attrs)
+            status: :inactive,
+            **rule_params.slice(:type, :timeout_hours)
+          )
         end
 
+        result.activation_rules = subscription.activation_rules.reload
         result
       end
 

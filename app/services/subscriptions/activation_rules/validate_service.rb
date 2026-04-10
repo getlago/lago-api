@@ -5,10 +5,15 @@ module Subscriptions
     class ValidateService < BaseValidator
       def valid?
         valid_activation_rules_format?
-        valid_subscription_status? unless errors?
-        valid_rules? unless errors?
+        valid_subscription_status?
+        valid_rules? unless errors[:activation_rules]&.include?("invalid_format")
 
-        !errors?
+        if errors?
+          result.validation_failure!(errors:)
+          return false
+        end
+
+        true
       end
 
       private
@@ -34,13 +39,21 @@ module Subscriptions
 
           validate_specific_rule(rule)
         end
+
+        duplicated_rule_types?
+      end
+
+      def duplicated_rule_types?
+        types = args[:activation_rules].map { |rule| rule[:type].to_s }
+        return true if types.uniq.size == types.size
+
+        add_error(field: :activation_rules, error_code: "duplicated_type")
       end
 
       def valid_rule_type?(rule)
         return true if Subscription::ActivationRule::STI_MAPPING.key?(rule[:type].to_s)
 
         add_error(field: :activation_rules, error_code: "invalid_type")
-        false
       end
 
       def validate_specific_rule(rule)

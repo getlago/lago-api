@@ -29,7 +29,7 @@ module Subscriptions
         ending_at: params[:ending_at],
         payment_method: params[:payment_method],
         activation_rules: params[:activation_rules],
-        subscription_type: subscription_type,
+        subscription_type:,
         subscription: current_subscription
       )
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
@@ -147,7 +147,7 @@ module Subscriptions
         new_subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
-      if new_subscription.subscription_at > Time.current || (new_subscription.subscription_at.today? && activation_rules?)
+      if new_subscription.subscription_at.future? || (new_subscription.subscription_at.today? && params[:activation_rules]&.present?)
         new_subscription.pending!
         apply_activation_rules(new_subscription)
       else
@@ -275,12 +275,8 @@ module Subscriptions
       end
     end
 
-    def activation_rules?
-      params.key?(:activation_rules) && params[:activation_rules].present?
-    end
-
     def apply_activation_rules(subscription)
-      return unless params.key?(:activation_rules)
+      return unless params[:activation_rules]&.present?
 
       Subscriptions::ActivationRules::ApplyService.call!(
         subscription:,
