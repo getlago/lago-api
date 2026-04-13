@@ -1014,6 +1014,20 @@ RSpec.describe Subscriptions::UpdateService do
               end
             end
           end
+
+          context "when subscription is not starting in the future" do
+            let(:subscription) { create(:subscription, :pending, :with_previous_subscription, :with_activation_rules, activation_rules_config: [{type: "payment", timeout_hours: 48}]) }
+            let(:params) { {activation_rules: [{type: "payment", timeout_hours: 24}]} }
+
+            it "replaces existing activation rules" do
+              result = update_service.call
+
+              expect(result).to be_success
+              rules = subscription.activation_rules.reload
+              expect(rules.count).to eq(1)
+              expect(rules.first.timeout_hours).to eq(24)
+            end
+          end
         end
 
         context "when activation rules do not exist" do
@@ -1052,6 +1066,20 @@ RSpec.describe Subscriptions::UpdateService do
 
               expect(result).to be_success
               expect(result.subscription).to be_active
+            end
+          end
+
+          context "when subscription is not starting in the future" do
+            let(:subscription) { create(:subscription, :pending, :with_previous_subscription) }
+            let(:params) { {activation_rules: [{type: "payment", timeout_hours: 24}]} }
+
+            it "applies activation rules" do
+              result = update_service.call
+
+              expect(result).to be_success
+              rules = subscription.activation_rules.reload
+              expect(rules.count).to eq(1)
+              expect(rules.first.timeout_hours).to eq(24)
             end
           end
         end
