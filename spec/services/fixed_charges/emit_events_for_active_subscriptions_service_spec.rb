@@ -77,6 +77,43 @@ RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService do
       expect(FixedChargeEvent.where(subscription: terminated_subscription, fixed_charge:)).not_to exist
     end
 
+    context "when there are incomplete subscriptions" do
+      let(:incomplete_subscription) do
+        create(
+          :subscription,
+          :incomplete,
+          :anniversary,
+          plan:,
+          customer: customer_1,
+          started_at: 1.day.ago,
+          subscription_at: 1.day.ago
+        )
+      end
+
+      before { incomplete_subscription }
+
+      it "creates fixed charge events for incomplete subscriptions" do
+        expect(FixedChargeEvent.where(subscription: incomplete_subscription, fixed_charge:)).not_to exist
+
+        result
+
+        expect(FixedChargeEvent.where(subscription: incomplete_subscription, fixed_charge:)).to exist
+      end
+    end
+
+    context "when a provided subscription is incomplete" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :anniversary, plan:, started_at: 1.day.ago, subscription_at: 1.day.ago)
+      end
+
+      it "creates fixed charge event for the incomplete subscription" do
+        expect { result }.to change(FixedChargeEvent, :count).by(1)
+
+        event = FixedChargeEvent.find_by(subscription:, fixed_charge:)
+        expect(event).to be_present
+      end
+    end
+
     context "when there are no active subscriptions" do
       let(:active_subscription_1) { nil }
       let(:active_subscription_2) { nil }

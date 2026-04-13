@@ -41,7 +41,9 @@ module Events
     def subscriptions
       return @subscriptions if defined? @subscriptions
 
-      subscriptions = organization.subscriptions.where(external_id: event.external_subscription_id)
+      subscriptions = organization.subscriptions
+        .where(external_id: event.external_subscription_id)
+        .where.not(status: :incomplete)
       return unless subscriptions
 
       @subscriptions = subscriptions
