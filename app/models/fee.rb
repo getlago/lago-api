@@ -363,11 +363,13 @@ end
 #  pay_in_advance_event_id             :uuid
 #  pay_in_advance_event_transaction_id :string
 #  subscription_id                     :uuid
+#  subscription_rate_schedule_cycle_id :uuid
 #  subscription_rate_schedule_id       :uuid
 #  true_up_parent_fee_id               :uuid
 #
 # Indexes
 #
+#  idx_fees_on_srs_cycle_id                            (subscription_rate_schedule_cycle_id)
 #  idx_pay_in_advance_duplication_guard_charge         (pay_in_advance_event_transaction_id,charge_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false))
 #  idx_pay_in_advance_duplication_guard_charge_filter  (pay_in_advance_event_transaction_id,charge_id,charge_filter_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false))
 #  index_fees_on_add_on_id                             (add_on_id)
@@ -398,6 +400,7 @@ end
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)
+#  fk_rails_...  (subscription_rate_schedule_cycle_id => subscription_rate_schedule_cycles.id)
 #  fk_rails_...  (subscription_rate_schedule_id => subscription_rate_schedules.id)
 #  fk_rails_...  (true_up_parent_fee_id => fees.id)
 #
