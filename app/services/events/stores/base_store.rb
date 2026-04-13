@@ -93,6 +93,10 @@ module Events
         raise NotImplementedError
       end
 
+      def presentation_breakdown_latest
+        raise NotImplementedError
+      end
+
       def sum_precise_total_amount_cents
         raise NotImplementedError
       end

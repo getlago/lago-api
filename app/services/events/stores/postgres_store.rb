@@ -237,6 +237,16 @@ module Events
         presentation_breakdown(aggregation_sql: "COUNT(*)")
       end
 
+      def presentation_breakdown_latest
+        presentation_breakdown(
+          aggregation_sql: <<~SQL.squish
+            (ARRAY_AGG((#{sanitized_property_name})::numeric
+              ORDER BY events.timestamp DESC, events.created_at DESC
+            ))[1]
+          SQL
+        )
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
