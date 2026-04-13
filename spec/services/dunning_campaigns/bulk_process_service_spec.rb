@@ -725,6 +725,155 @@ RSpec.describe DunningCampaigns::BulkProcessService do
         expect(SendWebhookJob).not_to have_been_enqueued
       end
     end
+
+    context "when one currency is maxed and another has overdue below threshold" do
+      let(:dunning_campaign) { create :dunning_campaign, organization:, max_attempts: 3, days_between_attempts: 1 }
+
+      let(:usd_threshold) do
+        create(:dunning_campaign_threshold, dunning_campaign:, currency: "USD", amount_cents: 40_00)
+      end
+
+      let(:eur_threshold) do
+        create(:dunning_campaign_threshold, dunning_campaign:, currency: "EUR", amount_cents: 80_00)
+      end
+
+      let(:customer) do
+        create :customer, organization:, billing_entity:, currency: "USD",
+          dunning_currency_attempts: {"USD" => 3},
+          last_dunning_campaign_attempt_at: 2.days.ago
+      end
+
+      before do
+        usd_threshold
+        eur_threshold
+        billing_entity.update!(applied_dunning_campaign: dunning_campaign)
+        create(:invoice, organization:, customer:, currency: "USD", payment_overdue: true, total_amount_cents: 50_00)
+        create(:invoice, organization:, customer:, currency: "EUR", payment_overdue: true, total_amount_cents: 52_07)
+      end
+
+      it "sends the campaign finished webhook" do
+        expect { result }.to have_enqueued_job(SendWebhookJob)
+          .with("dunning_campaign.finished", customer, {dunning_campaign_code: dunning_campaign.code})
+      end
+
+      it "marks all currencies as exhausted to prevent duplicate webhooks" do
+        result
+        customer.reload
+        expect(customer.dunning_currency_attempts).to eq("USD" => 3, "EUR" => 3)
+      end
+
+      it "does not enqueue any process attempt job" do
+        result
+        expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when one currency is maxed and another has no overdue at all" do
+      let(:dunning_campaign) { create :dunning_campaign, organization:, max_attempts: 2, days_between_attempts: 1 }
+
+      let(:usd_threshold) do
+        create(:dunning_campaign_threshold, dunning_campaign:, currency: "USD", amount_cents: 40_00)
+      end
+
+      let(:eur_threshold) do
+        create(:dunning_campaign_threshold, dunning_campaign:, currency: "EUR", amount_cents: 20_00)
+      end
+
+      let(:customer) do
+        create :customer, organization:, billing_entity:, currency: "USD",
+          dunning_currency_attempts: {"USD" => 2},
+          last_dunning_campaign_attempt_at: 2.days.ago
+      end
+
+      before do
+        usd_threshold
+        eur_threshold
+        billing_entity.update!(applied_dunning_campaign: dunning_campaign)
+        create(:invoice, organization:, customer:, currency: "USD", payment_overdue: true, total_amount_cents: 50_00)
+      end
+
+      it "sends the campaign finished webhook" do
+        expect { result }.to have_enqueued_job(SendWebhookJob)
+          .with("dunning_campaign.finished", customer, {dunning_campaign_code: dunning_campaign.code})
+      end
+
+      it "marks all currencies as exhausted to prevent duplicate webhooks" do
+        result
+        customer.reload
+        expect(customer.dunning_currency_attempts).to eq("USD" => 2, "EUR" => 2)
+      end
+
+      it "does not enqueue any process attempt job" do
+        result
+        expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when all currencies are already marked as exhausted from a previous run" do
+      let(:dunning_campaign) { create :dunning_campaign, organization:, max_attempts: 3, days_between_attempts: 1 }
+
+      let(:usd_threshold) do
+        create(:dunning_campaign_threshold, dunning_campaign:, currency: "USD", amount_cents: 40_00)
+      end
+
+      let(:eur_threshold) do
+        create(:dunning_campaign_threshold, dunning_campaign:, currency: "EUR", amount_cents: 80_00)
+      end
+
+      let(:customer) do
+        create :customer, organization:, billing_entity:, currency: "USD",
+          dunning_currency_attempts: {"USD" => 3, "EUR" => 3},
+          last_dunning_campaign_attempt_at: 2.days.ago
+      end
+
+      before do
+        usd_threshold
+        eur_threshold
+        billing_entity.update!(applied_dunning_campaign: dunning_campaign)
+        create(:invoice, organization:, customer:, currency: "USD", payment_overdue: true, total_amount_cents: 50_00)
+        create(:invoice, organization:, customer:, currency: "EUR", payment_overdue: true, total_amount_cents: 52_07)
+      end
+
+      it "does not send the campaign finished webhook again" do
+        result
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when one currency was dunned but another was never triggered" do
+      let(:dunning_campaign) { create :dunning_campaign, organization:, max_attempts: 2, days_between_attempts: 1 }
+
+      let(:usd_threshold) do
+        create(:dunning_campaign_threshold, dunning_campaign:, currency: "USD", amount_cents: 40_00)
+      end
+
+      let(:gbp_threshold) do
+        create(:dunning_campaign_threshold, dunning_campaign:, currency: "GBP", amount_cents: 20_00)
+      end
+
+      let(:customer) do
+        create :customer, organization:, billing_entity:, currency: "USD",
+          dunning_currency_attempts: {"USD" => 2},
+          last_dunning_campaign_attempt_at: 2.days.ago
+      end
+
+      before do
+        usd_threshold
+        gbp_threshold
+        billing_entity.update!(applied_dunning_campaign: dunning_campaign)
+        create(:invoice, organization:, customer:, currency: "USD", payment_overdue: true, total_amount_cents: 50_00)
+      end
+
+      it "sends the campaign finished webhook since there is nothing left to do" do
+        expect { result }.to have_enqueued_job(SendWebhookJob)
+          .with("dunning_campaign.finished", customer, {dunning_campaign_code: dunning_campaign.code})
+      end
+
+      it "does not enqueue any process attempt job" do
+        result
+        expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+      end
+    end
   end
 
   it "does not queue jobs" do
