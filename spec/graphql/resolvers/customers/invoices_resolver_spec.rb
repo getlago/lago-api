@@ -94,6 +94,32 @@ RSpec.describe Resolvers::Customers::InvoicesResolver do
     end
   end
 
+  context "when preloading offset amounts" do
+    subject do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {customerId: customer.id}
+      )
+    end
+
+    let(:query) do
+      <<~GQL
+        query($customerId: ID!) {
+          customerInvoices(customerId: $customerId) {
+            collection { id totalDueAmountCents totalSettledAmountCents }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+    let(:preloadable_invoices) { [draft_invoice, finalized_invoice] }
+
+    include_examples "preloads offset amounts"
+  end
+
   context "when query fails" do
     it "returns an error" do
       allow(InvoicesQuery).to receive(:call).and_return(

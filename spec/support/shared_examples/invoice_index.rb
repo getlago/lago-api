@@ -61,6 +61,15 @@ RSpec.shared_examples "an invoice index endpoint" do
     end
   end
 
+  context "when preloading offset amounts" do
+    let(:params) { {} }
+    let(:preloadable_invoices) { create_list(:invoice, 2, customer:, organization:) }
+
+    before { preloadable_invoices }
+
+    include_examples "preloads offset amounts"
+  end
+
   context "with issuing_date params" do
     let(:params) do
       {issuing_date_from: 2.days.ago.to_date, issuing_date_to: Date.tomorrow.to_date}
