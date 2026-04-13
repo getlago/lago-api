@@ -27,7 +27,7 @@ module Charges
           charge.children.where(id: child_ids).find_each do |child_charge|
             Charges::UpdateService.call!(
               charge: child_charge,
-              params: params.deep_dup,
+              params:,
               cascade_options: {
                 cascade: true,
                 parent_filters:,
