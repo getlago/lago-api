@@ -118,12 +118,24 @@ RSpec.describe Charges::UpdateChildrenService do
         end
       end
 
-      it "does not touch child charge from filter saves" do
-        allow(Charge).to receive(:no_touching).and_call_original
+      it "does not issue an extra child charge update from filter saves" do
+        child_charge_updates = []
 
-        update_service.call
+        callback = lambda do |_name, _start, _finish, _id, payload|
+          sql = payload[:sql]
+          next unless sql.match?(/\AUPDATE\s+"charges"/i)
 
-        expect(Charge).to have_received(:no_touching).once
+          binds = payload[:type_casted_binds] || payload[:binds]
+          next unless Array(binds).include?(child_charge.id)
+
+          child_charge_updates << sql
+        end
+
+        ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+          update_service.call
+        end
+
+        expect(child_charge_updates.size).to eq(1)
       end
     end
 
