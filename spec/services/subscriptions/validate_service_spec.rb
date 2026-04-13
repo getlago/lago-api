@@ -294,7 +294,7 @@ RSpec.describe Subscriptions::ValidateService do
         it { is_expected.to be_valid }
       end
 
-      context "when activation_rules contains invalid payment rule" do
+      context "when activation_rules contains invalid rule" do
         let(:activation_rules) { [{type: "unknown", timeout_hours: 48}] }
 
         it "is invalid with invalid_type error" do
