@@ -9,7 +9,7 @@
 RSpec.shared_examples "preloads offset amounts" do
   before do
     preloadable_invoices.each do |invoice|
-      create(:credit_note, :finalized, invoice:, offset_amount_cents: 100)
+      create(:credit_note, status: :finalized, invoice:, offset_amount_cents: 100)
     end
   end
 

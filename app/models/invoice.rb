@@ -299,7 +299,7 @@ class Invoice < ApplicationRecord
   # Batch-loads offset_amount_cents for a collection of invoices in a single query,
   # caching the result on each instance to avoid N+1 queries during serialization.
   def self.preload_offset_amounts(invoices)
-    return if invoices.blank?
+    return unless invoices
 
     invoice_ids = invoices.map(&:id).compact
 
