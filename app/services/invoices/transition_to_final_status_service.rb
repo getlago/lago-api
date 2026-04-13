@@ -10,7 +10,9 @@ module Invoices
     end
 
     def call
-      if should_finalize_invoice?
+      if invoice.subscription_gated? && invoice.total_amount_cents.positive?
+        # Keep open for payment-gated invoices awaiting payment resolution
+      elsif should_finalize_invoice?
         Invoices::FinalizeService.call!(invoice: invoice)
       else
         invoice.status = :closed
