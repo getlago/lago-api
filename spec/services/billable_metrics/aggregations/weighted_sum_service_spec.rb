@@ -20,7 +20,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
 
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:bypass_aggregation) { false }
-  let(:filters) { {grouped_by:, matching_filters:, ignored_filters:} }
+  let(:filters) { {grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }
 
   let(:subscription) { create(:subscription, started_at: DateTime.parse("2023-04-01 22:22:22")) }
   let(:organization) { subscription.organization }
@@ -28,6 +28,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
   let(:grouped_by) { nil }
   let(:matching_filters) { nil }
   let(:ignored_filters) { nil }
+  let(:presentation_by) { nil }
 
   let(:billable_metric) { create(:weighted_sum_billable_metric, organization:) }
 
@@ -77,6 +78,28 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
 
     expect(result.aggregation.round(5).to_s).to eq("0.02218")
     expect(result.count).to eq(7)
+  end
+
+  context "when using presentation_by" do
+    let(:presentation_by) { ["region"] }
+
+    let(:events_values) do
+      [
+        {timestamp: Time.zone.parse("2023-08-01 00:00:00.000"), value: 2, region: "eu"},
+        {timestamp: Time.zone.parse("2023-08-01 01:00:00"), value: 3, region: "us"},
+        {timestamp: Time.zone.parse("2023-08-01 02:00:00"), value: -1, region: "eu"}
+      ]
+    end
+
+    it "returns presentation breakdowns" do
+      result = aggregator.aggregate
+
+      region_eu = result.breakdowns.first[:breakdowns].find { |b| b[:presentation_by]["region"] == "eu" }
+      expect(region_eu[:units].round(5).to_s).to eq("1.00269")
+
+      region_us = result.breakdowns.first[:breakdowns].find { |b| b[:presentation_by]["region"] == "us" }
+      expect(region_us[:units].round(5).to_s).to eq("2.99597")
+    end
   end
 
   context "with a single event" do
@@ -220,6 +243,27 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           expect(result.variation).to eq(0)
           expect(result.total_aggregated_units).to eq(10)
           expect(result.recurring_updated_at).to eq(from_datetime)
+        end
+
+        context "when using presentation_by" do
+          let(:presentation_by) { ["region"] }
+
+          let(:events_values) do
+            [
+              {timestamp: Time.zone.parse("2023-08-01 00:00:00.000"), value: 2, region: "eu"},
+              {timestamp: Time.zone.parse("2023-08-01 01:00:00"), value: 3, region: "eu"}
+            ]
+          end
+
+          it "returns presentation breakdowns" do
+            result = aggregator.aggregate
+
+            region_eu = result.breakdowns.first[:breakdowns].find { |b| b[:presentation_by]["region"] == "eu" }
+            expect(region_eu[:units].round(5).to_s).to eq("4.99597")
+
+            region_nil = result.breakdowns.first[:breakdowns].find { |b| b[:presentation_by]["region"].nil? }
+            expect(region_nil[:units].round(5).to_s).to eq("10.0")
+          end
         end
       end
     end

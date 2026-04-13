@@ -251,6 +251,55 @@ module Events
         presentation_breakdown(aggregation_sql: "MAX((#{sanitized_property_name})::numeric)")
       end
 
+      def presentation_breakdown_unique_count
+        # NOTE: Important to use a dup to avoid mutate the current object grouped_by using presentation_by values
+        # also, set presentation_by to nil to avoid any confusion in the query building
+        unique_store_for_breakdown = dup
+        unique_store_for_breakdown.grouped_by = grouped_and_presentation_columns.values.flatten
+        weighted_sum_store_for_breakdown.presentation_by = nil
+
+        query = Events::Stores::Postgres::UniqueCountQuery.new(store: unique_store_for_breakdown)
+
+        sql = sanitize_sql_for_conditions(
+          [query.grouped_query]
+        )
+
+        prepare_presentation_result(select_all(sql).rows)
+      end
+
+      def presentation_breakdown_weighted_sum(initial_value: 0, initial_values: [])
+        # NOTE: Important to use a dup to avoid mutate the current object grouped_by using presentation_by values
+        # also, set presentation_by to nil to avoid any confusion in the query building
+        weighted_sum_store_for_breakdown = dup
+        weighted_sum_store_for_breakdown.grouped_by = grouped_and_presentation_columns.values.flatten
+        weighted_sum_store_for_breakdown.presentation_by = nil
+
+        query = Events::Stores::Postgres::WeightedSumQuery.new(store: weighted_sum_store_for_breakdown)
+
+        baseline_initial_values = if initial_values.present?
+          initial_values
+        elsif initial_value.to_d.nonzero?
+          [{groups: {}, value: initial_value}]
+        else
+          []
+        end
+
+        formatted_initial_values = weighted_sum_store_for_breakdown.formatted_weighted_sum_initial_values(baseline_initial_values)
+        return [] if formatted_initial_values.empty?
+
+        sql = sanitize_sql_for_conditions(
+          [
+            sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
+            {
+              from_datetime:,
+              to_datetime: to_datetime.ceil
+            }
+          ]
+        )
+
+        prepare_presentation_result(select_all(sql).rows)
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
@@ -321,26 +370,12 @@ module Events
       def grouped_weighted_sum(initial_values: [])
         query = Events::Stores::Postgres::WeightedSumQuery.new(store: self)
 
-        # NOTE: build the list of initial values for each groups
-        #       from the events in the period
-        formated_initial_values = grouped_count.map do |group|
-          value = 0
-          previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
-          value = previous_group[:value] if previous_group
-          {groups: group[:groups], value:}
-        end
-
-        # NOTE: add the initial values for groups that are not in the events
-        initial_values.each do |intial_value|
-          next if formated_initial_values.find { |g| g[:groups] == intial_value[:groups] }
-
-          formated_initial_values << intial_value
-        end
-        return [] if formated_initial_values.empty?
+        formatted_initial_values = formatted_weighted_sum_initial_values(initial_values)
+        return [] if formatted_initial_values.empty?
 
         sql = sanitize_sql_for_conditions(
           [
-            sanitize_colon(query.grouped_query(initial_values: formated_initial_values)),
+            sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
             {
               from_datetime:,
               to_datetime: to_datetime.ceil
@@ -349,6 +384,26 @@ module Events
         )
 
         prepare_grouped_result(select_all(sql).rows)
+      end
+
+      def formatted_weighted_sum_initial_values(initial_values)
+        # NOTE: build the list of initial values for each groups
+        #       from the events in the period
+        formatted_initial_values = grouped_count.map do |group|
+          value = 0
+          previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
+          value = previous_group[:value] if previous_group
+          {groups: group[:groups], value:}
+        end
+
+        # NOTE: add the initial values for groups that are not in the events
+        initial_values.each do |initial_value|
+          next if formatted_initial_values.find { |g| g[:groups] == initial_value[:groups] }
+
+          formatted_initial_values << initial_value
+        end
+
+        formatted_initial_values
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation

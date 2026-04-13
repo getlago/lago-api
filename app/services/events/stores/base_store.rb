@@ -101,6 +101,30 @@ module Events
         raise NotImplementedError
       end
 
+      def presentation_breakdown_unique_count
+        raise NotImplementedError
+      end
+
+      def presentation_breakdown_weighted_sum(initial_value: 0, initial_values: [])
+        raise NotImplementedError
+      end
+
+      def unique_count
+        raise NotImplementedError
+      end
+
+      def grouped_unique_count
+        raise NotImplementedError
+      end
+
+      def prorated_unique_count
+        raise NotImplementedError
+      end
+
+      def grouped_prorated_unique_count
+        raise NotImplementedError
+      end
+
       def sum_precise_total_amount_cents
         raise NotImplementedError
       end

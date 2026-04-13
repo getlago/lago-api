@@ -242,6 +242,10 @@ module Events
         raise NotImplementedError
       end
 
+      def presentation_breakdown_unique_count
+        raise NotImplementedError
+      end
+
       # NOTE: check if an event created before the current on belongs to an active (as in present and not removed)
       #       unique property
       def active_unique_property?(event)
