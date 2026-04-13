@@ -61,9 +61,9 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ValidateService do
       context "when payment_method_type is manual" do
         let(:payment_method_params) { {payment_method_type: "manual"} }
 
-        it "is invalid with invalid_for_activation_rules error" do
+        it "is invalid with invalid_for_payment_activation_rules error" do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[:payment_method]).to eq(["invalid_for_activation_rules"])
+          expect(result.error.messages[:payment_method]).to eq(["invalid_for_payment_activation_rules"])
         end
       end
 
@@ -79,9 +79,9 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ValidateService do
         context "when subscription payment_method_type is manual" do
           let(:subscription) { create(:subscription, customer:, plan:, organization:, payment_method_type: "manual") }
 
-          it "is invalid with invalid_for_activation_rules error" do
+          it "is invalid with invalid_for_payment_activation_rules error" do
             expect(validate_service).not_to be_valid
-            expect(result.error.messages[:payment_method]).to eq(["invalid_for_activation_rules"])
+            expect(result.error.messages[:payment_method]).to eq(["invalid_for_payment_activation_rules"])
           end
         end
 

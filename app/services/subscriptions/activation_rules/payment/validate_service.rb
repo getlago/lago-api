@@ -31,7 +31,7 @@ module Subscriptions
           return true if args[:payment_method].blank? && args[:subscription].nil? && args[:customer]&.payment_provider.present?
 
           return add_error(field: :payment_method, error_code: "no_linked_payment_provider") if args[:payment_method].blank? && args[:subscription].nil?
-          add_error(field: :payment_method, error_code: "invalid_for_activation_rules")
+          add_error(field: :payment_method, error_code: "invalid_for_payment_activation_rules")
         end
       end
     end
