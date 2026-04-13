@@ -59,8 +59,9 @@ module InvoiceIndex
     )
 
     if result.success?
-      invoices = result.invoices.includes(:metadata, :applied_taxes, :billing_entity, :applied_usage_thresholds)
-      Invoice.preload_offset_amounts(invoices)
+      invoices = Invoice.preload_offset_amounts(
+        result.invoices.includes(:metadata, :applied_taxes, :billing_entity, :applied_usage_thresholds)
+      )
 
       render(
         json: ::CollectionSerializer.new(
@@ -68,7 +69,7 @@ module InvoiceIndex
           ::V1::InvoiceSerializer,
           collection_name: "invoices",
           meta: pagination_metadata(
-            result.invoices,
+            invoices,
             key: "invoices",
             organization_id: current_organization.id,
             params: params.permit(*WHITELIST)

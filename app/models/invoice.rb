@@ -164,6 +164,26 @@ class Invoice < ApplicationRecord
     %w[customer]
   end
 
+  # Batch-loads offset_amount_cents for a collection of invoices in a single query,
+  # caching the result on each instance to avoid N+1 queries during serialization.
+  def self.preload_offset_amounts(invoices)
+    return unless invoices
+
+    invoice_ids = invoices.map(&:id).compact
+
+    offset_amounts = CreditNote
+      .where(invoice_id: invoice_ids)
+      .finalized
+      .group(:invoice_id)
+      .sum(:offset_amount_cents)
+
+    invoices.each do |invoice|
+      invoice.precalculated_offset_amount_cents = (offset_amounts[invoice.id] || 0)
+    end
+
+    invoices
+  end
+
   def payment_invoices
     Invoice.where(id: id)
   end
@@ -294,24 +314,6 @@ class Invoice < ApplicationRecord
       number_of_days:,
       period_duration: date_service.charges_duration_in_days
     }
-  end
-
-  # Batch-loads offset_amount_cents for a collection of invoices in a single query,
-  # caching the result on each instance to avoid N+1 queries during serialization.
-  def self.preload_offset_amounts(invoices)
-    return unless invoices
-
-    invoice_ids = invoices.map(&:id).compact
-
-    offset_amounts = CreditNote
-      .where(invoice_id: invoice_ids)
-      .finalized
-      .group(:invoice_id)
-      .sum(:offset_amount_cents)
-
-    invoices.each do |invoice|
-      invoice.precalculated_offset_amount_cents = (offset_amounts[invoice.id] || 0)
-    end
   end
 
   def offset_amount_cents

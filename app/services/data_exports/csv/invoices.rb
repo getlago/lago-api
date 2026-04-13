@@ -101,9 +101,7 @@ module DataExports
       end
 
       def collection
-        invoices = Invoice.find(data_export_part.object_ids)
-        Invoice.preload_offset_amounts(invoices)
-        invoices
+        Invoice.preload_offset_amounts(Invoice.find(data_export_part.object_ids))
       end
 
       def organization
