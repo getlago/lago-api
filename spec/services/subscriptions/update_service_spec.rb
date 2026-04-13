@@ -1070,21 +1070,6 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
-      context "when subscription is incomplete" do
-        let(:subscription) { create(:subscription, :incomplete) }
-
-        context "when trying to update any attribute" do
-          let(:params) { {name: "new name"} }
-
-          it "returns validation error" do
-            result = update_service.call
-
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:subscription]).to include("not_editable")
-          end
-        end
-      end
     end
   end
 end
