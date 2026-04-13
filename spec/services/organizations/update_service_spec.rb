@@ -113,6 +113,56 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context "when slug is sent" do
+      before { params[:slug] = "new-slug" }
+
+      it "updates the organization slug" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.organization.slug).to eq("new-slug")
+      end
+    end
+
+    context "when slug is invalid" do
+      before { params[:slug] = "INVALID SLUG!" }
+
+      it "returns an error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:slug]).to be_present
+      end
+    end
+
+    context "when slug is already taken" do
+      before do
+        create(:organization, slug: "taken-slug")
+        params[:slug] = "taken-slug"
+      end
+
+      it "returns an error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:slug]).to be_present
+      end
+    end
+
+    context "when slug is a reserved word" do
+      before { params[:slug] = "customers" }
+
+      it "returns an error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:slug]).to be_present
+      end
+    end
+
     context "with premium features", :premium do
       let(:timezone) { "Europe/Paris" }
       let(:email_settings) { ["invoice.finalized"] }

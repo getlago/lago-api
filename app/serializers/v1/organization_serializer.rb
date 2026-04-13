@@ -6,6 +6,7 @@ module V1
       payload = {
         lago_id: model.id,
         name: model.name,
+        slug: model.slug,
         default_currency: model.default_currency,
         created_at: model.created_at.iso8601,
         webhook_url: webhook_urls.first.to_s,
