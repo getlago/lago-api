@@ -8,6 +8,7 @@ module Types
       argument :authentication_methods, [Types::Organizations::AuthenticationMethodsEnum], required: false
       argument :default_currency, Types::CurrencyEnum, required: false
       argument :email, String, required: false
+      argument :slug, String, required: false
       argument :legal_name, String, required: false
       argument :legal_number, String, required: false
       argument :logo, String, required: false
