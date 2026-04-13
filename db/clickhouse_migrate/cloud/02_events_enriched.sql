@@ -9,7 +9,7 @@ CREATE TABLE default.events_enriched
     `sorted_properties` Map(String, String) DEFAULT mapSort(properties),
     `enriched_at` DateTime64(3) DEFAULT now(),
     `value` Nullable(String),
-    `decimal_value` Nullable(Decimal(38, 26) DEFAULT toDecimal128OrZero(value, 26)),
+    `decimal_value` Nullable(Decimal(38, 26)) DEFAULT toDecimal128OrZero(value, 26),
     `precise_total_amount_cents` Nullable(Decimal(40, 15))
 )
 ENGINE = SharedReplacingMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}', timestamp)
