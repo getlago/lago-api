@@ -16,7 +16,6 @@ class CreateSubscriptionRateSchedules < ActiveRecord::Migration[8.0]
 
       t.datetime :started_at
       t.datetime :ended_at
-      t.date :next_billing_date, index: true
       t.timestamps
     end
   end
