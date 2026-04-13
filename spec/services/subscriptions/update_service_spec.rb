@@ -1069,7 +1069,6 @@ RSpec.describe Subscriptions::UpdateService do
           expect(result.error.messages[:activation_rules]).to include("subscription_not_pending")
         end
       end
-
     end
   end
 end
