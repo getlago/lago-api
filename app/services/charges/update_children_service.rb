@@ -21,11 +21,6 @@ module Charges
     def call
       return result unless charge
 
-      # NOTE: No outer transaction — each child update is already individually
-      # transactional via Charges::UpdateService. Wrapping all children in a
-      # single transaction causes long lock durations (20 children × 72 filters)
-      # and deadlocks when concurrent batch jobs update the same charge_filters.
-
       # skip touching to avoid deadlocks and redundant cascading updates
       Charge.no_touching do
         Plan.no_touching do
