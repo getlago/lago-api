@@ -117,6 +117,14 @@ RSpec.describe Charges::UpdateChildrenService do
           expect { update_service.call }.not_to change { child_plan.reload.updated_at }
         end
       end
+
+      it "does not touch child charge from filter saves" do
+        allow(Charge).to receive(:no_touching).and_call_original
+
+        update_service.call
+
+        expect(Charge).to have_received(:no_touching).once
+      end
     end
 
     context "when charge has children that has been modified" do
