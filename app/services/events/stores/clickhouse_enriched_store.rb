@@ -38,6 +38,10 @@ module Events
         raise NotImplementedError
       end
 
+      def presentation_breakdown_max
+        raise NotImplementedError
+      end
+
       def events_cte_queries(**args)
         return events_cte_queries_with_deduplication(**args) if deduplicate
 

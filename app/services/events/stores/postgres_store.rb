@@ -247,6 +247,10 @@ module Events
         )
       end
 
+      def presentation_breakdown_max
+        presentation_breakdown(aggregation_sql: "MAX((#{sanitized_property_name})::numeric)")
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
