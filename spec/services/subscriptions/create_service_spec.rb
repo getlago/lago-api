@@ -1134,12 +1134,12 @@ RSpec.describe Subscriptions::CreateService do
               )
             end
 
-            it "excludes subscription from editable scope and fails to create" do
+            it "returns pending_plan_change error" do
               result = create_service.call
 
               expect(result).not_to be_success
               expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:external_id]).to eq(["value_already_exist"])
+              expect(result.error.messages[:subscription]).to eq(["pending_plan_change"])
             end
           end
         end
@@ -1348,12 +1348,12 @@ RSpec.describe Subscriptions::CreateService do
               )
             end
 
-            it "excludes subscription from editable scope and fails to create" do
+            it "returns pending_plan_change error" do
               result = create_service.call
 
               expect(result).not_to be_success
               expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:external_id]).to eq(["value_already_exist"])
+              expect(result.error.messages[:subscription]).to eq(["pending_plan_change"])
             end
           end
         end

@@ -51,9 +51,13 @@ module Subscriptions
           .raise_if_error!
 
         customer.with_lock do
-          # Refresh current_subscription inside the lock to avoid stale data
           @current_subscription = editable_subscriptions
             .find_by("id = ? OR external_id = ?", params[:subscription_id], external_id)
+
+          if current_subscription&.next_subscription&.incomplete?
+            result.validation_failure!(errors: {subscription: ["pending_plan_change"]})
+            result.raise_if_error!
+          end
 
           subscription = handle_subscription
 
@@ -286,7 +290,6 @@ module Subscriptions
       return Subscription.none unless customer
 
       @editable_subscriptions ||= customer.subscriptions.active
-        .where.not(id: customer.subscriptions.incomplete.select(:previous_subscription_id))
         .or(customer.subscriptions.starting_in_the_future)
         .order(started_at: :desc)
     end
