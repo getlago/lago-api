@@ -6,6 +6,7 @@ class Organization < ApplicationRecord
   include Currencies
   include Organizations::AuthenticationMethods
   include HasFeatureFlags
+  include Organizations::Sluggable
 
   self.ignored_columns += [:clickhouse_aggregation]
 
