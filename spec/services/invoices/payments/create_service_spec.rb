@@ -72,6 +72,35 @@ RSpec.describe Invoices::Payments::CreateService do
       expect(invoice.payments.count).to eq(1)
     end
 
+    context "when invoice is subscription_gated (payment-gated)" do
+      let(:subscription) { create(:subscription, :incomplete, customer:, organization:) }
+      let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100, status: :open) }
+
+      before do
+        create(:subscription_activation_rule, subscription:, status: "pending")
+        create(:invoice_subscription, invoice:, subscription:)
+
+        allow(provider_class)
+          .to receive(:new)
+          .with(
+            payment: an_instance_of(Payment),
+            reference: "",
+            metadata: {
+              lago_invoice_id: invoice.id,
+              lago_customer_id: customer.id,
+              invoice_issuing_date: invoice.issuing_date.iso8601,
+              invoice_type: invoice.invoice_type
+            }
+          ).and_return(provider_service)
+      end
+
+      it "passes an empty reference to the payment provider" do
+        create_service.call
+
+        expect(provider_class).to have_received(:new).with(hash_including(reference: ""))
+      end
+    end
+
     context "with gocardless payment provider" do
       let(:provider) { "gocardless" }
       let(:provider_class) { PaymentProviders::Gocardless::Payments::CreateService }
