@@ -44,6 +44,7 @@ RSpec.describe Subscriptions::ActivationRules::ApplyService do
 
         expect(result).to be_success
         expect(result.activation_rules).to be_empty
+        expect(subscription.activation_rules.reload).to be_empty
       end
     end
 
@@ -56,6 +57,8 @@ RSpec.describe Subscriptions::ActivationRules::ApplyService do
         expect(result).to be_success
         expect(result.activation_rules.count).to eq(1)
         expect(result.activation_rules.first).to have_attributes(
+          id: String,
+          subscription_id: subscription.id,
           type: "payment",
           timeout_hours: 48,
           status: "inactive",
