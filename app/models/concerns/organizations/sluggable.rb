@@ -35,8 +35,8 @@ module Organizations
 
       candidate = ActiveSupport::Inflector.transliterate(name.to_s)
         .parameterize
-        .tr('_', '-')
-        .truncate(40, omission: '')
+        .tr("_", "-")
+        .truncate(40, omission: "")
 
       if candidate.length < 3 || candidate.match?(/\A\d+\z/) || RESERVED_SLUGS.include?(candidate)
         loop do
@@ -44,7 +44,7 @@ module Organizations
           break unless self.class.exists?(slug: candidate)
         end
       else
-        base = candidate.truncate(36, omission: '')
+        base = candidate.truncate(36, omission: "")
         while self.class.exists?(slug: candidate)
           suffix = SecureRandom.alphanumeric(3).downcase
           candidate = "#{base}-#{suffix}"
