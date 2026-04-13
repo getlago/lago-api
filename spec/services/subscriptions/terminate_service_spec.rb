@@ -94,6 +94,15 @@ RSpec.describe Subscriptions::TerminateService do
       end
     end
 
+    context "when subscription is incomplete" do
+      let(:subscription) { create(:subscription, :incomplete) }
+
+      it "returns a not allowed error" do
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("subscription_incomplete")
+      end
+    end
+
     context "when subscription is not found" do
       let(:subscription) { nil }
 

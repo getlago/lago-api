@@ -9,6 +9,8 @@ module Invoices
       end
 
       def call_async
+        return result if invoice.subscription? && invoice.open?
+
         if invoice.credit? && (invoice.open? || invoice.visible?)
           wallet_transaction = invoice.fees.credit.first.invoiceable
           SendWebhookJob.perform_later("wallet_transaction.payment_failure", wallet_transaction, params)
