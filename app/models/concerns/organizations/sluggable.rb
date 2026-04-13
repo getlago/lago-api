@@ -35,6 +35,7 @@ module Organizations
 
       candidate = ActiveSupport::Inflector.transliterate(name.to_s)
         .parameterize
+        .tr('_', '-')
         .truncate(40, omission: '')
 
       if candidate.length < 3 || candidate.match?(/\A\d+\z/) || RESERVED_SLUGS.include?(candidate)

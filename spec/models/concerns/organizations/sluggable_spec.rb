@@ -1,152 +1,152 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Organizations::Sluggable do
-  describe 'validations' do
+  describe "validations" do
     subject(:organization) { build(:organization) }
 
-    it 'validates presence of slug on update' do
+    it "validates presence of slug on update" do
       persisted_org = create(:organization)
       persisted_org.slug = nil
       expect(persisted_org).not_to be_valid
       expect(persisted_org.errors[:slug]).to be_present
     end
 
-    it 'validates uniqueness of slug' do
-      create(:organization, slug: 'taken-slug')
-      organization.slug = 'taken-slug'
+    it "validates uniqueness of slug" do
+      create(:organization, slug: "taken-slug")
+      organization.slug = "taken-slug"
       expect(organization).not_to be_valid
       expect(organization.errors[:slug]).to be_present
     end
 
-    it 'validates minimum length of 3' do
-      organization.slug = 'ab'
+    it "validates minimum length of 3" do
+      organization.slug = "ab"
       expect(organization).not_to be_valid
     end
 
-    it 'validates maximum length of 40' do
-      organization.slug = 'a' * 41
+    it "validates maximum length of 40" do
+      organization.slug = "a" * 41
       expect(organization).not_to be_valid
     end
 
-    it 'validates format' do
+    it "validates format" do
       valid_slugs = %w[acme acme-corp a1b2 my-org-123]
       valid_slugs.each do |slug|
         organization.slug = slug
         expect(organization).to be_valid, "expected '#{slug}' to be valid"
       end
 
-      invalid_slugs = ['-starts-with-dash', 'ends-with-dash-', 'UPPERCASE', 'has spaces', 'special!chars', 'under_score']
+      invalid_slugs = ["-starts-with-dash", "ends-with-dash-", "UPPERCASE", "has spaces", "special!chars", "under_score"]
       invalid_slugs.each do |slug|
         organization.slug = slug
         expect(organization).not_to be_valid, "expected '#{slug}' to be invalid"
       end
     end
 
-    it 'rejects reserved slugs' do
+    it "rejects reserved slugs" do
       Organizations::Sluggable::RESERVED_SLUGS.each do |reserved|
         organization.slug = reserved
         expect(organization).not_to be_valid, "expected reserved slug '#{reserved}' to be rejected"
       end
     end
 
-    it 'skips slug validations when slug has not changed on persisted record' do
+    it "skips slug validations when slug has not changed on persisted record" do
       organization = create(:organization)
-      organization.name = 'Updated Name'
+      organization.name = "Updated Name"
       expect(organization).to be_valid
     end
   end
 
-  describe '#generate_slug' do
-    it 'auto-generates slug from organization name' do
-      organization = build(:organization, name: 'Acme Corporation', slug: nil)
+  describe "#generate_slug" do
+    it "auto-generates slug from organization name" do
+      organization = build(:organization, name: "Acme Corporation", slug: nil)
       organization.valid?
-      expect(organization.slug).to eq('acme-corporation')
+      expect(organization.slug).to eq("acme-corporation")
     end
 
-    it 'skips generation when slug is already present' do
-      organization = build(:organization, name: 'Acme Corporation', slug: 'custom-slug')
+    it "skips generation when slug is already present" do
+      organization = build(:organization, name: "Acme Corporation", slug: "custom-slug")
       organization.valid?
-      expect(organization.slug).to eq('custom-slug')
+      expect(organization.slug).to eq("custom-slug")
     end
 
-    it 'transliterates accented characters' do
-      organization = build(:organization, name: 'Société Générale', slug: nil)
+    it "transliterates accented characters" do
+      organization = build(:organization, name: "Société Générale", slug: nil)
       organization.valid?
-      expect(organization.slug).to eq('societe-generale')
+      expect(organization.slug).to eq("societe-generale")
     end
 
-    it 'handles umlauts and special characters' do
-      organization = build(:organization, name: 'Müller & Söhne GmbH', slug: nil)
+    it "handles umlauts and special characters" do
+      organization = build(:organization, name: "Müller & Söhne GmbH", slug: nil)
       organization.valid?
-      expect(organization.slug).to eq('muller-sohne-gmbh')
+      expect(organization.slug).to eq("muller-sohne-gmbh")
     end
 
-    it 'strips special characters' do
-      organization = build(:organization, name: 'Tech & Co. #1 @2024!', slug: nil)
+    it "strips special characters" do
+      organization = build(:organization, name: "Tech & Co. #1 @2024!", slug: nil)
       organization.valid?
-      expect(organization.slug).to eq('tech-co-1-2024')
+      expect(organization.slug).to eq("tech-co-1-2024")
     end
 
-    it 'truncates to 40 characters' do
-      organization = build(:organization, name: 'A Very Long Organization Name That Exceeds The Forty Character Limit', slug: nil)
+    it "truncates to 40 characters" do
+      organization = build(:organization, name: "A Very Long Organization Name That Exceeds The Forty Character Limit", slug: nil)
       organization.valid?
       expect(organization.slug.length).to be <= 40
     end
 
-    context 'with fallback cases' do
-      it 'generates random slug for non-transliterable names (Cyrillic)' do
-        organization = build(:organization, name: 'Газпром', slug: nil)
+    context "with fallback cases" do
+      it "generates random slug for non-transliterable names (Cyrillic)" do
+        organization = build(:organization, name: "Газпром", slug: nil)
         organization.valid?
         expect(organization.slug).to match(/\Aorg-[a-z0-9]{5}\z/)
       end
 
-      it 'generates random slug for non-transliterable names (CJK)' do
-        organization = build(:organization, name: '日本企業', slug: nil)
+      it "generates random slug for non-transliterable names (CJK)" do
+        organization = build(:organization, name: "日本企業", slug: nil)
         organization.valid?
         expect(organization.slug).to match(/\Aorg-[a-z0-9]{5}\z/)
       end
 
-      it 'generates random slug for purely numeric names' do
-        organization = build(:organization, name: '12345', slug: nil)
+      it "generates random slug for purely numeric names" do
+        organization = build(:organization, name: "12345", slug: nil)
         organization.valid?
         expect(organization.slug).to match(/\Aorg-[a-z0-9]{5}\z/)
       end
 
-      it 'generates random slug for reserved words' do
-        organization = build(:organization, name: 'Admin', slug: nil)
+      it "generates random slug for reserved words" do
+        organization = build(:organization, name: "Admin", slug: nil)
         organization.valid?
         expect(organization.slug).to match(/\Aorg-[a-z0-9]{5}\z/)
       end
 
-      it 'generates random slug for names shorter than 3 characters' do
-        organization = build(:organization, name: 'AB', slug: nil)
+      it "generates random slug for names shorter than 3 characters" do
+        organization = build(:organization, name: "AB", slug: nil)
         organization.valid?
         expect(organization.slug).to match(/\Aorg-[a-z0-9]{5}\z/)
       end
 
-      it 'generates random slug for blank names' do
-        organization = build(:organization, name: '🚀', slug: nil)
+      it "generates random slug for blank names" do
+        organization = build(:organization, name: "🚀", slug: nil)
         organization.valid?
         expect(organization.slug).to match(/\Aorg-[a-z0-9]{5}\z/)
       end
     end
 
-    context 'with collision handling' do
-      it 'appends random suffix on collision' do
-        create(:organization, slug: 'acme-corp')
-        organization = build(:organization, name: 'Acme Corp', slug: nil)
+    context "with collision handling" do
+      it "appends random suffix on collision" do
+        create(:organization, slug: "acme-corp")
+        organization = build(:organization, name: "Acme Corp", slug: nil)
         organization.valid?
         expect(organization.slug).to match(/\Aacme-corp-[a-z0-9]{3}\z/)
       end
 
-      it 'generates unique slugs for organizations with the same name' do
-        org1 = create(:organization, name: 'Acme Corp', slug: nil)
-        org2 = build(:organization, name: 'Acme Corp', slug: nil)
+      it "generates unique slugs for organizations with the same name" do
+        org1 = create(:organization, name: "Acme Corp", slug: nil)
+        org2 = build(:organization, name: "Acme Corp", slug: nil)
         org2.valid?
         expect(org2.slug).not_to eq(org1.slug)
-        expect(org2.slug).to start_with('acme-corp')
+        expect(org2.slug).to start_with("acme-corp")
       end
     end
   end
