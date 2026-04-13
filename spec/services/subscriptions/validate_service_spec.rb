@@ -271,45 +271,6 @@ RSpec.describe Subscriptions::ValidateService do
       end
     end
 
-    context "when subscription_type is update" do
-      let(:subscription_type) { "update" }
-
-      context "when subscription is incomplete" do
-        let(:subscription) { create(:subscription, :incomplete, customer:, plan:, organization:) }
-
-        it "is invalid with subscription not_editable error" do
-          expect(validate_service).not_to be_valid
-          expect(result.error.messages[:subscription]).to eq(["not_editable"])
-        end
-      end
-
-      context "when subscription is active" do
-        let(:subscription) { create(:subscription, customer:, plan:, organization:) }
-
-        it { is_expected.to be_valid }
-      end
-
-      context "when subscription is pending" do
-        let(:subscription) { create(:subscription, :pending, customer:, plan:, organization:) }
-
-        it { is_expected.to be_valid }
-      end
-    end
-
-    context "when subscription_type is upgrade" do
-      let(:subscription_type) { "upgrade" }
-      let(:subscription) { create(:subscription, customer:, plan:, organization:) }
-
-      it { is_expected.to be_valid }
-    end
-
-    context "when subscription_type is downgrade" do
-      let(:subscription_type) { "downgrade" }
-      let(:subscription) { create(:subscription, customer:, plan:, organization:) }
-
-      it { is_expected.to be_valid }
-    end
-
     context "with activation_rules" do
       let(:args) do
         {

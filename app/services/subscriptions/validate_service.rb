@@ -11,7 +11,6 @@ module Subscriptions
       valid_on_termination_credit_note?
       valid_on_termination_invoice?
       valid_payment_method?
-      valid_subscription_status?
       valid_activation_rules?
 
       if errors?
@@ -103,14 +102,6 @@ module Subscriptions
       add_error(field: :payment_method, error_code: "invalid_payment_method")
 
       false
-    end
-
-    def valid_subscription_status?
-      return true if args[:subscription].nil?
-      return true unless args[:subscription_type] == "update"
-      return true unless args[:subscription].incomplete?
-
-      add_error(field: :subscription, error_code: "not_editable")
     end
 
     def valid_activation_rules?
