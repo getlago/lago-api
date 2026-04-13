@@ -21,22 +21,20 @@ module Charges
     def call
       return result unless charge
 
-      ActiveRecord::Base.transaction do
-        # skip touching to avoid deadlocks and redundant cascading updates
-        Charge.no_touching do
-          Plan.no_touching do
-            charge.children.where(id: child_ids).find_each do |child_charge|
-              Charges::UpdateService.call!(
-                charge: child_charge,
-                params:,
-                cascade_options: {
-                  cascade: true,
-                  parent_filters:,
-                  equal_properties: old_parent.equal_properties?(child_charge),
-                  equal_applied_pricing_unit_rate: old_parent.equal_applied_pricing_unit_rate?(child_charge)
-                }
-              )
-            end
+      # skip touching to avoid deadlocks and redundant cascading updates
+      Charge.no_touching do
+        Plan.no_touching do
+          charge.children.where(id: child_ids).find_each do |child_charge|
+            Charges::UpdateService.call!(
+              charge: child_charge,
+              params:,
+              cascade_options: {
+                cascade: true,
+                parent_filters:,
+                equal_properties: old_parent.equal_properties?(child_charge),
+                equal_applied_pricing_unit_rate: old_parent.equal_applied_pricing_unit_rate?(child_charge)
+              }
+            )
           end
         end
       end
