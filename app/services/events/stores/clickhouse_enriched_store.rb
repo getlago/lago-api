@@ -26,6 +26,14 @@ module Events
         end
       end
 
+      def presentation_breakdown_sum
+        raise NotImplementedError
+      end
+
+      def presentation_breakdown_count
+        raise NotImplementedError
+      end
+
       def events_cte_queries(**args)
         return events_cte_queries_with_deduplication(**args) if deduplicate
 

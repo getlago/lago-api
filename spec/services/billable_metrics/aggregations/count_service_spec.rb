@@ -20,13 +20,14 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:bypass_aggregation) { false }
   let(:filters) do
-    {event: pay_in_advance_event, grouped_by:, matching_filters:, ignored_filters:}
+    {event: pay_in_advance_event, grouped_by:, presentation_by:, matching_filters:, ignored_filters:}
   end
 
   let(:subscription) { create(:subscription, organization:) }
   let(:organization) { create(:organization) }
   let(:customer) { subscription.customer }
   let(:grouped_by) { nil }
+  let(:presentation_by) { nil }
   let(:matching_filters) { {} }
   let(:ignored_filters) { [] }
 
@@ -145,6 +146,111 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
       result = count_service.aggregate
 
       expect(result.pay_in_advance_aggregation).to eq(1)
+    end
+  end
+
+  context "with presentation group keys" do
+    let(:presentation_by) { ["cloud"] }
+
+    let(:event_list) do
+      create_list(
+        :event,
+        3,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        subscription:,
+        customer:,
+        timestamp: Time.zone.now - 1.day,
+        properties: {"cloud" => "aws"}
+      ) + create_list(
+        :event,
+        1,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        subscription:,
+        customer:,
+        timestamp: Time.zone.now - 1.day,
+        properties: {"cloud" => "gcp"}
+      )
+    end
+
+    it "returns the presentation breakdowns" do
+      result = count_service.aggregate
+
+      expect(result.breakdowns).to match_array([
+        {
+          groups: {},
+          breakdowns: match_array([
+            {presentation_by: {"cloud" => "aws"}, units: 3},
+            {presentation_by: {"cloud" => "gcp"}, units: 1}
+          ])
+        }
+      ])
+    end
+
+    context "with grouped_by" do
+      let(:grouped_by) { ["agent_name"] }
+
+      let(:event_list) do
+        [
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            subscription:,
+            customer:,
+            timestamp: Time.zone.now - 1.day,
+            properties: {"agent_name" => "frodo", "cloud" => "aws"}
+          ),
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            subscription:,
+            customer:,
+            timestamp: Time.zone.now - 1.day,
+            properties: {"agent_name" => "frodo", "cloud" => "aws"}
+          ),
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            subscription:,
+            customer:,
+            timestamp: Time.zone.now - 1.day,
+            properties: {"agent_name" => "frodo", "cloud" => "gcp"}
+          ),
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            subscription:,
+            customer:,
+            timestamp: Time.zone.now - 1.day,
+            properties: {"agent_name" => "aragorn", "cloud" => "aws"}
+          )
+        ]
+      end
+
+      it "returns the presentation breakdowns per group" do
+        result = count_service.aggregate
+
+        expect(result.breakdowns).to match_array([
+          {
+            groups: {"agent_name" => "frodo"},
+            breakdowns: match_array([
+              {presentation_by: {"cloud" => "aws"}, units: 2},
+              {presentation_by: {"cloud" => "gcp"}, units: 1}
+            ])
+          },
+          {
+            groups: {"agent_name" => "aragorn"},
+            breakdowns: match_array([
+              {presentation_by: {"cloud" => "aws"}, units: 1}
+            ])
+          }
+        ])
+      end
     end
   end
 

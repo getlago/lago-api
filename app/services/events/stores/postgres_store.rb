@@ -230,12 +230,11 @@ module Events
       end
 
       def presentation_breakdown_sum
-        results = events
-          .group(sanitized_grouped_by_and_presentation_by)
-          .sum("(#{sanitized_property_name})::numeric")
-          .map { |group, value| [group, value].flatten }
+        presentation_breakdown(aggregation_sql: "SUM((#{sanitized_property_name})::numeric)")
+      end
 
-        prepare_presentation_result(results)
+      def presentation_breakdown_count
+        presentation_breakdown(aggregation_sql: "COUNT(*)")
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -473,6 +472,12 @@ module Events
         end
 
         outer_map.values
+      end
+
+      def presentation_breakdown(aggregation_sql:)
+        rows = events.group(sanitized_grouped_by_and_presentation_by).pluck(Arel.sql((sanitized_grouped_by_and_presentation_by + [aggregation_sql]).join(", ")))
+
+        prepare_presentation_result(rows)
       end
 
       def grouped_and_presentation_columns
