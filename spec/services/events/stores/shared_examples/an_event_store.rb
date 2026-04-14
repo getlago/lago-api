@@ -346,6 +346,24 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             end
           end
         end
+
+        # Empty hashes or hashes with all-empty-array values in ignored_filters
+        # could produce invalid SQL (e.g., empty Tuple() in ClickHouse) if not
+        # filtered out. This verifies the defensive guards in filters_scope.
+        context "when ignored_filters contains empty and all-empty-values entries" do
+          let(:ignored_filters) do
+            [
+              {},
+              {"city" => [], "country" => []},
+              {"city" => ["caen"]},
+              {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}
+            ]
+          end
+
+          it "returns the number of unique events ignoring empty entries" do
+            expect(event_store.count).to eq(4)
+          end
+        end
       end
 
       context "with max timestamp" do

@@ -173,4 +173,59 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
       )
     end
   end
+
+  describe "when a child filter has all values subsumed by the current filter" do
+    subject(:service_result) { described_class.call(charge: charge_2, filter: current_filter) }
+
+    let(:billable_metric_2) { create(:billable_metric) }
+    let(:charge_2) { create(:standard_charge, billable_metric: billable_metric_2) }
+
+    let(:bm_filter_region) { create(:billable_metric_filter, billable_metric: billable_metric_2, key: "region", values: %w[eu us]) }
+    let(:bm_filter_cloud) { create(:billable_metric_filter, billable_metric: billable_metric_2, key: "cloud", values: %w[aws gcp]) }
+
+    # parent_filter has region=eu and cloud=aws (fewer values)
+    let(:parent_filter) { create(:charge_filter, charge: charge_2, invoice_display_name: "parent") }
+    let(:parent_filter_values) do
+      [
+        create(:charge_filter_value, values: %w[eu], billable_metric_filter: bm_filter_region, charge_filter: parent_filter),
+        create(:charge_filter_value, values: %w[aws], billable_metric_filter: bm_filter_cloud, charge_filter: parent_filter)
+      ]
+    end
+
+    # superset_child has region=eu,us and cloud=aws,gcp (superset of parent).
+    # After subtraction (child_values - parent_values): {"region" => ["us"], "cloud" => ["gcp"]} (non-empty, kept).
+    let(:superset_child) { create(:charge_filter, charge: charge_2, invoice_display_name: "superset") }
+    let(:superset_child_values) do
+      [
+        create(:charge_filter_value, values: %w[eu us], billable_metric_filter: bm_filter_region, charge_filter: superset_child),
+        create(:charge_filter_value, values: %w[aws gcp], billable_metric_filter: bm_filter_cloud, charge_filter: superset_child)
+      ]
+    end
+
+    # identical_child has the exact same keys and values as parent_filter.
+    # After subtraction: {"region" => [], "cloud" => []} (all empty, must be rejected).
+    let(:identical_child) { create(:charge_filter, charge: charge_2, invoice_display_name: "identical") }
+    let(:identical_child_values) do
+      [
+        create(:charge_filter_value, values: %w[eu], billable_metric_filter: bm_filter_region, charge_filter: identical_child),
+        create(:charge_filter_value, values: %w[aws], billable_metric_filter: bm_filter_cloud, charge_filter: identical_child)
+      ]
+    end
+
+    let(:current_filter) { parent_filter }
+
+    before do
+      parent_filter_values
+      superset_child_values
+      identical_child_values
+    end
+
+    it "rejects ignored filters where all values are empty arrays after subtraction" do
+      # superset_child: {"region" => ["eu", "us"], "cloud" => ["aws", "gcp"]} - parent → {"region" => ["us"], "cloud" => ["gcp"]} (kept)
+      # identical_child: {"region" => ["eu"], "cloud" => ["aws"]} - parent → {"region" => [], "cloud" => []} (rejected)
+      expect(service_result.ignored_filters).to eq(
+        [{"region" => %w[us], "cloud" => %w[gcp]}]
+      )
+    end
+  end
 end
