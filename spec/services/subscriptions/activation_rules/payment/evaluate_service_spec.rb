@@ -20,14 +20,12 @@ RSpec.describe Subscriptions::ActivationRules::Payment::EvaluateService do
     context "when rule is applicable (pay-in-advance plan, no trial)" do
       it "transitions rule to pending" do
         expect(result).to be_success
-        expect(rule.reload.status).to eq("pending")
+        expect(result.rule).to be_pending
       end
 
       it "sets expires_at based on timeout_hours" do
         freeze_time do
-          result
-
-          expect(rule.reload.expires_at).to eq(Time.current + 48.hours)
+          expect(result.rule.expires_at).to eq(Time.current + 48.hours)
         end
       end
 
@@ -35,9 +33,8 @@ RSpec.describe Subscriptions::ActivationRules::Payment::EvaluateService do
         let(:timeout_hours) { 0 }
 
         it "transitions rule to pending without expires_at" do
-          result
-
-          expect(rule.reload).to have_attributes(status: "pending", expires_at: nil)
+          expect(result.rule).to be_pending
+          expect(result.rule.expires_at).to be_nil
         end
       end
     end
@@ -49,9 +46,7 @@ RSpec.describe Subscriptions::ActivationRules::Payment::EvaluateService do
       before { create(:fixed_charge, plan:, add_on:, pay_in_advance: true) }
 
       it "transitions rule to pending" do
-        result
-
-        expect(rule.reload.status).to eq("pending")
+        expect(result.rule).to be_pending
       end
     end
 
@@ -59,9 +54,8 @@ RSpec.describe Subscriptions::ActivationRules::Payment::EvaluateService do
       let(:plan) { create(:plan, organization:, pay_in_advance: false) }
 
       it "transitions rule to not_applicable" do
-        result
-
-        expect(rule.reload.status).to eq("not_applicable")
+        expect(result).to be_success
+        expect(result.rule).to be_not_applicable
       end
     end
 
@@ -69,9 +63,8 @@ RSpec.describe Subscriptions::ActivationRules::Payment::EvaluateService do
       let(:plan) { create(:plan, organization:, pay_in_advance: true, trial_period: 30) }
 
       it "transitions rule to not_applicable" do
-        result
-
-        expect(rule.reload.status).to eq("not_applicable")
+        expect(result).to be_success
+        expect(result.rule).to be_not_applicable
       end
     end
 
@@ -82,9 +75,8 @@ RSpec.describe Subscriptions::ActivationRules::Payment::EvaluateService do
       before { create(:fixed_charge, plan:, add_on:, pay_in_advance: true) }
 
       it "transitions rule to pending" do
-        result
-
-        expect(rule.reload.status).to eq("pending")
+        expect(result).to be_success
+        expect(result.rule).to be_pending
       end
     end
   end
@@ -96,9 +88,8 @@ RSpec.describe Subscriptions::ActivationRules::Payment::EvaluateService do
       let(:status) { :satisfied }
 
       it "transitions rule to satisfied" do
-        result
-
-        expect(rule.reload.status).to eq("satisfied")
+        expect(result).to be_success
+        expect(result.rule).to be_satisfied
       end
     end
 
@@ -106,9 +97,8 @@ RSpec.describe Subscriptions::ActivationRules::Payment::EvaluateService do
       let(:status) { :failed }
 
       it "transitions rule to failed" do
-        result
-
-        expect(rule.reload.status).to eq("failed")
+        expect(result).to be_success
+        expect(result.rule).to be_failed
       end
     end
 
@@ -116,9 +106,8 @@ RSpec.describe Subscriptions::ActivationRules::Payment::EvaluateService do
       let(:status) { :expired }
 
       it "transitions rule to expired" do
-        result
-
-        expect(rule.reload.status).to eq("expired")
+        expect(result).to be_success
+        expect(result.rule).to be_expired
       end
     end
   end

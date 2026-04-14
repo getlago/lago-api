@@ -17,13 +17,14 @@ RSpec.describe Subscriptions::ActivationRules::EvaluateService do
 
     it "delegates to Payment::EvaluateService" do
       expect(result).to be_success
-      expect(rule.reload.status).to eq("pending")
+      expect(result.rules.first).to be_pending
     end
   end
 
   context "when subscription has no activation rules" do
     it "returns success without changes" do
       expect(result).to be_success
+      expect(result.rules).to be_empty
     end
   end
 end

@@ -4,6 +4,8 @@ module Subscriptions
   module ActivationRules
     module Payment
       class EvaluateService < BaseService
+        Result = BaseResult[:rule]
+
         def initialize(rule:, status: nil)
           @rule = rule
           @status = status
@@ -18,6 +20,7 @@ module Subscriptions
             transition_pending_rule
           end
 
+          result.rule = rule
           result
         end
 
