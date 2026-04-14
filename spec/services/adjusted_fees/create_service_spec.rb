@@ -535,6 +535,16 @@ RSpec.describe AdjustedFees::CreateService do
       end
     end
 
+    context "when invoice type is not subscription" do
+      before { invoice.update_columns(invoice_type: :advance_charges, status: :generating) }
+
+      it "does not call RefreshDraftService" do
+        described_class.new(invoice:, params:, preview: true).call
+
+        expect(Invoices::RefreshDraftService).not_to have_received(:call)
+      end
+    end
+
     context "when license is not premium" do
       it "returns forbidden status" do
         result = create_service.call
