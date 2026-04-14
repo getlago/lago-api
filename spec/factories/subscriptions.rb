@@ -46,5 +46,17 @@ FactoryBot.define do
     trait :with_previous_subscription do
       previous_subscription { association(:subscription, customer:, plan:, organization:) }
     end
+
+    trait :with_activation_rules do
+      transient do
+        activation_rules_config { [{type: "payment", timeout_hours: 48}] }
+      end
+
+      after(:create) do |subscription, evaluator|
+        evaluator.activation_rules_config.each do |config|
+          create(:subscription_activation_rule, subscription:, organization: subscription.organization, **config)
+        end
+      end
+    end
   end
 end
