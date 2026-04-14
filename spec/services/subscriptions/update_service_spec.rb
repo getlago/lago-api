@@ -935,5 +935,168 @@ RSpec.describe Subscriptions::UpdateService do
         expect(result.error.error_code).to eq("plan_not_found")
       end
     end
+
+    context "with activation_rules" do
+      context "when subscription is pending" do
+        context "when activation rules exist" do
+          let(:subscription) { create(:subscription, :pending, :with_activation_rules, activation_rules_config: [{type: "payment", timeout_hours: 48}], subscription_at: Time.current + 5.days) }
+
+          context "when rules are replaced" do
+            let(:params) { {activation_rules: [{type: "payment", timeout_hours: 12}]} }
+
+            it "replaces existing rules" do
+              result = update_service.call
+
+              expect(result).to be_success
+              rules = subscription.activation_rules.reload
+              expect(rules.count).to eq(1)
+              expect(rules.first.timeout_hours).to eq(12)
+            end
+          end
+
+          context "when activation_rules is empty array" do
+            let(:params) { {activation_rules: []} }
+
+            it "removes all activation rules" do
+              result = update_service.call
+
+              expect(result).to be_success
+              expect(subscription.activation_rules.reload).to be_empty
+            end
+          end
+
+          context "when subscription_at changes to past" do
+            let(:params) { {subscription_at: (Time.current - 5.days).iso8601} }
+
+            it "deletes activation rules and activates the subscription" do
+              result = update_service.call
+
+              expect(result).to be_success
+              expect(result.subscription).to be_active
+              expect(subscription.activation_rules.reload).to be_empty
+            end
+
+            context "when activation_rules are also provided in params" do
+              let(:params) { {subscription_at: (Time.current - 5.days).iso8601, activation_rules: [{type: "payment", timeout_hours: 24}]} }
+
+              it "does not apply activation rules and clears existing ones" do
+                result = update_service.call
+
+                expect(result).to be_success
+                expect(result.subscription).to be_active
+                expect(subscription.activation_rules.reload).to be_empty
+              end
+            end
+          end
+
+          context "when subscription_at changes to today" do
+            let(:params) { {subscription_at: Time.current.beginning_of_day.iso8601} }
+
+            it "keeps activation rules and stays pending" do
+              result = update_service.call
+
+              expect(result).to be_success
+              expect(result.subscription).to be_pending
+              expect(subscription.activation_rules.reload.count).to eq(1)
+            end
+
+            context "when activation_rules are also provided in params" do
+              let(:params) { {subscription_at: Time.current.beginning_of_day.iso8601, activation_rules: [{type: "payment", timeout_hours: 24}]} }
+
+              it "applies the new activation rules and stays pending" do
+                result = update_service.call
+
+                expect(result).to be_success
+                expect(result.subscription).to be_pending
+                rules = subscription.activation_rules.reload
+                expect(rules.count).to eq(1)
+                expect(rules.first.timeout_hours).to eq(24)
+              end
+            end
+          end
+
+          context "when subscription is not starting in the future" do
+            let(:subscription) { create(:subscription, :pending, :with_previous_subscription, :with_activation_rules, activation_rules_config: [{type: "payment", timeout_hours: 48}]) }
+            let(:params) { {activation_rules: [{type: "payment", timeout_hours: 24}]} }
+
+            it "replaces existing activation rules" do
+              result = update_service.call
+
+              expect(result).to be_success
+              rules = subscription.activation_rules.reload
+              expect(rules.count).to eq(1)
+              expect(rules.first.timeout_hours).to eq(24)
+            end
+          end
+        end
+
+        context "when activation rules do not exist" do
+          let(:subscription) { create(:subscription, :pending, subscription_at: Time.current + 5.days) }
+
+          it "persists activation rules" do
+            params = {activation_rules: [{type: "payment", timeout_hours: 24}]}
+            result = described_class.call(subscription:, params:)
+
+            expect(result).to be_success
+            rules = subscription.activation_rules.reload
+            expect(rules.count).to eq(1)
+            expect(rules.first).to have_attributes(
+              type: "payment",
+              timeout_hours: 24,
+              status: "inactive"
+            )
+          end
+
+          context "when subscription_at changes to past" do
+            let(:params) { {subscription_at: (Time.current - 5.days).iso8601} }
+
+            it "activates the subscription" do
+              result = update_service.call
+
+              expect(result).to be_success
+              expect(result.subscription).to be_active
+            end
+          end
+
+          context "when subscription_at changes to today" do
+            let(:params) { {subscription_at: Time.current.beginning_of_day.iso8601} }
+
+            it "activates the subscription" do
+              result = update_service.call
+
+              expect(result).to be_success
+              expect(result.subscription).to be_active
+            end
+          end
+
+          context "when subscription is not starting in the future" do
+            let(:subscription) { create(:subscription, :pending, :with_previous_subscription) }
+            let(:params) { {activation_rules: [{type: "payment", timeout_hours: 24}]} }
+
+            it "applies activation rules" do
+              result = update_service.call
+
+              expect(result).to be_success
+              rules = subscription.activation_rules.reload
+              expect(rules.count).to eq(1)
+              expect(rules.first.timeout_hours).to eq(24)
+            end
+          end
+        end
+      end
+
+      context "when subscription is active" do
+        let(:subscription) { create(:subscription) }
+        let(:params) { {activation_rules: [{type: "payment", timeout_hours: 24}]} }
+
+        it "returns validation error" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:activation_rules]).to include("subscription_not_pending")
+        end
+      end
+    end
   end
 end
