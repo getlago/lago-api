@@ -538,9 +538,12 @@ RSpec.describe AdjustedFees::CreateService do
     context "when invoice type is not subscription" do
       before { invoice.update!(invoice_type: :advance_charges, status: :generating) }
 
-      it "does not call RefreshDraftService" do
-        described_class.new(invoice:, params:, preview: true).call
+      it "returns success without calling RefreshDraftService" do
+        result = described_class.new(invoice:, params:, preview: true).call
 
+        expect(result).to be_success
+        expect(result.fee).to be_a(Fee)
+        expect(result.adjusted_fee).to be_a(AdjustedFee)
         expect(Invoices::RefreshDraftService).not_to have_received(:call)
       end
     end
