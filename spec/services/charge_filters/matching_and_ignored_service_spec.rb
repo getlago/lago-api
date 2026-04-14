@@ -155,7 +155,13 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     end
   end
 
-  # Isolated setups for edge cases discovered via fuzz testing (ISSUE-1799)
+  # The following contexts cover edge cases where ignored_filters contains
+  # empty hashes or hashes with all-empty-array values. These states should
+  # not occur in normal usage — charge filters should always have values,
+  # and duplicate filters should not exist — but missing validations allow
+  # them in production. The store-level defensive guards (ISSUE-1799) prevent
+  # these from producing invalid SQL.
+
   context "when a filter has no values" do
     subject(:service_result) { described_class.call(charge: isolated_charge, filter: current_filter) }
 
@@ -200,18 +206,13 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
 
     let(:isolated_charge) { create(:standard_charge, billable_metric:) }
 
-    # Parent: size=[512, 1024] (superset)
     let(:parent_filter) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "parent") }
-    # Child: size=[512] (strict subset — subtraction produces [])
     let(:subset_child) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "subset_child") }
-    # Sibling: size=[1024] (not a subset — subtraction produces ["1024"] - ["512","1024"] = [])
-    # Actually this IS a subset too. Let's add a non-subset for contrast.
     let(:partial_overlap) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "partial") }
 
     before do
       create(:charge_filter_value, values: %w[512 1024], billable_metric_filter: filter_size, charge_filter: parent_filter)
       create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: subset_child)
-      # partial_overlap uses size + steps — different key set, so no subtraction
       create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: partial_overlap)
       create(:charge_filter_value, values: ["25"], billable_metric_filter: filter_steps, charge_filter: partial_overlap)
     end
@@ -219,7 +220,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     describe "for parent_filter" do
       let(:current_filter) { parent_filter }
 
-      it "produces all-empty-values entry from subset child and keeps non-subset children intact" do
+      it "produces all-empty-values entry from subset child and keeps different-key children intact" do
         expect(service_result.matching_filters).to eq({"size" => %w[512 1024]})
         expect(service_result.ignored_filters).to eq(
           [

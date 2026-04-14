@@ -3,18 +3,10 @@
 require "rails_helper"
 
 # Regression test for ISSUE-1799: ClickHouse query fails with empty Tuple()
-# when ignored_filters contains empty hashes or hashes with all-empty-array values.
-#
-# Two patterns produce problematic entries in ignored_filters:
-#
-# 1. Empty hash {} — when a charge filter has no ChargeFilterValue records.
-#    MatchingAndIgnoredService returns {} for that child, which the store
-#    wraps as "()" in SQL.
-#
-# 2. All-empty-values {"key" => []} — when a child filter has the same keys
-#    as the parent AND the child's values are a subset of the parent's.
-#    After subtraction (child_values - parent_values), all arrays become [].
-#    This is the more realistic production case.
+# when ignored_filters contains empty hashes or hashes with all-empty-array
+# values. These states should not occur — charge filters should always have
+# values and duplicates should not exist — but missing validations allow them
+# in production. The store-level defensive guards prevent invalid SQL.
 describe "Current Usage - Filters with empty ignored_filters entries", transaction: false do
   [
     :postgres,
@@ -26,8 +18,8 @@ describe "Current Usage - Filters with empty ignored_filters entries", transacti
       let(:plan) { create(:plan, organization:, amount_cents: 0, pay_in_advance: false, interval: "monthly") }
       let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
 
-      # Pattern 1: empty hash {} in ignored_filters
-      # Requires filters with no ChargeFilterValue records.
+      # Filters with no ChargeFilterValue records should not exist but can due
+      # to missing validations. They produce {} in ignored_filters.
       context "when charge filters have no values" do
         before do
           cloud_filter = create(:billable_metric_filter, billable_metric:, key: "cloud", values: %w[aws gcp])
@@ -68,15 +60,9 @@ describe "Current Usage - Filters with empty ignored_filters entries", transacti
         end
       end
 
-      # Pattern 2: all-empty-values {"cloud" => []} in ignored_filters
-      # When a child filter's values are a subset of the parent's values
-      # on all shared keys, the subtraction produces empty arrays.
-      #
-      # Setup:
-      # - Filter "All clouds": cloud=[aws, gcp] (parent — superset)
-      # - Filter "AWS only":   cloud=[aws]       (child — subset)
-      # When processing "All clouds", "AWS only" is a child with the same
-      # key. After subtraction: {"cloud" => ["aws"] - ["aws", "gcp"]} = {"cloud" => []}.
+      # Duplicate filters with identical values should not exist but can due
+      # to missing validations. The child's subtraction zeroes out all arrays,
+      # producing {"cloud" => []} in ignored_filters.
       context "when a child filter's values are a subset of the parent's" do
         before do
           cloud_filter = create(:billable_metric_filter, billable_metric:, key: "cloud", values: %w[aws gcp])

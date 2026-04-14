@@ -347,9 +347,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           end
         end
 
-        # Empty hashes or hashes with all-empty-array values in ignored_filters
-        # could produce invalid SQL (e.g., empty Tuple() in ClickHouse) if not
-        # filtered out. This verifies the defensive guards in filters_scope.
+        # Charge filters with no values or duplicate values should not exist but
+        # can due to missing validations. They produce empty hashes or hashes with
+        # all-empty-array values in ignored_filters, which would generate invalid
+        # SQL (e.g., empty Tuple() in ClickHouse) without the defensive guards.
         context "when ignored_filters contains empty and all-empty-values entries" do
           let(:ignored_filters) do
             [
