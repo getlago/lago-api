@@ -121,6 +121,8 @@ module Api
         subscription = if query.count > 1
           if params[:status] == "pending"
             query.pending
+          elsif params[:status] == "incomplete"
+            query.incomplete
           else
             query.active
           end
