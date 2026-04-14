@@ -22,7 +22,7 @@ module Subscriptions
           subscription.activation_rules.create!(
             organization_id: subscription.organization_id,
             status: :inactive,
-            **rule_params.slice(:type, :timeout_hours)
+            **rule_params.to_h.with_indifferent_access.slice(:type, :timeout_hours)
           )
         end
 
