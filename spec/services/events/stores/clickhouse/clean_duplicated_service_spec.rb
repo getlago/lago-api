@@ -23,7 +23,7 @@ RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedService, :clickhouse d
           external_subscription_id: subscription.external_id,
           transaction_id: transaction_id,
           timestamp: timestamp,
-          code: "event_code_#{SecureRandom.hex(4)}",
+          code: "event_code",
           enriched_at: base_enriched_at + i.minutes
         )
       end
@@ -43,6 +43,57 @@ RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedService, :clickhouse d
       expect(event.enriched_at).to match_datetime(base_enriched_at + 2.minutes)
 
       expect(Subscriptions::ChargeCacheService).to have_received(:expire_for_subscription).with(subscription)
+    end
+
+    context "when events share the same transaction_id but have different codes" do
+      let(:other_code) { "other_event_code" }
+
+      before do
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          transaction_id: transaction_id,
+          timestamp: timestamp,
+          code: other_code,
+          enriched_at: base_enriched_at
+        )
+      end
+
+      it "does not delete events with a different code" do
+        result = clean_service.call
+
+        expect(result).to be_success
+        expect(::Clickhouse::EventsEnriched.where(transaction_id:, timestamp:, code: "event_code").count).to eq(1)
+        expect(::Clickhouse::EventsEnriched.where(transaction_id:, timestamp:, code: other_code).count).to eq(1)
+      end
+    end
+
+    context "when duplicate events share the same enriched_at timestamp" do
+      before do
+        ::Clickhouse::EventsEnriched.where(transaction_id:, timestamp:).delete_all
+
+        2.times do
+          create(
+            :clickhouse_events_enriched,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            transaction_id: transaction_id,
+            timestamp: timestamp,
+            code: "event_code",
+            enriched_at: base_enriched_at
+          )
+        end
+      end
+
+      it "deletes all copies including the keeper" do
+        expect(::Clickhouse::EventsEnriched.where(transaction_id:, timestamp:).count).to eq(2)
+
+        result = clean_service.call
+
+        expect(result).to be_success
+        expect(::Clickhouse::EventsEnriched.where(transaction_id:, timestamp:).count).to eq(0)
+      end
     end
   end
 end
