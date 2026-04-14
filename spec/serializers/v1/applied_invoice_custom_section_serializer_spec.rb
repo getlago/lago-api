@@ -18,6 +18,7 @@ RSpec.describe V1::AppliedInvoiceCustomSectionSerializer do
 
       expect(serialized_data[:lago_id]).to eq(applied_invoice_custom_section.id)
       expect(serialized_data[:created_at]).to eq(applied_invoice_custom_section.created_at.iso8601)
+      expect(serialized_data[:invoice_custom_section_id]).to eq(applied_invoice_custom_section.invoice_custom_section_id)
       expect(serialized_data[:invoice_custom_section]).to eq(
         lago_id: invoice_custom_section.id,
         code: invoice_custom_section.code,
