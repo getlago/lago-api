@@ -50,7 +50,7 @@ module ChargeFilters
         end
 
         res
-      end.compact.reject { |h| h.empty? || h.values.all?(&:empty?) }
+      end.compact
 
       result
     end
