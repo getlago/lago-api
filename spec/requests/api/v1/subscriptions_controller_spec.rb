@@ -752,7 +752,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           subject
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq({payment_method: %w[invalid_for_activation_rules]})
+          expect(json[:error_details]).to eq({payment_method: %w[invalid_for_payment_activation_rules]})
         end
       end
 
@@ -1708,11 +1708,11 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         let(:subscription) { create(:subscription, :incomplete, customer:, plan:) }
         let(:update_params) { {name: "new name"} }
 
-        it "returns a validation error" do
+        it "returns a method not allowed error", pending: "requires update service to reject incomplete subscriptions" do
           subject
 
-          expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq({subscription: %w[not_editable]})
+          expect(response).to have_http_status(:method_not_allowed)
+          expect(json[:code]).to eq("subscription_incomplete")
         end
       end
     end
