@@ -45,8 +45,9 @@ module ChargeFilters
             end
 
             if parent_filter.blank? || parent_filter_properties(parent_filter) != filter.properties
-              # Make sure that pricing group keys are cascaded even if properties are overridden
+              # Make sure that pricing/presentation group keys are cascaded even if properties are overridden
               cascade_pricing_group_keys(filter, filter_param)
+              cascade_presentation_group_keys(filter, filter_param)
               filter.save!
 
               PaperTrail.request.disable_model(filter.class)
@@ -164,6 +165,16 @@ module ChargeFilters
       elsif filter.pricing_group_keys.present?
         filter.properties.delete("pricing_group_keys")
         filter.properties.delete("grouped_by")
+      end
+    end
+
+    def cascade_presentation_group_keys(filter, params)
+      presentation_group_keys = params.dig(:properties, :presentation_group_keys)
+
+      if presentation_group_keys
+        filter.properties["presentation_group_keys"] = presentation_group_keys
+      elsif filter.presentation_group_keys.present?
+        filter.properties.delete("presentation_group_keys")
       end
     end
 

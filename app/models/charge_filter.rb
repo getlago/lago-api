@@ -54,6 +54,16 @@ class ChargeFilter < ApplicationRecord
     properties["pricing_group_keys"].presence || properties["grouped_by"]
   end
 
+  def presentation_group_keys
+    properties["presentation_group_keys"].presence
+  end
+
+  def presentation_group_keys_values
+    return [] if properties["presentation_group_keys"].blank?
+
+    properties["presentation_group_keys"].flat_map { |e| e.fetch("value", nil) }.compact
+  end
+
   private
 
   def validate_properties
