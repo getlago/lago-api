@@ -9,12 +9,17 @@ RSpec.describe DailyUsages::ComputeService do
   let(:billing_entity) { create(:billing_entity, organization:) }
   let(:customer) { create(:customer, organization:, billing_entity:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:charge) { create(:standard_charge, plan:, billable_metric:) }
+  let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: properties) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) do
     create(:subscription, :calendar, customer:, plan:, started_at: timestamp - 1.year, subscription_at: timestamp - 1.year)
   end
-
+  let(:properties) do
+    {
+      amount: "100"
+    }.merge(presentation_group_keys)
+  end
+  let(:presentation_group_keys) { {} }
   let(:timestamp) { Time.zone.parse("2024-10-22 00:05:00") }
   let(:usage_date) { Date.parse("2024-10-21") }
 
@@ -25,7 +30,10 @@ RSpec.describe DailyUsages::ComputeService do
       external_subscription_id: subscription.external_id,
       code: billable_metric.code,
       timestamp: timestamp - 2.hours,
-      created_at: timestamp - 2.hours
+      created_at: timestamp - 2.hours,
+      properties: {
+        "region" => "eu-central"
+      }
     )
   end
 
@@ -74,6 +82,21 @@ RSpec.describe DailyUsages::ComputeService do
           expect(daily_usage.refreshed_at).to match_datetime(timestamp)
           expect(daily_usage.from_datetime).to match_datetime(timestamp.beginning_of_month)
           expect(daily_usage.to_datetime).to match_datetime(timestamp.end_of_month)
+        end
+      end
+
+      context "when charges contains presentation group keys" do
+        let(:presentation_group_keys) do
+          {"presentation_group_keys" => [{"value" => "region"}]}
+        end
+
+        it "creates a daily usage including presentation group keys" do
+          travel_to(timestamp) do
+            expect { compute_service.call }.to change(DailyUsage, :count).by(1)
+
+            daily_usage = DailyUsage.order(created_at: :asc).last
+            expect(daily_usage.usage["charges_usage"].first["presentation_breakdowns"]).to eq([{"units" => "1.0", "presentation_by" => {"region" => "eu-central"}}])
+          end
         end
       end
 
