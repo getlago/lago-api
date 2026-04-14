@@ -155,4 +155,106 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     end
   end
 
+  # Isolated setups for edge cases discovered via fuzz testing (ISSUE-1799)
+  context "when a filter has no values" do
+    subject(:service_result) { described_class.call(charge: isolated_charge, filter: current_filter) }
+
+    let(:isolated_charge) { create(:standard_charge, billable_metric:) }
+
+    let(:empty_a) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "empty_a") }
+    let(:empty_b) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "empty_b") }
+    let(:with_values) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "with_values") }
+
+    before do
+      empty_a
+      empty_b
+      create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: with_values)
+    end
+
+    describe "for empty_a" do
+      let(:current_filter) { empty_a }
+
+      it "produces empty hashes in ignored_filters from other empty filters" do
+        expect(service_result.matching_filters).to eq({})
+        expect(service_result.ignored_filters).to eq(
+          [
+            {},
+            {"size" => ["512"]}
+          ]
+        )
+      end
+    end
+
+    describe "for with_values" do
+      let(:current_filter) { with_values }
+
+      it "does not include empty filters as children" do
+        expect(service_result.matching_filters).to eq({"size" => ["512"]})
+        expect(service_result.ignored_filters).to eq([])
+      end
+    end
+  end
+
+  context "when a child's values are a subset of the parent's" do
+    subject(:service_result) { described_class.call(charge: isolated_charge, filter: current_filter) }
+
+    let(:isolated_charge) { create(:standard_charge, billable_metric:) }
+
+    # Parent: size=[512, 1024] (superset)
+    let(:parent_filter) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "parent") }
+    # Child: size=[512] (strict subset — subtraction produces [])
+    let(:subset_child) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "subset_child") }
+    # Sibling: size=[1024] (not a subset — subtraction produces ["1024"] - ["512","1024"] = [])
+    # Actually this IS a subset too. Let's add a non-subset for contrast.
+    let(:partial_overlap) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "partial") }
+
+    before do
+      create(:charge_filter_value, values: %w[512 1024], billable_metric_filter: filter_size, charge_filter: parent_filter)
+      create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: subset_child)
+      # partial_overlap uses size + steps — different key set, so no subtraction
+      create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: partial_overlap)
+      create(:charge_filter_value, values: ["25"], billable_metric_filter: filter_steps, charge_filter: partial_overlap)
+    end
+
+    describe "for parent_filter" do
+      let(:current_filter) { parent_filter }
+
+      it "produces all-empty-values entry from subset child and keeps non-subset children intact" do
+        expect(service_result.matching_filters).to eq({"size" => %w[512 1024]})
+        expect(service_result.ignored_filters).to eq(
+          [
+            {"size" => []},
+            {"size" => ["512"], "steps" => ["25"]}
+          ]
+        )
+      end
+    end
+  end
+
+  context "when two filters have identical keys and values" do
+    subject(:service_result) { described_class.call(charge: isolated_charge, filter: current_filter) }
+
+    let(:isolated_charge) { create(:standard_charge, billable_metric:) }
+
+    let(:filter_a) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "filter_a") }
+    let(:filter_b) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "filter_b") }
+
+    before do
+      create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: filter_a)
+      create(:charge_filter_value, values: ["25"], billable_metric_filter: filter_steps, charge_filter: filter_a)
+      create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: filter_b)
+      create(:charge_filter_value, values: ["25"], billable_metric_filter: filter_steps, charge_filter: filter_b)
+    end
+
+    describe "for filter_a" do
+      let(:current_filter) { filter_a }
+
+      it "produces all-empty-values entry from the identical sibling" do
+        expect(service_result.matching_filters).to eq({"size" => ["512"], "steps" => ["25"]})
+        expect(service_result.ignored_filters).to eq(
+          [{"size" => [], "steps" => []}]
+        )
+      end
+    end
+  end
 end
