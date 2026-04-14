@@ -256,7 +256,7 @@ module Events
         # also, set presentation_by to nil to avoid any confusion in the query building
         unique_store_for_breakdown = dup
         unique_store_for_breakdown.grouped_by = grouped_and_presentation_columns.values.flatten
-        weighted_sum_store_for_breakdown.presentation_by = nil
+        unique_store_for_breakdown.presentation_by = nil
 
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: unique_store_for_breakdown)
 

@@ -375,8 +375,8 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
         {
           groups: {},
           breakdowns: match_array([
-            {presentation_by: {"cloud" => "aws"}, units: BigDecimal("14")},
-            {presentation_by: {"cloud" => "gcp"}, units: BigDecimal("0")}
+            {presentation_by: {"cloud" => "aws"}, units: BigDecimal(14)},
+            {presentation_by: {"cloud" => "gcp"}, units: BigDecimal(-5)}
           ])
         }
       ])
@@ -436,14 +436,14 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
           {
             groups: {"agent_name" => "frodo"},
             breakdowns: match_array([
-              {presentation_by: {"cloud" => "aws"}, units: BigDecimal("10")},
-              {presentation_by: {"cloud" => "gcp"}, units: BigDecimal("12")}
+              {presentation_by: {"cloud" => "aws"}, units: BigDecimal(10)},
+              {presentation_by: {"cloud" => "gcp"}, units: BigDecimal(12)}
             ])
           },
           {
             groups: {"agent_name" => "aragorn"},
             breakdowns: match_array([
-              {presentation_by: {"cloud" => "aws"}, units: BigDecimal("3")}
+              {presentation_by: {"cloud" => "aws"}, units: BigDecimal(3)}
             ])
           }
         ])
