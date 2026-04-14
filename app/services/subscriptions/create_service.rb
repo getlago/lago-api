@@ -51,13 +51,14 @@ module Subscriptions
           .raise_if_error!
 
         customer.with_lock do
-          @current_subscription = editable_subscriptions
-            .find_by("id = ? OR external_id = ?", params[:subscription_id], external_id)
-
-          if current_subscription&.next_subscription&.incomplete?
-            result.validation_failure!(errors: {subscription: ["pending_plan_change"]})
+          if customer.subscriptions.incomplete
+              .exists?(["id = ? OR external_id = ?", params[:subscription_id], external_id])
+            result.validation_failure!(errors: {subscription: ["subscription_incomplete"]})
             result.raise_if_error!
           end
+
+          @current_subscription = editable_subscriptions
+            .find_by("id = ? OR external_id = ?", params[:subscription_id], external_id)
 
           subscription = handle_subscription
 
