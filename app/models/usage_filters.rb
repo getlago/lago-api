@@ -46,4 +46,5 @@ class UsageFilters
   end
 
   NONE = new.freeze
+  WITHOUT_PRESENTATION_FILTER = new(filter_by_presentation: []).freeze
 end
