@@ -27,7 +27,7 @@ module Integrations
 
           response = http_client.post_with_response(payload, headers)
           ActiveRecord::Base.transaction do
-            save_object_type_id(response["objectTypeId"])
+            save_object_type_id(JSON.parse(response.body)["objectTypeId"])
           end
           result.response = response
           result

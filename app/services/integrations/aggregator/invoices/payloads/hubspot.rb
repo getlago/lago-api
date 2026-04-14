@@ -11,7 +11,7 @@ module Integrations
             end
 
             {
-              "objectType" => "LagoInvoices",
+              "objectType" => integration.invoices_object_type_id,
               "input" => {
                 "associations" => [],
                 "properties" => {
@@ -40,7 +40,7 @@ module Integrations
 
             {
               "objectId" => integration_invoice.external_id,
-              "objectType" => "LagoInvoices",
+              "objectType" => integration.invoices_object_type_id,
               "input" => {
                 "properties" => {
                   "lago_invoice_id" => invoice.id,

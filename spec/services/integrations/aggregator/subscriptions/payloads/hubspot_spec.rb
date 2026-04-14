@@ -30,7 +30,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Payloads::Hubspot do
 
     let(:create_body) do
       {
-        "objectType" => "LagoSubscriptions",
+        "objectType" => integration.subscriptions_object_type_id,
         "input" => {
           "associations" => [],
           "properties" => {
@@ -63,7 +63,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Payloads::Hubspot do
     let(:update_body) do
       {
         "objectId" => integration_subscription.external_id,
-        "objectType" => "LagoSubscriptions",
+        "objectType" => integration.subscriptions_object_type_id,
         "input" => {
           "properties" => {
             "lago_subscription_id" => subscription.id,
