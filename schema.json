@@ -27538,6 +27538,18 @@
               "deprecationReason": null
             },
             {
+              "name": "subscription_canceled",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscription_incomplete",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "subscription_terminated",
               "description": null,
               "isDeprecated": false,
