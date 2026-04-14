@@ -98,6 +98,11 @@ module Events
           .and(arel_table[:code].eq(code)))
         ).then { with_timestamp_boundaries(it, from_datetime, to_datetime) }
 
+        # Push property filters BEFORE GROUP BY so ClickHouse filters first,
+        # then deduplicates only relevant rows (significant memory/CPU savings).
+        query = arel_filters_scope(query)
+        query = apply_arel_grouped_by_values(query) if grouped_by_values?
+
         columns = deduplicated_columns.dup
 
         # Grouping and filtering is made based on the properties
