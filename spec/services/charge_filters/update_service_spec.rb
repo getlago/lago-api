@@ -93,7 +93,8 @@ RSpec.describe ChargeFilters::UpdateService do
           params: hash_including("charge_model", "properties", "filters"),
           old_parent_attrs: hash_including("id" => charge.id),
           old_parent_filters_attrs: array_including(hash_including("id", "properties")),
-          old_parent_applied_pricing_unit_attrs: nil
+          old_parent_applied_pricing_unit_attrs: nil,
+          cascaded_at: anything
         )
       end
     end

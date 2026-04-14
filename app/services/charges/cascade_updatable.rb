@@ -14,7 +14,8 @@ module Charges
         params: build_cascade_params.deep_stringify_keys,
         old_parent_attrs: old_parent_attrs || charge.attributes,
         old_parent_filters_attrs: old_filters_attrs.map(&:deep_stringify_keys),
-        old_parent_applied_pricing_unit_attrs: old_applied_pricing_unit_attrs || charge.applied_pricing_unit&.attributes
+        old_parent_applied_pricing_unit_attrs: old_applied_pricing_unit_attrs || charge.applied_pricing_unit&.attributes,
+        cascaded_at: Time.current.iso8601(6)
       )
     end
 

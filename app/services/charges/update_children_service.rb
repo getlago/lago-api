@@ -4,12 +4,13 @@ module Charges
   class UpdateChildrenService < BaseService
     Result = BaseResult[:charge]
 
-    def initialize(charge:, params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:, child_ids:)
+    def initialize(charge:, params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:, child_ids:, cascaded_at: nil)
       @charge = charge
       @params = params
       @parent_filters = old_parent_filters_attrs
       @old_parent = Charge.new(old_parent_attrs)
       @child_ids = child_ids
+      @cascaded_at = cascaded_at
 
       if old_parent_applied_pricing_unit_attrs.present?
         @old_parent.build_applied_pricing_unit(old_parent_applied_pricing_unit_attrs)
@@ -21,12 +22,12 @@ module Charges
     def call
       return result unless charge
 
-      # Acquire an advisory lock on the parent charge to prevent concurrent
-      # cascades from overlapping (e.g. parent updated twice in quick succession).
-      # timeout_seconds: 0 fails immediately if another cascade is running;
-      # the job's retry_on will pick it up later.
       Charge.with_advisory_lock!("update_children_charge_#{charge.id}", timeout_seconds: 0) do
-        # skip touching to avoid deadlocks and redundant cascading updates
+        if stale_cascade?
+          Rails.logger.info("Charges::UpdateChildrenService - Skipping stale cascade for charge #{charge.id} (cascaded_at: #{cascaded_at})")
+          next
+        end
+
         Charge.no_touching do
           Plan.no_touching do
             charge.children.where(id: child_ids).find_each do |child_charge|
@@ -51,6 +52,17 @@ module Charges
 
     private
 
-    attr_reader :charge, :params, :old_parent, :parent_filters, :child_ids
+    attr_reader :charge, :params, :old_parent, :parent_filters, :child_ids, :cascaded_at
+
+    def stale_cascade?
+      return false unless cascaded_at
+
+      latest_change = [
+        charge.reload.updated_at,
+        charge.filters.with_discarded.maximum(:updated_at)
+      ].compact.max
+
+      latest_change > Time.iso8601(cascaded_at)
+    end
   end
 end

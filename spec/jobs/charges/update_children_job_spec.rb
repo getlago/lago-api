@@ -13,6 +13,7 @@ RSpec.describe Charges::UpdateChildrenJob do
   let(:old_parent_attrs) { charge.attributes }
   let(:old_parent_filters_attrs) { charge.filters.map(&:attributes) }
   let(:old_parent_applied_pricing_unit_attrs) { charge.filters.map(&:attributes) }
+  let(:cascaded_at) { charge.updated_at.iso8601(6) }
   let(:params) do
     {
       properties: {}
@@ -26,12 +27,12 @@ RSpec.describe Charges::UpdateChildrenJob do
     subscription2
     allow(Charges::UpdateChildrenBatchJob)
       .to receive(:perform_later)
-      .with(child_ids: [child_charge.id], params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:)
+      .with(child_ids: [child_charge.id], params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:, cascaded_at:)
       .and_call_original
   end
 
   it "calls the batch jobs" do
-    described_class.perform_now(params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:)
+    described_class.perform_now(params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:, cascaded_at:)
 
     expect(Charges::UpdateChildrenBatchJob).to have_received(:perform_later).once
   end

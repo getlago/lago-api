@@ -16,15 +16,17 @@ RSpec.describe Charges::UpdateChildrenBatchJob do
     }
   end
 
+  let(:cascaded_at) { charge.updated_at.iso8601(6) }
+
   before do
     allow(Charges::UpdateChildrenService)
       .to receive(:call!)
-      .with(charge:, child_ids:, params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:)
+      .with(charge:, child_ids:, params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:, cascaded_at:)
       .and_call_original
   end
 
   it "calls the children service" do
-    described_class.perform_now(child_ids:, params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:)
+    described_class.perform_now(child_ids:, params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:, cascaded_at:)
 
     expect(Charges::UpdateChildrenService).to have_received(:call!)
   end

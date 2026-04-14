@@ -10,7 +10,8 @@ RSpec.describe Charges::UpdateChildrenService do
       old_parent_attrs:,
       old_parent_filters_attrs:,
       old_parent_applied_pricing_unit_attrs:,
-      child_ids:
+      child_ids:,
+      cascaded_at:
     )
   end
 
@@ -20,6 +21,7 @@ RSpec.describe Charges::UpdateChildrenService do
   let(:old_parent_attrs) { charge&.attributes }
   let(:old_parent_filters_attrs) { charge&.filters&.map(&:attributes) }
   let(:old_parent_applied_pricing_unit_attrs) { charge&.applied_pricing_unit&.attributes }
+  let(:cascaded_at) { charge&.updated_at&.iso8601(6) }
   let(:charge) do
     create(
       :standard_charge,
@@ -155,6 +157,35 @@ RSpec.describe Charges::UpdateChildrenService do
 
         expect(child_charge.reload).to have_attributes(
           properties: {"amount" => "500"}
+        )
+      end
+    end
+
+    context "when cascade is stale" do
+      let(:cascaded_at) { 1.minute.ago.iso8601(6) }
+
+      before do
+        allow(Charges::UpdateService).to receive(:call!).and_call_original
+      end
+
+      it "skips the cascade without updating children" do
+        update_service.call
+
+        expect(Charges::UpdateService).not_to have_received(:call!)
+        expect(child_charge.reload).to have_attributes(
+          properties: {"amount" => "300"}
+        )
+      end
+    end
+
+    context "when cascaded_at is nil (backward compatibility)" do
+      let(:cascaded_at) { nil }
+
+      it "processes the cascade normally" do
+        update_service.call
+
+        expect(child_charge.reload).to have_attributes(
+          properties: {"amount" => "400"}
         )
       end
     end
