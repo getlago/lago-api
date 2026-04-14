@@ -3,32 +3,24 @@
 require "rails_helper"
 
 RSpec.describe Charges::UpdateChildrenService do
-  subject(:update_service) do
+  subject(:service) do
     described_class.new(
-      charge:,
       params:,
       old_parent_attrs:,
       old_parent_filters_attrs:,
-      old_parent_applied_pricing_unit_attrs:,
-      child_ids:
+      old_parent_applied_pricing_unit_attrs:
     )
   end
 
   let(:billable_metric) { create(:billable_metric) }
   let(:organization) { billable_metric.organization }
   let(:plan) { create(:plan, organization:) }
-  let(:old_parent_attrs) { charge&.attributes }
-  let(:old_parent_filters_attrs) { charge&.filters&.map(&:attributes) }
-  let(:old_parent_applied_pricing_unit_attrs) { charge&.applied_pricing_unit&.attributes }
   let(:charge) do
     create(
       :standard_charge,
       plan:,
       billable_metric:,
-      amount_currency: "USD",
-      properties: {
-        amount: "300"
-      }
+      properties: {amount: "300"}
     )
   end
   let(:billable_metric_filter) do
@@ -40,30 +32,23 @@ RSpec.describe Charges::UpdateChildrenService do
     )
   end
 
-  let(:child_plan) { create(:plan, organization:, parent_id:) }
-  let(:parent_id) { plan.id }
-  let(:charge_parent_id) { charge.id }
-  let(:child_ids) { [child_charge&.id] }
+  let(:child_plan) { create(:plan, organization:, parent_id: plan.id) }
   let(:child_charge) do
     create(
       :standard_charge,
-      plan_id: child_plan.id,
-      parent_id: charge_parent_id,
-      billable_metric_id: billable_metric.id,
+      plan: child_plan,
+      parent_id: charge.id,
+      billable_metric:,
       properties: {amount: "300"}
     )
   end
+  let(:old_parent_attrs) { charge.attributes }
+  let(:old_parent_filters_attrs) { charge.filters.map(&:attributes) }
+  let(:old_parent_applied_pricing_unit_attrs) { charge.applied_pricing_unit&.attributes }
   let(:params) do
     {
-      id: charge&.id,
-      billable_metric_id: billable_metric.id,
       charge_model: "standard",
-      pay_in_advance: true,
-      prorated: true,
-      invoiceable: false,
-      properties: {
-        amount: "400"
-      },
+      properties: {amount: "400"},
       applied_pricing_unit: {conversion_rate: 2.5},
       filters: [
         {
@@ -76,82 +61,68 @@ RSpec.describe Charges::UpdateChildrenService do
   end
 
   before do
+    create(:subscription, plan: child_plan)
     charge && create(:applied_pricing_unit, pricing_unitable: charge, conversion_rate: 1.1)
     child_charge && create(:applied_pricing_unit, pricing_unitable: child_charge, conversion_rate: 1.1)
   end
 
   describe "#call" do
-    context "when charge is not found" do
-      let(:charge) { nil }
-      let(:child_charge) { nil }
+    it "updates child charges with active subscriptions" do
+      service.call
 
-      it "returns an empty result" do
-        result = update_service.call
+      expect(child_charge.reload).to have_attributes(
+        properties: {"amount" => "400"}
+      )
+      expect(child_charge.filters.first).to have_attributes(
+        invoice_display_name: "Card filter",
+        properties: {"amount" => "90"}
+      )
+      expect(child_charge.filters.first.values.first).to have_attributes(
+        billable_metric_filter_id: billable_metric_filter.id,
+        values: ["card"]
+      )
+      expect(child_charge.applied_pricing_unit.conversion_rate).to eq 2.5
+    end
 
-        expect(result).to be_success
-        expect(result.charge).to be_nil
+    it "does not touch plan" do
+      freeze_time do
+        expect { service.call }.not_to change { child_plan.reload.updated_at }
       end
     end
 
-    context "when charge has children that has not been modified" do
-      it "updates child charge" do
-        update_service.call
+    it "does not issue an extra child charge update from filter saves" do
+      child_charge_updates = []
 
-        expect(child_charge.reload).to have_attributes(
-          properties: {"amount" => "400"}
-        )
+      callback = lambda do |_name, _start, _finish, _id, payload|
+        sql = payload[:sql]
+        next unless sql.match?(/\AUPDATE\s+"charges"/i)
 
-        expect(child_charge.filters.first).to have_attributes(
-          invoice_display_name: "Card filter",
-          properties: {"amount" => "90"}
-        )
-        expect(child_charge.filters.first.values.first).to have_attributes(
-          billable_metric_filter_id: billable_metric_filter.id,
-          values: ["card"]
-        )
-        expect(child_charge.applied_pricing_unit.conversion_rate).to eq 2.5
+        binds = payload[:type_casted_binds] || payload[:binds]
+        next unless Array(binds).include?(child_charge.id)
+
+        child_charge_updates << sql
       end
 
-      it "does not touch plan" do
-        freeze_time do
-          expect { update_service.call }.not_to change { child_plan.reload.updated_at }
-        end
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        service.call
       end
 
-      it "does not issue an extra child charge update from filter saves" do
-        child_charge_updates = []
-
-        callback = lambda do |_name, _start, _finish, _id, payload|
-          sql = payload[:sql]
-          next unless sql.match?(/\AUPDATE\s+"charges"/i)
-
-          binds = payload[:type_casted_binds] || payload[:binds]
-          next unless Array(binds).include?(child_charge.id)
-
-          child_charge_updates << sql
-        end
-
-        ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
-          update_service.call
-        end
-
-        expect(child_charge_updates.size).to eq(1)
-      end
+      expect(child_charge_updates.size).to eq(1)
     end
 
-    context "when charge has children that has been modified" do
+    context "when child charge properties have been modified" do
       let(:child_charge) do
         create(
           :standard_charge,
-          plan_id: child_plan.id,
-          parent_id: charge_parent_id,
-          billable_metric_id: billable_metric.id,
+          plan: child_plan,
+          parent_id: charge.id,
+          billable_metric:,
           properties: {amount: "500"}
         )
       end
 
-      it "does not update charge properties" do
-        update_service.call
+      it "does not overwrite modified properties" do
+        service.call
 
         expect(child_charge.reload).to have_attributes(
           properties: {"amount" => "500"}
@@ -159,33 +130,40 @@ RSpec.describe Charges::UpdateChildrenService do
       end
     end
 
-    context "when charge has no children" do
-      let(:child_charge) do
+    context "when child has a terminated subscription" do
+      let(:child_plan2) { create(:plan, organization:, parent_id: plan.id) }
+      let!(:child_charge2) do
         create(
           :standard_charge,
-          plan_id: child_plan.id,
-          parent_id: nil,
-          billable_metric_id: billable_metric.id,
+          plan: child_plan2,
+          parent_id: charge.id,
+          billable_metric:,
           properties: {amount: "300"}
         )
       end
 
-      before do
-        allow(Charges::UpdateService).to receive(:call!).and_call_original
-      end
+      before { create(:subscription, plan: child_plan2, status: :terminated) }
 
-      it "does not call the update service" do
-        update_service.call
+      it "skips children without active or pending subscriptions" do
+        service.call
 
-        expect(Charges::UpdateService).not_to have_received(:call!)
-      end
-
-      it "does not update charge properties" do
-        update_service.call
-
-        expect(child_charge.reload).to have_attributes(
+        expect(child_charge2.reload).to have_attributes(
           properties: {"amount" => "300"}
         )
+      end
+    end
+
+    context "when charge is not found" do
+      let(:old_parent_attrs) { {"id" => SecureRandom.uuid} }
+
+      before do
+        allow(Charges::UpdateService).to receive(:call!)
+      end
+
+      it "returns early without processing" do
+        service.call
+
+        expect(Charges::UpdateService).not_to have_received(:call!)
       end
     end
   end

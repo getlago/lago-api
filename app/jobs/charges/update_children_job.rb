@@ -2,21 +2,19 @@
 
 module Charges
   class UpdateChildrenJob < ApplicationJob
-    queue_as :default
+    queue_as :low_priority
+
+    retry_on WithAdvisoryLock::FailedToAcquireLock,
+      attempts: MAX_LOCK_RETRY_ATTEMPTS,
+      wait: random_lock_retry_delay
 
     def perform(params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:)
-      charge = Charge.find_by(id: old_parent_attrs["id"])
-      return unless charge
-
-      charge.children.joins(plan: :subscriptions).where(subscriptions: {status: %w[active pending]}).distinct.pluck(:id).each_slice(20) do |child_ids|
-        Charges::UpdateChildrenBatchJob.perform_later(
-          child_ids:,
-          params:,
-          old_parent_attrs:,
-          old_parent_filters_attrs:,
-          old_parent_applied_pricing_unit_attrs:
-        )
-      end
+      Charges::UpdateChildrenService.call!(
+        params:,
+        old_parent_attrs:,
+        old_parent_filters_attrs:,
+        old_parent_applied_pricing_unit_attrs:
+      )
     end
   end
 end
