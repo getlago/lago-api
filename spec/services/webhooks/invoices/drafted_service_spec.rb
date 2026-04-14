@@ -12,7 +12,8 @@ RSpec.describe Webhooks::Invoices::DraftedService do
   let(:invoice) { create(:invoice, customer:, organization:) }
 
   before do
-    create_list(:fee, 2, invoice:)
+    create_list(:fee, 1, invoice:)
+    create_list(:fee, 1, invoice:, presentation_breakdowns: [build(:presentation_breakdown)])
     create_list(:credit, 2, invoice:)
   end
 
