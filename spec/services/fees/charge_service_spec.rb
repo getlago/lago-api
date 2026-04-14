@@ -3550,6 +3550,68 @@ RSpec.describe Fees::ChargeService, :premium do
               expect(parsed.first["events_count"]).to eq(1)
             end
 
+            context "when charge uses presentation_group_keys" do
+              let(:billable_metric) do
+                create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
+              end
+
+              let(:charge) do
+                create(
+                  :standard_charge,
+                  plan: subscription.plan,
+                  billable_metric:,
+                  properties: {
+                    amount: "20",
+                    presentation_group_keys: [{value: "region"}]
+                  }
+                )
+              end
+
+              before do
+                create(
+                  :event,
+                  organization:,
+                  subscription:,
+                  code: billable_metric.code,
+                  timestamp: Time.zone.parse("2022-03-16"),
+                  properties: {region: "eu", value: 10}
+                )
+                create(
+                  :event,
+                  organization:,
+                  subscription:,
+                  code: billable_metric.code,
+                  timestamp: Time.zone.parse("2022-03-16"),
+                  properties: {region: "us", value: 5}
+                )
+              end
+
+              it "keeps presentation_breakdowns on subsequent calls from cache" do
+                first_result = charge_subscription_service.call
+                cached_value = Rails.cache.read(cache_key)
+                second_result = charge_subscription_service.call
+
+                expect(first_result).to be_success
+                expect(first_result.fees.count).to eq(1)
+                expect(first_result.fees.first.presentation_breakdowns.map(&:presentation_by)).to match_array(
+                  [{"region" => "eu"}, {"region" => "us"}]
+                )
+
+                expect(JSON.parse(cached_value).first["presentation_breakdowns"]).to match_array(
+                  [
+                    hash_including({"presentation_by" => {"region" => "eu"}, "units" => "10.0", "organization_id" => organization.id}),
+                    hash_including({"presentation_by" => {"region" => "us"}, "units" => "5.0", "organization_id" => organization.id})
+                  ]
+                )
+
+                expect(second_result).to be_success
+                expect(second_result.fees.count).to eq(1)
+                expect(second_result.fees.first.presentation_breakdowns.map(&:presentation_by)).to match_array(
+                  [{"region" => "eu"}, {"region" => "us"}]
+                )
+              end
+            end
+
             it "returns fees from cache on subsequent calls" do
               first_result = charge_subscription_service.call
               second_result = charge_subscription_service.call
