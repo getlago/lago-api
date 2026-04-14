@@ -29,7 +29,7 @@ class BillRateSchedulesJob < ApplicationJob
   def lock_key_arguments
     arguments = self.arguments.dup
 
-    return arguments if arguments[0].empty?
+    return arguments if arguments[0].blank?
 
     subscription_rate_schedules = SubscriptionRateSchedule.where(id: arguments[0]).includes(:subscription)
     return arguments if subscription_rate_schedules.empty?

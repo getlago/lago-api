@@ -26,9 +26,7 @@ module RateSchedules
     attr_reader :organization, :billing_at
 
     # NOTE: SubscriptionRateSchedules eligible to be billed now (in arrears):
-    # - status = active
-    # - have a cycle that fully ended in the customer's timezone (cycle's to_datetime
-    #   falls on a date strictly before today, evaluated at the customer/billing entity TZ)
+    # - have a cycle that has ended (DATE(to_datetime) <= today in customer/billing entity TZ)
     # - that cycle has no fee yet (not already billed)
     def billable_subscription_rate_schedules
       organization.subscription_rate_schedules
