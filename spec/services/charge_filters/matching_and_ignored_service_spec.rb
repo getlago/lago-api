@@ -73,6 +73,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     ]
   end
 
+  let(:f6) { create(:charge_filter, charge:, invoice_display_name: "f6") }
   before do
     f1
     f1_values
@@ -84,6 +85,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     f4_values
     f5
     f5_values
+    f6
   end
 
   describe "for f1" do
@@ -150,6 +152,23 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
           {"size" => ["512"], "steps" => ["25"]},
           {"size" => %w[512 1024], "steps" => %w[25 50 75 100]},
           {"size" => ["1024"]}
+        ]
+      )
+    end
+  end
+
+  describe "for f6 (filter with no values)" do
+    let(:current_filter) { f6 }
+
+    it "returns a formatted hash" do
+      expect(service_result.matching_filters).to eq({})
+      expect(service_result.ignored_filters).to match_array(
+        [
+          {"size" => ["512"], "steps" => ["25"], "model" => ["llama-2"]},
+          {"size" => ["512"], "steps" => ["25"]},
+          {"size" => ["512", "1024"], "steps" => ["25", "50", "75", "100"]},
+          {"size" => ["512", "1024"]},
+          {"size" => ["512"]}
         ]
       )
     end
