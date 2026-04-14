@@ -36,14 +36,14 @@ RSpec.describe Customers::RefreshWalletsService do
           :standard_charge,
           plan: subscription.plan,
           billable_metric:,
-          properties: {amount: "3"}
+          properties: {amount: "3", presentation_group_keys: [{value: "cloud"}]}
         )
 
         create(
           :standard_charge,
           plan: subscription.plan,
           billable_metric: pay_in_advance_billable_metric,
-          properties: {amount: "1"},
+          properties: {amount: "1", presentation_group_keys: [{value: "region"}]},
           pay_in_advance: true,
           invoiceable: true
         )
@@ -97,6 +97,35 @@ RSpec.describe Customers::RefreshWalletsService do
 
     it "marks customer as not awaiting wallet refresh" do
       expect { subject }.to change(customer, :awaiting_wallet_refresh).from(true).to(false)
+    end
+
+    context "when charges have presentation_group_keys" do
+      before do
+        allow(Invoices::CustomerUsageService).to receive(:call!).and_call_original
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+      end
+
+      it "calls CustomerUsageService with UsageFilters::WITHOUT_PRESENTATION" do
+        subject
+
+        customer.active_subscriptions.each do |subscription|
+          expect(Invoices::CustomerUsageService).to have_received(:call!).with(
+            customer:,
+            subscription:,
+            usage_filters: UsageFilters::WITHOUT_PRESENTATION
+          )
+        end
+      end
+
+      it "calls AggregationFactory with presentation_by as empty array" do
+        subject
+
+        expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).at_least(:once) do |args|
+          next unless args[:filters].key?(:presentation_by)
+
+          expect(args[:filters][:presentation_by]).to eq([])
+        end
+      end
     end
 
     describe "current usage calculation" do

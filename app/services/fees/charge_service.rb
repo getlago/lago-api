@@ -423,7 +423,6 @@ module Fees
       grouped_by_keys = grouped_by_keys(charge_filter:)
       filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present?
 
-      # FIXME: Add an option to skip presentation keys when the usage_filters have such option to ignore the computation
       presentation_group_keys_values = charge.presentation_group_keys_values
       if presentation_group_keys_values.present?
         filters[:presentation_by] = presentation_group_keys_values & (usage_filters.filter_by_presentation || presentation_group_keys_values)
