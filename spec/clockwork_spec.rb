@@ -49,6 +49,27 @@ describe Clockwork do
     end
   end
 
+  describe "schedule:bill_rate_schedules" do
+    let(:job) { "schedule:bill_rate_schedules" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 01:01:00") }
+
+    it "enqueues a rate schedules biller job" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.second
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::RateSchedulesBillerJob).to have_been_enqueued
+    end
+  end
+
   describe "schedule:activate_subscriptions" do
     let(:job) { "schedule:activate_subscriptions" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }

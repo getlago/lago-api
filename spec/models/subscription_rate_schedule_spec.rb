@@ -22,6 +22,9 @@ RSpec.describe SubscriptionRateSchedule do
       expect(subject).to belong_to(:subscription)
       expect(subject).to belong_to(:product_item)
       expect(subject).to belong_to(:rate_schedule)
+      expect(subject).to have_many(:cycles)
+        .class_name("SubscriptionRateScheduleCycle")
+        .dependent(:destroy)
     end
   end
 

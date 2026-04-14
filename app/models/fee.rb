@@ -21,6 +21,7 @@ class Fee < ApplicationRecord
   belongs_to :billing_entity
   belongs_to :fixed_charge, -> { with_discarded }, optional: true
   belongs_to :subscription_rate_schedule, optional: true
+  belongs_to :subscription_rate_schedule_cycle, optional: true
 
   has_one :adjusted_fee, dependent: :nullify
   has_one :billable_metric, -> { with_discarded }, through: :charge
