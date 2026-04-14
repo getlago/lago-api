@@ -39,7 +39,7 @@ module V1
       payload = payload.merge(applicable_usage_thresholds) if include?(:applicable_usage_thresholds)
       payload = payload.merge(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
 
-      if model.organization.feature_flag_enabled?(:payment_gated_subscriptions)
+      if organization.feature_flag_enabled?(:payment_gated_subscriptions)
         payload[:cancelation_reason] = model.cancelation_reason
         payload[:activated_at] = model.activated_at&.iso8601
         payload[:activation_rules] = model.activation_rules.map do |rule|
@@ -51,6 +51,10 @@ module V1
     end
 
     private
+
+    def organization
+      options[:organization] || model.organization
+    end
 
     def customer
       ::V1::CustomerSerializer.new(model.customer).serialize

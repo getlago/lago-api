@@ -19,14 +19,15 @@ module SubscriptionIndex
 
     if result.success?
       subscriptions = result.subscriptions
-        .includes(:organization, :plan, previous_subscription: :plan, next_subscriptions: :plan, customer: :billing_entity)
+        .includes(:plan, previous_subscription: :plan, next_subscriptions: :plan, customer: :billing_entity)
 
       render(
         json: ::CollectionSerializer.new(
           subscriptions,
           ::V1::SubscriptionSerializer,
           collection_name: "subscriptions",
-          meta: pagination_metadata(subscriptions)
+          meta: pagination_metadata(subscriptions),
+          organization: current_organization
         )
       )
     else
