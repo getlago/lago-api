@@ -57,20 +57,17 @@ module Invoices
     attr_reader :billable_pairs
 
     def billable_cycle_for(srs)
-      tz = srs.subscription.customer.applicable_timezone
-
       srs.cycles
-        .where(
-          "DATE(subscription_rate_schedule_cycles.to_datetime::timestamptz AT TIME ZONE :tz) " \
-          "<= DATE(:billing_at::timestamptz AT TIME ZONE :tz)",
-          tz: tz,
-          billing_at: Time.zone.at(timestamp)
-        )
-        .where(
-          "NOT EXISTS (SELECT 1 FROM fees " \
-          "WHERE fees.subscription_rate_schedule_cycle_id = subscription_rate_schedule_cycles.id " \
-          "AND fees.deleted_at IS NULL)"
-        )
+        .joins(subscription_rate_schedule: {subscription: {customer: :billing_entity}})
+        .where(<<~SQL.squish, billing_at: Time.zone.at(timestamp))
+          DATE(subscription_rate_schedule_cycles.to_datetime) <= DATE((:billing_at)#{at_time_zone})
+        SQL
+        .where(<<~SQL.squish)
+          NOT EXISTS (
+            SELECT 1 FROM fees
+            WHERE fees.subscription_rate_schedule_cycle_id = subscription_rate_schedule_cycles.id
+          )
+        SQL
         .order(cycle_index: :desc)
         .first
     end
