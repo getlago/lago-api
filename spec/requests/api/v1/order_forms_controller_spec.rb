@@ -25,9 +25,58 @@ RSpec.describe Api::V1::OrderFormsController do
     end
 
     context "when filtering by status" do
-      subject { get_with_token(organization, "/api/v1/order_forms", {status: "generated"}) }
+      subject { get_with_token(organization, "/api/v1/order_forms", {status: ["generated"]}) }
 
       it "returns only matching order forms" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:order_forms].count).to eq(1)
+        expect(json[:order_forms].first[:lago_id]).to eq(order_form.id)
+      end
+    end
+
+    context "when filtering by number" do
+      subject { get_with_token(organization, "/api/v1/order_forms", {number: [order_form.number]}) }
+
+      it "returns only matching order forms" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:order_forms].count).to eq(1)
+        expect(json[:order_forms].first[:lago_id]).to eq(order_form.id)
+      end
+    end
+
+    context "when filtering by customer_id" do
+      subject { get_with_token(organization, "/api/v1/order_forms", {customer_id: [customer.id]}) }
+
+      let(:other_customer) { create(:customer, organization:) }
+      let(:other_quote) { create(:quote, organization:, customer: other_customer) }
+
+      before { create(:order_form, organization:, customer: other_customer, quote: other_quote) }
+
+      it "returns only matching order forms" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:order_forms].count).to eq(2)
+      end
+    end
+
+    context "when filtering by order_form_date_from and order_form_date_to" do
+      subject do
+        get_with_token(organization, "/api/v1/order_forms", {
+          order_form_date_from: 4.days.ago.iso8601,
+          order_form_date_to: 2.days.ago.iso8601
+        })
+      end
+
+      let!(:order_form) { create(:order_form, organization:, customer:, quote:, created_at: 3.days.ago) }
+
+      before { create(:order_form, :signed, organization:, customer:, quote:, created_at: 1.day.ago) }
+
+      it "returns only order forms within the date range" do
         subject
 
         expect(response).to have_http_status(:ok)
