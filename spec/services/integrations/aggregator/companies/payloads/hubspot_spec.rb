@@ -55,5 +55,15 @@ RSpec.describe Integrations::Aggregator::Companies::Payloads::Hubspot do
     it "returns the payload body" do
       expect(subject).to eq payload_body
     end
+
+    context "when customer fields are blank" do
+      let(:customer) { create(:customer, customer_type: "company", name: nil, url: nil) }
+
+      it "excludes blank fields from properties" do
+        properties = subject.dig("input", "properties")
+        expect(properties).not_to have_key("name")
+        expect(properties).not_to have_key("domain")
+      end
+    end
   end
 end

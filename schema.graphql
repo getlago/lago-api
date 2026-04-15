@@ -5705,6 +5705,8 @@ enum EventTypeEnum {
   plan_created
   plan_deleted
   plan_updated
+  subscription_canceled
+  subscription_incomplete
   subscription_started
   subscription_terminated
   subscription_termination_alert

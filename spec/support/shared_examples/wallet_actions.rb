@@ -247,7 +247,7 @@ RSpec.shared_examples "a wallet create endpoint" do
       expect(recurring_rules.first[:trigger]).to eq("interval")
       expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
       custom_section = recurring_rules.first[:applied_invoice_custom_sections].first
-      expect(custom_section[:invoice_custom_section_id]).to eq(section_1.id)
+      expect(custom_section[:invoice_custom_section][:lago_id]).to eq(section_1.id)
       expect(recurring_rules.first[:payment_method][:payment_method_type]).to eq("provider")
       expect(recurring_rules.first[:payment_method][:payment_method_id]).to eq(payment_method.id)
     end
@@ -766,7 +766,7 @@ RSpec.shared_examples "a wallet update endpoint" do
       expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
       expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
       custom_section = recurring_rules.first[:applied_invoice_custom_sections].first
-      expect(custom_section[:invoice_custom_section_id]).to eq(section_1.id)
+      expect(custom_section[:invoice_custom_section][:lago_id]).to eq(section_1.id)
       expect(recurring_rules.first[:payment_method][:payment_method_type]).to eq("provider")
       expect(recurring_rules.first[:payment_method][:payment_method_id]).to eq(payment_method.id)
 
