@@ -31,11 +31,11 @@ module FixedCharges
       # This handles cases like plan overrides where the subscription hasn't been updated yet
       # otherwise, emit events for all active subscriptions on the plan
       if subscription
-        # Only emit events for active subscriptions, even when explicitly provided
+        # Emit events for active and incomplete subscriptions
         # Pending subscriptions will have events created when they activate
-        subscription.active? ? [subscription] : []
+        (subscription.active? || subscription.incomplete?) ? [subscription] : []
       else
-        fixed_charge.plan.subscriptions.active
+        fixed_charge.plan.subscriptions.where(status: %i[active incomplete])
       end
     end
 

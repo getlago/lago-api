@@ -63,6 +63,24 @@ RSpec.describe Events::PostProcessService do
       end
     end
 
+    context "when subscription is incomplete" do
+      let(:subscription) do
+        create(:subscription, :incomplete, organization:, customer:, plan:, started_at:)
+      end
+
+      it "does not enqueue a pay in advance job" do
+        expect { process_service.call }.not_to have_enqueued_job(Events::PayInAdvanceJob)
+      end
+
+      it "does not track subscription activity" do
+        allow(UsageMonitoring::TrackSubscriptionActivityService).to receive(:call)
+
+        process_service.call
+
+        expect(UsageMonitoring::TrackSubscriptionActivityService).not_to have_received(:call)
+      end
+    end
+
     context "when event matches an pay_in_advance charge" do
       let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
       let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "item_id") }
