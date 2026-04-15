@@ -22,4 +22,30 @@ describe Clock::MarkInvoicesAsPaymentOverdueJob, job: true do
         .and have_enqueued_job(Invoices::Payments::MarkOverdueJob).with(invoice: overdue_invoice_2)
     end
   end
+
+  describe "index usage" do
+    # Force PostgreSQL to use indexes even on a tiny test dataset so we can
+    # verify the planner CAN use them for the query patterns the job produces.
+    around do |example|
+      ActiveRecord::Base.connection.execute("SET enable_seqscan = off")
+      example.run
+    ensure
+      ActiveRecord::Base.connection.execute("SET enable_seqscan = on")
+    end
+
+    it "uses the partial index on payment_due_date for the overdue invoice lookup" do
+      create(:invoice, payment_due_date: 1.day.ago)
+
+      plan = Invoice
+        .finalized
+        .not_payment_succeeded
+        .where(payment_overdue: false)
+        .where(payment_dispute_lost_at: nil)
+        .where(payment_due_date: ...Time.current)
+        .explain
+        .inspect
+
+      expect(plan).to include("index_invoices_on_payment_due_date")
+    end
+  end
 end
