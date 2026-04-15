@@ -730,6 +730,7 @@ end
 #  index_invoices_by_cursor                                        (organization_id,issuing_date DESC,created_at DESC,id)
 #  index_invoices_on_customer_id_and_sequential_id                 (customer_id,sequential_id) UNIQUE
 #  index_invoices_on_number                                        (number)
+#  index_invoices_on_payment_due_date                              (payment_due_date) WHERE ((status = 1) AND (payment_status <> 1) AND (payment_overdue = false) AND (payment_dispute_lost_at IS NULL))
 #  index_invoices_on_payment_method_id                             (payment_method_id)
 #  index_invoices_on_ready_to_be_refreshed                         (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)
 #  index_invoices_on_voided_invoice_id                             (voided_invoice_id)
