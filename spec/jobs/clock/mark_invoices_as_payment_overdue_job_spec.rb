@@ -42,6 +42,8 @@ describe Clock::MarkInvoicesAsPaymentOverdueJob, job: true do
         .where(payment_overdue: false)
         .where(payment_dispute_lost_at: nil)
         .where(payment_due_date: ...Time.current)
+        .order(:payment_due_date, :id)
+        .limit(1000)
         .explain
         .inspect
 
