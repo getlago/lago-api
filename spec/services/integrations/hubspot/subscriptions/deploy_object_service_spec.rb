@@ -28,7 +28,7 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployObjectService do
         .and_return(http_client_get)
       allow(http_client).to receive(:post_with_response).and_return(response)
       allow(http_client_get).to receive(:get).and_raise LagoHttpClient::HttpError.new("error", "error", nil)
-      allow(response).to receive(:[]).with("objectTypeId").and_return("123")
+      allow(response).to receive(:body).and_return({"objectTypeId" => "123"}.to_json)
 
       integration.subscriptions_properties_version = nil
       integration.save!

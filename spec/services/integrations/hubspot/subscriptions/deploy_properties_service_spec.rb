@@ -27,7 +27,7 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployPropertiesService do
 
       expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
       expect(http_client).to have_received(:post_with_response) do |payload, headers|
-        expect(payload[:objectType]).to eq("LagoSubscriptions")
+        expect(payload[:objectType]).to eq(integration.subscriptions_object_type_id)
         expect(headers["Authorization"]).to include("Bearer")
       end
       expect(integration.reload.subscriptions_properties_version).to eq(described_class::VERSION)

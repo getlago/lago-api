@@ -133,6 +133,29 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       end
     end
 
+    context "when usage threshold belongs to subscription" do
+      let(:sorted_usage_thresholds) { [create(:usage_threshold, :for_subscription, subscription:)] }
+
+      it "creates a progressive billing invoice" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to be_present
+
+        invoice = result.invoice
+        amount_cents = 100
+
+        expect(invoice).to have_attributes(
+          organization: organization,
+          customer: customer,
+          currency: plan.amount_currency,
+          status: "finalized",
+          invoice_type: "progressive_billing",
+          fees_amount_cents: amount_cents
+        )
+      end
+    end
+
     context "when threshold was already billed" do
       before do
         invoice = create(

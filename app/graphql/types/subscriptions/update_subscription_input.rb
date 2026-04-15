@@ -7,6 +7,7 @@ module Types
 
       argument :id, ID, required: true
 
+      argument :activation_rules, [Types::Subscriptions::ActivationRuleInput], required: false
       argument :ending_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
       argument :name, String, required: false

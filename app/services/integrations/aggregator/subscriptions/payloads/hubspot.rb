@@ -7,7 +7,7 @@ module Integrations
         class Hubspot < Integrations::Aggregator::Subscriptions::Payloads::BasePayload
           def create_body
             {
-              "objectType" => "LagoSubscriptions",
+              "objectType" => integration.subscriptions_object_type_id,
               "input" => {
                 "associations" => [],
                 "properties" => {
@@ -32,7 +32,7 @@ module Integrations
           def update_body
             {
               "objectId" => integration_subscription.external_id,
-              "objectType" => "LagoSubscriptions",
+              "objectType" => integration.subscriptions_object_type_id,
               "input" => {
                 "properties" => {
                   "lago_subscription_id" => subscription.id,

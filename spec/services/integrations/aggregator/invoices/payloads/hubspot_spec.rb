@@ -37,7 +37,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
 
     let(:create_body) do
       {
-        "objectType" => "LagoInvoices",
+        "objectType" => integration.invoices_object_type_id,
         "input" => {
           "associations" => [],
           "properties" => {
@@ -78,7 +78,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
     let(:update_body) do
       {
         "objectId" => integration_invoice.external_id,
-        "objectType" => "LagoInvoices",
+        "objectType" => integration.invoices_object_type_id,
         "input" => {
           "properties" => {
             "lago_invoice_id" => invoice.id,

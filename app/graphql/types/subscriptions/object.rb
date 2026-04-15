@@ -51,6 +51,10 @@ module Types
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum
       field :progressive_billing_disabled, Boolean
 
+      field :activated_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :activation_rules, [Types::Subscriptions::ActivationRuleType], null: false
+      field :cancelation_reason, Types::Subscriptions::CancelationReasonEnum, null: true
+
       def next_plan
         object.next_subscription&.plan
       end

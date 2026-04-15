@@ -21,6 +21,20 @@ input AcceptInviteInput {
   token: String!
 }
 
+enum ActivationRuleStatusEnum {
+  declined
+  expired
+  failed
+  inactive
+  not_applicable
+  pending
+  satisfied
+}
+
+enum ActivationRuleTypeEnum {
+  payment
+}
+
 """
 Base activity log
 """
@@ -964,6 +978,11 @@ input BillingEntityUpdateAppliedDunningCampaignInput {
 enum BillingTimeEnum {
   anniversary
   calendar
+}
+
+enum CancelationReasonEnum {
+  payment_failed
+  timeout
 }
 
 type CashfreeProvider {
@@ -3281,6 +3300,7 @@ input CreateSubscriptionChargeFilterInput {
 Create Subscription input arguments
 """
 input CreateSubscriptionInput {
+  activationRules: [SubscriptionActivationRuleInput!]
   billingTime: BillingTimeEnum!
 
   """
@@ -5685,6 +5705,8 @@ enum EventTypeEnum {
   plan_created
   plan_deleted
   plan_updated
+  subscription_canceled
+  subscription_incomplete
   subscription_started
   subscription_terminated
   subscription_termination_alert
@@ -11070,8 +11092,11 @@ type StripeProvider {
 }
 
 type Subscription {
+  activatedAt: ISO8601DateTime
+  activationRules: [SubscriptionActivationRule!]!
   activityLogs: [ActivityLog!]
   billingTime: BillingTimeEnum
+  cancelationReason: CancelationReasonEnum
   canceledAt: ISO8601DateTime
   charges: [Charge!]
   createdAt: ISO8601DateTime!
@@ -11105,6 +11130,22 @@ type Subscription {
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
   usageThresholds: [UsageThreshold!]!
+}
+
+type SubscriptionActivationRule {
+  createdAt: ISO8601DateTime!
+  expiresAt: ISO8601DateTime
+  id: ID!
+  status: ActivationRuleStatusEnum!
+  timeoutHours: Int
+  type: ActivationRuleTypeEnum!
+  updatedAt: ISO8601DateTime!
+}
+
+input SubscriptionActivationRuleInput {
+  id: ID
+  timeoutHours: Int
+  type: ActivationRuleTypeEnum!
 }
 
 """
@@ -12922,6 +12963,8 @@ input UpdateSubscriptionFixedChargeInput {
 Update Subscription input arguments
 """
 input UpdateSubscriptionInput {
+  activationRules: [SubscriptionActivationRuleInput!]
+
   """
   A unique identifier for the client performing the mutation.
   """
