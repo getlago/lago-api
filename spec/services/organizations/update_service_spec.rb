@@ -124,6 +124,17 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context "when slug has mixed case and whitespace" do
+      before { params[:slug] = "  My-Slug  " }
+
+      it "normalizes the slug before saving" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.organization.slug).to eq("my-slug")
+      end
+    end
+
     context "when slug is invalid" do
       before { params[:slug] = "INVALID SLUG!" }
 

@@ -7,7 +7,7 @@ FactoryBot.define do
     end
 
     name { Faker::Company.name }
-    sequence(:slug) { |n| "#{Faker::Internet.slug(glue: "-")}-#{n}" }
+    sequence(:slug) { |n| "test-org-#{n}" }
     default_currency { "USD" }
     audit_logs_period { nil }
 

@@ -82,7 +82,6 @@ end
 #  id                             :uuid             not null, primary key
 #  amount_cents                   :bigint           not null
 #  amount_currency                :string           not null
-#  apply_after_finalization       :boolean          default(FALSE), not null
 #  before_taxes                   :boolean          default(FALSE), not null
 #  created_at                     :datetime         not null
 #  updated_at                     :datetime         not null
