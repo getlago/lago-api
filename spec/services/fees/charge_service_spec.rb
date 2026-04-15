@@ -119,6 +119,111 @@ RSpec.describe Fees::ChargeService, :premium do
           expect { charge_subscription_service.call }.to change(Fee, :count)
         end
 
+        context "when charge uses presentation_group_keys" do
+          let(:event) do
+            create(
+              :event,
+              organization: subscription.organization,
+              subscription:,
+              code: billable_metric.code,
+              timestamp: boundaries.charges_to_datetime - 2.days,
+              properties: {region: "apac", value: 0}
+            )
+          end
+
+          let(:billable_metric) do
+            create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
+          end
+
+          let(:charge) do
+            create(
+              :standard_charge,
+              plan: subscription.plan,
+              billable_metric:,
+              properties: {
+                amount: "0",
+                presentation_group_keys: [{value: "region"}]
+              }
+            )
+          end
+
+          let(:region) do
+            create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa apac])
+          end
+
+          let(:europe_filter) do
+            create(
+              :charge_filter,
+              charge:,
+              properties: {
+                amount: "0",
+                presentation_group_keys: [{value: "region"}]
+              }
+            )
+          end
+
+          let(:usa_filter) do
+            create(
+              :charge_filter,
+              charge:,
+              properties: {
+                amount: "0",
+                presentation_group_keys: [{value: "region"}]
+              }
+            )
+          end
+
+          before do
+            create(:charge_filter_value, charge_filter: europe_filter, billable_metric_filter: region, values: ["europe"])
+            create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ["usa"])
+
+            create(
+              :event,
+              organization:,
+              subscription:,
+              code: billable_metric.code,
+              timestamp: Time.zone.parse("2022-03-16"),
+              properties: {region: "europe", value: 10}
+            )
+            create(
+              :event,
+              organization:,
+              subscription:,
+              code: billable_metric.code,
+              timestamp: Time.zone.parse("2022-03-16"),
+              properties: {region: "usa", value: 5}
+            )
+            create(
+              :event,
+              organization:,
+              subscription:,
+              code: billable_metric.code,
+              timestamp: Time.zone.parse("2022-03-16"),
+              properties: {region: "apac", value: 3}
+            )
+          end
+
+          it "builds presentation_breakdowns on each persisted fee" do
+            expect { charge_subscription_service.call }.to change(Fee, :count).from(0).to(3)
+
+            result = charge_subscription_service.call
+
+            europe_fee = result.fees.find { |f| f.charge_filter_id == europe_filter.id }
+            usa_fee = result.fees.find { |f| f.charge_filter_id == usa_filter.id }
+            catch_all_fee = result.fees.find { |f| f.charge_filter_id.nil? }
+
+            expect(europe_fee.presentation_breakdowns.map(&:presentation_by)).to match_array([{"region" => "europe"}])
+            expect(usa_fee.presentation_breakdowns.map(&:presentation_by)).to match_array([{"region" => "usa"}])
+            expect(catch_all_fee.presentation_breakdowns.map(&:presentation_by)).to match_array([{"region" => "apac"}])
+
+            expect(europe_fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([10.0])
+            expect(usa_fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([5.0])
+            expect(catch_all_fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([3.0])
+
+            expect(result.fees.flat_map(&:presentation_breakdowns)).to all(have_attributes(organization_id: organization.id))
+          end
+        end
+
         context "with preview context" do
           let(:context) { :invoice_preview }
 
@@ -2525,6 +2630,100 @@ RSpec.describe Fees::ChargeService, :premium do
 
     context "when current usage" do
       let(:context) { :current_usage }
+
+      context "when charge uses presentation_group_keys" do
+        let(:billable_metric) do
+          create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
+        end
+
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan,
+            billable_metric:,
+            properties: {
+              amount: "0",
+              presentation_group_keys: [{value: "region"}]
+            }
+          )
+        end
+
+        let(:region) do
+          create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa apac])
+        end
+
+        let(:europe_filter) do
+          create(
+            :charge_filter,
+            charge:,
+            properties: {
+              amount: "0",
+              presentation_group_keys: [{value: "region"}]
+            }
+          )
+        end
+
+        let(:usa_filter) do
+          create(
+            :charge_filter,
+            charge:,
+            properties: {
+              amount: "0",
+              presentation_group_keys: [{value: "region"}]
+            }
+          )
+        end
+
+        before do
+          create(:charge_filter_value, charge_filter: europe_filter, billable_metric_filter: region, values: ["europe"])
+          create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ["usa"])
+
+          create(
+            :event,
+            organization:,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"),
+            properties: {region: "europe", value: 10}
+          )
+          create(
+            :event,
+            organization:,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"),
+            properties: {region: "usa", value: 5}
+          )
+          create(
+            :event,
+            organization:,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"),
+            properties: {region: "apac", value: 3}
+          )
+        end
+
+        it "builds presentation_breakdowns on each non-persisted fee" do
+          expect { charge_subscription_service.call }.not_to change(Fee, :count)
+
+          result = charge_subscription_service.call
+
+          europe_fee = result.fees.find { |f| f.charge_filter_id == europe_filter.id }
+          usa_fee = result.fees.find { |f| f.charge_filter_id == usa_filter.id }
+          catch_all_fee = result.fees.find { |f| f.charge_filter_id.nil? }
+
+          expect(europe_fee.presentation_breakdowns.map(&:presentation_by)).to match_array([{"region" => "europe"}])
+          expect(usa_fee.presentation_breakdowns.map(&:presentation_by)).to match_array([{"region" => "usa"}])
+          expect(catch_all_fee.presentation_breakdowns.map(&:presentation_by)).to match_array([{"region" => "apac"}])
+
+          expect(europe_fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([10.0])
+          expect(usa_fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([5.0])
+          expect(catch_all_fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([3.0])
+
+          expect(result.fees.flat_map(&:presentation_breakdowns)).to all(have_attributes(organization_id: organization.id))
+        end
+      end
 
       context "with all types of aggregation" do
         BillableMetric::AGGREGATION_TYPES.keys.each do |aggregation_type|

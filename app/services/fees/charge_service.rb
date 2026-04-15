@@ -2,6 +2,7 @@
 
 module Fees
   class ChargeService < BaseService
+    EMPTY_BREAKDOWN = {breakdowns: []}.freeze
     # optional params:
     # | usage_filters - UsageFilters
     #  - context (:current_usage, :invoice_preview, :recurring) - to be moved in usage_filters
@@ -102,25 +103,29 @@ module Fees
 
     def init_charge_fees(properties:, charge_filter: nil)
       fees = cache_middleware.call(charge_filter:) do
-        breakdowns, charge_model_result = apply_aggregation_and_charge_model(properties:, charge_filter:)
+        aggregation_result = aggregator(charge_filter:).aggregate(options: options(properties))
 
+        unless aggregation_result.success?
+          result.fail_with_error!(aggregation_result.error)
+          return []
+        end
+
+        if billable_metric.recurring?
+          persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter)
+        end
+
+        charge_model_result = apply_charge_model(aggregation_result:, properties:)
         unless charge_model_result.success?
           result.fail_with_error!(charge_model_result.error)
           return []
         end
 
-        charge_fees = fees_from_charge_model_result(charge_model_result, properties:, charge_filter:)
-
-        # FIXME: Move this to a proper place after adding to the charge_model_result or find a better solution
-        empty_breakdown = {breakdowns: []}.freeze
-        breakdowns_indexed_by_group = breakdowns&.index_by { |e| e[:groups] }
-        if breakdowns_indexed_by_group.present?
-          charge_fees.each do |fee|
-            breakdowns_indexed_by_group.fetch(fee.grouped_by, empty_breakdown)[:breakdowns].each do |breakdown|
-              fee.presentation_breakdowns.build(breakdown.merge(organization_id: charge.organization_id))
-            end
-          end
-        end
+        charge_fees = fees_from_charge_model_result(
+          charge_model_result,
+          properties:,
+          charge_filter:,
+          breakdowns: aggregation_result.breakdowns
+        )
 
         filter_non_persistable_fees_for_caching(charge_fees)
       end
@@ -150,15 +155,26 @@ module Fees
         calculate_projected_usage:
       ).apply
 
-      fees_from_charge_model_result(charge_model_result, properties:, charge_filter:)
+      fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns: {})
     end
 
-    def fees_from_charge_model_result(charge_model_result, properties:, charge_filter:)
+    def fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns:)
+      breakdowns_indexed_by_group = breakdowns&.index_by { |e| e[:groups] }
+
       charge_model_result.grouped_results.map do |amount_result|
         # TODO: check if this is still needed as we now skip certain zero units fees
         next if current_usage && charge_filter && amount_result.units.zero? && !with_zero_units_filters
 
-        init_fee(amount_result, properties:, charge_filter:)
+        fee = init_fee(amount_result, properties:, charge_filter:)
+        next if fee.nil?
+
+        if breakdowns_indexed_by_group.present?
+          breakdowns_indexed_by_group.fetch(fee.grouped_by, EMPTY_BREAKDOWN)[:breakdowns].each do |breakdown|
+            fee.presentation_breakdowns.build(breakdown.merge(organization_id: charge.organization_id))
+          end
+        end
+
+        fee
       end.compact
     end
 
@@ -315,22 +331,14 @@ module Fees
       result.fees << true_up_fee if true_up_fee
     end
 
-    def apply_aggregation_and_charge_model(properties:, charge_filter: nil)
-      aggregation_result = aggregator(charge_filter:).aggregate(options: options(properties))
-      return aggregation_result unless aggregation_result.success?
-
-      if billable_metric.recurring?
-        persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter)
-      end
-
-      # FIXME: This is not good, the breakdowns should be associated with charge model result or be accomodated in another way
-      [aggregation_result.breakdowns, ChargeModels::Factory.new_instance(
+    def apply_charge_model(aggregation_result:, properties:)
+      ChargeModels::Factory.new_instance(
         chargeable: charge,
         aggregation_result:,
         properties:,
         period_ratio: calculate_period_ratio,
         calculate_projected_usage:
-      ).apply]
+      ).apply
     end
 
     def options(properties)
