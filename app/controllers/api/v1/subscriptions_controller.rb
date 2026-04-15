@@ -121,6 +121,8 @@ module Api
         subscription = if query.count > 1
           if params[:status] == "pending"
             query.pending
+          elsif params[:status] == "incomplete"
+            query.incomplete
           else
             query.active
           end
@@ -175,6 +177,7 @@ module Api
               :skip_invoice_custom_sections,
               {invoice_custom_section_codes: []}
             ],
+            activation_rules: [:type, :timeout_hours],
             payment_method: [
               :payment_method_type,
               :payment_method_id
@@ -192,6 +195,7 @@ module Api
           :on_termination_credit_note,
           :on_termination_invoice,
           :progressive_billing_disabled,
+          activation_rules: [:type, :timeout_hours],
           invoice_custom_section: [
             :skip_invoice_custom_sections,
             {invoice_custom_section_codes: []}

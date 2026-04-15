@@ -5730,6 +5730,7 @@ enum FeatureFlagEnum {
   multi_currency
   multiple_payment_methods
   non_persistable_charge_cache_optimization
+  payment_gated_subscriptions
   postgres_enriched_events
   wallet_traceability
 }
