@@ -129,12 +129,12 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
           expect(result.fixed_charge.units).to eq(10)
         end
 
-        it "calls EmitEventsForActiveSubscriptionsService" do
-          allow(FixedCharges::EmitEventsForActiveSubscriptionsService).to receive(:call!)
+        it "calls EmitEventsService" do
+          allow(FixedCharges::EmitEventsService).to receive(:call!)
 
           service.call
 
-          expect(FixedCharges::EmitEventsForActiveSubscriptionsService).to have_received(:call!).with(
+          expect(FixedCharges::EmitEventsService).to have_received(:call!).with(
             fixed_charge: existing_override,
             subscription:,
             apply_units_immediately: false
@@ -150,12 +150,12 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
             }
           end
 
-          it "calls EmitEventsForActiveSubscriptionsService with apply_units_immediately true" do
-            allow(FixedCharges::EmitEventsForActiveSubscriptionsService).to receive(:call!)
+          it "calls EmitEventsService with apply_units_immediately true" do
+            allow(FixedCharges::EmitEventsService).to receive(:call!)
 
             service.call
 
-            expect(FixedCharges::EmitEventsForActiveSubscriptionsService).to have_received(:call!).with(
+            expect(FixedCharges::EmitEventsService).to have_received(:call!).with(
               fixed_charge: existing_override,
               subscription:,
               apply_units_immediately: true

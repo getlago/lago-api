@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module FixedCharges
-  class EmitEventsForActiveSubscriptionsService < BaseService
+  class EmitEventsService < BaseService
     def initialize(fixed_charge:, subscription: nil, apply_units_immediately: false, timestamp: Time.current.to_i)
       @fixed_charge = fixed_charge
       @subscription = subscription
