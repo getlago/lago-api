@@ -107,6 +107,8 @@ class BillingEntity < ApplicationRecord
   validate :validate_email_settings
   validate :validate_einvoicing
 
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+
   after_create :generate_document_number_prefix
 
   def country=(value)

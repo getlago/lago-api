@@ -13,7 +13,7 @@ module Organizations
     end
 
     def call
-      organization.email = EmailSanitizer.call(params[:email]) if params.key?(:email)
+      organization.email = params[:email] if params.key?(:email)
       organization.legal_name = params[:legal_name] if params.key?(:legal_name)
       organization.legal_number = params[:legal_number] if params.key?(:legal_number)
       if params.key?(:tax_identification_number)

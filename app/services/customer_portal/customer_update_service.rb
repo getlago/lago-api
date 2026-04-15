@@ -21,7 +21,7 @@ module CustomerPortal
         customer.lastname = args[:lastname] if args.key?(:lastname)
         customer.legal_name = args[:legal_name] if args.key?(:legal_name)
         customer.tax_identification_number = args[:tax_identification_number] if args.key?(:tax_identification_number)
-        customer.email = EmailSanitizer.call(args[:email]) if args.key?(:email)
+        customer.email = args[:email] if args.key?(:email)
 
         customer.document_locale = args[:document_locale] if args.key?(:document_locale)
 

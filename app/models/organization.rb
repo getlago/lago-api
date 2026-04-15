@@ -172,6 +172,8 @@ class Organization < ApplicationRecord
   validate :validate_premium_integrations
   validate :validate_email_settings
 
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+
   before_create :set_hmac_key
   after_create :generate_document_number_prefix
 

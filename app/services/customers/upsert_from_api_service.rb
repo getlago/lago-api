@@ -53,7 +53,7 @@ module Customers
         customer.address_line2 = params[:address_line2] if params.key?(:address_line2)
         customer.state = params[:state] if params.key?(:state)
         customer.zipcode = params[:zipcode] if params.key?(:zipcode)
-        customer.email = EmailSanitizer.call(params[:email]) if params.key?(:email)
+        customer.email = params[:email] if params.key?(:email)
         customer.city = params[:city] if params.key?(:city)
         customer.shipping_address_line1 = shipping_address[:address_line1] if shipping_address.key?(:address_line1)
         customer.shipping_address_line2 = shipping_address[:address_line2] if shipping_address.key?(:address_line2)
