@@ -16,5 +16,6 @@ RSpec.describe Types::Subscriptions::CreateSubscriptionInput do
     expect(subject).to accept_argument(:subscription_id).of_type("ID")
     expect(subject).to accept_argument(:name).of_type("String")
     expect(subject).to accept_argument(:billing_time).of_type("BillingTimeEnum!")
+    expect(subject).to accept_argument(:activation_rules).of_type("[SubscriptionActivationRuleInput!]")
   end
 end
