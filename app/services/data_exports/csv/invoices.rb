@@ -101,22 +101,7 @@ module DataExports
       end
 
       def collection
-        invoices = Invoice.find(data_export_part.object_ids)
-        preload_offset_amounts(invoices)
-      end
-
-      def preload_offset_amounts(invoices)
-        offset_amounts = CreditNote
-          .where(invoice_id: data_export_part.object_ids)
-          .finalized
-          .group(:invoice_id)
-          .sum(:offset_amount_cents)
-
-        invoices.each do |invoice|
-          invoice.save_precalculated_offset_amount_cents(offset_amounts[invoice.id] || 0)
-        end
-
-        invoices
+        Invoice.preload_offset_amounts(Invoice.find(data_export_part.object_ids))
       end
 
       def organization

@@ -154,12 +154,34 @@ class Invoice < ApplicationRecord
   validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :payment_dispute_lost_at, absence: true, unless: :payment_dispute_losable?
 
+  attr_writer :precalculated_offset_amount_cents
+
   def self.ransackable_attributes(_ = nil)
     %w[id number]
   end
 
   def self.ransackable_associations(_ = nil)
     %w[customer]
+  end
+
+  # Batch-loads offset_amount_cents for a collection of invoices in a single query,
+  # caching the result on each instance to avoid N+1 queries during serialization.
+  def self.preload_offset_amounts(invoices)
+    return unless invoices
+
+    invoice_ids = invoices.map(&:id).compact
+
+    offset_amounts = CreditNote
+      .where(invoice_id: invoice_ids)
+      .finalized
+      .group(:invoice_id)
+      .sum(:offset_amount_cents)
+
+    invoices.each do |invoice|
+      invoice.precalculated_offset_amount_cents = (offset_amounts[invoice.id] || 0)
+    end
+
+    invoices
   end
 
   def payment_invoices
@@ -292,12 +314,6 @@ class Invoice < ApplicationRecord
       number_of_days:,
       period_duration: date_service.charges_duration_in_days
     }
-  end
-
-  # Caches offset_amount_cents in the invoice instance to avoid N+1 queries when exporting invoices.
-  # Allows batch calculation of offset amounts for many invoices in a single aggregated query.
-  def save_precalculated_offset_amount_cents(offset_amount_cents)
-    @precalculated_offset_amount_cents = offset_amount_cents
   end
 
   def offset_amount_cents
