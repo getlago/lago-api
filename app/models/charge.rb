@@ -73,9 +73,9 @@ class Charge < ApplicationRecord
   end
 
   def presentation_group_keys_values
-    return [] if properties["presentation_group_keys"].blank?
+    return [] if presentation_group_keys.blank?
 
-    properties["presentation_group_keys"].flat_map { |e| e.fetch("value", nil) }.compact
+    presentation_group_keys.map { |e| e.fetch("value", nil) }.compact
   end
 
   def equal_properties?(charge)
