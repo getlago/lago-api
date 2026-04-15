@@ -1,0 +1,38 @@
+# frozen_string_literal: true
+
+module Mutations
+  module Quotes
+    module BillingItems
+      module WalletCredits
+        class Update < BaseMutation
+          include AuthenticableApiUser
+          include RequiredOrganization
+
+          REQUIRED_PERMISSION = "quotes:update"
+          graphql_name "UpdateQuoteWalletCredit"
+          description "Updates a wallet credit billing item on a draft quote"
+
+          argument :quote_id, ID, required: true
+          argument :id, ID, required: true
+          argument :name, String, required: false
+          argument :currency, String, required: false
+          argument :rate_amount, String, required: false
+          argument :paid_credits, String, required: false
+          argument :granted_credits, String, required: false
+          argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
+          argument :priority, Integer, required: false
+          argument :recurring_transaction_rules, GraphQL::Types::JSON, required: false
+          argument :position, Integer, required: false
+
+          type Types::Quotes::Object
+
+          def resolve(quote_id:, id:, **args)
+            quote = current_organization.quotes.find_by(id: quote_id)
+            result = ::Quotes::BillingItems::WalletCredits::UpdateService.call(quote:, id:, params: args)
+            result.success? ? result.quote : result_error(result)
+          end
+        end
+      end
+    end
+  end
+end
