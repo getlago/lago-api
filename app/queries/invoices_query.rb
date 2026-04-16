@@ -27,7 +27,7 @@ class InvoicesQuery < BaseQuery
   def call
     return result unless validate_filters.success?
 
-    invoices = base_scope.result.includes(:customer).includes(file_attachment: :blob)
+    invoices = base_scope.result.includes(:customer, file_attachment: :blob, xml_file_attachment: :blob)
     invoices = with_customers_filter(invoices)
 
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
