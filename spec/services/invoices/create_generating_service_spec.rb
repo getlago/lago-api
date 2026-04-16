@@ -124,6 +124,19 @@ RSpec.describe Invoices::CreateGeneratingService do
           expect(result.invoice.expected_finalization_date.to_s).to eq("2022-11-27")
         end
       end
+
+      context "when subscription_gated is true" do
+        subject(:create_service) do
+          described_class.new(customer:, invoice_type:, currency:, datetime:, charge_in_advance:, invoicing_reason:, subscription_gated: true)
+        end
+
+        it "skips grace period and uses current date as issuing date" do
+          result = create_service.call
+
+          expect(result.invoice.issuing_date.to_s).to eq(datetime.to_date.to_s)
+          expect(result.invoice.expected_finalization_date.to_s).to eq(datetime.to_date.to_s)
+        end
+      end
     end
 
     context "when customer is a partner account", :premium do

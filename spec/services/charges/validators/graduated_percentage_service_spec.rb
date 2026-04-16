@@ -199,5 +199,11 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
         {"graduated_percentage_ranges" => ranges}.merge(grouping_properties)
       end
     end
+
+    it_behaves_like "presentation_group_keys property validation" do
+      let(:properties) do
+        {"graduated_percentage_ranges" => ranges}.merge(grouping_properties)
+      end
+    end
   end
 end

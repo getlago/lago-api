@@ -449,4 +449,35 @@ RSpec.shared_examples "an invoice index endpoint" do
       end
     end
   end
+
+  context "with file attachments N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    let(:params) { {} }
+
+    before do
+      invoices = create_list(:invoice, 3, customer:, organization:)
+      invoices.each do |invoice|
+        invoice.file.attach(
+          io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
+          filename: "invoice.pdf",
+          content_type: "application/pdf"
+        )
+        invoice.xml_file.attach(
+          io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
+          filename: "invoice.xml",
+          content_type: "application/xml"
+        )
+      end
+    end
+
+    it "does not trigger N+1 queries for file_url and xml_url" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:invoices].count).to eq(3)
+      json[:invoices].each do |invoice|
+        expect(invoice[:file_url]).to be_present
+        expect(invoice[:xml_url]).to be_present
+      end
+    end
+  end
 end

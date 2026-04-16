@@ -3,6 +3,9 @@
 module Charges
   module Validators
     class BaseService < BaseValidator
+      ALLOWED_PRESENTATION_GROUP_KEYS_OPTIONS_KEYS = %i[display_in_invoice].freeze
+      ALLOWED_PRESENTATION_GROUP_KEYS_KEYS = %i[value options].freeze
+
       def initialize(charge:, properties: nil)
         @charge = charge
         @properties = properties || charge.properties
@@ -15,6 +18,7 @@ module Charges
         # NOTE: override and add validation rules
 
         validate_pricing_group_keys
+        validate_presentation_group_keys
 
         if errors?
           result.validation_failure!(errors:)
@@ -49,6 +53,46 @@ module Charges
         end
 
         add_error(field: grouped_key, error_code: "invalid_type")
+      end
+
+      def validate_presentation_group_keys
+        raw_keys = properties["presentation_group_keys"]
+        return if raw_keys.blank?
+
+        valid_presentation_group_keys = raw_keys.is_a?(Array) && raw_keys.all? do |key|
+          next false unless key.is_a?(Hash)
+
+          key = key.deep_symbolize_keys
+          keys_valid = (key.keys - ALLOWED_PRESENTATION_GROUP_KEYS_KEYS).empty?
+          value_key_present = key.key?(:value)
+
+          value_valid = key[:value].is_a?(String) && key[:value].present?
+
+          options_key_valid = true
+
+          if key.key?(:options)
+            options = key[:options]
+
+            options_key_valid = if options.is_a?(Hash)
+              options.keys == ALLOWED_PRESENTATION_GROUP_KEYS_OPTIONS_KEYS && [true, false].include?(options[:display_in_invoice])
+            else
+              false
+            end
+          end
+
+          keys_valid && value_key_present && value_valid && options_key_valid
+        end
+
+        unless valid_presentation_group_keys
+          add_error(
+            field: "presentation_group_keys",
+            error_code: "invalid_type"
+          )
+        end
+
+        if raw_keys.size > 2
+          add_error(field: "presentation_group_keys", error_code: "too_many_keys")
+        end
       end
     end
   end

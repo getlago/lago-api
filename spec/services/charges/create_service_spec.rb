@@ -103,6 +103,7 @@ RSpec.describe Charges::CreateService do
             values: %w[card physical]
           )
         end
+        let(:properties) { {} }
 
         let(:params) do
           {
@@ -122,7 +123,8 @@ RSpec.describe Charges::CreateService do
                 properties: {amount: "90"},
                 values: {billable_metric_filter.key => ["card"]}
               }
-            ]
+            ],
+            properties: properties
           }
         end
 
@@ -161,6 +163,21 @@ RSpec.describe Charges::CreateService do
             billable_metric_filter_id: billable_metric_filter.id,
             values: ["card"]
           )
+        end
+
+        context "when presentation_group_keys are present in properties" do
+          let(:properties) do
+            {amount: "0", presentation_group_keys: [{"value" => "department"}, {"value" => "region"}]}
+          end
+
+          it "sets correctly attributes" do
+            subject
+
+            created_charge = plan.reload.charges.first
+            expect(created_charge).to have_attributes(
+              properties: {"amount" => "0", "presentation_group_keys" => [{"value" => "department"}, {"value" => "region"}]}
+            )
+          end
         end
 
         context "when premium", :premium do
