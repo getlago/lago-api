@@ -146,6 +146,59 @@ describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
     end
   end
 
+  context "with only a recurring threshold (no one-time thresholds)" do
+    it "triggers alerts at each recurring step without raising" do
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: subscription_external_id,
+        plan_code: plan.code
+      })
+      create_alert(subscription_external_id, {
+        alert_type: :current_usage_amount,
+        code: :recurring_only,
+        thresholds: [
+          {value: 10_00, code: :alert, recurring: true}
+        ]
+      })
+      alert = UsageMonitoring::Alert.find(json[:alert][:lago_id])
+
+      send_event!(code: billable_metric.code, properties: {ops_count: 7}, external_subscription_id: subscription_external_id)
+      perform_usage_update
+
+      expect(alert.triggered_alerts.count).to eq(1)
+      ta = alert.triggered_alerts.sole
+      expect(ta.current_value).to eq(3_500)
+      expect(ta.previous_value).to eq(0)
+      expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
+        {code: "alert", value: "1000.0", recurring: true},
+        {code: "alert", value: "2000.0", recurring: true},
+        {code: "alert", value: "3000.0", recurring: true}
+      ])
+
+      webhooks_sent.find { |w| w[:webhook_type] == "alert.triggered" }.tap do |webhook|
+        expect(webhook[:object_type]).to eq("triggered_alert")
+        expect(webhook[:triggered_alert]).to include({
+          lago_id: ta.id,
+          current_value: "3500.0",
+          previous_value: "0.0",
+          triggered_at: String
+        })
+      end
+
+      send_event!(code: billable_metric.code, properties: {ops_count: 4}, external_subscription_id: subscription_external_id)
+      perform_usage_update
+
+      expect(alert.triggered_alerts.count).to eq(2)
+      ta = alert.triggered_alerts.order(:created_at).last
+      expect(ta.current_value).to eq(5500)
+      expect(ta.previous_value).to eq(3500)
+      expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
+        {code: "alert", value: "4000.0", recurring: true},
+        {code: "alert", value: "5000.0", recurring: true}
+      ])
+    end
+  end
+
   context "with billable_metric_current_usage_units alert" do
     it do
       create_subscription({

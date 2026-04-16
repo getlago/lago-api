@@ -4,7 +4,7 @@ module Metadata
   class InvoiceMetadata < ApplicationRecord
     COUNT_PER_INVOICE = 5
 
-    belongs_to :invoice
+    belongs_to :invoice, touch: true
     belongs_to :organization
 
     validates :key, presence: true, uniqueness: {scope: :invoice_id}, length: {maximum: 20}

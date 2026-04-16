@@ -49,6 +49,7 @@ class Organization < ApplicationRecord
   has_many :pricing_units
   has_many :customers
   has_many :subscriptions
+  has_many :activation_rules, class_name: "Subscription::ActivationRule"
   has_many :invoices
   has_many :credit_notes
   has_many :fees
@@ -97,6 +98,7 @@ class Organization < ApplicationRecord
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
   has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
+  has_one :enriched_store_migration
 
   has_many :invoice_custom_sections
   has_many :manual_invoice_custom_sections, -> { where(section_type: "manual") }, class_name: "InvoiceCustomSection"

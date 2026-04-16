@@ -24,6 +24,7 @@ ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_f435d13904;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_f375d320ad;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_f32b205d44;
+ALTER TABLE IF EXISTS ONLY public.enriched_store_subscription_migrations DROP CONSTRAINT IF EXISTS fk_rails_f232478e56;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_f228550fda;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_f18cd04d51;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_eeb6a32be1;
@@ -46,6 +47,7 @@ ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_de6b3c3138;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_dd342449a6;
+ALTER TABLE IF EXISTS ONLY public.enriched_store_subscription_migrations DROP CONSTRAINT IF EXISTS fk_rails_dc444f5f29;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_db9140d0fd;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_d9ffb8b4a1;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_d9ea200904;
@@ -72,6 +74,7 @@ ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_c545103d57;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_c29bf4ff0f;
+ALTER TABLE IF EXISTS ONLY public.enriched_store_migrations DROP CONSTRAINT IF EXISTS fk_rails_c04bd1a196;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_bff25bb1bb;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
@@ -279,6 +282,7 @@ ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_0baa7bd751;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_0934890b24;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_08dfe87131;
+ALTER TABLE IF EXISTS ONLY public.enriched_store_subscription_migrations DROP CONSTRAINT IF EXISTS fk_rails_08d9dce6d1;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_085d1cc97b;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_07b21049f2;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_06b7046ec3;
@@ -480,6 +484,7 @@ DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
+DROP INDEX IF EXISTS public.index_invoices_on_payment_due_date;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_id_and_sequential_id;
 DROP INDEX IF EXISTS public.index_invoices_by_cursor;
@@ -589,6 +594,7 @@ DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_plan_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_organization_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_entitlement_feature_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlement_values_on_organization_id;
+DROP INDEX IF EXISTS public.index_enriched_store_migrations_on_organization_id;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_organization_id;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_deleted_at;
@@ -751,6 +757,7 @@ DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_recurring_756a2a370
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_78eb24d06c;
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_4290c95dec;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_type_8feb7b9623;
+DROP INDEX IF EXISTS public.idx_on_subscription_id_b41afd08e0;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_295edd8bb3;
 DROP INDEX IF EXISTS public.idx_on_recurring_transaction_rule_id_fba3d39cca;
 DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
@@ -763,6 +770,7 @@ DROP INDEX IF EXISTS public.idx_on_organization_id_ccdf05cbfe;
 DROP INDEX IF EXISTS public.idx_on_organization_id_83703a45f4;
 DROP INDEX IF EXISTS public.idx_on_organization_id_7020c3c43a;
 DROP INDEX IF EXISTS public.idx_on_organization_id_376a587b04;
+DROP INDEX IF EXISTS public.idx_on_organization_id_2be2ef98ea;
 DROP INDEX IF EXISTS public.idx_on_invoice_id_payment_request_id_aa550779a4;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_d8b9068730;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_ccb39e9622;
@@ -776,6 +784,7 @@ DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_9946ccf514;
 DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_6a228dc433;
 DROP INDEX IF EXISTS public.idx_on_entitlement_feature_id_821ae72311;
 DROP INDEX IF EXISTS public.idx_on_entitlement_entitlement_id_48c0b3356a;
+DROP INDEX IF EXISTS public.idx_on_enriched_store_migration_id_e409c5dc43;
 DROP INDEX IF EXISTS public.idx_on_dunning_campaign_id_currency_fbf233b2ae;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_invoice_custom_section_id_bd78c547d3;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_customer_id_invoice_custom_e7aada65cb;
@@ -786,6 +795,7 @@ DROP INDEX IF EXISTS public.idx_invoice_subscriptions_on_subscription_with_times
 DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
 DROP INDEX IF EXISTS public.idx_events_for_distinct_codes;
 DROP INDEX IF EXISTS public.idx_events_billing_lookup;
+DROP INDEX IF EXISTS public.idx_enriched_store_sub_migrations_on_migration_and_subscription;
 DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_filtered_lookup;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_wallet;
@@ -873,6 +883,8 @@ ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXIS
 ALTER TABLE IF EXISTS ONLY public.entitlement_features DROP CONSTRAINT IF EXISTS entitlement_features_pkey;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS entitlement_entitlements_pkey;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS entitlement_entitlement_values_pkey;
+ALTER TABLE IF EXISTS ONLY public.enriched_store_subscription_migrations DROP CONSTRAINT IF EXISTS enriched_store_subscription_migrations_pkey;
+ALTER TABLE IF EXISTS ONLY public.enriched_store_migrations DROP CONSTRAINT IF EXISTS enriched_store_migrations_pkey;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaigns DROP CONSTRAINT IF EXISTS dunning_campaigns_pkey;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS dunning_campaign_thresholds_pkey;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS data_exports_pkey;
@@ -1024,6 +1036,8 @@ DROP TABLE IF EXISTS public.entitlement_privileges;
 DROP TABLE IF EXISTS public.entitlement_features;
 DROP TABLE IF EXISTS public.entitlement_entitlements;
 DROP TABLE IF EXISTS public.entitlement_entitlement_values;
+DROP TABLE IF EXISTS public.enriched_store_subscription_migrations;
+DROP TABLE IF EXISTS public.enriched_store_migrations;
 DROP TABLE IF EXISTS public.enriched_events_default;
 DROP TABLE IF EXISTS public.enriched_events;
 DROP TABLE IF EXISTS public.dunning_campaigns;
@@ -1091,6 +1105,8 @@ DROP TYPE IF EXISTS public.inbound_webhook_status;
 DROP TYPE IF EXISTS public.fixed_charge_charge_model;
 DROP TYPE IF EXISTS public.entity_document_numbering;
 DROP TYPE IF EXISTS public.entitlement_privilege_value_types;
+DROP TYPE IF EXISTS public.enriched_store_sub_migration_status;
+DROP TYPE IF EXISTS public.enriched_store_migration_status;
 DROP TYPE IF EXISTS public.customer_type;
 DROP TYPE IF EXISTS public.customer_account_type;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
@@ -1164,6 +1180,37 @@ CREATE TYPE public.customer_account_type AS ENUM (
 CREATE TYPE public.customer_type AS ENUM (
     'company',
     'individual'
+);
+
+
+--
+-- Name: enriched_store_migration_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.enriched_store_migration_status AS ENUM (
+    'pending',
+    'checking',
+    'processing',
+    'enabling',
+    'completed',
+    'failed'
+);
+
+
+--
+-- Name: enriched_store_sub_migration_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.enriched_store_sub_migration_status AS ENUM (
+    'pending',
+    'comparing',
+    'reprocessing',
+    'waiting_for_enrichment',
+    'deduplicating',
+    'dedup_paused',
+    'validating',
+    'completed',
+    'failed'
 );
 
 
@@ -1384,11 +1431,11 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'billable_metric_current_usage_amount',
     'billable_metric_current_usage_units',
     'lifetime_usage_amount',
-    'billable_metric_lifetime_usage_units',
     'wallet_balance_amount',
     'wallet_credits_balance',
     'wallet_ongoing_balance_amount',
-    'wallet_credits_ongoing_balance'
+    'wallet_credits_ongoing_balance',
+    'billable_metric_lifetime_usage_units'
 );
 
 
@@ -2355,6 +2402,46 @@ CREATE TABLE public.enriched_events_default (
     operation_type character varying,
     precise_total_amount_cents numeric(40,15),
     target_wallet_code character varying
+);
+
+
+--
+-- Name: enriched_store_migrations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.enriched_store_migrations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    status public.enriched_store_migration_status DEFAULT 'pending'::public.enriched_store_migration_status NOT NULL,
+    started_at timestamp(6) without time zone,
+    completed_at timestamp(6) without time zone,
+    error_message text,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: enriched_store_subscription_migrations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.enriched_store_subscription_migrations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    enriched_store_migration_id uuid NOT NULL,
+    subscription_id uuid NOT NULL,
+    organization_id uuid NOT NULL,
+    status public.enriched_store_sub_migration_status DEFAULT 'pending'::public.enriched_store_sub_migration_status NOT NULL,
+    billable_metric_codes jsonb DEFAULT '[]'::jsonb,
+    events_reprocessed_count integer DEFAULT 0,
+    duplicates_removed_count integer DEFAULT 0,
+    dedup_pending_queries jsonb DEFAULT '[]'::jsonb,
+    comparison_results jsonb DEFAULT '{}'::jsonb,
+    error_message text,
+    started_at timestamp(6) without time zone,
+    completed_at timestamp(6) without time zone,
+    attempts integer DEFAULT 0,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -5245,6 +5332,22 @@ ALTER TABLE ONLY public.dunning_campaigns
 
 
 --
+-- Name: enriched_store_migrations enriched_store_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.enriched_store_migrations
+    ADD CONSTRAINT enriched_store_migrations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: enriched_store_subscription_migrations enriched_store_subscription_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.enriched_store_subscription_migrations
+    ADD CONSTRAINT enriched_store_subscription_migrations_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: entitlement_entitlement_values entitlement_entitlement_values_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5958,6 +6061,13 @@ CREATE INDEX idx_enqueued_per_organization ON public.usage_monitoring_subscripti
 
 
 --
+-- Name: idx_enriched_store_sub_migrations_on_migration_and_subscription; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_enriched_store_sub_migrations_on_migration_and_subscription ON public.enriched_store_subscription_migrations USING btree (enriched_store_migration_id, subscription_id);
+
+
+--
 -- Name: idx_events_billing_lookup; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6025,6 +6135,13 @@ CREATE UNIQUE INDEX idx_on_billing_entity_id_invoice_custom_section_id_bd78c547d
 --
 
 CREATE UNIQUE INDEX idx_on_dunning_campaign_id_currency_fbf233b2ae ON public.dunning_campaign_thresholds USING btree (dunning_campaign_id, currency) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_on_enriched_store_migration_id_e409c5dc43; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_enriched_store_migration_id_e409c5dc43 ON public.enriched_store_subscription_migrations USING btree (enriched_store_migration_id);
 
 
 --
@@ -6119,6 +6236,13 @@ CREATE UNIQUE INDEX idx_on_invoice_id_payment_request_id_aa550779a4 ON public.in
 
 
 --
+-- Name: idx_on_organization_id_2be2ef98ea; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_organization_id_2be2ef98ea ON public.enriched_store_subscription_migrations USING btree (organization_id);
+
+
+--
 -- Name: idx_on_organization_id_376a587b04; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6200,6 +6324,13 @@ CREATE INDEX idx_on_recurring_transaction_rule_id_fba3d39cca ON public.recurring
 --
 
 CREATE INDEX idx_on_subscription_id_295edd8bb3 ON public.entitlement_subscription_feature_removals USING btree (subscription_id);
+
+
+--
+-- Name: idx_on_subscription_id_b41afd08e0; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_subscription_id_b41afd08e0 ON public.enriched_store_subscription_migrations USING btree (subscription_id);
 
 
 --
@@ -7341,6 +7472,13 @@ CREATE UNIQUE INDEX index_dunning_campaigns_on_organization_id_and_code ON publi
 
 
 --
+-- Name: index_enriched_store_migrations_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_enriched_store_migrations_on_organization_id ON public.enriched_store_migrations USING btree (organization_id);
+
+
+--
 -- Name: index_entitlement_entitlement_values_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8101,6 +8239,13 @@ CREATE UNIQUE INDEX index_invoices_on_customer_id_and_sequential_id ON public.in
 --
 
 CREATE INDEX index_invoices_on_number ON public.invoices USING btree (number);
+
+
+--
+-- Name: index_invoices_on_payment_due_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_payment_due_date ON public.invoices USING btree (payment_due_date) WHERE ((status = 1) AND (payment_status <> 1) AND (payment_overdue = false) AND (payment_dispute_lost_at IS NULL));
 
 
 --
@@ -9418,6 +9563,14 @@ ALTER TABLE ONLY public.billing_entities_taxes
 
 ALTER TABLE ONLY public.fees
     ADD CONSTRAINT fk_rails_085d1cc97b FOREIGN KEY (charge_id) REFERENCES public.charges(id);
+
+
+--
+-- Name: enriched_store_subscription_migrations fk_rails_08d9dce6d1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.enriched_store_subscription_migrations
+    ADD CONSTRAINT fk_rails_08d9dce6d1 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
 
 
 --
@@ -11077,6 +11230,14 @@ ALTER TABLE ONLY public.customers
 
 
 --
+-- Name: enriched_store_migrations fk_rails_c04bd1a196; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.enriched_store_migrations
+    ADD CONSTRAINT fk_rails_c04bd1a196 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: wallet_transactions fk_rails_c29bf4ff0f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11285,6 +11446,14 @@ ALTER TABLE ONLY public.customers_invoice_custom_sections
 
 
 --
+-- Name: enriched_store_subscription_migrations fk_rails_dc444f5f29; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.enriched_store_subscription_migrations
+    ADD CONSTRAINT fk_rails_dc444f5f29 FOREIGN KEY (enriched_store_migration_id) REFERENCES public.enriched_store_migrations(id);
+
+
+--
 -- Name: invites fk_rails_dd342449a6; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11461,6 +11630,14 @@ ALTER TABLE ONLY public.payment_requests
 
 
 --
+-- Name: enriched_store_subscription_migrations fk_rails_f232478e56; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.enriched_store_subscription_migrations
+    ADD CONSTRAINT fk_rails_f232478e56 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: wallet_transactions fk_rails_f32b205d44; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11587,6 +11764,9 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260415160654'),
+('20260409161142'),
+('20260409151451'),
 ('20260407091845'),
 ('20260331122448'),
 ('20260331103301'),

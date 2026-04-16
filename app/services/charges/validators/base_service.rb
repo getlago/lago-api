@@ -3,6 +3,9 @@
 module Charges
   module Validators
     class BaseService < BaseValidator
+      ALLOWED_PRESENTATION_GROUP_KEYS_OPTIONS_KEYS = %i[display_in_invoice].freeze
+      ALLOWED_PRESENTATION_GROUP_KEYS_KEYS = %i[value options].freeze
+
       def initialize(charge:, properties: nil)
         @charge = charge
         @properties = properties || charge.properties
@@ -59,27 +62,36 @@ module Charges
         valid_presentation_group_keys = raw_keys.is_a?(Array) && raw_keys.all? do |key|
           next false unless key.is_a?(Hash)
 
-          # NOTE: Support hashes with strings and symbols as keys to avoid issues with different formats
-          value_key_present = key.key?("value") || key.key?(:value)
-          options_key_valid = !key.key?("options") && !key.key?(:options)
+          key = key.deep_symbolize_keys
+          keys_valid = (key.keys - ALLOWED_PRESENTATION_GROUP_KEYS_KEYS).empty?
+          value_key_present = key.key?(:value)
 
-          if key.key?("options") || key.key?(:options)
-            options = key["options"] || key[:options]
-            options_key_valid = options.is_a?(Hash)
+          value_valid = key[:value].is_a?(String) && key[:value].present?
+
+          options_key_valid = true
+
+          if key.key?(:options)
+            options = key[:options]
+
+            options_key_valid = if options.is_a?(Hash)
+              options.keys == ALLOWED_PRESENTATION_GROUP_KEYS_OPTIONS_KEYS && [true, false].include?(options[:display_in_invoice])
+            else
+              false
+            end
           end
 
-          value_key_present && options_key_valid
+          keys_valid && value_key_present && value_valid && options_key_valid
         end
 
         unless valid_presentation_group_keys
-          return add_error(
+          add_error(
             field: "presentation_group_keys",
-            error_code: "presentation_group_keys must be an array of hashes with a 'value' key"
+            error_code: "invalid_type"
           )
         end
 
         if raw_keys.size > 2
-          add_error(field: "presentation_group_keys", error_code: "presentation_group_keys have a maximum of 2 elements")
+          add_error(field: "presentation_group_keys", error_code: "too_many_keys")
         end
       end
     end

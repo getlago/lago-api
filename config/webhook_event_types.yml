@@ -228,6 +228,16 @@ plan_deleted:
   description: A plan has been deleted
   category: Plans
   deprecated: false
+subscription_canceled:
+  name: subscription.canceled
+  description: A subscription has been canceled
+  category: Subscriptions and Fees
+  deprecated: false
+subscription_incomplete:
+  name: subscription.incomplete
+  description: A subscription is awaiting activation rule resolution before becoming active
+  category: Subscriptions and Fees
+  deprecated: false
 subscription_terminated:
   name: subscription.terminated
   description: A subscription has been terminated

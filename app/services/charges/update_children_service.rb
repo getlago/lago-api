@@ -21,20 +21,26 @@ module Charges
     def call
       return result unless charge
 
-      ActiveRecord::Base.transaction do
-        # skip touching to avoid deadlocks
-        Plan.no_touching do
-          charge.children.where(id: child_ids).find_each do |child_charge|
-            Charges::UpdateService.call!(
-              charge: child_charge,
-              params:,
-              cascade_options: {
-                cascade: true,
-                parent_filters:,
-                equal_properties: old_parent.equal_properties?(child_charge),
-                equal_applied_pricing_unit_rate: old_parent.equal_applied_pricing_unit_rate?(child_charge)
-              }
-            )
+      # Acquire an advisory lock on the parent charge to prevent concurrent
+      # cascades from overlapping (e.g. parent updated twice in quick succession).
+      # timeout_seconds: 0 fails immediately if another cascade is running;
+      # the job's retry_on will pick it up later.
+      Charge.with_advisory_lock!("update_children_charge_#{charge.id}", timeout_seconds: 0) do
+        # skip touching to avoid deadlocks and redundant cascading updates
+        Charge.no_touching do
+          Plan.no_touching do
+            charge.children.where(id: child_ids).find_each do |child_charge|
+              Charges::UpdateService.call!(
+                charge: child_charge,
+                params:,
+                cascade_options: {
+                  cascade: true,
+                  parent_filters:,
+                  equal_properties: old_parent.equal_properties?(child_charge),
+                  equal_applied_pricing_unit_rate: old_parent.equal_applied_pricing_unit_rate?(child_charge)
+                }
+              )
+            end
           end
         end
       end

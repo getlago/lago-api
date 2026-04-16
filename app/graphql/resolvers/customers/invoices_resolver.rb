@@ -29,7 +29,9 @@ module Resolvers
           }
         )
 
-        result.invoices
+        return result_error(result) unless result.success?
+
+        Invoice.preload_offset_amounts(result.invoices)
       rescue ActiveRecord::RecordNotFound
         not_found_error(resource: "customer")
       end

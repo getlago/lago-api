@@ -24,6 +24,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:pricing_units)
       expect(subject).to have_many(:customers)
       expect(subject).to have_many(:subscriptions)
+      expect(subject).to have_many(:activation_rules).class_name("Subscription::ActivationRule")
       expect(subject).to have_many(:credit_notes)
       expect(subject).to have_many(:invoices)
       expect(subject).to have_many(:fees)
@@ -53,6 +54,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:subscription_feature_removals).class_name("Entitlement::SubscriptionFeatureRemoval")
 
       expect(subject).to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true)
+      expect(subject).to have_one(:enriched_store_migration)
       expect(subject).to have_many(:pending_vies_checks)
     end
   end

@@ -20,12 +20,16 @@ RSpec.describe Subscriptions::ValidateService do
       subscription_at:,
       ending_at:,
       on_termination_credit_note:,
-      on_termination_invoice:
+      on_termination_invoice:,
+      subscription:,
+      subscription_type:
     }
   end
 
   let(:on_termination_credit_note) { nil }
   let(:on_termination_invoice) { nil }
+  let(:subscription) { nil }
+  let(:subscription_type) { "create" }
 
   describe "#ending_at" do
     subject(:method_call) { validate_service.__send__(:ending_at) }
@@ -263,6 +267,39 @@ RSpec.describe Subscriptions::ValidateService do
         it "returns false and result has errors" do
           expect(validate_service).not_to be_valid
           expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+    end
+
+    context "with activation_rules" do
+      let(:args) do
+        {
+          customer:,
+          plan:,
+          subscription_at:,
+          ending_at:,
+          on_termination_credit_note:,
+          on_termination_invoice:,
+          subscription:,
+          subscription_type:,
+          activation_rules:
+        }
+      end
+
+      let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+
+      context "when activation_rules contains valid payment rule" do
+        let(:activation_rules) { [{type: "payment", timeout_hours: 48}] }
+
+        it { is_expected.to be_valid }
+      end
+
+      context "when activation_rules contains invalid rule" do
+        let(:activation_rules) { [{type: "unknown", timeout_hours: 48}] }
+
+        it "is invalid with invalid_type error" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:activation_rules]).to eq(["invalid_type"])
         end
       end
     end

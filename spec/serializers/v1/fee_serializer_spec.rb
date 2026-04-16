@@ -44,6 +44,8 @@ RSpec.describe ::V1::FeeSerializer do
       "units" => fee.units.to_s,
       "precise_unit_amount" => fee.precise_unit_amount.to_s,
       "precise_coupons_amount_cents" => fee.precise_coupons_amount_cents.to_s,
+      "sub_total_excluding_taxes_amount_cents" => fee.sub_total_excluding_taxes_amount_cents.round,
+      "sub_total_excluding_taxes_precise_amount_cents" => fee.sub_total_excluding_taxes_precise_amount_cents.to_s,
       "pay_in_advance" => fee.subscription.plan.pay_in_advance,
       "invoiceable" => true,
       "events_count" => fee.events_count,

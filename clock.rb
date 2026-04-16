@@ -177,14 +177,9 @@ module Clockwork
   # NOTE: Enable wallets and lifetime usage refresh from the events-processor
   if ENV["LAGO_REDIS_STORE_URL"].present? && ENV["LAGO_CLICKHOUSE_ENABLED"].present?
     every(1.minute, "schedule:refresh_flagged_subscriptions") do
-      # DEPRECATED: Drains legacy Redis SET key. Remove once subscription_refreshed is fully drained.
       Clock::ConsumeSubscriptionRefreshedQueueJob
         .set(sentry: {"slug" => "lago_refresh_flagged_subscriptions", "cron" => "*/1 * * * *"})
         .perform_later
-
-      Clock::ConsumeSubscriptionRefreshedQueueJob
-        .set(sentry: {"slug" => "lago_refresh_flagged_subscriptions_v2", "cron" => "*/1 * * * *"})
-        .perform_later("v2")
     end
   end
 end

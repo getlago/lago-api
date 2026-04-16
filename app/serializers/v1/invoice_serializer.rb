@@ -71,13 +71,16 @@ module V1
       ::CollectionSerializer.new(
         model.sorted_invoice_subscriptions.includes(subscription: [:customer, :plan]).map(&:subscription),
         ::V1::SubscriptionSerializer,
-        collection_name: "subscriptions"
+        collection_name: "subscriptions",
+        organization: model.organization
       ).serialize
     end
 
     def preview_subscriptions
       ::CollectionSerializer.new(
-        model.subscriptions, ::V1::SubscriptionSerializer, collection_name: "subscriptions"
+        model.subscriptions, ::V1::SubscriptionSerializer,
+        collection_name: "subscriptions",
+        organization: model.organization
       ).serialize
     end
 

@@ -2,17 +2,9 @@
 
 RSpec.shared_examples "presentation_group_keys property validation" do
   let(:grouping_properties) { {"presentation_group_keys" => presentation_group_keys} }
-  let(:presentation_group_keys) { {} }
+  let(:presentation_group_keys) { nil }
 
   it { expect(validation_service).to be_valid }
-
-  context "when presentation_group_keys is nil" do
-    let(:presentation_group_keys) { nil }
-
-    it "is valid" do
-      expect(validation_service).to be_valid
-    end
-  end
 
   context "when presentation_group_keys is an empty array" do
     let(:presentation_group_keys) { [] }
@@ -51,6 +43,52 @@ RSpec.shared_examples "presentation_group_keys property validation" do
     end
   end
 
+  context "when presentation_group_keys has options with non-hash value" do
+    let(:presentation_group_keys) { [{"value" => "region", "options" => "invalid"}] }
+
+    it "is invalid" do
+      expect(validation_service).not_to be_valid
+      expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+      expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("invalid_type")
+    end
+  end
+
+  context "when presentation_group_keys has options with unknown key" do
+    let(:presentation_group_keys) { [{"value" => "region", "options" => {"unknown" => true}}] }
+
+    it "is invalid" do
+      expect(validation_service).not_to be_valid
+      expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+      expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("invalid_type")
+    end
+  end
+
+  context "when presentation_group_keys has options with extra keys" do
+    let(:presentation_group_keys) do
+      [{"value" => "region", "options" => {"display_in_invoice" => true, "extra" => false}}]
+    end
+
+    it "is invalid" do
+      expect(validation_service).not_to be_valid
+      expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+      expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("invalid_type")
+    end
+  end
+
+  context "when presentation_group_keys has options with non-boolean display_in_invoice" do
+    let(:presentation_group_keys) { [{"value" => "region", "options" => {"display_in_invoice" => "true"}}] }
+
+    it "is invalid" do
+      expect(validation_service).not_to be_valid
+      expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+      expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("invalid_type")
+    end
+  end
+
   context "when presentation_group_keys has more than 2 elements" do
     let(:presentation_group_keys) do
       [
@@ -64,7 +102,7 @@ RSpec.shared_examples "presentation_group_keys property validation" do
       expect(validation_service).not_to be_valid
       expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
       expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
-      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("presentation_group_keys have a maximum of 2 elements")
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("too_many_keys")
     end
   end
 
@@ -75,7 +113,7 @@ RSpec.shared_examples "presentation_group_keys property validation" do
       expect(validation_service).not_to be_valid
       expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
       expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
-      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("presentation_group_keys must be an array of hashes with a 'value' key")
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("invalid_type")
     end
   end
 
@@ -86,7 +124,7 @@ RSpec.shared_examples "presentation_group_keys property validation" do
       expect(validation_service).not_to be_valid
       expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
       expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
-      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("presentation_group_keys must be an array of hashes with a 'value' key")
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("invalid_type")
     end
   end
 
@@ -97,7 +135,51 @@ RSpec.shared_examples "presentation_group_keys property validation" do
       expect(validation_service).not_to be_valid
       expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
       expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
-      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("presentation_group_keys must be an array of hashes with a 'value' key")
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("invalid_type")
+    end
+  end
+
+  context "when presentation_group_keys contains hashes with nil value" do
+    let(:presentation_group_keys) { [{"value" => nil}] }
+
+    it "is invalid" do
+      expect(validation_service).not_to be_valid
+      expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+      expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("invalid_type")
+    end
+  end
+
+  context "when presentation_group_keys contains hashes with empty string value" do
+    let(:presentation_group_keys) { [{"value" => ""}] }
+
+    it "is invalid" do
+      expect(validation_service).not_to be_valid
+      expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+      expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("invalid_type")
+    end
+  end
+
+  context "when presentation_group_keys contains hashes with numeric value" do
+    let(:presentation_group_keys) { [{"value" => 123}] }
+
+    it "is invalid" do
+      expect(validation_service).not_to be_valid
+      expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+      expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("invalid_type")
+    end
+  end
+
+  context "when presentation_group_keys contains hashes with extra keys" do
+    let(:presentation_group_keys) { [{"value" => "region", "extra" => "nope"}] }
+
+    it "is invalid" do
+      expect(validation_service).not_to be_valid
+      expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+      expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("invalid_type")
     end
   end
 end

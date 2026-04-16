@@ -28,6 +28,12 @@ module Fees
 
       ActiveRecord::Base.transaction do
         result.fees = persist_fees(fees.compact)
+
+        if !charge.invoiceable? && customer_provider_taxation?
+          Fees::ApplyProviderTaxesToStandaloneFeesService.call!(
+            customer:, fees: result.fees, currency: subscription.plan.amount_currency
+          )
+        end
       end
 
       deliver_webhooks
@@ -113,8 +119,11 @@ module Fees
         # Non-invoiceable fees are regrouped later by AdvanceChargesService which
         # aggregates pre-existing fee taxes. They must have taxes applied now because
         # there is no ComputeTaxesAndTotalsService step for them.
+        # Provider-taxed customers get taxes via apply_provider_taxes after persist.
         # Invoiceable fees get taxes applied later via ComputeTaxesAndTotalsService.
-        Fees::ApplyTaxesService.call!(fee:) if !charge.invoiceable?
+        if !charge.invoiceable? && !customer_provider_taxation?
+          Fees::ApplyTaxesService.call!(fee:)
+        end
 
         fee.save! unless estimate
         fee
@@ -192,6 +201,12 @@ module Fees
 
     def customer
       @customer ||= subscription.customer
+    end
+
+    def customer_provider_taxation?
+      return @customer_provider_taxation if defined?(@customer_provider_taxation)
+
+      @customer_provider_taxation = customer.tax_customer.present?
     end
 
     def isolation_mode

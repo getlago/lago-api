@@ -76,14 +76,17 @@ module UsageMonitoring
     def find_thresholds_crossed_increasing(current)
       crossed = []
       return crossed if current <= previous_value
-      return crossed if current < one_time_thresholds_values.first
 
-      if previous_value < one_time_thresholds_values.last
-        crossed += one_time_thresholds_values.filter { it > previous_value && it <= current }
+      if one_time_thresholds_values.present?
+        return crossed if current < one_time_thresholds_values.first
+
+        if previous_value < one_time_thresholds_values.last
+          crossed += one_time_thresholds_values.filter { it > previous_value && it <= current }
+        end
       end
 
       crossed += find_recurring_thresholds_crossed_increasing(
-        previous_value, current, recurring_threshold&.value, one_time_thresholds_values.last
+        previous_value, current, recurring_threshold&.value, one_time_thresholds_values.last || 0
       )
 
       crossed.uniq.sort
@@ -92,14 +95,17 @@ module UsageMonitoring
     def find_thresholds_crossed_decreasing(current)
       crossed = []
       return crossed if current >= previous_value
-      return crossed if current > one_time_thresholds_values.last
 
-      if previous_value > one_time_thresholds_values.first
-        crossed += one_time_thresholds_values.filter { it < previous_value && it >= current }
+      if one_time_thresholds_values.present?
+        return crossed if current > one_time_thresholds_values.last
+
+        if previous_value > one_time_thresholds_values.first
+          crossed += one_time_thresholds_values.filter { it < previous_value && it >= current }
+        end
       end
 
       crossed += find_recurring_thresholds_crossed_decreasing(
-        previous_value, current, recurring_threshold&.value, one_time_thresholds_values.first
+        previous_value, current, recurring_threshold&.value, one_time_thresholds_values.first || 0
       )
 
       crossed.uniq.sort
