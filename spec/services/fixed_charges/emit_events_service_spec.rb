@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService do
+RSpec.describe FixedCharges::EmitEventsService do
   subject(:service) do
     described_class.new(fixed_charge:, subscription:)
   end

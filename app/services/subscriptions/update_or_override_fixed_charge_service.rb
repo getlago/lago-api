@@ -76,7 +76,7 @@ module Subscriptions
       existing_fixed_charge.units = params[:units] if params.key?(:units)
       existing_fixed_charge.save!
 
-      FixedCharges::EmitEventsForActiveSubscriptionsService.call!(
+      FixedCharges::EmitEventsService.call!(
         fixed_charge: existing_fixed_charge,
         subscription:,
         apply_units_immediately: !!params[:apply_units_immediately]

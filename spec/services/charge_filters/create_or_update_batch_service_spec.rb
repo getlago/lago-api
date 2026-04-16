@@ -241,12 +241,13 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
             scheme_filter.key => ["visa"]
           },
           invoice_display_name: "New display name",
-          properties: {amount: "20"}.merge(pricing_group_keys)
+          properties: {amount: "20"}.merge(pricing_group_keys).merge(presentation_group_keys)
         }
       ]
     end
 
     let(:pricing_group_keys) { {pricing_group_keys: ["region"]} }
+    let(:presentation_group_keys) { {} }
 
     before { filter_values }
 
@@ -456,6 +457,47 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
               invoice_display_name: nil,
               properties: {"amount" => "0.00115740741"}
             )
+          end
+        end
+
+        context "when properties contains a presentation_group_keys attribute" do
+          let(:presentation_group_keys) { {presentation_group_keys: [{"value" => "region", "options" => {"display_in_invoice" => true}}]} }
+
+          it "updates the filter" do
+            expect { service }.not_to change(ChargeFilter, :count)
+
+            expect(filter.reload.presentation_group_keys).to eq([{"value" => "region", "options" => {"display_in_invoice" => true}}])
+            expect(filter.values.count).to eq(2)
+            expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
+          end
+
+          context "when filters already have a presentation_group_keys value" do
+            let(:filter) do
+              create(:charge_filter, charge:, properties: {amount: "755", presentation_group_keys: [{"value" => "cloud"}]})
+            end
+
+            it "updates the filter" do
+              expect { service }.not_to change(ChargeFilter, :count)
+
+              expect(filter.reload.presentation_group_keys).to eq([{"value" => "region", "options" => {"display_in_invoice" => true}}])
+              expect(filter.values.count).to eq(2)
+              expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
+            end
+          end
+        end
+
+        context "when filters already has a presentation_group_keys value" do
+          let(:filter) do
+            create(:charge_filter, charge:, properties: {amount: "755", presentation_group_keys: [{"value" => "cloud"}]})
+          end
+          let(:presentation_group_keys) { {} }
+
+          it "clears the presentation_group_keys" do
+            expect { service }.not_to change(ChargeFilter, :count)
+
+            expect(filter.reload.presentation_group_keys).to be_nil
+            expect(filter.values.count).to eq(2)
+            expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
           end
         end
       end

@@ -45,7 +45,7 @@ RSpec.describe FixedCharges::OverrideService do
 
     context "when lago premium", :premium do
       before do
-        allow(FixedCharges::EmitEventsForActiveSubscriptionsService).to receive(:call!)
+        allow(FixedCharges::EmitEventsService).to receive(:call!)
       end
 
       it "creates a fixed charge based on the given fixed charge" do
@@ -72,7 +72,7 @@ RSpec.describe FixedCharges::OverrideService do
       it "emits fixed charge events for all active subscriptions" do
         result = override_service.call
 
-        expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+        expect(FixedCharges::EmitEventsService)
           .to have_received(:call!)
           .with(
             fixed_charge: result.fixed_charge,
@@ -265,7 +265,7 @@ RSpec.describe FixedCharges::OverrideService do
         end
 
         before do
-          allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+          allow(FixedCharges::EmitEventsService)
             .to receive(:call!)
         end
 
@@ -282,7 +282,7 @@ RSpec.describe FixedCharges::OverrideService do
         it "creates fixed charge events for the specific subscription" do
           result = override_service.call
 
-          expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+          expect(FixedCharges::EmitEventsService)
             .to have_received(:call!)
             .with(
               fixed_charge: result.fixed_charge,
@@ -304,7 +304,7 @@ RSpec.describe FixedCharges::OverrideService do
           it "creates fixed charge events for the specific subscription" do
             result = override_service.call
 
-            expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+            expect(FixedCharges::EmitEventsService)
               .to have_received(:call!)
               .with(
                 fixed_charge: result.fixed_charge,

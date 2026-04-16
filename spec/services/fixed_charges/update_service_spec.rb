@@ -263,14 +263,14 @@ RSpec.describe FixedCharges::UpdateService do
         end
 
         before do
-          allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+          allow(FixedCharges::EmitEventsService)
             .to receive(:call!)
         end
 
         it "emits fixed charge events for all active subscriptions" do
           result
 
-          expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+          expect(FixedCharges::EmitEventsService)
             .to have_received(:call!)
             .with(
               fixed_charge: result.fixed_charge,
@@ -309,7 +309,7 @@ RSpec.describe FixedCharges::UpdateService do
           it "emits fixed charge events for all active subscriptions" do
             result
 
-            expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+            expect(FixedCharges::EmitEventsService)
               .to have_received(:call!)
               .with(
                 fixed_charge: result.fixed_charge,
@@ -339,14 +339,14 @@ RSpec.describe FixedCharges::UpdateService do
         end
 
         before do
-          allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+          allow(FixedCharges::EmitEventsService)
             .to receive(:call!)
         end
 
         it "does not emit any fixed charge events" do
           result
 
-          expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+          expect(FixedCharges::EmitEventsService)
             .not_to have_received(:call!)
         end
       end
