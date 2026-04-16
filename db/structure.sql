@@ -11,6 +11,7 @@ SET row_security = off;
 
 ALTER TABLE IF EXISTS ONLY public.membership_roles DROP CONSTRAINT IF EXISTS membership_role_membership_fk;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_ff75b29299;
+ALTER TABLE IF EXISTS ONLY public.presentation_breakdowns DROP CONSTRAINT IF EXISTS fk_rails_ff548a9f4c;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_fea16bf2e7;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_fd84cdb7c6;
 ALTER TABLE IF EXISTS ONLY public.subscription_activation_rules DROP CONSTRAINT IF EXISTS fk_rails_fd60209637;
@@ -82,6 +83,7 @@ ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS fk_rails_bacb46d2a3;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_ba128983c2;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_b974dac270;
+ALTER TABLE IF EXISTS ONLY public.presentation_breakdowns DROP CONSTRAINT IF EXISTS fk_rails_b8f3cabc8e;
 ALTER TABLE IF EXISTS ONLY public.subscription_activation_rules DROP CONSTRAINT IF EXISTS fk_rails_b749d2045d;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_b61aa73940;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_b50dc82c1e;
@@ -407,6 +409,8 @@ DROP INDEX IF EXISTS public.index_pricing_units_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_pricing_unit_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_fee_id;
+DROP INDEX IF EXISTS public.index_presentation_breakdowns_on_organization_id;
+DROP INDEX IF EXISTS public.index_presentation_breakdowns_on_fee_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id;
@@ -831,6 +835,7 @@ ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sec
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS quantified_events_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS pricing_units_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS pricing_unit_usages_pkey;
+ALTER TABLE IF EXISTS ONLY public.presentation_breakdowns DROP CONSTRAINT IF EXISTS presentation_breakdowns_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS plans_pkey;
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS pending_vies_checks_pkey;
@@ -947,6 +952,7 @@ DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.quantified_events;
 DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
+DROP TABLE IF EXISTS public.presentation_breakdowns;
 DROP TABLE IF EXISTS public.pending_vies_checks;
 DROP TABLE IF EXISTS public.payment_receipts;
 DROP TABLE IF EXISTS public.payment_providers;
@@ -4535,6 +4541,21 @@ CREATE TABLE public.pending_vies_checks (
 
 
 --
+-- Name: presentation_breakdowns; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.presentation_breakdowns (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    fee_id uuid NOT NULL,
+    presentation_by jsonb DEFAULT '[]'::jsonb NOT NULL,
+    units numeric(30,10) DEFAULT 0.0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: pricing_unit_usages; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5700,6 +5721,14 @@ ALTER TABLE ONLY public.plans
 
 ALTER TABLE ONLY public.plans_taxes
     ADD CONSTRAINT plans_taxes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: presentation_breakdowns presentation_breakdowns_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presentation_breakdowns
+    ADD CONSTRAINT presentation_breakdowns_pkey PRIMARY KEY (id);
 
 
 --
@@ -8731,6 +8760,20 @@ CREATE INDEX index_plans_taxes_on_tax_id ON public.plans_taxes USING btree (tax_
 
 
 --
+-- Name: index_presentation_breakdowns_on_fee_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_presentation_breakdowns_on_fee_id ON public.presentation_breakdowns USING btree (fee_id);
+
+
+--
+-- Name: index_presentation_breakdowns_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_presentation_breakdowns_on_organization_id ON public.presentation_breakdowns USING btree (organization_id);
+
+
+--
 -- Name: index_pricing_unit_usages_on_fee_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11115,6 +11158,14 @@ ALTER TABLE ONLY public.subscription_activation_rules
 
 
 --
+-- Name: presentation_breakdowns fk_rails_b8f3cabc8e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presentation_breakdowns
+    ADD CONSTRAINT fk_rails_b8f3cabc8e FOREIGN KEY (fee_id) REFERENCES public.fees(id);
+
+
+--
 -- Name: wallet_transactions_invoice_custom_sections fk_rails_b974dac270; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11683,6 +11734,14 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 
 
 --
+-- Name: presentation_breakdowns fk_rails_ff548a9f4c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presentation_breakdowns
+    ADD CONSTRAINT fk_rails_ff548a9f4c FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: wallet_transactions_invoice_custom_sections fk_rails_ff75b29299; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11708,6 +11767,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260415160654'),
 ('20260409161142'),
 ('20260409151451'),
+('20260407091845'),
 ('20260331122448'),
 ('20260331103301'),
 ('20260327140626'),

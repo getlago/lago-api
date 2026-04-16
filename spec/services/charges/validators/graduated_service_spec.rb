@@ -221,5 +221,9 @@ RSpec.describe Charges::Validators::GraduatedService do
     it_behaves_like "pricing_group_keys property validation" do
       let(:properties) { {"graduated_ranges" => ranges}.merge(grouping_properties) }
     end
+
+    it_behaves_like "presentation_group_keys property validation" do
+      let(:properties) { {"graduated_ranges" => ranges}.merge(grouping_properties) }
+    end
   end
 end
