@@ -1183,6 +1183,47 @@ RSpec.describe Customer do
     end
   end
 
+  describe "#reset_dunning_campaign_for_currency!" do
+    let(:last_dunning_campaign_attempt_at) { 1.day.ago }
+    let(:customer) do
+      create(
+        :customer,
+        last_dunning_campaign_attempt: 5,
+        last_dunning_campaign_attempt_at:,
+        dunning_currency_attempts: {"EUR" => 3, "USD" => 2}
+      )
+    end
+
+    it "resets only the specified currency and keeps others" do
+      expect { customer.reset_dunning_campaign_for_currency!("EUR") && customer.reload }
+        .to change(customer, :dunning_currency_attempts).to({"USD" => 2})
+        .and change(customer, :last_dunning_campaign_attempt).to(0)
+    end
+
+    it "preserves last_dunning_campaign_attempt_at when other currencies remain" do
+      customer.reset_dunning_campaign_for_currency!("EUR")
+      customer.reload
+      expect(customer.last_dunning_campaign_attempt_at).to be_within(1.second).of(last_dunning_campaign_attempt_at)
+    end
+
+    context "when resetting the last remaining currency" do
+      let(:customer) do
+        create(
+          :customer,
+          last_dunning_campaign_attempt: 5,
+          last_dunning_campaign_attempt_at:,
+          dunning_currency_attempts: {"EUR" => 3}
+        )
+      end
+
+      it "clears everything including the timestamp" do
+        expect { customer.reset_dunning_campaign_for_currency!("EUR") && customer.reload }
+          .to change(customer, :dunning_currency_attempts).to({})
+          .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+      end
+    end
+  end
+
   describe "#flag_wallets_for_refresh" do
     subject { customer.flag_wallets_for_refresh }
 
