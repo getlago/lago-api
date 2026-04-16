@@ -38,16 +38,20 @@ module DunningCampaigns
 
         thresholds = applicable_dunning_campaign_thresholds
 
-        if thresholds.any?
-          increment_per_currency_attempts(thresholds)
+        return result if thresholds.empty?
 
-          thresholds.each do |threshold|
-            DunningCampaigns::ProcessAttemptJob.perform_later(customer:, dunning_campaign_threshold: threshold)
-          end
+        increment_per_currency_attempts(thresholds)
 
-          send_dunning_finished_webhook if all_thresholds_done?
-        elsif customer.dunning_currency_attempts.present? && all_thresholds_done? && !all_thresholds_max_attempts_reached?
-          send_dunning_finished_webhook
+        thresholds.each do |threshold|
+          DunningCampaigns::ProcessAttemptJob.perform_later(customer:, dunning_campaign_threshold: threshold)
+        end
+
+        if all_thresholds_max_attempts_reached?
+          SendWebhookJob.perform_later(
+            "dunning_campaign.finished",
+            customer,
+            dunning_campaign_code: dunning_campaign.code
+          )
         end
 
         result
@@ -83,39 +87,12 @@ module DunningCampaigns
         customer.save!
       end
 
-      def send_dunning_finished_webhook
-        SendWebhookJob.perform_later(
-          "dunning_campaign.finished",
-          customer,
-          dunning_campaign_code: dunning_campaign.code
-        )
-        mark_all_currencies_exhausted
-      end
-
-      def all_thresholds_done?
-        attempts = customer.dunning_currency_attempts
-        balances = customer.overdue_balances
-
-        dunning_campaign.thresholds.present? && dunning_campaign.thresholds.all? do |threshold|
-          (attempts[threshold.currency] || 0) >= dunning_campaign.max_attempts ||
-            (balances[threshold.currency] || 0) < threshold.amount_cents
-        end
-      end
-
       def all_thresholds_max_attempts_reached?
         attempts = customer.dunning_currency_attempts
 
         dunning_campaign.thresholds.present? && dunning_campaign.thresholds.all? do |threshold|
           (attempts[threshold.currency] || 0) >= dunning_campaign.max_attempts
         end
-      end
-
-      def mark_all_currencies_exhausted
-        attempts = customer.dunning_currency_attempts.dup
-        dunning_campaign.thresholds.each do |threshold|
-          attempts[threshold.currency] = [attempts[threshold.currency] || 0, dunning_campaign.max_attempts].max
-        end
-        customer.update!(dunning_currency_attempts: attempts)
       end
 
       def days_between_attempts_satisfied?
