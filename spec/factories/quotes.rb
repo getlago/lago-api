@@ -4,7 +4,6 @@ FactoryBot.define do
   factory :quote do
     organization
     customer
-    sequential_id { 1 }
     version { 1 }
     status { :draft }
     order_type { :subscription_creation }

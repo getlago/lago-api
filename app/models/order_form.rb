@@ -37,7 +37,7 @@ class OrderForm < ApplicationRecord
   end
 
   def self.ransackable_associations(_ = nil)
-    %w[customer]
+    %w[customer quote]
   end
 
   sequenced(

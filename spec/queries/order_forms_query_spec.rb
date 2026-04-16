@@ -50,13 +50,71 @@ RSpec.describe OrderFormsQuery do
     end
   end
 
-  context "when filtering by external_customer_id" do
+  context "when filtering by customer_id" do
     let(:other_customer) { create(:customer, organization:) }
     let(:other_quote) { create(:quote, organization:, customer: other_customer) }
     let(:order_form_two) { create(:order_form, organization:, customer: other_customer, quote: other_quote) }
-    let(:filters) { {external_customer_id: customer.external_id} }
+    let(:filters) { {customer_id: [customer.id]} }
 
     it "returns only order forms for the specified customer" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([order_form_one.id])
+    end
+  end
+
+  context "when filtering by number" do
+    let(:filters) { {number: [order_form_one.number]} }
+
+    it "returns only order forms with the specified numbers" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([order_form_one.id])
+    end
+  end
+
+  context "when filtering by quote_number" do
+    let(:other_customer) { create(:customer, organization:) }
+    let(:other_quote) { create(:quote, organization:, customer: other_customer) }
+    let(:order_form_two) { create(:order_form, organization:, customer: other_customer, quote: other_quote) }
+    let(:filters) { {quote_number: [quote.number]} }
+
+    it "returns only order forms linked to the specified quote" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([order_form_one.id])
+    end
+  end
+
+  context "when filtering by owner_id" do
+    let(:user) { membership.user }
+    let(:other_customer) { create(:customer, organization:) }
+    let(:other_quote) { create(:quote, organization:, customer: other_customer) }
+    let(:order_form_two) { create(:order_form, organization:, customer: other_customer, quote: other_quote) }
+    let(:filters) { {owner_id: [user.id]} }
+
+    before { QuoteOwner.create!(organization:, quote:, user:) }
+
+    it "returns only order forms whose quote has the specified owner" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([order_form_one.id])
+    end
+  end
+
+  context "when filtering by created_at range" do
+    let(:order_form_one) { create(:order_form, organization:, customer:, quote:, created_at: 3.days.ago) }
+    let(:order_form_two) { create(:order_form, organization:, customer:, quote:, created_at: 1.day.ago) }
+    let(:filters) { {created_at_from: 2.days.ago.iso8601, created_at_to: Time.current.iso8601} }
+
+    it "returns only order forms within the date range" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([order_form_two.id])
+    end
+  end
+
+  context "when filtering by expires_at range" do
+    let(:order_form_one) { create(:order_form, organization:, customer:, quote:, expires_at: 5.days.from_now) }
+    let(:order_form_two) { create(:order_form, organization:, customer:, quote:, expires_at: 15.days.from_now) }
+    let(:filters) { {expires_at_from: 3.days.from_now.iso8601, expires_at_to: 10.days.from_now.iso8601} }
+
+    it "returns only order forms expiring within the date range" do
       expect(result).to be_success
       expect(returned_ids).to eq([order_form_one.id])
     end
