@@ -109,8 +109,7 @@ module Subscriptions
       end
 
       def pay_in_advance?
-        # Referrence the current rate schedule
-        subscription.current_rate_schedule.pay_in_advance?
+        subscription.active_rate_schedules.any?(&:pay_in_advance?)
       end
 
       # NOTE: If subscription is terminated automatically by setting ending_at, there is a chance that this service will
@@ -165,18 +164,18 @@ module Subscriptions
       end
 
       def bill_subscription
-        return unless bill_in_arrears_fees?
+        #return unless bill_in_arrears_fees?
 
-        #
+        # bill only in arrears product items
         if async
           Invoices::RateSchedulesBillingJob.perform_after_commit(
-            [subscription.current_rate_schedule],
+            [subscription.active_rate_schedules],
             subscription.terminated_at,
             invoicing_reason: :subscription_terminating
           )
         else
           Invoices::RateSchedulesBillingService.new(
-            [subscription.current_rate_schedule],
+            [subscription.active_rate_schedules],
             subscription.terminated_at,
             invoicing_reason: :subscription_terminating
           )

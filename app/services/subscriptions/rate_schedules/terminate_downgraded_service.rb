@@ -49,6 +49,7 @@ module Subscriptions
       def activate_next_subscription
         next_subscription.mark_as_active!(rotation_date)
 
+        # Will we need it or will we have a different version of it?
         EmitFixedChargeEventsService.call!(
           subscriptions: [next_subscription],
           timestamp: next_subscription.started_at + 1.second
@@ -69,7 +70,7 @@ module Subscriptions
 
       def bill_subscriptions
         Invoices::RateSchedulesBillingJob.perform_later(
-          [billable_rate_schedule],
+          [billable_rate_schedules],
           timestamp,
           invoicing_reason: :upgrading
         )
@@ -77,14 +78,15 @@ module Subscriptions
 
       def billable_rate_schedules
         # NOTE: Create an invoice for the terminated subscription if it has not been billed yet
-        rate_schedules = [subscription.current_rate_schedule]
-        rate_schedules << next_subscription.current_rate_schedule if pay_in_advance?
+        rate_schedules = subscription.active_rate_schedules
+        # check every rate schedule for the next subscription if it is pay in advance
+        #rate_schedules += next_subscription.active_rate_schedule if pay_in_advance?
 
         rate_schedules
       end
 
       def pay_in_advance?
-        next_subscription.current_rate_schedule.pay_in_advance?
+        next_subscription.active_rate_schedule.pay_in_advance?
         # or only for the charges if subscription was billed in advance
         #next_subscription.plan.pay_in_advance? || next_subscription.fixed_charges.pay_in_advance.any?
       end
