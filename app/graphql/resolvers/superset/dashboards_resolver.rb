@@ -19,6 +19,8 @@ module Resolvers
           user: nil
         )
 
+        return result_error(result) unless result.success?
+
         result.dashboards
       end
     end
