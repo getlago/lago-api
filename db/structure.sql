@@ -9421,6 +9421,13 @@ CREATE UNIQUE INDEX index_unique_quote_owners_on_quote_user ON public.quote_owne
 
 
 --
+-- Name: index_unique_quotes_on_organization_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_quotes_on_organization_number ON public.quotes USING btree (organization_id, number);
+
+
+--
 -- Name: index_unique_quotes_on_organization_sequentialid_version; Type: INDEX; Schema: public; Owner: -
 --
 
