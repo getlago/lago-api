@@ -74,6 +74,10 @@ module Types
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :mrrs, resolver: Resolvers::Analytics::MrrsResolver
+    field :order, resolver: Resolvers::OrderResolver
+    field :order_form, resolver: Resolvers::OrderFormResolver
+    field :order_forms, resolver: Resolvers::OrderFormsResolver
+    field :orders, resolver: Resolvers::OrdersResolver
     field :organization, resolver: Resolvers::OrganizationResolver
     field :overdue_balances, resolver: Resolvers::Analytics::OverdueBalancesResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver

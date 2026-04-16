@@ -19,6 +19,7 @@ RSpec.describe ::V1::OrderSerializer do
       "backdated_billing" => nil,
       "billing_snapshot" => order.billing_snapshot,
       "currency" => "EUR",
+      "execution_record" => nil,
       "executed_at" => nil,
       "lago_organization_id" => order.organization_id,
       "lago_customer_id" => order.customer_id,
