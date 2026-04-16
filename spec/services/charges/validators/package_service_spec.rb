@@ -194,5 +194,15 @@ RSpec.describe Charges::Validators::PackageService do
         }.merge(grouping_properties)
       end
     end
+
+    it_behaves_like "presentation_group_keys property validation" do
+      let(:package_properties) do
+        {
+          package_size: 10,
+          free_units: 10,
+          amount: "100"
+        }.merge(grouping_properties)
+      end
+    end
   end
 end

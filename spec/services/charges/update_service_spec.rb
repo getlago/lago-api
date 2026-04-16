@@ -87,7 +87,7 @@ RSpec.describe Charges::UpdateService do
           accepts_target_wallet: true,
           properties: {
             amount: "400"
-          }.merge(pricing_group_keys),
+          }.merge(pricing_group_keys).merge(presentation_group_keys),
           applied_pricing_unit: applied_pricing_unit_params,
           filters: [
             {
@@ -105,6 +105,7 @@ RSpec.describe Charges::UpdateService do
         }
       end
 
+      let(:presentation_group_keys) { {} }
       let(:pricing_group_keys) { {} }
 
       before { create(:applied_pricing_unit, pricing_unitable: charge, conversion_rate: 1.1) }
@@ -259,6 +260,17 @@ RSpec.describe Charges::UpdateService do
           end
         end
 
+        context "with presentation_group_keys in the properties" do
+          let(:presentation_group_keys) do
+            {presentation_group_keys: [{"value" => "region", "options" => {"display_in_invoice" => true}}]}
+          end
+
+          it "apply the value to the charge" do
+            expect { subject }.to change { charge.reload.properties["presentation_group_keys"] }
+              .from(nil).to([{"value" => "region", "options" => {"display_in_invoice" => true}}])
+          end
+        end
+
         context "with pricing_group_keys in the properties" do
           let(:pricing_group_keys) { {pricing_group_keys: ["cloud"]} }
 
@@ -279,6 +291,38 @@ RSpec.describe Charges::UpdateService do
 
           it "does not update charge properties" do
             expect { subject }.not_to change { charge.reload.properties }
+          end
+
+          context "with presentation_group_keys in the properties" do
+            let(:presentation_group_keys) do
+              {presentation_group_keys: [{"value" => "region", "options" => {"display_in_invoice" => true}}]}
+            end
+
+            it "apply the value to the charge" do
+              expect { subject }.to change { charge.reload.properties["presentation_group_keys"] }
+                .from(nil).to([{"value" => "region", "options" => {"display_in_invoice" => true}}])
+            end
+
+            context "when charge has a presentation_group_keys" do
+              let(:charge) do
+                create(
+                  :standard_charge,
+                  plan:,
+                  billable_metric_id: sum_billable_metric.id,
+                  amount_currency: "USD",
+                  properties: {
+                    amount: "300",
+                    presentation_group_keys: [{value: "department"}]
+                  }
+                )
+              end
+
+              it "overrides the keys" do
+                expect { subject }.to change { charge.reload.properties["presentation_group_keys"] }
+                  .from([{"value" => "department"}])
+                  .to([{"value" => "region", "options" => {"display_in_invoice" => true}}])
+              end
+            end
           end
 
           context "with pricing_group_keys in the properties" do

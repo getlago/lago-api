@@ -538,6 +538,102 @@ RSpec.describe Charge do
     end
   end
 
+  describe "#presentation_group_keys" do
+    subject(:charge) { build(:standard_charge, properties:) }
+
+    context "when presentation_group_keys is present" do
+      let(:properties) { {"amount_cents" => "1000", "presentation_group_keys" => [{"value" => "region"}]} }
+
+      it "returns the presentation group keys" do
+        expect(charge.presentation_group_keys).to eq([{"value" => "region"}])
+      end
+    end
+
+    context "when presentation_group_keys is blank" do
+      let(:properties) { {"amount_cents" => "1000"} }
+
+      it "returns nil" do
+        expect(charge.presentation_group_keys).to be_nil
+      end
+    end
+
+    context "when presentation_group_keys is an empty array" do
+      let(:properties) { {"amount_cents" => "1000", "presentation_group_keys" => []} }
+
+      it "returns nil" do
+        expect(charge.presentation_group_keys).to be_nil
+      end
+    end
+  end
+
+  describe "#presentation_group_keys_values" do
+    subject(:charge) { build(:standard_charge, properties:) }
+
+    context "when presentation_group_keys is blank" do
+      let(:properties) { {"amount_cents" => "1000"} }
+
+      it "returns an empty array" do
+        expect(charge.presentation_group_keys_values).to eq([])
+      end
+    end
+
+    context "when presentation_group_keys is nil" do
+      let(:properties) { {"amount_cents" => "1000", "presentation_group_keys" => nil} }
+
+      it "returns an empty array" do
+        expect(charge.presentation_group_keys_values).to eq([])
+      end
+    end
+
+    context "when presentation_group_keys is an empty array" do
+      let(:properties) { {"amount_cents" => "1000", "presentation_group_keys" => []} }
+
+      it "returns an empty array" do
+        expect(charge.presentation_group_keys_values).to eq([])
+      end
+    end
+
+    context "when presentation_group_keys has one element with value" do
+      let(:properties) { {"amount_cents" => "1000", "presentation_group_keys" => [{"value" => "region"}]} }
+
+      it "returns array with the value" do
+        expect(charge.presentation_group_keys_values).to eq(["region"])
+      end
+    end
+
+    context "when presentation_group_keys has multiple elements with values" do
+      let(:properties) do
+        {
+          "amount_cents" => "1000",
+          "presentation_group_keys" => [
+            {"value" => "region"},
+            {"value" => "country"}
+          ]
+        }
+      end
+
+      it "returns array with all values" do
+        expect(charge.presentation_group_keys_values).to eq(["region", "country"])
+      end
+    end
+
+    context "when presentation_group_keys has elements with nil values" do
+      let(:properties) do
+        {
+          "amount_cents" => "1000",
+          "presentation_group_keys" => [
+            {"value" => "region"},
+            {"value" => nil}
+          ]
+        }
+      end
+
+      it "returns array with only non-nil values" do
+        expect(charge.presentation_group_keys_values).to eq(["region"])
+      end
+    end
+  end
+
   describe "#equal_properties?" do
     let(:charge1) { build(:standard_charge, properties: {amount: 100}) }
 
