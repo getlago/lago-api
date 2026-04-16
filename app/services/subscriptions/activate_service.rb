@@ -21,13 +21,15 @@ module Subscriptions
         timestamp: subscription.started_at + 1.second
       )
 
-      bill_subscription
+      after_commit do
+        bill_subscription
 
-      SendWebhookJob.perform_later("subscription.started", subscription)
-      Utils::ActivityLog.produce(subscription, "subscription.started")
+        SendWebhookJob.perform_later("subscription.started", subscription)
+        Utils::ActivityLog.produce(subscription, "subscription.started")
 
-      if subscription.should_sync_hubspot_subscription?
-        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
+        if subscription.should_sync_hubspot_subscription?
+          Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
+        end
       end
 
       result
