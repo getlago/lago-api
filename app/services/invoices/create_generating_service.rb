@@ -2,7 +2,7 @@
 
 module Invoices
   class CreateGeneratingService < BaseService
-    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil, invoicing_reason: nil) # rubocop:disable Metrics/ParameterLists
+    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil, invoicing_reason: nil, subscription_gated: false) # rubocop:disable Metrics/ParameterLists
       @customer = customer
       @invoice_type = invoice_type
       @currency = currency
@@ -11,6 +11,7 @@ module Invoices
       @skip_charges = skip_charges
       @invoice_id = invoice_id
       @recurring = invoicing_reason&.to_sym == :subscription_periodic
+      @subscription_gated = subscription_gated
 
       super
     end
@@ -45,7 +46,7 @@ module Invoices
 
     private
 
-    attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges, :invoice_id, :recurring
+    attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges, :invoice_id, :recurring, :subscription_gated
 
     delegate :organization, to: :customer
 
@@ -66,6 +67,8 @@ module Invoices
     end
 
     def grace_period?
+      return false if subscription_gated
+
       invoice_type.to_sym == :subscription
     end
 
