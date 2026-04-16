@@ -94,6 +94,21 @@ RSpec.describe UsageMonitoring::Alert do
   end
 
   describe "#find_thresholds_crossed" do
+    context "when alert has only recurring thresholds (no one-time thresholds)" do
+      let(:alert) { create(:alert, code: "only-recurring", thresholds: nil, recurring_threshold: 100) }
+
+      it "does not raise ArgumentError for increasing direction" do
+        alert.previous_value = 0
+        expect(alert.find_thresholds_crossed(150)).to eq([100])
+      end
+
+      it "does not raise ArgumentError for decreasing direction" do
+        alert.direction = "decreasing"
+        alert.previous_value = 50
+        expect(alert.find_thresholds_crossed(-150)).to eq([-100])
+      end
+    end
+
     context "when direction is increasing" do
       it "returns threshold values between previous_value and current (inclusive)" do
         alert.previous_value = 8
