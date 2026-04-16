@@ -64,6 +64,7 @@ module ChargeModels
         if charge_model
           attributes << :grouped_by if properties[:grouped_by].present? && properties[:pricing_group_keys].blank?
           attributes << :pricing_group_keys if properties[:pricing_group_keys].present?
+          attributes << :presentation_group_keys if properties[:presentation_group_keys].present?
         end
 
         attributes
