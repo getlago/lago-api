@@ -12,21 +12,15 @@ class BackfillOrganizationSlugs < ActiveRecord::Migration[8.0]
   ].freeze
 
   def up
-    safety_assured do
-      Organization.unscoped.find_each do |org|
-        candidate = generate_slug_for(org.name)
-        candidate = resolve_collision(candidate)
-        org.update_column(:slug, candidate) # rubocop:disable Rails/SkipsModelValidations
-      end
-
-      change_column_null :organizations, :slug, false
-      change_column_default :organizations, :slug, from: -> { "'org-' || substr(md5(random()::text), 1, 8)" }, to: nil
+    Organization.unscoped.find_each do |org|
+      candidate = generate_slug_for(org.name)
+      candidate = resolve_collision(candidate)
+      org.update_column(:slug, candidate) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 
   def down
-    change_column_default :organizations, :slug, from: nil, to: -> { "'org-' || substr(md5(random()::text), 1, 8)" }
-    change_column_null :organizations, :slug, true
+    # No-op: slugs will be removed when the column is dropped
   end
 
   private
