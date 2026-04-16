@@ -14,15 +14,29 @@ class BillRateSchedulesJob < ApplicationJob
   retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
   retry_on Sequenced::SequenceError, ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
 
-  def perform(subscription_rate_schedule_ids, timestamp)
+  def perform(subscription_rate_schedule_ids, timestamp, invoice: nil)
     subscription_rate_schedules = SubscriptionRateSchedule
       .where(id: subscription_rate_schedule_ids)
       .includes(:subscription, :rate_schedule, :product_item)
     return if subscription_rate_schedules.empty?
 
-    Invoices::RateSchedulesBillingService.call!(
+    result = Invoices::RateSchedulesBillingService.call(
       subscription_rate_schedules:,
-      timestamp:
+      timestamp:,
+      invoice:
+    )
+    return if result.success?
+
+    result.invoice&.reload
+
+    if invoice || !result.invoice&.generating?
+      return result.raise_if_error!
+    end
+
+    self.class.set(wait: 5.minutes).perform_later(
+      subscription_rate_schedule_ids,
+      timestamp,
+      invoice: result.invoice
     )
   end
 

@@ -25,24 +25,20 @@ module RateSchedules
 
     attr_reader :organization, :billing_at
 
-    # NOTE: SubscriptionRateSchedules eligible to be billed now (in arrears):
-    # - have a cycle that has ended (DATE(to_datetime) <= today in customer/billing entity TZ)
-    # - that cycle has no fee yet (not already billed)
+    # NOTE: SubscriptionRateSchedules eligible to be billed now:
+    # - next_billing_date has been reached (in the customer/billing entity TZ)
+    # - billing cycle limit not yet exhausted
     def billable_subscription_rate_schedules
       organization.subscription_rate_schedules
         .joins(subscription: {customer: :billing_entity})
-        .joins(:cycles)
         .where(<<~SQL.squish, billing_at:)
-          DATE(subscription_rate_schedule_cycles.to_datetime) <= DATE((:billing_at)#{at_time_zone})
+          subscription_rate_schedules.next_billing_date <= DATE((:billing_at)#{at_time_zone})
         SQL
         .where(<<~SQL.squish)
-          NOT EXISTS (
-            SELECT 1 FROM fees
-            WHERE fees.subscription_rate_schedule_cycle_id = subscription_rate_schedule_cycles.id
-          )
+          subscription_rate_schedules.intervals_to_bill IS NULL
+          OR subscription_rate_schedules.intervals_billed < subscription_rate_schedules.intervals_to_bill
         SQL
         .includes(subscription: :customer)
-        .distinct
     end
   end
 end

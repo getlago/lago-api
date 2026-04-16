@@ -15,6 +15,56 @@ class SubscriptionRateSchedule < ApplicationRecord
   enum :status, STATUSES, validate: true
 
   validates :intervals_billed, numericality: {greater_than_or_equal_to: 0}
+
+  def create_billing_cycle!
+    if rate_schedule.pay_in_advance?
+      from = next_billing_date
+      to = advance_date(next_billing_date)
+    else
+      to = next_billing_date
+      from = retreat_date(next_billing_date)
+    end
+
+    cycles.create!(
+      organization:,
+      cycle_index: intervals_billed,
+      from_datetime: from,
+      to_datetime: to
+    )
+  end
+
+  def advance_billing!
+    update!(
+      intervals_billed: intervals_billed + 1,
+      next_billing_date: advance_date(next_billing_date)
+    )
+  end
+
+  private
+
+  def advance_date(from)
+    rs = rate_schedule
+    offset = rs.billing_interval_count
+
+    case rs.billing_interval_unit
+    when "day" then from + offset.days
+    when "week" then from + offset.weeks
+    when "month" then from + offset.months
+    when "year" then from + offset.years
+    end
+  end
+
+  def retreat_date(from)
+    rs = rate_schedule
+    offset = rs.billing_interval_count
+
+    case rs.billing_interval_unit
+    when "day" then from - offset.days
+    when "week" then from - offset.weeks
+    when "month" then from - offset.months
+    when "year" then from - offset.years
+    end
+  end
 end
 
 # == Schema Information
