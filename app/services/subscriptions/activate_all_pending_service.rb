@@ -5,7 +5,7 @@ module Subscriptions
     Result = BaseResult
 
     def initialize(timestamp:)
-      @timestamp = timestamp
+      @timestamp = Time.zone.at(timestamp)
 
       super
     end
@@ -18,10 +18,10 @@ module Subscriptions
         .where(
           "DATE(subscriptions.subscription_at#{at_time_zone}) <= " \
           "DATE(?#{at_time_zone})",
-          Time.zone.at(timestamp)
+          timestamp
         )
         .find_each do |subscription|
-          ActivateService.call!(subscription:, timestamp: Time.zone.at(timestamp))
+          ActivateService.call!(subscription:, timestamp:)
         end
 
       result
