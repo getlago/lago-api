@@ -89,6 +89,12 @@ RSpec.describe Organizations::Sluggable do
       expect(organization.slug).to eq("tech-co-1-2024")
     end
 
+    it "cleans up consecutive and trailing dashes" do
+      organization = build(:organization, name: "test ()(/&()/-.,-.,--_:_;-,-,)(/&/()&(-.,--.,-,_:;_;", slug: nil)
+      organization.valid?
+      expect(organization.slug).to eq("test")
+    end
+
     it "truncates to 40 characters" do
       organization = build(:organization, name: "A Very Long Organization Name That Exceeds The Forty Character Limit", slug: nil)
       organization.valid?
