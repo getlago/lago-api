@@ -44,8 +44,7 @@ module Subscriptions
         BillSubscriptionJob.perform_later(
           [subscription],
           timestamp.to_i,
-          invoicing_reason: :subscription_starting,
-          skip_charges: true
+          invoicing_reason: :subscription_starting
         )
       elsif subscription.fixed_charges.pay_in_advance.any?
         Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(

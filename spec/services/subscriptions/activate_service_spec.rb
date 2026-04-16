@@ -31,6 +31,13 @@ RSpec.describe Subscriptions::ActivateService do
     expect(Utils::ActivityLog).to have_produced("subscription.started").with(subscription)
   end
 
+  it "does not enqueue billing jobs" do
+    result
+
+    expect(BillSubscriptionJob).not_to have_been_enqueued
+    expect(Invoices::CreatePayInAdvanceFixedChargesJob).not_to have_been_enqueued
+  end
+
   context "when subscription has fixed charges" do
     let(:add_on) { create(:add_on, organization:) }
     let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }
@@ -60,7 +67,27 @@ RSpec.describe Subscriptions::ActivateService do
       result
 
       expect(BillSubscriptionJob).to have_been_enqueued
-        .with([subscription], anything, invoicing_reason: :subscription_starting, skip_charges: true)
+        .with([subscription], anything, invoicing_reason: :subscription_starting)
+    end
+
+    it "does not enqueue CreatePayInAdvanceFixedChargesJob" do
+      result
+
+      expect(Invoices::CreatePayInAdvanceFixedChargesJob).not_to have_been_enqueued
+    end
+  end
+
+  context "when plan is pay in advance with pay-in-advance fixed charges" do
+    let(:plan) { create(:plan, organization:, pay_in_advance: true) }
+    let(:add_on) { create(:add_on, organization:) }
+
+    before { create(:fixed_charge, plan:, add_on:, pay_in_advance: true) }
+
+    it "enqueues BillSubscriptionJob but not CreatePayInAdvanceFixedChargesJob" do
+      result
+
+      expect(BillSubscriptionJob).to have_been_enqueued
+      expect(Invoices::CreatePayInAdvanceFixedChargesJob).not_to have_been_enqueued
     end
   end
 
@@ -75,6 +102,26 @@ RSpec.describe Subscriptions::ActivateService do
 
       expect(Invoices::CreatePayInAdvanceFixedChargesJob).to have_been_enqueued
     end
+
+    it "does not enqueue BillSubscriptionJob" do
+      result
+
+      expect(BillSubscriptionJob).not_to have_been_enqueued
+    end
+  end
+
+  context "when plan is pay in arrears with non-pay-in-advance fixed charges" do
+    let(:plan) { create(:plan, organization:, pay_in_advance: false) }
+    let(:add_on) { create(:add_on, organization:) }
+
+    before { create(:fixed_charge, plan:, add_on:, pay_in_advance: false) }
+
+    it "does not enqueue any billing job" do
+      result
+
+      expect(BillSubscriptionJob).not_to have_been_enqueued
+      expect(Invoices::CreatePayInAdvanceFixedChargesJob).not_to have_been_enqueued
+    end
   end
 
   context "when plan is pay in advance with trial period" do
@@ -85,6 +132,24 @@ RSpec.describe Subscriptions::ActivateService do
 
       expect(BillSubscriptionJob).not_to have_been_enqueued
     end
+
+    context "when plan has pay-in-advance fixed charges" do
+      let(:add_on) { create(:add_on, organization:) }
+
+      before { create(:fixed_charge, plan:, add_on:, pay_in_advance: true) }
+
+      it "enqueues CreatePayInAdvanceFixedChargesJob" do
+        result
+
+        expect(Invoices::CreatePayInAdvanceFixedChargesJob).to have_been_enqueued
+      end
+
+      it "does not enqueue BillSubscriptionJob" do
+        result
+
+        expect(BillSubscriptionJob).not_to have_been_enqueued
+      end
+    end
   end
 
   context "when subscription is already active" do
@@ -93,6 +158,8 @@ RSpec.describe Subscriptions::ActivateService do
     it "returns the subscription without changes" do
       expect(result.subscription).to be_active
       expect(SendWebhookJob).not_to have_been_enqueued
+      expect(BillSubscriptionJob).not_to have_been_enqueued
+      expect(Invoices::CreatePayInAdvanceFixedChargesJob).not_to have_been_enqueued
     end
   end
 end
