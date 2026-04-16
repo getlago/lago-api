@@ -30,8 +30,8 @@ class BackfillOrganizationSlugs < ActiveRecord::Migration[8.0]
       .parameterize
       .tr("_", "-")
       .gsub(/-{2,}/, "-")
-      .gsub(/\A-|-\z/, "")
       .truncate(40, omission: "")
+      .gsub(/\A-|-\z/, "")
 
     if candidate.length < 3 || candidate.match?(/\A\d+\z/) || RESERVED_SLUGS.include?(candidate)
       generate_random_slug
@@ -47,7 +47,7 @@ class BackfillOrganizationSlugs < ActiveRecord::Migration[8.0]
       generate_random_slug
     else
       loop do
-        candidate = "#{slug.truncate(36, omission: "")}-#{SecureRandom.alphanumeric(3).downcase}"
+        candidate = "#{slug.truncate(36, omission: "").gsub(/-\z/, "")}-#{SecureRandom.alphanumeric(3).downcase}"
         return candidate unless slug_taken?(candidate)
       end
     end

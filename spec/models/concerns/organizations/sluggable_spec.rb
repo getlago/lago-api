@@ -101,6 +101,13 @@ RSpec.describe Organizations::Sluggable do
       expect(organization.slug.length).to be <= 40
     end
 
+    it "does not leave trailing hyphen after truncation" do
+      organization = build(:organization, name: "Alpha Beta Gamma Delta Epsilon Zeta Eta T", slug: nil)
+      organization.valid?
+      expect(organization.slug).not_to end_with("-")
+      expect(organization.slug).to match(Organizations::Sluggable::SLUG_FORMAT)
+    end
+
     context "with fallback cases" do
       it "generates random slug for non-transliterable names (Cyrillic)" do
         organization = build(:organization, name: "Газпром", slug: nil)
@@ -153,6 +160,15 @@ RSpec.describe Organizations::Sluggable do
         org2.valid?
         expect(org2.slug).not_to eq(org1.slug)
         expect(org2.slug).to start_with("acme-corp")
+      end
+
+      it "does not produce double hyphens when base ends with hyphen" do
+        # "Alpha Beta Gamma Delta Epsilon Zeta Eta Theta" → truncated to 40 → "alpha-beta-gamma-delta-epsilon-zeta-eta-" → cleaned → "alpha-beta-gamma-delta-epsilon-zeta-eta"
+        # On collision, base truncated to 36 → "alpha-beta-gamma-delta-epsilon-zeta-" → cleaned → "alpha-beta-gamma-delta-epsilon-zeta"
+        create(:organization, slug: "alpha-beta-gamma-delta-epsilon-zeta-eta")
+        organization = build(:organization, name: "Alpha Beta Gamma Delta Epsilon Zeta Eta Theta", slug: nil)
+        organization.valid?
+        expect(organization.slug).not_to include("--")
       end
     end
   end
