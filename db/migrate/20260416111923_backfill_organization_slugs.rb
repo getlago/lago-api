@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class AddSlugToOrganizations < ActiveRecord::Migration[8.0]
+class BackfillOrganizationSlugs < ActiveRecord::Migration[8.0]
   RESERVED_SLUGS = %w[
     auth login sign-up forgot-password reset-password invitation
     customer-portal 404 forbidden api admin graphql webhooks google okta
@@ -11,12 +11,8 @@ class AddSlugToOrganizations < ActiveRecord::Migration[8.0]
     features feature tax webhook api-keys create update duplicate
   ].freeze
 
-  SLUG_FORMAT = /\A[a-z0-9]([a-z0-9-]*[a-z0-9])?\z/
-
   def up
     safety_assured do
-      add_column :organizations, :slug, :string
-
       Organization.unscoped.find_each do |org|
         candidate = generate_slug_for(org.name)
         candidate = resolve_collision(candidate)
@@ -24,11 +20,13 @@ class AddSlugToOrganizations < ActiveRecord::Migration[8.0]
       end
 
       change_column_null :organizations, :slug, false
+      change_column_default :organizations, :slug, from: -> { "'org-' || substr(md5(random()::text), 1, 8)" }, to: nil
     end
   end
 
   def down
-    remove_column :organizations, :slug # rubocop:disable Lago/NoDropColumnOrTable
+    change_column_default :organizations, :slug, from: nil, to: -> { "'org-' || substr(md5(random()::text), 1, 8)" }
+    change_column_null :organizations, :slug, true
   end
 
   private
