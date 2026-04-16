@@ -19,5 +19,9 @@ FactoryBot.define do
       voided_at { Time.current }
       void_reason { :manual }
     end
+
+    trait :auto_execute do
+      auto_execute { true }
+    end
   end
 end
