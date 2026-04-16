@@ -30,12 +30,7 @@ class KarafkaApp < Karafka::App
     config.monitor = Karafka::LagoMonitor.new
   end
 
-  Karafka.monitor.subscribe(
-    WaterDrop::Instrumentation::LoggerListener.new(
-      Karafka.logger,
-      log_messages: true
-    )
-  )
+  Karafka.monitor.subscribe(Karafka::Instrumentation::LoggerListener.new)
 
   Karafka.monitor.subscribe "error.occurred" do |event|
     Sentry.capture_exception(event[:error])

@@ -26,7 +26,8 @@ module SubscriptionIndex
           subscriptions,
           ::V1::SubscriptionSerializer,
           collection_name: "subscriptions",
-          meta: pagination_metadata(subscriptions)
+          meta: pagination_metadata(subscriptions),
+          organization: current_organization
         )
       )
     else

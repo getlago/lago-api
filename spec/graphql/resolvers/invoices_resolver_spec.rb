@@ -551,6 +551,55 @@ RSpec.describe Resolvers::InvoicesResolver do
     end
   end
 
+  context "when preloading offset amounts" do
+    subject do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+    end
+
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(limit: 5) {
+            collection { id totalDueAmountCents totalSettledAmountCents }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+    let(:preloadable_invoices) { [invoice_first, invoice_second] }
+
+    include_examples "preloads offset amounts"
+  end
+
+  context "when filters are invalid" do
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(limit: 5, billingEntityIds: ["random"]) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    it "returns an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect_graphql_error(result:, message: "Unprocessable Entity")
+    end
+  end
+
   context "when filtering by billing_entity_id" do
     let(:billing_entity2) { create(:billing_entity, organization:) }
     let(:invoice_third) do
