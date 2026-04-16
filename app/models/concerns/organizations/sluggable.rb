@@ -46,7 +46,7 @@ module Organizations
           break unless self.class.exists?(slug: candidate)
         end
       else
-        base = candidate.truncate(36, omission: "").gsub(/-\z/, "")
+        base = candidate.truncate(36, omission: "").delete_suffix("-")
         while self.class.exists?(slug: candidate)
           suffix = SecureRandom.alphanumeric(3).downcase
           candidate = "#{base}-#{suffix}"

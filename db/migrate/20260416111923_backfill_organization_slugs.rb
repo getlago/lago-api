@@ -47,7 +47,7 @@ class BackfillOrganizationSlugs < ActiveRecord::Migration[8.0]
       generate_random_slug
     else
       loop do
-        candidate = "#{slug.truncate(36, omission: "").gsub(/-\z/, "")}-#{SecureRandom.alphanumeric(3).downcase}"
+        candidate = "#{slug.truncate(36, omission: "").delete_suffix("-")}-#{SecureRandom.alphanumeric(3).downcase}"
         return candidate unless slug_taken?(candidate)
       end
     end
