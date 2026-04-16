@@ -72,6 +72,7 @@ module Invoices
     def schedule_post_processing_jobs(old_payment_status)
       if params.key?(:payment_status)
         handle_prepaid_credits(params[:payment_status])
+        handle_payment_gated_activation(params[:payment_status])
         update_fees_payment_status
         if old_payment_status != params[:payment_status] && invoice.visible?
           deliver_webhook
@@ -102,6 +103,18 @@ module Invoices
       return unless %i[succeeded failed].include?(payment_status.to_sym)
 
       Invoices::PrepaidCreditJob.perform_after_commit(invoice, payment_status.to_sym)
+    end
+
+    def handle_payment_gated_activation(payment_status)
+      return unless invoice.subscription_gated?
+      return unless %i[succeeded failed].include?(payment_status.to_sym)
+
+      subscription = invoice.subscriptions.find(&:incomplete?)
+      return unless subscription
+
+      Subscriptions::ActivationRules::Payment::ResolveService.call!(
+        subscription:, invoice:, payment_status: payment_status.to_sym
+      )
     end
 
     def valid_metadata_count?(metadata:)

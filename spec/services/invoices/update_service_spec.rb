@@ -244,6 +244,44 @@ RSpec.describe Invoices::UpdateService do
       end
     end
 
+    context "when invoice is subscription_gated and payment_status changes" do
+      let(:plan) { create(:plan, organization: invoice.organization, pay_in_advance: true) }
+      let(:subscription) { create(:subscription, :incomplete, organization: invoice.organization, customer: invoice.customer, plan:) }
+      let(:rule) { create(:subscription_activation_rule, subscription:, status: "pending") }
+      let(:invoice) { create(:invoice, status: :open, invoice_type: :subscription, payment_overdue: false) }
+
+      before do
+        rule
+        create(:invoice_subscription, invoice:, subscription:)
+      end
+
+      context "when payment_status is succeeded" do
+        let(:update_args) { {payment_status: "succeeded"} }
+
+        it "calls ResolveService" do
+          allow(Subscriptions::ActivationRules::Payment::ResolveService).to receive(:call!)
+
+          invoice_service.call
+
+          expect(Subscriptions::ActivationRules::Payment::ResolveService).to have_received(:call!)
+            .with(subscription:, invoice:, payment_status: :succeeded)
+        end
+      end
+
+      context "when payment_status is failed" do
+        let(:update_args) { {payment_status: "failed"} }
+
+        it "calls ResolveService" do
+          allow(Subscriptions::ActivationRules::Payment::ResolveService).to receive(:call!)
+
+          invoice_service.call
+
+          expect(Subscriptions::ActivationRules::Payment::ResolveService).to have_received(:call!)
+            .with(subscription:, invoice:, payment_status: :failed)
+        end
+      end
+    end
+
     context "with payment_status update and notification is turned on" do
       let(:webhook_notification) { true }
 
