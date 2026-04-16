@@ -26,6 +26,8 @@ class PaymentRequest < ApplicationRecord
   monetize :amount_cents
   monetize :total_due_amount_cents, with_model_currency: :currency, allow_nil: true
 
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+
   def self.ransackable_attributes(_ = nil)
     %w[id number]
   end
