@@ -327,6 +327,16 @@ class Customer < ApplicationRecord
     )
   end
 
+  def reset_dunning_campaign_for_currency!(currency)
+    attempts = dunning_currency_attempts.dup
+    attempts.delete(currency.to_s)
+    update!(
+      dunning_currency_attempts: attempts,
+      last_dunning_campaign_attempt: 0,
+      last_dunning_campaign_attempt_at: (attempts.present? ? last_dunning_campaign_attempt_at : nil)
+    )
+  end
+
   def flag_wallets_for_refresh
     return unless wallets.active.exists?
 
