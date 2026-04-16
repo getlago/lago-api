@@ -361,7 +361,7 @@ RSpec.describe FixedCharges::CreateService do
           end
 
           before do
-            allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+            allow(FixedCharges::EmitEventsService)
               .to receive(:call!)
           end
 
@@ -375,7 +375,7 @@ RSpec.describe FixedCharges::CreateService do
           it "emits fixed charge events for all active subscriptions" do
             result
 
-            expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+            expect(FixedCharges::EmitEventsService)
               .to have_received(:call!)
               .with(
                 fixed_charge: result.fixed_charge,
@@ -397,7 +397,7 @@ RSpec.describe FixedCharges::CreateService do
           end
 
           before do
-            allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+            allow(FixedCharges::EmitEventsService)
               .to receive(:call!)
           end
 
@@ -410,7 +410,7 @@ RSpec.describe FixedCharges::CreateService do
           it "emits fixed charge events for active subscriptions with apply_units_immediately false" do
             result
 
-            expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+            expect(FixedCharges::EmitEventsService)
               .to have_received(:call!)
               .with(
                 fixed_charge: result.fixed_charge,
@@ -439,15 +439,15 @@ RSpec.describe FixedCharges::CreateService do
       end
 
       before do
-        allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+        allow(FixedCharges::EmitEventsService)
           .to receive(:call!)
           .and_call_original
       end
 
-      it "passes the custom timestamp to EmitEventsForActiveSubscriptionsService" do
+      it "passes the custom timestamp to EmitEventsService" do
         result
 
-        expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+        expect(FixedCharges::EmitEventsService)
           .to have_received(:call!)
           .with(
             fixed_charge: result.fixed_charge,
