@@ -57,6 +57,48 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
     end
   end
 
+  context "when payment_status is succeeded" do
+    let(:payment_status) { :succeeded }
+
+    it "marks the activation rule as satisfied" do
+      result
+
+      expect(rule.reload.status).to eq("satisfied")
+    end
+
+    it "finalizes the invoice" do
+      result
+
+      expect(invoice.reload.status).to eq("finalized")
+    end
+
+    it "activates the subscription" do
+      freeze_time do
+        result
+
+        expect(subscription.reload).to be_active
+        expect(subscription.activated_at).to eq(Time.current)
+      end
+    end
+
+    it "sends a subscription.started webhook" do
+      result
+
+      expect(SendWebhookJob).to have_been_enqueued.with("subscription.started", subscription)
+    end
+
+    context "when subscription is already active (idempotency)" do
+      let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+
+      it "returns early without changes" do
+        result
+
+        expect(rule.reload.status).to eq("pending")
+        expect(invoice.reload.status).to eq("open")
+      end
+    end
+  end
+
   context "when payment_status is failed" do
     let(:payment_status) { :failed }
 

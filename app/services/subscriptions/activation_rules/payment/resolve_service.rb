@@ -31,22 +31,24 @@ module Subscriptions
         attr_reader :subscription, :invoice, :payment_status
 
         def handle_success
-          # TODO: implement in next TDD cycle
+          return unless subscription.incomplete? && invoice.open? && invoice.subscription?
+
+          EvaluateService.call!(rule: payment_rule, status: :satisfied)
+          Invoices::FinalizeService.call!(invoice:)
+          ActivationRules::EvaluateService.call!(subscription:)
         end
 
         def handle_failure
           return unless subscription.incomplete? && invoice.open? && invoice.subscription?
 
-          payment_rule.failed!
+          EvaluateService.call!(rule: payment_rule, status: :failed)
           invoice.closed!
           subscription.cancelation_reason = :payment_failed
-          subscription.mark_as_canceled!
-
-          SendWebhookJob.perform_later("subscription.canceled", subscription)
+          ActivationRules::EvaluateService.call!(subscription:)
         end
 
         def payment_rule
-          @payment_rule ||= subscription.activation_rules.find_by(type: "payment")
+          @payment_rule ||= subscription.activation_rules.payment.sole
         end
       end
     end
