@@ -31,6 +31,8 @@ class RateSchedule < ApplicationRecord
   enum :charge_model, CHARGE_MODELS, validate: true
   enum :regroup_paid_fees, REGROUP_PAID_FEES_OPTIONS
 
+  scope :subscription, -> { joins(:product_item).where(product_item: { item_type: :subscription }) }
+
   validates :billing_interval_count, numericality: {greater_than_or_equal_to: 1}
   validates :position, presence: true
   validates :amount_currency, inclusion: {in: currency_list}

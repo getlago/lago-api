@@ -109,7 +109,8 @@ module Subscriptions
       end
 
       def pay_in_advance?
-        subscription.active_rate_schedules.any?(&:pay_in_advance?)
+        #subscription.pay_in_advance?
+        subscription.rate_schedules.subscription.sole.pay_in_advance?
       end
 
       # NOTE: If subscription is terminated automatically by setting ending_at, there is a chance that this service will
