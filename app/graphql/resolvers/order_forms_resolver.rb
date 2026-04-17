@@ -11,9 +11,9 @@ module Resolvers
 
     argument :created_at_from, GraphQL::Types::ISO8601DateTime, required: false
     argument :created_at_to, GraphQL::Types::ISO8601DateTime, required: false
+    argument :customer_id, [ID], required: false
     argument :expires_at_from, GraphQL::Types::ISO8601DateTime, required: false
     argument :expires_at_to, GraphQL::Types::ISO8601DateTime, required: false
-    argument :customer_id, [ID], required: false
     argument :limit, Integer, required: false
     argument :number, [String], required: false
     argument :owner_id, [ID], required: false
