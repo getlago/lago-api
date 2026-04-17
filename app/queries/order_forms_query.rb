@@ -39,16 +39,13 @@ class OrderFormsQuery < BaseQuery
   end
 
   def base_scope
-    organization.order_forms.ransack(search_params)
+    organization.order_forms.includes(:customer).ransack(search_params)
   end
 
   def search_params
     return if search_term.blank?
 
-    {
-      m: "or",
-      number_cont: search_term
-    }
+    {number_cont: search_term}
   end
 
   def with_status(scope)

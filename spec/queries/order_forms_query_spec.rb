@@ -137,4 +137,29 @@ RSpec.describe OrderFormsQuery do
       expect(returned_ids).to be_empty
     end
   end
+
+  context "when filters are invalid" do
+    let(:filters) { {status: "invalid_status"} }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages[:status]).to be_present
+    end
+  end
+
+  context "when order forms belong to another organization" do
+    let(:other_organization) { create(:organization) }
+    let(:other_customer) { create(:customer, organization: other_organization) }
+    let(:other_quote) { create(:quote, organization: other_organization, customer: other_customer) }
+
+    before do
+      create(:order_form, organization: other_organization, customer: other_customer, quote: other_quote)
+    end
+
+    it "does not return order forms from other organizations" do
+      expect(result).to be_success
+      expect(returned_ids).to match_array([order_form_one.id, order_form_two.id])
+    end
+  end
 end

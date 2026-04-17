@@ -55,6 +55,8 @@ module Resolvers
         search_term:
       )
 
+      return result_error(result) unless result.success?
+
       result.order_forms
     end
   end
