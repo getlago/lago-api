@@ -72,12 +72,7 @@ module Types
       end
 
       def presentation_breakdowns
-        object.presentation_breakdowns.map do |breakdown|
-          {
-            presentation_by: breakdown.presentation_by,
-            units: breakdown.units
-          }
-        end
+        Types::Fees::PresentationBreakdownBuilder.call([object])
       end
     end
   end

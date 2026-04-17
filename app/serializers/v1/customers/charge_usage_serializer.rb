@@ -14,7 +14,7 @@ module V1
             billable_metric: billable_metric_data(fee),
             filters: filters(fees),
             grouped_usage: grouped_usage(fees),
-            presentation_breakdowns: presentation_breakdowns(fees)
+            presentation_breakdowns: PresentationBreakdownSerializer.call(fees)
           }
         end
       end
@@ -112,19 +112,8 @@ module V1
           **usage_data.except(:amount_currency),
           grouped_by: grouped_fees.first.grouped_by,
           filters: filters(grouped_fees),
-          presentation_breakdowns: presentation_breakdowns(grouped_fees)
+          presentation_breakdowns: PresentationBreakdownSerializer.call(grouped_fees)
         }
-      end
-
-      def presentation_breakdowns(fees)
-        fees.flat_map do |fee|
-          fee.presentation_breakdowns.map do |breakdown|
-            {
-              presentation_by: breakdown.presentation_by,
-              units: breakdown.units
-            }
-          end
-        end
       end
     end
   end

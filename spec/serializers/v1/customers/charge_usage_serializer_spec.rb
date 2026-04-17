@@ -96,8 +96,9 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       presentation_breakdown_class = Struct.new(:presentation_by, :units, keyword_init: true)
 
       [
-        presentation_breakdown_class.new(presentation_by: "card_type", units: "7"),
-        presentation_breakdown_class.new(presentation_by: "country", units: "3")
+        presentation_breakdown_class.new(presentation_by: {"card_type" => "visa"}, units: "7"),
+        presentation_breakdown_class.new(presentation_by: {"card_type" => "visa"}, units: "1"),
+        presentation_breakdown_class.new(presentation_by: {"country" => "pt"}, units: "3")
       ]
     end
 
@@ -132,17 +133,17 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     end
 
     it "serializes the breakdowns" do
-      expect(result["charges"].first["presentation_breakdowns"]).to eq(
+      expect(result["charges"].first["presentation_breakdowns"]).to match_array(
         [
-          {"presentation_by" => "card_type", "units" => "7"},
-          {"presentation_by" => "country", "units" => "3"}
+          {"presentation_by" => {"card_type" => "visa"}, "units" => "8.0"},
+          {"presentation_by" => {"country" => "pt"}, "units" => "3.0"}
         ]
       )
 
-      expect(result["charges"].first["grouped_usage"].first["presentation_breakdowns"]).to eq(
+      expect(result["charges"].first["grouped_usage"].first["presentation_breakdowns"]).to match_array(
         [
-          {"presentation_by" => "card_type", "units" => "7"},
-          {"presentation_by" => "country", "units" => "3"}
+          {"presentation_by" => {"card_type" => "visa"}, "units" => "8.0"},
+          {"presentation_by" => {"country" => "pt"}, "units" => "3.0"}
         ]
       )
     end

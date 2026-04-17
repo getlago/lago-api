@@ -56,7 +56,7 @@ module V1
         amount_details: model.amount_details,
         self_billed: model.invoice&.self_billed || false,
         pricing_unit_details:,
-        presentation_breakdowns: model.presentation_breakdowns.map { |breakdown| {presentation_by: breakdown.presentation_by, units: breakdown.units} }
+        presentation_breakdowns: V1::Customers::PresentationBreakdownSerializer.call([model])
       }
 
       payload.merge!(model.date_boundaries) if model.charge? || model.subscription? || model.add_on? || model.fixed_charge?

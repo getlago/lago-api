@@ -139,6 +139,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
 
       [
         presentation_breakdown_class.new(presentation_by: "card_type", units: "7"),
+        presentation_breakdown_class.new(presentation_by: "card_type", units: "1"),
         presentation_breakdown_class.new(presentation_by: "country", units: "3")
       ]
     end
@@ -155,17 +156,17 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         instance_double("ServiceResult", raise_if_error!: projection_result)
       )
 
-      expect(result["charges"].first["presentation_breakdowns"]).to eq(
+      expect(result["charges"].first["presentation_breakdowns"]).to match_array(
         [
-          {"presentation_by" => "card_type", "units" => "7"},
-          {"presentation_by" => "country", "units" => "3"}
+          {"presentation_by" => "card_type", "units" => "8.0"},
+          {"presentation_by" => "country", "units" => "3.0"}
         ]
       )
 
-      expect(result["charges"].first["grouped_usage"].first["presentation_breakdowns"]).to eq(
+      expect(result["charges"].first["grouped_usage"].first["presentation_breakdowns"]).to match_array(
         [
-          {"presentation_by" => "card_type", "units" => "7"},
-          {"presentation_by" => "country", "units" => "3"}
+          {"presentation_by" => "card_type", "units" => "8.0"},
+          {"presentation_by" => "country", "units" => "3.0"}
         ]
       )
     end

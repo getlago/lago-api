@@ -58,14 +58,7 @@ module Types
         end
 
         def presentation_breakdowns
-          object.flat_map do |f|
-            f.presentation_breakdowns.map do |breakdown|
-              {
-                presentation_by: breakdown.presentation_by,
-                units: breakdown.units
-              }
-            end
-          end
+          Types::Fees::PresentationBreakdownBuilder.call(object)
         end
 
         private

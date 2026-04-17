@@ -90,7 +90,7 @@ RSpec.describe Types::Fees::Object do
         expect(subject).to eq([
           {
             presentation_by: {"department" => "engineering"},
-            units: BigDecimal("60.0")
+            units: "60.0"
           }
         ])
       end
@@ -113,7 +113,7 @@ RSpec.describe Types::Fees::Object do
         expect(subject).to eq([
           {
             presentation_by: {"department" => "engineering", "region" => "eu"},
-            units: BigDecimal("60.0")
+            units: "60.0"
           }
         ])
       end
