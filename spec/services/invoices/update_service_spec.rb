@@ -258,26 +258,20 @@ RSpec.describe Invoices::UpdateService do
       context "when payment_status is succeeded" do
         let(:update_args) { {payment_status: "succeeded"} }
 
-        it "calls ResolveService" do
-          allow(Subscriptions::ActivationRules::Payment::ResolveService).to receive(:call!)
-
-          invoice_service.call
-
-          expect(Subscriptions::ActivationRules::Payment::ResolveService).to have_received(:call!)
-            .with(subscription:, invoice:, payment_status: :succeeded)
+        it "enqueues ResolveJob" do
+          expect { invoice_service.call }
+            .to have_enqueued_job_after_commit(Subscriptions::ActivationRules::Payment::ResolveJob)
+            .with(subscription, invoice, :succeeded)
         end
       end
 
       context "when payment_status is failed" do
         let(:update_args) { {payment_status: "failed"} }
 
-        it "calls ResolveService" do
-          allow(Subscriptions::ActivationRules::Payment::ResolveService).to receive(:call!)
-
-          invoice_service.call
-
-          expect(Subscriptions::ActivationRules::Payment::ResolveService).to have_received(:call!)
-            .with(subscription:, invoice:, payment_status: :failed)
+        it "enqueues ResolveJob" do
+          expect { invoice_service.call }
+            .to have_enqueued_job_after_commit(Subscriptions::ActivationRules::Payment::ResolveJob)
+            .with(subscription, invoice, :failed)
         end
       end
     end

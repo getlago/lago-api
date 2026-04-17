@@ -112,9 +112,8 @@ module Invoices
       subscription = invoice.subscriptions.find(&:incomplete?)
       return unless subscription
 
-      Subscriptions::ActivationRules::Payment::ResolveService.call!(
-        subscription:, invoice:, payment_status: payment_status.to_sym
-      )
+      Subscriptions::ActivationRules::Payment::ResolveJob
+        .perform_after_commit(subscription, invoice, payment_status.to_sym)
     end
 
     def valid_metadata_count?(metadata:)
