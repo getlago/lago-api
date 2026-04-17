@@ -238,13 +238,26 @@ module Events
       end
 
       def presentation_breakdown_latest
-        presentation_breakdown(
-          aggregation_sql: <<~SQL.squish
-            (ARRAY_AGG((#{sanitized_property_name})::numeric
-              ORDER BY events.timestamp DESC, events.created_at DESC
-            ))[1]
-          SQL
-        )
+        rows = if grouped_and_presentation_columns[:grouped_by].any?
+          sql = events
+            .order(Arel.sql((sanitized_grouped_by + ["events.timestamp DESC, events.created_at DESC"]).join(", ")))
+            .select(
+              [
+                "DISTINCT ON (#{sanitized_grouped_by.join(", ")}) #{sanitized_grouped_by_and_presentation_by.join(", ")}",
+                "(#{sanitized_property_name})::numeric"
+              ].join(", ")
+            )
+            .to_sql
+
+          select_all(sql).rows
+        else
+          events
+            .order(timestamp: :desc, created_at: :desc)
+            .limit(1)
+            .pluck(Arel.sql((sanitized_grouped_by_and_presentation_by + ["(#{sanitized_property_name})::numeric"]).join(", ")))
+        end
+
+        prepare_presentation_result(rows)
       end
 
       def presentation_breakdown_max
