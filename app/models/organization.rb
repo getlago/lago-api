@@ -50,6 +50,8 @@ class Organization < ApplicationRecord
   has_many :customers
   has_many :subscriptions
   has_many :activation_rules, class_name: "Subscription::ActivationRule"
+  has_many :subscription_rate_schedules
+  has_many :subscription_rate_schedule_cycles
   has_many :invoices
   has_many :credit_notes
   has_many :fees
