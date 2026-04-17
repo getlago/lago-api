@@ -40,7 +40,7 @@ class FeesQuery < BaseQuery
     fees = with_fee_type(fees) if filters.fee_type
     fees = with_payment_status(fees) if filters.payment_status
 
-    fees = fees.where(pay_in_advance_event_transaction_id: filters.event_transaction_id) if filters.event_transaction_id
+    fees = with_event_transaction_id(fees) if filters.event_transaction_id
 
     fees = with_created_date_range(fees) if filters.created_at_from || filters.created_at_to
     fees = with_succeeded_date_range(fees) if filters.succeeded_at_from || filters.succeeded_at_to
@@ -51,6 +51,12 @@ class FeesQuery < BaseQuery
     result
   rescue BaseService::FailedResult
     result
+  end
+
+  # Returns the original fee created by the event and any regenerated fees from the void/regenerate flow
+  def with_event_transaction_id(scope)
+    original_fees_ids = scope.where(pay_in_advance_event_transaction_id: filters.event_transaction_id).select(:id)
+    scope.where(id: original_fees_ids).or(scope.where(original_fee_id: original_fees_ids))
   end
 
   def with_external_subscription(scope)

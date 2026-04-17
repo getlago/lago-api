@@ -65,46 +65,80 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
         original_fee.update!(pay_in_advance_event_transaction_id: "txn_123", pay_in_advance: true)
       end
 
-      it "clears pay_in_advance_event_transaction_id on the duplicated fee" do
+      it "clears pay_in_advance_event_transaction_id and sets original_fee_id" do
         regenerated_fee = regenerate_result.invoice.fees.first
 
         expect(regenerated_fee.pay_in_advance_event_transaction_id).to be_nil
+        expect(regenerated_fee.original_fee_id).to eq(original_fee.id)
         expect(original_fee.reload.pay_in_advance_event_transaction_id).to eq("txn_123")
       end
     end
 
-    context "when voided invoice has invoice_subscriptions" do
-      it "duplicates invoice_subscriptions to the regenerated invoice" do
-        regenerated_invoice = regenerate_result.invoice
+    describe "invoice_subscriptions duplication" do
+      context "when voided invoice is subscription type" do
+        it "duplicates invoice_subscriptions to the regenerated invoice" do
+          regenerated_invoice = regenerate_result.invoice
 
-        expect(regenerated_invoice.invoice_subscriptions).not_to be_empty
-        expect(regenerated_invoice.invoice_subscriptions.count).to eq(voided_invoice.invoice_subscriptions.count)
-      end
-    end
-
-    context "when voided invoice has no invoice_subscriptions" do
-      let(:add_on) { create(:add_on, organization:) }
-      let(:voided_invoice) do
-        create(
-          :invoice,
-          :one_off,
-          :voided,
-          customer:,
-          organization:,
-          currency: "EUR"
-        )
-      end
-      let(:original_fee) do
-        create(:add_on_fee, invoice: voided_invoice, add_on:, amount_cents: 1000, unit_amount_cents: 1000)
-      end
-      let(:fees_params) do
-        [{id: original_fee.id, subscription_id: nil, units: 2, unit_amount_cents: 1000}]
+          expect(regenerated_invoice.invoice_subscriptions).not_to be_empty
+          expect(regenerated_invoice.invoice_subscriptions.count).to eq(voided_invoice.invoice_subscriptions.count)
+        end
       end
 
-      it "does not create invoice_subscriptions on the regenerated invoice" do
-        regenerated_invoice = regenerate_result.invoice
+      context "when voided invoice is progressive_billing type" do
+        let(:voided_invoice) do
+          create(
+            :invoice,
+            :progressive_billing_invoice,
+            :voided,
+            customer:,
+            organization:,
+            currency: "EUR",
+            subscriptions: [subscription]
+          )
+        end
+        let(:original_fee) do
+          create(:charge_fee, invoice: voided_invoice, subscription:, amount_cents: 1000, unit_amount_cents: 1000)
+        end
 
-        expect(regenerated_invoice.invoice_subscriptions).to be_empty
+        it "duplicates invoice_subscriptions to the regenerated invoice" do
+          regenerated_invoice = regenerate_result.invoice
+
+          expect(regenerated_invoice.invoice_subscriptions).not_to be_empty
+          expect(regenerated_invoice.invoice_subscriptions.count).to eq(voided_invoice.invoice_subscriptions.count)
+        end
+      end
+
+      context "when voided invoice is one_off type" do
+        let(:add_on) { create(:add_on, organization:) }
+        let(:voided_invoice) do
+          create(:invoice, :voided, invoice_type: :one_off, customer:, organization:, currency: "EUR")
+        end
+        let(:original_fee) do
+          create(:one_off_fee, invoice: voided_invoice, add_on:, amount_cents: 1000, unit_amount_cents: 1000)
+        end
+        let(:fees_params) do
+          [{id: original_fee.id, units: 2, unit_amount_cents: 1000}]
+        end
+
+        it "does not create invoice_subscriptions on the regenerated invoice" do
+          expect(regenerate_result.invoice.invoice_subscriptions).to be_empty
+        end
+      end
+
+      context "when voided invoice is credit type" do
+        let(:voided_invoice) do
+          create(:invoice, :credit, :voided, customer:, organization:, currency: "EUR")
+        end
+        let(:original_fee) do
+          create(:fee, invoice: voided_invoice, amount_cents: 1000, unit_amount_cents: 1000, fee_type: :credit)
+        end
+        let(:fees_params) do
+          [{id: original_fee.id, units: 2, unit_amount_cents: 1000}]
+        end
+
+        it "does not create invoice_subscriptions on the regenerated invoice" do
+          expect(regenerate_result.invoice.invoice_subscriptions).to be_empty
+        end
       end
     end
 

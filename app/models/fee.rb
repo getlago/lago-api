@@ -17,6 +17,7 @@ class Fee < ApplicationRecord
   belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
   belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
+  belongs_to :original_fee, class_name: "Fee", optional: true # Points to the root fee in a void/regenerate chain
   belongs_to :organization
   belongs_to :billing_entity
   belongs_to :fixed_charge, -> { with_discarded }, optional: true

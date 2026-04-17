@@ -120,12 +120,53 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
 
       regenerated_fee = regenerated_invoice.fees.first
       expect(regenerated_fee.pay_in_advance_event_transaction_id).to be_nil
+      expect(regenerated_fee.original_fee_id).to eq(original_fee.id)
       expect(regenerated_fee.units).to eq(5)
       expect(regenerated_fee.unit_amount_cents).to eq(2000)
       expect(regenerated_fee.amount_cents).to eq(10_000)
 
       # Original fee on the voided invoice is untouched
       expect(original_fee.reload.pay_in_advance_event_transaction_id).to be_present
+    end
+  end
+
+  context "when multiple void/regenerate cycles occur" do
+    it "preserves original_fee_id pointing to the root fee across the chain" do
+      advance_charges_invoice = create_advance_charges_invoice
+      subscription = customer.subscriptions.sole
+      original_fee = advance_charges_invoice.fees.first
+
+      # First cycle: void → regenerate
+      void_invoice(advance_charges_invoice)
+
+      first_result = Invoices::RegenerateFromVoidedService.call(
+        voided_invoice: advance_charges_invoice,
+        fees_params: [{id: original_fee.id, subscription_id: subscription.id, units: 5, unit_amount_cents: 20.0}]
+      )
+      expect(first_result).to be_success
+
+      first_regenerated_invoice = first_result.invoice
+      first_regenerated_fee = first_regenerated_invoice.fees.first
+      expect(first_regenerated_fee.original_fee_id).to eq(original_fee.id)
+
+      # Second cycle: void the regenerated invoice → regenerate again
+      void_invoice(first_regenerated_invoice)
+      expect(first_regenerated_invoice).to be_voided
+
+      second_result = Invoices::RegenerateFromVoidedService.call(
+        voided_invoice: first_regenerated_invoice,
+        fees_params: [{id: first_regenerated_fee.id, subscription_id: subscription.id, units: 8, unit_amount_cents: 15.0}]
+      )
+      expect(second_result).to be_success
+
+      second_regenerated_invoice = second_result.invoice
+      second_regenerated_fee = second_regenerated_invoice.fees.first
+
+      # original_fee_id always points to the root fee, not the intermediate one
+      expect(second_regenerated_fee.original_fee_id).to eq(original_fee.id)
+      expect(second_regenerated_fee.pay_in_advance_event_transaction_id).to be_nil
+      expect(second_regenerated_fee.units).to eq(8)
+      expect(second_regenerated_fee.unit_amount_cents).to eq(1500)
     end
   end
 
