@@ -224,6 +224,21 @@ RSpec.describe Customers::UpsertFromApiService do
     end
   end
 
+  context "with email containing unicode lookalike characters" do
+    let(:create_args) do
+      {
+        external_id:,
+        name: "Foo Bar",
+        email: "hello@something\u2013other.com"
+      }
+    end
+
+    it "sanitizes the email before saving" do
+      expect(result).to be_success
+      expect(result.customer.email).to eq("hello@something-other.com")
+    end
+  end
+
   context "with external_id already used by a deleted customer" do
     it "creates a customer with the same external_id" do
       create(:customer, :deleted, organization:, external_id:)
