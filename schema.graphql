@@ -9070,6 +9070,49 @@ enum OrderByEnum {
   net_revenue_amount_cents
 }
 
+type OrderForm {
+  billingSnapshot: JSON!
+  createdAt: ISO8601DateTime!
+  customer: Customer!
+  expiresAt: ISO8601DateTime
+  id: ID!
+  number: String!
+  signedAt: ISO8601DateTime
+  signedByUserId: ID
+  status: OrderFormStatusEnum!
+  updatedAt: ISO8601DateTime!
+  voidReason: OrderFormVoidReasonEnum
+  voidedAt: ISO8601DateTime
+}
+
+"""
+OrderFormCollection type
+"""
+type OrderFormCollection {
+  """
+  A collection of paginated OrderFormCollection
+  """
+  collection: [OrderForm!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+enum OrderFormStatusEnum {
+  expired
+  generated
+  signed
+  voided
+}
+
+enum OrderFormVoidReasonEnum {
+  expired
+  invalid
+  manual
+}
+
 enum OrderTypeEnum {
   one_off
   subscription_amendment
@@ -9356,6 +9399,7 @@ enum PermissionEnum {
   invoices_update
   invoices_view
   invoices_void
+  order_forms_view
   organization_emails_update
   organization_emails_view
   organization_integrations_create
@@ -9469,6 +9513,7 @@ type Permissions {
   invoicesUpdate: Boolean!
   invoicesView: Boolean!
   invoicesVoid: Boolean!
+  orderFormsView: Boolean!
   organizationEmailsUpdate: Boolean!
   organizationEmailsView: Boolean!
   organizationIntegrationsCreate: Boolean!
@@ -10458,6 +10503,21 @@ type Query {
   Query MRR of an organization
   """
   mrrs(billingEntityId: ID, currency: CurrencyEnum): MrrCollection!
+
+  """
+  Query a single order form
+  """
+  orderForm(
+    """
+    Uniq ID of the order form
+    """
+    id: ID!
+  ): OrderForm
+
+  """
+  Query order forms
+  """
+  orderForms(createdAtFrom: ISO8601DateTime, createdAtTo: ISO8601DateTime, customerId: [ID!], expiresAtFrom: ISO8601DateTime, expiresAtTo: ISO8601DateTime, limit: Int, number: [String!], ownerId: [ID!], page: Int, quoteNumber: [String!], searchTerm: String, status: [OrderFormStatusEnum!]): OrderFormCollection!
 
   """
   Query the current organization
