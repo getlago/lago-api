@@ -33,6 +33,10 @@ module BillableMetrics
           result.aggregation = aggregation
         end
 
+        if presentation_by.present?
+          result.breakdowns = event_store.presentation_breakdown_unique_count
+        end
+
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation(aggregation_without_proration:)
         result.options = options
         result.count = result.aggregation
@@ -87,6 +91,10 @@ module BillableMetrics
           group_result.options = options
 
           group_result
+        end
+
+        if presentation_by.present?
+          result.breakdowns = event_store.presentation_breakdown_unique_count
         end
 
         result

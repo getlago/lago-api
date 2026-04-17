@@ -18,7 +18,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { {event: pay_in_advance_event, grouped_by:, matching_filters:, ignored_filters:} }
+  let(:filters) { {event: pay_in_advance_event, grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }
 
   let(:subscription) do
     create(
@@ -36,6 +36,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:grouped_by) { nil }
+  let(:presentation_by) { nil }
   let(:matching_filters) { nil }
   let(:ignored_filters) { nil }
 
@@ -60,7 +61,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
   let(:to_datetime) { Time.zone.parse("2022-08-08 23:59:59 UTC") }
 
   let(:added_at) { from_datetime - 1.month }
-  let(:removed_at) { nil }
   let(:event) do
     create(
       :event,
@@ -76,6 +76,106 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
 
   describe "#aggregate" do
     let(:result) { unique_count_service.aggregate(options:) }
+
+    context "with presentation group keys" do
+      let(:presentation_by) { ["cloud"] }
+
+      let(:event) do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: added_at,
+          properties: {unique_id: "001", cloud: "aws"}
+        )
+      end
+
+      let(:new_event) do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          timestamp: from_datetime + 10.days,
+          properties: {unique_id: "002", cloud: "gcp"}
+        )
+      end
+
+      before { new_event }
+
+      it "returns the presentation breakdowns" do
+        expect(result.breakdowns).to match_array([
+          {
+            groups: {},
+            breakdowns: match_array([
+              {presentation_by: {"cloud" => "aws"}, units: 1},
+              {presentation_by: {"cloud" => "gcp"}, units: 1}
+            ])
+          }
+        ])
+      end
+
+      context "with grouped_by" do
+        let(:grouped_by) { ["agent_name"] }
+        let(:event) { nil }
+
+        let(:unique_count_events) do
+          [
+            create(
+              :event,
+              organization_id: organization.id,
+              code: billable_metric.code,
+              external_subscription_id: subscription.external_id,
+              timestamp: added_at,
+              properties: {unique_id: "003", agent_name: "frodo", cloud: "aws"}
+            ),
+            create(
+              :event,
+              organization_id: organization.id,
+              code: billable_metric.code,
+              external_subscription_id: subscription.external_id,
+              timestamp: from_datetime + 10.days,
+              properties: {unique_id: "004", agent_name: "frodo", cloud: "gcp"}
+            ),
+            create(
+              :event,
+              organization_id: organization.id,
+              code: billable_metric.code,
+              external_subscription_id: subscription.external_id,
+              timestamp: added_at,
+              properties: {unique_id: "005", agent_name: "aragorn", cloud: "aws"}
+            )
+          ]
+        end
+
+        before { unique_count_events }
+
+        it "returns the presentation breakdowns per group" do
+          expect(result.breakdowns).to match_array([
+            {
+              groups: {"agent_name" => "frodo"},
+              breakdowns: match_array([
+                {presentation_by: {"cloud" => "aws"}, units: 1},
+                {presentation_by: {"cloud" => "gcp"}, units: 1}
+              ])
+            },
+            {
+              groups: {"agent_name" => "aragorn"},
+              breakdowns: match_array([
+                {presentation_by: {"cloud" => "aws"}, units: 1}
+              ])
+            },
+            {
+              groups: {"agent_name" => nil},
+              breakdowns: match_array([
+                {presentation_by: {"cloud" => "gcp"}, units: 1}
+              ])
+            }
+          ])
+        end
+      end
+    end
 
     context "with persisted metric on full period" do
       it "returns the number of persisted metric" do
