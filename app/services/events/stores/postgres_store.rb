@@ -261,7 +261,26 @@ module Events
       end
 
       def presentation_breakdown_max
-        presentation_breakdown(aggregation_sql: "MAX((#{sanitized_property_name})::numeric)")
+        rows = if grouped_and_presentation_columns[:grouped_by].any?
+          sql = events
+            .order(Arel.sql((sanitized_grouped_by + ["(#{sanitized_property_name})::numeric DESC"]).join(", ")))
+            .select(
+              [
+                "DISTINCT ON (#{sanitized_grouped_by.join(", ")}) #{sanitized_grouped_by_and_presentation_by.join(", ")}",
+                "(#{sanitized_property_name})::numeric"
+              ].join(", ")
+            )
+            .to_sql
+
+          select_all(sql).rows
+        else
+          events
+            .order(Arel.sql("(#{sanitized_property_name})::numeric DESC"))
+            .limit(1)
+            .pluck(Arel.sql((sanitized_grouped_by_and_presentation_by + ["(#{sanitized_property_name})::numeric"]).join(", ")))
+        end
+
+        prepare_presentation_result(rows)
       end
 
       def presentation_breakdown_unique_count

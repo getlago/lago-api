@@ -370,7 +370,6 @@ RSpec.describe BillableMetrics::Aggregations::MaxService do
         {
           groups: {},
           breakdowns: match_array([
-            {presentation_by: {"cloud" => "aws"}, units: 10},
             {presentation_by: {"cloud" => "gcp"}, units: 12}
           ])
         }
@@ -419,7 +418,6 @@ RSpec.describe BillableMetrics::Aggregations::MaxService do
           {
             groups: {"agent_name" => "frodo"},
             breakdowns: match_array([
-              {presentation_by: {"cloud" => "aws"}, units: 2},
               {presentation_by: {"cloud" => "gcp"}, units: 7}
             ])
           },
