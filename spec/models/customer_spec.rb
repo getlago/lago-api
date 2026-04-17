@@ -1194,19 +1194,19 @@ RSpec.describe Customer do
       )
     end
 
-    it "resets only the specified currency and keeps others" do
+    it "resets only the specified currency to zero and keeps others" do
       expect { customer.reset_dunning_campaign_for_currency!("EUR") && customer.reload }
-        .to change(customer, :dunning_currency_attempts).to({"USD" => 2})
+        .to change(customer, :dunning_currency_attempts).to({"EUR" => 0, "USD" => 2})
         .and change(customer, :last_dunning_campaign_attempt).to(0)
     end
 
-    it "preserves last_dunning_campaign_attempt_at when other currencies remain" do
+    it "preserves last_dunning_campaign_attempt_at when other currencies are active" do
       customer.reset_dunning_campaign_for_currency!("EUR")
       customer.reload
       expect(customer.last_dunning_campaign_attempt_at).to be_within(1.second).of(last_dunning_campaign_attempt_at)
     end
 
-    context "when resetting the last remaining currency" do
+    context "when all currencies are reset to zero" do
       let(:customer) do
         create(
           :customer,
@@ -1216,9 +1216,9 @@ RSpec.describe Customer do
         )
       end
 
-      it "clears everything including the timestamp" do
+      it "clears the timestamp so dunning can restart immediately" do
         expect { customer.reset_dunning_campaign_for_currency!("EUR") && customer.reload }
-          .to change(customer, :dunning_currency_attempts).to({})
+          .to change(customer, :dunning_currency_attempts).to({"EUR" => 0})
           .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
       end
     end

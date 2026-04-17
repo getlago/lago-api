@@ -46,7 +46,7 @@ module DunningCampaigns
           DunningCampaigns::ProcessAttemptJob.perform_later(customer:, dunning_campaign_threshold: threshold)
         end
 
-        if all_thresholds_max_attempts_reached?
+        if all_dunned_currencies_max_attempts_reached?
           SendWebhookJob.perform_later(
             "dunning_campaign.finished",
             customer,
@@ -87,11 +87,12 @@ module DunningCampaigns
         customer.save!
       end
 
-      def all_thresholds_max_attempts_reached?
+      def all_dunned_currencies_max_attempts_reached?
         attempts = customer.dunning_currency_attempts
+        return false if attempts.blank?
 
-        dunning_campaign.thresholds.present? && dunning_campaign.thresholds.all? do |threshold|
-          (attempts[threshold.currency] || 0) >= dunning_campaign.max_attempts
+        attempts.all? do |_currency, count|
+          count >= dunning_campaign.max_attempts
         end
       end
 
