@@ -22,5 +22,9 @@ FactoryBot.define do
         )
       end
     end
+
+    trait :auto_execute do
+      auto_execute { true }
+    end
   end
 end
