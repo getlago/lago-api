@@ -22,7 +22,7 @@ class OrderFormsQuery < BaseQuery
     order_forms = with_customer_id(order_forms) if filters.customer_id.present?
     order_forms = with_number(order_forms) if filters.number.present?
     order_forms = with_quote_number(order_forms) if filters.quote_number.present?
-    order_forms = with_owner_ids(order_forms) if filters.owner_id.present?
+    order_forms = with_owner_id(order_forms) if filters.owner_id.present?
     order_forms = with_created_at_range(order_forms) if created_at_range?
     order_forms = with_expires_at_range(order_forms) if expires_at_range?
     order_forms = paginate(order_forms)
@@ -67,7 +67,7 @@ class OrderFormsQuery < BaseQuery
     scope.joins(:quote).where(quotes: {number: filters.quote_number})
   end
 
-  def with_owner_ids(scope)
+  def with_owner_id(scope)
     scope.where(
       quote_id: QuoteOwner.where(user_id: filters.owner_id).select(:quote_id)
     )
