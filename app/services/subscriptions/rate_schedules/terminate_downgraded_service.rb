@@ -69,6 +69,7 @@ module Subscriptions
       end
 
       def bill_subscriptions
+        # NOTE: Create an invoice for the terminated subscription if it has not been billed yet
         Invoices::RateSchedulesBillingJob.perform_later(
           [billable_rate_schedules],
           timestamp,
@@ -77,18 +78,13 @@ module Subscriptions
       end
 
       def billable_rate_schedules
-        # NOTE: Create an invoice for the terminated subscription if it has not been billed yet
-        rate_schedules = subscription.active_rate_schedules
-        # check every rate schedule for the next subscription if it is pay in advance
-        #rate_schedules += next_subscription.active_rate_schedule if pay_in_advance?
+        rate_schedules = subscription.billable_rate_schedules
+
+        if next_subscription.pay_in_advance? || next_subscription.has_pay_in_advance_fixed_charges?
+          rate_schedules += next_subscription.billable_rate_schedule
+        end
 
         rate_schedules
-      end
-
-      def pay_in_advance?
-        next_subscription.active_rate_schedule.pay_in_advance?
-        # or only for the charges if subscription was billed in advance
-        #next_subscription.plan.pay_in_advance? || next_subscription.fixed_charges.pay_in_advance.any?
       end
     end
   end

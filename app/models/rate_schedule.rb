@@ -31,7 +31,11 @@ class RateSchedule < ApplicationRecord
   enum :charge_model, CHARGE_MODELS, validate: true
   enum :regroup_paid_fees, REGROUP_PAID_FEES_OPTIONS
 
-  scope :subscription, -> { joins(:product_item).where(product_item: { item_type: :subscription }) }
+  scope :pay_in_advance, -> { where(pay_in_advance: true) }
+
+  ProductItem::ITEM_TYPES.each do |item_type|
+    scope item_type, -> { joins(:product_item).where(product_item: { item_type: item_type }) }
+  end
 
   validates :billing_interval_count, numericality: {greater_than_or_equal_to: 1}
   validates :position, presence: true

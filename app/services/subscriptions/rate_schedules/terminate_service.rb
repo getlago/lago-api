@@ -27,7 +27,7 @@ module Subscriptions
 
         ActiveRecord::Base.transaction do
           if subscription.pending?
-            terminate_pending_subscription
+            cancel_pending_subscription
           elsif !subscription.terminated?
             terminate_active_subscription
           end
@@ -48,7 +48,7 @@ module Subscriptions
 
       attr_reader :subscription, :async, :upgrade, :on_termination_credit_note, :on_termination_invoice
 
-      def terminate_pending_subscription
+      def cancel_pending_subscription
         previous = subscription.previous_subscription
         subscription.mark_as_canceled!
 
@@ -110,7 +110,7 @@ module Subscriptions
 
       def pay_in_advance?
         #subscription.pay_in_advance?
-        subscription.rate_schedules.subscription.sole.pay_in_advance?
+        subscription.rate_schedules.active.subscription.sole.pay_in_advance?
       end
 
       # NOTE: If subscription is terminated automatically by setting ending_at, there is a chance that this service will
@@ -165,18 +165,25 @@ module Subscriptions
       end
 
       def bill_subscription
-        #return unless bill_in_arrears_fees?
+        return unless bill_in_arrears_fees?
 
-        # bill only in arrears product items
+        # Original:
+        # if bill_in_arrears_fees? -> BillSubscriptionJob
+        # BillNonInvoiceableFeesJob
+
+        # BillsubscriptionJob -> Invoices::RateSchedulesBillingService
+        # BillNonInvoiceableFeesJob -> Advance Charges ?
+
+        # has ended_at and don't have cycles
         if async
           Invoices::RateSchedulesBillingJob.perform_after_commit(
-            [subscription.active_rate_schedules],
+            [subscription.billable_rate_schedules],
             subscription.terminated_at,
             invoicing_reason: :subscription_terminating
           )
         else
           Invoices::RateSchedulesBillingService.new(
-            [subscription.active_rate_schedules],
+            [subscription.billable_rate_schedules],
             subscription.terminated_at,
             invoicing_reason: :subscription_terminating
           )

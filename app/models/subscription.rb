@@ -297,6 +297,19 @@ class Subscription < ApplicationRecord
 
     usage_thresholds.presence || plan.usage_thresholds.presence || plan.applicable_usage_thresholds
   end
+
+  def pay_in_advance?
+    billable_rate_schedules.subscription.pay_in_advance.exists?
+    # billable_rate_schedules.subscription.any?(&:pay_in_advance?)
+  end
+
+  def has_pay_in_advance_usages?
+    billable_rate_schedules.usage.pay_in_advance.exists?
+  end
+
+  def has_pay_in_advance_fixed_charges?
+    billable_rate_schedules.fixed.pay_in_advance.exists?
+  end
 end
 
 # == Schema Information
