@@ -34,6 +34,11 @@ module BillableMetrics
 
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation(aggregation_without_proration:)
         result.count = aggregation_without_proration.count
+
+        if presentation_by.present?
+          result.breakdowns = event_store.presentation_breakdown_sum
+        end
+
         result.options = options
         result
       rescue ActiveRecord::StatementInvalid => e
@@ -88,6 +93,10 @@ module BillableMetrics
           group_result.options = options
 
           group_result
+        end
+
+        if presentation_by.present?
+          result.breakdowns = event_store.presentation_breakdown_sum
         end
 
         result
