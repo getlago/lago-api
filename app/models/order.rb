@@ -46,6 +46,10 @@ class Order < ApplicationRecord
 
   validates :billing_snapshot, presence: true
 
+  def self.ransackable_attributes(_ = nil)
+    %w[number]
+  end
+
   sequenced(
     scope: ->(order) { order.organization.orders },
     lock_key: ->(order) { order.organization_id }
