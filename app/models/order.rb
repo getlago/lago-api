@@ -30,6 +30,10 @@ class Order < ApplicationRecord
 
   validates :execution_mode, presence: true, if: -> { executed? || execute_at.present? }
 
+  def self.ransackable_attributes(_ = nil)
+    %w[number]
+  end
+
   sequenced(
     scope: ->(order) { order.organization.orders },
     lock_key: ->(order) { order.organization_id }
