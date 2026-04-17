@@ -7,6 +7,7 @@ class AddIndexOnSubscriptionsEndingAtActive < ActiveRecord::Migration[8.0]
     add_index :subscriptions, :ending_at,
       where: "status = 1 AND ending_at IS NOT NULL",
       name: "index_subscriptions_on_ending_at_active",
-      algorithm: :concurrently
+      algorithm: :concurrently,
+      if_not_exists: true
   end
 end
