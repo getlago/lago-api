@@ -4,7 +4,6 @@ FactoryBot.define do
   factory :quote do
     organization
     customer
-    sequential_id { 1 }
     version { 1 }
     status { :draft }
     order_type { :subscription_creation }
@@ -18,6 +17,10 @@ FactoryBot.define do
       status { :voided }
       voided_at { Time.current }
       void_reason { :manual }
+    end
+
+    trait :auto_execute do
+      auto_execute { true }
     end
   end
 end
