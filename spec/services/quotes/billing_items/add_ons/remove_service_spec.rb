@@ -32,6 +32,17 @@ RSpec.describe Quotes::BillingItems::AddOns::RemoveService do
       end
     end
 
+    context "when quote is nil" do
+      let(:id) { item_id }
+
+      it "returns not_found_failure" do
+        result = described_class.new(quote: nil, id:).call
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("quote")
+      end
+    end
+
     context "when quote is not draft" do
       let(:id) { item_id }
 

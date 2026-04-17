@@ -61,6 +61,17 @@ RSpec.describe Quotes::BillingItems::WalletCredits::AddService do
       end
     end
 
+    context "when quote is nil" do
+      let(:params) { {name: "Credits", currency: "EUR", rate_amount: "1.0", paid_credits: "500.0", granted_credits: "500.0"} }
+
+      it "returns not_found_failure" do
+        result = described_class.new(quote: nil, params:).call
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("quote")
+      end
+    end
+
     context "when quote is not draft" do
       let(:params) { {name: "Credits", currency: "EUR", rate_amount: "1.0", paid_credits: "500.0", granted_credits: "500.0"} }
 

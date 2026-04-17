@@ -13,6 +13,8 @@ module Quotes
         end
 
         def call
+          return result.forbidden_failure! unless License.premium?
+          return result.not_found_failure!(resource: "quote") unless quote
           return result.not_allowed_failure!(code: "inappropriate_state") unless quote.draft?
 
           unless ALLOWED_ORDER_TYPES.include?(quote.order_type)
