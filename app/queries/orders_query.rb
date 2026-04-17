@@ -26,7 +26,7 @@ class OrdersQuery < BaseQuery
     orders = with_number(orders) if filters.number.present?
     orders = with_order_form_number(orders) if filters.order_form_number.present?
     orders = with_quote_number(orders) if filters.quote_number.present?
-    orders = with_owner_ids(orders) if filters.owner_id.present?
+    orders = with_owner_id(orders) if filters.owner_id.present?
     orders = with_executed_at_range(orders) if executed_at_range?
     orders = paginate(orders)
     orders = apply_consistent_ordering(orders)
@@ -82,7 +82,7 @@ class OrdersQuery < BaseQuery
     scope.joins(order_form: :quote).where(quotes: {number: filters.quote_number})
   end
 
-  def with_owner_ids(scope)
+  def with_owner_id(scope)
     scope.where(
       order_form_id: OrderForm.where(
         quote_id: QuoteOwner.where(user_id: filters.owner_id).select(:quote_id)
