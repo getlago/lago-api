@@ -212,6 +212,7 @@ module Invoices
       dup_fee.taxes_base_rate = 0
       dup_fee.taxes_rate = 0
       dup_fee.pay_in_advance_event_transaction_id = nil
+      dup_fee.original_fee = voided_fee.original_fee || voided_fee
       dup_fee.save!
       dup_fee
     end
