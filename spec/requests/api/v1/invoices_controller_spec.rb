@@ -332,6 +332,52 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "with N+1 query detection on customer and tax associations", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+      before do
+        [customer.billing_entity, other_billing_entity].each do |billing_entity|
+          invoice_customer = create(
+            :customer,
+            organization:,
+            billing_entity:,
+            payment_provider: "stripe",
+            payment_provider_code: "stripe_code"
+          )
+          create(:stripe_customer, customer: invoice_customer)
+          create(:netsuite_customer, customer: invoice_customer)
+
+          invoice = create(:invoice, customer: invoice_customer, organization:, billing_entity:)
+          create(:invoice_applied_tax, invoice:, tax:, organization:)
+
+          invoice.file.attach(
+            io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
+            filename: "invoice.pdf",
+            content_type: "application/pdf"
+          )
+          invoice.xml_file.attach(
+            io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
+            filename: "invoice.xml",
+            content_type: "application/xml"
+          )
+        end
+      end
+
+      it "does not trigger N+1 queries on applied_taxes, billing_entity, customer, payment_provider_customers, or active_storage_attachments" do
+        get_with_token(organization, "/api/v1/invoices", {})
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].count).to eq(2)
+        json[:invoices].each do |invoice|
+          expect(invoice[:customer][:billing_configuration][:provider_customer_id]).to be_present
+          expect(invoice[:customer][:integration_customers]).to be_present
+          expect(invoice[:applied_taxes]).to be_present
+          expect(invoice[:file_url]).to be_present
+          expect(invoice[:xml_url]).to be_present
+        end
+      end
+    end
+
     context "with unknown params" do
       before do
         allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
