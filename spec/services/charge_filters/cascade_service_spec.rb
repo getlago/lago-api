@@ -11,18 +11,20 @@ RSpec.describe ChargeFilters::CascadeService do
 
   let(:child_plan) { create(:plan, organization:, parent: parent_plan) }
   let(:child_charge) { create(:standard_charge, plan: child_plan, billable_metric:, parent: parent_charge, properties: {amount: "0"}) }
-  let!(:subscription) { create(:subscription, plan: child_plan, status: :active) }
 
-  let!(:parent_filter) do
-    filter = create(:charge_filter, charge: parent_charge, invoice_display_name: "US region", properties: {amount: "10"})
+  let(:child_filter) do
+    filter = create(:charge_filter, charge: child_charge, invoice_display_name: "US region", properties: {amount: "10"})
     create(:charge_filter_value, charge_filter: filter, billable_metric_filter: bm_filter, values: ["us"])
     filter
   end
 
-  let!(:child_filter) do
-    filter = create(:charge_filter, charge: child_charge, invoice_display_name: "US region", properties: {amount: "10"})
-    create(:charge_filter_value, charge_filter: filter, billable_metric_filter: bm_filter, values: ["us"])
-    filter
+  before do
+    create(:subscription, plan: child_plan, status: :active)
+
+    parent_filter = create(:charge_filter, charge: parent_charge, invoice_display_name: "US region", properties: {amount: "10"})
+    create(:charge_filter_value, charge_filter: parent_filter, billable_metric_filter: bm_filter, values: ["us"])
+
+    child_filter
   end
 
   describe "#call" do
@@ -59,10 +61,83 @@ RSpec.describe ChargeFilters::CascadeService do
 
           expect(child_filter.reload.properties).to eq({"amount" => "99"})
         end
+
+        context "when new properties include pricing_group_keys" do
+          subject(:service) do
+            described_class.call(
+              charge: parent_charge,
+              action: "update",
+              filter_values: {"region" => ["us"]},
+              old_properties: {"amount" => "10"},
+              new_properties: {"amount" => "15", "pricing_group_keys" => ["agent_name"]},
+              invoice_display_name: "US region updated"
+            )
+          end
+
+          it "cascades pricing_group_keys even though properties are customized" do
+            service
+
+            expect(child_filter.reload.properties).to eq({"amount" => "99", "pricing_group_keys" => ["agent_name"]})
+          end
+        end
+
+        context "when new properties include presentation_group_keys" do
+          subject(:service) do
+            described_class.call(
+              charge: parent_charge,
+              action: "update",
+              filter_values: {"region" => ["us"]},
+              old_properties: {"amount" => "10"},
+              new_properties: {"amount" => "15", "presentation_group_keys" => [{"value" => "region"}]},
+              invoice_display_name: "US region updated"
+            )
+          end
+
+          it "cascades presentation_group_keys even though properties are customized" do
+            service
+
+            expect(child_filter.reload.properties).to eq({"amount" => "99", "presentation_group_keys" => [{"value" => "region"}]})
+          end
+        end
+
+        context "when new properties remove pricing_group_keys" do
+          subject(:service) do
+            described_class.call(
+              charge: parent_charge,
+              action: "update",
+              filter_values: {"region" => ["us"]},
+              old_properties: {"amount" => "10", "pricing_group_keys" => ["old_key"]},
+              new_properties: {"amount" => "15"},
+              invoice_display_name: "US region updated"
+            )
+          end
+
+          let!(:child_filter) do
+            filter = create(
+              :charge_filter,
+              charge: child_charge,
+              invoice_display_name: "Custom",
+              properties: {"amount" => "99", "pricing_group_keys" => ["old_key"]}
+            )
+            create(:charge_filter_value, charge_filter: filter, billable_metric_filter: bm_filter, values: ["us"])
+            filter
+          end
+
+          it "removes pricing_group_keys from the customized filter" do
+            service
+
+            expect(child_filter.reload.properties).to eq({"amount" => "99"})
+          end
+        end
       end
 
       context "when child has no matching filter" do
-        let!(:child_filter) { nil }
+        before do
+          child_charge.filters.each do |f|
+            f.values.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+            f.discard!
+          end
+        end
 
         it "succeeds without error" do
           expect(service).to be_success
@@ -80,8 +155,6 @@ RSpec.describe ChargeFilters::CascadeService do
           invoice_display_name: "EU region"
         )
       end
-
-      let!(:eu_bm_filter) { bm_filter } # reuse — already has "eu" in values
 
       it "creates the filter on the child charge" do
         expect { service }.to change { child_charge.filters.reload.count }.by(1)
@@ -120,7 +193,12 @@ RSpec.describe ChargeFilters::CascadeService do
       end
 
       context "when child has no matching filter" do
-        let!(:child_filter) { nil }
+        before do
+          child_charge.filters.each do |f|
+            f.values.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+            f.discard!
+          end
+        end
 
         it "succeeds without error" do
           expect(service).to be_success
@@ -129,8 +207,6 @@ RSpec.describe ChargeFilters::CascadeService do
     end
 
     context "when child charge has no active subscription" do
-      let!(:subscription) { create(:subscription, plan: child_plan, status: :terminated) }
-
       subject(:service) do
         described_class.call(
           charge: parent_charge,
@@ -140,6 +216,10 @@ RSpec.describe ChargeFilters::CascadeService do
           new_properties: {"amount" => "15"},
           invoice_display_name: "US region"
         )
+      end
+
+      before do
+        Subscription.update_all(status: :terminated) # rubocop:disable Rails/SkipsModelValidations
       end
 
       it "does not update the child filter" do

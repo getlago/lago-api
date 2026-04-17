@@ -16,6 +16,8 @@ module ChargeFilters
     def call
       return result.not_found_failure!(resource: "charge_filter") unless charge_filter
 
+      # Capture values before the transaction discards them — to_h uses the kept
+      # scope and would return an empty hash after discard.
       filter_values = charge_filter.to_h_with_discarded
 
       ActiveRecord::Base.transaction do

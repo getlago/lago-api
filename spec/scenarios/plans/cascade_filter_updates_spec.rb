@@ -2,10 +2,8 @@
 
 require "rails_helper"
 
-# Reproduces the real-world scenario where a customer rapidly updates multiple
-# charge filters via the API (e.g. 160+ PUT requests in quick succession).
-# Each filter update cascades only that specific filter to child charges,
-# so there's no ordering issue — each cascade is independent.
+# Tests filter-level cascade for create, update, and destroy operations.
+# Each filter operation cascades only that specific filter to child charges
 RSpec.describe "Cascade filter updates", :premium do
   include ScenariosHelper
 
@@ -19,7 +17,9 @@ RSpec.describe "Cascade filter updates", :premium do
 
   before { bm_filter }
 
-  it "applies all filter changes when multiple updates are fired in quick succession" do
+  # Sets up a parent plan with a charge and two filters, a subscription with
+  # a charge override, and returns the key objects for assertions.
+  def setup_plan_with_subscription
     create_plan({
       name: "Enterprise",
       code: "enterprise",
@@ -52,10 +52,7 @@ RSpec.describe "Cascade filter updates", :premium do
 
     parent_plan = organization.plans.find_by(code: "enterprise")
     parent_charge = parent_plan.charges.first
-    filter_us = parent_charge.filters.find_by(invoice_display_name: "US region")
-    filter_eu = parent_charge.filters.find_by(invoice_display_name: "EU region")
 
-    # Customer subscribes and overrides a charge → creates child plan + child charge
     create_subscription({
       external_customer_id: customer.external_id,
       external_id: "sub_enterprise",
@@ -71,13 +68,21 @@ RSpec.describe "Cascade filter updates", :premium do
 
     subscription.reload
     child_charge = subscription.plan.charges.find_by(code: "storage_charge")
+
+    {parent_plan:, parent_charge:, child_charge:}
+  end
+
+  it "cascades rapid-fire filter updates independently" do
+    ctx = setup_plan_with_subscription
+    parent_plan = ctx[:parent_plan]
+    parent_charge = ctx[:parent_charge]
+    child_charge = ctx[:child_charge]
+    filter_us = parent_charge.filters.find_by(invoice_display_name: "US region")
+    filter_eu = parent_charge.filters.find_by(invoice_display_name: "EU region")
     child_filter_us = child_charge.filters.find_by(invoice_display_name: "US region")
     child_filter_eu = child_charge.filters.find_by(invoice_display_name: "EU region")
 
-    expect(child_filter_us.properties).to eq({"amount" => "10"})
-    expect(child_filter_eu.properties).to eq({"amount" => "20"})
-
-    # Rapid-fire filter updates — queue cascade jobs without executing them
+    # Queue multiple filter updates without executing jobs
     update_plan_charge_filter(
       parent_plan, parent_charge.code, filter_us.id,
       {properties: {amount: "15"}, cascade_updates: true},
@@ -94,11 +99,78 @@ RSpec.describe "Cascade filter updates", :premium do
     expect(child_filter_us.reload.properties).to eq({"amount" => "10"})
     expect(child_filter_eu.reload.properties).to eq({"amount" => "20"})
 
-    # Each filter update enqueued its own independent CascadeJob.
-    # No ordering issue — they each update only their own filter on children.
+    # Each filter update enqueued its own independent CascadeJob
     perform_all_enqueued_jobs
 
     expect(child_filter_us.reload.properties).to eq({"amount" => "15"})
     expect(child_filter_eu.reload.properties).to eq({"amount" => "25"})
+  end
+
+  it "cascades filter creation to child charges" do
+    ctx = setup_plan_with_subscription
+    parent_plan = ctx[:parent_plan]
+    parent_charge = ctx[:parent_charge]
+    child_charge = ctx[:child_charge]
+
+    expect(child_charge.filters.count).to eq(2)
+
+    create_plan_charge_filter(parent_plan, parent_charge.code, {
+      invoice_display_name: "Asia region",
+      properties: {amount: "30"},
+      values: {region: ["asia"]},
+      cascade_updates: true
+    })
+
+    child_charge.reload
+    expect(child_charge.filters.count).to eq(3)
+
+    child_filter_asia = child_charge.filters.find_by(invoice_display_name: "Asia region")
+    expect(child_filter_asia.properties).to eq({"amount" => "30"})
+    expect(child_filter_asia.to_h).to eq({"region" => ["asia"]})
+  end
+
+  it "cascades filter deletion to child charges" do
+    ctx = setup_plan_with_subscription
+    parent_plan = ctx[:parent_plan]
+    parent_charge = ctx[:parent_charge]
+    child_charge = ctx[:child_charge]
+    filter_eu = parent_charge.filters.find_by(invoice_display_name: "EU region")
+
+    expect(child_charge.filters.count).to eq(2)
+
+    delete_plan_charge_filter(parent_plan, parent_charge.code, filter_eu.id)
+
+    # Destroy via API doesn't pass cascade_updates through the helper,
+    # so cascade manually to test the destroy path
+    ChargeFilters::CascadeService.call!(
+      charge: parent_charge,
+      action: "destroy",
+      filter_values: {"region" => ["eu"]}
+    )
+
+    child_charge.reload
+    expect(child_charge.filters.count).to eq(1)
+    expect(child_charge.filters.first.invoice_display_name).to eq("US region")
+  end
+
+  it "does not overwrite a customer-customized filter" do
+    ctx = setup_plan_with_subscription
+    parent_plan = ctx[:parent_plan]
+    parent_charge = ctx[:parent_charge]
+    child_charge = ctx[:child_charge]
+    filter_us = parent_charge.filters.find_by(invoice_display_name: "US region")
+    child_filter_us = child_charge.filters.find_by(invoice_display_name: "US region")
+
+    # Customer customizes the US filter on their subscription
+    child_filter_us.update!(properties: {"amount" => "99"})
+
+    # Admin updates the same filter on the parent plan
+    update_plan_charge_filter(
+      parent_plan, parent_charge.code, filter_us.id,
+      {properties: {amount: "15"}, cascade_updates: true}
+    )
+
+    # Customer's override is preserved
+    expect(child_filter_us.reload.properties).to eq({"amount" => "99"})
   end
 end

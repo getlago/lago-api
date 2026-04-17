@@ -59,24 +59,26 @@ module ChargeFilters
     def create_child_filter(child_charge)
       return if find_child_filter(child_charge)
 
-      child_filter = child_charge.filters.new(
-        organization_id: child_charge.organization_id,
-        invoice_display_name:,
-        properties: ChargeModels::FilterPropertiesService.call(
-          chargeable: child_charge,
-          properties: new_properties
-        ).properties
-      )
-      child_filter.save!
-
-      filter_values.each do |key, values|
-        billable_metric_filter = child_charge.billable_metric.filters.find_by(key:)
-
-        child_filter.values.create!(
-          billable_metric_filter_id: billable_metric_filter&.id,
+      ActiveRecord::Base.transaction do
+        child_filter = child_charge.filters.new(
           organization_id: child_charge.organization_id,
-          values:
+          invoice_display_name:,
+          properties: ChargeModels::FilterPropertiesService.call(
+            chargeable: child_charge,
+            properties: new_properties
+          ).properties
         )
+        child_filter.save!
+
+        filter_values.each do |key, values|
+          billable_metric_filter = child_charge.billable_metric.filters.find_by(key:)
+
+          child_filter.values.create!(
+            billable_metric_filter_id: billable_metric_filter&.id,
+            organization_id: child_charge.organization_id,
+            values:
+          )
+        end
       end
     end
 
@@ -90,7 +92,7 @@ module ChargeFilters
 
     def find_child_filter(child_charge)
       child_charge.filters.includes(values: :billable_metric_filter).find do |f|
-        f.to_h.sort == filter_values.sort
+        f.to_h == filter_values
       end
     end
 
@@ -100,6 +102,8 @@ module ChargeFilters
       normalize_properties(old_properties) != normalize_properties(child_filter.properties)
     end
 
+    # Cascade group keys even for customized filters — group keys are structural
+    # (they affect how events are bucketed), not pricing overrides.
     def cascade_group_keys(child_filter)
       pricing_group_keys = new_properties&.dig("pricing_group_keys") || new_properties&.dig("grouped_by")
       if pricing_group_keys
