@@ -47,11 +47,7 @@ class Order < ApplicationRecord
   validates :billing_snapshot, presence: true
 
   def self.ransackable_attributes(_ = nil)
-    %w[id number]
-  end
-
-  def self.ransackable_associations(_ = nil)
-    %w[customer]
+    %w[number]
   end
 
   sequenced(
