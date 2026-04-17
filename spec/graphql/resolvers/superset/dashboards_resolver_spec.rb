@@ -96,4 +96,24 @@ RSpec.describe Resolvers::Superset::DashboardsResolver do
       expect(dashboards_response).to eq([])
     end
   end
+
+  context "when the superset service fails" do
+    let(:result) do
+      BaseService::Result.new.tap do |r|
+        r.service_failure!(code: "superset_auth_failed", message: "Failed to authenticate with Superset")
+      end
+    end
+
+    it "returns an error" do
+      graphql_result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect(graphql_result["errors"]).to be_present
+      expect(graphql_result["errors"].first["extensions"]["code"]).to eq("superset_auth_failed")
+    end
+  end
 end
