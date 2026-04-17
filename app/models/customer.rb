@@ -331,11 +331,12 @@ class Customer < ApplicationRecord
 
   def reset_dunning_campaign_for_currency!(currency)
     attempts = dunning_currency_attempts.dup
-    attempts.delete(currency.to_s)
+    attempts[currency.to_s] = 0
+    all_reset = attempts.values.all?(&:zero?)
     update!(
       dunning_currency_attempts: attempts,
       last_dunning_campaign_attempt: 0,
-      last_dunning_campaign_attempt_at: (attempts.present? ? last_dunning_campaign_attempt_at : nil)
+      last_dunning_campaign_attempt_at: (all_reset ? nil : last_dunning_campaign_attempt_at)
     )
   end
 
