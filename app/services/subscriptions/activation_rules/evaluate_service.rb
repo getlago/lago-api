@@ -34,15 +34,23 @@ module Subscriptions
       def resolve_subscription_status
         return unless subscription.incomplete?
 
-        if subscription.activation_rules.any?(&:failed?)
+        if any_rule_failed?
           subscription.mark_as_canceled!
 
           after_commit do
             SendWebhookJob.perform_later("subscription.canceled", subscription)
           end
-        elsif !subscription.pending_rules?
+        elsif all_rules_satisfied?
           Subscriptions::ActivateService.call!(subscription:)
         end
+      end
+
+      def all_rules_satisfied?
+        subscription.activation_rules.all? { |rule| rule.satisfied? || rule.not_applicable? }
+      end
+
+      def any_rule_failed?
+        subscription.activation_rules.any? { |rule| rule.failed? || rule.expired? || rule.declined? }
       end
     end
   end

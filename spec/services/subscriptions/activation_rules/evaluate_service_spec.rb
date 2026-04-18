@@ -69,6 +69,42 @@ RSpec.describe Subscriptions::ActivationRules::EvaluateService do
     end
   end
 
+  context "when all rules are not_applicable" do
+    let(:rule) { create(:payment_subscription_activation_rule, subscription:, status: "not_applicable") }
+
+    before { rule }
+
+    it "activates the subscription" do
+      expect(result.subscription).to be_active
+    end
+  end
+
+  context "when a rule has expired" do
+    let(:rule) { create(:payment_subscription_activation_rule, subscription:, status: "expired") }
+
+    before { rule }
+
+    it "cancels the subscription" do
+      expect(result.subscription).to be_canceled
+    end
+
+    it "sends a subscription.canceled webhook" do
+      result
+
+      expect(SendWebhookJob).to have_been_enqueued.with("subscription.canceled", subscription)
+    end
+  end
+
+  context "when a rule is still inactive" do
+    let(:rule) { create(:payment_subscription_activation_rule, subscription:, status: "inactive") }
+
+    before { rule }
+
+    it "does not change subscription status" do
+      expect(result.subscription).to be_incomplete
+    end
+  end
+
   context "when rules are still pending" do
     let(:rule) { create(:payment_subscription_activation_rule, subscription:, status: "pending") }
 
