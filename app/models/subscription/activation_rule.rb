@@ -44,6 +44,17 @@ class Subscription::ActivationRule < ApplicationRecord
   def applicable?
     raise NotImplementedError, "#{self.class}#applicable? must be implemented"
   end
+
+  def evaluate!
+    evaluate_service_class.call!(rule: self)
+  end
+
+  private
+
+  def evaluate_service_class
+    type_module = self.class.name.demodulize
+    "Subscriptions::ActivationRules::#{type_module}::EvaluateService".constantize
+  end
 end
 
 # == Schema Information

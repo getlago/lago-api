@@ -14,10 +14,7 @@ module Subscriptions
         result.rules = []
 
         subscription.activation_rules.each do |rule|
-          case rule
-          when Subscription::ActivationRule::Payment
-            Payment::EvaluateService.call!(rule:)
-          end
+          rule.evaluate!
           result.rules << rule
         end
 
