@@ -255,6 +255,42 @@ module Events
         presentation_breakdown_distinct(order_sql: "events.property DESC")
       end
 
+      def presentation_breakdown_weighted_sum(initial_value: 0, initial_values: [])
+        # NOTE: Important to use a dup to avoid mutate the current object grouped_by using presentation_by values
+        # also, set presentation_by to nil to avoid any confusion in the query building
+        weighted_sum_store_for_breakdown = dup
+        weighted_sum_store_for_breakdown.grouped_by = grouped_and_presentation_columns.values.flatten
+        weighted_sum_store_for_breakdown.presentation_by = nil
+
+        baseline_initial_values = if initial_values.present?
+          initial_values
+        elsif initial_value.to_d.nonzero?
+          [{groups: {}, value: initial_value}]
+        else
+          []
+        end
+
+        formatted_initial_values = weighted_sum_store_for_breakdown.formatted_weighted_sum_initial_values(baseline_initial_values)
+        return [] if formatted_initial_values.empty?
+
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: weighted_sum_store_for_breakdown)
+
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
+              {
+                from_datetime:,
+                to_datetime: to_datetime.ceil,
+                decimal_scale: DECIMAL_SCALE
+              }
+            ]
+          )
+
+          prepare_presentation_result(connection.select_all(sql).rows)
+        end
+      end
+
       def presentation_breakdown_unique_count
         # NOTE: Important to use a dup to avoid mutate the current object grouped_by using presentation_by values
         # also, set presentation_by to nil to avoid any confusion in the query building
@@ -646,26 +682,12 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Clickhouse::WeightedSumQuery.new(store: self)
 
-          # NOTE: build the list of initial values for each groups
-          #       from the events in the period
-          formated_initial_values = grouped_count.map do |group|
-            value = 0
-            previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
-            value = previous_group[:value] if previous_group
-            {groups: group[:groups], value:}
-          end
-
-          # NOTE: add the initial values for groups that are not in the events
-          initial_values.each do |intial_value|
-            next if formated_initial_values.find { |g| g[:groups] == intial_value[:groups] }
-
-            formated_initial_values << intial_value
-          end
-          return [] if formated_initial_values.empty?
+          formatted_initial_values = formatted_weighted_sum_initial_values(initial_values)
+          return [] if formatted_initial_values.empty?
 
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
-              sanitize_colon(query.grouped_query(initial_values: formated_initial_values)),
+              sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
@@ -841,6 +863,23 @@ module Events
 
       def operation_type_sql
         "events_enriched.sorted_properties['operation_type']"
+      end
+
+      def formatted_weighted_sum_initial_values(initial_values)
+        formatted_initial_values = grouped_count.map do |group|
+          value = 0
+          previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
+          value = previous_group[:value] if previous_group
+          {groups: group[:groups], value:}
+        end
+
+        initial_values.each do |initial_value|
+          next if formatted_initial_values.find { |g| g[:groups] == initial_value[:groups] }
+
+          formatted_initial_values << initial_value
+        end
+
+        formatted_initial_values
       end
 
       private

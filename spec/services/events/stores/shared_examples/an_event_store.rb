@@ -1846,6 +1846,143 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
+  if include_feature?(:presentation_breakdown_weighted_sum)
+    describe "#presentation_breakdown_weighted_sum" do
+      subject(:event_store) do
+        described_class.new(
+          code:,
+          subscription:,
+          boundaries:,
+          filters: {
+            grouped_by:,
+            grouped_by_values:,
+            presentation_by: ["cloud"],
+            matching_filters:,
+            ignored_filters:,
+            charge_id: charge&.id,
+            charge_filter: charge_filter
+          },
+          deduplicate: with_event_duplication
+        )
+      end
+
+      let(:events) { [] }
+      let(:started_at) { Time.zone.parse("2023-03-01") }
+
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+      end
+
+      context "without grouped_by" do
+        before do
+          create_event(timestamp: Time.zone.parse("2023-03-05 00:00:00"), value: 2, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, properties: {"cloud" => "aws"})
+
+          create_event(timestamp: Time.zone.parse("2023-03-05 00:00:00"), value: 2, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, properties: {"cloud" => "gcp"})
+        end
+
+        it "returns the weighted sum breakdown by presentation_by" do
+          result = event_store.presentation_breakdown_weighted_sum
+
+          expect(result.size).to eq(1)
+          expect(result.first[:groups]).to eq({})
+          breakdowns = result.first[:breakdowns]
+          expect(breakdowns.map { |b| b[:presentation_by] }).to match_array([{"cloud" => "aws"}, {"cloud" => "gcp"}])
+          breakdowns.each { |b| expect(b[:units].round(5)).to eq(0.02218) }
+        end
+      end
+
+      context "with grouped_by" do
+        let(:grouped_by) { ["agent_name"] }
+
+        before do
+          create_event(timestamp: Time.zone.parse("2023-03-05 00:00:00"), value: 2, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+
+          create_event(timestamp: Time.zone.parse("2023-03-05 00:00:00"), value: 2, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+        end
+
+        it "returns the weighted sum breakdown per group" do
+          result = event_store.presentation_breakdown_weighted_sum
+
+          expect(result.map { |r| r[:groups] }).to match_array([{"agent_name" => "frodo"}, {"agent_name" => "aragorn"}])
+          result.each do |row|
+            expect(row[:breakdowns].size).to eq(1)
+            expect(row[:breakdowns].first[:units].round(5)).to eq(0.02218)
+          end
+        end
+      end
+
+      context "with no events" do
+        it "returns an empty array" do
+          result = event_store.presentation_breakdown_weighted_sum
+
+          expect(result).to eq([])
+        end
+      end
+
+      context "with initial values" do
+        let(:initial_values) do
+          [
+            {groups: {"cloud" => "aws"}, value: 1000},
+            {groups: {"cloud" => "gcp"}, value: 1000}
+          ]
+        end
+
+        before do
+          create_event(timestamp: Time.zone.parse("2023-03-05 00:00:00"), value: 2, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, properties: {"cloud" => "aws"})
+
+          create_event(timestamp: Time.zone.parse("2023-03-05 00:00:00"), value: 2, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, properties: {"cloud" => "gcp"})
+        end
+
+        it "uses the initial values in the aggregation" do
+          result = event_store.presentation_breakdown_weighted_sum(initial_values:)
+
+          expect(result.size).to eq(1)
+          expect(result.first[:groups]).to eq({})
+          breakdowns = result.first[:breakdowns]
+          expect(breakdowns.map { |b| b[:presentation_by] }).to match_array([{"cloud" => "aws"}, {"cloud" => "gcp"}])
+          breakdowns.each { |b| expect(b[:units].round(5)).to eq(1000.02218) }
+        end
+      end
+    end
+  end
+
   if include_feature?(:sum_date_breakdown)
     describe "#sum_date_breakdown" do
       it "returns the sum grouped by day" do
