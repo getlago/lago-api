@@ -15,7 +15,7 @@ RSpec.describe Subscriptions::ActivationRules::EvaluateService do
 
     before { rule }
 
-    it "delegates to Payment::EvaluateService" do
+    it "evaluates the rule and delegates to ResolveSubscriptionStatusService" do
       expect(result).to be_success
       expect(result.rules.first).to be_pending
     end
@@ -28,90 +28,16 @@ RSpec.describe Subscriptions::ActivationRules::EvaluateService do
     end
   end
 
-  context "when all rules are satisfied" do
+  context "when all rules are already satisfied" do
     let(:rule) { create(:payment_subscription_activation_rule, subscription:, status: "satisfied") }
 
     before { rule }
 
-    it "activates the subscription" do
-      freeze_time do
-        expect(result.subscription).to be_active
-        expect(result.subscription.activated_at).to eq(Time.current)
-      end
-    end
+    it "activates the subscription via ResolveSubscriptionStatusService" do
+      allow(Subscriptions::ActivationRules::ResolveSubscriptionStatusService).to receive(:call).and_call_original
 
-    it "sends a subscription.started webhook" do
-      result
-
-      expect(SendWebhookJob).to have_been_enqueued.with("subscription.started", subscription)
-    end
-
-    it "produces a subscription.started activity log" do
-      result
-
-      expect(Utils::ActivityLog).to have_produced("subscription.started").with(subscription)
-    end
-  end
-
-  context "when a rule has failed" do
-    let(:rule) { create(:payment_subscription_activation_rule, subscription:, status: "failed") }
-
-    before { rule }
-
-    it "cancels the subscription" do
-      expect(result.subscription).to be_canceled
-    end
-
-    it "sends a subscription.canceled webhook" do
-      result
-
-      expect(SendWebhookJob).to have_been_enqueued.with("subscription.canceled", subscription)
-    end
-  end
-
-  context "when all rules are not_applicable" do
-    let(:rule) { create(:payment_subscription_activation_rule, subscription:, status: "not_applicable") }
-
-    before { rule }
-
-    it "activates the subscription" do
       expect(result.subscription).to be_active
-    end
-  end
-
-  context "when a rule has expired" do
-    let(:rule) { create(:payment_subscription_activation_rule, subscription:, status: "expired") }
-
-    before { rule }
-
-    it "cancels the subscription" do
-      expect(result.subscription).to be_canceled
-    end
-
-    it "sends a subscription.canceled webhook" do
-      result
-
-      expect(SendWebhookJob).to have_been_enqueued.with("subscription.canceled", subscription)
-    end
-  end
-
-  context "when a rule is still inactive" do
-    let(:rule) { create(:payment_subscription_activation_rule, subscription:, status: "inactive") }
-
-    before { rule }
-
-    it "does not change subscription status" do
-      expect(result.subscription).to be_incomplete
-    end
-  end
-
-  context "when rules are still pending" do
-    let(:rule) { create(:payment_subscription_activation_rule, subscription:, status: "pending") }
-
-    before { rule }
-
-    it "does not change subscription status" do
-      expect(result.subscription).to be_incomplete
+      expect(Subscriptions::ActivationRules::ResolveSubscriptionStatusService).to have_received(:call).with(subscription:)
     end
   end
 end

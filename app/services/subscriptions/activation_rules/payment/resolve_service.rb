@@ -35,7 +35,7 @@ module Subscriptions
 
           EvaluateService.call!(rule: payment_rule, status: :satisfied)
           Invoices::FinalizeService.call!(invoice:)
-          ActivationRules::EvaluateService.call!(subscription:)
+          ActivationRules::ResolveSubscriptionStatusService.call!(subscription:)
         end
 
         def handle_failure
@@ -43,8 +43,8 @@ module Subscriptions
 
           EvaluateService.call!(rule: payment_rule, status: :failed)
           invoice.closed!
-          subscription.cancelation_reason = :payment_failed
-          ActivationRules::EvaluateService.call!(subscription:)
+          ActivationRules::ResolveSubscriptionStatusService.call!(subscription:)
+          subscription.update!(cancelation_reason: :payment_failed) if subscription.canceled?
         end
 
         def payment_rule
