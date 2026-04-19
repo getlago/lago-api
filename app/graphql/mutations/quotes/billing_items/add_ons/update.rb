@@ -12,18 +12,18 @@ module Mutations
           graphql_name "UpdateQuoteAddOn"
           description "Updates an add-on billing item on a draft quote"
 
-          argument :quote_id, ID, required: true
-          argument :id, ID, required: true
-          argument :name, String, required: false
           argument :add_on_id, ID, required: false
-          argument :description, String, required: false
-          argument :units, Integer, required: false
+          argument :add_on_overrides, GraphQL::Types::JSON, required: false
           argument :amount_cents, GraphQL::Types::BigInt, required: false
+          argument :description, String, required: false
+          argument :id, ID, required: true
           argument :invoice_display_name, String, required: false
+          argument :name, String, required: false
+          argument :position, Integer, required: false
+          argument :quote_id, ID, required: true
           argument :service_from_date, String, required: false
           argument :service_to_date, String, required: false
-          argument :add_on_overrides, GraphQL::Types::JSON, required: false
-          argument :position, Integer, required: false
+          argument :units, Integer, required: false
 
           type Types::Quotes::Object
 

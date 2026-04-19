@@ -12,8 +12,8 @@ module Mutations
           graphql_name "RemoveQuoteCoupon"
           description "Removes a coupon billing item from a draft quote"
 
-          argument :quote_id, ID, required: true
           argument :id, ID, required: true
+          argument :quote_id, ID, required: true
 
           type Types::Quotes::Object
 

@@ -12,16 +12,16 @@ module Mutations
           graphql_name "AddQuoteWalletCredit"
           description "Adds a wallet credit billing item to a draft quote"
 
-          argument :quote_id, ID, required: true
-          argument :name, String, required: false
           argument :currency, String, required: false
-          argument :rate_amount, String, required: false
-          argument :paid_credits, String, required: false
-          argument :granted_credits, String, required: false
           argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
-          argument :priority, Integer, required: false
-          argument :recurring_transaction_rules, GraphQL::Types::JSON, required: false
+          argument :granted_credits, String, required: false
+          argument :name, String, required: false
+          argument :paid_credits, String, required: false
           argument :position, Integer, required: false
+          argument :priority, Integer, required: false
+          argument :quote_id, ID, required: true
+          argument :rate_amount, String, required: false
+          argument :recurring_transaction_rules, GraphQL::Types::JSON, required: false
 
           type Types::Quotes::Object
 
