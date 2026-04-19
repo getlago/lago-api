@@ -256,7 +256,26 @@ module Events
       end
 
       def presentation_breakdown_unique_count
-        raise NotImplementedError
+        # NOTE: Important to use a dup to avoid mutate the current object grouped_by using presentation_by values
+        # also, set presentation_by to nil to avoid any confusion in the query building
+        unique_store_for_breakdown = dup
+        unique_store_for_breakdown.grouped_by = grouped_and_presentation_columns.values.flatten
+        unique_store_for_breakdown.presentation_by = nil
+
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: unique_store_for_breakdown)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.grouped_query),
+              {
+                to_datetime:,
+                decimal_date_scale: DECIMAL_DATE_SCALE
+              }
+            ]
+          )
+
+          prepare_presentation_result(connection.select_all(sql).rows)
+        end
       end
 
       # NOTE: check if an event created before the current on belongs to an active (as in present and not removed)

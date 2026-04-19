@@ -1764,6 +1764,88 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
+  if include_feature?(:presentation_breakdown_unique_count)
+    describe "#presentation_breakdown_unique_count" do
+      subject(:event_store) do
+        described_class.new(
+          code:,
+          subscription:,
+          boundaries:,
+          filters: {
+            grouped_by:,
+            grouped_by_values:,
+            presentation_by: ["cloud"],
+            matching_filters:,
+            ignored_filters:,
+            charge_id: charge&.id,
+            charge_filter: charge_filter
+          },
+          deduplicate: with_event_duplication
+        )
+      end
+
+      let(:events) { [] }
+
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+      end
+
+      context "without grouped_by" do
+        before do
+          create_event(timestamp: subscription_started_at + 1.day, value: 1, properties: {"cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 2.days, value: 2, properties: {"cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 3.days, value: 3, properties: {"cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 1.day, value: 1, properties: {"cloud" => "gcp"})
+        end
+
+        it "returns the unique count breakdown by presentation_by" do
+          result = event_store.presentation_breakdown_unique_count
+
+          expect(result).to match_array([
+            {
+              groups: {},
+              breakdowns: match_array([
+                {presentation_by: {"cloud" => "aws"}, units: 3},
+                {presentation_by: {"cloud" => "gcp"}, units: 1}
+              ])
+            }
+          ])
+        end
+      end
+
+      context "with grouped_by" do
+        let(:grouped_by) { ["agent_name"] }
+
+        before do
+          create_event(timestamp: subscription_started_at + 1.day, value: 1, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 2.days, value: 2, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 1.day, value: 1, properties: {"agent_name" => "frodo", "cloud" => "gcp"})
+          create_event(timestamp: subscription_started_at + 1.day, value: 1, properties: {"agent_name" => "aragorn", "cloud" => "aws"})
+        end
+
+        it "returns the unique count breakdown per group" do
+          result = event_store.presentation_breakdown_unique_count
+
+          expect(result).to match_array([
+            {
+              groups: {"agent_name" => "frodo"},
+              breakdowns: match_array([
+                {presentation_by: {"cloud" => "aws"}, units: 2},
+                {presentation_by: {"cloud" => "gcp"}, units: 1}
+              ])
+            },
+            {
+              groups: {"agent_name" => "aragorn"},
+              breakdowns: match_array([
+                {presentation_by: {"cloud" => "aws"}, units: 1}
+              ])
+            }
+          ])
+        end
+      end
+    end
+  end
+
   if include_feature?(:sum_date_breakdown)
     describe "#sum_date_breakdown" do
       it "returns the sum grouped by day" do
