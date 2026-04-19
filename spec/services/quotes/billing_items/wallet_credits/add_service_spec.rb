@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Quotes::BillingItems::WalletCredits::AddService do
+RSpec.describe Quotes::BillingItems::WalletCredits::AddService, :premium do
   subject(:service) { described_class.new(quote:, params:) }
 
   let(:organization) { create(:organization) }

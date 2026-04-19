@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Quotes::BillingItems::Plans::UpdateService do
+RSpec.describe Quotes::BillingItems::Plans::UpdateService, :premium do
   subject(:service) { described_class.new(quote:, id:, params:) }
 
   let(:organization) { create(:organization) }

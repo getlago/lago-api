@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Quotes::BillingItems::WalletCredits::RemoveService do
+RSpec.describe Quotes::BillingItems::WalletCredits::RemoveService, :premium do
   subject(:service) { described_class.new(quote:, id:) }
 
   let(:organization) { create(:organization) }
