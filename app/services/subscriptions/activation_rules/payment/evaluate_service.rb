@@ -38,7 +38,7 @@ module Subscriptions
         end
 
         def transition_pending_rule
-          raise ArgumentError, "status required to transition a pending rule" unless status.present?
+          raise ArgumentError, "status required to transition a pending rule" if status.blank?
 
           rule.public_send(:"#{status}!")
         end
