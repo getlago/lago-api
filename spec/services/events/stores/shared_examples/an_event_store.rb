@@ -1608,6 +1608,84 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
+  if include_feature?(:presentation_breakdown_latest)
+    describe "#presentation_breakdown_latest" do
+      subject(:event_store) do
+        described_class.new(
+          code:,
+          subscription:,
+          boundaries:,
+          filters: {
+            grouped_by:,
+            grouped_by_values:,
+            presentation_by: ["cloud"],
+            matching_filters:,
+            ignored_filters:,
+            charge_id: charge&.id,
+            charge_filter: charge_filter
+          },
+          deduplicate: with_event_duplication
+        )
+      end
+
+      let(:events) { [] }
+
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+      end
+
+      context "without grouped_by" do
+        before do
+          create_event(timestamp: subscription_started_at + 1.day, value: 10, properties: {"cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 2.days, value: 12, properties: {"cloud" => "gcp"})
+        end
+
+        it "returns the latest event's presentation_by values" do
+          result = event_store.presentation_breakdown_latest
+
+          expect(result).to match_array([
+            {
+              groups: {},
+              breakdowns: [
+                {presentation_by: {"cloud" => "gcp"}, units: 12}
+              ]
+            }
+          ])
+        end
+      end
+
+      context "with grouped_by" do
+        let(:grouped_by) { ["agent_name"] }
+
+        before do
+          create_event(timestamp: subscription_started_at + 1.day, value: 2, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 2.days, value: 7, properties: {"agent_name" => "frodo", "cloud" => "gcp"})
+          create_event(timestamp: subscription_started_at + 1.day + 1.second, value: 3, properties: {"agent_name" => "aragorn", "cloud" => "aws"})
+        end
+
+        it "returns the latest event's presentation_by values per group" do
+          result = event_store.presentation_breakdown_latest
+
+          expect(result).to match_array([
+            {
+              groups: {"agent_name" => "frodo"},
+              breakdowns: [
+                {presentation_by: {"cloud" => "gcp"}, units: 7}
+              ]
+            },
+            {
+              groups: {"agent_name" => "aragorn"},
+              breakdowns: [
+                {presentation_by: {"cloud" => "aws"}, units: 3}
+              ]
+            }
+          ])
+        end
+      end
+    end
+  end
+
   if include_feature?(:sum_date_breakdown)
     describe "#sum_date_breakdown" do
       it "returns the sum grouped by day" do

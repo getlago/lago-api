@@ -248,7 +248,36 @@ module Events
       end
 
       def presentation_breakdown_latest
-        raise NotImplementedError
+        column_arel, all_column_names = presentation_breakdown_arel_columns
+        grouped_by_names = Array.new(grouped_and_presentation_columns[:grouped_by].size) { |i| "pb_#{i}" }.join(", ")
+
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = events_cte_queries(
+            select: column_arel + [arel_table[:decimal_value].as("property"), arel_table[:timestamp]],
+            deduplicated_columns: %w[decimal_value properties]
+          )
+
+          sql = if grouped_and_presentation_columns[:grouped_by].any?
+            with_ctes(ctes_sql, <<-SQL)
+              SELECT
+                DISTINCT ON (#{grouped_by_names}) #{all_column_names},
+                property
+              FROM events
+              ORDER BY #{grouped_by_names}, events.timestamp DESC
+            SQL
+          else
+            with_ctes(ctes_sql, <<-SQL)
+              SELECT
+                #{all_column_names},
+                property
+              FROM events
+              ORDER BY events.timestamp DESC
+              LIMIT 1
+            SQL
+          end
+
+          prepare_presentation_result(connection.select_all(sql).rows)
+        end
       end
 
       def presentation_breakdown_max
@@ -855,15 +884,11 @@ module Events
       end
 
       def presentation_breakdown(extra_select:, deduplicated_columns:, aggregation_sql:)
-        all_columns = grouped_and_presentation_columns.values.flatten
-        all_column_arel = all_columns.map.with_index do |col, i|
-          Arel::Nodes::SqlLiteral.new(sanitized_property_name(col)).as("pb_#{i}")
-        end
-        all_column_names = Array.new(all_columns.count) { |i| "pb_#{i}" }.join(", ")
+        column_arel, all_column_names = presentation_breakdown_arel_columns
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
-            select: all_column_arel + extra_select,
+            select: column_arel + extra_select,
             deduplicated_columns:
           )
 
@@ -877,6 +902,15 @@ module Events
 
           prepare_presentation_result(connection.select_all(sql).rows)
         end
+      end
+
+      def presentation_breakdown_arel_columns
+        all_columns = grouped_and_presentation_columns.values.flatten
+        column_arel = all_columns.map.with_index do |col, i|
+          Arel::Nodes::SqlLiteral.new(sanitized_property_name(col)).as("pb_#{i}")
+        end
+        column_names = Array.new(all_columns.count) { |i| "pb_#{i}" }.join(", ")
+        [column_arel, column_names]
       end
     end
   end
