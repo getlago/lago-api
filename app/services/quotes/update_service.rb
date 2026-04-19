@@ -21,7 +21,6 @@ module Quotes
       update_params = params.slice(
         :auto_execute,
         :backdated_billing,
-        :billing_items,
         :commercial_terms,
         :contacts,
         :content,
@@ -33,6 +32,18 @@ module Quotes
         :metadata,
         :order_type
       )
+
+      if params.key?(:billing_items)
+        validation = Quotes::BillingItems::ValidateService.call(
+          organization: quote.organization,
+          order_type: quote.order_type,
+          billing_items: params[:billing_items]
+        )
+        return validation unless validation.success?
+
+        update_params[:billing_items] = validation.billing_items
+      end
+
       Quote.transaction do
         quote.update!(update_params)
         sync_owners!(quote:, owners: params[:owners]) if params.has_key?(:owners)

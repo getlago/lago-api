@@ -107,6 +107,15 @@ Rails.application.routes.draw do
         end
       end
 
+      resources :quotes, only: [] do
+        scope module: :quotes do
+          resources :plans, only: %i[create update destroy], controller: "billing_items/plans"
+          resources :add_ons, only: %i[create update destroy], controller: "billing_items/add_ons"
+          resources :coupons, only: %i[create update destroy], controller: "billing_items/coupons"
+          resources :wallet_credits, only: %i[create update destroy], controller: "billing_items/wallet_credits"
+        end
+      end
+
       resources :coupons, param: :code, code: /.*/
       resources :credit_notes, only: %i[create update show index] do
         post :download, on: :member, action: :download_pdf

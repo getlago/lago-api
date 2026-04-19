@@ -23,7 +23,6 @@ module Quotes
       create_params = params.slice(
         :auto_execute,
         :backdated_billing,
-        :billing_items,
         :commercial_terms,
         :contacts,
         :content,
@@ -35,6 +34,17 @@ module Quotes
         :metadata,
         :order_type
       )
+
+      if params.key?(:billing_items)
+        validation = Quotes::BillingItems::ValidateService.call(
+          organization:,
+          order_type: params[:order_type],
+          billing_items: params[:billing_items]
+        )
+        return validation unless validation.success?
+
+        create_params[:billing_items] = validation.billing_items
+      end
 
       quote = Quote.transaction do
         quote = organization.quotes.create!(

@@ -43,7 +43,7 @@ RSpec.describe Quotes::UpdateService do
 
         expect(result.quote.auto_execute).to eq(true)
         expect(result.quote.backdated_billing).to eq(nil)
-        expect(result.quote.billing_items).to eq({})
+        expect(result.quote.billing_items).to eq({"plans" => [], "coupons" => [], "wallet_credits" => []})
         expect(result.quote.commercial_terms).to eq({})
         expect(result.quote.contacts).to eq({})
         expect(result.quote.content).to eq("Test content")

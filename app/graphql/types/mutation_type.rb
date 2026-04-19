@@ -238,5 +238,21 @@ module Types
     field :remove_subscription_entitlement, mutation: Mutations::Entitlement::RemoveSubscriptionEntitlement
 
     field :create_ai_conversation, mutation: Mutations::AiConversations::Create
+
+    field :add_quote_plan, mutation: Mutations::Quotes::BillingItems::Plans::Add
+    field :remove_quote_plan, mutation: Mutations::Quotes::BillingItems::Plans::Remove
+    field :update_quote_plan, mutation: Mutations::Quotes::BillingItems::Plans::Update
+
+    field :add_quote_add_on, mutation: Mutations::Quotes::BillingItems::AddOns::Add
+    field :remove_quote_add_on, mutation: Mutations::Quotes::BillingItems::AddOns::Remove
+    field :update_quote_add_on, mutation: Mutations::Quotes::BillingItems::AddOns::Update
+
+    field :add_quote_coupon, mutation: Mutations::Quotes::BillingItems::Coupons::Add
+    field :remove_quote_coupon, mutation: Mutations::Quotes::BillingItems::Coupons::Remove
+    field :update_quote_coupon, mutation: Mutations::Quotes::BillingItems::Coupons::Update
+
+    field :add_quote_wallet_credit, mutation: Mutations::Quotes::BillingItems::WalletCredits::Add
+    field :remove_quote_wallet_credit, mutation: Mutations::Quotes::BillingItems::WalletCredits::Remove
+    field :update_quote_wallet_credit, mutation: Mutations::Quotes::BillingItems::WalletCredits::Update
   end
 end
