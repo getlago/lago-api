@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Quotes::BillingItems::WalletCreditsController do
+RSpec.describe Api::V1::Quotes::BillingItems::WalletCreditsController, :premium do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:, order_type: :subscription_creation) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Quotes::BillingItems::CouponsController do
+RSpec.describe Api::V1::Quotes::BillingItems::CouponsController, :premium do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:coupon) { create(:coupon, organization:) }
