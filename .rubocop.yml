@@ -170,6 +170,14 @@ GraphQL/ExtractInputType:
     - "app/graphql/mutations/plans/update.rb"
     - "app/graphql/mutations/register_user.rb"
     - "app/graphql/mutations/wallet_transactions/create.rb"
+    - "app/graphql/mutations/quotes/billing_items/add_ons/add.rb"
+    - "app/graphql/mutations/quotes/billing_items/add_ons/update.rb"
+    - "app/graphql/mutations/quotes/billing_items/coupons/add.rb"
+    - "app/graphql/mutations/quotes/billing_items/coupons/update.rb"
+    - "app/graphql/mutations/quotes/billing_items/plans/add.rb"
+    - "app/graphql/mutations/quotes/billing_items/plans/update.rb"
+    - "app/graphql/mutations/quotes/billing_items/wallet_credits/add.rb"
+    - "app/graphql/mutations/quotes/billing_items/wallet_credits/update.rb"
 
 ThreadSafety/NewThread:
   Exclude:
