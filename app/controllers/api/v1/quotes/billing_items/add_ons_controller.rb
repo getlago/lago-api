@@ -50,7 +50,7 @@ module Api
           end
 
           def render_quote(quote)
-            render(json: ::V1::QuoteSerializer.new(quote, root_name: "quote").serialize)
+            render(json: ::V1::QuoteSerializer.new(quote, root_name: "quote"))
           end
 
           def resource_name

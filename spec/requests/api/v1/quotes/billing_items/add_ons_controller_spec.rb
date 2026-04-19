@@ -19,9 +19,9 @@ RSpec.describe Api::V1::Quotes::BillingItems::AddOnsController, :premium do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:quote][:billing_items]["add_ons"].length).to eq(1)
-      expect(json[:quote][:billing_items]["add_ons"].first["name"]).to eq("Implementation")
-      expect(json[:quote][:billing_items]["add_ons"].first["id"]).to start_with("qta_")
+      expect(json[:quote][:billing_items][:add_ons].length).to eq(1)
+      expect(json[:quote][:billing_items][:add_ons].first[:name]).to eq("Implementation")
+      expect(json[:quote][:billing_items][:add_ons].first[:id]).to start_with("qta_")
     end
 
     context "when quote does not belong to organization" do
@@ -66,7 +66,7 @@ RSpec.describe Api::V1::Quotes::BillingItems::AddOnsController, :premium do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:quote][:billing_items]["add_ons"].first["name"]).to eq("Updated Name")
+      expect(json[:quote][:billing_items][:add_ons].first[:name]).to eq("Updated Name")
     end
 
     context "when item id is not found" do
@@ -101,7 +101,7 @@ RSpec.describe Api::V1::Quotes::BillingItems::AddOnsController, :premium do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:quote][:billing_items]["add_ons"]).to be_empty
+      expect(json[:quote][:billing_items][:add_ons]).to be_empty
     end
 
     context "when item id is not found" do

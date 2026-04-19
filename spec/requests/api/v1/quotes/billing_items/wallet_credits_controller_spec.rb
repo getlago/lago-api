@@ -27,9 +27,9 @@ RSpec.describe Api::V1::Quotes::BillingItems::WalletCreditsController, :premium 
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:quote][:billing_items]["wallet_credits"].length).to eq(1)
-      expect(json[:quote][:billing_items]["wallet_credits"].first["name"]).to eq("Monthly credits")
-      expect(json[:quote][:billing_items]["wallet_credits"].first["id"]).to start_with("qtw_")
+      expect(json[:quote][:billing_items][:wallet_credits].length).to eq(1)
+      expect(json[:quote][:billing_items][:wallet_credits].first[:name]).to eq("Monthly credits")
+      expect(json[:quote][:billing_items][:wallet_credits].first[:id]).to start_with("qtw_")
     end
 
     context "when quote does not belong to organization" do
@@ -76,7 +76,7 @@ RSpec.describe Api::V1::Quotes::BillingItems::WalletCreditsController, :premium 
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:quote][:billing_items]["wallet_credits"].first["paid_credits"]).to eq("1000.0")
+      expect(json[:quote][:billing_items][:wallet_credits].first[:paid_credits]).to eq("1000.0")
     end
 
     context "when item id is not found" do
@@ -113,7 +113,7 @@ RSpec.describe Api::V1::Quotes::BillingItems::WalletCreditsController, :premium 
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:quote][:billing_items]["wallet_credits"]).to be_empty
+      expect(json[:quote][:billing_items][:wallet_credits]).to be_empty
     end
 
     context "when item id is not found" do

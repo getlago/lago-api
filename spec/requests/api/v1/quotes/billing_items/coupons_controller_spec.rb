@@ -19,9 +19,9 @@ RSpec.describe Api::V1::Quotes::BillingItems::CouponsController, :premium do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:quote][:billing_items]["coupons"].length).to eq(1)
-      expect(json[:quote][:billing_items]["coupons"].first["coupon_id"]).to eq(coupon.id)
-      expect(json[:quote][:billing_items]["coupons"].first["id"]).to start_with("qtc_")
+      expect(json[:quote][:billing_items][:coupons].length).to eq(1)
+      expect(json[:quote][:billing_items][:coupons].first[:coupon_id]).to eq(coupon.id)
+      expect(json[:quote][:billing_items][:coupons].first[:id]).to start_with("qtc_")
     end
 
     context "when quote does not belong to organization" do
@@ -68,7 +68,7 @@ RSpec.describe Api::V1::Quotes::BillingItems::CouponsController, :premium do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:quote][:billing_items]["coupons"].first["amount_cents"]).to eq(10_000)
+      expect(json[:quote][:billing_items][:coupons].first[:amount_cents]).to eq(10_000)
     end
 
     context "when item id is not found" do
@@ -105,7 +105,7 @@ RSpec.describe Api::V1::Quotes::BillingItems::CouponsController, :premium do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:quote][:billing_items]["coupons"]).to be_empty
+      expect(json[:quote][:billing_items][:coupons]).to be_empty
     end
 
     context "when item id is not found" do

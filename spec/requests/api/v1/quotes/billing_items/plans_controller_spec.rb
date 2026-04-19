@@ -20,9 +20,9 @@ RSpec.describe Api::V1::Quotes::BillingItems::PlansController, :premium do
 
       expect(response).to have_http_status(:success)
       expect(json[:quote][:lago_id]).to eq(quote.id)
-      expect(json[:quote][:billing_items]["plans"].length).to eq(1)
-      expect(json[:quote][:billing_items]["plans"].first["plan_id"]).to eq(plan.id)
-      expect(json[:quote][:billing_items]["plans"].first["id"]).to start_with("qtp_")
+      expect(json[:quote][:billing_items][:plans].length).to eq(1)
+      expect(json[:quote][:billing_items][:plans].first[:plan_id]).to eq(plan.id)
+      expect(json[:quote][:billing_items][:plans].first[:id]).to start_with("qtp_")
     end
 
     context "when quote does not belong to organization" do
@@ -69,8 +69,8 @@ RSpec.describe Api::V1::Quotes::BillingItems::PlansController, :premium do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:quote][:billing_items]["plans"].first["plan_name"]).to eq("Updated Name")
-      expect(json[:quote][:billing_items]["plans"].first["id"]).to eq(item_id)
+      expect(json[:quote][:billing_items][:plans].first[:plan_name]).to eq("Updated Name")
+      expect(json[:quote][:billing_items][:plans].first[:id]).to eq(item_id)
     end
 
     context "when item id is not found" do
@@ -105,7 +105,7 @@ RSpec.describe Api::V1::Quotes::BillingItems::PlansController, :premium do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:quote][:billing_items]["plans"]).to be_empty
+      expect(json[:quote][:billing_items][:plans]).to be_empty
     end
 
     context "when item id is not found" do
