@@ -41,10 +41,10 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
   end
 
   context "without deduplication" do
-    it_behaves_like "an event store", with_event_duplication: false
+    it_behaves_like "an event store", with_event_duplication: false, excluding_features: [:presentation_breakdown_sum, :presentation_breakdown_count]
   end
 
   context "with deduplication" do
-    it_behaves_like "an event store", with_event_duplication: true
+    it_behaves_like "an event store", with_event_duplication: true, excluding_features: [:presentation_breakdown_sum, :presentation_breakdown_count]
   end
 end

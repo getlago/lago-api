@@ -232,11 +232,19 @@ module Events
       end
 
       def presentation_breakdown_sum
-        raise NotImplementedError
+        presentation_breakdown(
+          extra_select: [arel_table[:decimal_value].as("property")],
+          deduplicated_columns: %w[decimal_value properties],
+          aggregation_sql: "sum(events.property)"
+        )
       end
 
       def presentation_breakdown_count
-        raise NotImplementedError
+        presentation_breakdown(
+          extra_select: [],
+          deduplicated_columns: %w[properties],
+          aggregation_sql: "count()"
+        )
       end
 
       def presentation_breakdown_latest
@@ -814,6 +822,61 @@ module Events
 
       def operation_type_sql
         "events_enriched.sorted_properties['operation_type']"
+      end
+
+      def grouped_and_presentation_columns
+        @grouped_and_presentation_columns ||= {grouped_by: grouped_by || [], presentation_by: presentation_by.difference(grouped_by || [])}
+      end
+
+      def prepare_presentation_result(rows)
+        grouped_by_count = grouped_and_presentation_columns[:grouped_by].size
+        presentation_by_count = grouped_and_presentation_columns[:presentation_by].size
+
+        outer_map = {}
+
+        rows.each do |row|
+          grouped_attrs = {}
+          grouped_and_presentation_columns[:grouped_by].each_with_index do |field, i|
+            grouped_attrs[field] = row[i]
+          end
+
+          presentation_attrs = {}
+          grouped_and_presentation_columns[:presentation_by].each_with_index do |field, i|
+            presentation_attrs[field] = row[grouped_by_count + i]
+          end
+
+          units = row[grouped_by_count + presentation_by_count]
+
+          result = outer_map[grouped_attrs.hash] ||= {groups: grouped_attrs, breakdowns: []}
+          result[:breakdowns] << {presentation_by: presentation_attrs, units: units.to_d}
+        end
+
+        outer_map.values
+      end
+
+      def presentation_breakdown(extra_select:, deduplicated_columns:, aggregation_sql:)
+        all_columns = grouped_and_presentation_columns.values.flatten
+        all_column_arel = all_columns.map.with_index do |col, i|
+          Arel::Nodes::SqlLiteral.new(sanitized_property_name(col)).as("pb_#{i}")
+        end
+        all_column_names = Array.new(all_columns.count) { |i| "pb_#{i}" }.join(", ")
+
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = events_cte_queries(
+            select: all_column_arel + extra_select,
+            deduplicated_columns:
+          )
+
+          sql = with_ctes(ctes_sql, <<-SQL)
+            SELECT
+              #{all_column_names},
+              #{aggregation_sql}
+            FROM events
+            GROUP BY #{all_column_names}
+          SQL
+
+          prepare_presentation_result(connection.select_all(sql).rows)
+        end
       end
     end
   end
