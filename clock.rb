@@ -176,9 +176,9 @@ module Clockwork
 
   # NOTE: Enable wallets and lifetime usage refresh from the events-processor
   if ENV["LAGO_REDIS_STORE_URL"].present? && ENV["LAGO_CLICKHOUSE_ENABLED"].present?
-    every(1.minute, "schedule:refresh_flagged_subscriptions") do
+    every(10.seconds, "schedule:refresh_flagged_subscriptions") do
       Clock::ConsumeSubscriptionRefreshedQueueJob
-        .set(sentry: {"slug" => "lago_refresh_flagged_subscriptions", "cron" => "*/1 * * * *"})
+        .set(sentry: {"slug" => "lago_refresh_flagged_subscriptions"})
         .perform_later
     end
   end
