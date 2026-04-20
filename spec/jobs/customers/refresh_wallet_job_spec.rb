@@ -3,6 +3,41 @@
 require "rails_helper"
 
 RSpec.describe Customers::RefreshWalletJob do
+  describe "queue routing" do
+    let(:customer) { create(:customer) }
+
+    around do |example|
+      previous = ENV["LAGO_DEDICATED_WORKER_ORG_IDS"]
+      example.run
+    ensure
+      ENV["LAGO_DEDICATED_WORKER_ORG_IDS"] = previous
+    end
+
+    context "when the customer's organization is in the dedicated list" do
+      before { ENV["LAGO_DEDICATED_WORKER_ORG_IDS"] = customer.organization_id }
+
+      it "routes to the wallet_refresh queue" do
+        expect(described_class.new(customer).queue_name).to eq("wallet_refresh")
+      end
+    end
+
+    context "when the customer's organization is not in the dedicated list" do
+      before { ENV["LAGO_DEDICATED_WORKER_ORG_IDS"] = "some-other-org-id" }
+
+      it "falls back to low_priority" do
+        expect(described_class.new(customer).queue_name).to eq("low_priority")
+      end
+    end
+
+    context "when the env var is not set" do
+      before { ENV.delete("LAGO_DEDICATED_WORKER_ORG_IDS") }
+
+      it "falls back to low_priority" do
+        expect(described_class.new(customer).queue_name).to eq("low_priority")
+      end
+    end
+  end
+
   describe "#perform" do
     subject { described_class.perform_now(customer) }
 
