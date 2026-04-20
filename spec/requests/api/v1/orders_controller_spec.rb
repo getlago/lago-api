@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::OrdersController do
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
   let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:order_form) { create(:order_form, :signed, organization:, customer:, quote:) }
@@ -48,6 +48,17 @@ RSpec.describe Api::V1::OrdersController do
         expect(json[:orders].first[:lago_id]).to eq(order_two.id)
       end
     end
+
+    context "when the order_forms feature flag is disabled" do
+      let(:organization) { create(:organization) }
+
+      it "returns forbidden" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_not_available")
+      end
+    end
   end
 
   describe "GET /api/v1/orders/:id" do
@@ -74,6 +85,17 @@ RSpec.describe Api::V1::OrdersController do
         subject
 
         expect(response).to be_not_found_error("order")
+      end
+    end
+
+    context "when the order_forms feature flag is disabled" do
+      let(:organization) { create(:organization) }
+
+      it "returns forbidden" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_not_available")
       end
     end
   end

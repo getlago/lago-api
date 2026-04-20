@@ -4,6 +4,8 @@ module Api
   module V1
     class OrdersController < Api::BaseController
       def index
+        return forbidden_error(code: "feature_not_available") unless current_organization.feature_flag_enabled?(:order_forms)
+
         result = OrdersQuery.call(
           organization: current_organization,
           pagination: {
@@ -29,6 +31,8 @@ module Api
       end
 
       def show
+        return forbidden_error(code: "feature_not_available") unless current_organization.feature_flag_enabled?(:order_forms)
+
         order = current_organization.orders.find_by(id: params[:id])
         return not_found_error(resource: "order") unless order
 
