@@ -37,6 +37,12 @@ module Clockwork
       .perform_later
   end
 
+  if Utils::DedicatedWorkerConfig.any?
+    every(Utils::DedicatedWorkerConfig.refresh_interval, "schedule:process_dedicated_orgs_subscription_activities") do
+      Clock::ProcessDedicatedOrgsSubscriptionActivitiesJob.perform_later
+    end
+  end
+
   lifetime_usage_refresh_interval = ENV["LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS"].presence || 5.minutes
   every(lifetime_usage_refresh_interval.to_i.seconds, "schedule:refresh_lifetime_usages") do
     unless ENV["LAGO_DISABLE_LIFETIME_USAGE_REFRESH"] == "true"

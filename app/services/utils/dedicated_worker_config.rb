@@ -2,7 +2,8 @@
 
 module Utils
   module DedicatedWorkerConfig
-    DEDICATED_QUEUE = :dedicated
+    DEDICATED_WALLETS_QUEUE = :dedicated_wallets
+    DEDICATED_ALERTS_QUEUE = :dedicated_alerts
 
     ORGANIZATION_IDS = ENV["LAGO_DEDICATED_WORKER_ORG_IDS"].to_s.split(",").map(&:strip).reject(&:empty?).each(&:downcase).freeze
 

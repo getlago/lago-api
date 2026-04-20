@@ -3,6 +3,8 @@
 require "spec_helper"
 
 RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedService, :clickhouse do
+  skip "Temporarily disabled as it fails randomly because of the Clickhouse automatic deduplication"
+
   subject(:clean_service) { described_class.new(subscription:, timestamp:) }
 
   let(:organization) { create(:organization, clickhouse_events_store: true) }

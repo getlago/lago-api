@@ -57,5 +57,33 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService
         expect(result.nb_jobs_enqueued).to eq(batch_size + 1)
       end
     end
+
+    context "when the organization is targeted for the dedicated queue" do
+      before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", [organization.id]) }
+
+      it "enqueues ProcessSubscriptionActivityJob instances on the dedicated queue" do
+        create_list(:subscription_activity, 2, organization:, enqueued: false)
+
+        service.call
+
+        expect(ActiveJob).to have_received(:perform_all_later).once do |jobs|
+          expect(jobs.map(&:queue_name)).to all(eq("dedicated_alerts"))
+        end
+      end
+    end
+
+    context "when the organization is not targeted for the dedicated queue" do
+      before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", []) }
+
+      it "enqueues ProcessSubscriptionActivityJob instances on the default queue" do
+        create_list(:subscription_activity, 2, organization:, enqueued: false)
+
+        service.call
+
+        expect(ActiveJob).to have_received(:perform_all_later).once do |jobs|
+          expect(jobs.map(&:queue_name)).to all(eq("default"))
+        end
+      end
+    end
   end
 end
