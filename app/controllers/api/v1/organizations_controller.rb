@@ -66,6 +66,7 @@ module Api
           :document_numbering,
           :document_number_prefix,
           :finalize_zero_amount_invoice,
+          :slug,
           email_settings: [],
           billing_configuration: [
             :invoice_footer,

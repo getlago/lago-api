@@ -7,6 +7,7 @@ FactoryBot.define do
     end
 
     name { Faker::Company.name }
+    sequence(:slug) { |n| "test-org-#{n}" }
     default_currency { "USD" }
     audit_logs_period { nil }
 
@@ -57,6 +58,7 @@ FactoryBot.define do
       with_static_values { true }
 
       name { "ACME Corporation" }
+      slug { "acme-corp" }
       default_currency { "USD" }
       country { "US" }
     end
