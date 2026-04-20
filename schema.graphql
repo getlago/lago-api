@@ -8882,9 +8882,51 @@ enum OnTerminationInvoiceEnum {
   skip
 }
 
+type Order {
+  backdatedBilling: OrderBackdatedBillingEnum
+  billingSnapshot: JSON!
+  createdAt: ISO8601DateTime!
+  currency: String
+  customer: Customer!
+  executedAt: ISO8601DateTime
+  executionMode: OrderExecutionModeEnum
+  executionRecord: JSON
+  id: ID!
+  number: String!
+  orderForm: OrderForm!
+  orderType: OrderTypeEnum!
+  status: OrderStatusEnum!
+  updatedAt: ISO8601DateTime!
+}
+
+enum OrderBackdatedBillingEnum {
+  generate_past_invoices
+  start_without_invoices
+}
+
 enum OrderByEnum {
   gross_revenue_amount_cents
   net_revenue_amount_cents
+}
+
+"""
+OrderCollection type
+"""
+type OrderCollection {
+  """
+  A collection of paginated OrderCollection
+  """
+  collection: [Order!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+enum OrderExecutionModeEnum {
+  execute_in_lago
+  order_only
 }
 
 type OrderForm {
@@ -8928,6 +8970,17 @@ enum OrderFormVoidReasonEnum {
   expired
   invalid
   manual
+}
+
+enum OrderStatusEnum {
+  created
+  executed
+}
+
+enum OrderTypeEnum {
+  one_off
+  subscription_amendment
+  subscription_creation
 }
 
 """
@@ -10287,6 +10340,16 @@ type Query {
   mrrs(billingEntityId: ID, currency: CurrencyEnum): MrrCollection!
 
   """
+  Query a single order
+  """
+  order(
+    """
+    Uniq ID of the order
+    """
+    id: ID!
+  ): Order
+
+  """
   Query a single order form
   """
   orderForm(
@@ -10300,6 +10363,11 @@ type Query {
   Query order forms
   """
   orderForms(createdAtFrom: ISO8601DateTime, createdAtTo: ISO8601DateTime, customerId: [ID!], expiresAtFrom: ISO8601DateTime, expiresAtTo: ISO8601DateTime, limit: Int, number: [String!], ownerId: [ID!], page: Int, quoteNumber: [String!], searchTerm: String, status: [OrderFormStatusEnum!]): OrderFormCollection!
+
+  """
+  Query orders
+  """
+  orders(customerId: [ID!], executedAtFrom: ISO8601DateTime, executedAtTo: ISO8601DateTime, executionMode: [OrderExecutionModeEnum!], limit: Int, number: [String!], orderFormNumber: [String!], orderType: [OrderTypeEnum!], ownerId: [ID!], page: Int, quoteNumber: [String!], searchTerm: String, status: [OrderStatusEnum!]): OrderCollection!
 
   """
   Query the current organization
