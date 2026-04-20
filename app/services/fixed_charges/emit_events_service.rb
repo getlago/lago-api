@@ -2,6 +2,8 @@
 
 module FixedCharges
   class EmitEventsService < BaseService
+    Result = BaseResult[:fixed_charge_events]
+
     def initialize(fixed_charge:, subscription: nil, apply_units_immediately: false, timestamp: Time.current.to_i)
       @fixed_charge = fixed_charge
       @subscription = subscription
@@ -11,12 +13,12 @@ module FixedCharges
     end
 
     def call
-      subscriptions.each do |subscription|
+      result.fixed_charge_events = subscriptions.map do |subscription|
         ::FixedChargeEvents::CreateService.call!(
           subscription:,
           fixed_charge:,
           timestamp: apply_units_immediately ? timestamp : next_billing_period(subscription)
-        )
+        ).fixed_charge_event
       end
 
       result

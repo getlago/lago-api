@@ -170,6 +170,8 @@ class Customer < ApplicationRecord
     normalizes attribute, with: ->(value) { value.delete("\u0000").presence }
   end
 
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+
   def self.ransackable_attributes(_auth_object = nil)
     %w[id name firstname lastname legal_name external_id email]
   end

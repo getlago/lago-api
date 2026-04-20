@@ -17,6 +17,8 @@ class Invite < ApplicationRecord
   validates :email, email: true
   validates :token, uniqueness: true
 
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+
   def mark_as_revoked!(timestamp = Time.current)
     self.revoked_at ||= timestamp
     revoked!

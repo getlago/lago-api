@@ -27,6 +27,13 @@ RSpec.describe Invite do
     end
   end
 
+  describe "normalizations" do
+    it "sanitizes email on assignment" do
+      invite = build(:invite, email: " hello@some\u200Bthing\u2013other.com ")
+      expect(invite.email).to eq("hello@something-other.com")
+    end
+  end
+
   describe "validations" do
     subject(:invite) { build(:invite, organization:) }
 

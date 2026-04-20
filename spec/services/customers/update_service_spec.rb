@@ -69,6 +69,20 @@ RSpec.describe Customers::UpdateService do
       expect(Utils::ActivityLog).to have_produced("customer.updated").after_commit.with(customer)
     end
 
+    context "with email containing unicode lookalike characters" do
+      let(:update_args) do
+        {
+          id: customer.id,
+          email: "hello@something\u2013other.com"
+        }
+      end
+
+      it "sanitizes the email before saving" do
+        result = customers_service.call
+        expect(result.customer.email).to eq("hello@something-other.com")
+      end
+    end
+
     context "when updating the billing entity reference" do
       let(:billing_entity_2) { create(:billing_entity, organization:) }
 

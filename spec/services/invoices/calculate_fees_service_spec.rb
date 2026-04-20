@@ -2362,6 +2362,25 @@ RSpec.describe Invoices::CalculateFeesService do
     end
   end
 
+  context "when subscription is incomplete" do
+    let(:status) { :incomplete }
+    let(:timestamp) { Time.zone.parse("07 Mar 2022") }
+    let(:started_at) { Time.zone.parse("07 Mar 2022") }
+    let(:billing_time) { :anniversary }
+    let(:pay_in_advance) { true }
+    let(:fixed_charge) do
+      create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "10"}, units: 10, pay_in_advance: true)
+    end
+
+    it "creates subscription and fixed charge fees" do
+      result = invoice_service.call
+
+      expect(result).to be_success
+      expect(invoice.fees.subscription.count).to eq(1)
+      expect(invoice.fees.fixed_charge.count).to eq(1)
+    end
+  end
+
   describe "#should_create_yearly_subscription_fee?" do
     subject(:method_call) { invoice_service.send(:should_create_yearly_subscription_fee?, subscription) }
 

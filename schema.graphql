@@ -4245,6 +4245,7 @@ type CurrentOrganization {
   name: String!
   netPaymentTerm: Int!
   premiumIntegrations: [PremiumIntegrationTypeEnum!]!
+  slug: String!
   state: String
   stripePaymentProviders: [StripeProvider!]
   taxIdentificationNumber: String
@@ -8899,6 +8900,7 @@ type Organization {
   id: ID!
   logoUrl: String
   name: String!
+  slug: String!
   timezone: TimezoneEnum
 }
 
@@ -12795,6 +12797,7 @@ input UpdateOrganizationInput {
   legalNumber: String
   logo: String
   netPaymentTerm: Int
+  slug: String
   state: String
   taxIdentificationNumber: String
   timezone: TimezoneEnum

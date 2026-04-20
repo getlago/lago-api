@@ -107,13 +107,13 @@ RSpec.describe UsageFilters do
 
   describe "WITHOUT_PRESENTATION" do
     it "is a frozen instance with default values but without presentation" do
-      expect(described_class::WITHOUT_PRESENTATION).to be_frozen
-      expect(described_class::WITHOUT_PRESENTATION.filter_by_charge_id).to be_nil
-      expect(described_class::WITHOUT_PRESENTATION.filter_by_charge_code).to be_nil
-      expect(described_class::WITHOUT_PRESENTATION.filter_by_group).to be_nil
-      expect(described_class::WITHOUT_PRESENTATION.filter_by_presentation).to eq([])
-      expect(described_class::WITHOUT_PRESENTATION.skip_grouping).to be(false)
-      expect(described_class::WITHOUT_PRESENTATION.full_usage).to be(false)
+      expect(described_class::WITHOUT_PRESENTATION_FILTER).to be_frozen
+      expect(described_class::WITHOUT_PRESENTATION_FILTER.filter_by_charge_id).to be_nil
+      expect(described_class::WITHOUT_PRESENTATION_FILTER.filter_by_charge_code).to be_nil
+      expect(described_class::WITHOUT_PRESENTATION_FILTER.filter_by_group).to be_nil
+      expect(described_class::WITHOUT_PRESENTATION_FILTER.filter_by_presentation).to eq([])
+      expect(described_class::WITHOUT_PRESENTATION_FILTER.skip_grouping).to be(false)
+      expect(described_class::WITHOUT_PRESENTATION_FILTER.full_usage).to be(false)
     end
   end
 end

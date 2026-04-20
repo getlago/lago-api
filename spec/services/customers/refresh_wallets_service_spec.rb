@@ -105,14 +105,14 @@ RSpec.describe Customers::RefreshWalletsService do
         allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
       end
 
-      it "calls CustomerUsageService with UsageFilters::WITHOUT_PRESENTATION" do
+      it "calls CustomerUsageService with UsageFilters::WITHOUT_PRESENTATION_FILTER" do
         subject
 
         customer.active_subscriptions.each do |subscription|
           expect(Invoices::CustomerUsageService).to have_received(:call!).with(
             customer:,
             subscription:,
-            usage_filters: UsageFilters::WITHOUT_PRESENTATION
+            usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER
           )
         end
       end
