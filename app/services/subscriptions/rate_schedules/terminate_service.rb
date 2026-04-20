@@ -89,28 +89,24 @@ module Subscriptions
       def update_on_termination_actions
         params = {}
 
-        if pay_in_advance? && subscription.on_termination_credit_note != on_termination_credit_note
-          params[:on_termination_credit_note] = on_termination_credit_note 
+        if subscription.pay_in_advance? && subscription.on_termination_credit_note != on_termination_credit_note
+          params[:on_termination_credit_note] = on_termination_credit_note
         end
 
         if subscription.on_termination_invoice != on_termination_invoice
-          params[:on_termination_invoice] = on_termination_invoice 
+          params[:on_termination_invoice] = on_termination_invoice
         end
 
         return if params.empty?
 
+        # TODO: add new update service for rate schedules subscriptions for on_termination_invoice to work properly
         Subscriptions::UpdateService.call!(subscription:, params:)
       end
 
       def generate_credit_note_for_unconsumed_subscription?
-        pay_in_advance? &&
+        subscription.pay_in_advance? &&
           pay_in_advance_invoice_issued? &&
           on_termination_credit_note.in?(%i[credit refund offset])
-      end
-
-      def pay_in_advance?
-        #subscription.pay_in_advance?
-        subscription.rate_schedules.active.subscription.sole.pay_in_advance?
       end
 
       # NOTE: If subscription is terminated automatically by setting ending_at, there is a chance that this service will
@@ -167,26 +163,21 @@ module Subscriptions
       def bill_subscription
         return unless bill_in_arrears_fees?
 
-        # Original:
-        # if bill_in_arrears_fees? -> BillSubscriptionJob
-        # BillNonInvoiceableFeesJob
-
-        # BillsubscriptionJob -> Invoices::RateSchedulesBillingService
+        # if bill_in_arrears_fees? -> BillSubscriptionJob -> Invoices::RateSchedulesBillingService
         # BillNonInvoiceableFeesJob -> Advance Charges ?
 
-        # has ended_at and don't have cycles
         if async
           Invoices::RateSchedulesBillingJob.perform_after_commit(
-            [subscription.billable_rate_schedules],
+            subscription.subscription_rate_schedules.to_a,
             subscription.terminated_at,
             invoicing_reason: :subscription_terminating
           )
         else
           Invoices::RateSchedulesBillingService.new(
-            [subscription.billable_rate_schedules],
+            subscription.subscription_rate_schedules,
             subscription.terminated_at,
             invoicing_reason: :subscription_terminating
-          )
+          ).call
         end
       end
 

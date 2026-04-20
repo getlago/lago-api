@@ -33,8 +33,8 @@ class RateSchedule < ApplicationRecord
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
 
-  ProductItem::ITEM_TYPES.each do |item_type|
-    scope item_type, -> { joins(:product_item).where(product_item: { item_type: item_type }) }
+  ProductItem::ITEM_TYPES.each do |item_type, _|
+    scope item_type, -> { joins(:product_item).where(product_item: {item_type: item_type}) }
   end
 
   validates :billing_interval_count, numericality: {greater_than_or_equal_to: 1}
