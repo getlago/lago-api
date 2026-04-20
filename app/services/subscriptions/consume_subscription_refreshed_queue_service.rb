@@ -10,8 +10,8 @@ module Subscriptions
 
     # Events-processor writes to a sorted set with ZADD, using the event timestamp as score
     # and a bucketed member key (org_id:sub_id|bucket). Members are only eligible for consumption
-    # once their score has aged past CLICKHOUSE_MERGE_DELAY, giving ClickHouse time to merge.
-    CLICKHOUSE_MERGE_DELAY = 15
+    # once their score has aged past SUBSCRIPTION_BUCKET_DURATION.
+    SUBSCRIPTION_BUCKET_DURATION = 10
 
     def call
       return result if ENV["LAGO_REDIS_STORE_URL"].blank?
@@ -23,7 +23,7 @@ module Subscriptions
           break
         end
 
-        threshold = (Time.current - CLICKHOUSE_MERGE_DELAY).to_i
+        threshold = (Time.current - SUBSCRIPTION_BUCKET_DURATION).to_i
         values = redis_client.zrangebyscore(REDIS_STORE_NAME, "-inf", threshold, limit: [0, BATCH_SIZE])
         break if values.blank?
 
