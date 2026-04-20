@@ -70,17 +70,17 @@ module Subscriptions
 
       def bill_subscriptions
         Invoices::RateSchedulesBillingJob.perform_later(
-          [billable_rate_schedules],
+          billable_rate_schedules,
           timestamp,
           invoicing_reason: :upgrading
         )
       end
 
       def billable_rate_schedules
-        rate_schedules = subscription.rate_schedules
+        rate_schedules = subscription.subscription_rate_schedules.to_a
 
         if next_subscription.pay_in_advance? || next_subscription.has_pay_in_advance_fixed_items?
-          rate_schedules += next_subscription.rate_schedule
+          rate_schedules += next_subscription.subscription_rate_schedules.to_a
         end
 
         rate_schedules

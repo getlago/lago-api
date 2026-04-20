@@ -94,8 +94,8 @@ RSpec.describe Subscriptions::RateSchedules::TerminateService do
 
       it "bills the subscription" do
         freeze_time do
-          expect { subject }.to have_enqueued_job_after_commit(Invoices::RateSchedulesBillingJob).
-            with([subscription_rate_schedule], Time.current, invoicing_reason: :subscription_terminating)
+          expect { subject }.to have_enqueued_job_after_commit(Invoices::RateSchedulesBillingJob)
+            .with([subscription_rate_schedule], Time.current, invoicing_reason: :subscription_terminating)
         end
       end
     end
@@ -112,7 +112,7 @@ RSpec.describe Subscriptions::RateSchedules::TerminateService do
     context "with :on_termination_invoice parameter" do
       subject(:result) { described_class.call(subscription:, on_termination_invoice:) }
 
-      context "and on_termination_invoice is :generate" do
+      context "with on_termination_invoice is :generate" do
         let(:on_termination_invoice) { "generate" }
 
         it "updates the subscription :on_termination_invoice value" do
@@ -128,7 +128,7 @@ RSpec.describe Subscriptions::RateSchedules::TerminateService do
         end
       end
 
-      context "and on_termination_invoice is :skip" do
+      context "with on_termination_invoice is :skip" do
         let(:on_termination_invoice) { "skip" }
 
         it "updates the subscription :on_termination_invoice value" do
@@ -141,7 +141,7 @@ RSpec.describe Subscriptions::RateSchedules::TerminateService do
         end
       end
 
-      context "and :on_termination_invoice is invalid" do
+      context "with :on_termination_invoice is invalid" do
         let(:on_termination_invoice) { "invalid" }
 
         it "raises an error" do
@@ -153,7 +153,7 @@ RSpec.describe Subscriptions::RateSchedules::TerminateService do
       end
     end
 
-    xcontext "with :on_termination_credit_note parameter" do
+    context "with :on_termination_credit_note parameter", skip: "until update service is added for the rate schedules case" do
       let(:subscription) do
         create(
           :subscription,
@@ -313,7 +313,7 @@ RSpec.describe Subscriptions::RateSchedules::TerminateService do
         end
       end
 
-      context "and the subscription is pay in arrears" do
+      context "when the subscription is pay in arrears" do
         let(:on_termination_credit_note) { "credit" }
 
         before do
