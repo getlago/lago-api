@@ -44,6 +44,9 @@ class Subscription < ApplicationRecord
 
   has_many :alerts, ->(s) { where(organization_id: s.organization_id) }, class_name: "UsageMonitoring::Alert", foreign_key: :subscription_external_id, primary_key: :external_id
 
+  has_many :subscription_rate_schedules
+  has_many :rate_schedules, through: :subscription_rate_schedules
+
   delegate :amount_currency, to: :plan, prefix: true
 
   validates :external_id, :billing_time, presence: true
@@ -293,6 +296,19 @@ class Subscription < ApplicationRecord
     return [] if progressive_billing_disabled?
 
     usage_thresholds.presence || plan.usage_thresholds.presence || plan.applicable_usage_thresholds
+  end
+
+  def pay_in_advance?
+    rate_schedules.subscription.pay_in_advance.exists?
+    # billable_rate_schedules.subscription.any?(&:pay_in_advance?)
+  end
+
+  def has_pay_in_advance_usage_items?
+    rate_schedules.usage.pay_in_advance.exists?
+  end
+
+  def has_pay_in_advance_fixed_items?
+    rate_schedules.fixed.pay_in_advance.exists?
   end
 end
 

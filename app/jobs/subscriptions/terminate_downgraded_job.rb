@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  class TerminateJob < ApplicationJob
+  class TerminateDowngradedJob < ApplicationJob
     queue_as do
       if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_BILLING"])
         :billing
@@ -10,7 +10,6 @@ module Subscriptions
       end
     end
 
-    # TODO: Remove it after all remaining TerminageJob are processed
     def perform(subscription, timestamp)
       result = Subscriptions::TerminateDowngradedService.new(subscription:, timestamp:).call
 

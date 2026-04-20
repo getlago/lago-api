@@ -402,7 +402,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       it "enqueues a job on billing day" do
         billing_service.call
 
-        expect(Subscriptions::TerminateJob).to have_been_enqueued
+        expect(Subscriptions::TerminateDowngradedJob).to have_been_enqueued
           .with(previous_subscription, current_date.to_i)
       end
 
