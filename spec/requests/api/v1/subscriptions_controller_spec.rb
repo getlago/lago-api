@@ -1708,7 +1708,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         let(:subscription) { create(:subscription, :incomplete, customer:, plan:) }
         let(:update_params) { {name: "new name"} }
 
-        it "returns a method not allowed error", pending: "requires update service to reject incomplete subscriptions" do
+        it "returns a method not allowed error" do
           subject
 
           expect(response).to have_http_status(:method_not_allowed)

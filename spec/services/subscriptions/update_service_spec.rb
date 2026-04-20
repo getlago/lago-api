@@ -24,6 +24,17 @@ RSpec.describe Subscriptions::UpdateService do
       subscription
     end
 
+    context "when subscription is incomplete" do
+      let(:subscription) { create(:subscription, :incomplete) }
+
+      it "returns a not allowed error" do
+        result = update_service.call
+
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("subscription_incomplete")
+      end
+    end
+
     context "when both usage_thresholds and plan_overrides.usage_thresholds are present" do
       let(:params) do
         {
