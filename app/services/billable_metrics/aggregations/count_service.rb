@@ -3,12 +3,6 @@
 module BillableMetrics
   module Aggregations
     class CountService < BillableMetrics::Aggregations::BaseService
-      def initialize(...)
-        super
-
-        event_store.aggregation_property = billable_metric.field_name
-      end
-
       def compute_aggregation(options: {})
         return empty_result if should_bypass_aggregation?
 

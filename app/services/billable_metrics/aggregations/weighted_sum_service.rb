@@ -125,7 +125,6 @@ module BillableMetrics
 
       def grouped_latest_values
         return @grouped_latest_values if @grouped_latest_values
-        return @grouped_latest_values = grouped_latest_values_from_events if subscription.previous_subscription_id?
 
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
@@ -148,6 +147,7 @@ module BillableMetrics
             }
           end
         end
+        return @grouped_latest_values = grouped_latest_values_from_events if subscription.previous_subscription_id?
 
         @grouped_latest_values = {}
       end
