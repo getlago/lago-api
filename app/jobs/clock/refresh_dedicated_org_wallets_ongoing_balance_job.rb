@@ -7,7 +7,7 @@ module Clock
     def perform
       return unless License.premium?
 
-      org_ids = Utils::DedicatedOrganizationWorker.organization_ids
+      org_ids = Utils::DedicatedWorkerConfig.organization_ids
       return if org_ids.empty?
 
       Customer

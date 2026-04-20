@@ -53,13 +53,7 @@ describe Clock::RefreshWalletsOngoingBalanceJob, job: true do
       end
 
       context "when the customer's organization is handled by the dedicated worker" do
-        around do |example|
-          previous = ENV["LAGO_DEDICATED_WORKER_ORG_IDS"]
-          ENV["LAGO_DEDICATED_WORKER_ORG_IDS"] = organization.id
-          example.run
-        ensure
-          ENV["LAGO_DEDICATED_WORKER_ORG_IDS"] = previous
-        end
+        before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", [organization.id]) }
 
         it "does not schedule refresh job for customers in the dedicated organization" do
           subject

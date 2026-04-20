@@ -9,7 +9,7 @@ module Clock
 
       scope = Customer.with_active_wallets.awaiting_wallet_refresh.without_tax_errors
 
-      dedicated_org_ids = Utils::DedicatedOrganizationWorker.organization_ids
+      dedicated_org_ids = Utils::DedicatedWorkerConfig.organization_ids
       scope = scope.where.not(organization_id: dedicated_org_ids) if dedicated_org_ids.any?
 
       scope.find_each do |customer|

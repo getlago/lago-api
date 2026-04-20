@@ -6,8 +6,8 @@ module Customers
 
     queue_as do
       customer = arguments.first
-      if Utils::DedicatedOrganizationWorker.enabled_for?(customer&.organization_id)
-        Utils::DedicatedOrganizationWorker::DEDICATED_QUEUE
+      if Utils::DedicatedWorkerConfig.enabled_for?(customer&.organization_id)
+        Utils::DedicatedWorkerConfig::DEDICATED_QUEUE
       else
         :low_priority
       end

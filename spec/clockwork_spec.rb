@@ -322,8 +322,8 @@ describe Clockwork do
     before do
       allow(ENV).to receive(:[]).and_call_original
       allow(ENV).to receive(:[]).with("LAGO_REDIS_CACHE_URL").and_return("redis:6379")
-      allow(ENV).to receive(:[]).with("LAGO_DEDICATED_WORKER_ORG_IDS").and_return("org-1")
       allow(ENV).to receive(:[]).with("LAGO_DISABLE_WALLET_REFRESH").and_return(nil)
+      stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", ["org-1"])
     end
 
     it "enqueue a refresh dedicated org wallets job every 5 seconds" do
@@ -343,10 +343,10 @@ describe Clockwork do
 
     context "with a custom interval configured" do
       before do
-        allow(ENV).to receive(:[]).with("LAGO_DEDICATED_WALLET_REFRESH_INTERVAL_SECONDS").and_return("10")
+        allow(ENV).to receive(:[]).with("LAGO_DEDICATED_REFRESH_INTERVAL_SECONDS").and_return("10")
       end
 
-      it 'uses the ENV["LAGO_DEDICATED_WALLET_REFRESH_INTERVAL_SECONDS"] to set a custom period' do
+      it 'uses the ENV["LAGO_DEDICATED_REFRESH_INTERVAL_SECONDS"] to set a custom period' do
         Clockwork::Test.run(
           file: clock_file,
           start_time:,

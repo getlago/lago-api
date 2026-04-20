@@ -54,13 +54,9 @@ module Clockwork
           .perform_later
       end
 
-      if ENV["LAGO_DEDICATED_WORKER_ORG_IDS"].present?
-        dedicated_wallet_refresh_interval = ENV["LAGO_DEDICATED_WALLET_REFRESH_INTERVAL_SECONDS"].presence || 5
-
-        every(dedicated_wallet_refresh_interval.to_i.seconds, "schedule:refresh_dedicated_org_wallets") do
-          Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob
-            .set(sentry: {"slug" => "lago_refresh_dedicated_org_wallets"})
-            .perform_later
+      if Utils::DedicatedWorkerConfig.any?
+        every(Utils::DedicatedWorkerConfig.refresh_interval, "schedule:refresh_dedicated_org_wallets") do
+          Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob.perform_later
         end
       end
     end

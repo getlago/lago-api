@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob, job: true do
+RSpec.describe Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob, job: true do
   describe "#perform" do
     subject { described_class.perform_now }
 
@@ -26,15 +26,8 @@ describe Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob, job: true do
       customer_with_terminated_wallet
     end
 
-    around do |example|
-      previous = ENV["LAGO_DEDICATED_WORKER_ORG_IDS"]
-      example.run
-    ensure
-      ENV["LAGO_DEDICATED_WORKER_ORG_IDS"] = previous
-    end
-
-    context "when the env var is blank" do
-      before { ENV.delete("LAGO_DEDICATED_WORKER_ORG_IDS") }
+    context "when the dedicated org list is empty" do
+      before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", []) }
 
       context "when premium", :premium do
         it "does not enqueue any refresh job" do
@@ -44,8 +37,8 @@ describe Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob, job: true do
       end
     end
 
-    context "when the env var lists the target organization" do
-      before { ENV["LAGO_DEDICATED_WORKER_ORG_IDS"] = target_organization.id }
+    context "when the dedicated org list contains the target organization" do
+      before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", [target_organization.id]) }
 
       context "when freemium" do
         it "does not enqueue refresh jobs" do
