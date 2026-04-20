@@ -1134,12 +1134,12 @@ RSpec.describe Subscriptions::CreateService do
               )
             end
 
-            it "returns pending_plan_change error" do
+            it "returns subscription_incomplete error" do
               result = create_service.call
 
               expect(result).not_to be_success
               expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:subscription]).to eq(["pending_plan_change"])
+              expect(result.error.messages[:subscription]).to eq(["subscription_incomplete"])
             end
           end
         end
@@ -1348,15 +1348,31 @@ RSpec.describe Subscriptions::CreateService do
               )
             end
 
-            it "returns pending_plan_change error" do
+            it "returns subscription_incomplete error" do
               result = create_service.call
 
               expect(result).not_to be_success
               expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:subscription]).to eq(["pending_plan_change"])
+              expect(result.error.messages[:subscription]).to eq(["subscription_incomplete"])
             end
           end
         end
+      end
+    end
+
+    context "when existing subscription with same external_id is incomplete" do
+      let(:incomplete_subscription) do
+        create(:subscription, :incomplete, customer:, plan:, organization:, external_id:)
+      end
+
+      before { incomplete_subscription }
+
+      it "returns a subscription_incomplete error" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:subscription]).to eq(["subscription_incomplete"])
       end
     end
 
