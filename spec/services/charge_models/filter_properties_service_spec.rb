@@ -30,6 +30,23 @@ RSpec.describe ChargeModels::FilterPropertiesService do
 
         expect(result.properties).to eq(properties)
       end
+
+      context "when presentation_group_keys are present" do
+        let(:properties) do
+          {
+            "amount" => 100,
+            "presentation_group_keys" => [{"value" => "region", "options" => {"display_in_invoice" => true}}]
+          }
+        end
+
+        it "includes presentation_group_keys in the result" do
+          result = filter_service.call
+
+          expect(result.properties["presentation_group_keys"]).to eq(
+            [{"value" => "region", "options" => {"display_in_invoice" => true}}]
+          )
+        end
+      end
     end
 
     context "with a fixed charge" do

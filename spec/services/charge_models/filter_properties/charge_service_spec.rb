@@ -24,7 +24,8 @@ RSpec.describe ChargeModels::FilterProperties::ChargeService do
       per_transaction_max_amount: 100,
       per_transaction_min_amount: 10,
       volume_ranges: [{from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"}],
-      custom_properties:
+      custom_properties:,
+      presentation_group_keys: [{value: "region", options: {display_in_invoice: true}}]
     }
   end
 
@@ -42,9 +43,10 @@ RSpec.describe ChargeModels::FilterProperties::ChargeService do
 
       it "filters the properties" do
         properties = filter_service.call.properties
-        expect(properties.keys).to include("amount", "pricing_group_keys")
+        expect(properties.keys).to include("amount", "pricing_group_keys", "presentation_group_keys")
         expect(properties["amount"]).to eq(100)
         expect(properties["pricing_group_keys"]).to eq(["location"])
+        expect(properties["presentation_group_keys"]).to eq([{"value" => "region", "options" => {"display_in_invoice" => true}}])
       end
 
       # TODO(pricing_group_keys): remove after deprecation
@@ -61,6 +63,12 @@ RSpec.describe ChargeModels::FilterProperties::ChargeService do
         let(:properties) { {amount: 100, pricing_group_keys: ["", ""]} }
 
         it { expect(filter_service.call.properties[:pricing_group_keys]).to be_empty }
+      end
+
+      context "when presentation_group_keys is present" do
+        let(:properties) { {amount: 100, presentation_group_keys: [{value: "region", options: {display_in_invoice: true}}]} }
+
+        it { expect(filter_service.call.properties[:presentation_group_keys]).to eq([{"value" => "region", "options" => {"display_in_invoice" => true}}]) }
       end
 
       # TODO(pricing_group_keys): remove after deprecation
