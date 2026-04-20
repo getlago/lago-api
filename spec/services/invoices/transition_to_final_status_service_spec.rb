@@ -44,7 +44,11 @@ RSpec.describe Invoices::TransitionToFinalStatusService do
   context "when invoice is subscription_gated with positive amount" do
     let(:fees_amount_cents) { 100 }
     let(:plan) { create(:plan, organization:, pay_in_advance: true) }
-    let(:subscription) { create(:subscription, :incomplete, organization:, customer:, plan:) }
+    let(:subscription) do
+      create(:subscription, :incomplete, :with_activation_rules,
+        activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+        organization:, customer:, plan:)
+    end
     let(:invoice) do
       create(
         :invoice,
@@ -58,15 +62,42 @@ RSpec.describe Invoices::TransitionToFinalStatusService do
       )
     end
 
-    before do
-      create(:subscription_activation_rule, subscription:, status: "pending")
-      create(:invoice_subscription, invoice:, subscription:)
-    end
+    before { create(:invoice_subscription, invoice:, subscription:) }
 
     it "keeps the invoice as open" do
       result
 
       expect(invoice.status).to eq("open")
+    end
+  end
+
+  context "when invoice is subscription_gated with zero amount" do
+    let(:fees_amount_cents) { 0 }
+    let(:plan) { create(:plan, organization:, pay_in_advance: true) }
+    let(:subscription) do
+      create(:subscription, :incomplete, :with_activation_rules,
+        activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+        organization:, customer:, plan:)
+    end
+    let(:invoice) do
+      create(
+        :invoice,
+        organization:,
+        currency: "EUR",
+        fees_amount_cents:,
+        total_amount_cents: 0,
+        issuing_date: Time.zone.now.beginning_of_month,
+        customer:,
+        status: :open
+      )
+    end
+
+    before { create(:invoice_subscription, invoice:, subscription:) }
+
+    it "follows the normal finalize/close logic" do
+      result
+
+      expect(invoice.status).to eq("finalized")
     end
   end
 
