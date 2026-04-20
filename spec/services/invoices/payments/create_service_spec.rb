@@ -73,18 +73,22 @@ RSpec.describe Invoices::Payments::CreateService do
     end
 
     context "when invoice is subscription_gated (payment-gated)" do
-      let(:subscription) { create(:subscription, :incomplete, customer:, organization:) }
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+          customer:, organization:)
+      end
       let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100, status: :open) }
+      let(:expected_reference) { "#{invoice.billing_entity.name} - Invoice #{invoice.id}" }
 
       before do
-        create(:subscription_activation_rule, subscription:, status: "pending")
         create(:invoice_subscription, invoice:, subscription:)
 
         allow(provider_class)
           .to receive(:new)
           .with(
             payment: an_instance_of(Payment),
-            reference: "",
+            reference: expected_reference,
             metadata: {
               lago_invoice_id: invoice.id,
               lago_customer_id: customer.id,
@@ -94,10 +98,10 @@ RSpec.describe Invoices::Payments::CreateService do
           ).and_return(provider_service)
       end
 
-      it "passes an empty reference to the payment provider" do
+      it "uses invoice ID instead of number in the reference" do
         create_service.call
 
-        expect(provider_class).to have_received(:new).with(hash_including(reference: ""))
+        expect(provider_class).to have_received(:new).with(hash_including(reference: expected_reference))
       end
     end
 

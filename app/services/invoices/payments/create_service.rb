@@ -170,9 +170,11 @@ module Invoices
       end
 
       def payment_reference
-        return "" if invoice.subscription_gated?
-
-        "#{invoice.billing_entity.name} - Invoice #{invoice.number}"
+        if invoice.subscription_gated?
+          "#{invoice.billing_entity.name} - Invoice #{invoice.id}"
+        else
+          "#{invoice.billing_entity.name} - Invoice #{invoice.number}"
+        end
       end
 
       def processing_payment
