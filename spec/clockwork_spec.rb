@@ -303,11 +303,11 @@ describe Clockwork do
         file: clock_file,
         start_time:,
         end_time:,
-        tick_speed: 1.minute
+        tick_speed: 1.second
       )
 
       expect(Clockwork::Test).to be_ran_job(job)
-      expect(Clockwork::Test.times_run(job)).to eq(1)
+      expect(Clockwork::Test.times_run(job)).to eq(6)
 
       Clockwork::Test.block_for(job).call
       expect(Clock::ConsumeSubscriptionRefreshedQueueJob).to have_been_enqueued
