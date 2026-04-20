@@ -4551,9 +4551,9 @@ CREATE TABLE public.presentation_breakdowns (
     organization_id uuid NOT NULL,
     fee_id uuid NOT NULL,
     presentation_by jsonb DEFAULT '[]'::jsonb NOT NULL,
-    units numeric(30,10) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    units numeric DEFAULT 0.0 NOT NULL
 );
 
 
@@ -11773,6 +11773,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260420114717'),
 ('20260416124233'),
 ('20260416124232'),
 ('20260416111923'),
