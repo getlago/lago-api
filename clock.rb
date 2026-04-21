@@ -47,11 +47,17 @@ module Clockwork
   end
 
   if ENV["LAGO_MEMCACHE_SERVERS"].present? || ENV["LAGO_REDIS_CACHE_URL"].present?
-    every(5.minutes, "schedule:refresh_wallets_ongoing_balance") do
-      unless ENV["LAGO_DISABLE_WALLET_REFRESH"] == "true"
+    unless ENV["LAGO_DISABLE_WALLET_REFRESH"] == "true"
+      every(5.minutes, "schedule:refresh_wallets_ongoing_balance") do
         Clock::RefreshWalletsOngoingBalanceJob
           .set(sentry: {"slug" => "lago_refresh_wallets_ongoing_balance", "cron" => "*/5 * * * *"})
           .perform_later
+      end
+
+      if Utils::DedicatedWorkerConfig.any?
+        every(Utils::DedicatedWorkerConfig.refresh_interval, "schedule:refresh_dedicated_org_wallets") do
+          Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob.perform_later
+        end
       end
     end
   end
