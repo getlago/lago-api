@@ -17,6 +17,9 @@ class Subscription::ActivationRule < ApplicationRecord
     not_applicable: "not_applicable"
   }.freeze
 
+  FULFILLED_STATUSES = STATUSES.values_at(:satisfied, :not_applicable).freeze
+  REJECTED_STATUSES = STATUSES.values_at(:failed, :expired, :declined).freeze
+
   TYPES = {
     payment: "payment"
   }.freeze

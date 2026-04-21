@@ -29,11 +29,11 @@ module Subscriptions
       attr_reader :subscription
 
       def all_rules_satisfied?
-        subscription.activation_rules.all? { |rule| rule.satisfied? || rule.not_applicable? }
+        subscription.activation_rules.where.not(status: Subscription::ActivationRule::FULFILLED_STATUSES).none?
       end
 
       def any_rule_failed?
-        subscription.activation_rules.any? { |rule| rule.failed? || rule.expired? || rule.declined? }
+        subscription.activation_rules.where(status: Subscription::ActivationRule::REJECTED_STATUSES).exists?
       end
     end
   end

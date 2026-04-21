@@ -245,15 +245,15 @@ RSpec.describe Invoices::UpdateService do
     end
 
     context "when invoice is subscription_gated and payment_status changes" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          organization: invoice.organization, customer: invoice.customer, plan:,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}])
+      end
       let(:plan) { create(:plan, organization: invoice.organization, pay_in_advance: true) }
-      let(:subscription) { create(:subscription, :incomplete, organization: invoice.organization, customer: invoice.customer, plan:) }
-      let(:rule) { create(:subscription_activation_rule, subscription:, status: "pending") }
       let(:invoice) { create(:invoice, status: :open, invoice_type: :subscription, payment_overdue: false) }
 
-      before do
-        rule
-        create(:invoice_subscription, invoice:, subscription:)
-      end
+      before { create(:invoice_subscription, invoice:, subscription:) }
 
       context "when payment_status is succeeded" do
         let(:update_args) { {payment_status: "succeeded"} }
