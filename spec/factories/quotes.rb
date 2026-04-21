@@ -10,13 +10,10 @@ FactoryBot.define do
 
     trait :approved do
       status { :approved }
-      approved_at { Time.current }
     end
 
     trait :voided do
       status { :voided }
-      voided_at { Time.current }
-      void_reason { :manual }
     end
   end
 end

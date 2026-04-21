@@ -28,8 +28,6 @@ RSpec.describe Resolvers::QuotesResolver do
         sequential_id: 1,
         number: "QT-2025-0001",
         status: :voided,
-        void_reason: :manual,
-        voided_at: Time.current,
         version:
       )
     end

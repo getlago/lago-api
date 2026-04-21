@@ -15,15 +15,7 @@ class Quote < ApplicationRecord
     one_off: "one_off"
   }.freeze
 
-  VOID_REASONS = {
-    manual: "manual",
-    superseded: "superseded",
-    cascade_of_expired: "cascade_of_expired",
-    cascade_of_voided: "cascade_of_voided"
-  }.freeze
-
   before_save :ensure_number
-  before_save :ensure_share_token
 
   belongs_to :organization
   belongs_to :customer
@@ -32,12 +24,7 @@ class Quote < ApplicationRecord
   has_many :owners, through: :quote_owners, source: :user, class_name: "User"
 
   enum :status, STATUSES, default: :draft, validate: true
-  enum :void_reason, VOID_REASONS, instance_methods: false, validate: {allow_nil: true}
   enum :order_type, ORDER_TYPES, instance_methods: false, validate: true
-
-  validates :share_token, on: :update, presence: true, if: -> { draft? || approved? }
-  validates :void_reason, :voided_at, on: :update, presence: true, if: -> { voided? }
-  validates :approved_at, on: :update, presence: true, if: -> { approved? }
 
   sequenced(
     scope: ->(quote) { quote.organization.quotes },
@@ -54,12 +41,6 @@ class Quote < ApplicationRecord
     formatted_sequential_id = format("%04d", sequential_id)
     self.number = "QT-#{time.strftime("%Y")}-#{formatted_sequential_id}"
   end
-
-  def ensure_share_token
-    return if voided?
-
-    self.share_token ||= SecureRandom.uuid
-  end
 end
 
 # == Schema Information
@@ -68,14 +49,10 @@ end
 # Database name: primary
 #
 #  id              :uuid             not null, primary key
-#  approved_at     :datetime
 #  number          :string           not null
 #  order_type      :enum             not null
-#  share_token     :string
 #  status          :enum             default("draft"), not null
 #  version         :integer          default(1), not null
-#  void_reason     :enum
-#  voided_at       :datetime
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  customer_id     :uuid             not null
@@ -89,7 +66,6 @@ end
 #  index_quotes_on_organization_number                       (organization_id,number)
 #  index_quotes_on_subscription_id                           (subscription_id)
 #  index_unique_quotes_on_organization_sequentialid_version  (organization_id,sequential_id,version DESC) UNIQUE
-#  index_unique_quotes_on_share_token                        (share_token) UNIQUE
 #
 # Foreign Keys
 #

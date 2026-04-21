@@ -369,7 +369,6 @@ DROP INDEX IF EXISTS public.index_usage_monitoring_alert_thresholds_on_organizat
 DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
-DROP INDEX IF EXISTS public.index_unique_quotes_on_share_token;
 DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_sequentialid_version;
 DROP INDEX IF EXISTS public.index_unique_quote_owners_on_quote_user;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
@@ -1117,7 +1116,6 @@ DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_adjustments;
 DROP TYPE IF EXISTS public.subscription_cancelation_reasons;
 DROP TYPE IF EXISTS public.subscription_activation_rule_types;
 DROP TYPE IF EXISTS public.subscription_activation_rule_statuses;
-DROP TYPE IF EXISTS public.quote_void_reason;
 DROP TYPE IF EXISTS public.quote_status;
 DROP TYPE IF EXISTS public.quote_order_type;
 DROP TYPE IF EXISTS public.payment_type;
@@ -1354,18 +1352,6 @@ CREATE TYPE public.quote_status AS ENUM (
     'draft',
     'approved',
     'voided'
-);
-
-
---
--- Name: quote_void_reason; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.quote_void_reason AS ENUM (
-    'manual',
-    'superseded',
-    'cascade_of_expired',
-    'cascade_of_voided'
 );
 
 
@@ -4719,10 +4705,6 @@ CREATE TABLE public.quotes (
     sequential_id integer NOT NULL,
     order_type public.quote_order_type NOT NULL,
     status public.quote_status DEFAULT 'draft'::public.quote_status NOT NULL,
-    approved_at timestamp(6) without time zone,
-    voided_at timestamp(6) without time zone,
-    void_reason public.quote_void_reason,
-    share_token character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     CONSTRAINT quotes_constraint_sequentialid_positive CHECK ((sequential_id > 0)),
@@ -9289,13 +9271,6 @@ CREATE UNIQUE INDEX index_unique_quote_owners_on_quote_user ON public.quote_owne
 --
 
 CREATE UNIQUE INDEX index_unique_quotes_on_organization_sequentialid_version ON public.quotes USING btree (organization_id, sequential_id, version DESC);
-
-
---
--- Name: index_unique_quotes_on_share_token; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_unique_quotes_on_share_token ON public.quotes USING btree (share_token);
 
 
 --

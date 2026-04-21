@@ -4,7 +4,6 @@ class CreateQuotes < ActiveRecord::Migration[8.0]
   def change
     create_enum :quote_status, %w[draft approved voided]
     create_enum :quote_order_type, %w[subscription_creation subscription_amendment one_off]
-    create_enum :quote_void_reason, %w[manual superseded cascade_of_expired cascade_of_voided]
 
     create_table :quotes, id: :uuid, if_not_exists: true do |t|
       t.references :organization, null: false, foreign_key: true, index: false, type: :uuid
@@ -15,10 +14,6 @@ class CreateQuotes < ActiveRecord::Migration[8.0]
       t.integer :sequential_id, null: false
       t.enum :order_type, enum_type: :quote_order_type, null: false
       t.enum :status, enum_type: :quote_status, null: false, default: "draft"
-      t.datetime :approved_at
-      t.datetime :voided_at
-      t.enum :void_reason, enum_type: :quote_void_reason
-      t.string :share_token
       t.timestamps
 
       t.check_constraint "version > 0", name: "quotes_constraint_version_positive"
@@ -28,7 +23,6 @@ class CreateQuotes < ActiveRecord::Migration[8.0]
         order: {version: :desc},
         name: "index_unique_quotes_on_organization_sequentialid_version"
       t.index [:organization_id, :number], name: "index_quotes_on_organization_number"
-      t.index :share_token, unique: true, name: "index_unique_quotes_on_share_token"
     end
   end
 end

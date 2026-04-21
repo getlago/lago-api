@@ -10582,7 +10582,6 @@ type Query {
 }
 
 type Quote {
-  approvedAt: ISO8601DateTime
   createdAt: ISO8601DateTime!
   customer: Customer!
   id: ID!
@@ -10590,13 +10589,10 @@ type Quote {
   orderType: QuoteOrderTypeEnum!
   organization: Organization!
   owners: [User!]
-  shareToken: String
   status: QuoteStatusEnum!
   subscription: Subscription
   updatedAt: ISO8601DateTime!
   version: Int!
-  voidReason: QuoteVoidReasonEnum
-  voidedAt: ISO8601DateTime
 }
 
 """
@@ -10624,13 +10620,6 @@ enum QuoteStatusEnum {
   approved
   draft
   voided
-}
-
-enum QuoteVoidReasonEnum {
-  cascade_of_expired
-  cascade_of_voided
-  manual
-  superseded
 }
 
 enum RecurringTransactionIntervalEnum {

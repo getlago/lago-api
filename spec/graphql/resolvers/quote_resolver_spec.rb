@@ -13,14 +13,10 @@ RSpec.describe Resolvers::QuoteResolver do
           organization { id name }
           subscription { id }
           owners { id email }
-          approvedAt
           number
           orderType
-          shareToken
           status
           version
-          voidReason
-          voidedAt
           createdAt
           updatedAt
         }
@@ -64,14 +60,10 @@ RSpec.describe Resolvers::QuoteResolver do
     expect(quote_response["owners"]).to match_array(
       owners.map { |u| {"id" => u.id, "email" => u.email} }
     )
-    expect(quote_response["approvedAt"]).to eq(quote.approved_at&.iso8601)
     expect(quote_response["number"]).to eq(quote.number)
     expect(quote_response["orderType"]).to eq(quote.order_type)
-    expect(quote_response["shareToken"]).to eq(quote.share_token)
     expect(quote_response["status"]).to eq(quote.status)
     expect(quote_response["version"]).to eq(quote.version)
-    expect(quote_response["voidReason"]).to eq(quote.void_reason)
-    expect(quote_response["voidedAt"]).to eq(quote.voided_at&.iso8601)
     expect(quote_response["createdAt"]).to eq(quote.created_at.iso8601)
     expect(quote_response["updatedAt"]).to eq(quote.updated_at.iso8601)
   end

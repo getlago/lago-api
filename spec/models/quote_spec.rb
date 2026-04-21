@@ -12,11 +12,6 @@ RSpec.describe Quote, type: :model do
         .validating
         .with_values(Quote::STATUSES)
 
-      expect(subject).to define_enum_for(:void_reason)
-        .backed_by_column_of_type(:enum)
-        .with_values(Quote::VOID_REASONS)
-        .without_instance_methods
-
       expect(subject).to define_enum_for(:order_type)
         .backed_by_column_of_type(:enum)
         .validating
@@ -35,49 +30,6 @@ RSpec.describe Quote, type: :model do
     end
   end
 
-  describe "validations" do
-    describe "share_token validation" do
-      it "requires share_token when draft" do
-        q = create(:quote)
-        q.share_token = nil
-        expect(q).not_to be_valid
-        expect(q.errors[:share_token]).to include("value_is_mandatory")
-      end
-
-      it "requires share_token when approved" do
-        q = create(:quote, :approved)
-        q.share_token = nil
-        expect(q).not_to be_valid
-      end
-
-      it "does not require share_token when voided" do
-        q = create(:quote, :voided)
-        q.share_token = nil
-        expect(q).to be_valid
-      end
-    end
-
-    describe "voided fields validation" do
-      it "requires void_reason and voided_at when voided" do
-        q = create(:quote, :voided)
-        q.void_reason = nil
-        q.voided_at = nil
-        expect(q).not_to be_valid
-        expect(q.errors[:void_reason]).to include("value_is_mandatory")
-        expect(q.errors[:voided_at]).to include("value_is_mandatory")
-      end
-    end
-
-    describe "approved_at validation" do
-      it "requires approved_at when approved" do
-        q = create(:quote, :approved)
-        q.approved_at = nil
-        expect(q).not_to be_valid
-        expect(q.errors[:approved_at]).to include("value_is_mandatory")
-      end
-    end
-  end
-
   describe "callbacks" do
     describe "ensure_number" do
       it "sets number to QT-<year>-<4-digit-seq> on save when blank" do
@@ -92,20 +44,6 @@ RSpec.describe Quote, type: :model do
         q = create(:quote, number: "QT-2099-9999")
         q.save!
         expect(q.number).to eq("QT-2099-9999")
-      end
-    end
-
-    describe "ensure_share_token" do
-      it "assigns a share_token on save when blank" do
-        q = build(:quote, share_token: nil)
-        q.save!
-        expect(q.share_token).to be_present
-      end
-
-      it "does not assign a share_token when voided" do
-        q = build(:quote, :voided, share_token: nil)
-        q.save(validate: false)
-        expect(q.share_token).to be_nil
       end
     end
   end
