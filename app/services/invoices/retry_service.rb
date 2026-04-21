@@ -12,7 +12,7 @@ module Invoices
       return result.not_found_failure!(resource: "invoice") unless invoice
       return result.not_allowed_failure!(code: "invalid_status") unless invoice.failed?
 
-      invoice.status = "pending"
+      invoice.status = invoice.subscriptions.any?(&:gated?) ? "open" : "pending"
       invoice.tax_status = "pending"
       invoice.save!
 
