@@ -231,6 +231,7 @@ module Types
     field :update_subscription_alert, mutation: Mutations::Subscriptions::Alerts::Update
 
     field :create_quote, mutation: Mutations::Quotes::Create
+    field :void_quote, mutation: Mutations::Quotes::Void
 
     field :create_feature, mutation: Mutations::Entitlement::CreateFeature
     field :destroy_feature, mutation: Mutations::Entitlement::DestroyFeature

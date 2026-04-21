@@ -17,6 +17,8 @@ RSpec.describe Resolvers::QuoteResolver do
           orderType
           status
           version
+          voidReason
+          voidedAt
           createdAt
           updatedAt
         }
@@ -64,6 +66,8 @@ RSpec.describe Resolvers::QuoteResolver do
     expect(quote_response["orderType"]).to eq(quote.order_type)
     expect(quote_response["status"]).to eq(quote.status)
     expect(quote_response["version"]).to eq(quote.version)
+    expect(quote_response["voidReason"]).to be_nil
+    expect(quote_response["voidedAt"]).to be_nil
     expect(quote_response["createdAt"]).to eq(quote.created_at.iso8601)
     expect(quote_response["updatedAt"]).to eq(quote.updated_at.iso8601)
   end

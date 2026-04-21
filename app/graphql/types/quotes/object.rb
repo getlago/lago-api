@@ -17,6 +17,8 @@ module Types
       field :status, Types::Quotes::StatusEnum, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
       field :version, Integer, null: false
+      field :void_reason, Types::Quotes::VoidReasonEnum, null: true
+      field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
     end
   end
 end

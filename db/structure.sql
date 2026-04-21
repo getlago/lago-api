@@ -1114,6 +1114,7 @@ DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_adjustments;
 DROP TYPE IF EXISTS public.subscription_cancelation_reasons;
 DROP TYPE IF EXISTS public.subscription_activation_rule_types;
 DROP TYPE IF EXISTS public.subscription_activation_rule_statuses;
+DROP TYPE IF EXISTS public.quote_void_reason;
 DROP TYPE IF EXISTS public.quote_status;
 DROP TYPE IF EXISTS public.quote_order_type;
 DROP TYPE IF EXISTS public.payment_type;
@@ -1350,6 +1351,18 @@ CREATE TYPE public.quote_status AS ENUM (
     'draft',
     'approved',
     'voided'
+);
+
+
+--
+-- Name: quote_void_reason; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.quote_void_reason AS ENUM (
+    'manual',
+    'superseded',
+    'cascade_of_expired',
+    'cascade_of_voided'
 );
 
 
@@ -4686,6 +4699,8 @@ CREATE TABLE public.quotes (
     status public.quote_status DEFAULT 'draft'::public.quote_status NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    voided_at timestamp with time zone,
+    void_reason public.quote_void_reason,
     CONSTRAINT quotes_constraint_sequentialid_positive CHECK ((sequential_id > 0)),
     CONSTRAINT quotes_constraint_version_positive CHECK ((version > 0))
 );
@@ -11962,6 +11977,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260422001418'),
 ('20260421133503'),
 ('20260421133501'),
 ('20260420114717'),

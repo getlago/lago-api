@@ -15,6 +15,13 @@ class Quote < ApplicationRecord
     one_off: "one_off"
   }.freeze
 
+  VOID_REASONS = {
+    manual: "manual",
+    superseded: "superseded",
+    cascade_of_expired: "cascade_of_expired",
+    cascade_of_voided: "cascade_of_voided"
+  }.freeze
+
   before_save :ensure_number
 
   belongs_to :organization
@@ -25,6 +32,7 @@ class Quote < ApplicationRecord
 
   enum :status, STATUSES, default: :draft, validate: true
   enum :order_type, ORDER_TYPES, instance_methods: false, validate: true
+  enum :void_reason, VOID_REASONS, instance_methods: false, validate: {allow_nil: true}
 
   sequenced(
     scope: ->(quote) { quote.organization.quotes },
@@ -53,6 +61,8 @@ end
 #  order_type      :enum             not null
 #  status          :enum             default("draft"), not null
 #  version         :integer          default(1), not null
+#  void_reason     :enum
+#  voided_at       :timestamptz
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  customer_id     :uuid             not null

@@ -16,6 +16,8 @@ RSpec.describe Types::Quotes::Object do
     expect(subject).to have_field(:owners).of_type("[User!]")
     expect(subject).to have_field(:status).of_type("QuoteStatusEnum!")
     expect(subject).to have_field(:version).of_type("Int!")
+    expect(subject).to have_field(:void_reason).of_type("QuoteVoidReasonEnum")
+    expect(subject).to have_field(:voided_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
   end

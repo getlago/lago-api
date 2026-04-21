@@ -17,6 +17,11 @@ RSpec.describe Quote, type: :model do
         .validating
         .with_values(Quote::ORDER_TYPES)
         .without_instance_methods
+
+      expect(subject).to define_enum_for(:void_reason)
+        .backed_by_column_of_type(:enum)
+        .with_values(Quote::VOID_REASONS)
+        .without_instance_methods
     end
   end
 
