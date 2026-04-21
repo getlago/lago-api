@@ -98,5 +98,25 @@ RSpec.describe Invoices::RetryService do
       expect(invoice.reload.status).to eq("pending")
       expect(invoice.reload.tax_status).to eq("pending")
     end
+
+    context "when invoice is subscription_gated" do
+      let(:gated_subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+          customer:, organization:)
+      end
+
+      before do
+        create(:invoice_subscription, invoice:, subscription: gated_subscription)
+        invoice.update!(status: :failed)
+      end
+
+      it "sets invoice status to open instead of pending" do
+        retry_service.call
+
+        expect(invoice.reload.status).to eq("open")
+        expect(invoice.reload.tax_status).to eq("pending")
+      end
+    end
   end
 end

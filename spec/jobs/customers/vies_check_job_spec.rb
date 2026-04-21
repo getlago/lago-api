@@ -65,6 +65,25 @@ RSpec.describe Customers::ViesCheckJob do
         expect { described_class.perform_now(customer) }
           .not_to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(pending_but_tax_succeeded_invoice)
       end
+
+      context "when customer has gated invoices blocked by VIES" do
+        let(:subscription) do
+          create(:subscription, :incomplete, :with_activation_rules,
+            activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+            customer:, organization: customer.organization)
+        end
+        let(:gated_invoice) do
+          create(:invoice, :with_subscriptions, customer:, organization: customer.organization,
+            status: :open, tax_status: "pending", subscriptions: [subscription])
+        end
+
+        before { gated_invoice }
+
+        it "enqueues FinalizePendingViesInvoiceJob for gated invoices with pending tax_status" do
+          expect { described_class.perform_now(customer) }
+            .to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(gated_invoice)
+        end
+      end
     end
   end
 

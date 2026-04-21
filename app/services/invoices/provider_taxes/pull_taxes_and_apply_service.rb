@@ -12,7 +12,7 @@ module Invoices
       def call
         return result.not_found_failure!(resource: "invoice") unless invoice
         return result.not_found_failure!(resource: "integration_customer") unless customer.tax_customer
-        return result unless invoice.pending? || invoice.draft?
+        return result unless invoice.pending? || invoice.draft? || invoice.subscription_gated?
         return result unless invoice.tax_pending?
 
         invoice.error_details.tax_error.discard_all # rubocop:disable Lago/DiscardAll
@@ -54,7 +54,9 @@ module Invoices
           result.invoice = invoice
         end
 
-        if invoice.finalized?
+        if invoice.subscription_gated?
+          Invoices::Payments::CreateService.call_async(invoice:)
+        elsif invoice.finalized?
           SendWebhookJob.perform_later("invoice.created", invoice)
           Utils::ActivityLog.produce(invoice, "invoice.created")
           GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
