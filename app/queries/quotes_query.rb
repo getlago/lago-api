@@ -6,7 +6,7 @@ class QuotesQuery < BaseQuery
   Result = BaseResult[:quotes]
   Filters = BaseFilters[:customer, :status, :number, :version, :from_date, :to_date, :owners]
 
-  def initialize(latest_version_only:, **args)
+  def initialize(latest_version_only: false, **args)
     @latest_version_only = latest_version_only
     super(**args)
   end
@@ -67,10 +67,12 @@ class QuotesQuery < BaseQuery
   end
 
   def with_owners(scope)
-    scope.joins(:quote_owners).where(quote_owners: {user_id: filters.owners})
+    scope.joins(:quote_owners).where(quote_owners: {user_id: filters.owners}).distinct
   end
 
   def with_latest_version_only(scope)
-    scope.select("DISTINCT ON (sequential_id) *").order(:sequential_id, version: :desc)
+    scope.distinct(false)
+      .select("DISTINCT ON (quotes.sequential_id) quotes.*")
+      .order("quotes.sequential_id, quotes.version DESC")
   end
 end

@@ -783,11 +783,6 @@ type AvalaraIntegration {
   name: String!
 }
 
-enum BackdatedBillingEnum {
-  generate_past_invoices
-  start_without_invoices
-}
-
 """
 Represents non-fractional signed whole numeric values. Since the value may
 exceed the size of a 32-bit integer, it's encoded as a string.
@@ -5728,11 +5723,6 @@ enum EventTypeEnum {
   wallet_updated
 }
 
-enum ExecutionModeEnum {
-  execute_in_lago
-  order_only
-}
-
 """
 Organization Feature Flag Values
 """
@@ -8897,12 +8887,6 @@ enum OrderByEnum {
   net_revenue_amount_cents
 }
 
-enum OrderTypeEnum {
-  one_off
-  subscription_amendment
-  subscription_creation
-}
-
 """
 Safe Organization Type
 """
@@ -10356,7 +10340,7 @@ type Query {
   """
   Query quotes of an organization
   """
-  quotes(customer: [ID!], fromDate: ISO8601Date, latestVersionOnly: Boolean, limit: Int, number: [String!], owners: [ID!], page: Int, status: [StatusEnum!], toDate: ISO8601Date, version: [Int!]): QuoteCollection!
+  quotes(customer: [ID!], fromDate: ISO8601Date, latestVersionOnly: Boolean, limit: Int, number: [String!], owners: [ID!], page: Int, status: [QuoteStatusEnum!], toDate: ISO8601Date, version: [Int!]): QuoteCollection!
 
   """
   Query a single role
@@ -10600,7 +10584,7 @@ type Query {
 type Quote {
   approvedAt: ISO8601DateTime
   autoExecute: Boolean!
-  backdatedBilling: BackdatedBillingEnum
+  backdatedBilling: QuoteBackdatedBillingEnum
   billingItems: JSON
   commercialTerms: JSON
   contacts: JSON
@@ -10609,21 +10593,26 @@ type Quote {
   currency: String
   customer: Customer!
   description: String
-  executionMode: ExecutionModeEnum
+  executionMode: QuoteExecutionModeEnum
   id: ID!
   internalNotes: String
   legalText: String
   metadata: JSON
   number: String!
-  orderType: OrderTypeEnum!
+  orderType: QuoteOrderTypeEnum!
   organization: Organization!
   owners: [User!]
   shareToken: String
-  status: StatusEnum!
+  status: QuoteStatusEnum!
   updatedAt: ISO8601DateTime!
   version: Int!
-  voidReason: VoidReasonEnum
+  voidReason: QuoteVoidReasonEnum
   voidedAt: ISO8601DateTime
+}
+
+enum QuoteBackdatedBillingEnum {
+  generate_past_invoices
+  start_without_invoices
 }
 
 """
@@ -10639,6 +10628,30 @@ type QuoteCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+enum QuoteExecutionModeEnum {
+  execute_in_lago
+  order_only
+}
+
+enum QuoteOrderTypeEnum {
+  one_off
+  subscription_amendment
+  subscription_creation
+}
+
+enum QuoteStatusEnum {
+  approved
+  draft
+  voided
+}
+
+enum QuoteVoidReasonEnum {
+  cascade_of_expired
+  cascade_of_voided
+  manual
+  superseded
 }
 
 enum RecurringTransactionIntervalEnum {
@@ -11159,12 +11172,6 @@ input SetAsDefaultInput {
   """
   clientMutationId: String
   id: ID!
-}
-
-enum StatusEnum {
-  approved
-  draft
-  voided
 }
 
 enum StatusTypeEnum {
@@ -13137,13 +13144,6 @@ input VoidInvoiceInput {
   generateCreditNote: Boolean
   id: ID!
   refundAmount: BigInt
-}
-
-enum VoidReasonEnum {
-  cascade_of_expired
-  cascade_of_voided
-  manual
-  superseded
 }
 
 """

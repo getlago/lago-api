@@ -27,6 +27,7 @@ RSpec.describe Resolvers::QuotesResolver do
         :quote,
         organization:,
         customer:,
+        sequential_id: 1,
         number:,
         status: :voided,
         void_reason: :manual,

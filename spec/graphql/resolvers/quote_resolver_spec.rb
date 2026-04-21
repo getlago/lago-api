@@ -11,6 +11,7 @@ RSpec.describe Resolvers::QuoteResolver do
           id
           customer { id name }
           organization { id name }
+          owners { id email }
           approvedAt
           autoExecute
           backdatedBilling
@@ -42,9 +43,10 @@ RSpec.describe Resolvers::QuoteResolver do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
+  let(:owners) { create_list(:membership, 2, organization:).map(&:user) }
 
   before do
-    quote
+    owners.each { |u| create(:quote_owner, organization:, quote:, user: u) }
   end
 
   it_behaves_like "requires current user"
@@ -69,6 +71,9 @@ RSpec.describe Resolvers::QuoteResolver do
     expect(quote_response["organization"]["name"]).to eq(organization.name)
     expect(quote_response["customer"]["id"]).to eq(customer.id)
     expect(quote_response["customer"]["name"]).to eq(customer.name)
+    expect(quote_response["owners"]).to match_array(
+      owners.map { |u| {"id" => u.id, "email" => u.email} }
+    )
     expect(quote_response["approvedAt"]).to eq(quote.approved_at&.iso8601)
     expect(quote_response["autoExecute"]).to eq(quote.auto_execute)
     expect(quote_response["backdatedBilling"]).to eq(quote.backdated_billing)

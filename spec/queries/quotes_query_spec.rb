@@ -43,5 +43,95 @@ RSpec.describe QuotesQuery do
         ])
       end
     end
+
+    context "with latest_version_only combined with owners filter" do
+      let(:latest_version_only) { true }
+      let(:user) { create(:membership, organization:).user }
+      let(:filters) { {owners: [user.id]} }
+
+      before do
+        create(:quote_owner, organization:, quote: q1_v3, user:)
+        create(:quote_owner, organization:, quote: q2_v1, user:)
+      end
+
+      it "returns the latest version per sequential_id without raising" do
+        numbers_versions = result.quotes.pluck(:number, :version)
+        expect(numbers_versions).to match_array([
+          ["QT-2024-0001", 3],
+          ["QT-2024-0002", 1]
+        ])
+      end
+    end
+  end
+
+  describe "date filtering" do
+    let!(:older) do
+      create(
+        :quote,
+        organization:,
+        customer:,
+        sequential_id: 1,
+        version: 1,
+        number: "QT-2024-0001",
+        created_at: Time.zone.parse("2024-01-01 10:00:00")
+      )
+    end
+    let!(:inside) do
+      create(
+        :quote,
+        organization:,
+        customer:,
+        sequential_id: 2,
+        version: 1,
+        number: "QT-2024-0002",
+        created_at: Time.zone.parse("2024-02-15 10:00:00")
+      )
+    end
+    let!(:newer) do
+      create(
+        :quote,
+        organization:,
+        customer:,
+        sequential_id: 3,
+        version: 1,
+        number: "QT-2024-0003",
+        created_at: Time.zone.parse("2024-03-10 10:00:00")
+      )
+    end
+    let(:filters) do
+      {
+        from_date: Date.new(2024, 2, 1),
+        to_date: Date.new(2024, 2, 28)
+      }
+    end
+
+    it "only returns quotes created within the date window" do
+      expect(result.quotes.pluck(:number)).to eq(["QT-2024-0002"])
+    end
+  end
+
+  describe "owners filter deduplication" do
+    let(:user1) { create(:membership, organization:).user }
+    let(:user2) { create(:membership, organization:).user }
+    let!(:quote) do
+      create(
+        :quote,
+        organization:,
+        customer:,
+        sequential_id: 1,
+        version: 1,
+        number: "QT-2024-0001"
+      )
+    end
+    let(:filters) { {owners: [user1.id, user2.id]} }
+
+    before do
+      create(:quote_owner, organization:, quote:, user: user1)
+      create(:quote_owner, organization:, quote:, user: user2)
+    end
+
+    it "returns each matching quote only once" do
+      expect(result.quotes.to_a.map(&:id)).to eq([quote.id])
+    end
   end
 end

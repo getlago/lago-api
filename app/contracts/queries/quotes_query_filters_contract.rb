@@ -15,8 +15,8 @@ module Queries
       optional(:version).maybe do
         array(:integer, gt?: 0)
       end
-      optional(:from_date).maybe(:time)
-      optional(:to_date).maybe(:time)
+      optional(:from_date).maybe(:date)
+      optional(:to_date).maybe(:date)
       optional(:owners).maybe do
         array(:string, format?: Regex::UUID)
       end
