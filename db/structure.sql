@@ -5060,7 +5060,8 @@ CREATE TABLE public.subscription_rate_schedules (
     started_at timestamp(6) without time zone,
     ended_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    billing_anchor_date date
 );
 
 
@@ -12769,6 +12770,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260429133133'),
 ('20260424170418'),
 ('20260421123920'),
 ('20260421103557'),
