@@ -573,6 +573,48 @@ RSpec.describe Invoices::SubscriptionService do
       end
     end
 
+    context "when subscription is gated" do
+      let(:invoicing_reason) { :subscription_starting }
+      let(:pay_in_advance) { true }
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+          plan:, customer:, organization: customer.organization,
+          subscription_at: started_at.to_date, started_at:, created_at: started_at)
+      end
+
+      it "creates an open invoice" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to be_open
+      end
+
+      it "skips grace period" do
+        result = invoice_service.call
+
+        expect(result.invoice.issuing_date.to_s).to eq(Time.zone.at(timestamp).to_date.to_s)
+      end
+
+      it "does not send invoice.created webhook" do
+        invoice_service.call
+
+        expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
+      end
+
+      it "does not generate documents" do
+        invoice_service.call
+
+        expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
+      end
+
+      it "triggers payment" do
+        invoice_service.call
+
+        expect(Invoices::Payments::CreateService).to have_received(:call_async)
+      end
+    end
+
     context "when an error occurs" do
       context "with a stale object error" do
         it "propagates the error" do
