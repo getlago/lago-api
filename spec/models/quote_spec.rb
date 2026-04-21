@@ -28,7 +28,9 @@ RSpec.describe Quote, type: :model do
       expect(subject).to have_many(:quote_owners).dependent(:destroy)
       expect(subject).to have_many(:owners).through(:quote_owners).source(:user).class_name("User")
     end
+  end
 
+  describe "customer association" do
     it "loads a discarded customer" do
       customer = create(:customer)
       quote = create(:quote, organization: customer.organization, customer:)
@@ -38,7 +40,7 @@ RSpec.describe Quote, type: :model do
     end
   end
 
-  describe "#number" do
+  describe "number" do
     it "is set to QT-<year>-<4-digit-seq> on save when blank" do
       org = create(:organization)
       customer = create(:customer, organization: org)
