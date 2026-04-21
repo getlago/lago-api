@@ -117,6 +117,31 @@ RSpec.describe Coupons::CreateService do
       end
     end
 
+    context "when frequency is recurring without frequency_duration" do
+      let(:create_args) do
+        {
+          name: "Super Coupon",
+          code: coupon_code,
+          organization_id: organization.id,
+          coupon_type: "fixed_amount",
+          frequency: "recurring",
+          amount_cents: 100,
+          amount_currency: "EUR",
+          expiration: "no_expiration",
+          reusable: false
+        }
+      end
+
+      it "fails with a validation error" do
+        expect { create_service.call }.not_to change(Coupon, :count)
+
+        result = create_service.call
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:frequency_duration)
+      end
+    end
+
     context "with plan limitations in graphql context" do
       let(:plan) { create(:plan, organization:) }
       let(:create_args) do
