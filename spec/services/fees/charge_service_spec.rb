@@ -233,7 +233,6 @@ RSpec.describe Fees::ChargeService, :premium do
         end
       end
 
-      # TODO(pricing_group_keys): remove after deprecation of grouped_by
       context "with grouped standard charge" do
         let(:charge) do
           create(
@@ -242,7 +241,7 @@ RSpec.describe Fees::ChargeService, :premium do
             billable_metric:,
             properties: {
               amount: "20",
-              grouped_by: ["cloud"]
+              pricing_group_keys: ["cloud"]
             }
           )
         end
@@ -3763,13 +3762,13 @@ RSpec.describe Fees::ChargeService, :premium do
               end
             end
 
-            context "with grouped_by keys" do
+            context "with pricing_group_keys keys" do
               let(:charge) do
                 create(
                   :standard_charge,
                   plan: subscription.plan,
                   billable_metric:,
-                  properties: {amount: "100", grouped_by: ["region"]}
+                  properties: {amount: "100", pricing_group_keys: ["region"]}
                 )
               end
 
