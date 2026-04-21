@@ -8,7 +8,7 @@ class CreateQuotes < ActiveRecord::Migration[8.0]
     create_enum :quote_execution_mode, %w[execute_in_lago order_only]
     create_enum :quote_backdated_billing, %w[generate_past_invoices start_without_invoices]
 
-    create_table :quotes, id: :uuid do |t|
+    create_table :quotes, id: :uuid, if_not_exists: true do |t|
       t.references :organization, null: false, foreign_key: true, index: false, type: :uuid
       t.references :customer, null: false, foreign_key: true, type: :uuid
       t.string :number, null: false
