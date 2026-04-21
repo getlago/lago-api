@@ -535,9 +535,7 @@ RSpec.describe AdjustedFees::CreateService do
       end
     end
 
-    context "when invoice type is not subscription" do
-      before { invoice.update!(invoice_type: :advance_charges, status: :generating) }
-
+    context "when called with preview: true" do
       it "returns success without calling RefreshDraftService" do
         result = described_class.new(invoice:, params:, preview: true).call
 
@@ -546,20 +544,20 @@ RSpec.describe AdjustedFees::CreateService do
         expect(result.adjusted_fee).to be_a(AdjustedFee)
         expect(Invoices::RefreshDraftService).not_to have_received(:call)
       end
-    end
 
-    context "when license is not premium" do
-      it "returns forbidden status" do
-        result = create_service.call
+      context "when license is not premium" do
+        it "returns forbidden status" do
+          result = create_service.call
 
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("feature_unavailable")
-      end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("feature_unavailable")
+        end
 
-      it "returns the estimated adjusted fee" do
-        result = described_class.new(invoice:, params:, preview: true).call
-        expect(result).to be_success
+        it "returns the estimated adjusted fee" do
+          result = described_class.new(invoice:, params:, preview: true).call
+          expect(result).to be_success
+        end
       end
     end
   end

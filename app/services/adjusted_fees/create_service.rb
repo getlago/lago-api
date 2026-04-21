@@ -51,7 +51,7 @@ module AdjustedFees
       fixed_charge_id = fee.fixed_charge_id
       charge_filter_id = fee.charge_filter_id
 
-      if invoice.subscription?
+      unless preview
         refresh_result = Invoices::RefreshDraftService.call(invoice: invoice)
         refresh_result.raise_if_error!
       end
