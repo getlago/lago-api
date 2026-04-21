@@ -78,6 +78,34 @@ RSpec.describe Quotes::CreateService do
       end
     end
 
+    context "with order_type subscription_creation" do
+      let(:params) { {customer_id: customer.id, order_type: "subscription_creation"} }
+
+      it "creates a quote with order_type subscription_creation" do
+        expect(result).to be_success
+        expect(result.quote.order_type).to eq("subscription_creation")
+      end
+    end
+
+    context "when subscription_id is an empty string" do
+      let(:params) { {customer_id: customer.id, subscription_id: "", order_type: "one_off"} }
+
+      it "creates a quote without a subscription" do
+        expect(result).to be_success
+        expect(result.quote.subscription_id).to be_nil
+      end
+    end
+
+    context "when customer has been discarded" do
+      before { customer.discard! }
+
+      it "returns a not_found failure for customer" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("customer")
+      end
+    end
+
     context "with owners" do
       let(:owner_membership) { create(:membership, organization:) }
       let(:other_owner_membership) { create(:membership, organization:) }
@@ -94,6 +122,46 @@ RSpec.describe Quotes::CreateService do
 
         expect(result).to be_success
         expect(result.quote.owners).to match_array([owner_membership.user, other_owner_membership.user])
+      end
+    end
+
+    context "with owners nil" do
+      let(:params) { {customer_id: customer.id, order_type: "one_off", owners: nil} }
+
+      it "creates a quote with no owners" do
+        expect { result }.not_to change(QuoteOwner, :count)
+
+        expect(result).to be_success
+        expect(result.quote.owners).to be_empty
+      end
+    end
+
+    context "with owners as an empty array" do
+      let(:params) { {customer_id: customer.id, order_type: "one_off", owners: []} }
+
+      it "creates a quote with no owners" do
+        expect { result }.not_to change(QuoteOwner, :count)
+
+        expect(result).to be_success
+        expect(result.quote.owners).to be_empty
+      end
+    end
+
+    context "when the same owner id is passed twice" do
+      let(:owner_membership) { create(:membership, organization:) }
+      let(:params) do
+        {
+          customer_id: customer.id,
+          order_type: "one_off",
+          owners: [owner_membership.user_id, owner_membership.user_id]
+        }
+      end
+
+      it "deduplicates and creates a single quote_owner row" do
+        expect { result }.to change(QuoteOwner, :count).by(1)
+
+        expect(result).to be_success
+        expect(result.quote.owners).to eq([owner_membership.user])
       end
     end
 
