@@ -177,6 +177,27 @@ RSpec.describe QuotesQuery do
       end
     end
 
+    context "with to_date only" do
+      let!(:yesterday_quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001", created_at: 1.day.ago) }
+      let!(:today_quote) { create(:quote, organization:, customer:, sequential_id: 2, version: 1, number: "QT-2024-0002", created_at: Time.current) }
+      let(:filters) { {to_date: Date.today} }
+
+      it "returns quotes created up to the end of to_date" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to match_array([yesterday_quote.id, today_quote.id])
+      end
+    end
+
+    context "with to_date equal to the created day" do
+      let!(:quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001", created_at: Time.current) }
+      let(:filters) { {to_date: Date.current} }
+
+      it "includes quotes created earlier the same day" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to eq([quote.id])
+      end
+    end
+
     context "with owners filter" do
       let(:user_one) { create(:user) }
       let(:user_two) { create(:user) }
@@ -228,6 +249,23 @@ RSpec.describe QuotesQuery do
         expect(result.quotes.pluck(:number, :version)).to eq([
           ["QT-2024-0002", 1],
           ["QT-2024-0001", 3]
+        ])
+      end
+    end
+
+    context "with latest_version_only combined with a status filter" do
+      let!(:draft_v1) { create(:quote, organization:, customer:, sequential_id: 10, version: 1, number: "QT-2025-0010", status: :draft) }
+      let!(:approved_v2) { create(:quote, organization:, customer:, sequential_id: 10, version: 2, number: "QT-2025-0010", status: :approved) }
+
+      let(:latest_version_only) { true }
+      let(:filters) { {status: ["draft"]} }
+
+      it "filters first, then picks the latest among the filtered versions" do
+        # Intended behaviour: when a quote has v1=draft and v2=approved, and the
+        # caller filters on status=draft with latest_version_only, we surface v1.
+        # The filter applies BEFORE the DISTINCT ON roll-up.
+        expect(result.quotes.pluck(:number, :version)).to eq([
+          ["QT-2025-0010", 1]
         ])
       end
     end

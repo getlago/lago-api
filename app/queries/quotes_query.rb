@@ -63,7 +63,9 @@ class QuotesQuery < BaseQuery
   end
 
   def with_date(scope)
-    scope.where(created_at: filters.from_date..filters.to_date)
+    scope = scope.where(created_at: filters.from_date..) if filters.from_date
+    scope = scope.where(created_at: ..filters.to_date.end_of_day) if filters.to_date
+    scope
   end
 
   def with_owners(scope)
