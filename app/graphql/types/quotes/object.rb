@@ -10,8 +10,6 @@ module Types
       field :organization, Types::Organizations::OrganizationType, null: false
 
       field :approved_at, GraphQL::Types::ISO8601DateTime, null: true
-      field :auto_execute, Boolean, null: false
-      field :backdated_billing, Types::Quotes::BackdatedBillingEnum, null: true
       field :billing_items, GraphQL::Types::JSON, null: true
       field :commercial_terms, GraphQL::Types::JSON, null: true
       field :contacts, GraphQL::Types::JSON, null: true
@@ -19,7 +17,6 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :currency, String, null: true
       field :description, String, null: true
-      field :execution_mode, Types::Quotes::ExecutionModeEnum, null: true
       field :internal_notes, String, null: true
       field :legal_text, String, null: true
       field :metadata, GraphQL::Types::JSON, null: true

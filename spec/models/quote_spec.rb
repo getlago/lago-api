@@ -22,16 +22,6 @@ RSpec.describe Quote, type: :model do
         .validating
         .with_values(Quote::ORDER_TYPES)
         .without_instance_methods
-
-      expect(subject).to define_enum_for(:execution_mode)
-        .backed_by_column_of_type(:enum)
-        .with_values(Quote::EXECUTION_MODES)
-        .without_instance_methods
-
-      expect(subject).to define_enum_for(:backdated_billing)
-        .backed_by_column_of_type(:enum)
-        .with_values(Quote::BACKDATED_BILLING_OPTIONS)
-        .without_instance_methods
     end
   end
 

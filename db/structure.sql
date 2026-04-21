@@ -1118,8 +1118,6 @@ DROP TYPE IF EXISTS public.subscription_activation_rule_statuses;
 DROP TYPE IF EXISTS public.quote_void_reason;
 DROP TYPE IF EXISTS public.quote_status;
 DROP TYPE IF EXISTS public.quote_order_type;
-DROP TYPE IF EXISTS public.quote_execution_mode;
-DROP TYPE IF EXISTS public.quote_backdated_billing;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
@@ -1332,26 +1330,6 @@ CREATE TYPE public.payment_payable_payment_status AS ENUM (
 CREATE TYPE public.payment_type AS ENUM (
     'provider',
     'manual'
-);
-
-
---
--- Name: quote_backdated_billing; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.quote_backdated_billing AS ENUM (
-    'generate_past_invoices',
-    'start_without_invoices'
-);
-
-
---
--- Name: quote_execution_mode; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.quote_execution_mode AS ENUM (
-    'execute_in_lago',
-    'order_only'
 );
 
 
@@ -4752,9 +4730,6 @@ CREATE TABLE public.quotes (
     internal_notes text,
     contacts jsonb,
     metadata jsonb,
-    auto_execute boolean DEFAULT false NOT NULL,
-    backdated_billing public.quote_backdated_billing,
-    execution_mode public.quote_execution_mode,
     share_token character varying,
     CONSTRAINT quotes_constraint_sequentialid_positive CHECK ((sequential_id > 0)),
     CONSTRAINT quotes_constraint_version_positive CHECK ((version > 0))

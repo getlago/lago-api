@@ -13,15 +13,12 @@ RSpec.describe Resolvers::QuoteResolver do
           organization { id name }
           owners { id email }
           approvedAt
-          autoExecute
-          backdatedBilling
           billingItems
           commercialTerms
           contacts
           content
           currency
           description
-          executionMode
           internalNotes
           legalText
           metadata
@@ -75,15 +72,12 @@ RSpec.describe Resolvers::QuoteResolver do
       owners.map { |u| {"id" => u.id, "email" => u.email} }
     )
     expect(quote_response["approvedAt"]).to eq(quote.approved_at&.iso8601)
-    expect(quote_response["autoExecute"]).to eq(quote.auto_execute)
-    expect(quote_response["backdatedBilling"]).to eq(quote.backdated_billing)
     expect(quote_response["billingItems"]).to eq(quote.billing_items)
     expect(quote_response["commercialTerms"]).to eq(quote.commercial_terms)
     expect(quote_response["contacts"]).to eq(quote.contacts)
     expect(quote_response["content"]).to eq(quote.content)
     expect(quote_response["currency"]).to eq(quote.currency)
     expect(quote_response["description"]).to eq(quote.description)
-    expect(quote_response["executionMode"]).to eq(quote.execution_mode)
     expect(quote_response["internalNotes"]).to eq(quote.internal_notes)
     expect(quote_response["legalText"]).to eq(quote.legal_text)
     expect(quote_response["metadata"]).to eq(quote.metadata)

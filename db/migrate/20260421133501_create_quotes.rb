@@ -5,8 +5,6 @@ class CreateQuotes < ActiveRecord::Migration[8.0]
     create_enum :quote_status, %w[draft approved voided]
     create_enum :quote_order_type, %w[subscription_creation subscription_amendment one_off]
     create_enum :quote_void_reason, %w[manual superseded cascade_of_expired cascade_of_voided]
-    create_enum :quote_execution_mode, %w[execute_in_lago order_only]
-    create_enum :quote_backdated_billing, %w[generate_past_invoices start_without_invoices]
 
     create_table :quotes, id: :uuid, if_not_exists: true do |t|
       t.references :organization, null: false, foreign_key: true, index: false, type: :uuid
@@ -29,9 +27,6 @@ class CreateQuotes < ActiveRecord::Migration[8.0]
       t.text :internal_notes
       t.jsonb :contacts
       t.jsonb :metadata
-      t.boolean :auto_execute, null: false, default: false
-      t.enum :backdated_billing, enum_type: :quote_backdated_billing
-      t.enum :execution_mode, enum_type: :quote_execution_mode
       t.string :share_token
 
       t.check_constraint "version > 0", name: "quotes_constraint_version_positive"

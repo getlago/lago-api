@@ -10583,8 +10583,6 @@ type Query {
 
 type Quote {
   approvedAt: ISO8601DateTime
-  autoExecute: Boolean!
-  backdatedBilling: QuoteBackdatedBillingEnum
   billingItems: JSON
   commercialTerms: JSON
   contacts: JSON
@@ -10593,7 +10591,6 @@ type Quote {
   currency: String
   customer: Customer!
   description: String
-  executionMode: QuoteExecutionModeEnum
   id: ID!
   internalNotes: String
   legalText: String
@@ -10610,11 +10607,6 @@ type Quote {
   voidedAt: ISO8601DateTime
 }
 
-enum QuoteBackdatedBillingEnum {
-  generate_past_invoices
-  start_without_invoices
-}
-
 """
 QuoteCollection type
 """
@@ -10628,11 +10620,6 @@ type QuoteCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
-}
-
-enum QuoteExecutionModeEnum {
-  execute_in_lago
-  order_only
 }
 
 enum QuoteOrderTypeEnum {

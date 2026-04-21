@@ -22,16 +22,6 @@ class Quote < ApplicationRecord
     cascade_of_voided: "cascade_of_voided"
   }.freeze
 
-  EXECUTION_MODES = {
-    execute_in_lago: "execute_in_lago",
-    order_only: "order_only"
-  }.freeze
-
-  BACKDATED_BILLING_OPTIONS = {
-    generate_past_invoices: "generate_past_invoices",
-    start_without_invoices: "start_without_invoices"
-  }.freeze
-
   before_save :ensure_number
   before_save :ensure_share_token
 
@@ -43,8 +33,6 @@ class Quote < ApplicationRecord
   enum :status, STATUSES, default: :draft, validate: true
   enum :void_reason, VOID_REASONS, instance_methods: false, validate: {allow_nil: true}
   enum :order_type, ORDER_TYPES, instance_methods: false, validate: true
-  enum :execution_mode, EXECUTION_MODES, instance_methods: false, validate: {allow_nil: true}
-  enum :backdated_billing, BACKDATED_BILLING_OPTIONS, instance_methods: false, validate: {allow_nil: true}
 
   validates :share_token, on: :update, presence: true, if: -> { draft? || approved? }
   validates :void_reason, :voided_at, on: :update, presence: true, if: -> { voided? }
@@ -78,32 +66,29 @@ end
 # Table name: quotes
 # Database name: primary
 #
-#  id                :uuid             not null, primary key
-#  approved_at       :datetime
-#  auto_execute      :boolean          default(FALSE), not null
-#  backdated_billing :enum
-#  billing_items     :jsonb
-#  commercial_terms  :jsonb
-#  contacts          :jsonb
-#  content           :text
-#  currency          :string
-#  description       :text
-#  execution_mode    :enum
-#  internal_notes    :text
-#  legal_text        :text
-#  metadata          :jsonb
-#  number            :string           not null
-#  order_type        :enum             not null
-#  share_token       :string
-#  status            :enum             default("draft"), not null
-#  version           :integer          default(1), not null
-#  void_reason       :enum
-#  voided_at         :datetime
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  customer_id       :uuid             not null
-#  organization_id   :uuid             not null
-#  sequential_id     :integer          not null
+#  id               :uuid             not null, primary key
+#  approved_at      :datetime
+#  billing_items    :jsonb
+#  commercial_terms :jsonb
+#  contacts         :jsonb
+#  content          :text
+#  currency         :string
+#  description      :text
+#  internal_notes   :text
+#  legal_text       :text
+#  metadata         :jsonb
+#  number           :string           not null
+#  order_type       :enum             not null
+#  share_token      :string
+#  status           :enum             default("draft"), not null
+#  version          :integer          default(1), not null
+#  void_reason      :enum
+#  voided_at        :datetime
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  customer_id      :uuid             not null
+#  organization_id  :uuid             not null
+#  sequential_id    :integer          not null
 #
 # Indexes
 #
