@@ -87,6 +87,7 @@ RSpec.describe Queries::QuotesQueryFiltersContract do
     it_behaves_like "an invalid filter", :number, "QT-2024-0001", ["must be an array"]
     it_behaves_like "an invalid filter", :number, ["random"], {0 => ["is in invalid format"]}
     it_behaves_like "an invalid filter", :version, [0], {0 => ["must be greater than 0"]}
+    it_behaves_like "an invalid filter", :version, [-1], {0 => ["must be greater than 0"]}
     it_behaves_like "an invalid filter", :version, ["not-an-integer"], {0 => ["must be an integer"]}
     it_behaves_like "an invalid filter", :from_date, "not-a-date", ["must be a date"]
     it_behaves_like "an invalid filter", :to_date, "not-a-date", ["must be a date"]

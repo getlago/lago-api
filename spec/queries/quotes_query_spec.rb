@@ -106,6 +106,18 @@ RSpec.describe QuotesQuery do
         expect(result.quotes.total_pages).to eq(2)
       end
     end
+
+    context "with pagination combined with a filter" do
+      let(:pagination) { {page: 2, limit: 2} }
+      let(:filters) { {status: ["draft"]} }
+
+      it "paginates within the filtered set" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:number)).to eq(["QT-2024-0002", "QT-2024-0001"])
+        expect(result.quotes.total_count).to eq(4)
+        expect(result.quotes.total_pages).to eq(2)
+      end
+    end
   end
 
   describe "filters" do
@@ -121,6 +133,32 @@ RSpec.describe QuotesQuery do
       end
     end
 
+    context "with an empty customer filter" do
+      let!(:quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let(:filters) { {customer: []} }
+
+      it "behaves as no filter and returns all quotes" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to eq([quote.id])
+      end
+    end
+
+    context "with combined customer and status filters" do
+      let(:other_customer) { create(:customer, organization:) }
+      let!(:draft_for_customer) { create(:quote, organization:, customer:, status: :draft, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let(:filters) { {customer: [customer.id], status: ["draft"]} }
+
+      before do
+        create(:quote, organization:, customer:, status: :approved, sequential_id: 2, version: 1, number: "QT-2024-0002")
+        create(:quote, organization:, customer: other_customer, status: :draft, sequential_id: 3, version: 1, number: "QT-2024-0003")
+      end
+
+      it "returns the intersection of matching customer and status" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to eq([draft_for_customer.id])
+      end
+    end
+
     context "with status filter" do
       let!(:draft_quote) { create(:quote, organization:, customer:, status: :draft, sequential_id: 1, version: 1, number: "QT-2024-0001") }
       let!(:approved_quote) { create(:quote, organization:, customer:, status: :approved, sequential_id: 2, version: 1, number: "QT-2024-0002") }
@@ -133,6 +171,16 @@ RSpec.describe QuotesQuery do
       end
     end
 
+    context "with an empty status filter" do
+      let!(:quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let(:filters) { {status: []} }
+
+      it "behaves as no filter and returns all quotes" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to eq([quote.id])
+      end
+    end
+
     context "with number filter" do
       let!(:matching_quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
       let!(:other_quote) { create(:quote, organization:, customer:, sequential_id: 2, version: 1, number: "QT-2024-0002") }
@@ -141,6 +189,16 @@ RSpec.describe QuotesQuery do
       it "returns only quotes matching the numbers" do
         expect(result).to be_success
         expect(result.quotes.pluck(:id)).to eq([matching_quote.id])
+      end
+    end
+
+    context "with a number filter matching no existing quote" do
+      let!(:quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let(:filters) { {number: ["QT-2025-9999"]} }
+
+      it "returns an empty collection" do
+        expect(result).to be_success
+        expect(result.quotes).to be_empty
       end
     end
 
@@ -198,6 +256,32 @@ RSpec.describe QuotesQuery do
       end
     end
 
+    context "with from_date in the future" do
+      let(:filters) { {from_date: 1.week.from_now.to_date} }
+
+      before do
+        create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001")
+      end
+
+      it "returns an empty collection" do
+        expect(result).to be_success
+        expect(result.quotes).to be_empty
+      end
+    end
+
+    context "with to_date earlier than from_date" do
+      let(:filters) { {from_date: Date.current, to_date: 7.days.ago.to_date} }
+
+      before do
+        create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001")
+      end
+
+      it "returns an empty collection" do
+        expect(result).to be_success
+        expect(result.quotes).to be_empty
+      end
+    end
+
     context "with owners filter" do
       let(:user_one) { create(:user) }
       let(:user_two) { create(:user) }
@@ -213,6 +297,16 @@ RSpec.describe QuotesQuery do
       it "returns only quotes with the matching owners" do
         expect(result).to be_success
         expect(result.quotes.pluck(:id)).to eq([matching_quote.id])
+      end
+    end
+
+    context "with an empty owners filter" do
+      let!(:quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let(:filters) { {owners: []} }
+
+      it "behaves as no filter and returns all quotes" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to eq([quote.id])
       end
     end
 
@@ -250,6 +344,15 @@ RSpec.describe QuotesQuery do
           ["QT-2024-0002", 1],
           ["QT-2024-0001", 3]
         ])
+      end
+    end
+
+    context "with latest_version_only and no quotes" do
+      let(:latest_version_only) { true }
+
+      it "returns an empty collection without raising" do
+        expect(result).to be_success
+        expect(result.quotes).to be_empty
       end
     end
 

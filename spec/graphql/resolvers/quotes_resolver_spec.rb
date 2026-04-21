@@ -110,6 +110,29 @@ RSpec.describe Resolvers::QuotesResolver do
       quotes_response = result["data"]["quotes"]
       expect(quotes_response["metadata"]["totalCount"]).to eq(5)
     end
+
+    context "when the filter targets a customer from another organization" do
+      let(:other_organization) { create(:organization) }
+      let(:foreign_customer) { create(:customer, organization: other_organization) }
+
+      before do
+        create(:quote, organization: other_organization, customer: foreign_customer, sequential_id: 1, number: "QT-2025-0099")
+      end
+
+      it "does not leak quotes from other organizations" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {customer: [foreign_customer.id]}
+        )
+
+        quotes_response = result["data"]["quotes"]
+        expect(quotes_response["collection"]).to be_empty
+        expect(quotes_response["metadata"]["totalCount"]).to eq(0)
+      end
+    end
   end
 
   context "when filtering by status" do
