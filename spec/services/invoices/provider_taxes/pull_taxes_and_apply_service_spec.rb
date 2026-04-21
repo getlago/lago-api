@@ -513,5 +513,31 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         end
       end
     end
+
+    context "when invoice is subscription_gated" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+          customer:, organization:)
+      end
+      let(:invoice) do
+        create(:invoice, :with_subscriptions, customer:, organization:, status: :open,
+          currency: "EUR", subscriptions: [subscription])
+      end
+
+      before do
+        invoice.update!(tax_status: :pending)
+      end
+
+      it "allows processing and triggers payment only" do
+        allow(Invoices::Payments::CreateService).to receive(:call_async)
+
+        result = pull_taxes_service.call
+
+        expect(result).to be_success
+        expect(Invoices::Payments::CreateService).to have_received(:call_async)
+        expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
+      end
+    end
   end
 end
