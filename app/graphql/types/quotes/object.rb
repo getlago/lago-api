@@ -8,18 +8,10 @@ module Types
       field :customer, Types::Customers::Object, null: false
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType, null: false
+      field :subscription, Types::Subscriptions::Object, null: true
 
       field :approved_at, GraphQL::Types::ISO8601DateTime, null: true
-      field :billing_items, GraphQL::Types::JSON, null: true
-      field :commercial_terms, GraphQL::Types::JSON, null: true
-      field :contacts, GraphQL::Types::JSON, null: true
-      field :content, String, null: true
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
-      field :currency, String, null: true
-      field :description, String, null: true
-      field :internal_notes, String, null: true
-      field :legal_text, String, null: true
-      field :metadata, GraphQL::Types::JSON, null: true
       field :number, String, null: false
       field :order_type, Types::Quotes::OrderTypeEnum, null: false
       field :owners, [Types::UserType], null: true

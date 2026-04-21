@@ -27,6 +27,7 @@ class Quote < ApplicationRecord
 
   belongs_to :organization
   belongs_to :customer
+  belongs_to :subscription, optional: true
   has_many :quote_owners, dependent: :destroy
   has_many :owners, through: :quote_owners, source: :user, class_name: "User"
 
@@ -66,34 +67,27 @@ end
 # Table name: quotes
 # Database name: primary
 #
-#  id               :uuid             not null, primary key
-#  approved_at      :datetime
-#  billing_items    :jsonb
-#  commercial_terms :jsonb
-#  contacts         :jsonb
-#  content          :text
-#  currency         :string
-#  description      :text
-#  internal_notes   :text
-#  legal_text       :text
-#  metadata         :jsonb
-#  number           :string           not null
-#  order_type       :enum             not null
-#  share_token      :string
-#  status           :enum             default("draft"), not null
-#  version          :integer          default(1), not null
-#  void_reason      :enum
-#  voided_at        :datetime
-#  created_at       :datetime         not null
-#  updated_at       :datetime         not null
-#  customer_id      :uuid             not null
-#  organization_id  :uuid             not null
-#  sequential_id    :integer          not null
+#  id              :uuid             not null, primary key
+#  approved_at     :datetime
+#  number          :string           not null
+#  order_type      :enum             not null
+#  share_token     :string
+#  status          :enum             default("draft"), not null
+#  version         :integer          default(1), not null
+#  void_reason     :enum
+#  voided_at       :datetime
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  customer_id     :uuid             not null
+#  organization_id :uuid             not null
+#  sequential_id   :integer          not null
+#  subscription_id :uuid
 #
 # Indexes
 #
 #  index_quotes_on_customer_id                               (customer_id)
 #  index_quotes_on_organization_number                       (organization_id,number)
+#  index_quotes_on_subscription_id                           (subscription_id)
 #  index_unique_quotes_on_organization_sequentialid_version  (organization_id,sequential_id,version DESC) UNIQUE
 #  index_unique_quotes_on_share_token                        (share_token) UNIQUE
 #
@@ -101,4 +95,5 @@ end
 #
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (subscription_id => subscriptions.id)
 #

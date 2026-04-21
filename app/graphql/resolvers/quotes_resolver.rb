@@ -23,7 +23,7 @@ module Resolvers
         }
       )
 
-      result.quotes.includes(:customer, :organization, :owners)
+      result.quotes.includes(:customer, :organization, :subscription, :owners)
     end
   end
 end

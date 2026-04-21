@@ -188,6 +188,7 @@ ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rail
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_5cb2f24c3d;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_5c2e0b6d34;
 ALTER TABLE IF EXISTS ONLY public.error_details DROP CONSTRAINT IF EXISTS fk_rails_5c21eece29;
+ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_5bb40a7bae;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_5ade8984b1;
 ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_5a4b906a16;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
@@ -406,6 +407,7 @@ DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_started_at;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_organization_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_expiration_at;
+DROP INDEX IF EXISTS public.index_quotes_on_subscription_id;
 DROP INDEX IF EXISTS public.index_quotes_on_organization_number;
 DROP INDEX IF EXISTS public.index_quotes_on_customer_id;
 DROP INDEX IF EXISTS public.index_quote_owners_on_user_id;
@@ -4711,26 +4713,18 @@ CREATE TABLE public.quotes (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     customer_id uuid NOT NULL,
+    subscription_id uuid,
     number character varying NOT NULL,
     version integer DEFAULT 1 NOT NULL,
     sequential_id integer NOT NULL,
     order_type public.quote_order_type NOT NULL,
-    currency character varying,
-    description text,
     status public.quote_status DEFAULT 'draft'::public.quote_status NOT NULL,
     approved_at timestamp(6) without time zone,
     voided_at timestamp(6) without time zone,
     void_reason public.quote_void_reason,
+    share_token character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    billing_items jsonb,
-    commercial_terms jsonb,
-    content text,
-    legal_text text,
-    internal_notes text,
-    contacts jsonb,
-    metadata jsonb,
-    share_token character varying,
     CONSTRAINT quotes_constraint_sequentialid_positive CHECK ((sequential_id > 0)),
     CONSTRAINT quotes_constraint_version_positive CHECK ((version > 0))
 );
@@ -9032,6 +9026,13 @@ CREATE INDEX index_quotes_on_organization_number ON public.quotes USING btree (o
 
 
 --
+-- Name: index_quotes_on_subscription_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_quotes_on_subscription_id ON public.quotes USING btree (subscription_id);
+
+
+--
 -- Name: index_recurring_transaction_rules_on_expiration_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10565,6 +10566,14 @@ ALTER TABLE ONLY public.invoice_settlements
 
 ALTER TABLE ONLY public.add_ons_taxes
     ADD CONSTRAINT fk_rails_5ade8984b1 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: quotes fk_rails_5bb40a7bae; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quotes
+    ADD CONSTRAINT fk_rails_5bb40a7bae FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
 
 
 --

@@ -10583,24 +10583,16 @@ type Query {
 
 type Quote {
   approvedAt: ISO8601DateTime
-  billingItems: JSON
-  commercialTerms: JSON
-  contacts: JSON
-  content: String
   createdAt: ISO8601DateTime!
-  currency: String
   customer: Customer!
-  description: String
   id: ID!
-  internalNotes: String
-  legalText: String
-  metadata: JSON
   number: String!
   orderType: QuoteOrderTypeEnum!
   organization: Organization!
   owners: [User!]
   shareToken: String
   status: QuoteStatusEnum!
+  subscription: Subscription
   updatedAt: ISO8601DateTime!
   version: Int!
   voidReason: QuoteVoidReasonEnum

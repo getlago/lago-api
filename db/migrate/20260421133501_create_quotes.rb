@@ -9,25 +9,17 @@ class CreateQuotes < ActiveRecord::Migration[8.0]
     create_table :quotes, id: :uuid, if_not_exists: true do |t|
       t.references :organization, null: false, foreign_key: true, index: false, type: :uuid
       t.references :customer, null: false, foreign_key: true, type: :uuid
+      t.references :subscription, foreign_key: true, type: :uuid
       t.string :number, null: false
       t.integer :version, null: false, default: 1
       t.integer :sequential_id, null: false
       t.enum :order_type, enum_type: :quote_order_type, null: false
-      t.string :currency
-      t.text :description
       t.enum :status, enum_type: :quote_status, null: false, default: "draft"
       t.datetime :approved_at
       t.datetime :voided_at
       t.enum :void_reason, enum_type: :quote_void_reason
-      t.timestamps
-      t.jsonb :billing_items
-      t.jsonb :commercial_terms
-      t.text :content
-      t.text :legal_text
-      t.text :internal_notes
-      t.jsonb :contacts
-      t.jsonb :metadata
       t.string :share_token
+      t.timestamps
 
       t.check_constraint "version > 0", name: "quotes_constraint_version_positive"
       t.check_constraint "sequential_id > 0", name: "quotes_constraint_sequentialid_positive"

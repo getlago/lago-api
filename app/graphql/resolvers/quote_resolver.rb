@@ -14,7 +14,7 @@ module Resolvers
     type Types::Quotes::Object, null: true
 
     def resolve(id:)
-      current_organization.quotes.includes(:customer, :organization, :owners).find(id)
+      current_organization.quotes.includes(:customer, :organization, :subscription, :owners).find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "quote")
     end

@@ -11,17 +11,9 @@ RSpec.describe Resolvers::QuoteResolver do
           id
           customer { id name }
           organization { id name }
+          subscription { id }
           owners { id email }
           approvedAt
-          billingItems
-          commercialTerms
-          contacts
-          content
-          currency
-          description
-          internalNotes
-          legalText
-          metadata
           number
           orderType
           shareToken
@@ -68,19 +60,11 @@ RSpec.describe Resolvers::QuoteResolver do
     expect(quote_response["organization"]["name"]).to eq(organization.name)
     expect(quote_response["customer"]["id"]).to eq(customer.id)
     expect(quote_response["customer"]["name"]).to eq(customer.name)
+    expect(quote_response["subscription"]).to be_nil
     expect(quote_response["owners"]).to match_array(
       owners.map { |u| {"id" => u.id, "email" => u.email} }
     )
     expect(quote_response["approvedAt"]).to eq(quote.approved_at&.iso8601)
-    expect(quote_response["billingItems"]).to eq(quote.billing_items)
-    expect(quote_response["commercialTerms"]).to eq(quote.commercial_terms)
-    expect(quote_response["contacts"]).to eq(quote.contacts)
-    expect(quote_response["content"]).to eq(quote.content)
-    expect(quote_response["currency"]).to eq(quote.currency)
-    expect(quote_response["description"]).to eq(quote.description)
-    expect(quote_response["internalNotes"]).to eq(quote.internal_notes)
-    expect(quote_response["legalText"]).to eq(quote.legal_text)
-    expect(quote_response["metadata"]).to eq(quote.metadata)
     expect(quote_response["number"]).to eq(quote.number)
     expect(quote_response["orderType"]).to eq(quote.order_type)
     expect(quote_response["shareToken"]).to eq(quote.share_token)

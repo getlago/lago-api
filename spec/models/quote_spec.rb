@@ -29,6 +29,7 @@ RSpec.describe Quote, type: :model do
     it "defines the expected associations" do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:customer)
+      expect(subject).to belong_to(:subscription).optional
       expect(subject).to have_many(:quote_owners).dependent(:destroy)
       expect(subject).to have_many(:owners).through(:quote_owners).source(:user).class_name("User")
     end
