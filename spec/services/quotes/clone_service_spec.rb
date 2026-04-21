@@ -201,6 +201,61 @@ RSpec.describe Quotes::CloneService do
       end
     end
 
+    context "when prior active versions are superseded" do
+      let(:quote) { create(:quote, organization:, customer:, status: :draft, version: 1) }
+      let!(:prior_approved) do
+        create(
+          :quote,
+          organization:,
+          customer:,
+          sequential_id: quote.sequential_id,
+          version: 2,
+          status: :approved
+        )
+      end
+
+      before { allow(Quotes::VoidService).to receive(:call).and_call_original }
+
+      it "invokes VoidService with reason superseded for the source" do
+        expect(result).to be_success
+        expect(Quotes::VoidService).to have_received(:call).with(quote: quote, reason: :superseded)
+      end
+
+      it "invokes VoidService with reason superseded for each active prior version" do
+        expect(result).to be_success
+        expect(Quotes::VoidService).to have_received(:call).with(quote: prior_approved, reason: :superseded)
+      end
+    end
+
+    %i[subscription_creation subscription_amendment one_off].each do |order_type_value|
+      context "when the source order_type is #{order_type_value}" do
+        let(:subscription) do
+          if order_type_value == :one_off
+            nil
+          else
+            create(:subscription, organization:, customer:)
+          end
+        end
+        let(:quote) do
+          create(
+            :quote,
+            organization:,
+            customer:,
+            subscription: subscription,
+            order_type: order_type_value,
+            status: :draft
+          )
+        end
+
+        it "preserves order_type and subscription_id on the clone" do
+          expect(result).to be_success
+          cloned = result.quote
+          expect(cloned.order_type).to eq(order_type_value.to_s)
+          expect(cloned.subscription_id).to eq(quote.subscription_id)
+        end
+      end
+    end
+
     context "when a quote in another organization shares the same sequential_id" do
       let(:other_organization) { create(:organization, feature_flags: ["quote"]) }
       let(:other_customer) { create(:customer, organization: other_organization) }
