@@ -4,19 +4,25 @@ module Quotes
   class CreateService < BaseService
     Result = BaseResult[:quote]
 
-    def initialize(organization:, customer:, subscription: nil, params: {})
+    def initialize(organization:, params: {})
       @organization = organization
-      @customer = customer
-      @subscription = subscription
       @params = params
       super
     end
 
     def call
-      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "organization") unless organization
-      return result.not_found_failure!(resource: "customer") unless customer
+      return result.forbidden_failure! unless License.premium?
       return result.forbidden_failure! unless organization.feature_flag_enabled?(:quote)
+
+      customer = organization.customers.find_by(id: params[:customer_id])
+      return result.not_found_failure!(resource: "customer") unless customer
+
+      subscription = nil
+      if params[:subscription_id].present?
+        subscription = organization.subscriptions.find_by(id: params[:subscription_id])
+        return result.not_found_failure!(resource: "subscription") unless subscription
+      end
 
       if params[:owners].present?
         invalid_ids = invalid_owner_ids(params[:owners])
@@ -25,14 +31,17 @@ module Quotes
         end
       end
 
+      # TODO: when the approve / update slice lands, enforce that `order_type: subscription_amendment`
+      # requires a subscription, and that `order_type: one_off` forbids one.
+
       quote = Quote.transaction do
-        quote = organization.quotes.create!(
+        q = organization.quotes.create!(
           customer:,
           subscription:,
           order_type: params[:order_type]
         )
-        add_owners!(quote:, owners: params[:owners]) if params[:owners].present?
-        quote
+        add_owners!(quote: q, owners: params[:owners]) if params[:owners].present?
+        q
       end
 
       result.quote = quote
@@ -43,7 +52,7 @@ module Quotes
 
     private
 
-    attr_reader :organization, :customer, :subscription, :params
+    attr_reader :organization, :params
 
     def invalid_owner_ids(owners)
       org_user_ids = organization.memberships.active.pluck(:user_id)

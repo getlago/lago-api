@@ -3,19 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Quotes::CreateService do
-  subject(:result) do
-    described_class.call(
-      organization:,
-      customer:,
-      subscription:,
-      params:
-    )
-  end
+  subject(:result) { described_class.call(organization:, params:) }
 
   let(:organization) { create(:organization, feature_flags: ["quote"]) }
   let(:customer) { create(:customer, organization:) }
-  let(:subscription) { nil }
-  let(:params) { {order_type: "one_off"} }
+  let(:params) { {customer_id: customer.id, order_type: "one_off"} }
 
   context "when license is premium", :premium do
     it "creates a quote" do
@@ -35,7 +27,13 @@ RSpec.describe Quotes::CreateService do
 
     context "with a subscription" do
       let(:subscription) { create(:subscription, organization:, customer:) }
-      let(:params) { {order_type: "subscription_amendment"} }
+      let(:params) do
+        {
+          customer_id: customer.id,
+          subscription_id: subscription.id,
+          order_type: "subscription_amendment"
+        }
+      end
 
       it "persists the subscription on the quote" do
         expect(result).to be_success
@@ -44,11 +42,30 @@ RSpec.describe Quotes::CreateService do
       end
     end
 
+    context "when subscription_id belongs to another organization" do
+      let(:other_organization) { create(:organization) }
+      let(:foreign_subscription) { create(:subscription, organization: other_organization) }
+      let(:params) do
+        {
+          customer_id: customer.id,
+          subscription_id: foreign_subscription.id,
+          order_type: "subscription_amendment"
+        }
+      end
+
+      it "returns a not found error" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("subscription")
+      end
+    end
+
     context "with owners" do
       let(:owner_membership) { create(:membership, organization:) }
       let(:other_owner_membership) { create(:membership, organization:) }
       let(:params) do
         {
+          customer_id: customer.id,
           order_type: "one_off",
           owners: [owner_membership.user_id, other_owner_membership.user_id]
         }
@@ -62,11 +79,14 @@ RSpec.describe Quotes::CreateService do
       end
     end
 
-    context "when an owner does not belong to the organization" do
+    context "when an owner is a member of a different organization" do
       let(:owner_membership) { create(:membership, organization:) }
-      let(:stranger) { create(:user) }
+      let(:other_organization) { create(:organization) }
+      let(:foreign_membership) { create(:membership, organization: other_organization) }
+      let(:stranger) { foreign_membership.user }
       let(:params) do
         {
+          customer_id: customer.id,
           order_type: "one_off",
           owners: [owner_membership.user_id, stranger.id]
         }
@@ -101,7 +121,7 @@ RSpec.describe Quotes::CreateService do
 
   context "when organization is nil", :premium do
     let(:organization) { nil }
-    let(:customer) { create(:customer) }
+    let(:params) { {customer_id: SecureRandom.uuid, order_type: "one_off"} }
 
     it "returns a not_found failure for organization" do
       expect(result).not_to be_success
@@ -111,7 +131,19 @@ RSpec.describe Quotes::CreateService do
   end
 
   context "when customer is nil", :premium do
-    let(:customer) { nil }
+    let(:params) { {customer_id: nil, order_type: "one_off"} }
+
+    it "returns a not_found failure for customer" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::NotFoundFailure)
+      expect(result.error.resource).to eq("customer")
+    end
+  end
+
+  context "when customer belongs to another organization", :premium do
+    let(:other_organization) { create(:organization) }
+    let(:foreign_customer) { create(:customer, organization: other_organization) }
+    let(:params) { {customer_id: foreign_customer.id, order_type: "one_off"} }
 
     it "returns a not_found failure for customer" do
       expect(result).not_to be_success

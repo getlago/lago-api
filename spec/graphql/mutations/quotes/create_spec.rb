@@ -52,4 +52,29 @@ RSpec.describe Mutations::Quotes::Create do
     expect(result_data["customer"]["id"]).to eq(customer.id)
     expect(result_data["organization"]["id"]).to eq(organization.id)
   end
+
+  context "when an owner belongs to a different organization", :premium do
+    let(:other_organization) { create(:organization) }
+    let(:foreign_membership) { create(:membership, organization: other_organization) }
+
+    it "returns a GraphQL error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            orderType: "one_off",
+            owners: [foreign_membership.user_id]
+          }
+        }
+      )
+
+      expect(result["errors"]).to be_present
+      expect(result["errors"].first["extensions"]["code"]).to eq("unprocessable_entity")
+      expect(result["errors"].first["extensions"]["details"]["owners"]).to eq(["not_found"])
+    end
+  end
 end
