@@ -20,7 +20,7 @@ module Quotes
 
       subscription = nil
       if params[:subscription_id].present?
-        subscription = organization.subscriptions.find_by(id: params[:subscription_id])
+        subscription = customer.subscriptions.find_by(id: params[:subscription_id])
         return result.not_found_failure!(resource: "subscription") unless subscription
       end
 

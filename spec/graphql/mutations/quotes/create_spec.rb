@@ -77,4 +77,29 @@ RSpec.describe Mutations::Quotes::Create do
       expect(result["errors"].first["extensions"]["details"]["owners"]).to eq(["not_found"])
     end
   end
+
+  context "when subscription belongs to another organization", :premium do
+    let(:foreign_customer) { create(:customer) }
+    let(:foreign_subscription) { create(:subscription, organization: foreign_customer.organization, customer: foreign_customer) }
+
+    it "returns a GraphQL error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            subscriptionId: foreign_subscription.id,
+            orderType: "subscription_amendment"
+          }
+        }
+      )
+
+      expect(result["errors"]).to be_present
+      expect(result["errors"].first["extensions"]["code"]).to eq("not_found")
+      expect(result["errors"].first["extensions"]["details"]["subscription"]).to eq(["not_found"])
+    end
+  end
 end

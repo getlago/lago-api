@@ -60,6 +60,24 @@ RSpec.describe Quotes::CreateService do
       end
     end
 
+    context "when subscription belongs to another customer in the same organization" do
+      let(:other_customer) { create(:customer, organization:) }
+      let(:foreign_subscription) { create(:subscription, organization:, customer: other_customer) }
+      let(:params) do
+        {
+          customer_id: customer.id,
+          subscription_id: foreign_subscription.id,
+          order_type: "subscription_amendment"
+        }
+      end
+
+      it "returns a not found error" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("subscription")
+      end
+    end
+
     context "with owners" do
       let(:owner_membership) { create(:membership, organization:) }
       let(:other_owner_membership) { create(:membership, organization:) }
@@ -130,7 +148,7 @@ RSpec.describe Quotes::CreateService do
     end
   end
 
-  context "when customer is nil", :premium do
+  context "when customer_id is nil", :premium do
     let(:params) { {customer_id: nil, order_type: "one_off"} }
 
     it "returns a not_found failure for customer" do
