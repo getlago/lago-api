@@ -40,19 +40,83 @@ RSpec.describe Quote, type: :model do
     end
   end
 
+  describe "sequential_id" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:quote) { build(:quote, organization:, customer:) }
+
+    it "assigns a sequential_id when blank" do
+      quote.save!
+
+      expect(quote).to be_valid
+      expect(quote.sequential_id).to eq(1)
+    end
+
+    context "when sequential_id is present" do
+      before { quote.sequential_id = 3 }
+
+      it "does not replace the sequential_id" do
+        quote.save!
+
+        expect(quote).to be_valid
+        expect(quote.sequential_id).to eq(3)
+      end
+    end
+
+    context "when another quote already exists in the organization" do
+      before { create(:quote, organization:, sequential_id: 5) }
+
+      it "takes the next available id" do
+        quote.save!
+
+        expect(quote).to be_valid
+        expect(quote.sequential_id).to eq(6)
+      end
+    end
+
+    context "with quotes in another organization" do
+      before { create(:quote, sequential_id: 1) }
+
+      it "scopes the sequence to the organization" do
+        quote.save!
+
+        expect(quote).to be_valid
+        expect(quote.sequential_id).to eq(1)
+      end
+    end
+  end
+
   describe "number" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:quote) { build(:quote, organization:, customer:) }
+
     it "is set to QT-<year>-<4-digit-seq> on save when blank" do
-      org = create(:organization)
-      customer = create(:customer, organization: org)
-      q = Quote.new(organization: org, customer:, status: :draft, order_type: :subscription_creation, version: 1)
-      q.save!
-      expect(q.number).to match(/\AQT-\d{4}-\d{4}\z/)
+      quote.save!
+
+      expect(quote.number).to match(/\AQT-\d{4}-\d{4}\z/)
+    end
+
+    it "uses the year from created_at rather than the current time" do
+      travel_to(Time.zone.local(2025, 6, 1)) { quote.save! }
+
+      travel_to(Time.zone.local(2026, 3, 1)) do
+        quote.update!(status: :approved)
+        expect(quote.number).to start_with("QT-2025-")
+      end
     end
 
     it "does not overwrite an existing number" do
-      q = create(:quote, number: "QT-2099-9999")
-      q.save!
-      expect(q.number).to eq("QT-2099-9999")
+      persisted = create(:quote, organization:, customer:, number: "QT-2099-9999")
+      persisted.save!
+
+      expect(persisted.number).to eq("QT-2099-9999")
+    end
+  end
+
+  describe "status" do
+    it "defaults to draft" do
+      expect(described_class.new.status).to eq("draft")
     end
   end
 end

@@ -93,5 +93,16 @@ RSpec.describe QuotesQuery do
         ["QT-2024-0001", 1]
       ])
     end
+
+    context "with a page past the last page" do
+      let(:pagination) { {page: 99, limit: 2} }
+
+      it "returns an empty collection while keeping metadata stable" do
+        expect(result).to be_success
+        expect(result.quotes).to be_empty
+        expect(result.quotes.total_count).to eq(4)
+        expect(result.quotes.total_pages).to eq(2)
+      end
+    end
   end
 end

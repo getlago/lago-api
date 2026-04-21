@@ -58,4 +58,26 @@ RSpec.describe Resolvers::QuotesResolver do
     expect(last_quote["number"]).to eq("QT-2025-0001")
     expect(last_quote["version"]).to eq(1)
   end
+
+  context "when quotes exist in another organization" do
+    let(:other_organization) { create(:organization) }
+    let(:other_customer) { create(:customer, organization: other_organization) }
+
+    before do
+      create(:quote, organization: other_organization, customer: other_customer, sequential_id: 1, number: "QT-2025-0099")
+    end
+
+    it "does not return quotes from other organizations" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      quotes_response = result["data"]["quotes"]
+      expect(quotes_response["collection"].count).to eq(5)
+      expect(quotes_response["metadata"]["totalCount"]).to eq(5)
+    end
+  end
 end

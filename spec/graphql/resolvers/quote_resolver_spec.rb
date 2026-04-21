@@ -83,4 +83,24 @@ RSpec.describe Resolvers::QuoteResolver do
       expect_graphql_error(result:, message: "Resource not found")
     end
   end
+
+  context "when quote belongs to another organization" do
+    let(:other_organization) { create(:organization) }
+    let(:other_customer) { create(:customer, organization: other_organization) }
+    let(:other_quote) { create(:quote, organization: other_organization, customer: other_customer) }
+
+    it "returns a not found error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          quoteId: other_quote.id
+        }
+      )
+
+      expect_graphql_error(result:, message: "Resource not found")
+    end
+  end
 end
