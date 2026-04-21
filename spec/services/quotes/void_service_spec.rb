@@ -36,6 +36,17 @@ RSpec.describe Quotes::VoidService do
       end
     end
 
+    context "when the quote has owners" do
+      let(:owner) { create(:user) }
+
+      before { create(:quote_owner, quote:, organization:, user: owner) }
+
+      it "does not drop the owners" do
+        expect(result).to be_success
+        expect(quote.reload.owners).to contain_exactly(owner)
+      end
+    end
+
     context "when the quote is already voided" do
       let(:quote) do
         create(
