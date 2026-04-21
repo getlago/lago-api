@@ -39,7 +39,7 @@ module Coupons
     attr_reader :applied_coupons, :invoice
 
     def add_credit(applied_coupon, fees, base_amount_cents)
-      credit_amount = AppliedCoupons::AmountService.call(applied_coupon:, base_amount_cents:).amount
+      credit_amount = AppliedCoupons::AmountService.call(applied_coupon:, base_amount_cents:, invoice:).amount
       new_credit = Credit.new(
         invoice:,
         organization_id: invoice.organization_id,
