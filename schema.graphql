@@ -283,6 +283,16 @@ enum ActivityTypeEnum {
   plan_updated
 
   """
+  subscription.canceled
+  """
+  subscription_canceled
+
+  """
+  subscription.incomplete
+  """
+  subscription_incomplete
+
+  """
   subscription.started
   """
   subscription_started
