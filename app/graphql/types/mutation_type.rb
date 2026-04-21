@@ -230,6 +230,8 @@ module Types
     field :destroy_subscription_alert, mutation: Mutations::Subscriptions::Alerts::Destroy
     field :update_subscription_alert, mutation: Mutations::Subscriptions::Alerts::Update
 
+    field :create_quote, mutation: Mutations::Quotes::Create
+
     field :create_feature, mutation: Mutations::Entitlement::CreateFeature
     field :destroy_feature, mutation: Mutations::Entitlement::DestroyFeature
     field :update_feature, mutation: Mutations::Entitlement::UpdateFeature
