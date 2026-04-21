@@ -749,6 +749,65 @@ RSpec.describe Fees::ChargeService, :premium do
             end
           end
         end
+
+        context "with presentation_group_keys" do
+          let(:charge) do
+            create(
+              :standard_charge,
+              plan: subscription.plan,
+              billable_metric:,
+              properties: {
+                amount: "20",
+                pricing_group_keys: ["cloud"],
+                presentation_group_keys: [{value: "region"}]
+              }
+            )
+          end
+
+          before do
+            create(
+              :event,
+              organization: subscription.organization,
+              subscription:,
+              code: charge.billable_metric.code,
+              timestamp: Time.zone.parse("2022-03-16"),
+              properties: {cloud: "aws", region: "us-east-1", value: 10}
+            )
+            create(
+              :event,
+              organization: subscription.organization,
+              subscription:,
+              code: charge.billable_metric.code,
+              timestamp: Time.zone.parse("2022-03-16"),
+              properties: {cloud: "aws", region: "us-central-1", value: 5}
+            )
+            create(
+              :event,
+              organization: subscription.organization,
+              subscription:,
+              code: charge.billable_metric.code,
+              timestamp: Time.zone.parse("2022-03-16"),
+              properties: {cloud: "gcp", region: "eu-west-1", value: 3}
+            )
+          end
+
+          it "builds presentation_breakdowns scoped by pricing group on each persisted fee" do
+            expect { charge_subscription_service.call }.to change(Fee, :count).from(0).to(2)
+
+            result = charge_subscription_service.call
+
+            aws_fee = result.fees.find { |f| f.grouped_by["cloud"] == "aws" }
+            gcp_fee = result.fees.find { |f| f.grouped_by["cloud"] == "gcp" }
+
+            expect(aws_fee.presentation_breakdowns.map(&:presentation_by)).to match_array([{"region" => "us-east-1"}, {"region" => "us-central-1"}])
+            expect(aws_fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([10.0, 5.0])
+
+            expect(gcp_fee.presentation_breakdowns.map(&:presentation_by)).to match_array([{"region" => "eu-west-1"}])
+            expect(gcp_fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([3.0])
+
+            expect(result.fees.flat_map(&:presentation_breakdowns)).to all(have_attributes(organization_id: organization.id))
+          end
+        end
       end
 
       context "with accepts_target_wallet enabled" do

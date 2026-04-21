@@ -26,7 +26,7 @@ module BillableMetrics
         result.count = event_store.count
 
         if presentation_by.present?
-          result.breakdowns = event_store.presentation_breakdown_sum
+          result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by)
         end
 
         result.options = {running_total: running_total(options)}
@@ -52,7 +52,7 @@ module BillableMetrics
         counts = event_store.grouped_count
 
         if presentation_by.present?
-          result.breakdowns = event_store.presentation_breakdown_sum
+          result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by)
         end
 
         merged_hash = {}

@@ -220,22 +220,13 @@ module Events
         events.sum("(#{sanitized_property_name})::numeric")
       end
 
-      def grouped_sum
+      def grouped_sum(columns = grouped_by)
         results = events
-          .group(sanitized_grouped_by)
+          .group(columns.map { sanitized_property_name(it) })
           .sum("(#{sanitized_property_name})::numeric")
           .map { |group, value| [group, value].flatten }
 
-        prepare_grouped_result(results)
-      end
-
-      def presentation_breakdown_sum
-        results = events
-          .group(sanitized_grouped_by_and_presentation_by)
-          .sum("(#{sanitized_property_name})::numeric")
-          .map { |group, value| [group, value].flatten }
-
-        prepare_presentation_result(results)
+        prepare_grouped_result(results, columns: columns)
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -410,10 +401,6 @@ module Events
         grouped_by.map { sanitized_property_name(it) }
       end
 
-      def sanitized_grouped_by_and_presentation_by
-        grouped_and_presentation_columns.values.flatten.map { |c| sanitized_property_name(c) }
-      end
-
       delegate :connection, to: :Event
 
       delegate :select_all, to: :connection
@@ -433,13 +420,13 @@ module Events
       # NOTE: returns the values for each groups
       #       The result format will be an array of hash with the format:
       #       [{ groups: { 'cloud' => 'aws', 'region' => 'us_east_1' }, value: 12.9 }, ...]
-      def prepare_grouped_result(rows, timestamp: false)
+      def prepare_grouped_result(rows, timestamp: false, columns: grouped_by)
         rows.map do |row|
           last_group = timestamp ? -2 : -1
           groups = row[...last_group].map(&:presence)
 
           result = {
-            groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            groups: columns.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
             value: row.last
           }
 
@@ -447,36 +434,6 @@ module Events
 
           result
         end
-      end
-
-      def prepare_presentation_result(rows)
-        grouped_by_count = grouped_and_presentation_columns[:grouped_by].size
-        presentation_by_count = grouped_and_presentation_columns[:presentation_by].size
-
-        outer_map = {}
-
-        rows.each do |row|
-          grouped_attrs = {}
-          grouped_and_presentation_columns[:grouped_by].each_with_index do |field, i|
-            grouped_attrs[field] = row[i]
-          end
-
-          presentation_attrs = {}
-          grouped_and_presentation_columns[:presentation_by].each_with_index do |field, i|
-            presentation_attrs[field] = row[grouped_by_count + i]
-          end
-
-          units = row[grouped_by_count + presentation_by_count]
-
-          result = outer_map[grouped_attrs.hash] ||= {groups: grouped_attrs, breakdowns: []}
-          result[:breakdowns] << {presentation_by: presentation_attrs, units: units}
-        end
-
-        outer_map.values
-      end
-
-      def grouped_and_presentation_columns
-        @grouped_and_presentation_columns ||= {grouped_by: grouped_by || [], presentation_by: presentation_by.difference(grouped_by || [])}
       end
 
       def operation_type_sql

@@ -2,7 +2,6 @@
 
 module Fees
   class ChargeService < BaseService
-    EMPTY_BREAKDOWN = {breakdowns: []}.freeze
     # optional params:
     # | usage_filters - UsageFilters
     #  - context (:current_usage, :invoice_preview, :recurring) - to be moved in usage_filters
@@ -155,12 +154,10 @@ module Fees
         calculate_projected_usage:
       ).apply
 
-      fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns: {})
+      fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns: [])
     end
 
     def fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns:)
-      breakdowns_indexed_by_group = breakdowns&.index_by { |e| e[:groups] }
-
       charge_model_result.grouped_results.map do |amount_result|
         # TODO: check if this is still needed as we now skip certain zero units fees
         next if current_usage && charge_filter && amount_result.units.zero? && !with_zero_units_filters
@@ -168,10 +165,19 @@ module Fees
         fee = init_fee(amount_result, properties:, charge_filter:)
         next if fee.nil?
 
-        if breakdowns_indexed_by_group.present?
-          breakdowns_indexed_by_group.fetch(fee.grouped_by, EMPTY_BREAKDOWN)[:breakdowns].each do |breakdown|
-            fee.presentation_breakdowns.build(breakdown.merge(organization_id: charge.organization_id))
+        Array(breakdowns).each do |breakdown|
+          if fee.grouped_by.empty?
+            presentation_by = breakdown[:groups]
+          else
+            next unless fee.grouped_by.all? { |k, v| breakdown[:groups][k] == v }
+            presentation_by = breakdown[:groups].reject { |k, _| fee.grouped_by.key?(k) }
           end
+
+          fee.presentation_breakdowns.build(
+            presentation_by:,
+            units: breakdown[:value],
+            organization_id: charge.organization_id
+          )
         end
 
         fee
