@@ -230,6 +230,7 @@ module Types
     field :destroy_subscription_alert, mutation: Mutations::Subscriptions::Alerts::Destroy
     field :update_subscription_alert, mutation: Mutations::Subscriptions::Alerts::Update
 
+    field :clone_quote, mutation: Mutations::Quotes::Clone
     field :create_quote, mutation: Mutations::Quotes::Create
     field :void_quote, mutation: Mutations::Quotes::Void
 
