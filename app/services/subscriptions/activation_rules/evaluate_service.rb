@@ -3,7 +3,7 @@
 module Subscriptions
   module ActivationRules
     class EvaluateService < BaseService
-      Result = BaseResult[:rules]
+      Result = BaseResult[:subscription, :rules]
 
       def initialize(subscription:)
         @subscription = subscription
@@ -14,13 +14,13 @@ module Subscriptions
         result.rules = []
 
         subscription.activation_rules.each do |rule|
-          case rule
-          when Subscription::ActivationRule::Payment
-            Payment::EvaluateService.call!(rule:)
-          end
+          rule.evaluate!
           result.rules << rule
         end
 
+        ResolveSubscriptionStatusService.call!(subscription:)
+
+        result.subscription = subscription
         result
       end
 

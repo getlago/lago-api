@@ -104,4 +104,15 @@ RSpec.describe Subscription::ActivationRule do
       expect { rule.applicable? }.to raise_error(NotImplementedError)
     end
   end
+
+  describe "#evaluate!" do
+    it "calls the type-specific EvaluateService" do
+      allow(Subscriptions::ActivationRules::Payment::EvaluateService).to receive(:call!)
+
+      activation_rule.evaluate!
+
+      expect(Subscriptions::ActivationRules::Payment::EvaluateService)
+        .to have_received(:call!).with(rule: activation_rule)
+    end
+  end
 end

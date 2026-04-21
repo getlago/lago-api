@@ -15,7 +15,7 @@ RSpec.describe Subscriptions::ActivationRules::EvaluateService do
 
     before { rule }
 
-    it "delegates to Payment::EvaluateService" do
+    it "evaluates the rule and delegates to ResolveSubscriptionStatusService" do
       expect(result).to be_success
       expect(result.rules.first).to be_pending
     end
@@ -25,6 +25,19 @@ RSpec.describe Subscriptions::ActivationRules::EvaluateService do
     it "returns success without changes" do
       expect(result).to be_success
       expect(result.rules).to be_empty
+    end
+  end
+
+  context "when all rules are already satisfied" do
+    let(:rule) { create(:payment_subscription_activation_rule, subscription:, status: "satisfied") }
+
+    before { rule }
+
+    it "activates the subscription via ResolveSubscriptionStatusService" do
+      allow(Subscriptions::ActivationRules::ResolveSubscriptionStatusService).to receive(:call).and_call_original
+
+      expect(result.subscription).to be_active
+      expect(Subscriptions::ActivationRules::ResolveSubscriptionStatusService).to have_received(:call).with(subscription:)
     end
   end
 end

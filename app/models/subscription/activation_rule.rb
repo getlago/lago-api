@@ -17,6 +17,9 @@ class Subscription::ActivationRule < ApplicationRecord
     not_applicable: "not_applicable"
   }.freeze
 
+  FULFILLED_STATUSES = STATUSES.values_at(:satisfied, :not_applicable).freeze
+  REJECTED_STATUSES = STATUSES.values_at(:failed, :expired, :declined).freeze
+
   TYPES = {
     payment: "payment"
   }.freeze
@@ -43,6 +46,17 @@ class Subscription::ActivationRule < ApplicationRecord
 
   def applicable?
     raise NotImplementedError, "#{self.class}#applicable? must be implemented"
+  end
+
+  def evaluate!
+    evaluate_service_class.call!(rule: self)
+  end
+
+  private
+
+  def evaluate_service_class
+    type_module = self.class.name.demodulize
+    "Subscriptions::ActivationRules::#{type_module}::EvaluateService".constantize
   end
 end
 

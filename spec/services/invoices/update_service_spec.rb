@@ -244,6 +244,38 @@ RSpec.describe Invoices::UpdateService do
       end
     end
 
+    context "when invoice is subscription_gated and payment_status changes" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          organization: invoice.organization, customer: invoice.customer, plan:,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}])
+      end
+      let(:plan) { create(:plan, organization: invoice.organization, pay_in_advance: true) }
+      let(:invoice) { create(:invoice, status: :open, invoice_type: :subscription, payment_overdue: false) }
+
+      before { create(:invoice_subscription, invoice:, subscription:) }
+
+      context "when payment_status is succeeded" do
+        let(:update_args) { {payment_status: "succeeded"} }
+
+        it "enqueues ResolveJob" do
+          expect { invoice_service.call }
+            .to have_enqueued_job_after_commit(Subscriptions::ActivationRules::Payment::ResolveJob)
+            .with(subscription, invoice, :succeeded)
+        end
+      end
+
+      context "when payment_status is failed" do
+        let(:update_args) { {payment_status: "failed"} }
+
+        it "enqueues ResolveJob" do
+          expect { invoice_service.call }
+            .to have_enqueued_job_after_commit(Subscriptions::ActivationRules::Payment::ResolveJob)
+            .with(subscription, invoice, :failed)
+        end
+      end
+    end
+
     context "with payment_status update and notification is turned on" do
       let(:webhook_notification) { true }
 
