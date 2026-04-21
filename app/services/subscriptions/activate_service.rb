@@ -11,7 +11,8 @@ module Subscriptions
     end
 
     def call
-      return result if subscription.active? || subscription.incomplete?
+      return result if subscription.active?
+      return result if subscription.incomplete? && subscription.pending_rules?
 
       if subscription.pending_rules?
         subscription.mark_as_incomplete!
@@ -52,7 +53,13 @@ module Subscriptions
       subscription.incomplete?
     end
 
+    def payment_gated?
+      gated? && subscription.activation_rules.payment.pending.any?
+    end
+
     def bill_subscription
+      return if gated? && !payment_gated?
+
       if subscription.plan.pay_in_advance? && !subscription.in_trial_period?
         BillSubscriptionJob.perform_later(
           [subscription],
