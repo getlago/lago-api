@@ -12,7 +12,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
-      return result unless invoice.pending? && invoice.tax_pending?
+      return result unless (invoice.pending? || invoice.subscription_gated?) && invoice.tax_pending?
       return result if customer.tax_customer
       return result if customer.vies_check_in_progress?
 
@@ -36,7 +36,9 @@ module Invoices
         result.invoice = invoice
       end
 
-      if invoice.finalized?
+      if invoice.subscription_gated?
+        after_commit { create_payment }
+      elsif invoice.finalized?
         after_commit do
           SendWebhookJob.perform_later(webhook_type, invoice)
           Utils::ActivityLog.produce(invoice, webhook_type)
