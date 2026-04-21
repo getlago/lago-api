@@ -13,21 +13,25 @@ RSpec.describe Quote, type: :model do
         .with_values(Quote::STATUSES)
 
       expect(subject).to define_enum_for(:void_reason)
-        .without_instance_methods
+        .backed_by_column_of_type(:enum)
         .with_values(Quote::VOID_REASONS)
+        .without_instance_methods
 
       expect(subject).to define_enum_for(:order_type)
-        .without_instance_methods
+        .backed_by_column_of_type(:enum)
         .validating
         .with_values(Quote::ORDER_TYPES)
+        .without_instance_methods
 
       expect(subject).to define_enum_for(:execution_mode)
-        .without_instance_methods
+        .backed_by_column_of_type(:enum)
         .with_values(Quote::EXECUTION_MODES)
+        .without_instance_methods
 
       expect(subject).to define_enum_for(:backdated_billing)
-        .without_instance_methods
+        .backed_by_column_of_type(:enum)
         .with_values(Quote::BACKDATED_BILLING_OPTIONS)
+        .without_instance_methods
     end
   end
 

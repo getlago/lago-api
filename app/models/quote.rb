@@ -9,27 +9,27 @@ class Quote < ApplicationRecord
     voided: "voided"
   }.freeze
 
-  VOID_REASONS = {
-    manual: 0,
-    superseded: 1,
-    cascade_of_expired: 2,
-    cascade_of_voided: 3
+  ORDER_TYPES = {
+    subscription_creation: "subscription_creation",
+    subscription_amendment: "subscription_amendment",
+    one_off: "one_off"
   }.freeze
 
-  ORDER_TYPES = {
-    subscription_creation: 0,
-    subscription_amendment: 1,
-    one_off: 2
+  VOID_REASONS = {
+    manual: "manual",
+    superseded: "superseded",
+    cascade_of_expired: "cascade_of_expired",
+    cascade_of_voided: "cascade_of_voided"
   }.freeze
 
   EXECUTION_MODES = {
-    execute_in_lago: 0,
-    order_only: 1
+    execute_in_lago: "execute_in_lago",
+    order_only: "order_only"
   }.freeze
 
   BACKDATED_BILLING_OPTIONS = {
-    generate_past_invoices: 0,
-    start_without_invoices: 1
+    generate_past_invoices: "generate_past_invoices",
+    start_without_invoices: "start_without_invoices"
   }.freeze
 
   before_save :ensure_number
@@ -81,23 +81,23 @@ end
 #  id                :uuid             not null, primary key
 #  approved_at       :datetime
 #  auto_execute      :boolean          default(FALSE), not null
-#  backdated_billing :integer
+#  backdated_billing :enum
 #  billing_items     :jsonb
 #  commercial_terms  :jsonb
 #  contacts          :jsonb
 #  content           :text
 #  currency          :string
 #  description       :text
-#  execution_mode    :integer
+#  execution_mode    :enum
 #  internal_notes    :text
 #  legal_text        :text
 #  metadata          :jsonb
 #  number            :string           not null
-#  order_type        :integer          not null
+#  order_type        :enum             not null
 #  share_token       :string
 #  status            :enum             default("draft"), not null
 #  version           :integer          default(1), not null
-#  void_reason       :integer
+#  void_reason       :enum
 #  voided_at         :datetime
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null

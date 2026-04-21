@@ -3,6 +3,10 @@
 class CreateQuotes < ActiveRecord::Migration[8.0]
   def change
     create_enum :quote_status, %w[draft approved voided]
+    create_enum :quote_order_type, %w[subscription_creation subscription_amendment one_off]
+    create_enum :quote_void_reason, %w[manual superseded cascade_of_expired cascade_of_voided]
+    create_enum :quote_execution_mode, %w[execute_in_lago order_only]
+    create_enum :quote_backdated_billing, %w[generate_past_invoices start_without_invoices]
 
     create_table :quotes, id: :uuid do |t|
       t.references :organization, null: false, foreign_key: true, index: false, type: :uuid
@@ -10,13 +14,13 @@ class CreateQuotes < ActiveRecord::Migration[8.0]
       t.string :number, null: false
       t.integer :version, null: false, default: 1
       t.integer :sequential_id, null: false
-      t.integer :order_type, null: false, comment: "Rails enum"
+      t.enum :order_type, enum_type: :quote_order_type, null: false
       t.string :currency
       t.text :description
       t.enum :status, enum_type: :quote_status, null: false, default: "draft"
       t.datetime :approved_at
       t.datetime :voided_at
-      t.integer :void_reason, comment: "Rails enum"
+      t.enum :void_reason, enum_type: :quote_void_reason
       t.timestamps
       t.jsonb :billing_items
       t.jsonb :commercial_terms
@@ -26,8 +30,8 @@ class CreateQuotes < ActiveRecord::Migration[8.0]
       t.jsonb :contacts
       t.jsonb :metadata
       t.boolean :auto_execute, null: false, default: false
-      t.integer :backdated_billing, comment: "Rails enum"
-      t.integer :execution_mode, comment: "Rails enum"
+      t.enum :backdated_billing, enum_type: :quote_backdated_billing
+      t.enum :execution_mode, enum_type: :quote_execution_mode
       t.string :share_token
 
       t.check_constraint "version > 0", name: "quotes_constraint_version_positive"

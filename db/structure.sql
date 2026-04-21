@@ -1115,7 +1115,11 @@ DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_adjustments;
 DROP TYPE IF EXISTS public.subscription_cancelation_reasons;
 DROP TYPE IF EXISTS public.subscription_activation_rule_types;
 DROP TYPE IF EXISTS public.subscription_activation_rule_statuses;
+DROP TYPE IF EXISTS public.quote_void_reason;
 DROP TYPE IF EXISTS public.quote_status;
+DROP TYPE IF EXISTS public.quote_order_type;
+DROP TYPE IF EXISTS public.quote_execution_mode;
+DROP TYPE IF EXISTS public.quote_backdated_billing;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
@@ -1332,6 +1336,37 @@ CREATE TYPE public.payment_type AS ENUM (
 
 
 --
+-- Name: quote_backdated_billing; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.quote_backdated_billing AS ENUM (
+    'generate_past_invoices',
+    'start_without_invoices'
+);
+
+
+--
+-- Name: quote_execution_mode; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.quote_execution_mode AS ENUM (
+    'execute_in_lago',
+    'order_only'
+);
+
+
+--
+-- Name: quote_order_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.quote_order_type AS ENUM (
+    'subscription_creation',
+    'subscription_amendment',
+    'one_off'
+);
+
+
+--
 -- Name: quote_status; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1339,6 +1374,18 @@ CREATE TYPE public.quote_status AS ENUM (
     'draft',
     'approved',
     'voided'
+);
+
+
+--
+-- Name: quote_void_reason; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.quote_void_reason AS ENUM (
+    'manual',
+    'superseded',
+    'cascade_of_expired',
+    'cascade_of_voided'
 );
 
 
@@ -4689,13 +4736,13 @@ CREATE TABLE public.quotes (
     number character varying NOT NULL,
     version integer DEFAULT 1 NOT NULL,
     sequential_id integer NOT NULL,
-    order_type integer NOT NULL,
+    order_type public.quote_order_type NOT NULL,
     currency character varying,
     description text,
     status public.quote_status DEFAULT 'draft'::public.quote_status NOT NULL,
     approved_at timestamp(6) without time zone,
     voided_at timestamp(6) without time zone,
-    void_reason integer,
+    void_reason public.quote_void_reason,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     billing_items jsonb,
@@ -4706,8 +4753,8 @@ CREATE TABLE public.quotes (
     contacts jsonb,
     metadata jsonb,
     auto_execute boolean DEFAULT false NOT NULL,
-    backdated_billing integer,
-    execution_mode integer,
+    backdated_billing public.quote_backdated_billing,
+    execution_mode public.quote_execution_mode,
     share_token character varying,
     CONSTRAINT quotes_constraint_sequentialid_positive CHECK ((sequential_id > 0)),
     CONSTRAINT quotes_constraint_version_positive CHECK ((version > 0))

@@ -32,18 +32,6 @@ module Types
       field :version, Integer, null: false
       field :void_reason, Types::Quotes::VoidReasonEnum, null: true
       field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
-
-      def customer
-        dataloader.with(Sources::ActiveRecord, Customer).load(object.customer_id)
-      end
-
-      def organization
-        dataloader.with(Sources::ActiveRecord, Organization).load(object.organization_id)
-      end
-
-      def owners
-        dataloader.with(Sources::OwnersForQuote, context[:current_organization]).load(object.id)
-      end
     end
   end
 end
