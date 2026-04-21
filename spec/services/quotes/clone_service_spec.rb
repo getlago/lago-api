@@ -222,6 +222,58 @@ RSpec.describe Quotes::CloneService do
       end
     end
 
+    context "when voiding a prior version fails" do
+      let!(:other_version) do
+        create(
+          :quote,
+          organization:,
+          customer:,
+          sequential_id: quote.sequential_id,
+          version: 2,
+          status: :approved
+        )
+      end
+      let(:failed_result) do
+        BaseService::Result.new.tap { |r| r.not_allowed_failure!(code: "inappropriate_state") }
+      end
+
+      before do
+        allow(Quotes::VoidService).to receive(:call).and_wrap_original do |original, **kwargs|
+          (kwargs[:quote].id == other_version.id) ? failed_result : original.call(**kwargs)
+        end
+      end
+
+      it "rolls the clone back" do
+        quote_count_before = Quote.count
+        owner_count_before = QuoteOwner.count
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+
+        expect(Quote.count).to eq(quote_count_before)
+        expect(QuoteOwner.count).to eq(owner_count_before)
+        expect(quote.reload.status).to eq("draft")
+        expect(other_version.reload.status).to eq("approved")
+      end
+    end
+
+    context "when another clone races in and claims the next version" do
+      before do
+        quote # ensure the source exists before stubbing save!
+        allow_any_instance_of(Quote).to receive(:save!).and_raise(ActiveRecord::RecordNotUnique.new("duplicate"))
+      end
+
+      it "returns a service failure" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("concurrent_clone")
+      end
+
+      it "does not create a new quote" do
+        expect { result }.not_to change(Quote, :count)
+      end
+    end
+
     context "when quote is nil" do
       let(:quote) { nil }
 

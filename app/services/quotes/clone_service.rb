@@ -23,6 +23,8 @@ module Quotes
 
       result.quote = cloned
       result
+    rescue ActiveRecord::RecordNotUnique
+      result.service_failure!(code: "concurrent_clone", message: "Another clone is already in progress for this quote")
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
