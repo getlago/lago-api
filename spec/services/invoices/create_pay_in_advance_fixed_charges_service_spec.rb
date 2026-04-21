@@ -662,5 +662,40 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
         expect(result.invoice).to be_nil
       end
     end
+
+    context "when subscription is gated" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+          customer:, plan:, organization:)
+      end
+
+      it "creates an open invoice" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to be_open
+      end
+
+      it "does not send invoice.created webhook" do
+        invoice_service.call
+
+        expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
+      end
+
+      it "does not generate documents" do
+        invoice_service.call
+
+        expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
+      end
+
+      it "triggers payment" do
+        allow(Invoices::Payments::CreateService).to receive(:call_async)
+
+        invoice_service.call
+
+        expect(Invoices::Payments::CreateService).to have_received(:call_async)
+      end
+    end
   end
 end
