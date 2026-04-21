@@ -264,7 +264,8 @@ RSpec.describe AppliedCoupons::CreateService do
 
         expect(create_result).not_to be_success
         expect(create_result.error).to be_a(BaseService::ValidationFailure)
-        expect(create_result.error.messages.keys).to include(:frequency_duration, :frequency_duration_remaining)
+        expect(create_result.error.messages[:frequency_duration]).to eq(["value_is_mandatory", "is not a number"])
+        expect(create_result.error.messages[:frequency_duration_remaining]).to eq(["value_is_mandatory", "is not a number"])
       end
     end
   end
