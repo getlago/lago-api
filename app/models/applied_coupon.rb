@@ -28,6 +28,8 @@ class AppliedCoupon < ApplicationRecord
 
   validates :amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :amount_currency, inclusion: {in: currency_list}, allow_nil: true
+  validates :frequency_duration, presence: true, numericality: {greater_than: 0}, if: :recurring?
+  validates :frequency_duration_remaining, presence: true, numericality: {greater_than_or_equal_to: 0}, if: :recurring?
 
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp

@@ -244,5 +244,28 @@ RSpec.describe AppliedCoupons::CreateService do
         expect(customer.reload.currency).to eq(amount_currency)
       end
     end
+
+    context "when frequency is overridden to recurring without frequency_duration" do
+      let(:coupon) do
+        create(:coupon, status: "active", organization:, frequency: "once", frequency_duration: nil)
+      end
+
+      let(:params) do
+        {
+          amount_cents:,
+          amount_currency:,
+          percentage_rate:,
+          frequency: "recurring"
+        }
+      end
+
+      it "fails with a validation error" do
+        expect { create_result }.not_to change(AppliedCoupon, :count)
+
+        expect(create_result).not_to be_success
+        expect(create_result.error).to be_a(BaseService::ValidationFailure)
+        expect(create_result.error.messages.keys).to include(:frequency_duration, :frequency_duration_remaining)
+      end
+    end
   end
 end

@@ -26,6 +26,17 @@ RSpec.describe AppliedCoupon do
   describe "validations" do
     it { is_expected.to validate_numericality_of(:amount_cents).is_greater_than_or_equal_to(0) }
     it { is_expected.to validate_inclusion_of(:amount_currency).in_array(described_class.currency_list) }
+
+    context "when recurring" do
+      subject(:applied_coupon) do
+        build(:applied_coupon, frequency: "recurring", frequency_duration: 3, frequency_duration_remaining: 3)
+      end
+
+      it { is_expected.to validate_presence_of(:frequency_duration).with_message("value_is_mandatory") }
+      it { is_expected.to validate_numericality_of(:frequency_duration).is_greater_than(0) }
+      it { is_expected.to validate_presence_of(:frequency_duration_remaining).with_message("value_is_mandatory") }
+      it { is_expected.to validate_numericality_of(:frequency_duration_remaining).is_greater_than_or_equal_to(0) }
+    end
   end
 
   describe "#remaining_amount" do
