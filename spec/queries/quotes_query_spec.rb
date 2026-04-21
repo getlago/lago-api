@@ -4,12 +4,14 @@ require "rails_helper"
 
 RSpec.describe QuotesQuery do
   subject(:result) do
-    described_class.call(organization:, pagination:)
+    described_class.call(organization:, pagination:, filters:, latest_version_only:)
   end
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:pagination) { nil }
+  let(:filters) { {} }
+  let(:latest_version_only) { false }
 
   describe "ordering" do
     let!(:q1_v1) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
@@ -102,6 +104,149 @@ RSpec.describe QuotesQuery do
         expect(result.quotes).to be_empty
         expect(result.quotes.total_count).to eq(4)
         expect(result.quotes.total_pages).to eq(2)
+      end
+    end
+  end
+
+  describe "filters" do
+    context "with customer filter" do
+      let(:other_customer) { create(:customer, organization:) }
+      let!(:matching_quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let!(:other_quote) { create(:quote, organization:, customer: other_customer, sequential_id: 2, version: 1, number: "QT-2024-0002") }
+      let(:filters) { {customer: [customer.id]} }
+
+      it "returns only quotes for the passed customer" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to eq([matching_quote.id])
+      end
+    end
+
+    context "with status filter" do
+      let!(:draft_quote) { create(:quote, organization:, customer:, status: :draft, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let!(:approved_quote) { create(:quote, organization:, customer:, status: :approved, sequential_id: 2, version: 1, number: "QT-2024-0002") }
+      let!(:voided_quote) { create(:quote, organization:, customer:, status: :voided, sequential_id: 3, version: 1, number: "QT-2024-0003") }
+      let(:filters) { {status: ["draft", "voided"]} }
+
+      it "returns only quotes with the passed statuses" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to match_array([draft_quote.id, voided_quote.id])
+      end
+    end
+
+    context "with number filter" do
+      let!(:matching_quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let!(:other_quote) { create(:quote, organization:, customer:, sequential_id: 2, version: 1, number: "QT-2024-0002") }
+      let(:filters) { {number: ["QT-2024-0001"]} }
+
+      it "returns only quotes matching the numbers" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to eq([matching_quote.id])
+      end
+    end
+
+    context "with version filter" do
+      let!(:v1) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let!(:v2) { create(:quote, organization:, customer:, sequential_id: 1, version: 2, number: "QT-2024-0001") }
+      let!(:v3) { create(:quote, organization:, customer:, sequential_id: 1, version: 3, number: "QT-2024-0001") }
+      let(:filters) { {version: [1, 3]} }
+
+      it "returns only quotes at the passed versions" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to match_array([v1.id, v3.id])
+      end
+    end
+
+    context "with date window" do
+      let!(:old_quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001", created_at: 10.days.ago) }
+      let!(:recent_quote) { create(:quote, organization:, customer:, sequential_id: 2, version: 1, number: "QT-2024-0002", created_at: 1.day.ago) }
+      let(:filters) { {from_date: 5.days.ago.to_date, to_date: Date.today} }
+
+      it "returns only quotes created within the window" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to eq([recent_quote.id])
+      end
+    end
+
+    context "with from_date as a Date object" do
+      let!(:quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let(:filters) { {from_date: Date.today - 1} }
+
+      it "does not fail validation" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to eq([quote.id])
+      end
+    end
+
+    context "with owners filter" do
+      let(:user_one) { create(:user) }
+      let(:user_two) { create(:user) }
+      let!(:matching_quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let!(:other_quote) { create(:quote, organization:, customer:, sequential_id: 2, version: 1, number: "QT-2024-0002") }
+      let(:filters) { {owners: [user_one.id]} }
+
+      before do
+        create(:quote_owner, organization:, quote: matching_quote, user: user_one)
+        create(:quote_owner, organization:, quote: other_quote, user: user_two)
+      end
+
+      it "returns only quotes with the matching owners" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to eq([matching_quote.id])
+      end
+    end
+
+    context "with owners filter matching multiple users" do
+      let(:user_one) { create(:user) }
+      let(:user_two) { create(:user) }
+      let!(:quote) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let(:filters) { {owners: [user_one.id, user_two.id]} }
+
+      before do
+        create(:quote_owner, organization:, quote:, user: user_one)
+        create(:quote_owner, organization:, quote:, user: user_two)
+      end
+
+      it "returns the quote exactly once" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to eq([quote.id])
+      end
+    end
+
+    context "with latest_version_only" do
+      let!(:q1_v1) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let!(:q1_v2) { create(:quote, organization:, customer:, sequential_id: 1, version: 2, number: "QT-2024-0001") }
+      let!(:q1_v3) { create(:quote, organization:, customer:, sequential_id: 1, version: 3, number: "QT-2024-0001") }
+      let!(:q2_v1) { create(:quote, organization:, customer:, sequential_id: 2, version: 1, number: "QT-2024-0002") }
+      let(:latest_version_only) { true }
+
+      it "returns the highest version per sequential_id" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to match_array([q1_v3.id, q2_v1.id])
+      end
+
+      it "orders the deduped set by number DESC then version DESC" do
+        expect(result.quotes.pluck(:number, :version)).to eq([
+          ["QT-2024-0002", 1],
+          ["QT-2024-0001", 3]
+        ])
+      end
+    end
+
+    context "with latest_version_only combined with owners filter" do
+      let(:user_one) { create(:user) }
+      let!(:q1_v1) { create(:quote, organization:, customer:, sequential_id: 1, version: 1, number: "QT-2024-0001") }
+      let!(:q1_v2) { create(:quote, organization:, customer:, sequential_id: 1, version: 2, number: "QT-2024-0001") }
+      let(:filters) { {owners: [user_one.id]} }
+      let(:latest_version_only) { true }
+
+      before do
+        create(:quote_owner, organization:, quote: q1_v1, user: user_one)
+        create(:quote_owner, organization:, quote: q1_v2, user: user_one)
+      end
+
+      it "combines filters without raising an ambiguous column error" do
+        expect(result).to be_success
+        expect(result.quotes.pluck(:id)).to eq([q1_v2.id])
       end
     end
   end
