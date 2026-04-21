@@ -70,4 +70,23 @@ RSpec.describe Mutations::Quotes::Void do
       expect(result["errors"].first["extensions"]["details"]["quote"]).to eq(["not_found"])
     end
   end
+
+  context "when the quote is already voided", :premium do
+    let(:quote) { create(:quote, organization:, customer:, status: :voided, void_reason: "manual", voided_at: 1.day.ago) }
+
+    it "returns an inappropriate_state error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {id: quote.id, reason: "manual"}
+        }
+      )
+
+      expect(result["errors"]).to be_present
+      expect(result["errors"].first["extensions"]["code"]).to eq("inappropriate_state")
+    end
+  end
 end

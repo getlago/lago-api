@@ -47,6 +47,19 @@ RSpec.describe Quotes::VoidService do
       end
     end
 
+    context "when the quote customer has been discarded" do
+      before { customer.discard! }
+
+      it "voids the quote" do
+        expect(result).to be_success
+
+        quote.reload
+        expect(quote.status).to eq("voided")
+        expect(quote.void_reason).to eq("manual")
+        expect(quote.voided_at).not_to be_nil
+      end
+    end
+
     context "when the quote is already voided" do
       let(:quote) do
         create(

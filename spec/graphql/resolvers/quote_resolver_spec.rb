@@ -107,4 +107,36 @@ RSpec.describe Resolvers::QuoteResolver do
       expect_graphql_error(result:, message: "Resource not found")
     end
   end
+
+  context "when quote is voided" do
+    let(:voided_at) { Time.current.change(usec: 0) }
+    let(:quote) do
+      create(
+        :quote,
+        organization:,
+        customer:,
+        status: :voided,
+        void_reason: "superseded",
+        voided_at:
+      )
+    end
+
+    it "serializes the void fields" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          quoteId: quote.id
+        }
+      )
+
+      quote_response = result["data"]["quote"]
+
+      expect(quote_response["status"]).to eq("voided")
+      expect(quote_response["voidReason"]).to eq("superseded")
+      expect(quote_response["voidedAt"]).to eq(voided_at.iso8601)
+    end
+  end
 end
