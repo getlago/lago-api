@@ -12,7 +12,8 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
-      return result unless (invoice.pending? || invoice.subscription_gated?) && invoice.tax_pending?
+      return result if !invoice.pending? && !invoice.subscription_gated?
+      return result unless invoice.tax_pending?
       return result if customer.tax_customer
       return result if customer.vies_check_in_progress?
 
