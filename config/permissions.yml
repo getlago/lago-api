@@ -189,6 +189,22 @@ pricing_units:
     - finance
   create:
   update:
+quotes:
+  view:
+    - finance
+    - manager
+  create:
+    - manager
+  update:
+    - manager
+  delete:
+    - manager
+  approve:
+    - manager
+  clone:
+    - manager
+  void:
+    - manager
 roles:
   view:
   create:

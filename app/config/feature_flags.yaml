@@ -25,3 +25,7 @@ multi_currency:
 payment_gated_subscriptions:
   description: "Enable payment-gated subscription activation rules"
   owners: ["@osmarluz", "@ancorcruz"]
+
+quote:
+  description: "Enable the Quotes product"
+  owners: ["@murparreira", "@toommz", "@rinasergeeva"]

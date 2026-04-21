@@ -783,6 +783,11 @@ type AvalaraIntegration {
   name: String!
 }
 
+enum BackdatedBillingEnum {
+  generate_past_invoices
+  start_without_invoices
+}
+
 """
 Represents non-fractional signed whole numeric values. Since the value may
 exceed the size of a 32-bit integer, it's encoded as a string.
@@ -5723,6 +5728,11 @@ enum EventTypeEnum {
   wallet_updated
 }
 
+enum ExecutionModeEnum {
+  execute_in_lago
+  order_only
+}
+
 """
 Organization Feature Flag Values
 """
@@ -5733,6 +5743,7 @@ enum FeatureFlagEnum {
   non_persistable_charge_cache_optimization
   payment_gated_subscriptions
   postgres_enriched_events
+  quote
   wallet_traceability
 }
 
@@ -8886,6 +8897,12 @@ enum OrderByEnum {
   net_revenue_amount_cents
 }
 
+enum OrderTypeEnum {
+  one_off
+  subscription_amendment
+  subscription_creation
+}
+
 """
 Safe Organization Type
 """
@@ -9196,6 +9213,13 @@ enum PermissionEnum {
   pricing_units_create
   pricing_units_update
   pricing_units_view
+  quotes_approve
+  quotes_clone
+  quotes_create
+  quotes_delete
+  quotes_update
+  quotes_view
+  quotes_void
   roles_create
   roles_delete
   roles_update
@@ -9303,6 +9327,13 @@ type Permissions {
   pricingUnitsCreate: Boolean!
   pricingUnitsUpdate: Boolean!
   pricingUnitsView: Boolean!
+  quotesApprove: Boolean!
+  quotesClone: Boolean!
+  quotesCreate: Boolean!
+  quotesDelete: Boolean!
+  quotesUpdate: Boolean!
+  quotesView: Boolean!
+  quotesVoid: Boolean!
   rolesCreate: Boolean!
   rolesDelete: Boolean!
   rolesUpdate: Boolean!
@@ -10318,6 +10349,16 @@ type Query {
   pricingUnits(limit: Int, page: Int, searchTerm: String): PricingUnitCollection!
 
   """
+  Query a quote
+  """
+  quote(id: ID!): Quote
+
+  """
+  Query quotes of an organization
+  """
+  quotes(customer: [ID!], fromDate: ISO8601Date, latestVersionOnly: Boolean, limit: Int, number: [String!], owners: [ID!], page: Int, status: [StatusEnum!], toDate: ISO8601Date, version: [Int!]): QuoteCollection!
+
+  """
   Query a single role
   """
   role(
@@ -10554,6 +10595,50 @@ type Query {
   Query Webhooks
   """
   webhooks(eventTypes: [String!], fromDate: ISO8601DateTime, httpStatuses: [String!], limit: Int, page: Int, searchTerm: String, status: WebhookStatusEnum, statuses: [WebhookStatusEnum!], toDate: ISO8601DateTime, webhookEndpointId: String!): WebhookCollection!
+}
+
+type Quote {
+  approvedAt: ISO8601DateTime
+  autoExecute: Boolean!
+  backdatedBilling: BackdatedBillingEnum
+  billingItems: JSON
+  commercialTerms: JSON
+  contacts: JSON
+  content: String
+  createdAt: ISO8601DateTime!
+  currency: String
+  customer: Customer!
+  description: String
+  executionMode: ExecutionModeEnum
+  id: ID!
+  internalNotes: String
+  legalText: String
+  metadata: JSON
+  number: String!
+  orderType: OrderTypeEnum!
+  organization: Organization!
+  owners: [User!]
+  shareToken: String
+  status: StatusEnum!
+  updatedAt: ISO8601DateTime!
+  version: Int!
+  voidReason: VoidReasonEnum
+  voidedAt: ISO8601DateTime
+}
+
+"""
+QuoteCollection type
+"""
+type QuoteCollection {
+  """
+  A collection of paginated QuoteCollection
+  """
+  collection: [Quote!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
 }
 
 enum RecurringTransactionIntervalEnum {
@@ -11074,6 +11159,12 @@ input SetAsDefaultInput {
   """
   clientMutationId: String
   id: ID!
+}
+
+enum StatusEnum {
+  approved
+  draft
+  voided
 }
 
 enum StatusTypeEnum {
@@ -13046,6 +13137,13 @@ input VoidInvoiceInput {
   generateCreditNote: Boolean
   id: ID!
   refundAmount: BigInt
+}
+
+enum VoidReasonEnum {
+  cascade_of_expired
+  cascade_of_voided
+  manual
+  superseded
 }
 
 """
