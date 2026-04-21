@@ -199,6 +199,31 @@ RSpec.describe Organization do
       end
     end
 
+    describe "of slug" do
+      it "validates length, format, and exclusion" do
+        organization.slug = "ab"
+        expect(organization).not_to be_valid
+
+        organization.slug = "a" * 41
+        expect(organization).not_to be_valid
+
+        organization.slug = "-invalid"
+        expect(organization).not_to be_valid
+
+        organization.slug = "customers"
+        expect(organization).not_to be_valid
+
+        organization.slug = "valid-slug"
+        expect(organization).to be_valid
+      end
+
+      it "validates presence on persisted record" do
+        persisted_org = create(:organization)
+        persisted_org.slug = nil
+        expect(persisted_org).not_to be_valid
+      end
+    end
+
     describe "of premium_integrations inclusion" do
       context "when it includes an invalid integration" do
         subject(:organization) { build(:organization, premium_integrations: ["invalid_integration"]) }
@@ -238,6 +263,18 @@ RSpec.describe Organization do
 
       it "sets unique hmac key" do
         expect { subject }.to change(organization, :hmac_key).to unique_hmac_key
+      end
+
+      it "auto-generates slug from name when not provided" do
+        org = build(:organization, name: "Acme Corporation", slug: nil)
+        org.save!
+        expect(org.slug).to eq("acme-corporation")
+      end
+
+      it "keeps provided slug when present" do
+        org = build(:organization, name: "Acme Corporation", slug: "custom-slug")
+        org.save!
+        expect(org.slug).to eq("custom-slug")
       end
     end
 

@@ -9,6 +9,7 @@ RSpec.describe Types::Organizations::UpdateOrganizationInput do
     expect(subject).to accept_argument(:authentication_methods).of_type("[AuthenticationMethodsEnum!]")
     expect(subject).to accept_argument(:default_currency).of_type("CurrencyEnum")
     expect(subject).to accept_argument(:email).of_type("String")
+    expect(subject).to accept_argument(:slug).of_type("String")
     expect(subject).to accept_argument(:legal_name).of_type("String")
     expect(subject).to accept_argument(:legal_number).of_type("String")
     expect(subject).to accept_argument(:logo).of_type("String")

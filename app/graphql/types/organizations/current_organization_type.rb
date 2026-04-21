@@ -8,6 +8,7 @@ module Types
       field :id, ID, null: false
       field :logo_url, String
       field :name, String, null: false
+      field :slug, String, null: false
       field :timezone, Types::TimezoneEnum
 
       field :default_currency, Types::CurrencyEnum, null: false

@@ -6,6 +6,7 @@ class Organization < ApplicationRecord
   include Currencies
   include Organizations::AuthenticationMethods
   include HasFeatureFlags
+  include Organizations::Sluggable
 
   self.ignored_columns += [:clickhouse_aggregation]
 
@@ -339,6 +340,7 @@ end
 #  net_payment_term                 :integer          default(0), not null
 #  pre_filter_events                :boolean          default(FALSE), not null
 #  premium_integrations             :string           default([]), not null, is an Array
+#  slug                             :string           not null
 #  state                            :string
 #  tax_identification_number        :string
 #  timezone                         :string           default("UTC"), not null
@@ -352,4 +354,5 @@ end
 #
 #  index_organizations_on_api_key   (api_key) UNIQUE
 #  index_organizations_on_hmac_key  (hmac_key) UNIQUE
+#  index_organizations_on_slug      (slug) UNIQUE
 #

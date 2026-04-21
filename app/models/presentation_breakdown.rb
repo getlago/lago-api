@@ -12,7 +12,7 @@ end
 #
 #  id              :uuid             not null, primary key
 #  presentation_by :jsonb            not null
-#  units           :decimal(30, 10)  default(0.0), not null
+#  units           :decimal(, )      default(0.0), not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  fee_id          :uuid             not null

@@ -458,6 +458,7 @@ DROP INDEX IF EXISTS public.index_payment_intents_on_invoice_id_and_status;
 DROP INDEX IF EXISTS public.index_payment_intents_on_invoice_id;
 DROP INDEX IF EXISTS public.index_password_resets_on_user_id;
 DROP INDEX IF EXISTS public.index_password_resets_on_token;
+DROP INDEX IF EXISTS public.index_organizations_on_slug;
 DROP INDEX IF EXISTS public.index_organizations_on_hmac_key;
 DROP INDEX IF EXISTS public.index_organizations_on_api_key;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id_and_organization_id;
@@ -2886,6 +2887,7 @@ CREATE TABLE public.organizations (
     clickhouse_deduplication_enabled boolean DEFAULT false NOT NULL,
     feature_flags character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     max_wallets integer,
+    slug character varying NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -4549,9 +4551,9 @@ CREATE TABLE public.presentation_breakdowns (
     organization_id uuid NOT NULL,
     fee_id uuid NOT NULL,
     presentation_by jsonb DEFAULT '[]'::jsonb NOT NULL,
-    units numeric(30,10) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    units numeric DEFAULT 0.0 NOT NULL
 );
 
 
@@ -8431,6 +8433,13 @@ CREATE UNIQUE INDEX index_organizations_on_hmac_key ON public.organizations USIN
 
 
 --
+-- Name: index_organizations_on_slug; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_organizations_on_slug ON public.organizations USING btree (slug);
+
+
+--
 -- Name: index_password_resets_on_token; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11764,6 +11773,11 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260420114717'),
+('20260416124233'),
+('20260416124232'),
+('20260416111923'),
+('20260416111922'),
 ('20260415160654'),
 ('20260409161142'),
 ('20260409151451'),

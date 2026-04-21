@@ -54,7 +54,7 @@ module Invoices
         payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
           provider:,
           payment:,
-          reference: "#{invoice.billing_entity.name} - Invoice #{invoice.number}",
+          reference: payment_reference,
           metadata: {
             lago_invoice_id: invoice.id,
             lago_customer_id: invoice.customer_id,
@@ -167,6 +167,14 @@ module Invoices
           },
           error_details: e.original_error ? V1::Errors::ErrorSerializerFactory.new_instance(e.original_error).serialize : {}
         })
+      end
+
+      def payment_reference
+        if invoice.subscription_gated?
+          "#{invoice.billing_entity.name} - Invoice #{invoice.id}"
+        else
+          "#{invoice.billing_entity.name} - Invoice #{invoice.number}"
+        end
       end
 
       def processing_payment

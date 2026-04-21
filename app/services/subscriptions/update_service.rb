@@ -19,6 +19,7 @@ module Subscriptions
 
     def call
       return result.not_found_failure!(resource: "subscription") unless subscription
+      return result.not_allowed_failure!(code: "subscription_incomplete") if subscription.incomplete?
 
       unless valid?(
         customer: subscription.customer,
