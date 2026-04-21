@@ -11,7 +11,7 @@ end
 # Table name: quote_owners
 # Database name: primary
 #
-#  id              :bigint           not null, primary key
+#  id              :uuid             not null, primary key
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  organization_id :uuid             not null

@@ -18,7 +18,7 @@ class Quote < ApplicationRecord
   before_save :ensure_number
 
   belongs_to :organization
-  belongs_to :customer
+  belongs_to :customer, -> { with_discarded }
   belongs_to :subscription, optional: true
   has_many :quote_owners, dependent: :destroy
   has_many :owners, through: :quote_owners, source: :user, class_name: "User"

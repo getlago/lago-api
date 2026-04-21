@@ -22,6 +22,7 @@ module Resolvers
           limit:
         }
       )
+      return result_error(result) unless result.success?
 
       result.quotes.includes(:customer, :organization, :subscription, :owners)
     end

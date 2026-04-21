@@ -2,7 +2,7 @@
 
 class CreateQuoteOwners < ActiveRecord::Migration[8.0]
   def change
-    create_table :quote_owners, if_not_exists: true do |t|
+    create_table :quote_owners, id: :uuid, if_not_exists: true do |t|
       t.references :organization, null: false, foreign_key: true, type: :uuid
       t.references :quote, null: false, foreign_key: true, index: false, type: :uuid
       t.references :user, null: false, foreign_key: true, type: :uuid

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Resolvers::QuoteResolver do
   let(:required_permission) { "quotes:view" }
   let(:query) do
-    <<-GQL
+    <<~GQL
       query($quoteId: ID!) {
         quote(id: $quoteId) {
           id
@@ -66,5 +66,21 @@ RSpec.describe Resolvers::QuoteResolver do
     expect(quote_response["version"]).to eq(quote.version)
     expect(quote_response["createdAt"]).to eq(quote.created_at.iso8601)
     expect(quote_response["updatedAt"]).to eq(quote.updated_at.iso8601)
+  end
+
+  context "when quote is not found" do
+    it "returns an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          quoteId: SecureRandom.uuid
+        }
+      )
+
+      expect_graphql_error(result:, message: "Resource not found")
+    end
   end
 end
