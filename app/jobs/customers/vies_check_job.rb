@@ -32,9 +32,11 @@ module Customers
     end
 
     def enqueue_pending_invoice_finalization(customer)
-      customer.invoices.pending.where(tax_status: "pending").find_each do |invoice|
-        Invoices::FinalizePendingViesInvoiceJob.perform_later(invoice)
-      end
+      customer.invoices
+        .where(status: %i[pending open], tax_status: "pending")
+        .find_each do |invoice|
+          Invoices::FinalizePendingViesInvoiceJob.perform_later(invoice)
+        end
     end
 
     def retry_delay(pending_vies_check)
