@@ -220,13 +220,13 @@ module Events
         events.sum("(#{sanitized_property_name})::numeric")
       end
 
-      def grouped_sum
+      def grouped_sum(columns = grouped_by)
         results = events
-          .group(sanitized_grouped_by)
+          .group(columns.map { sanitized_property_name(it) })
           .sum("(#{sanitized_property_name})::numeric")
           .map { |group, value| [group, value].flatten }
 
-        prepare_grouped_result(results)
+        prepare_grouped_result(results, columns: columns)
       end
 
       def presentation_breakdown_sum
@@ -533,13 +533,13 @@ module Events
       # NOTE: returns the values for each groups
       #       The result format will be an array of hash with the format:
       #       [{ groups: { 'cloud' => 'aws', 'region' => 'us_east_1' }, value: 12.9 }, ...]
-      def prepare_grouped_result(rows, timestamp: false)
+      def prepare_grouped_result(rows, timestamp: false, columns: grouped_by)
         rows.map do |row|
           last_group = timestamp ? -2 : -1
           groups = row[...last_group].map(&:presence)
 
           result = {
-            groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            groups: columns.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
             value: row.last
           }
 

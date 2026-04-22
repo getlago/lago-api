@@ -59,6 +59,7 @@ module BillableMetrics
         @grouped_by = filters[:grouped_by]
         @grouped_by_values = filters[:grouped_by_values]
         @presentation_by = filters[:presentation_by]
+        @uniq_grouped_by_and_presentation_by = ((grouped_by || []) + (presentation_by || [])).uniq
 
         @boundaries = boundaries
 
@@ -128,7 +129,8 @@ module BillableMetrics
         :grouped_by,
         :grouped_by_values,
         :presentation_by,
-        :bypass_aggregation
+        :bypass_aggregation,
+        :uniq_grouped_by_and_presentation_by
 
       delegate :billable_metric, to: :charge
 
