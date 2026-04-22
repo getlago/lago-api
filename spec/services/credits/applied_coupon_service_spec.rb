@@ -507,6 +507,28 @@ RSpec.describe Credits::AppliedCouponService do
           end
         end
       end
+
+      context "when frequency_duration_remaining is already 0" do
+        let(:coupon) { create(:coupon, organization:, frequency: "recurring", frequency_duration: 3) }
+        let(:applied_coupon) do
+          create(
+            :applied_coupon,
+            coupon:,
+            customer:,
+            amount_cents: 12,
+            frequency: "recurring",
+            frequency_duration: 3,
+            frequency_duration_remaining: 0
+          )
+        end
+
+        it "does not decrement frequency_duration_remaining below 0" do
+          result = credit_service.call
+
+          expect(result).to be_success
+          expect(applied_coupon.reload.frequency_duration_remaining).to eq(0)
+        end
+      end
     end
   end
 end
