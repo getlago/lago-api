@@ -518,14 +518,6 @@ RSpec.describe Subscriptions::CreateService do
     context "when plan is pay_in_advance" do
       let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
 
-      context "when subscription is not active" do
-        let(:subscription_at) { Time.current + 1.hour }
-
-        it "does not enqueue a job to bill the subscription" do
-          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
-        end
-      end
-
       context "when subscription_at is current date" do
         it "enqueues a job to bill the subscription" do
           expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
@@ -1407,14 +1399,14 @@ RSpec.describe Subscriptions::CreateService do
         context "when subscription_at is today" do
           let(:subscription_at) { Time.current.beginning_of_day.iso8601 }
 
-          # TODO: The final version of this flow will set the subscription to pending and create the activation rules
-          it "creates active subscription without activation rules" do
+          it "creates active subscription with not_applicable activation rules" do
             result = create_service.call
 
             expect(result).to be_success
             subscription = result.subscription
             expect(subscription).to be_active
-            expect(subscription.activation_rules.count).to eq(0)
+            expect(subscription.activation_rules.count).to eq(1)
+            expect(subscription.activation_rules.first).to be_not_applicable
           end
         end
       end
