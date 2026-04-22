@@ -39,9 +39,7 @@ module Credits
         fee.save!
       end
 
-      if applied_coupon.recurring?
-        applied_coupon.frequency_duration_remaining = [applied_coupon.frequency_duration_remaining.to_i - 1, 0].max
-      end
+      decrement_frequency_duration_remaining if applied_coupon.recurring?
 
       if should_terminate_applied_coupon?(credit_amount)
         applied_coupon.mark_as_terminated!
@@ -83,6 +81,10 @@ module Credits
       else
         applied_coupon.frequency_duration_remaining <= 0
       end
+    end
+
+    def decrement_frequency_duration_remaining
+      applied_coupon.frequency_duration_remaining = [applied_coupon.frequency_duration_remaining.to_i - 1, 0].max
     end
 
     # TODO: ensure targeted amount is right with BM/plan limitation
