@@ -138,7 +138,7 @@ RSpec.describe Coupons::CreateService do
         result = create_service.call
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages.keys).to include(:frequency_duration)
+        expect(result.error.messages[:frequency_duration]).to eq(["value_is_mandatory", "is not a number"])
       end
     end
 
