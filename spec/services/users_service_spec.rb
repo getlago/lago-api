@@ -100,13 +100,14 @@ RSpec.describe UsersService do
 
   describe "#register_from_invite" do
     let(:email) { Faker::Internet.email }
+    let(:password) { SecureRandom.hex(16) }
+    let(:invite) { create(:invite, email:) }
 
-    context "when user already exists" do
-      it "creates user and membership if user doesn't exist" do
-        create(:user, email:)
-        invite = create(:invite, email:)
+    context "when is existing user" do
+      let!(:user) { create(:user, email:, password: "old_password") }
 
-        result = user_service.register_from_invite(invite, nil)
+      it "reuse user and adds membership" do
+        result = user_service.register_from_invite(invite, password)
 
         expect(result.user).to be_persisted
         expect(result.user.email).to eq email
@@ -114,13 +115,37 @@ RSpec.describe UsersService do
         expect(result.organization).to eq invite.organization
         expect(result.token).to be_present
       end
+
+      context "without active memberships" do
+        before { create(:membership, user:, status: :revoked) }
+
+        it "updates the password" do
+          result = user_service.register_from_invite(invite, password)
+
+          expect(result.user).to eq user
+          expect(result.user.authenticate(password).id).to eq(user.id)
+          expect(result.user.authenticate("old_password")).to be false
+          expect(result.token).to be_present
+        end
+      end
+
+      context "with active memberships" do
+        before { create(:membership, user:, status: :active) }
+
+        it "keeps the existing password" do
+          result = user_service.register_from_invite(invite, password)
+
+          expect(result.user).to eq user
+          expect(result.user.authenticate(password)).to eq false
+          expect(result.user.authenticate("old_password").id).to eq(user.id)
+          expect(result.token).to be_present
+        end
+      end
     end
 
-    context "when user doesn't exist" do
-      it "creates user and membership if user doesn't exist" do
-        invite = create(:invite, email:)
-
-        result = user_service.register_from_invite(invite, "password")
+    context "when is a new user" do
+      it "creates user and membership" do
+        result = user_service.register_from_invite(invite, password)
 
         expect(result.user).to be_persisted
         expect(result.user.email).to eq email
