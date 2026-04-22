@@ -569,6 +569,7 @@ DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_true_up_parent_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_fees_on_pay_in_advance_event_transaction_id;
+DROP INDEX IF EXISTS public.index_fees_on_original_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_on_invoiceable;
 DROP INDEX IF EXISTS public.index_fees_on_invoice_id;
@@ -3089,7 +3090,8 @@ CREATE TABLE public.fees (
     billing_entity_id uuid NOT NULL,
     precise_credit_notes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     fixed_charge_id uuid,
-    duplicated_in_advance boolean DEFAULT false
+    duplicated_in_advance boolean DEFAULT false,
+    original_fee_id uuid
 );
 
 
@@ -6383,14 +6385,14 @@ CREATE INDEX idx_on_wallet_transaction_id_ac2826109e ON public.wallet_transactio
 -- Name: idx_pay_in_advance_duplication_guard_charge; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false));
+CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL));
 
 
 --
 -- Name: idx_pay_in_advance_duplication_guard_charge_filter; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge_filter ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id, charge_filter_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false));
+CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge_filter ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id, charge_filter_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL));
 
 
 --
@@ -7676,6 +7678,13 @@ CREATE INDEX index_fees_on_invoiceable ON public.fees USING btree (invoiceable_t
 --
 
 CREATE INDEX index_fees_on_organization_id ON public.fees USING btree (organization_id);
+
+
+--
+-- Name: index_fees_on_original_fee_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_original_fee_id ON public.fees USING btree (original_fee_id);
 
 
 --
@@ -11790,6 +11799,8 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260421123920'),
+('20260421103557'),
+('20260421013319'),
 ('20260420114717'),
 ('20260416124233'),
 ('20260416124232'),
