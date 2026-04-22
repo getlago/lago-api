@@ -165,23 +165,27 @@ module Fees
         fee = init_fee(amount_result, properties:, charge_filter:)
         next if fee.nil?
 
-        Array(breakdowns).each do |breakdown|
-          if fee.grouped_by.empty?
-            presentation_by = breakdown[:groups]
-          else
-            next unless fee.grouped_by.all? { |k, v| breakdown[:groups][k] == v }
-            presentation_by = breakdown[:groups].reject { |k, _| fee.grouped_by.key?(k) }
-          end
-
-          fee.presentation_breakdowns.build(
-            presentation_by:,
-            units: breakdown[:value],
-            organization_id: charge.organization_id
-          )
-        end
+        build_breakdowns_for_fee(fee:, breakdowns:)
 
         fee
       end.compact
+    end
+
+    def build_breakdowns_for_fee(fee:, breakdowns:)
+      Array(breakdowns).each do |breakdown|
+        if fee.grouped_by.empty?
+          presentation_by = breakdown[:groups]
+        else
+          next unless fee.grouped_by.all? { |k, v| breakdown[:groups][k] == v }
+          presentation_by = breakdown[:groups].reject { |k, _| fee.grouped_by.key?(k) }
+        end
+
+        fee.presentation_breakdowns.build(
+          presentation_by:,
+          units: breakdown[:value],
+          organization_id: charge.organization_id
+        )
+      end
     end
 
     def filter_non_persistable_fees_for_caching(charge_fees)
