@@ -24,6 +24,7 @@ module Invoices
       return result if active_subscriptions.empty? && recurring
 
       create_generating_invoice unless invoice
+      invoice.status = :open if subscription_gated?
       result.invoice = invoice
 
       fee_result = ActiveRecord::Base.transaction do
@@ -68,7 +69,9 @@ module Invoices
         return result
       end
 
-      if grace_period?
+      if subscription_gated?
+        Invoices::Payments::CreateService.call_async(invoice:)
+      elsif grace_period?
         SendWebhookJob.perform_after_commit("invoice.drafted", invoice)
         Utils::ActivityLog.produce_after_commit(invoice, "invoice.drafted")
       else
@@ -116,6 +119,10 @@ module Invoices
       @active_subscriptions ||= subscriptions.select(&:active?)
     end
 
+    def subscription_gated?
+      @subscription_gated ||= subscriptions.any?(&:gated?)
+    end
+
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
@@ -136,6 +143,8 @@ module Invoices
     end
 
     def grace_period?
+      return false if subscription_gated?
+
       @grace_period ||= customer.applicable_invoice_grace_period.positive?
     end
 
