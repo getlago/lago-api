@@ -79,7 +79,16 @@ class UsersService < BaseService
 
   def register_from_invite(invite, password)
     ActiveRecord::Base.transaction do
-      result.user = User.find_or_create_by!(email: invite.email) { |u| u.password = password }
+      user = User.find_or_initialize_by(email: invite.email)
+
+      if user.new_record?
+        user.password = password
+        user.save!
+      elsif user.memberships.active.none?
+        user.update!(password:)
+      end
+
+      result.user = user
       result.organization = invite.organization
 
       result.membership = Membership.create!(
