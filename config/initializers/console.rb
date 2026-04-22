@@ -130,5 +130,60 @@ Rails.application.console do
 
     inv.file&.destroy
   end
+
+  def clear_dead_termination_jobs
+    ds = Sidekiq::DeadSet.new
+
+    # Filter jobs related to BillSubscriptionJob and error_class ActiveRecord::RecordNotUnique
+    jobs = ds.select do |job|
+      job.item['wrapped'].include?('BillSubscriptionJob') && job.item['error_class'] == 'ActiveRecord::RecordNotUnique'
+    end
+
+    # Count the number of filtered jobs
+    puts "Total BillSubscription jobs with error_class 'RecordNotUnique': #{jobs.count}"
+
+    to_be_deleted = 0
+    not_terminated = 0
+    no_invoice = 0
+
+    # Iterate over the jobs
+    jobs.each do |job|
+      job_args = job.item['args'].first['arguments']
+
+      # Extract subscription ID from job arguments
+      subscription_id = job_args[0][0]['_aj_globalid'].split('Subscription/').last
+      invoicing_reason = job_args[2]['invoicing_reason']['value']
+      invoicing_reason = :subscription_terminating if invoicing_reason == 'upgrading'
+
+      # Find the last invoice related to this subscription
+      invoice = InvoiceSubscription.where(invoicing_reason: :subscription_terminating, subscription_id: subscription_id).order(:created_at).last&.invoice
+
+      # Check if the invoice has been generated and get its status
+      if invoice
+
+        if (invoice.status == 'closed' && invoice.fees_amount_cents.zero?) || invoice.status == 'finalized'
+          subscription = Subscription.find(subscription_id)
+          if subscription.terminated?
+            # Remove the dead job if everything seems correct
+            job.delete
+            to_be_deleted += 1
+          else
+            not_terminated += 1
+          end
+        else
+          # puts "Subscription #{subscription_id} is not terminated. Keeping job in dead set."
+          not_terminated += 1
+        end
+      else
+        # puts "No invoice found for Subscription #{subscription_id}. Keeping job in dead set."
+        no_invoice += 1
+      end
+    end
+
+    puts 'Summary:'
+    puts 'Jobs to be deleted: ' + to_be_deleted.to_s
+    puts 'Subscriptions not terminated: ' + not_terminated.to_s
+    puts 'Subscriptions with no invoice: ' + no_invoice.to_s
+  end
 end
 # rubocop:enable Rails/Output
