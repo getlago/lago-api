@@ -205,8 +205,8 @@ module Events
         end
       end
 
-      def grouped_count
-        groups, group_names = grouped_arel_columns
+      def grouped_count(columns = grouped_by)
+        groups, column_names = grouped_arel_columns(columns)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
@@ -216,96 +216,13 @@ module Events
 
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
-              #{group_names},
+              #{column_names},
               toDecimal32(count(), 0)
             FROM events
-            GROUP BY #{group_names}
+            GROUP BY #{column_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows)
-        end
-      end
-
-      def presentation_breakdown_sum
-        presentation_breakdown(
-          extra_select: [arel_table[:decimal_value].as("property")],
-          deduplicated_columns: %w[decimal_value properties],
-          aggregation_sql: "sum(events.property)"
-        )
-      end
-
-      def presentation_breakdown_count
-        presentation_breakdown(
-          extra_select: [],
-          deduplicated_columns: %w[properties],
-          aggregation_sql: "count()"
-        )
-      end
-
-      def presentation_breakdown_latest
-        presentation_breakdown_distinct(order_sql: "events.timestamp DESC")
-      end
-
-      def presentation_breakdown_max
-        presentation_breakdown_distinct(order_sql: "events.property DESC")
-      end
-
-      def presentation_breakdown_weighted_sum(initial_value: 0, initial_values: [])
-        # NOTE: Important to use a dup to avoid mutate the current object grouped_by using presentation_by values
-        # also, set presentation_by to nil to avoid any confusion in the query building
-        weighted_sum_store_for_breakdown = dup
-        weighted_sum_store_for_breakdown.grouped_by = grouped_and_presentation_columns.values.flatten
-        weighted_sum_store_for_breakdown.presentation_by = nil
-
-        baseline_initial_values = if initial_values.present?
-          initial_values
-        elsif initial_value.to_d.nonzero?
-          [{groups: {}, value: initial_value}]
-        else
-          []
-        end
-
-        formatted_initial_values = weighted_sum_store_for_breakdown.formatted_weighted_sum_initial_values(baseline_initial_values)
-        return [] if formatted_initial_values.empty?
-
-        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: weighted_sum_store_for_breakdown)
-
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
-            [
-              sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
-              {
-                from_datetime:,
-                to_datetime: to_datetime.ceil,
-                decimal_scale: DECIMAL_SCALE
-              }
-            ]
-          )
-
-          prepare_presentation_result(connection.select_all(sql).rows)
-        end
-      end
-
-      def presentation_breakdown_unique_count
-        # NOTE: Important to use a dup to avoid mutate the current object grouped_by using presentation_by values
-        # also, set presentation_by to nil to avoid any confusion in the query building
-        unique_store_for_breakdown = dup
-        unique_store_for_breakdown.grouped_by = grouped_and_presentation_columns.values.flatten
-        unique_store_for_breakdown.presentation_by = nil
-
-        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: unique_store_for_breakdown)
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
-            [
-              sanitize_colon(query.grouped_query),
-              {
-                to_datetime:,
-                decimal_date_scale: DECIMAL_DATE_SCALE
-              }
-            ]
-          )
-
-          prepare_presentation_result(connection.select_all(sql).rows)
+          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
         end
       end
 
@@ -396,9 +313,13 @@ module Events
         end
       end
 
-      def grouped_unique_count
+      def grouped_unique_count(columns = grouped_by)
+        duplicated_unique_count_store = dup
+        duplicated_unique_count_store.grouped_by = columns
+        duplicated_unique_count_store.presentation_by = nil
+
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: duplicated_unique_count_store)
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
               sanitize_colon(query.grouped_query),
@@ -409,7 +330,7 @@ module Events
             ]
           )
 
-          prepare_grouped_result(connection.select_all(sql).rows)
+          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
         end
       end
 
@@ -442,8 +363,8 @@ module Events
         end
       end
 
-      def grouped_max
-        groups, group_names = grouped_arel_columns
+      def grouped_max(columns = grouped_by)
+        groups, column_names = grouped_arel_columns(columns)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
@@ -453,13 +374,13 @@ module Events
 
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
-              #{group_names},
+              #{column_names},
               MAX(property)
             FROM events
-            GROUP BY #{group_names}
+            GROUP BY #{column_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows)
+          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
         end
       end
 
@@ -473,8 +394,8 @@ module Events
         BigDecimal(value)
       end
 
-      def grouped_last
-        groups, group_names = grouped_arel_columns
+      def grouped_last(columns = grouped_by)
+        groups, column_names = grouped_arel_columns(columns)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
@@ -484,13 +405,13 @@ module Events
 
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
-              DISTINCT ON (#{group_names}) #{group_names},
+              DISTINCT ON (#{column_names}) #{column_names},
               property
             FROM events
-            ORDER BY #{group_names}, events.timestamp DESC
+            ORDER BY #{column_names}, events.timestamp DESC
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows)
+          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
         end
       end
 
@@ -537,24 +458,24 @@ module Events
         end
       end
 
-      def grouped_sum
-        groups, group_names = grouped_arel_columns
+      def grouped_sum(columns = grouped_by)
+        groups, column_names = grouped_arel_columns(columns)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
             select: groups + [arel_table[:decimal_value].as("property")],
-            deduplicated_columns: %w[decimal_value]
+            deduplicated_columns: %w[decimal_value properties]
           )
 
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
-              #{group_names},
+              #{column_names},
               sum(events.property)
             FROM events
-            GROUP BY #{group_names}
+            GROUP BY #{column_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows)
+          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
         end
       end
 
@@ -673,12 +594,24 @@ module Events
         BigDecimal(result["aggregation"].presence || 0)
       end
 
-      def grouped_weighted_sum(initial_values: [])
-        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          query = Clickhouse::WeightedSumQuery.new(store: self)
+      def grouped_weighted_sum(columns = grouped_by, initial_value: 0, initial_values: [])
+        duplicated_weighted_sum_store = dup
+        duplicated_weighted_sum_store.grouped_by = columns
+        duplicated_weighted_sum_store.presentation_by = nil
 
-          formatted_initial_values = formatted_weighted_sum_initial_values(initial_values)
-          return [] if formatted_initial_values.empty?
+        baseline_initial_values = if initial_values.present?
+          initial_values
+        elsif initial_value.to_d.nonzero?
+          [{groups: {}, value: initial_value}]
+        else
+          []
+        end
+
+        formatted_initial_values = duplicated_weighted_sum_store.formatted_weighted_sum_initial_values(baseline_initial_values)
+        return [] if formatted_initial_values.empty?
+
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Clickhouse::WeightedSumQuery.new(store: duplicated_weighted_sum_store)
 
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
@@ -691,7 +624,7 @@ module Events
             ]
           )
 
-          prepare_grouped_result(connection.select_all(sql).rows, decimal: true)
+          prepare_grouped_result(connection.select_all(sql).rows, decimal: true, columns: columns)
         end
       end
 
@@ -813,13 +746,13 @@ module Events
       # NOTE: returns the values for each groups
       #       The result format will be an array of hash with the format:
       #       [{ groups: { 'cloud' => 'aws', 'region' => 'us_east_1' }, value: 12.9 }, ...]
-      def prepare_grouped_result(rows, timestamp: false, decimal: false)
+      def prepare_grouped_result(rows, timestamp: false, decimal: false, columns: grouped_by)
         rows.map do |row|
           last_group = timestamp ? -2 : -1
           groups = row.flatten[...last_group].map(&:presence)
 
           result = {
-            groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            groups: columns.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
             value: decimal ? BigDecimal(row.last.presence || 0) : row.last
           }
 
@@ -833,12 +766,11 @@ module Events
         @arel_table ||= ::Clickhouse::EventsEnriched.arel_table
       end
 
-      def grouped_arel_columns
+      def grouped_arel_columns(columns = grouped_by)
+        names = Array.new(columns.count) { |i| "g_#{i}" }
         [
-          grouped_by.map.with_index do |group, index|
-            Arel::Nodes::SqlLiteral.new(sanitized_property_name(group)).as("g_#{index}")
-          end,
-          group_names.join(", ")
+          columns.map.with_index { |col, i| Arel::Nodes::SqlLiteral.new(sanitized_property_name(col)).as("g_#{i}") },
+          names.join(", ")
         ]
       end
 
@@ -875,101 +807,6 @@ module Events
         end
 
         formatted_initial_values
-      end
-
-      private
-
-      def grouped_and_presentation_columns
-        @grouped_and_presentation_columns ||= {grouped_by: grouped_by || [], presentation_by: presentation_by.difference(grouped_by || [])}
-      end
-
-      def prepare_presentation_result(rows)
-        grouped_by_count = grouped_and_presentation_columns[:grouped_by].size
-        presentation_by_count = grouped_and_presentation_columns[:presentation_by].size
-
-        outer_map = {}
-
-        rows.each do |row|
-          grouped_attrs = {}
-          grouped_and_presentation_columns[:grouped_by].each_with_index do |field, i|
-            grouped_attrs[field] = row[i]
-          end
-
-          presentation_attrs = {}
-          grouped_and_presentation_columns[:presentation_by].each_with_index do |field, i|
-            presentation_attrs[field] = row[grouped_by_count + i]
-          end
-
-          units = row[grouped_by_count + presentation_by_count]
-
-          result = outer_map[grouped_attrs.hash] ||= {groups: grouped_attrs, breakdowns: []}
-          result[:breakdowns] << {presentation_by: presentation_attrs, units: units.to_d}
-        end
-
-        outer_map.values
-      end
-
-      def presentation_breakdown(extra_select:, deduplicated_columns:, aggregation_sql:)
-        column_arel, all_column_names = presentation_breakdown_arel_columns
-
-        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_cte_queries(
-            select: column_arel + extra_select,
-            deduplicated_columns:
-          )
-
-          sql = with_ctes(ctes_sql, <<-SQL)
-            SELECT
-              #{all_column_names},
-              #{aggregation_sql}
-            FROM events
-            GROUP BY #{all_column_names}
-          SQL
-
-          prepare_presentation_result(connection.select_all(sql).rows)
-        end
-      end
-
-      def presentation_breakdown_distinct(order_sql:)
-        column_arel, all_column_names = presentation_breakdown_arel_columns
-        grouped_by_names = Array.new(grouped_and_presentation_columns[:grouped_by].size) { |i| "pb_#{i}" }.join(", ")
-
-        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_cte_queries(
-            select: column_arel + [arel_table[:decimal_value].as("property"), arel_table[:timestamp]],
-            deduplicated_columns: %w[decimal_value properties]
-          )
-
-          sql = if grouped_and_presentation_columns[:grouped_by].any?
-            with_ctes(ctes_sql, <<-SQL)
-              SELECT
-                DISTINCT ON (#{grouped_by_names}) #{all_column_names},
-                property
-              FROM events
-              ORDER BY #{grouped_by_names}, #{order_sql}
-            SQL
-          else
-            with_ctes(ctes_sql, <<-SQL)
-              SELECT
-                #{all_column_names},
-                property
-              FROM events
-              ORDER BY #{order_sql}
-              LIMIT 1
-            SQL
-          end
-
-          prepare_presentation_result(connection.select_all(sql).rows)
-        end
-      end
-
-      def presentation_breakdown_arel_columns
-        all_columns = grouped_and_presentation_columns.values.flatten
-        column_arel = all_columns.map.with_index do |col, i|
-          Arel::Nodes::SqlLiteral.new(sanitized_property_name(col)).as("pb_#{i}")
-        end
-        column_names = Array.new(all_columns.count) { |i| "pb_#{i}" }.join(", ")
-        [column_arel, column_names]
       end
     end
   end

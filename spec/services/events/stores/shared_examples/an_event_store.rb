@@ -1453,8 +1453,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
-  if include_feature?(:presentation_breakdown_sum)
-    describe "#presentation_breakdown_sum" do
+  if include_feature?(:grouped_sum_breakdown)
+    describe "#grouped_sum with breakdown columns" do
       subject(:event_store) do
         described_class.new(
           code:,
@@ -1487,16 +1487,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "returns the sum breakdown by presentation_by" do
-          result = event_store.presentation_breakdown_sum
+          result = event_store.grouped_sum(["cloud"])
 
           expect(result).to match_array([
-            {
-              groups: {},
-              breakdowns: match_array([
-                {presentation_by: {"cloud" => "aws"}, units: 30},
-                {presentation_by: {"cloud" => "gcp"}, units: 12}
-              ])
-            }
+            {groups: {"cloud" => "aws"}, value: 30},
+            {groups: {"cloud" => "gcp"}, value: 12}
           ])
         end
       end
@@ -1511,30 +1506,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "returns the sum breakdown per group" do
-          result = event_store.presentation_breakdown_sum
+          result = event_store.grouped_sum(["agent_name", "cloud"])
 
           expect(result).to match_array([
-            {
-              groups: {"agent_name" => "frodo"},
-              breakdowns: match_array([
-                {presentation_by: {"cloud" => "aws"}, units: 2},
-                {presentation_by: {"cloud" => "gcp"}, units: 7}
-              ])
-            },
-            {
-              groups: {"agent_name" => "aragorn"},
-              breakdowns: match_array([
-                {presentation_by: {"cloud" => "aws"}, units: 3}
-              ])
-            }
+            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
+            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7},
+            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3}
           ])
         end
       end
     end
   end
 
-  if include_feature?(:presentation_breakdown_count)
-    describe "#presentation_breakdown_count" do
+  if include_feature?(:grouped_count_breakdown)
+    describe "#grouped_count with breakdown columns" do
       subject(:event_store) do
         described_class.new(
           code:,
@@ -1562,16 +1547,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "returns the count breakdown by presentation_by" do
-          result = event_store.presentation_breakdown_count
+          result = event_store.grouped_count(["cloud"])
 
           expect(result).to match_array([
-            {
-              groups: {},
-              breakdowns: match_array([
-                {presentation_by: {"cloud" => "aws"}, units: 3},
-                {presentation_by: {"cloud" => "gcp"}, units: 1}
-              ])
-            }
+            {groups: {"cloud" => "aws"}, value: 3},
+            {groups: {"cloud" => "gcp"}, value: 1}
           ])
         end
       end
@@ -1586,30 +1566,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "returns the count breakdown per group" do
-          result = event_store.presentation_breakdown_count
+          result = event_store.grouped_count(["agent_name", "cloud"])
 
           expect(result).to match_array([
-            {
-              groups: {"agent_name" => "frodo"},
-              breakdowns: match_array([
-                {presentation_by: {"cloud" => "aws"}, units: 2},
-                {presentation_by: {"cloud" => "gcp"}, units: 1}
-              ])
-            },
-            {
-              groups: {"agent_name" => "aragorn"},
-              breakdowns: match_array([
-                {presentation_by: {"cloud" => "aws"}, units: 1}
-              ])
-            }
+            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
+            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 1},
+            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 1}
           ])
         end
       end
     end
   end
 
-  if include_feature?(:presentation_breakdown_latest)
-    describe "#presentation_breakdown_latest" do
+  if include_feature?(:grouped_last_breakdown)
+    describe "#grouped_last with breakdown columns" do
       subject(:event_store) do
         described_class.new(
           code:,
@@ -1641,16 +1611,12 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           create_event(timestamp: subscription_started_at + 2.days, value: 12, properties: {"cloud" => "gcp"})
         end
 
-        it "returns the latest event's presentation_by values" do
-          result = event_store.presentation_breakdown_latest
+        it "returns the latest value per cloud" do
+          result = event_store.grouped_last(["cloud"])
 
           expect(result).to match_array([
-            {
-              groups: {},
-              breakdowns: [
-                {presentation_by: {"cloud" => "gcp"}, units: 12}
-              ]
-            }
+            {groups: {"cloud" => "aws"}, value: 10},
+            {groups: {"cloud" => "gcp"}, value: 12}
           ])
         end
       end
@@ -1664,30 +1630,21 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           create_event(timestamp: subscription_started_at + 1.day + 1.second, value: 3, properties: {"agent_name" => "aragorn", "cloud" => "aws"})
         end
 
-        it "returns the latest event's presentation_by values per group" do
-          result = event_store.presentation_breakdown_latest
+        it "returns the latest value per group and cloud" do
+          result = event_store.grouped_last(["agent_name", "cloud"])
 
           expect(result).to match_array([
-            {
-              groups: {"agent_name" => "frodo"},
-              breakdowns: [
-                {presentation_by: {"cloud" => "gcp"}, units: 7}
-              ]
-            },
-            {
-              groups: {"agent_name" => "aragorn"},
-              breakdowns: [
-                {presentation_by: {"cloud" => "aws"}, units: 3}
-              ]
-            }
+            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
+            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7},
+            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3}
           ])
         end
       end
     end
   end
 
-  if include_feature?(:presentation_breakdown_max)
-    describe "#presentation_breakdown_max" do
+  if include_feature?(:grouped_max_breakdown)
+    describe "#grouped_max with breakdown columns" do
       subject(:event_store) do
         described_class.new(
           code:,
@@ -1719,16 +1676,12 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           create_event(timestamp: subscription_started_at + 1.day, value: 12, properties: {"cloud" => "gcp"})
         end
 
-        it "returns the event with the max value's presentation_by" do
-          result = event_store.presentation_breakdown_max
+        it "returns the max value per cloud" do
+          result = event_store.grouped_max(["cloud"])
 
           expect(result).to match_array([
-            {
-              groups: {},
-              breakdowns: [
-                {presentation_by: {"cloud" => "gcp"}, units: 12}
-              ]
-            }
+            {groups: {"cloud" => "aws"}, value: 10},
+            {groups: {"cloud" => "gcp"}, value: 12}
           ])
         end
       end
@@ -1742,30 +1695,21 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           create_event(timestamp: subscription_started_at + 1.day, value: 3, properties: {"agent_name" => "aragorn", "cloud" => "aws"})
         end
 
-        it "returns the max event's presentation_by values per group" do
-          result = event_store.presentation_breakdown_max
+        it "returns the max value per group and cloud" do
+          result = event_store.grouped_max(["agent_name", "cloud"])
 
           expect(result).to match_array([
-            {
-              groups: {"agent_name" => "frodo"},
-              breakdowns: [
-                {presentation_by: {"cloud" => "gcp"}, units: 7}
-              ]
-            },
-            {
-              groups: {"agent_name" => "aragorn"},
-              breakdowns: [
-                {presentation_by: {"cloud" => "aws"}, units: 3}
-              ]
-            }
+            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
+            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7},
+            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3}
           ])
         end
       end
     end
   end
 
-  if include_feature?(:presentation_breakdown_unique_count)
-    describe "#presentation_breakdown_unique_count" do
+  if include_feature?(:grouped_unique_count_breakdown)
+    describe "#grouped_unique_count with breakdown columns" do
       subject(:event_store) do
         described_class.new(
           code:,
@@ -1799,16 +1743,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "returns the unique count breakdown by presentation_by" do
-          result = event_store.presentation_breakdown_unique_count
+          result = event_store.grouped_unique_count(["cloud"])
 
           expect(result).to match_array([
-            {
-              groups: {},
-              breakdowns: match_array([
-                {presentation_by: {"cloud" => "aws"}, units: 3},
-                {presentation_by: {"cloud" => "gcp"}, units: 1}
-              ])
-            }
+            {groups: {"cloud" => "aws"}, value: 3},
+            {groups: {"cloud" => "gcp"}, value: 1}
           ])
         end
       end
@@ -1824,30 +1763,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "returns the unique count breakdown per group" do
-          result = event_store.presentation_breakdown_unique_count
+          result = event_store.grouped_unique_count(["agent_name", "cloud"])
 
           expect(result).to match_array([
-            {
-              groups: {"agent_name" => "frodo"},
-              breakdowns: match_array([
-                {presentation_by: {"cloud" => "aws"}, units: 2},
-                {presentation_by: {"cloud" => "gcp"}, units: 1}
-              ])
-            },
-            {
-              groups: {"agent_name" => "aragorn"},
-              breakdowns: match_array([
-                {presentation_by: {"cloud" => "aws"}, units: 1}
-              ])
-            }
+            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
+            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 1},
+            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 1}
           ])
         end
       end
     end
   end
 
-  if include_feature?(:presentation_breakdown_weighted_sum)
-    describe "#presentation_breakdown_weighted_sum" do
+  if include_feature?(:grouped_weighted_sum_breakdown)
+    describe "#grouped_weighted_sum with breakdown columns" do
       subject(:event_store) do
         described_class.new(
           code:,
@@ -1894,13 +1823,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "returns the weighted sum breakdown by presentation_by" do
-          result = event_store.presentation_breakdown_weighted_sum
+          result = event_store.grouped_weighted_sum(["cloud"])
 
-          expect(result.size).to eq(1)
-          expect(result.first[:groups]).to eq({})
-          breakdowns = result.first[:breakdowns]
-          expect(breakdowns.map { |b| b[:presentation_by] }).to match_array([{"cloud" => "aws"}, {"cloud" => "gcp"}])
-          breakdowns.each { |b| expect(b[:units].round(5)).to eq(0.02218) }
+          expect(result.size).to eq(2)
+          expect(result.map { |r| r[:groups] }).to match_array([{"cloud" => "aws"}, {"cloud" => "gcp"}])
+          result.each { |r| expect(r[:value].round(5)).to eq(0.02218) }
         end
       end
 
@@ -1926,19 +1853,19 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "returns the weighted sum breakdown per group" do
-          result = event_store.presentation_breakdown_weighted_sum
+          result = event_store.grouped_weighted_sum(["agent_name", "cloud"])
 
-          expect(result.map { |r| r[:groups] }).to match_array([{"agent_name" => "frodo"}, {"agent_name" => "aragorn"}])
-          result.each do |row|
-            expect(row[:breakdowns].size).to eq(1)
-            expect(row[:breakdowns].first[:units].round(5)).to eq(0.02218)
-          end
+          expect(result.map { |r| r[:groups] }).to match_array([
+            {"agent_name" => "frodo", "cloud" => "aws"},
+            {"agent_name" => "aragorn", "cloud" => "gcp"}
+          ])
+          result.each { |r| expect(r[:value].round(5)).to eq(0.02218) }
         end
       end
 
       context "with no events" do
         it "returns an empty array" do
-          result = event_store.presentation_breakdown_weighted_sum
+          result = event_store.grouped_weighted_sum(["cloud"])
 
           expect(result).to eq([])
         end
@@ -1971,13 +1898,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "uses the initial values in the aggregation" do
-          result = event_store.presentation_breakdown_weighted_sum(initial_values:)
+          result = event_store.grouped_weighted_sum(["cloud"], initial_values:)
 
-          expect(result.size).to eq(1)
-          expect(result.first[:groups]).to eq({})
-          breakdowns = result.first[:breakdowns]
-          expect(breakdowns.map { |b| b[:presentation_by] }).to match_array([{"cloud" => "aws"}, {"cloud" => "gcp"}])
-          breakdowns.each { |b| expect(b[:units].round(5)).to eq(1000.02218) }
+          expect(result.map { |r| r[:groups] }).to match_array([{"cloud" => "aws"}, {"cloud" => "gcp"}])
+          result.each { |r| expect(r[:value].round(5)).to eq(1000.02218) }
         end
       end
     end

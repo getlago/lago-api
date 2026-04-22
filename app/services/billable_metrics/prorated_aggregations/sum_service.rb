@@ -36,7 +36,7 @@ module BillableMetrics
         result.count = aggregation_without_proration.count
 
         if presentation_by.present?
-          result.breakdowns = event_store.presentation_breakdown_sum
+          result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by)
         end
 
         result.options = options
@@ -96,7 +96,7 @@ module BillableMetrics
         end
 
         if presentation_by.present?
-          result.breakdowns = event_store.presentation_breakdown_sum
+          result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by)
         end
 
         result

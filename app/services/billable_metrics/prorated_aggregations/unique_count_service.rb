@@ -34,7 +34,7 @@ module BillableMetrics
         end
 
         if presentation_by.present?
-          result.breakdowns = event_store.presentation_breakdown_unique_count
+          result.breakdowns = event_store.grouped_unique_count(uniq_grouped_by_and_presentation_by)
         end
 
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation(aggregation_without_proration:)
@@ -94,7 +94,7 @@ module BillableMetrics
         end
 
         if presentation_by.present?
-          result.breakdowns = event_store.presentation_breakdown_unique_count
+          result.breakdowns = event_store.grouped_unique_count(uniq_grouped_by_and_presentation_by)
         end
 
         result

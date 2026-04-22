@@ -17,7 +17,7 @@ module BillableMetrics
         result.count = event_store.count
 
         if presentation_by.present?
-          result.breakdowns = event_store.presentation_breakdown_latest
+          result.breakdowns = event_store.grouped_last(uniq_grouped_by_and_presentation_by)
         end
 
         result.options = options
@@ -48,7 +48,7 @@ module BillableMetrics
         end
 
         if presentation_by.present?
-          result.breakdowns = event_store.presentation_breakdown_latest
+          result.breakdowns = event_store.grouped_last(uniq_grouped_by_and_presentation_by)
         end
 
         result

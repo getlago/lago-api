@@ -368,16 +368,12 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
       ]
     end
 
-    it "returns the presentation breakdowns" do
+    it "returns the aggregations per group" do
       result = latest_service.aggregate
 
       expect(result.breakdowns).to match_array([
-        {
-          groups: {},
-          breakdowns: match_array([
-            {presentation_by: {"cloud" => "gcp"}, units: BigDecimal(-5)}
-          ])
-        }
+        {groups: {"cloud" => "aws"}, value: BigDecimal(14)},
+        {groups: {"cloud" => "gcp"}, value: BigDecimal(-5)}
       ])
     end
 
@@ -428,22 +424,13 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
         ]
       end
 
-      it "returns the presentation breakdowns per group" do
+      it "returns the aggregations per group" do
         result = latest_service.aggregate
 
         expect(result.breakdowns).to match_array([
-          {
-            groups: {"agent_name" => "frodo"},
-            breakdowns: match_array([
-              {presentation_by: {"cloud" => "gcp"}, units: BigDecimal(12)}
-            ])
-          },
-          {
-            groups: {"agent_name" => "aragorn"},
-            breakdowns: match_array([
-              {presentation_by: {"cloud" => "aws"}, units: BigDecimal(3)}
-            ])
-          }
+          {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: BigDecimal(10)},
+          {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: BigDecimal(12)},
+          {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: BigDecimal(3)}
         ])
       end
     end

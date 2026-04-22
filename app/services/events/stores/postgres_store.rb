@@ -76,13 +76,13 @@ module Events
         events(ordered: true).pluck(Arel.sql("(#{sanitized_property_name})::numeric * (#{ratio_sql})::numeric"))
       end
 
-      def grouped_count
+      def grouped_count(columns = grouped_by)
         results = events
-          .group(sanitized_grouped_by)
+          .group(columns.map { sanitized_property_name(it) })
           .count
           .map { |group, value| [group, value].flatten }
 
-        prepare_grouped_result(results)
+        prepare_grouped_result(results, columns: columns)
       end
 
       # NOTE: check if an event created before the current on belongs to an active (as in present and not removed)
@@ -148,14 +148,20 @@ module Events
         select_all(sql).to_a
       end
 
-      def grouped_unique_count
-        query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
+      def grouped_unique_count(columns = grouped_by)
+        # NOTE: Important to use a dup to avoid mutate the current object (self) to associate the columns
+        # also, set presentation_by to nil to avoid any confusion in the query building having duplicated keys
+        duplicated_unique_count_store = dup
+        duplicated_unique_count_store.grouped_by = columns
+        duplicated_unique_count_store.presentation_by = nil
+
+        query = Events::Stores::Postgres::UniqueCountQuery.new(store: duplicated_unique_count_store)
 
         sql = sanitize_sql_for_conditions(
           [query.grouped_query]
         )
 
-        prepare_grouped_result(select_all(sql).rows)
+        prepare_grouped_result(select_all(sql).rows, columns: columns)
       end
 
       def grouped_prorated_unique_count
@@ -177,30 +183,30 @@ module Events
         events.maximum("(#{sanitized_property_name})::numeric")
       end
 
-      def grouped_max
+      def grouped_max(columns = grouped_by)
         results = events
-          .group(sanitized_grouped_by)
+          .group(columns.map { sanitized_property_name(it) })
           .maximum("(#{sanitized_property_name})::numeric")
           .map { |group, value| [group, value].flatten }
 
-        prepare_grouped_result(results)
+        prepare_grouped_result(results, columns: columns)
       end
 
       def last
         events.order(timestamp: :desc, created_at: :desc).first&.properties&.[](aggregation_property)
       end
 
-      def grouped_last
-        groups = sanitized_grouped_by
+      def grouped_last(columns = grouped_by)
+        sanitized_columns = columns.map { sanitized_property_name(it) }
 
         sql = events
-          .order(Arel.sql((groups + ["events.timestamp DESC, created_at DESC"]).join(", ")))
+          .order(Arel.sql((sanitized_columns + ["events.timestamp DESC, created_at DESC"]).join(", ")))
           .select(
-            "DISTINCT ON (#{groups.join(", ")}) #{groups.join(", ")}, (#{sanitized_property_name})::numeric AS value"
+            "DISTINCT ON (#{sanitized_columns.join(", ")}) #{sanitized_columns.join(", ")}, (#{sanitized_property_name})::numeric AS value"
           )
           .to_sql
 
-        prepare_grouped_result(select_all(sql).rows)
+        prepare_grouped_result(select_all(sql).rows, columns: columns)
       end
 
       def sum_precise_total_amount_cents
@@ -227,109 +233,6 @@ module Events
           .map { |group, value| [group, value].flatten }
 
         prepare_grouped_result(results, columns: columns)
-      end
-
-      def presentation_breakdown_sum
-        presentation_breakdown(aggregation_sql: "SUM((#{sanitized_property_name})::numeric)")
-      end
-
-      def presentation_breakdown_count
-        presentation_breakdown(aggregation_sql: "COUNT(*)")
-      end
-
-      def presentation_breakdown_latest
-        rows = if grouped_and_presentation_columns[:grouped_by].any?
-          sql = events
-            .order(Arel.sql((sanitized_grouped_by + ["events.timestamp DESC, events.created_at DESC"]).join(", ")))
-            .select(
-              [
-                "DISTINCT ON (#{sanitized_grouped_by.join(", ")}) #{sanitized_grouped_by_and_presentation_by.join(", ")}",
-                "(#{sanitized_property_name})::numeric"
-              ].join(", ")
-            )
-            .to_sql
-
-          select_all(sql).rows
-        else
-          events
-            .order(timestamp: :desc, created_at: :desc)
-            .limit(1)
-            .pluck(Arel.sql((sanitized_grouped_by_and_presentation_by + ["(#{sanitized_property_name})::numeric"]).join(", ")))
-        end
-
-        prepare_presentation_result(rows)
-      end
-
-      def presentation_breakdown_max
-        rows = if grouped_and_presentation_columns[:grouped_by].any?
-          sql = events
-            .order(Arel.sql((sanitized_grouped_by + ["(#{sanitized_property_name})::numeric DESC"]).join(", ")))
-            .select(
-              [
-                "DISTINCT ON (#{sanitized_grouped_by.join(", ")}) #{sanitized_grouped_by_and_presentation_by.join(", ")}",
-                "(#{sanitized_property_name})::numeric"
-              ].join(", ")
-            )
-            .to_sql
-
-          select_all(sql).rows
-        else
-          events
-            .order(Arel.sql("(#{sanitized_property_name})::numeric DESC"))
-            .limit(1)
-            .pluck(Arel.sql((sanitized_grouped_by_and_presentation_by + ["(#{sanitized_property_name})::numeric"]).join(", ")))
-        end
-
-        prepare_presentation_result(rows)
-      end
-
-      def presentation_breakdown_unique_count
-        # NOTE: Important to use a dup to avoid mutate the current object grouped_by using presentation_by values
-        # also, set presentation_by to nil to avoid any confusion in the query building
-        unique_store_for_breakdown = dup
-        unique_store_for_breakdown.grouped_by = grouped_and_presentation_columns.values.flatten
-        unique_store_for_breakdown.presentation_by = nil
-
-        query = Events::Stores::Postgres::UniqueCountQuery.new(store: unique_store_for_breakdown)
-
-        sql = sanitize_sql_for_conditions(
-          [query.grouped_query]
-        )
-
-        prepare_presentation_result(select_all(sql).rows)
-      end
-
-      def presentation_breakdown_weighted_sum(initial_value: 0, initial_values: [])
-        # NOTE: Important to use a dup to avoid mutate the current object grouped_by using presentation_by values
-        # also, set presentation_by to nil to avoid any confusion in the query building
-        weighted_sum_store_for_breakdown = dup
-        weighted_sum_store_for_breakdown.grouped_by = grouped_and_presentation_columns.values.flatten
-        weighted_sum_store_for_breakdown.presentation_by = nil
-
-        query = Events::Stores::Postgres::WeightedSumQuery.new(store: weighted_sum_store_for_breakdown)
-
-        baseline_initial_values = if initial_values.present?
-          initial_values
-        elsif initial_value.to_d.nonzero?
-          [{groups: {}, value: initial_value}]
-        else
-          []
-        end
-
-        formatted_initial_values = weighted_sum_store_for_breakdown.formatted_weighted_sum_initial_values(baseline_initial_values)
-        return [] if formatted_initial_values.empty?
-
-        sql = sanitize_sql_for_conditions(
-          [
-            sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
-            {
-              from_datetime:,
-              to_datetime: to_datetime.ceil
-            }
-          ]
-        )
-
-        prepare_presentation_result(select_all(sql).rows)
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -399,10 +302,24 @@ module Events
         result["aggregation"]
       end
 
-      def grouped_weighted_sum(initial_values: [])
-        query = Events::Stores::Postgres::WeightedSumQuery.new(store: self)
+      def grouped_weighted_sum(columns = grouped_by, initial_value: 0, initial_values: [])
+        # NOTE: Important to use a dup to avoid mutate the current object (self) to associate the columns
+        # also, set presentation_by to nil to avoid any confusion in the query building having duplicated keys
+        duplicated_weighted_sum_store = dup
+        duplicated_weighted_sum_store.grouped_by = columns
+        duplicated_weighted_sum_store.presentation_by = nil
 
-        formatted_initial_values = formatted_weighted_sum_initial_values(initial_values)
+        baseline_initial_values = if initial_values.present?
+          initial_values
+        elsif initial_value.to_d.nonzero?
+          [{groups: {}, value: initial_value}]
+        else
+          []
+        end
+
+        query = Events::Stores::Postgres::WeightedSumQuery.new(store: duplicated_weighted_sum_store)
+
+        formatted_initial_values = duplicated_weighted_sum_store.formatted_weighted_sum_initial_values(baseline_initial_values)
         return [] if formatted_initial_values.empty?
 
         sql = sanitize_sql_for_conditions(
@@ -415,7 +332,7 @@ module Events
           ]
         )
 
-        prepare_grouped_result(select_all(sql).rows)
+        prepare_grouped_result(select_all(sql).rows, columns: columns)
       end
 
       def formatted_weighted_sum_initial_values(initial_values)
@@ -510,10 +427,6 @@ module Events
         grouped_by.map { sanitized_property_name(it) }
       end
 
-      def sanitized_grouped_by_and_presentation_by
-        grouped_and_presentation_columns.values.flatten.map { |c| sanitized_property_name(c) }
-      end
-
       delegate :connection, to: :Event
 
       delegate :select_all, to: :connection
@@ -547,42 +460,6 @@ module Events
 
           result
         end
-      end
-
-      def prepare_presentation_result(rows)
-        grouped_by_count = grouped_and_presentation_columns[:grouped_by].size
-        presentation_by_count = grouped_and_presentation_columns[:presentation_by].size
-
-        outer_map = {}
-
-        rows.each do |row|
-          grouped_attrs = {}
-          grouped_and_presentation_columns[:grouped_by].each_with_index do |field, i|
-            grouped_attrs[field] = row[i]
-          end
-
-          presentation_attrs = {}
-          grouped_and_presentation_columns[:presentation_by].each_with_index do |field, i|
-            presentation_attrs[field] = row[grouped_by_count + i]
-          end
-
-          units = row[grouped_by_count + presentation_by_count]
-
-          result = outer_map[grouped_attrs.hash] ||= {groups: grouped_attrs, breakdowns: []}
-          result[:breakdowns] << {presentation_by: presentation_attrs, units: units}
-        end
-
-        outer_map.values
-      end
-
-      def presentation_breakdown(aggregation_sql:)
-        rows = events.group(sanitized_grouped_by_and_presentation_by).pluck(Arel.sql((sanitized_grouped_by_and_presentation_by + [aggregation_sql]).join(", ")))
-
-        prepare_presentation_result(rows)
-      end
-
-      def grouped_and_presentation_columns
-        @grouped_and_presentation_columns ||= {grouped_by: grouped_by || [], presentation_by: presentation_by.difference(grouped_by || [])}
       end
 
       def operation_type_sql

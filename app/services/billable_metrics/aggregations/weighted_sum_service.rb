@@ -20,7 +20,7 @@ module BillableMetrics
         result.options = {}
 
         if presentation_by.present?
-          result.breakdowns = event_store.presentation_breakdown_weighted_sum(initial_value:)
+          result.breakdowns = event_store.grouped_weighted_sum(uniq_grouped_by_and_presentation_by, initial_value:)
         end
 
         if billable_metric.recurring?
@@ -51,7 +51,7 @@ module BillableMetrics
         end
 
         if presentation_by.present?
-          result.breakdowns = event_store.presentation_breakdown_weighted_sum(initial_values: grouped_latest_values)
+          result.breakdowns = event_store.grouped_weighted_sum(uniq_grouped_by_and_presentation_by, initial_values: grouped_latest_values)
         end
 
         result.aggregations = aggregations.map do |aggregation|

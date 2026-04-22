@@ -91,14 +91,14 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       ]
     end
 
-    it "returns presentation breakdowns" do
+    it "returns aggregations per group" do
       result = aggregator.aggregate
 
-      region_eu = result.breakdowns.first[:breakdowns].find { |b| b[:presentation_by]["region"] == "eu" }
-      expect(region_eu[:units].round(5).to_s).to eq("1.00269")
+      region_eu = result.breakdowns.find { |b| b[:groups]["region"] == "eu" }
+      expect(region_eu[:value].round(5).to_s).to eq("1.00269")
 
-      region_us = result.breakdowns.first[:breakdowns].find { |b| b[:presentation_by]["region"] == "us" }
-      expect(region_us[:units].round(5).to_s).to eq("2.99597")
+      region_us = result.breakdowns.find { |b| b[:groups]["region"] == "us" }
+      expect(region_us[:value].round(5).to_s).to eq("2.99597")
     end
   end
 
@@ -255,14 +255,14 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
             ]
           end
 
-          it "returns presentation breakdowns" do
+          it "returns aggregations per group" do
             result = aggregator.aggregate
 
-            region_eu = result.breakdowns.first[:breakdowns].find { |b| b[:presentation_by]["region"] == "eu" }
-            expect(region_eu[:units].round(5).to_s).to eq("4.99597")
+            region_eu = result.breakdowns.find { |b| b[:groups]["region"] == "eu" }
+            expect(region_eu[:value].round(5).to_s).to eq("4.99597")
 
-            region_nil = result.breakdowns.first[:breakdowns].find { |b| b[:presentation_by]["region"].nil? }
-            expect(region_nil[:units].round(5).to_s).to eq("10.0")
+            region_nil = result.breakdowns.find { |b| b[:groups]["region"].nil? }
+            expect(region_nil[:value].round(5).to_s).to eq("10.0")
           end
         end
       end

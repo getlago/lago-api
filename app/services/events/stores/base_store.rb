@@ -85,30 +85,6 @@ module Events
         raise NotImplementedError
       end
 
-      def presentation_breakdown_sum
-        raise NotImplementedError
-      end
-
-      def presentation_breakdown_count
-        raise NotImplementedError
-      end
-
-      def presentation_breakdown_latest
-        raise NotImplementedError
-      end
-
-      def presentation_breakdown_max
-        raise NotImplementedError
-      end
-
-      def presentation_breakdown_unique_count
-        raise NotImplementedError
-      end
-
-      def presentation_breakdown_weighted_sum(initial_value: 0, initial_values: [])
-        raise NotImplementedError
-      end
-
       def unique_count
         raise NotImplementedError
       end

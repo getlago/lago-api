@@ -24,7 +24,7 @@ module BillableMetrics
         result.pay_in_advance_aggregation = BigDecimal(compute_pay_in_advance_aggregation)
 
         if presentation_by.present?
-          result.breakdowns = event_store.presentation_breakdown_unique_count
+          result.breakdowns = event_store.grouped_unique_count(uniq_grouped_by_and_presentation_by)
         end
 
         result.options = {running_total: running_total(options, aggregation:)}
@@ -62,7 +62,7 @@ module BillableMetrics
         end
 
         if presentation_by.present?
-          result.breakdowns = event_store.presentation_breakdown_unique_count
+          result.breakdowns = event_store.grouped_unique_count(uniq_grouped_by_and_presentation_by)
         end
 
         result
