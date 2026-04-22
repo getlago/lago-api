@@ -53,7 +53,7 @@ class BaseQuery < BaseService
     return value if [Time, ActiveSupport::TimeWithZone, Date, DateTime].include?(value.class)
 
     DateTime.iso8601(value)
-  rescue Date::Error
+  rescue ArgumentError
     result.single_validation_failure!(field: field_name.to_sym, error_code: "invalid_date")
       .raise_if_error!
   end

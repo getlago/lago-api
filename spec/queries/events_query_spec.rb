@@ -76,6 +76,20 @@ RSpec.describe EventsQuery do
         expect(result).to be_success
         expect(result.events.count).to eq(1)
       end
+
+      context "when a timestamp value raises ArgumentError during iso8601 parsing" do
+        let(:filters) { {timestamp_from: "1" * 200} }
+
+        it "returns a validation failure instead of raising" do
+          expect { events_query.call }.not_to raise_error
+
+          result = events_query.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({timestamp_from: ["invalid_date"]})
+        end
+      end
     end
 
     context "with timestamp_from_started filter" do
