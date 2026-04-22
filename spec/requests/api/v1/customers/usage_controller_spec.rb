@@ -232,6 +232,67 @@ RSpec.describe Api::V1::Customers::UsageController do
         end
       end
 
+      context "when filter_by_metric_code is provided" do
+        let(:params) { {external_subscription_id: subscription.external_id, filter_by_metric_code: metric_a.code, apply_taxes: false} }
+
+        it "returns only charges for the given billable metric" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customer_usage][:charges_usage].count).to eq(1)
+
+          charge_usage = json[:customer_usage][:charges_usage].first
+          expect(charge_usage[:billable_metric][:code]).to eq(metric_a.code)
+          expect(charge_usage[:units]).to eq("14.0")
+          expect(charge_usage[:amount_cents]).to eq(14_000)
+        end
+      end
+
+      context "when filter_by_metric_code matches multiple charges sharing the same metric" do
+        let(:charge_a2) do
+          create(
+            :standard_charge,
+            plan: subscription.plan,
+            billable_metric: metric_a,
+            organization:,
+            properties: {amount: "5", pricing_group_keys: []}
+          )
+        end
+
+        let(:params) { {external_subscription_id: subscription.external_id, filter_by_metric_code: metric_a.code, apply_taxes: false} }
+
+        before { charge_a2 }
+
+        it "returns all charges for the metric" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customer_usage][:charges_usage].count).to eq(2)
+          expect(json[:customer_usage][:charges_usage].map { |c| c[:billable_metric][:code] }).to all(eq(metric_a.code))
+        end
+      end
+
+      context "when filter_by_metric_code does not match any charge" do
+        let(:params) { {external_subscription_id: subscription.external_id, filter_by_metric_code: "nonexistent_metric"} }
+
+        it "returns not found" do
+          subject
+
+          expect(response).to be_not_found_error("charge")
+        end
+      end
+
+      context "when filter_by_metric_code belongs to another organization" do
+        let(:other_metric) { create(:billable_metric) }
+        let(:params) { {external_subscription_id: subscription.external_id, filter_by_metric_code: other_metric.code} }
+
+        it "returns not found" do
+          subject
+
+          expect(response).to be_not_found_error("charge")
+        end
+      end
+
       context "when full_usage is true without filter" do
         let(:params) { {external_subscription_id: subscription.external_id, full_usage: true} }
 
