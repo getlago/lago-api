@@ -70,13 +70,15 @@ namespace :invoices do
         UPDATE invoices
         SET updated_at = stale.max_metadata_updated_at
         FROM (
-          SELECT invoices.id, MAX(im.updated_at) AS max_metadata_updated_at
-          FROM invoices
-          JOIN invoice_metadata im ON im.invoice_id = invoices.id
-          WHERE invoices.organization_id = $1
+          SELECT im.invoice_id AS id, MAX(im.updated_at) AS max_metadata_updated_at
+          FROM invoice_metadata im
+          JOIN invoices
+            ON invoices.id = im.invoice_id
+           AND im.updated_at > invoices.updated_at
+          WHERE im.organization_id = $1
             AND invoices.status IN (#{visible_statuses_sql})
-          GROUP BY invoices.id
-          HAVING MAX(im.updated_at) > invoices.updated_at
+          GROUP BY im.invoice_id
+          ORDER BY im.invoice_id
           LIMIT #{effective_limit}
         ) AS stale
         WHERE invoices.id = stale.id

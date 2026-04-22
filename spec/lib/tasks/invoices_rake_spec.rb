@@ -85,6 +85,29 @@ RSpec.describe "invoices:backfill_metadata_updated_at" do # rubocop:disable RSpe
     end
   end
 
+  context "with multiple stale invoices across multiple batches" do
+    let!(:stale_invoices) { Array.new(3) { create_stale_invoice } }
+
+    before do
+      ENV["BATCH_SIZE"] = "1"
+      ENV["TOTAL_LIMIT"] = "10"
+    end
+
+    after do
+      ENV.delete("BATCH_SIZE")
+      ENV.delete("TOTAL_LIMIT")
+    end
+
+    it "processes every stale invoice across iterations and reports zero remaining" do
+      expect { task.invoke(organization.id) }.to output(/Remaining stale invoices: 0/).to_stdout
+
+      stale_invoices.each do |invoice|
+        metadata_updated_at = invoice.metadata.first.updated_at
+        expect(invoice.reload.updated_at).to be_within(1.second).of(metadata_updated_at)
+      end
+    end
+  end
+
   context "with TOTAL_LIMIT set below the stale count" do
     before do
       2.times { create_stale_invoice }
