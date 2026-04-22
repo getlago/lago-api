@@ -60,6 +60,28 @@ RSpec.describe Coupons::UpdateService do
       end
     end
 
+    context "when frequency is recurring without frequency_duration" do
+      let(:params) do
+        {
+          name:,
+          coupon_type: "fixed_amount",
+          frequency: "recurring",
+          amount_cents: 100,
+          amount_currency: "EUR",
+          expiration: "no_expiration",
+          reusable: false
+        }
+      end
+
+      it "fails with a validation error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:frequency_duration]).to eq(["value_is_mandatory", "is not a number"])
+      end
+    end
+
     context "with new plan limitations" do
       let(:plan) { create(:plan, organization:) }
       let(:plan_second) { create(:plan, organization:) }
