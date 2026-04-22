@@ -1395,11 +1395,63 @@ RSpec.describe Subscriptions::CreateService do
           expect(subscription).to be_active
           expect(subscription.activation_rules.count).to eq(0)
         end
+      end
 
-        context "when subscription_at is today" do
-          let(:subscription_at) { Time.current.beginning_of_day.iso8601 }
+      context "when subscription_at is today" do
+        let(:subscription_at) { Time.current.beginning_of_day.iso8601 }
 
-          it "creates active subscription with not_applicable activation rules" do
+        it "creates active subscription with not_applicable activation rules (pay-in-arrears plan)" do
+          result = create_service.call
+
+          expect(result).to be_success
+          subscription = result.subscription
+          expect(subscription).to be_active
+          expect(subscription.activation_rules.count).to eq(1)
+          expect(subscription.activation_rules.first).to be_not_applicable
+        end
+
+        context "when plan is pay in advance" do
+          let(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", pay_in_advance: true) }
+
+          it "creates incomplete subscription with pending activation rule" do
+            result = create_service.call
+
+            expect(result).to be_success
+            subscription = result.subscription
+            expect(subscription).to be_incomplete
+            expect(subscription.activation_rules.count).to eq(1)
+            expect(subscription.activation_rules.first).to be_pending
+          end
+
+          it "enqueues BillSubscriptionJob" do
+            expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+          end
+        end
+
+        context "when plan is pay in arrears with pay-in-advance fixed charges" do
+          let(:add_on) { create(:add_on, organization:) }
+
+          before { create(:fixed_charge, plan:, add_on:, pay_in_advance: true) }
+
+          it "creates incomplete subscription with pending activation rule" do
+            result = create_service.call
+
+            expect(result).to be_success
+            subscription = result.subscription
+            expect(subscription).to be_incomplete
+            expect(subscription.activation_rules.count).to eq(1)
+            expect(subscription.activation_rules.first).to be_pending
+          end
+
+          it "enqueues CreatePayInAdvanceFixedChargesJob" do
+            expect { create_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
+        end
+
+        context "when plan is pay in advance with trial period" do
+          let(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", pay_in_advance: true, trial_period: 30) }
+
+          it "creates active subscription with not_applicable activation rule" do
             result = create_service.call
 
             expect(result).to be_success
@@ -1407,6 +1459,22 @@ RSpec.describe Subscriptions::CreateService do
             expect(subscription).to be_active
             expect(subscription.activation_rules.count).to eq(1)
             expect(subscription.activation_rules.first).to be_not_applicable
+          end
+
+          context "when plan has pay-in-advance fixed charges" do
+            let(:add_on) { create(:add_on, organization:) }
+
+            before { create(:fixed_charge, plan:, add_on:, pay_in_advance: true) }
+
+            it "creates incomplete subscription with pending activation rule" do
+              result = create_service.call
+
+              expect(result).to be_success
+              subscription = result.subscription
+              expect(subscription).to be_incomplete
+              expect(subscription.activation_rules.count).to eq(1)
+              expect(subscription.activation_rules.first).to be_pending
+            end
           end
         end
       end
