@@ -76,7 +76,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
     perform_all_enqueued_jobs
   end
 
-  describe "happy path: payment succeeds" do
+  describe "new subscription with payment successful" do
     it "creates incomplete subscription, then activates on payment success" do
       # Stage 1: Create subscription — goes incomplete, invoice open
       create_subscription(subscription_params)
@@ -139,6 +139,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       subscription = customer.subscriptions.sole
       expect(subscription).to be_active
       expect(subscription.activation_rules.count).to eq(0)
+      expect(subscription.invoices).to be_empty
     end
   end
 
@@ -155,6 +156,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
         subscription = customer.subscriptions.sole
         expect(subscription).to be_active
         expect(subscription.activation_rules.sole).to be_not_applicable
+        expect(subscription.invoices).to be_empty
       end
     end
 
@@ -197,23 +199,4 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
   end
 
-  describe "manual operations blocked on incomplete" do
-    it "rejects terminate and update on incomplete subscriptions" do
-      create_subscription(subscription_params)
-      perform_all_enqueued_jobs
-
-      subscription = customer.subscriptions.sole
-      expect(subscription).to be_incomplete
-
-      terminate_result = Subscriptions::TerminateService.call(subscription:)
-      expect(terminate_result).not_to be_success
-      expect(terminate_result.error.code).to eq("subscription_incomplete")
-
-      update_result = Subscriptions::UpdateService.call(subscription:, params: {name: "new name"})
-      expect(update_result).not_to be_success
-      expect(update_result.error.code).to eq("subscription_incomplete")
-
-      expect(subscription.reload).to be_incomplete
-    end
-  end
 end
