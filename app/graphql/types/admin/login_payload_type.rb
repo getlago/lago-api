@@ -7,7 +7,7 @@ module Types
       description "Login payload returned to Lago staff users"
 
       field :token, String, null: false
-      field :user, Types::UserType, null: false
+      field :admin_user, Types::Admin::UserType, null: false
       field :role, String, null: false
       field :allowed_integrations, [String], null: false
       field :reason_categories, [Types::Admin::ReasonCategoryEnum], null: false

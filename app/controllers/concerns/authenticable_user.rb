@@ -10,7 +10,11 @@ module AuthenticableUser
   private
 
   def current_user
-    @current_user ||= User.find_by(id: decoded_token["sub"]) if token && decoded_token
+    return @current_user if defined?(@current_user)
+    return (@current_user = nil) unless token && decoded_token
+    return (@current_user = nil) if decoded_token["admin"] == true
+
+    @current_user = User.find_by(id: decoded_token["sub"])
   end
 
   def current_organization

@@ -30,13 +30,13 @@ module Admin
         ].freeze
       }.freeze
 
-      def initialize(organization:, integration:, enabled:, reason:, reason_category:, user:, staff_role:)
+      def initialize(organization:, integration:, enabled:, reason:, reason_category:, admin_user:, staff_role:)
         @organization = organization
         @integration = integration.to_s
         @enabled = enabled
         @reason = reason.to_s.strip
         @reason_category = reason_category.to_s
-        @user = user
+        @admin_user = admin_user
         @staff_role = staff_role&.to_sym
 
         super
@@ -73,7 +73,7 @@ module Admin
 
       private
 
-      attr_reader :organization, :integration, :enabled, :reason, :reason_category, :user, :staff_role
+      attr_reader :organization, :integration, :enabled, :reason, :reason_category, :admin_user, :staff_role
 
       def valid_integration?
         Organization::PREMIUM_INTEGRATIONS.include?(integration)
@@ -113,11 +113,13 @@ module Admin
             reason: reason,
             reason_category: reason_category,
             staff_role: staff_role.to_s,
+            admin_user_id: admin_user&.id,
+            admin_user_email: admin_user&.email,
             previous_integrations: previous,
             current_integrations: current
           }.stringify_keys.transform_values { |v| v.to_json },
           organization_id: organization.id,
-          user_id: user&.id,
+          user_id: nil,
           resource_type: "Organization",
           resource_id: organization.id,
           logged_at: Time.current,
@@ -135,7 +137,7 @@ module Admin
           enabled: enabled,
           reason: reason,
           reason_category: reason_category,
-          actor_email: user&.email,
+          actor_email: admin_user&.email,
           staff_role: staff_role.to_s,
           previous_integrations: previous,
           current_integrations: current

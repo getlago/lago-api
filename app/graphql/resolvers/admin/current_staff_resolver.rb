@@ -5,22 +5,19 @@ module Resolvers
     class CurrentStaffResolver < Resolvers::BaseResolver
       include AuthenticableStaffUser
 
-      description "Returns the staff role and allowed integrations for the current user"
+      description "Returns the role and allowed integrations for the current admin user"
 
       type Types::Admin::CurrentStaffType, null: false
 
       StaffInfo = Struct.new(:email, :role, :allowed_integrations, :reason_categories, keyword_init: true)
 
       def resolve
-        email = context[:current_user].email
-        role = staff_role_for(email)
-        allowed = ::Admin::PremiumIntegrations::ToggleService::ROLE_ALLOWED_INTEGRATIONS[role]
-        allowed_list = (allowed == :all) ? ::Organization::PREMIUM_INTEGRATIONS : allowed
+        admin = current_admin_user
 
         StaffInfo.new(
-          email: email,
-          role: role.to_s,
-          allowed_integrations: allowed_list,
+          email: admin.email,
+          role: admin.role,
+          allowed_integrations: admin.allowed_integrations,
           reason_categories: ::Admin::PremiumIntegrations::ToggleService::REASON_CATEGORIES
         )
       end

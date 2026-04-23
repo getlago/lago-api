@@ -17,8 +17,8 @@ module Mutations
       type Types::Admin::OrganizationType
 
       def resolve(organization_id:, integration:, enabled:, reason:, reason_category:)
+        admin_user = current_admin_user
         organization = ::Organization.find_by(id: organization_id)
-        staff_role = staff_role_for(context[:current_user]&.email)
 
         result = ::Admin::PremiumIntegrations::ToggleService.call(
           organization: organization,
@@ -26,8 +26,8 @@ module Mutations
           enabled: enabled,
           reason: reason,
           reason_category: reason_category,
-          user: context[:current_user],
-          staff_role: staff_role
+          admin_user: admin_user,
+          staff_role: admin_user.role.to_sym
         )
 
         result.success? ? result.organization : result_error(result)

@@ -4,6 +4,7 @@ class GraphqlController < ApplicationController
   MAX_QUERY_LENGTH = 15_000
 
   include AuthenticableUser
+  include AuthenticableAdminUser
   include CustomerPortalUser
   include Trackable
 
@@ -25,6 +26,7 @@ class GraphqlController < ApplicationController
     context = {
       login_method:,
       current_user:,
+      current_admin_user:,
       current_organization:,
       current_membership:,
       customer_portal_user:,
