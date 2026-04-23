@@ -4,11 +4,11 @@ module Events
   module Stores
     module Clickhouse
       module EnrichedStoreMigration
-        class OrchestratorJob < ApplicationJob
+        class CheckJob < ApplicationJob
           queue_as "low_priority"
 
           def perform(enriched_store_migration)
-            OrchestratorService.call!(enriched_store_migration:)
+            CheckService.call!(enriched_store_migration:)
           end
         end
       end
