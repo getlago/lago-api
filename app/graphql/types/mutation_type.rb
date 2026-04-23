@@ -7,6 +7,9 @@ module Types
 
     field :update_organization, mutation: Mutations::Organizations::Update
 
+    field :admin_login_user, mutation: Mutations::Admin::LoginUser
+    field :admin_toggle_premium_integration, mutation: Mutations::Admin::TogglePremiumIntegration
+
     field :create_billable_metric, mutation: Mutations::BillableMetrics::Create
     field :destroy_billable_metric, mutation: Mutations::BillableMetrics::Destroy
     field :update_billable_metric, mutation: Mutations::BillableMetrics::Update

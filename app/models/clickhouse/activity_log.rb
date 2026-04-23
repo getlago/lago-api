@@ -86,7 +86,8 @@ module Clickhouse
       email_sent: "email.sent",
       feature_created: "feature.created",
       feature_deleted: "feature.deleted",
-      feature_updated: "feature.updated"
+      feature_updated: "feature.updated",
+      organization_premium_integration_toggled: "organization.premium_integration_toggled"
     }
 
     before_save :ensure_activity_id

@@ -12,6 +12,10 @@ module Types
     field :activity_log, resolver: Resolvers::ActivityLogResolver
     field :activity_logs, resolver: Resolvers::ActivityLogsResolver
     field :add_on, resolver: Resolvers::AddOnResolver
+    field :admin_current_staff, resolver: Resolvers::Admin::CurrentStaffResolver
+    field :admin_organization, resolver: Resolvers::Admin::OrganizationResolver
+    field :admin_organizations, resolver: Resolvers::Admin::OrganizationsResolver
+    field :admin_premium_integration_logs, resolver: Resolvers::Admin::PremiumIntegrationLogsResolver
     field :add_ons, resolver: Resolvers::AddOnsResolver
     field :ai_conversation, resolver: Resolvers::AiConversationResolver
     field :ai_conversations, resolver: Resolvers::AiConversationsResolver
