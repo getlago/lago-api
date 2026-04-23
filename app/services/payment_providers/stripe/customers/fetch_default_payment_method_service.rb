@@ -48,10 +48,10 @@ module PaymentProviders
 
           PaymentMethods::CardDetails.new(
             type: pm.type,
-            last4: pm.card&.last4,
-            brand: pm.card&.display_brand,
-            expiration_month: pm.card&.exp_month,
-            expiration_year: pm.card&.exp_year,
+            last4: pm.try(:card)&.last4,
+            brand: pm.try(:card)&.display_brand,
+            expiration_month: pm.try(:card)&.exp_month,
+            expiration_year: pm.try(:card)&.exp_year,
             card_holder_name: nil,
             issuer: nil
           ).to_h
