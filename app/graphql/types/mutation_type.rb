@@ -312,5 +312,7 @@ module Types
     field :create_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Create
     field :destroy_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Destroy
     field :update_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Update
+    field :admin_toggle_feature, mutation: Mutations::Admin::ToggleFeature
+    field :admin_batch_toggle_feature, mutation: Mutations::Admin::BatchToggleFeature
   end
 end
