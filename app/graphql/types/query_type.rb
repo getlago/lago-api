@@ -16,6 +16,7 @@ module Types
     field :admin_organization, resolver: Resolvers::Admin::OrganizationResolver
     field :admin_organizations, resolver: Resolvers::Admin::OrganizationsResolver
     field :admin_premium_integration_logs, resolver: Resolvers::Admin::PremiumIntegrationLogsResolver
+    field :admin_premium_integrations, resolver: Resolvers::Admin::PremiumIntegrationsResolver
     field :add_ons, resolver: Resolvers::AddOnsResolver
     field :ai_conversation, resolver: Resolvers::AiConversationResolver
     field :ai_conversations, resolver: Resolvers::AiConversationsResolver
