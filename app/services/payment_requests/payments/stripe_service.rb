@@ -50,15 +50,15 @@ module PaymentRequests
           return result
         end
 
-        result.payment = payment
-        result.payable = payment.payable
-
         processing = status == "processing"
         payment.status = status
 
         payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
         payment.payable_payment_status = payable_payment_status
         payment.save!
+
+        result.payment = payment
+        result.payable = payment.payable
 
         update_payable_payment_status(payment_status: payable_payment_status, processing:)
         update_invoices_payment_status(payment_status: payable_payment_status, processing:)

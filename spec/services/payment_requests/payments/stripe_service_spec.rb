@@ -644,6 +644,21 @@ RSpec.describe PaymentRequests::Payments::StripeService do
               status: "succeeded"
             )
           end
+
+          context "when a concurrent webhook has already persisted the payment" do
+            let(:new_payment) { build(:payment, payable: payment_request) }
+
+            before do
+              allow(Payment).to receive(:new).and_return(new_payment)
+              allow(new_payment).to receive(:save!).and_raise(ActiveRecord::RecordNotUnique)
+            end
+
+            it "returns a success result without a non-persisted payment" do
+              expect(result).to be_success
+              expect(result.payment).to be_nil
+              expect(result.payable).to be_nil
+            end
+          end
         end
       end
     end
