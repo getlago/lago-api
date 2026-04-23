@@ -22,7 +22,7 @@ module Resolvers
             scope = scope.where(id: term)
           else
             like = "%#{term.downcase}%"
-            scope = scope.where("LOWER(name) LIKE ? OR LOWER(email) LIKE ?", like, like)
+            scope = scope.where("LOWER(name) LIKE ?", like)
           end
         end
 
