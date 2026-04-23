@@ -55,7 +55,7 @@ module Subscriptions
     end
 
     def bill_subscription
-      return if subcription.incomplete? && !payment_gated?
+      return if subscription.incomplete? && !payment_gated?
 
       # TODO, this is actually doble billing the subscription
       if subscription.plan.pay_in_advance? && !subscription.in_trial_period?
