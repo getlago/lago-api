@@ -53,6 +53,9 @@ class BaseQuery < BaseService
     return value if [Time, ActiveSupport::TimeWithZone, Date, DateTime].include?(value.class)
 
     DateTime.iso8601(value)
+  # Date::Error inherits from ArgumentError so it is caught here too.
+  # A bare ArgumentError is raised e.g. for strings longer than 128 chars
+  # ("string length exceeds the limit 128").
   rescue ArgumentError
     result.single_validation_failure!(field: field_name.to_sym, error_code: "invalid_date")
       .raise_if_error!

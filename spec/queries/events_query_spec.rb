@@ -81,9 +81,8 @@ RSpec.describe EventsQuery do
         let(:filters) { {timestamp_from: "1" * 200} }
 
         it "returns a validation failure instead of raising" do
-          expect { events_query.call }.not_to raise_error
-
-          result = events_query.call
+          result = nil
+          expect { result = events_query.call }.not_to raise_error
 
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
