@@ -134,6 +134,10 @@ class Subscription < ApplicationRecord
     pending_rules? && incomplete?
   end
 
+  def payment_gated?
+    incomplete? && activation_rules.payment.pending.any?
+  end
+
   def upgraded?
     return false unless next_subscription
 
