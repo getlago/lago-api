@@ -74,6 +74,7 @@ ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_c71
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_c64033bcb0;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_c60c12efbd;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_c545103d57;
+ALTER TABLE IF EXISTS ONLY public.cs_admin_audit_logs DROP CONSTRAINT IF EXISTS fk_rails_c47aa068a0;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_c29bf4ff0f;
 ALTER TABLE IF EXISTS ONLY public.enriched_store_migrations DROP CONSTRAINT IF EXISTS fk_rails_c04bd1a196;
@@ -183,6 +184,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAIN
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_63683837a2;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62d18ea517;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_626209b8d2;
+ALTER TABLE IF EXISTS ONLY public.cs_admin_audit_logs DROP CONSTRAINT IF EXISTS fk_rails_602bbeefa1;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3f2dd;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_5efea6fe31;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_5e06da3c18;
@@ -198,6 +200,7 @@ ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_5
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_56b3626631;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_5628a713de;
+ALTER TABLE IF EXISTS ONLY public.cs_admin_audit_logs DROP CONSTRAINT IF EXISTS fk_rails_559c8fe04c;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_533b639bac;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_52b72c9b0e;
 ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS fk_rails_526379cd99;
@@ -658,6 +661,9 @@ DROP INDEX IF EXISTS public.index_customers_invoice_custom_sections_on_billing_e
 DROP INDEX IF EXISTS public.index_customer_metadata_on_organization_id;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id_and_key;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id;
+DROP INDEX IF EXISTS public.index_cs_admin_audit_logs_on_rollback_of_id;
+DROP INDEX IF EXISTS public.index_cs_admin_audit_logs_on_organization_id;
+DROP INDEX IF EXISTS public.index_cs_admin_audit_logs_on_actor_user_id;
 DROP INDEX IF EXISTS public.index_credits_on_progressive_billing_invoice_id;
 DROP INDEX IF EXISTS public.index_credits_on_organization_id;
 DROP INDEX IF EXISTS public.index_credits_on_invoice_id;
@@ -827,6 +833,10 @@ DROP INDEX IF EXISTS public.idx_events_for_distinct_codes;
 DROP INDEX IF EXISTS public.idx_events_billing_lookup;
 DROP INDEX IF EXISTS public.idx_enriched_store_sub_migrations_on_migration_and_subscription;
 DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
+DROP INDEX IF EXISTS public.idx_cs_audit_org_created;
+DROP INDEX IF EXISTS public.idx_cs_audit_feature_created;
+DROP INDEX IF EXISTS public.idx_cs_audit_batch;
+DROP INDEX IF EXISTS public.idx_cs_audit_actor_created;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_filtered_lookup;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_wallet;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
@@ -927,6 +937,7 @@ ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS cust
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS customers_pkey;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS customers_invoice_custom_sections_pkey;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS customer_metadata_pkey;
+ALTER TABLE IF EXISTS ONLY public.cs_admin_audit_logs DROP CONSTRAINT IF EXISTS cs_admin_audit_logs_pkey;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS credits_pkey;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS credit_notes_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS credit_notes_pkey;
@@ -1089,6 +1100,7 @@ DROP TABLE IF EXISTS public.customers_taxes;
 DROP TABLE IF EXISTS public.customers_invoice_custom_sections;
 DROP TABLE IF EXISTS public.customers;
 DROP TABLE IF EXISTS public.customer_metadata;
+DROP TABLE IF EXISTS public.cs_admin_audit_logs;
 DROP TABLE IF EXISTS public.credits;
 DROP TABLE IF EXISTS public.credit_notes_taxes;
 DROP TABLE IF EXISTS public.credit_notes;
@@ -2225,6 +2237,28 @@ CREATE TABLE public.credits (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     progressive_billing_invoice_id uuid,
     organization_id uuid NOT NULL
+);
+
+
+--
+-- Name: cs_admin_audit_logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cs_admin_audit_logs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    actor_user_id uuid NOT NULL,
+    actor_email character varying NOT NULL,
+    action integer NOT NULL,
+    organization_id uuid NOT NULL,
+    feature_type integer NOT NULL,
+    feature_key character varying NOT NULL,
+    before_value boolean,
+    after_value boolean NOT NULL,
+    reason text NOT NULL,
+    batch_id uuid,
+    rollback_of_id uuid,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -5054,7 +5088,8 @@ CREATE TABLE public.users (
     email character varying,
     password_digest character varying,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    cs_admin boolean DEFAULT false NOT NULL
 );
 
 
@@ -5457,6 +5492,14 @@ ALTER TABLE ONLY public.credit_notes_taxes
 
 ALTER TABLE ONLY public.credits
     ADD CONSTRAINT credits_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cs_admin_audit_logs cs_admin_audit_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cs_admin_audit_logs
+    ADD CONSTRAINT cs_admin_audit_logs_pkey PRIMARY KEY (id);
 
 
 --
@@ -6275,6 +6318,34 @@ CREATE UNIQUE INDEX idx_alerts_unique_per_type_per_wallet ON public.usage_monito
 --
 
 CREATE INDEX idx_cached_aggregation_filtered_lookup ON public.cached_aggregations USING btree (organization_id, external_subscription_id, charge_id, "timestamp" DESC, created_at DESC) INCLUDE (grouped_by, charge_filter_id, event_transaction_id);
+
+
+--
+-- Name: idx_cs_audit_actor_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cs_audit_actor_created ON public.cs_admin_audit_logs USING btree (actor_user_id, created_at DESC);
+
+
+--
+-- Name: idx_cs_audit_batch; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cs_audit_batch ON public.cs_admin_audit_logs USING btree (batch_id);
+
+
+--
+-- Name: idx_cs_audit_feature_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cs_audit_feature_created ON public.cs_admin_audit_logs USING btree (feature_key, created_at DESC);
+
+
+--
+-- Name: idx_cs_audit_org_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cs_audit_org_created ON public.cs_admin_audit_logs USING btree (organization_id, created_at DESC);
 
 
 --
@@ -7462,6 +7533,27 @@ CREATE INDEX index_credits_on_organization_id ON public.credits USING btree (org
 --
 
 CREATE INDEX index_credits_on_progressive_billing_invoice_id ON public.credits USING btree (progressive_billing_invoice_id);
+
+
+--
+-- Name: index_cs_admin_audit_logs_on_actor_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cs_admin_audit_logs_on_actor_user_id ON public.cs_admin_audit_logs USING btree (actor_user_id);
+
+
+--
+-- Name: index_cs_admin_audit_logs_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cs_admin_audit_logs_on_organization_id ON public.cs_admin_audit_logs USING btree (organization_id);
+
+
+--
+-- Name: index_cs_admin_audit_logs_on_rollback_of_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cs_admin_audit_logs_on_rollback_of_id ON public.cs_admin_audit_logs USING btree (rollback_of_id);
 
 
 --
@@ -10697,6 +10789,14 @@ ALTER TABLE ONLY public.entitlement_entitlement_values
 
 
 --
+-- Name: cs_admin_audit_logs fk_rails_559c8fe04c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cs_admin_audit_logs
+    ADD CONSTRAINT fk_rails_559c8fe04c FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: credits fk_rails_5628a713de; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10814,6 +10914,14 @@ ALTER TABLE ONLY public.recurring_transaction_rules
 
 ALTER TABLE ONLY public.fees
     ADD CONSTRAINT fk_rails_6023b3f2dd FOREIGN KEY (add_on_id) REFERENCES public.add_ons(id);
+
+
+--
+-- Name: cs_admin_audit_logs fk_rails_602bbeefa1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cs_admin_audit_logs
+    ADD CONSTRAINT fk_rails_602bbeefa1 FOREIGN KEY (rollback_of_id) REFERENCES public.cs_admin_audit_logs(id);
 
 
 --
@@ -11689,6 +11797,14 @@ ALTER TABLE ONLY public.active_storage_attachments
 
 
 --
+-- Name: cs_admin_audit_logs fk_rails_c47aa068a0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cs_admin_audit_logs
+    ADD CONSTRAINT fk_rails_c47aa068a0 FOREIGN KEY (actor_user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: pricing_unit_usages fk_rails_c545103d57; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12227,6 +12343,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260429123434'),
 ('20260424170418'),
 ('20260424131927'),
+('20260423105644'),
+('20260423105637'),
 ('20260421123920'),
 ('20260421103557'),
 ('20260421021503'),
