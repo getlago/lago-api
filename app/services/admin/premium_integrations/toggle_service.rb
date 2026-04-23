@@ -100,7 +100,11 @@ module Admin
       end
 
       def write_activity_log(previous, current)
-        Clickhouse::ActivityLog.create!(
+        # NOTE: `Clickhouse::ActivityLog#resource` validates presence by re-querying with
+        # `organization_id: ...`, which blows up when resource_type == "Organization" (the
+        # table has no organization_id column). We save with `validate: false` to skip that
+        # polymorphic check — the data we insert is fully controlled here.
+        log = Clickhouse::ActivityLog.new(
           activity_type: Clickhouse::ActivityLog::ACTIVITY_TYPES[:organization_premium_integration_toggled],
           activity_source: "api",
           activity_object: {
@@ -125,6 +129,8 @@ module Admin
           logged_at: Time.current,
           created_at: Time.current
         )
+        log.save!(validate: false)
+        log
       end
 
       def notify_slack_async(previous, current)
