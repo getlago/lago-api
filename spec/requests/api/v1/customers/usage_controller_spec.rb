@@ -269,6 +269,9 @@ RSpec.describe Api::V1::Customers::UsageController do
           expect(response).to have_http_status(:success)
           expect(json[:customer_usage][:charges_usage].count).to eq(2)
           expect(json[:customer_usage][:charges_usage].map { |c| c[:billable_metric][:code] }).to all(eq(metric_a.code))
+
+          amounts = json[:customer_usage][:charges_usage].map { |c| c[:amount_cents] }.sort
+          expect(amounts).to eq([7_000, 14_000])
         end
       end
 
@@ -309,6 +312,41 @@ RSpec.describe Api::V1::Customers::UsageController do
           {
             external_subscription_id: subscription.external_id,
             filter_by_charge_code: charge_a.code,
+            full_usage: true,
+            apply_taxes: false
+          }
+        end
+
+        it "returns method not allowed without premium integration" do
+          subject
+
+          expect(response).to have_http_status(:method_not_allowed)
+          expect(json[:code]).to eq("full_usage_not_allowed")
+        end
+
+        context "with granular_lifetime_usage premium integration", :premium do
+          before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
+
+          it "returns usage aggregated from subscription start" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:customer_usage][:charges_usage].count).to eq(1)
+
+            charge_usage = json[:customer_usage][:charges_usage].first
+            expect(charge_usage[:billable_metric][:code]).to eq(metric_a.code)
+            # All periods: aws(5+4+4) + gcp(7+6) = 26 units
+            expect(charge_usage[:units]).to eq("26.0")
+            expect(charge_usage[:amount_cents]).to eq(26_000)
+          end
+        end
+      end
+
+      context "when full_usage is true with filter_by_metric_code" do
+        let(:params) do
+          {
+            external_subscription_id: subscription.external_id,
+            filter_by_metric_code: metric_a.code,
             full_usage: true,
             apply_taxes: false
           }
