@@ -12,7 +12,7 @@ module Subscriptions
 
     def call
       return result if subscription.active?
-      return result if subscription.incomplete? && subscription.pending_rules?
+      return result if subscription.gated?
 
       if subscription.pending_rules?
         subscription.mark_as_incomplete!
