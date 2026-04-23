@@ -256,5 +256,8 @@ module Types
     field :ask_finance_assistant, mutation: Mutations::FinanceAssistant::Ask
     field :create_ai_conversation, mutation: Mutations::AiConversations::Create
     field :export_finance_assistant_result, mutation: Mutations::FinanceAssistant::Export
+
+    field :admin_toggle_feature, mutation: Mutations::Admin::ToggleFeature
+    field :admin_batch_toggle_feature, mutation: Mutations::Admin::BatchToggleFeature
   end
 end
