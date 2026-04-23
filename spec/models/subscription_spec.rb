@@ -317,6 +317,52 @@ RSpec.describe Subscription do
     end
   end
 
+  describe "#payment_gated?" do
+    subject(:payment_gated?) { subscription.payment_gated? }
+
+    context "when incomplete with pending payment rule" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}])
+      end
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when incomplete with satisfied payment rule" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "satisfied"}])
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when active with pending payment rule" do
+      let(:subscription) do
+        create(:subscription, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}])
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when pending with pending payment rule" do
+      let(:subscription) do
+        create(:subscription, :pending, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}])
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when incomplete with no activation rules" do
+      let(:subscription) { create(:subscription, :incomplete) }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
   describe "#upgraded?" do
     let(:previous_subscription) { nil }
     let(:subscription) do
