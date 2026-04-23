@@ -5,11 +5,11 @@ module Resolvers
     class OrganizationsResolver < Resolvers::BaseResolver
       include AuthenticableStaffUser
 
-      description "Search organizations across all tenants (Lago staff only)"
+      description "List or search organizations across all tenants (Lago staff only)"
 
-      argument :limit, Integer, required: false
-      argument :page, Integer, required: false
       argument :search_term, String, required: false
+      argument :page, Integer, required: false
+      argument :limit, Integer, required: false
 
       type Types::Admin::OrganizationType.collection_type, null: false
 
@@ -17,16 +17,16 @@ module Resolvers
         scope = ::Organization.order(created_at: :desc)
 
         if search_term.present?
-          term = "%#{search_term.to_s.strip.downcase}%"
-          scope =
-            if uuid?(search_term)
-              scope.where(id: search_term)
-            else
-              scope.where("LOWER(name) LIKE ? OR LOWER(email) LIKE ?", term, term)
-            end
+          term = search_term.to_s.strip
+          if uuid?(term)
+            scope = scope.where(id: term)
+          else
+            like = "%#{term.downcase}%"
+            scope = scope.where("LOWER(name) LIKE ? OR LOWER(email) LIKE ?", like, like)
+          end
         end
 
-        scope.page(page || 1).per(limit || 25)
+        scope.page(page || 1).per((limit || 25).clamp(1, 100))
       end
 
       private
