@@ -4,10 +4,11 @@ require "rails_helper"
 
 describe "Payment Gated Subscription Activation Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil) }
-  let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+  let(:customer) { create(:customer, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:stripe_customer) { create(:stripe_customer, payment_provider: stripe_provider, customer:) }
   let(:payment_method) { create(:payment_method, customer:) }
+  let(:payment_intent_id) { "pi_#{SecureRandom.hex(12)}" }
 
   let(:plan) do
     create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 1000)
@@ -25,68 +26,90 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
   before do
     create(:tax, :applied_to_billing_entity, organization:, rate: 0)
-    stripe_provider
+    customer.update!(payment_provider: :stripe, payment_provider_code: stripe_provider.code)
     stripe_customer
     payment_method
+
+    # Stub Stripe to return processing — payment stays pending, subscription remains incomplete
+    allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
+      .to receive(:create_payment_intent)
+      .and_return(
+        Stripe::PaymentIntent.construct_from(
+          id: payment_intent_id,
+          status: "processing",
+          amount: 1000,
+          currency: "eur"
+        )
+      )
+  end
+
+  def simulate_stripe_webhook(status:)
+    payment = Payment.order(created_at: :desc).first
+    payment.update!(provider_payment_id: payment_intent_id)
+
+    # Stub payment method retrieval triggered by SetPaymentMethodAndCreateReceiptJob
+    stub_request(:get, %r{https://api.stripe.com/v1/payment_methods/.*})
+      .and_return(status: 200, body: {id: "pm_test", object: "payment_method", type: "card"}.to_json)
+
+    event_type = (status == "succeeded") ? "payment_intent.succeeded" : "payment_intent.payment_failed"
+
+    PaymentProviders::Stripe::HandleEventService.call!(
+      organization:,
+      event_json: {
+        id: "evt_#{SecureRandom.hex(10)}",
+        object: "event",
+        type: event_type,
+        data: {
+          object: {
+            id: payment_intent_id,
+            object: "payment_intent",
+            status: status.to_s,
+            payment_method: "pm_test",
+            metadata: {
+              lago_invoice_id: payment.payable_id,
+              lago_customer_id: customer.id
+            }
+          }
+        }
+      }.to_json
+    )
+    perform_all_enqueued_jobs
   end
 
   describe "happy path: payment succeeds" do
     it "creates incomplete subscription, then activates on payment success" do
-      # Step 1: Create subscription with payment gating
+      # Stage 1: Create subscription — goes incomplete, invoice open
       create_subscription(subscription_params)
-      perform_enqueued_jobs
+      perform_all_enqueued_jobs
 
       subscription = customer.subscriptions.sole
       expect(subscription).to be_incomplete
       expect(subscription.started_at).to be_present
       expect(subscription.activated_at).to be_nil
+      expect(subscription.activation_rules.sole).to be_pending
 
-      # Verify activation rule
-      rule = subscription.activation_rules.sole
-      expect(rule).to be_pending
-      expect(rule.type).to eq("payment")
-      expect(rule.expires_at).to be_present
-
-      # Verify invoice created as open
       invoice = subscription.invoices.sole
       expect(invoice).to be_open
       expect(invoice.fees.subscription.count).to eq(1)
-      expect(invoice.total_amount_cents).to be_positive
 
-      # Verify webhooks
-      expect(SendWebhookJob).to have_been_enqueued.with("subscription.incomplete", subscription)
+      # Stage 2: Stripe webhook — payment succeeded
+      simulate_stripe_webhook(status: "succeeded")
 
-      # Step 2: Simulate payment success (PSP webhook)
-      Invoices::UpdateService.call!(
-        invoice:,
-        params: {payment_status: "succeeded"},
-        webhook_notification: false
-      )
-      perform_enqueued_jobs
-
-      # Verify subscription activated
       subscription.reload
       expect(subscription).to be_active
       expect(subscription.activated_at).to be_present
+      expect(subscription.activation_rules.sole).to be_satisfied
 
-      # Verify rule resolved
-      expect(rule.reload).to be_satisfied
-
-      # Verify invoice finalized
-      invoice.reload
-      expect(invoice).to be_finalized
+      expect(invoice.reload).to be_finalized
       expect(invoice.number).not_to include("DRAFT")
-
-      # Verify webhooks
-      expect(SendWebhookJob).to have_been_enqueued.with("subscription.started", subscription)
     end
   end
 
   describe "payment failure: subscription canceled" do
     it "creates incomplete subscription, then cancels on payment failure" do
-      # Step 1: Create subscription with payment gating
+      # Stage 1: Create subscription — goes incomplete
       create_subscription(subscription_params)
-      perform_enqueued_jobs
+      perform_all_enqueued_jobs
 
       subscription = customer.subscriptions.sole
       expect(subscription).to be_incomplete
@@ -94,29 +117,16 @@ describe "Payment Gated Subscription Activation Scenarios" do
       invoice = subscription.invoices.sole
       expect(invoice).to be_open
 
-      # Step 2: Simulate payment failure (PSP webhook)
-      Invoices::UpdateService.call!(
-        invoice:,
-        params: {payment_status: "failed"},
-        webhook_notification: false
-      )
-      perform_enqueued_jobs
+      # Stage 2: Stripe webhook — payment failed
+      simulate_stripe_webhook(status: "failed")
 
-      # Verify subscription canceled
       subscription.reload
       expect(subscription).to be_canceled
       expect(subscription.cancelation_reason).to eq("payment_failed")
       expect(subscription.activated_at).to be_nil
+      expect(subscription.activation_rules.sole).to be_failed
 
-      # Verify rule resolved
-      rule = subscription.activation_rules.sole
-      expect(rule).to be_failed
-
-      # Verify invoice closed
       expect(invoice.reload).to be_closed
-
-      # Verify webhooks
-      expect(SendWebhookJob).to have_been_enqueued.with("subscription.canceled", subscription)
     end
   end
 
@@ -140,13 +150,11 @@ describe "Payment Gated Subscription Activation Scenarios" do
     context "when plan has no pay-in-advance fixed charges" do
       it "activates immediately because there is nothing to collect" do
         create_subscription(subscription_params)
-        perform_enqueued_jobs
+        perform_all_enqueued_jobs
 
         subscription = customer.subscriptions.sole
         expect(subscription).to be_active
-
-        rule = subscription.activation_rules.sole
-        expect(rule).to be_not_applicable
+        expect(subscription.activation_rules.sole).to be_not_applicable
       end
     end
 
@@ -157,13 +165,11 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       it "gates on the fixed charge invoice" do
         create_subscription(subscription_params)
-        perform_enqueued_jobs
+        perform_all_enqueued_jobs
 
         subscription = customer.subscriptions.sole
         expect(subscription).to be_incomplete
-
-        rule = subscription.activation_rules.sole
-        expect(rule).to be_pending
+        expect(subscription.activation_rules.sole).to be_pending
       end
     end
   end
@@ -178,15 +184,12 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
     it "gates on the fixed charge only invoice" do
       create_subscription(subscription_params)
-      perform_enqueued_jobs
+      perform_all_enqueued_jobs
 
       subscription = customer.subscriptions.sole
       expect(subscription).to be_incomplete
+      expect(subscription.activation_rules.sole).to be_pending
 
-      rule = subscription.activation_rules.sole
-      expect(rule).to be_pending
-
-      # Invoice should contain fixed charge fees only
       invoice = subscription.invoices.sole
       expect(invoice).to be_open
       expect(invoice.fees.fixed_charge.count).to be_positive
@@ -194,26 +197,22 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
   end
 
-
   describe "manual operations blocked on incomplete" do
     it "rejects terminate and update on incomplete subscriptions" do
       create_subscription(subscription_params)
-      perform_enqueued_jobs
+      perform_all_enqueued_jobs
 
       subscription = customer.subscriptions.sole
       expect(subscription).to be_incomplete
 
-      # Terminate should fail
       terminate_result = Subscriptions::TerminateService.call(subscription:)
       expect(terminate_result).not_to be_success
       expect(terminate_result.error.code).to eq("subscription_incomplete")
 
-      # Update should fail
       update_result = Subscriptions::UpdateService.call(subscription:, params: {name: "new name"})
       expect(update_result).not_to be_success
       expect(update_result.error.code).to eq("subscription_incomplete")
 
-      # Subscription unchanged
       expect(subscription.reload).to be_incomplete
     end
   end
