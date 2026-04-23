@@ -9,7 +9,8 @@ module AuthenticableAdminUser
     return @current_admin_user if defined?(@current_admin_user)
     return (@current_admin_user = nil) unless admin_token?
 
-    @current_admin_user = AdminUser.find_by(id: admin_decoded_token["sub"])
+    email = admin_decoded_token["sub"]
+    @current_admin_user = AdminStaffCredentials.find(email)
   end
 
   def admin_token?

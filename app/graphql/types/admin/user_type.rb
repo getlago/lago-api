@@ -4,13 +4,14 @@ module Types
   module Admin
     class UserType < Types::BaseObject
       graphql_name "AdminUserType"
-      description "An authenticated Lago staff user"
+      description "An authenticated Lago staff user (hardcoded, no DB row)"
 
-      field :id, ID, null: false
       field :email, String, null: false
       field :role, String, null: false
-      field :last_sign_in_at, GraphQL::Types::ISO8601DateTime
-      field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      def role
+        object.role.to_s
+      end
     end
   end
 end
