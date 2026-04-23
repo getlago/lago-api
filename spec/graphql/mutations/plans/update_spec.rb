@@ -62,7 +62,10 @@ RSpec.describe Mutations::Plans::Update do
             filters {
               invoiceDisplayName
               values
-              properties { amount }
+              properties {
+                amount
+                presentationGroupKeys { value options { displayInInvoice } }
+              }
             }
           },
           fixedCharges {
@@ -149,7 +152,17 @@ RSpec.describe Mutations::Plans::Update do
               filters: [
                 {
                   invoiceDisplayName: "Payment method",
-                  properties: {amount: "10.00"},
+                  properties: {
+                    amount: "10.00",
+                    presentationGroupKeys: [
+                      {
+                        value: "country",
+                        options: {
+                          displayInInvoice: false
+                        }
+                      }
+                    ]
+                  },
                   values: {billable_metric_filter.key => %w[card]}
                 }
               ]
@@ -282,6 +295,9 @@ RSpec.describe Mutations::Plans::Update do
       filter = standard_charge["filters"].first
       expect(filter["invoiceDisplayName"]).to eq("Payment method")
       expect(filter["properties"]["amount"]).to eq("10.00")
+      expect(filter.dig("properties", "presentationGroupKeys")).to eq([
+        {"value" => "country", "options" => {"displayInInvoice" => false}}
+      ])
       expect(filter["values"]).to eq("payment_method" => %w[card])
 
       package_charge = result_data["charges"][1]
