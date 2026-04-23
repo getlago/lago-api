@@ -14,6 +14,7 @@ module Subscriptions
       return result if subscription.active?
       return result if subscription.gated?
 
+      # TODO: review this, I think it does not make sense at all.
       if subscription.pending_rules?
         subscription.mark_as_incomplete!
       else
@@ -28,7 +29,7 @@ module Subscriptions
       after_commit do
         bill_subscription
 
-        if gated?
+        if subscription.incomplete?
           SendWebhookJob.perform_later("subscription.incomplete", subscription)
           Utils::ActivityLog.produce(subscription, "subscription.incomplete")
         else
@@ -49,23 +50,20 @@ module Subscriptions
 
     attr_reader :subscription, :timestamp
 
-    def gated?
-      subscription.incomplete?
-    end
-
     def payment_gated?
-      gated? && subscription.activation_rules.payment.pending.any?
+      subscription.activation_rules.payment.pending.any?
     end
 
     def bill_subscription
-      return if gated? && !payment_gated?
+      return if subcription.incomplete? && !payment_gated?
 
+      # TODO, this is actually doble billing the subscription
       if subscription.plan.pay_in_advance? && !subscription.in_trial_period?
         BillSubscriptionJob.perform_later(
           [subscription],
           timestamp.to_i,
           invoicing_reason: :subscription_starting,
-          skip_charges: gated?
+          skip_charges: subscription.incomplete?
         )
       elsif subscription.fixed_charges.pay_in_advance.any?
         Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(
