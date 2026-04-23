@@ -318,5 +318,9 @@ module Types
     field :update_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Update
     field :admin_toggle_feature, mutation: Mutations::Admin::ToggleFeature
     field :admin_batch_toggle_feature, mutation: Mutations::Admin::BatchToggleFeature
+
+    field :admin_rollback_change, mutation: Mutations::Admin::RollbackChange
+    field :admin_batch_rollback, mutation: Mutations::Admin::BatchRollback
+    field :admin_create_organization, mutation: Mutations::Admin::CreateOrganization
   end
 end
