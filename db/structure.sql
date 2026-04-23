@@ -62,6 +62,7 @@ ALTER TABLE IF EXISTS ONLY public.item_metadata DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ce2c63d69f;
 ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS fk_rails_cd99351ee3;
+ALTER TABLE IF EXISTS ONLY public.pricing_imports DROP CONSTRAINT IF EXISTS fk_rails_cd04033576;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_cc318ad1ff;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_cbf700aeb8;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_caeb5a3949;
@@ -79,6 +80,7 @@ ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_b
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_bda048a8d9;
+ALTER TABLE IF EXISTS ONLY public.pricing_imports DROP CONSTRAINT IF EXISTS fk_rails_bd81699989;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_bacde7a063;
 ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS fk_rails_bacb46d2a3;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_ba128983c2;
@@ -411,6 +413,8 @@ DROP INDEX IF EXISTS public.index_pricing_units_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_pricing_unit_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_fee_id;
+DROP INDEX IF EXISTS public.index_pricing_imports_on_organization_id;
+DROP INDEX IF EXISTS public.index_pricing_imports_on_membership_id;
 DROP INDEX IF EXISTS public.index_presentation_breakdowns_on_organization_id;
 DROP INDEX IF EXISTS public.index_presentation_breakdowns_on_fee_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_tax_id;
@@ -838,6 +842,7 @@ ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sec
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS quantified_events_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS pricing_units_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS pricing_unit_usages_pkey;
+ALTER TABLE IF EXISTS ONLY public.pricing_imports DROP CONSTRAINT IF EXISTS pricing_imports_pkey;
 ALTER TABLE IF EXISTS ONLY public.presentation_breakdowns DROP CONSTRAINT IF EXISTS presentation_breakdowns_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS plans_pkey;
@@ -955,6 +960,7 @@ DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.quantified_events;
 DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
+DROP TABLE IF EXISTS public.pricing_imports;
 DROP TABLE IF EXISTS public.presentation_breakdowns;
 DROP TABLE IF EXISTS public.pending_vies_checks;
 DROP TABLE IF EXISTS public.payment_receipts;
@@ -1099,6 +1105,7 @@ DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_adjustments;
 DROP TYPE IF EXISTS public.subscription_cancelation_reasons;
 DROP TYPE IF EXISTS public.subscription_activation_rule_types;
 DROP TYPE IF EXISTS public.subscription_activation_rule_statuses;
+DROP TYPE IF EXISTS public.pricing_import_state;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
@@ -1311,6 +1318,19 @@ CREATE TYPE public.payment_payable_payment_status AS ENUM (
 CREATE TYPE public.payment_type AS ENUM (
     'provider',
     'manual'
+);
+
+
+--
+-- Name: pricing_import_state; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.pricing_import_state AS ENUM (
+    'draft',
+    'confirmed',
+    'processing',
+    'completed',
+    'failed'
 );
 
 
@@ -2227,6 +2247,7 @@ CREATE TABLE public.customers (
     subscription_invoice_issuing_date_anchor public.subscription_invoice_issuing_date_anchors,
     subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments,
     awaiting_wallet_refresh boolean DEFAULT false NOT NULL,
+    dunning_currency_attempts jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -4560,6 +4581,29 @@ CREATE TABLE public.presentation_breakdowns (
 
 
 --
+-- Name: pricing_imports; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pricing_imports (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    membership_id uuid,
+    state public.pricing_import_state DEFAULT 'draft'::public.pricing_import_state NOT NULL,
+    source_filename character varying,
+    proposed_plan jsonb DEFAULT '{}'::jsonb NOT NULL,
+    edited_plan jsonb DEFAULT '{}'::jsonb NOT NULL,
+    execution_report jsonb DEFAULT '[]'::jsonb NOT NULL,
+    progress_current integer DEFAULT 0 NOT NULL,
+    progress_total integer DEFAULT 0 NOT NULL,
+    error_message text,
+    started_at timestamp(6) without time zone,
+    finished_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: pricing_unit_usages; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5733,6 +5777,14 @@ ALTER TABLE ONLY public.plans_taxes
 
 ALTER TABLE ONLY public.presentation_breakdowns
     ADD CONSTRAINT presentation_breakdowns_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pricing_imports pricing_imports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_imports
+    ADD CONSTRAINT pricing_imports_pkey PRIMARY KEY (id);
 
 
 --
@@ -8785,6 +8837,20 @@ CREATE INDEX index_presentation_breakdowns_on_organization_id ON public.presenta
 
 
 --
+-- Name: index_pricing_imports_on_membership_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pricing_imports_on_membership_id ON public.pricing_imports USING btree (membership_id);
+
+
+--
+-- Name: index_pricing_imports_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pricing_imports_on_organization_id ON public.pricing_imports USING btree (organization_id);
+
+
+--
 -- Name: index_pricing_unit_usages_on_fee_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11223,6 +11289,14 @@ ALTER TABLE ONLY public.plans_taxes
 
 
 --
+-- Name: pricing_imports fk_rails_bd81699989; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_imports
+    ADD CONSTRAINT fk_rails_bd81699989 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: usage_monitoring_subscription_activities fk_rails_bda048a8d9; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11356,6 +11430,14 @@ ALTER TABLE ONLY public.plans
 
 ALTER TABLE ONLY public.integration_mappings
     ADD CONSTRAINT fk_rails_cc318ad1ff FOREIGN KEY (integration_id) REFERENCES public.integrations(id);
+
+
+--
+-- Name: pricing_imports fk_rails_cd04033576; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_imports
+    ADD CONSTRAINT fk_rails_cd04033576 FOREIGN KEY (membership_id) REFERENCES public.memberships(id);
 
 
 --
@@ -11789,6 +11871,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260423130621'),
 ('20260420114717'),
 ('20260416124233'),
 ('20260416124232'),
@@ -11800,6 +11883,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260407091845'),
 ('20260403184752'),
 ('20260403184747'),
+('20260401143315'),
 ('20260331122448'),
 ('20260331103301'),
 ('20260327140626'),

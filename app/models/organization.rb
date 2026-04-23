@@ -72,6 +72,7 @@ class Organization < ApplicationRecord
   has_many :webhooks
   has_many :cached_aggregations
   has_many :data_exports
+  has_many :pricing_imports
   has_many :error_details
   has_many :dunning_campaigns
   has_many :roles

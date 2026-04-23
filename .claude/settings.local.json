@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -h \"ActiveRecord::Migration\" db/migrate/*.rb)",
+      "Bash(grep -l \"GraphQL::Types::JSON\" app/graphql/types/*.rb app/graphql/types/**/*.rb)",
+      "Read(//Users/lovrocolic/lago/**)",
+      "Bash(docker-compose ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(grep -vE '^D, |^I, |^\\\\{')",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('packageManager:', d.get\\('packageManager'\\)\\); print\\('deps has apollo-upload:', '@apollo/client' in d['dependencies'], 'apollo-upload-client' in d['dependencies']\\)\")",
+      "Bash(pnpm add:*)",
+      "Bash(grep -rA4 \"MainHeader.Configure\" /Users/lovrocolic/lago/front/src/pages/settings --include=\"*.tsx\")",
+      "Bash(grep -v '^D, \\\\|^I, \\\\|^{')",
+      "Bash(ls /Users/lovrocolic/lago/.env*)",
+      "Bash(ls /Users/lovrocolic/lago/api/.env*)",
+      "Bash(grep -l ANTHROPIC /Users/lovrocolic/lago/docker-compose.dev.yml /Users/lovrocolic/lago/api/.env*)"
+    ]
+  }
+}
