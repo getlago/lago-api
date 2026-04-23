@@ -6,6 +6,7 @@ module Types
 
     field :email, String
     field :premium, Boolean, null: false
+    field :cs_admin, Boolean, null: false
 
     field :memberships, [Types::MembershipType], null: false
     # TODO: keeping organization for backwards compatibility, remove once the frontend is updated
