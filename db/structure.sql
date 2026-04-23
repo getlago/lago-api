@@ -645,8 +645,14 @@ DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id;
 DROP INDEX IF EXISTS public.index_customers_on_sequential_id;
 DROP INDEX IF EXISTS public.index_customers_on_org_id_and_sequential_id_unique;
+DROP INDEX IF EXISTS public.index_customers_on_name;
+DROP INDEX IF EXISTS public.index_customers_on_legal_name;
+DROP INDEX IF EXISTS public.index_customers_on_lastname;
+DROP INDEX IF EXISTS public.index_customers_on_gin_external_id;
+DROP INDEX IF EXISTS public.index_customers_on_firstname;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id;
+DROP INDEX IF EXISTS public.index_customers_on_email;
 DROP INDEX IF EXISTS public.index_customers_on_deleted_at;
 DROP INDEX IF EXISTS public.index_customers_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_customers_on_awaiting_wallet_refresh;
@@ -1156,6 +1162,7 @@ DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
+DROP EXTENSION IF EXISTS pg_trgm;
 DROP EXTENSION IF EXISTS pg_partman;
 DROP SCHEMA IF EXISTS partman;
 --
@@ -1170,6 +1177,13 @@ CREATE SCHEMA partman;
 --
 
 CREATE EXTENSION IF NOT EXISTS pg_partman WITH SCHEMA partman;
+
+
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
 
 --
@@ -7542,6 +7556,13 @@ CREATE INDEX index_customers_on_deleted_at ON public.customers USING btree (dele
 
 
 --
+-- Name: index_customers_on_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_email ON public.customers USING gin (email public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_customers_on_external_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7553,6 +7574,41 @@ CREATE INDEX index_customers_on_external_id ON public.customers USING btree (org
 --
 
 CREATE UNIQUE INDEX index_customers_on_external_id_and_organization_id ON public.customers USING btree (external_id, organization_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_customers_on_firstname; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_firstname ON public.customers USING gin (firstname public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_customers_on_gin_external_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_gin_external_id ON public.customers USING gin (external_id public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_customers_on_lastname; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_lastname ON public.customers USING gin (lastname public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_customers_on_legal_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_legal_name ON public.customers USING gin (legal_name public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_customers_on_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_name ON public.customers USING gin (name public.gin_trgm_ops) WHERE (deleted_at IS NULL);
 
 
 --
@@ -12229,6 +12285,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260429123434'),
 ('20260424170418'),
 ('20260424131927'),
+('20260422085615'),
 ('20260421123920'),
 ('20260421103557'),
 ('20260421021503'),
