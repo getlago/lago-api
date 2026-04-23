@@ -17,8 +17,11 @@ describe "Subscriptions Activation Scenario" do
     )
   end
 
-  let(:subscription_at) { DateTime.new(2023, 8, 24, 4, 17) }
+  # subscription_at must be on a different date than creation_time in the customer's timezone (America/Bogota, UTC-5)
+  # creation_time: 2023-08-24 00:07 UTC → 2023-08-23 19:07 Bogota
+  # subscription_at: 2023-08-25 10:00 UTC → 2023-08-25 05:00 Bogota (different day)
   let(:creation_time) { DateTime.new(2023, 8, 24, 0, 7) }
+  let(:subscription_at) { DateTime.new(2023, 8, 25, 10, 0) }
   let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: true) }
 
   before { fixed_charge }
