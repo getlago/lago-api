@@ -11,6 +11,8 @@ describe "Charge Models - Graduated Scenarios" do
   let(:sum_billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "amount") }
   let(:recurring_sum_billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "amount", recurring: true) }
 
+  before { tax }
+
   [true, false].each do |ff_enabled|
     context "with non_persistable_charge_cache_optimization #{ff_enabled ? "enabled" : "disabled"}" do
       before do
@@ -18,8 +20,6 @@ describe "Charge Models - Graduated Scenarios" do
       end
 
       describe "with sum_agg" do
-        before { tax }
-
         describe "non-prorated graduated with no events (ING-13 regression)" do
           it "returns zero customer usage without raising" do
             travel_to(DateTime.new(2024, 3, 5)) do

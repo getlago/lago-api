@@ -518,6 +518,49 @@ describe "Charge Models - Percentage Scenarios" do
             end
           end
         end
+
+        describe "with min and max per transaction amount, pricing group keys and no events (ING-13 grouped regression)", :premium do
+          it "returns zero customer usage without raising NoMethodError through the grouped hydrate path" do
+            travel_to(DateTime.new(2023, 3, 5)) do
+              create_subscription(
+                {
+                  external_customer_id: customer.external_id,
+                  external_id: customer.external_id,
+                  plan_code: plan.code
+                }
+              )
+            end
+
+            create(
+              :percentage_charge,
+              plan:,
+              billable_metric:,
+              properties: {
+                rate: "1",
+                fixed_amount: "1",
+                per_transaction_max_amount: "12",
+                per_transaction_min_amount: "1.75",
+                pricing_group_keys: ["region", "provider"]
+              }
+            )
+
+            travel_to(DateTime.new(2023, 3, 6)) do
+              # First call exercises the grouped hydrate path: ChargeModels::GroupedService
+              # copies the outer aggregator onto each inner aggregation. Before the fix the
+              # outer result.aggregator stayed nil for grouped charges, reintroducing the
+              # NoMethodError despite the ungrouped path being patched.
+              fetch_current_usage(customer:)
+              expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+              expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
+
+              # Second call exercises the cached-empty grouped path, matching how
+              # DailyUsages::ComputeJob repeatedly invoked the usage pipeline in production.
+              fetch_current_usage(customer:)
+              expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+              expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
+            end
+          end
+        end
       end
     end
   end

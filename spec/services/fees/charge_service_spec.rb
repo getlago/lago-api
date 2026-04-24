@@ -3709,6 +3709,18 @@ RSpec.describe Fees::ChargeService, :premium do
                 expect(second_result).to be_success
                 expect(second_result.fees.count).to eq(1)
                 expect(second_result.fees.first).to have_attributes(units: 0, amount_cents: 0, events_count: 0)
+                expect(second_result.fees.first.amount_details).to eq(
+                  "units" => "0.0",
+                  "free_units" => "0.0",
+                  "free_events" => 0,
+                  "paid_units" => "0.0",
+                  "rate" => "1.0",
+                  "per_unit_total_amount" => "0.0",
+                  "paid_events" => 0,
+                  "fixed_fee_unit_amount" => "0.0",
+                  "fixed_fee_total_amount" => "0.0",
+                  "min_max_adjustment_total_amount" => "0.0"
+                )
               end
             end
 
