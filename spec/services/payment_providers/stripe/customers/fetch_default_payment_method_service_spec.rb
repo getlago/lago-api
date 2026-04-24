@@ -109,18 +109,14 @@ RSpec.describe PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodSer
           )
         end
 
-        it "creates a payment method with nil card details" do
+        it "creates a payment method with only the type" do
           result = service.call
 
           payment_method = customer.payment_methods.order(created_at: :desc).first
 
           expect(result).to be_success
           expect(payment_method.provider_method_id).to eq(payment_method_id)
-          expect(payment_method.details["type"]).to eq("link")
-          expect(payment_method.details["last4"]).to be_nil
-          expect(payment_method.details["brand"]).to be_nil
-          expect(payment_method.details["expiration_month"]).to be_nil
-          expect(payment_method.details["expiration_year"]).to be_nil
+          expect(payment_method.details).to eq("type" => "link")
         end
       end
 
