@@ -117,6 +117,13 @@ module BillableMetrics
         end
       end
 
+      # Exposes a null result that carries this aggregator instance, so downstream charge models
+      # can dispatch `per_event_aggregation` through the real aggregator rather than nil.
+      def empty_results
+        self.class.null_result(result, grouped_by_keys: grouped_by, apply_aggregation: true)
+        result
+      end
+
       protected
 
       attr_accessor :event_store_class,
@@ -199,12 +206,6 @@ module BillableMetrics
       def empty_result
         self.class.null_result(result)
       end
-
-      def empty_results
-        self.class.null_result(result, grouped_by_keys: grouped_by, apply_aggregation: true)
-        result
-      end
-      public :empty_results
 
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that
       # previous aggregation and previous maximum aggregation are stored there. Fetching these values
