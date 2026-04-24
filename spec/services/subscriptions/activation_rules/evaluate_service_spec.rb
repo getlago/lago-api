@@ -28,6 +28,18 @@ RSpec.describe Subscriptions::ActivationRules::EvaluateService do
     end
   end
 
+  context "when subscription has a payment rule that is not applicable" do
+    let(:plan) { create(:plan, organization:, pay_in_advance: false) }
+    let(:rule) { create(:payment_subscription_activation_rule, subscription:) }
+
+    before { rule }
+
+    it "evaluates the rule to not_applicable" do
+      expect(result).to be_success
+      expect(result.rules.first).to be_not_applicable
+    end
+  end
+
   context "when rules are already in a terminal state" do
     let(:rule) { create(:payment_subscription_activation_rule, subscription:, status: "satisfied") }
 
