@@ -2,6 +2,8 @@
 
 module Subscriptions
   class ChargeCacheMiddleware
+    EMPTY_ARRAY = [].freeze
+
     def initialize(subscription:, charge:, to_datetime:, cache: true)
       @subscription = subscription
       @charge = charge
@@ -14,7 +16,12 @@ module Subscriptions
 
       json = Subscriptions::ChargeCacheService.call(subscription:, charge:, charge_filter:, expires_in: cache_expiration) do
         yield
-          .map { |fee| fee.attributes.merge("pricing_unit_usage" => fee.pricing_unit_usage&.attributes) }
+          .map do |fee|
+            fee.attributes.merge(
+              "pricing_unit_usage" => fee.pricing_unit_usage&.attributes,
+              "presentation_breakdowns" => fee.presentation_breakdowns.map(&:attributes)
+            )
+          end
           .to_json
       end
 
@@ -23,10 +30,18 @@ module Subscriptions
           PricingUnitUsage.new(j["pricing_unit_usage"].slice(*PricingUnitUsage.column_names))
         end
 
-        Fee.new(
+        fee = Fee.new(
           **j.slice(*Fee.column_names),
           pricing_unit_usage:
         )
+
+        j.fetch("presentation_breakdowns", EMPTY_ARRAY).each do |breakdown|
+          fee.presentation_breakdowns.build(
+            breakdown.slice(*PresentationBreakdown.column_names)
+          )
+        end
+
+        fee
       end
     end
 
