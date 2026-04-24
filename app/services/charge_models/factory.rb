@@ -7,7 +7,9 @@ module ChargeModels
 
       charge_model_class = charge_model_class(
         chargeable: chargeable,
-        has_aggregator: aggregation_result.respond_to?(:aggregator) && !aggregation_result.aggregator.nil?
+        has_aggregator: aggregation_result.respond_to?(:aggregator) &&
+          !aggregation_result.aggregator.nil? &&
+          !aggregation_result.aggregator.is_a?(BillableMetrics::Aggregations::NullAggregator)
       )
 
       common_args = {
