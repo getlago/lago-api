@@ -49,11 +49,11 @@ module Events
         end
 
         def compare
-          wall_times = execute_repetitions
+          wall_times, results = execute_repetitions
           flush_query_log
           server_rows = fetch_query_log_rows
 
-          metrics = build_metrics(wall_times, server_rows)
+          metrics = build_metrics(wall_times, server_rows, results)
           print_table(metrics)
           metrics
         end
@@ -64,23 +64,26 @@ module Events
 
         def execute_repetitions
           wall = queries.each_key.with_object({}) { |label, h| h[label] = [] }
+          results = {}
 
           repetitions.times do |rep_idx|
             queries.to_a.shuffle.each do |label, sql|
               tag = tag_for(label, rep_idx)
               tagged_sql = with_settings(sql, tag)
 
+              rows = nil
               elapsed = Benchmark.realtime do
                 ClickhouseConnection.connection_with_retry do |connection|
-                  connection.select_all(tagged_sql).to_a
+                  rows = connection.select_all(tagged_sql).to_a
                 end
               end
 
               wall[label] << (elapsed * 1000).to_i
+              results[label] ||= rows
             end
           end
 
-          wall
+          [wall, results]
         end
 
         def tag_for(label, rep_idx)
@@ -131,7 +134,7 @@ module Events
           []
         end
 
-        def build_metrics(wall_times, server_rows)
+        def build_metrics(wall_times, server_rows, results)
           grouped = server_rows.group_by { |row| parse_label_key(row["log_comment"]) }
 
           queries.each_key.with_object({}) do |label, out|
@@ -146,7 +149,8 @@ module Events
               read_bytes: runs.first&.dig("read_bytes").to_i,
               result_rows: runs.first&.dig("result_rows").to_i,
               wall_ms_runs: wall_times[label],
-              server_runs: runs
+              server_runs: runs,
+              result: results[label]
             }
           end
         end
@@ -178,22 +182,26 @@ module Events
           puts ""
 
           label_width = [metrics.keys.map { |k| k.to_s.length }.max || 0, 18].max
+          result_strings = metrics.transform_values { |m| format_result(m[:result]) }
+          result_width = [result_strings.values.map(&:length).max || 0, 6].max
           header = format(
-            "%-#{label_width}s |  Server ms |    Wall ms |     Peak mem |    Rows read |   Bytes read",
-            "Approach"
+            "%-#{label_width}s |  Server ms |    Wall ms |     Peak mem |    Rows read |   Bytes read | %-#{result_width}s",
+            "Approach",
+            "Result"
           )
           puts header
           puts "-" * header.length
 
           metrics.each do |label, m|
             puts format(
-              "%-#{label_width}s | %10d | %10d | %12s | %12s | %12s",
+              "%-#{label_width}s | %10d | %10d | %12s | %12s | %12s | %-#{result_width}s",
               label,
               m[:duration_ms_median],
               m[:wall_ms_median],
               format_bytes(m[:memory_usage_median]),
               format_number(m[:read_rows]),
-              format_bytes(m[:read_bytes])
+              format_bytes(m[:read_bytes]),
+              result_strings[label]
             )
           end
           puts ""
@@ -212,6 +220,17 @@ module Events
 
         def format_number(n)
           n.to_i.to_s.reverse.gsub(/(\d{3})(?=\d)/, '\1,').reverse
+        end
+
+        def format_result(rows)
+          return "(none)" if rows.nil?
+          return "(empty)" if rows.empty?
+
+          if rows.size == 1 && rows.first.is_a?(Hash)
+            rows.first.map { |k, v| "#{k}=#{v}" }.join(", ")
+          else
+            "#{rows.size} row#{"s" if rows.size != 1}"
+          end
         end
       end
     end
