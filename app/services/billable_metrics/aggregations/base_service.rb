@@ -44,9 +44,13 @@ module BillableMetrics
           result.current_usage_units = 0
           result.options = {running_total: []}
         end
-        result.aggregator ||= NullAggregator.new
         result
       end
+
+      # Exposes the aggregator's result so callers can seed `null_result` with a result that already
+      # carries `aggregator = self`, ensuring downstream calls like `per_event_aggregation` dispatch
+      # to the real aggregator rather than nil.
+      public :result
 
       def initialize(event_store_class:, charge:, subscription:, boundaries:, filters: {}, bypass_aggregation: false)
         super(nil)

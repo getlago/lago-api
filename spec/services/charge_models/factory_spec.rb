@@ -57,15 +57,6 @@ RSpec.describe ChargeModels::Factory do
 
           it { expect(result).to be_a(ChargeModels::GraduatedService) }
         end
-
-        context "when charge is prorated but the aggregator is a NullAggregator" do
-          let(:charge) { build(:graduated_charge, prorated: true) }
-          let(:aggregation_result) do
-            BaseService::Result.new.tap { |r| r.aggregator = BillableMetrics::Aggregations::NullAggregator.new }
-          end
-
-          it { expect(result).to be_a(ChargeModels::GraduatedService) }
-        end
       end
 
       context "with graduated_percentage charge model" do

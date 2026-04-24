@@ -15,7 +15,6 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
         expect(null_result.current_usage_units).to eq(0)
         expect(null_result.options).to eq({running_total: []})
         expect(null_result.grouped_by).to be_nil
-        expect(null_result.aggregator).to be_a(BillableMetrics::Aggregations::NullAggregator)
       end
     end
 
@@ -30,20 +29,6 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
         expect(returned.count).to eq(0)
         expect(returned.current_usage_units).to eq(0)
         expect(returned.options).to eq({running_total: []})
-        expect(returned.aggregator).to be_a(BillableMetrics::Aggregations::NullAggregator)
-      end
-    end
-
-    context "with a custom result that already has an aggregator" do
-      let(:custom_result) { described_class::Result.new }
-      let(:existing_aggregator) { Object.new }
-
-      it "does not replace the existing aggregator" do
-        custom_result.aggregator = existing_aggregator
-
-        returned = described_class.null_result(custom_result)
-
-        expect(returned.aggregator).to be(existing_aggregator)
       end
     end
 
