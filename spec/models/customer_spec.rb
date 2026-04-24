@@ -1141,7 +1141,7 @@ RSpec.describe Customer do
       end
     end
 
-    context "when there are non-overdue invoices" do
+    context "when customer have paid and overdue invoices" do
       before do
         create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 2_00)
         create(:invoice, customer: customer, payment_overdue: false, currency: "USD", total_amount_cents: 5_00)
