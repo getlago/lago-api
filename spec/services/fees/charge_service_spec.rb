@@ -583,6 +583,137 @@ RSpec.describe Fees::ChargeService, :premium do
           end
         end
 
+        context "with presentation_group_keys on charge_filter" do
+          let(:charge) do
+            create(
+              :standard_charge,
+              plan: subscription.plan,
+              billable_metric:,
+              properties: {
+                amount: "0",
+                pricing_group_keys: ["region"],
+                presentation_group_keys: [{value: "department"}]
+              }
+            )
+          end
+
+          let(:billable_metric) do
+            create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
+          end
+
+          let(:region) do
+            create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu na])
+          end
+
+          let(:eu_filter) do
+            create(
+              :charge_filter,
+              charge:,
+              properties: {
+                amount: "0",
+                pricing_group_keys: ["region"],
+                presentation_group_keys: [{value: "team"}]
+              }
+            )
+          end
+
+          let(:eu_region_filter_value) do
+            create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter: region, values: ["eu"])
+          end
+
+          before do
+            eu_region_filter_value
+
+            create(
+              :event,
+              organization: subscription.organization,
+              subscription:,
+              code: charge.billable_metric.code,
+              timestamp: Time.zone.parse("2022-03-16"),
+              properties: {region: "eu", team: "red", value: 1}
+            )
+            create(
+              :event,
+              organization: subscription.organization,
+              subscription:,
+              code: charge.billable_metric.code,
+              timestamp: Time.zone.parse("2022-03-16"),
+              properties: {region: "eu", team: "blue", value: 2}
+            )
+            create(
+              :event,
+              organization: subscription.organization,
+              subscription:,
+              code: charge.billable_metric.code,
+              timestamp: Time.zone.parse("2022-03-16"),
+              properties: {region: "na", department: "sales", value: 3}
+            )
+          end
+
+          it "builds presentation_breakdowns based on the charge_filter presentation group" do
+            expect { charge_subscription_service.call }.to change(Fee, :count).from(0).to(2)
+
+            result = charge_subscription_service.call
+
+            eu_fee = result.fees.find { |f| f.charge_filter_id == eu_filter.id }
+            na_fee = result.fees.find { |f| f.charge_filter_id.nil? }
+
+            expect(eu_fee.presentation_breakdowns.map(&:presentation_by))
+              .to match_array([{"team" => "red"}, {"team" => "blue"}])
+            expect(eu_fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([1.0, 2.0])
+
+            expect(na_fee.presentation_breakdowns.map(&:presentation_by)).to match_array([{"department" => "sales"}])
+            expect(na_fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([3.0])
+          end
+
+          context "when charge_filter does not define pricing_group_keys" do
+            let(:eu_filter) do
+              create(
+                :charge_filter,
+                charge:,
+                properties: {
+                  amount: "0",
+                  presentation_group_keys: [{value: "team"}]
+                }
+              )
+            end
+
+            it "persists the presentation breakdowns" do
+              expect { charge_subscription_service.call }.to change(PresentationBreakdown, :count).from(0).to(3)
+            end
+
+            it "falls back to charge pricing_group_keys for grouping" do
+              result = charge_subscription_service.call
+              expect(result).to be_success
+
+              expect(result.fees.map { |f| f.grouped_by["region"] }).to match_array([nil, "na"])
+            end
+
+            it "builds presentation_breakdowns based on the charge_filter presentation group" do
+              result = charge_subscription_service.call
+              expect(result).to be_success
+
+              fees_by_breakdowns_size = result.fees.group_by { |fee| fee.presentation_breakdowns.size }
+
+              expect(fees_by_breakdowns_size.keys).to match_array([1, 2])
+
+              two_breakdowns_fee = fees_by_breakdowns_size.fetch(2).first
+              one_breakdown_fee = fees_by_breakdowns_size.fetch(1).first
+
+              expect(two_breakdowns_fee.presentation_breakdowns.map(&:fee_id)).to eq([two_breakdowns_fee.id] * 2)
+              expect(one_breakdown_fee.presentation_breakdowns.map(&:fee_id)).to eq([one_breakdown_fee.id])
+
+              expect(two_breakdowns_fee.presentation_breakdowns.map(&:presentation_by))
+                .to match_array([{"team" => "blue"}, {"team" => "red"}])
+              expect(two_breakdowns_fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([2.0, 1.0])
+
+              expect(one_breakdown_fee.presentation_breakdowns.map(&:presentation_by))
+                .to match_array([{"department" => "sales"}])
+              expect(one_breakdown_fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([3.0])
+            end
+          end
+        end
+
         context "without events" do
           it "does not create a fee" do
             result = charge_subscription_service.call
