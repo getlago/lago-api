@@ -517,7 +517,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
     context "when invoice is subscription_gated" do
       let(:subscription) do
         create(:subscription, :incomplete, :with_activation_rules,
-          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+          activation_rules_config: [{type: :payment, timeout_hours: 48, status: :pending}],
           customer:, organization:)
       end
       let(:invoice) do

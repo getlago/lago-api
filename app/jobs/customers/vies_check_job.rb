@@ -33,7 +33,7 @@ module Customers
 
     def enqueue_pending_invoice_finalization(customer)
       customer.invoices
-        .where(status: %i[pending open], tax_status: "pending")
+        .where(status: %i[pending open], tax_status: :pending)
         .find_each do |invoice|
           Invoices::FinalizePendingViesInvoiceJob.perform_later(invoice)
         end
