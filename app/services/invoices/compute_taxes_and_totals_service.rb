@@ -35,9 +35,9 @@ module Invoices
 
     def set_pending_tax_status!
       if finalizing
-        invoice.status = invoice.subscription_gated? ? "open" : "pending"
+        invoice.status = invoice.subscription_gated? ? :open : :pending
       end
-      invoice.tax_status = "pending"
+      invoice.tax_status = :pending
       invoice.save!
     end
 

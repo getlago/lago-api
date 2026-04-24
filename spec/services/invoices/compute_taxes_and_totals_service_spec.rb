@@ -148,7 +148,7 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
       context "when invoice is subscription_gated" do
         let(:subscription) do
           create(:subscription, :incomplete, :with_activation_rules,
-            activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+            activation_rules_config: [{type: :payment, timeout_hours: 48, status: :pending}],
             plan:, subscription_at: started_at, started_at:, created_at: started_at)
         end
 
@@ -157,8 +157,8 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
         it "keeps invoice status as open and sets tax_status to pending" do
           totals_service.call
 
-          expect(invoice.reload.status).to eq("open")
-          expect(invoice.reload.tax_status).to eq("pending")
+          expect(invoice.reload).to be_open
+          expect(invoice.reload).to be_tax_pending
         end
       end
 

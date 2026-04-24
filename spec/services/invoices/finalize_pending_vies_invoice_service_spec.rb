@@ -530,12 +530,21 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
     context "when invoice is subscription_gated" do
       let(:subscription) do
         create(:subscription, :incomplete, :with_activation_rules,
-          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+          activation_rules_config: [{type: :payment, timeout_hours: 48, status: :pending}],
           customer:, organization:)
       end
       let(:invoice) do
-        create(:invoice, :with_subscriptions, customer:, organization:, billing_entity:,
-          status: :open, tax_status: :pending, currency: "EUR", subscriptions: [subscription])
+        create(
+          :invoice,
+          :with_subscriptions,
+          customer:,
+          organization:,
+          billing_entity:,
+          status: :open,
+          tax_status: :pending,
+          currency: "EUR",
+          subscriptions: [subscription]
+        )
       end
 
       it "allows processing and triggers payment only" do
