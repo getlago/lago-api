@@ -18,6 +18,7 @@ module Subscriptions
         elsif any_rule_failed?
           subscription.mark_as_canceled!
           SendWebhookJob.perform_after_commit("subscription.canceled", subscription)
+          Utils::ActivityLog.produce_after_commit(subscription, "subscription.canceled")
         end
 
         result.subscription = subscription
