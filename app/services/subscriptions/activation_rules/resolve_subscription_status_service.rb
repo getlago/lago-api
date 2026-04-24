@@ -33,7 +33,7 @@ module Subscriptions
       end
 
       def any_rule_failed?
-        subscription.activation_rules.where(status: Subscription::ActivationRule::REJECTED_STATUSES).exists?
+        subscription.activation_rules.rejected.exists?
       end
     end
   end
