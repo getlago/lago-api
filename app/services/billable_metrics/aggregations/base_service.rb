@@ -34,9 +34,9 @@ module BillableMetrics
       ]
       PerEventAggregationResult = BaseResult[:event_aggregation]
 
-      def self.null_result(result = BaseService::Result.new, grouped_by_keys: nil, apply_aggregation: false)
+      def self.null_result(result, grouped_by_keys: nil, apply_aggregation: false)
         if apply_aggregation && grouped_by_keys.present?
-          result.aggregations = [null_result(grouped_by_keys: grouped_by_keys)]
+          result.aggregations = [null_result(BaseService::Result.new, grouped_by_keys: grouped_by_keys)]
         else
           result.grouped_by = grouped_by_keys.index_with { nil } if grouped_by_keys
           result.aggregation = 0
@@ -46,11 +46,6 @@ module BillableMetrics
         end
         result
       end
-
-      # Exposes the aggregator's result so callers can seed `null_result` with a result that already
-      # carries `aggregator = self`, ensuring downstream calls like `per_event_aggregation` dispatch
-      # to the real aggregator rather than nil.
-      public :result
 
       def initialize(event_store_class:, charge:, subscription:, boundaries:, filters: {}, bypass_aggregation: false)
         super(nil)
@@ -209,6 +204,7 @@ module BillableMetrics
         self.class.null_result(result, grouped_by_keys: grouped_by, apply_aggregation: true)
         result
       end
+      public :empty_results
 
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that
       # previous aggregation and previous maximum aggregation are stored there. Fetching these values
