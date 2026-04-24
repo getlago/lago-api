@@ -475,6 +475,49 @@ describe "Charge Models - Percentage Scenarios" do
             end
           end
         end
+
+        describe "with min and max per transaction amount and no events (ING-13 regression)", :premium do
+          it "returns a zero customer usage without raising NoMethodError" do
+            travel_to(DateTime.new(2023, 3, 5)) do
+              create_subscription(
+                {
+                  external_customer_id: customer.external_id,
+                  external_id: customer.external_id,
+                  plan_code: plan.code
+                }
+              )
+            end
+
+            create(
+              :percentage_charge,
+              plan:,
+              billable_metric:,
+              properties: {
+                rate: "1",
+                fixed_amount: "1",
+                per_transaction_max_amount: "12",
+                per_transaction_min_amount: "1.75"
+              }
+            )
+
+            travel_to(DateTime.new(2023, 3, 6)) do
+              # First call: when non_persistable_charge_cache_optimization is on, the cache
+              # middleware returns an empty hydrated-fee array. This used to crash in
+              # ChargeModels::PercentageService because result.aggregator was nil.
+              fetch_current_usage(customer:)
+              expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+              expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
+              expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(0)
+
+              # Second call: exercises the cached-empty path again, matching how
+              # DailyUsages::ComputeJob repeatedly invoked the usage pipeline in production.
+              fetch_current_usage(customer:)
+              expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+              expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
+              expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(0)
+            end
+          end
+        end
       end
     end
   end
