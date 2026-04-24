@@ -1453,6 +1453,460 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
+  if include_feature?(:grouped_sum_breakdown)
+    describe "#grouped_sum with breakdown columns" do
+      subject(:event_store) do
+        described_class.new(
+          code:,
+          subscription:,
+          boundaries:,
+          filters: {
+            grouped_by:,
+            grouped_by_values:,
+            presentation_by: ["cloud"],
+            matching_filters:,
+            ignored_filters:,
+            charge_id: charge&.id,
+            charge_filter: charge_filter
+          },
+          deduplicate: with_event_duplication
+        )
+      end
+
+      let(:events) { [] }
+
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+      end
+
+      context "without grouped_by" do
+        before do
+          3.times { create_event(timestamp: subscription_started_at + 1.day, value: 10, properties: {"cloud" => "aws"}) }
+          create_event(timestamp: subscription_started_at + 1.day, value: 12, properties: {"cloud" => "gcp"})
+        end
+
+        it "returns the sum breakdown by presentation_by" do
+          result = event_store.grouped_sum(["cloud"])
+
+          expect(result).to match_array([
+            {groups: {"cloud" => "aws"}, value: 30},
+            {groups: {"cloud" => "gcp"}, value: 12}
+          ])
+        end
+      end
+
+      context "with grouped_by" do
+        let(:grouped_by) { ["agent_name"] }
+
+        before do
+          create_event(timestamp: subscription_started_at + 1.day, value: 2, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 1.day, value: 7, properties: {"agent_name" => "frodo", "cloud" => "gcp"})
+          create_event(timestamp: subscription_started_at + 1.day, value: 3, properties: {"agent_name" => "aragorn", "cloud" => "aws"})
+        end
+
+        it "returns the sum breakdown per group" do
+          result = event_store.grouped_sum(["agent_name", "cloud"])
+
+          expect(result).to match_array([
+            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
+            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7},
+            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3}
+          ])
+        end
+      end
+    end
+  end
+
+  if include_feature?(:grouped_count_breakdown)
+    describe "#grouped_count with breakdown columns" do
+      subject(:event_store) do
+        described_class.new(
+          code:,
+          subscription:,
+          boundaries:,
+          filters: {
+            grouped_by:,
+            grouped_by_values:,
+            presentation_by: ["cloud"],
+            matching_filters:,
+            ignored_filters:,
+            charge_id: charge&.id,
+            charge_filter: charge_filter
+          },
+          deduplicate: with_event_duplication
+        )
+      end
+
+      let(:events) { [] }
+
+      context "without grouped_by" do
+        before do
+          3.times { create_event(timestamp: subscription_started_at + 1.day, value: 10, properties: {"cloud" => "aws"}) }
+          create_event(timestamp: subscription_started_at + 1.day, value: 12, properties: {"cloud" => "gcp"})
+        end
+
+        it "returns the count breakdown by presentation_by" do
+          result = event_store.grouped_count(["cloud"])
+
+          expect(result).to match_array([
+            {groups: {"cloud" => "aws"}, value: 3},
+            {groups: {"cloud" => "gcp"}, value: 1}
+          ])
+        end
+      end
+
+      context "with grouped_by" do
+        let(:grouped_by) { ["agent_name"] }
+
+        before do
+          2.times { create_event(timestamp: subscription_started_at + 1.day, value: 2, properties: {"agent_name" => "frodo", "cloud" => "aws"}) }
+          create_event(timestamp: subscription_started_at + 1.day, value: 7, properties: {"agent_name" => "frodo", "cloud" => "gcp"})
+          create_event(timestamp: subscription_started_at + 1.day, value: 3, properties: {"agent_name" => "aragorn", "cloud" => "aws"})
+        end
+
+        it "returns the count breakdown per group" do
+          result = event_store.grouped_count(["agent_name", "cloud"])
+
+          expect(result).to match_array([
+            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
+            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 1},
+            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 1}
+          ])
+        end
+      end
+    end
+  end
+
+  if include_feature?(:grouped_last_breakdown)
+    describe "#grouped_last with breakdown columns" do
+      subject(:event_store) do
+        described_class.new(
+          code:,
+          subscription:,
+          boundaries:,
+          filters: {
+            grouped_by:,
+            grouped_by_values:,
+            presentation_by: ["cloud"],
+            matching_filters:,
+            ignored_filters:,
+            charge_id: charge&.id,
+            charge_filter: charge_filter
+          },
+          deduplicate: with_event_duplication
+        )
+      end
+
+      let(:events) { [] }
+
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+      end
+
+      context "without grouped_by" do
+        before do
+          create_event(timestamp: subscription_started_at + 1.day, value: 10, properties: {"cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 2.days, value: 12, properties: {"cloud" => "gcp"})
+        end
+
+        it "returns the latest value per cloud" do
+          result = event_store.grouped_last(["cloud"])
+
+          expect(result).to match_array([
+            {groups: {"cloud" => "aws"}, value: 10},
+            {groups: {"cloud" => "gcp"}, value: 12}
+          ])
+        end
+      end
+
+      context "with grouped_by" do
+        let(:grouped_by) { ["agent_name"] }
+
+        before do
+          create_event(timestamp: subscription_started_at + 1.day, value: 2, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 2.days, value: 7, properties: {"agent_name" => "frodo", "cloud" => "gcp"})
+          create_event(timestamp: subscription_started_at + 1.day + 1.second, value: 3, properties: {"agent_name" => "aragorn", "cloud" => "aws"})
+        end
+
+        it "returns the latest value per group and cloud" do
+          result = event_store.grouped_last(["agent_name", "cloud"])
+
+          expect(result).to match_array([
+            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
+            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7},
+            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3}
+          ])
+        end
+      end
+    end
+  end
+
+  if include_feature?(:grouped_max_breakdown)
+    describe "#grouped_max with breakdown columns" do
+      subject(:event_store) do
+        described_class.new(
+          code:,
+          subscription:,
+          boundaries:,
+          filters: {
+            grouped_by:,
+            grouped_by_values:,
+            presentation_by: ["cloud"],
+            matching_filters:,
+            ignored_filters:,
+            charge_id: charge&.id,
+            charge_filter: charge_filter
+          },
+          deduplicate: with_event_duplication
+        )
+      end
+
+      let(:events) { [] }
+
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+      end
+
+      context "without grouped_by" do
+        before do
+          3.times { create_event(timestamp: subscription_started_at + 1.day, value: 10, properties: {"cloud" => "aws"}) }
+          create_event(timestamp: subscription_started_at + 1.day, value: 12, properties: {"cloud" => "gcp"})
+        end
+
+        it "returns the max value per cloud" do
+          result = event_store.grouped_max(["cloud"])
+
+          expect(result).to match_array([
+            {groups: {"cloud" => "aws"}, value: 10},
+            {groups: {"cloud" => "gcp"}, value: 12}
+          ])
+        end
+      end
+
+      context "with grouped_by" do
+        let(:grouped_by) { ["agent_name"] }
+
+        before do
+          create_event(timestamp: subscription_started_at + 1.day, value: 2, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 1.day, value: 7, properties: {"agent_name" => "frodo", "cloud" => "gcp"})
+          create_event(timestamp: subscription_started_at + 1.day, value: 3, properties: {"agent_name" => "aragorn", "cloud" => "aws"})
+        end
+
+        it "returns the max value per group and cloud" do
+          result = event_store.grouped_max(["agent_name", "cloud"])
+
+          expect(result).to match_array([
+            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
+            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7},
+            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3}
+          ])
+        end
+      end
+    end
+  end
+
+  if include_feature?(:grouped_unique_count_breakdown)
+    describe "#grouped_unique_count with breakdown columns" do
+      subject(:event_store) do
+        described_class.new(
+          code:,
+          subscription:,
+          boundaries:,
+          filters: {
+            grouped_by:,
+            grouped_by_values:,
+            presentation_by: ["cloud"],
+            matching_filters:,
+            ignored_filters:,
+            charge_id: charge&.id,
+            charge_filter: charge_filter
+          },
+          deduplicate: with_event_duplication
+        )
+      end
+
+      let(:events) { [] }
+
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+      end
+
+      context "without grouped_by" do
+        before do
+          create_event(timestamp: subscription_started_at + 1.day, value: 1, properties: {"cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 2.days, value: 2, properties: {"cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 3.days, value: 3, properties: {"cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 1.day, value: 1, properties: {"cloud" => "gcp"})
+        end
+
+        it "returns the unique count breakdown by presentation_by" do
+          result = event_store.grouped_unique_count(["cloud"])
+
+          expect(result).to match_array([
+            {groups: {"cloud" => "aws"}, value: 3},
+            {groups: {"cloud" => "gcp"}, value: 1}
+          ])
+        end
+      end
+
+      context "with grouped_by" do
+        let(:grouped_by) { ["agent_name"] }
+
+        before do
+          create_event(timestamp: subscription_started_at + 1.day, value: 1, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 2.days, value: 2, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: subscription_started_at + 1.day, value: 1, properties: {"agent_name" => "frodo", "cloud" => "gcp"})
+          create_event(timestamp: subscription_started_at + 1.day, value: 1, properties: {"agent_name" => "aragorn", "cloud" => "aws"})
+        end
+
+        it "returns the unique count breakdown per group" do
+          result = event_store.grouped_unique_count(["agent_name", "cloud"])
+
+          expect(result).to match_array([
+            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
+            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 1},
+            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 1}
+          ])
+        end
+      end
+    end
+  end
+
+  if include_feature?(:grouped_weighted_sum_breakdown)
+    describe "#grouped_weighted_sum with breakdown columns" do
+      subject(:event_store) do
+        described_class.new(
+          code:,
+          subscription:,
+          boundaries:,
+          filters: {
+            grouped_by:,
+            grouped_by_values:,
+            presentation_by: ["cloud"],
+            matching_filters:,
+            ignored_filters:,
+            charge_id: charge&.id,
+            charge_filter: charge_filter
+          },
+          deduplicate: with_event_duplication
+        )
+      end
+
+      let(:events) { [] }
+      let(:started_at) { Time.zone.parse("2023-03-01") }
+
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+      end
+
+      context "without grouped_by" do
+        before do
+          create_event(timestamp: Time.zone.parse("2023-03-05 00:00:00"), value: 2, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, properties: {"cloud" => "aws"})
+
+          create_event(timestamp: Time.zone.parse("2023-03-05 00:00:00"), value: 2, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, properties: {"cloud" => "gcp"})
+        end
+
+        it "returns the weighted sum breakdown by presentation_by" do
+          result = event_store.grouped_weighted_sum(["cloud"])
+
+          expect(result.size).to eq(2)
+          expect(result.map { |r| r[:groups] }).to match_array([{"cloud" => "aws"}, {"cloud" => "gcp"}])
+          result.each { |r| expect(r[:value].round(5)).to eq(0.02218) }
+        end
+      end
+
+      context "with grouped_by" do
+        let(:grouped_by) { ["agent_name"] }
+
+        before do
+          create_event(timestamp: Time.zone.parse("2023-03-05 00:00:00"), value: 2, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, properties: {"agent_name" => "frodo", "cloud" => "aws"})
+
+          create_event(timestamp: Time.zone.parse("2023-03-05 00:00:00"), value: 2, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, properties: {"agent_name" => "aragorn", "cloud" => "gcp"})
+        end
+
+        it "returns the weighted sum breakdown per group" do
+          result = event_store.grouped_weighted_sum(["agent_name", "cloud"])
+
+          expect(result.map { |r| r[:groups] }).to match_array([
+            {"agent_name" => "frodo", "cloud" => "aws"},
+            {"agent_name" => "aragorn", "cloud" => "gcp"}
+          ])
+          result.each { |r| expect(r[:value].round(5)).to eq(0.02218) }
+        end
+      end
+
+      context "with no events" do
+        it "returns an empty array" do
+          result = event_store.grouped_weighted_sum(["cloud"])
+
+          expect(result).to eq([])
+        end
+      end
+
+      context "with initial values" do
+        let(:initial_values) do
+          [
+            {groups: {"cloud" => "aws"}, value: 1000},
+            {groups: {"cloud" => "gcp"}, value: 1000}
+          ]
+        end
+
+        before do
+          create_event(timestamp: Time.zone.parse("2023-03-05 00:00:00"), value: 2, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, properties: {"cloud" => "aws"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, properties: {"cloud" => "aws"})
+
+          create_event(timestamp: Time.zone.parse("2023-03-05 00:00:00"), value: 2, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, properties: {"cloud" => "gcp"})
+          create_event(timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, properties: {"cloud" => "gcp"})
+        end
+
+        it "uses the initial values in the aggregation" do
+          result = event_store.grouped_weighted_sum(["cloud"], initial_values:)
+
+          expect(result.map { |r| r[:groups] }).to match_array([{"cloud" => "aws"}, {"cloud" => "gcp"}])
+          result.each { |r| expect(r[:value].round(5)).to eq(1000.02218) }
+        end
+      end
+    end
+  end
+
   if include_feature?(:sum_date_breakdown)
     describe "#sum_date_breakdown" do
       it "returns the sum grouped by day" do
