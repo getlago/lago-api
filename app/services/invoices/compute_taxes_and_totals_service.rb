@@ -34,9 +34,7 @@ module Invoices
     attr_reader :invoice, :finalizing
 
     def set_pending_tax_status!
-      if finalizing
-        invoice.status = invoice.subscription_gated? ? :open : :pending
-      end
+      invoice.status = (invoice.subscription_gated? ? :open : :pending) if finalizing
       invoice.tax_status = :pending
       invoice.save!
     end
