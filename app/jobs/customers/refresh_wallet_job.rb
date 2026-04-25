@@ -15,7 +15,7 @@ module Customers
 
     retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
     retry_on BaseService::TooManyProviderRequestsFailure, wait: :polynomially_longer, attempts: 25
-    retry_on *Integrations::Aggregator::BaseService.retryable_errors, wait: :polynomially_longer, attempts: 6
+    retry_on(*Integrations::Aggregator::BaseService.retryable_errors, wait: :polynomially_longer, attempts: 6)
 
     def perform(customer)
       return unless customer.awaiting_wallet_refresh?
