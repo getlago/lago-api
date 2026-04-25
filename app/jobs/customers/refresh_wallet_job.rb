@@ -2,8 +2,6 @@
 
 module Customers
   class RefreshWalletJob < ApplicationJob
-    OUT_OF_MEMORY_ERROR = "function_runtime_out_of_memory"
-
     queue_as do
       customer = arguments.first
       if Utils::DedicatedWorkerConfig.enabled_for?(customer&.organization_id)
@@ -17,9 +15,7 @@ module Customers
 
     retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
     retry_on BaseService::TooManyProviderRequestsFailure, wait: :polynomially_longer, attempts: 25
-    retry_on Net::ReadTimeout,
-      Integrations::Aggregator::BadGatewayError,
-      Integrations::Aggregator::OutOfMemoryError, wait: :polynomially_longer, attempts: 6
+    retry_on *Integrations::Aggregator::BaseService.retryable_errors, wait: :polynomially_longer, attempts: 6
 
     def perform(customer)
       return unless customer.awaiting_wallet_refresh?
@@ -29,7 +25,6 @@ module Customers
     rescue BaseService::ValidationFailure => e
       tax_error = Array(e.messages[:tax_error])
 
-      raise Integrations::Aggregator::OutOfMemoryError if tax_error.any? { |msg| msg.include?(OUT_OF_MEMORY_ERROR) }
       raise unless tax_error.any? { |msg| msg.include?(Integrations::Aggregator::Taxes::BaseService::CUSTOMER_ADDRESS_INVALID) }
 
       ErrorDetails::CreateService.call!(
