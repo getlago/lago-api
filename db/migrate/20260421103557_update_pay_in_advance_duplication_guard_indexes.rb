@@ -30,8 +30,8 @@ class UpdatePayInAdvanceDuplicationGuardIndexes < ActiveRecord::Migration[8.0]
       algorithm: :concurrently,
       if_not_exists: true
 
-    remove_index :fees, name: CHARGE_INDEX, if_exists: true
-    remove_index :fees, name: CHARGE_FILTER_INDEX, if_exists: true
+    remove_index :fees, name: CHARGE_INDEX, if_exists: true, algorithm: :concurrently
+    remove_index :fees, name: CHARGE_FILTER_INDEX, if_exists: true, algorithm: :concurrently
 
     safety_assured do
       execute "ALTER INDEX #{CHARGE_INDEX_NEW} RENAME TO #{CHARGE_INDEX}"
@@ -56,8 +56,8 @@ class UpdatePayInAdvanceDuplicationGuardIndexes < ActiveRecord::Migration[8.0]
       algorithm: :concurrently,
       if_not_exists: true
 
-    remove_index :fees, name: CHARGE_INDEX, if_exists: true
-    remove_index :fees, name: CHARGE_FILTER_INDEX, if_exists: true
+    remove_index :fees, name: CHARGE_INDEX, if_exists: true, algorithm: :concurrently
+    remove_index :fees, name: CHARGE_FILTER_INDEX, if_exists: true, algorithm: :concurrently
 
     safety_assured do
       execute "ALTER INDEX #{CHARGE_INDEX_NEW} RENAME TO #{CHARGE_INDEX}"

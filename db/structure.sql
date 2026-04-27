@@ -10661,7 +10661,7 @@ ALTER TABLE ONLY public.commitments
 --
 
 ALTER TABLE ONLY public.fees
-    ADD CONSTRAINT fk_rails_775eb0ecd8 FOREIGN KEY (original_fee_id) REFERENCES public.fees(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_775eb0ecd8 FOREIGN KEY (original_fee_id) REFERENCES public.fees(id);
 
 
 --
@@ -11809,6 +11809,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260421123920'),
 ('20260421103557'),
+('20260421021503'),
 ('20260421013319'),
 ('20260420114717'),
 ('20260416124233'),
