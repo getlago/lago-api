@@ -145,7 +145,7 @@ module Fees
     end
 
     def hydrate_non_persistable_fees(properties:, charge_filter:)
-      zero_aggregation = BillableMetrics::Aggregations::BaseService.null_result(grouped_by_keys: grouped_by_keys(charge_filter:), apply_aggregation: true)
+      zero_aggregation = aggregator(charge_filter:).empty_results
 
       charge_model_result = ChargeModels::Factory.new_instance(
         chargeable: charge,

@@ -324,6 +324,7 @@ DROP INDEX IF EXISTS public.index_wt_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_webhooks_on_webhook_endpoint_id;
 DROP INDEX IF EXISTS public.index_webhooks_on_updated_at_for_cleanup;
 DROP INDEX IF EXISTS public.index_webhooks_on_organization_id;
+DROP INDEX IF EXISTS public.index_webhooks_on_object_type_and_object_id_and_webhook_type;
 DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_status_and_timestamps;
 DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_and_timestamps;
 DROP INDEX IF EXISTS public.index_webhooks_for_query;
@@ -378,6 +379,7 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on_null;
 DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on;
 DROP INDEX IF EXISTS public.index_subscriptions_on_external_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_ending_at_active;
 DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_subscription_id;
@@ -9000,6 +9002,13 @@ CREATE INDEX index_subscriptions_on_customer_id ON public.subscriptions USING bt
 
 
 --
+-- Name: index_subscriptions_on_ending_at_active; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_on_ending_at_active ON public.subscriptions USING btree (ending_at) WHERE ((status = 1) AND (ending_at IS NOT NULL));
+
+
+--
 -- Name: index_subscriptions_on_external_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9375,6 +9384,13 @@ CREATE INDEX index_webhooks_on_endpoint_and_timestamps ON public.webhooks USING 
 --
 
 CREATE INDEX index_webhooks_on_endpoint_status_and_timestamps ON public.webhooks USING btree (webhook_endpoint_id, status, updated_at);
+
+
+--
+-- Name: index_webhooks_on_object_type_and_object_id_and_webhook_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhooks_on_object_type_and_object_id_and_webhook_type ON public.webhooks USING btree (object_type, object_id, webhook_type);
 
 
 --
@@ -11783,6 +11799,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260409161142'),
 ('20260409151451'),
 ('20260407091845'),
+('20260403184752'),
+('20260403184747'),
 ('20260331122448'),
 ('20260331103301'),
 ('20260327140626'),

@@ -34,9 +34,9 @@ module BillableMetrics
       ]
       PerEventAggregationResult = BaseResult[:event_aggregation]
 
-      def self.null_result(result = BaseService::Result.new, grouped_by_keys: nil, apply_aggregation: false)
+      def self.null_result(result, grouped_by_keys: nil, apply_aggregation: false)
         if apply_aggregation && grouped_by_keys.present?
-          result.aggregations = [null_result(grouped_by_keys: grouped_by_keys)]
+          result.aggregations = [null_result(BaseService::Result.new, grouped_by_keys: grouped_by_keys)]
         else
           result.grouped_by = grouped_by_keys.index_with { nil } if grouped_by_keys
           result.aggregation = 0
@@ -115,6 +115,13 @@ module BillableMetrics
             compute_per_event_aggregation(exclude_event:, include_event_value:)
           end
         end
+      end
+
+      # Exposes a null result that carries this aggregator instance, so downstream charge models
+      # can dispatch `per_event_aggregation` through the real aggregator rather than nil.
+      def empty_results
+        self.class.null_result(result, grouped_by_keys: grouped_by, apply_aggregation: true)
+        result
       end
 
       protected
@@ -198,11 +205,6 @@ module BillableMetrics
 
       def empty_result
         self.class.null_result(result)
-      end
-
-      def empty_results
-        self.class.null_result(result, grouped_by_keys: grouped_by, apply_aggregation: true)
-        result
       end
 
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that

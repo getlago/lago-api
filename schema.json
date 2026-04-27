@@ -59763,6 +59763,18 @@
               "deprecationReason": null
             },
             {
+              "name": "downgradePlanDate",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601Date",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "endingAt",
               "description": null,
               "args": [],
@@ -60006,6 +60018,30 @@
                   "name": "Plan",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "previousPlan",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "Plan",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "previousSubscription",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "Subscription",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null

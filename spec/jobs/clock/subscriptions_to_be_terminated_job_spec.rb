@@ -306,6 +306,106 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
       end
     end
 
+    context "when ending_at is at end of day" do
+      it "still enqueues the alert" do
+        subscription = create(:subscription, customer:, organization:, ending_at: ending_at_15_days.end_of_day)
+
+        travel_to(current_date) do
+          described_class.perform_now
+
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", subscription)
+            .exactly(:once)
+        end
+      end
+    end
+
+    context "with subscriptions from different organizations" do
+      it "enqueues for matching subscriptions across organizations" do
+        other_org = create(:organization)
+        other_customer = create(:customer, organization: other_org)
+        create(:webhook_endpoint, organization: other_org)
+        other_sub = create(:subscription, customer: other_customer, organization: other_org, ending_at: ending_at_15_days)
+        sub = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+
+        travel_to(current_date) do
+          described_class.perform_now
+
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", sub)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", other_sub)
+        end
+      end
+    end
+
+    context "when a termination_alert webhook exists with a different object_type" do
+      it "does not block the alert" do
+        subscription = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+
+        travel_to(current_date) do
+          webhook = create(
+            :webhook,
+            :succeeded,
+            webhook_endpoint:,
+            object: subscription,
+            webhook_type: "subscription.termination_alert",
+            created_at: current_date
+          )
+          webhook.update_column(:object_type, "Invoice") # rubocop:disable Rails/SkipsModelValidations
+
+          described_class.perform_now
+
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("subscription.termination_alert", subscription)
+            .exactly(:once)
+        end
+      end
+    end
+
+    describe "index usage" do
+      # Force PostgreSQL to use indexes even on a tiny test dataset so we can
+      # verify the planner CAN use them for the query patterns the job produces.
+      around do |example|
+        ActiveRecord::Base.connection.execute("SET enable_seqscan = off")
+        example.run
+      ensure
+        ActiveRecord::Base.connection.execute("SET enable_seqscan = on")
+      end
+
+      it "uses the partial index on ending_at for the subscription lookup" do
+        create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+
+        plan = travel_to(current_date) do
+          Subscription
+            .active
+            .where("DATE(ending_at::timestamptz) IN (?)", [ending_at_15_days.to_date])
+            .explain
+            .inspect
+        end
+
+        expect(plan).to include("index_subscriptions_on_ending_at_active")
+      end
+
+      it "uses the composite index on (object_type, object_id, webhook_type) for the webhook dedup" do
+        subscription = create(:subscription, customer:, organization:, ending_at: ending_at_15_days)
+
+        plan = travel_to(current_date) do
+          Webhook
+            .where(
+              webhook_type: "subscription.termination_alert",
+              object_type: "Subscription",
+              object_id: [subscription.id]
+            )
+            .where("created_at::date = ?", current_date.to_date)
+            .explain
+            .inspect
+        end
+
+        expect(plan).to include("index_webhooks_on_object_type_and_object_id_and_webhook_type")
+      end
+    end
+
     context "with custom LAGO_SUBSCRIPTION_TERMINATION_ALERT_SENT_AT_DAYS" do
       around do |test|
         old_value = ENV["LAGO_SUBSCRIPTION_TERMINATION_ALERT_SENT_AT_DAYS"]

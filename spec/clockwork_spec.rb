@@ -298,7 +298,7 @@ describe Clockwork do
       allow(ENV).to receive(:[]).with("LAGO_CLICKHOUSE_ENABLED").and_return("true")
     end
 
-    it "enqueue a refresh flagged subscriptions job" do
+    it "enqueue a refresh flagged subscriptions job every 10 seconds" do
       Clockwork::Test.run(
         file: clock_file,
         start_time:,
@@ -311,6 +311,117 @@ describe Clockwork do
 
       Clockwork::Test.block_for(job).call
       expect(Clock::ConsumeSubscriptionRefreshedQueueJob).to have_been_enqueued
+    end
+  end
+
+  describe "schedule:process_dedicated_orgs_subscription_activities" do
+    let(:job) { "schedule:process_dedicated_orgs_subscription_activities" }
+    let(:start_time) { Time.zone.parse("2025-03-27T00:05:00") }
+    let(:end_time) { Time.zone.parse("2025-03-27T00:06:00") }
+
+    before do
+      allow(ENV).to receive(:[]).and_call_original
+      stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", ["org-1"])
+    end
+
+    it "enqueues a process dedicated orgs subscription activities job every 5 seconds" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.second
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(12)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::ProcessDedicatedOrgsSubscriptionActivitiesJob).to have_been_enqueued
+    end
+
+    context "with a custom interval configured" do
+      before do
+        allow(ENV).to receive(:[]).with("LAGO_DEDICATED_REFRESH_INTERVAL_SECONDS").and_return("10")
+      end
+
+      it 'uses the ENV["LAGO_DEDICATED_REFRESH_INTERVAL_SECONDS"] to set a custom period' do
+        Clockwork::Test.run(
+          file: clock_file,
+          start_time:,
+          end_time:,
+          tick_speed: 1.second
+        )
+
+        expect(Clockwork::Test).to be_ran_job(job)
+        expect(Clockwork::Test.times_run(job)).to eq(6)
+
+        Clockwork::Test.block_for(job).call
+        expect(Clock::ProcessDedicatedOrgsSubscriptionActivitiesJob).to have_been_enqueued
+      end
+    end
+
+    context "when the dedicated org list is empty" do
+      before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", []) }
+
+      it "does not register the schedule" do
+        Clockwork::Test.run(
+          file: clock_file,
+          start_time:,
+          end_time:,
+          tick_speed: 1.second
+        )
+
+        expect(Clockwork::Test).not_to be_ran_job(job)
+      end
+    end
+  end
+
+  describe "schedule:refresh_dedicated_org_wallets" do
+    let(:job) { "schedule:refresh_dedicated_org_wallets" }
+    let(:start_time) { Time.zone.parse("2025-03-27T00:05:00") }
+    let(:end_time) { Time.zone.parse("2025-03-27T00:06:00") }
+
+    before do
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("LAGO_REDIS_CACHE_URL").and_return("redis:6379")
+      allow(ENV).to receive(:[]).with("LAGO_DISABLE_WALLET_REFRESH").and_return(nil)
+      stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", ["org-1"])
+    end
+
+    it "enqueue a refresh dedicated org wallets job every 5 seconds" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.second
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(12)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob).to have_been_enqueued
+    end
+
+    context "with a custom interval configured" do
+      before do
+        allow(ENV).to receive(:[]).with("LAGO_DEDICATED_REFRESH_INTERVAL_SECONDS").and_return("10")
+      end
+
+      it 'uses the ENV["LAGO_DEDICATED_REFRESH_INTERVAL_SECONDS"] to set a custom period' do
+        Clockwork::Test.run(
+          file: clock_file,
+          start_time:,
+          end_time:,
+          tick_speed: 1.second
+        )
+
+        expect(Clockwork::Test).to be_ran_job(job)
+        expect(Clockwork::Test.times_run(job)).to eq(6)
+
+        Clockwork::Test.block_for(job).call
+        expect(Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob).to have_been_enqueued
+      end
     end
   end
 end

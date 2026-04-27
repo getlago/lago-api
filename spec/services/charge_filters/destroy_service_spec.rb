@@ -62,17 +62,19 @@ RSpec.describe ChargeFilters::DestroyService do
         filter_value
         create(:subscription, plan: child_plan, status: :active)
         child_charge
-        allow(Charges::UpdateChildrenJob).to receive(:perform_later)
+        allow(ChargeFilters::CascadeJob).to receive(:perform_later)
       end
 
-      it "triggers cascade update via Charges::UpdateChildrenJob" do
+      it "triggers filter-level cascade via ChargeFilters::CascadeJob" do
         service
 
-        expect(Charges::UpdateChildrenJob).to have_received(:perform_later).with(
-          params: hash_including("charge_model", "properties", "filters"),
-          old_parent_attrs: hash_including("id" => charge.id),
-          old_parent_filters_attrs: array_including(hash_including("id", "properties")),
-          old_parent_applied_pricing_unit_attrs: nil
+        expect(ChargeFilters::CascadeJob).to have_received(:perform_later).with(
+          charge.id,
+          "destroy",
+          hash_including("card_location"),
+          nil,
+          nil,
+          nil
         )
       end
     end

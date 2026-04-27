@@ -76,6 +76,29 @@ RSpec.describe Coupon do
         it { is_expected.to validate_presence_of(:percentage_rate) }
       end
     end
+
+    describe "of frequency_duration" do
+      subject(:coupon) { build(:coupon, frequency:) }
+
+      context "when recurring" do
+        let(:frequency) { "recurring" }
+
+        it { is_expected.to validate_presence_of(:frequency_duration).with_message("value_is_mandatory") }
+        it { is_expected.to validate_numericality_of(:frequency_duration).is_greater_than(0) }
+      end
+
+      context "when once" do
+        let(:frequency) { "once" }
+
+        it { is_expected.not_to validate_presence_of(:frequency_duration) }
+      end
+
+      context "when forever" do
+        let(:frequency) { "forever" }
+
+        it { is_expected.not_to validate_presence_of(:frequency_duration) }
+      end
+    end
   end
 
   describe ".mark_as_terminated" do

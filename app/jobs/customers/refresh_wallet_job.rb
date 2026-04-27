@@ -4,7 +4,14 @@ module Customers
   class RefreshWalletJob < ApplicationJob
     OUT_OF_MEMORY_ERROR = "function_runtime_out_of_memory"
 
-    queue_as "low_priority"
+    queue_as do
+      customer = arguments.first
+      if Utils::DedicatedWorkerConfig.enabled_for?(customer&.organization_id)
+        Utils::DedicatedWorkerConfig::DEDICATED_WALLETS_QUEUE
+      else
+        :low_priority
+      end
+    end
 
     unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 

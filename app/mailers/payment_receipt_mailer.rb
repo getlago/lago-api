@@ -11,6 +11,11 @@ class PaymentReceiptMailer < DocumentMailer
 
   def ensure_pdf
     PaymentReceipts::GeneratePdfService.new(payment_receipt: document).call
+
+    invoices = document.payment.payable.is_a?(Invoice) ? [document.payment.payable] : document.payment.payable.invoices
+
+    raise PaymentReceipts::FilesNotReadyError unless document.file.attached?
+    raise PaymentReceipts::FilesNotReadyError unless invoices.all? { |invoice| invoice.file.attached? }
   end
 
   def create_mail
