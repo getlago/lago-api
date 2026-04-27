@@ -84,14 +84,8 @@ class InvoicesQuery < BaseQuery
     return scope if search_term.blank? || filters.customer_id.present?
 
     matching_customer_ids = organization.customers
-      .ransack(
-        m: "or",
-        name_cont: search_term,
-        firstname_cont: search_term,
-        lastname_cont: search_term,
-        external_id_cont: search_term,
-        email_cont: search_term
-      ).result.select(:id)
+      .ransack(search_text_cont: search_term)
+      .result.select(:id)
 
     scope.or(
       organization.invoices.visible.where(customer_id: matching_customer_ids)
