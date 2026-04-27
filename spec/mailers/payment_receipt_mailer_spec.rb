@@ -48,7 +48,7 @@ RSpec.describe PaymentReceiptMailer do
 
       it "raises FilesNotReadyError" do
         expect {
-          payment_receipt_mailer.with(payment_receipt:).created
+          payment_receipt_mailer.with(payment_receipt:).created.deliver_now
         }.to raise_error(PaymentReceipts::FilesNotReadyError)
 
         expect(PaymentReceipts::GeneratePdfService).to have_received(:new)
@@ -60,7 +60,7 @@ RSpec.describe PaymentReceiptMailer do
 
       it "raises FilesNotReadyError" do
         expect {
-          payment_receipt_mailer.with(payment_receipt:).created
+          payment_receipt_mailer.with(payment_receipt:).created.deliver_now
         }.to raise_error(PaymentReceipts::FilesNotReadyError)
       end
     end
@@ -91,7 +91,7 @@ RSpec.describe PaymentReceiptMailer do
       context "when one invoice in the request is missing its file" do
         it "raises FilesNotReadyError" do
           expect {
-            payment_receipt_mailer.with(payment_receipt:).created
+            payment_receipt_mailer.with(payment_receipt:).created.deliver_now
           }.to raise_error(PaymentReceipts::FilesNotReadyError)
         end
       end
