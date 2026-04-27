@@ -27,7 +27,7 @@ RSpec.describe ::V1::Customers::PastUsageSerializer do
 
   let(:invoice) { invoice_subscription.invoice }
 
-  let(:fee1) { create(:charge_fee, charge: charge1, invoice:) }
+  let(:fee1) { create(:charge_fee, charge: charge1, invoice:, presentation_breakdowns: [build(:presentation_breakdown)]) }
   let(:fee2) { create(:charge_fee, charge: charge2, invoice:) }
 
   let(:usage) { OpenStruct.new(invoice_subscription:, fees: [fee1, fee2]) }
@@ -47,5 +47,7 @@ RSpec.describe ::V1::Customers::PastUsageSerializer do
     )
 
     expect(result["usage_period"]["charges_usage"].count).to eq(2)
+    expect(result["usage_period"]["charges_usage"].first["presentation_breakdowns"]).to eq([{"presentation_by" => {"department" => "engineering"}, "units" => "60.0"}])
+    expect(result["usage_period"]["charges_usage"].second["presentation_breakdowns"]).to eq([])
   end
 end

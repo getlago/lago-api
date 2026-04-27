@@ -137,6 +137,26 @@ RSpec.describe ::V1::InvoiceSerializer do
     end
   end
 
+  context "when includes fees" do
+    let(:fee1) { create(:fee, invoice:, presentation_breakdowns: [build(:presentation_breakdown)]) }
+    let(:fee2) { create(:fee, invoice:) }
+
+    let(:includes) { %i[fees] }
+
+    before do
+      fee1
+      fee2
+    end
+
+    it "returns fees and presentation breakdowns" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["invoice"]["fees"].count).to eq(2)
+      expect(result["invoice"]["fees"].first["presentation_breakdowns"]).to eq([{"presentation_by" => {"department" => "engineering"}, "units" => "60.0"}])
+      expect(result["invoice"]["fees"].second["presentation_breakdowns"]).to eq([])
+    end
+  end
+
   context "when the tax was deleted" do
     let(:includes) { %i[applied_taxes] }
 
