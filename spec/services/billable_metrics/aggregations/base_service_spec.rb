@@ -4,11 +4,12 @@ require "rails_helper"
 
 RSpec.describe BillableMetrics::Aggregations::BaseService do
   describe ".null_result" do
-    subject(:null_result) { described_class.null_result(**args) }
+    subject(:null_result) { described_class.null_result(result, **args) }
 
-    context "without arguments" do
-      let(:args) { {} }
+    let(:result) { BaseService::Result.new }
+    let(:args) { {} }
 
+    context "without keyword arguments" do
       it "returns a result with zero values" do
         expect(null_result.aggregation).to eq(0)
         expect(null_result.count).to eq(0)
@@ -16,19 +17,9 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
         expect(null_result.options).to eq({running_total: []})
         expect(null_result.grouped_by).to be_nil
       end
-    end
 
-    context "with a custom result" do
-      let(:custom_result) { described_class::Result.new }
-
-      it "populates the provided result" do
-        returned = described_class.null_result(custom_result)
-
-        expect(returned).to eq(custom_result)
-        expect(returned.aggregation).to eq(0)
-        expect(returned.count).to eq(0)
-        expect(returned.current_usage_units).to eq(0)
-        expect(returned.options).to eq({running_total: []})
+      it "populates and returns the provided result" do
+        expect(null_result).to be(result)
       end
     end
 
@@ -78,6 +69,50 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
         expect(null_result.current_usage_units).to eq(0)
         expect(null_result.options).to eq({running_total: []})
         expect(null_result.grouped_by).to be_nil
+      end
+    end
+  end
+
+  describe "#empty_results" do
+    subject(:empty_results) { aggregator.empty_results }
+
+    let(:aggregator) do
+      described_class.new(
+        event_store_class: Events::Stores::PostgresStore,
+        charge:,
+        subscription:,
+        boundaries: {from_datetime: Time.current, to_datetime: Time.current},
+        filters:
+      )
+    end
+
+    let(:subscription) { create(:subscription) }
+    let(:charge) { create(:standard_charge, plan: subscription.plan) }
+    let(:filters) { {} }
+
+    context "without grouped_by" do
+      it "returns the aggregator's result zeroed out with the aggregator attached" do
+        expect(empty_results.aggregator).to be(aggregator)
+        expect(empty_results.aggregation).to eq(0)
+        expect(empty_results.count).to eq(0)
+        expect(empty_results.current_usage_units).to eq(0)
+        expect(empty_results.options).to eq({running_total: []})
+      end
+    end
+
+    context "with grouped_by in the filters" do
+      let(:filters) { {grouped_by: %w[region provider]} }
+
+      it "wraps a null result inside aggregations for each group key and keeps the aggregator on the outer result" do
+        expect(empty_results.aggregator).to be(aggregator)
+        expect(empty_results.aggregations.size).to eq(1)
+
+        inner = empty_results.aggregations.first
+        expect(inner.grouped_by).to eq({"region" => nil, "provider" => nil})
+        expect(inner.aggregation).to eq(0)
+        expect(inner.count).to eq(0)
+        expect(inner.current_usage_units).to eq(0)
+        expect(inner.options).to eq({running_total: []})
       end
     end
   end
