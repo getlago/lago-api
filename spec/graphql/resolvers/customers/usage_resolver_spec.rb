@@ -240,10 +240,9 @@ RSpec.describe Resolvers::Customers::UsageResolver do
           }
         )
 
-        # FIXME: Confirm if we need to skip the presentation breakdowns when we have grouped usages
         charges_usage = result["data"]["customerUsage"]["chargesUsage"]
         expect(charges_usage.first["presentationBreakdowns"]).to be_empty
-        expect(charges_usage.second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+        expect(charges_usage.second["presentationBreakdowns"]).to be_empty
 
         grouped_usage = charges_usage.second["groupedUsage"]
         expect(grouped_usage.first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])

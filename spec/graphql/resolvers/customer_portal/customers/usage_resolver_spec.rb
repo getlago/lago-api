@@ -338,9 +338,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver do
 
           charges_usage = result["data"]["customerPortalCustomerUsage"]["chargesUsage"]
           presentation_breakdown_sum_metric = charges_usage.find { |usage| usage["billableMetric"]["code"] == sum_metric.code }["presentationBreakdowns"]
-          expect(presentation_breakdown_sum_metric).to eq([
-            {"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}
-          ])
+          expect(presentation_breakdown_sum_metric).to be_empty
           presentation_breakdown_metric = charges_usage.find { |usage| usage["billableMetric"]["code"] == metric.code }["presentationBreakdowns"]
           expect(presentation_breakdown_metric).to be_empty
         end

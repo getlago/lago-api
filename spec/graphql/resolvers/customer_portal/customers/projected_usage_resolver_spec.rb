@@ -330,9 +330,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
         expect(graduated_charge_usage["presentationBreakdowns"]).to be_empty
 
         standard_charge_usage = charges_usage.find { |usage| usage["charge"]["chargeModel"] == "standard" }
-        expect(standard_charge_usage["presentationBreakdowns"]).to eq([
-          {"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}
-        ])
+        expect(standard_charge_usage["presentationBreakdowns"]).to be_empty
 
         grouped_usage = standard_charge_usage["groupedUsage"]
         expect(grouped_usage.first["presentationBreakdowns"]).to eq([
