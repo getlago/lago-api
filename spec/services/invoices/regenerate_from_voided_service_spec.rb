@@ -65,10 +65,10 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
         original_fee.update!(pay_in_advance_event_transaction_id: "txn_123", pay_in_advance: true)
       end
 
-      it "clears pay_in_advance_event_transaction_id and sets original_fee_id" do
+      it "duplicates pay_in_advance_event_transaction_id and sets original_fee_id" do
         regenerated_fee = regenerate_result.invoice.fees.first
 
-        expect(regenerated_fee.pay_in_advance_event_transaction_id).to be_nil
+        expect(regenerated_fee.pay_in_advance_event_transaction_id).to eq("txn_123")
         expect(regenerated_fee.original_fee_id).to eq(original_fee.id)
         expect(original_fee.reload.pay_in_advance_event_transaction_id).to eq("txn_123")
       end
