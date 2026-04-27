@@ -127,4 +127,58 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
       expect(SendWebhookJob).to have_been_enqueued.with("subscription.canceled", subscription)
     end
   end
+
+  context "when payment succeeds late on a canceled subscription with closed invoice" do
+    let(:subscription) { create(:subscription, :canceled, organization:, customer:, plan:) }
+    let(:invoice) do
+      create(:invoice, organization:, customer:, status: :closed, invoice_type: :subscription,
+        total_amount_cents: 100, fees_amount_cents: 100)
+    end
+    let(:payment_status) { :succeeded }
+
+    it "enqueues a refund job for the invoice" do
+      result
+
+      expect(Payments::RefundJob).to have_been_enqueued.with(invoice)
+    end
+
+    it "does not change the rule status" do
+      result
+
+      expect(rule.reload.status).to eq("pending")
+    end
+
+    it "does not finalize the invoice" do
+      result
+
+      expect(invoice.reload.status).to eq("closed")
+    end
+
+    it "does not reactivate the subscription" do
+      result
+
+      expect(subscription.reload).to be_canceled
+    end
+  end
+
+  context "when payment fails late on a canceled subscription with closed invoice" do
+    let(:subscription) { create(:subscription, :canceled, organization:, customer:, plan:) }
+    let(:invoice) do
+      create(:invoice, organization:, customer:, status: :closed, invoice_type: :subscription,
+        total_amount_cents: 100, fees_amount_cents: 100)
+    end
+    let(:payment_status) { :failed }
+
+    it "does not enqueue a refund job" do
+      result
+
+      expect(Payments::RefundJob).not_to have_been_enqueued
+    end
+
+    it "does not change the rule status" do
+      result
+
+      expect(rule.reload.status).to eq("pending")
+    end
+  end
 end
