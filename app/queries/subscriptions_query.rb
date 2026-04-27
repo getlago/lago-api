@@ -37,11 +37,14 @@ class SubscriptionsQuery < BaseQuery
   end
 
   def base_scope
-    if organization.present?
+    scope = if organization.present?
       Subscription.where(organization:)
     else
       Subscription.where(customer: filters.customer)
-    end.joins(:customer, :plan).ransack(search_params)
+    end.includes(:customer, :plan)
+
+    scope = scope.joins(:customer, :plan) if search_term.present?
+    scope.ransack(search_params)
   end
 
   def search_params
@@ -68,7 +71,8 @@ class SubscriptionsQuery < BaseQuery
   end
 
   def with_external_customer(scope)
-    scope.joins(:customer).where(customers: {external_id: filters.external_customer_id})
+    customers = Customer.where(external_id: filters.external_customer_id)
+    scope.where(customer_id: customers.ids)
   end
 
   def with_plan_code(scope)
