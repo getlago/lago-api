@@ -182,7 +182,7 @@ namespace :customers do
           preserved_codes = customer.taxes.where.not("code ILIKE 'lago_eu%'").pluck(:code)
           tax_codes = (preserved_codes + [result.tax_code]).uniq
 
-          Customers::ApplyTaxesService.call(customer: customer, tax_codes: tax_codes).raise_if_error!
+          Customers::ApplyTaxesService.call!(customer: customer, tax_codes: tax_codes)
         end
 
         total_processed += customer_ids.size
