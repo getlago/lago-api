@@ -6,9 +6,11 @@ RSpec.describe PaymentReceiptMailer do
   subject(:payment_receipt_mailer) { described_class }
 
   let(:payment_receipt) { create(:payment_receipt) }
+  let(:invoice) { payment_receipt.payment.payable }
 
   before do
     payment_receipt.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "blank.pdf")
+    invoice.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "blank.pdf")
     allow(payment_receipt.payment.payable).to receive(:file_url).and_return("https://example.com/invoice.pdf")
   end
 
@@ -32,22 +34,30 @@ RSpec.describe PaymentReceiptMailer do
       end
     end
 
-    context "with no pdf file" do
-      let(:pdf_service) { instance_double(PaymentReceipts::GeneratePdfService) }
+    context "when the payment receipt file is still missing after generation" do
+      let(:pdf_service) { instance_double(PaymentReceipts::GeneratePdfService, call: nil) }
 
       before do
-        payment_receipt.file = nil
-
-        allow(PaymentReceipts::GeneratePdfService).to receive(:new)
-          .and_return(pdf_service)
-        allow(pdf_service).to receive(:call)
+        payment_receipt.file.purge
+        allow(PaymentReceipts::GeneratePdfService).to receive(:new).and_return(pdf_service)
       end
 
-      it "calls the payment_receipt pdf generate service" do
-        mailer = payment_receipt_mailer.with(payment_receipt:).created
+      it "raises FilesNotReadyError" do
+        expect {
+          payment_receipt_mailer.with(payment_receipt:).created
+        }.to raise_error(PaymentReceipts::FilesNotReadyError, /payment_receipt .* file missing/)
 
-        expect(mailer.to).not_to be_nil
         expect(PaymentReceipts::GeneratePdfService).to have_received(:new)
+      end
+    end
+
+    context "when an invoice file is missing" do
+      before { invoice.file.purge }
+
+      it "raises FilesNotReadyError" do
+        expect {
+          payment_receipt_mailer.with(payment_receipt:).created
+        }.to raise_error(PaymentReceipts::FilesNotReadyError, /invoice files missing/)
       end
     end
 
