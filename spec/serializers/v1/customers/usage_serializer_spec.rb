@@ -43,7 +43,8 @@ RSpec.describe ::V1::Customers::UsageSerializer do
             "from_datetime" => from_datetime.iso8601,
             "to_datetime" => to_datetime.iso8601,
             "charges_duration" => 30
-          }
+          },
+          presentation_breakdowns: []
         )
       ]
     )

@@ -13,7 +13,8 @@ module V1
             charge: charge_data(fee),
             billable_metric: billable_metric_data(fee),
             filters: filters(fees),
-            grouped_usage: grouped_usage(fees)
+            grouped_usage: grouped_usage(fees),
+            presentation_breakdowns: PresentationBreakdownBuilder.call(fees)
           }
         end
       end
@@ -110,7 +111,8 @@ module V1
         {
           **usage_data.except(:amount_currency),
           grouped_by: grouped_fees.first.grouped_by,
-          filters: filters(grouped_fees)
+          filters: filters(grouped_fees),
+          presentation_breakdowns: PresentationBreakdownBuilder.call(grouped_fees)
         }
       end
     end
