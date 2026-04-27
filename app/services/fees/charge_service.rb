@@ -96,7 +96,7 @@ module Fees
       end
 
       # NOTE: Create a fee for events not matching any filters.
-      charge_filter = ChargeFilter.new(charge:, properties: {"pricing_group_keys" => charge.pricing_group_keys})
+      charge_filter = ChargeFilter.new(charge:, properties: {"pricing_group_keys" => charge.pricing_group_keys, "presentation_group_keys" => charge.presentation_group_keys})
       init_charge_fees(properties: charge.properties, charge_filter:)
     end
 
@@ -441,7 +441,8 @@ module Fees
       grouped_by_keys = grouped_by_keys(charge_filter:)
       filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present?
 
-      presentation_group_keys_values = charge.presentation_group_keys_values
+      model = charge_filter.presence || charge
+      presentation_group_keys_values = model.presentation_group_keys_values
       if presentation_group_keys_values.present?
         filters[:presentation_by] = presentation_group_keys_values & (usage_filters.filter_by_presentation || presentation_group_keys_values)
       end
