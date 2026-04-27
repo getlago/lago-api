@@ -75,6 +75,13 @@ RSpec.describe SendEmailJob do
     end
   end
 
+  describe "retry configuration" do
+    it "retries on PaymentReceipts::FilesNotReadyError" do
+      matcher = described_class.rescue_handlers.find { |klass, _| klass == "PaymentReceipts::FilesNotReadyError" }
+      expect(matcher).not_to be_nil
+    end
+  end
+
   context "when delivery fails with retryable error" do
     before { allow_any_instance_of(Mail::Message).to receive(:deliver).and_raise(error) }
 

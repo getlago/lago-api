@@ -6,9 +6,11 @@ RSpec.describe PaymentReceiptMailer do
   subject(:payment_receipt_mailer) { described_class }
 
   let(:payment_receipt) { create(:payment_receipt) }
+  let(:invoice) { payment_receipt.payment.payable }
 
   before do
     payment_receipt.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "blank.pdf")
+    invoice.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "blank.pdf")
     allow(payment_receipt.payment.payable).to receive(:file_url).and_return("https://example.com/invoice.pdf")
   end
 
@@ -23,7 +25,11 @@ RSpec.describe PaymentReceiptMailer do
     end
 
     context "when pdfs are disabled" do
-      before { ENV["LAGO_DISABLE_PDF_GENERATION"] = "true" }
+      around do |example|
+        ENV["LAGO_DISABLE_PDF_GENERATION"] = "true"
+        example.run
+        ENV.delete("LAGO_DISABLE_PDF_GENERATION")
+      end
 
       it "does not attach the pdf" do
         mailer = payment_receipt_mailer.with(payment_receipt:).created
@@ -32,22 +38,62 @@ RSpec.describe PaymentReceiptMailer do
       end
     end
 
-    context "with no pdf file" do
-      let(:pdf_service) { instance_double(PaymentReceipts::GeneratePdfService) }
+    context "when the payment receipt file is still missing after generation" do
+      let(:pdf_service) { instance_double(PaymentReceipts::GeneratePdfService, call: nil) }
 
       before do
-        payment_receipt.file = nil
-
-        allow(PaymentReceipts::GeneratePdfService).to receive(:new)
-          .and_return(pdf_service)
-        allow(pdf_service).to receive(:call)
+        payment_receipt.file.purge
+        allow(PaymentReceipts::GeneratePdfService).to receive(:new).and_return(pdf_service)
       end
 
-      it "calls the payment_receipt pdf generate service" do
-        mailer = payment_receipt_mailer.with(payment_receipt:).created
+      it "raises FilesNotReadyError" do
+        expect {
+          payment_receipt_mailer.with(payment_receipt:).created.deliver_now
+        }.to raise_error(PaymentReceipts::FilesNotReadyError)
 
-        expect(mailer.to).not_to be_nil
         expect(PaymentReceipts::GeneratePdfService).to have_received(:new)
+      end
+    end
+
+    context "when an invoice file is missing" do
+      before { invoice.file.purge }
+
+      it "raises FilesNotReadyError" do
+        expect {
+          payment_receipt_mailer.with(payment_receipt:).created.deliver_now
+        }.to raise_error(PaymentReceipts::FilesNotReadyError)
+      end
+    end
+
+    context "when the payment is for a payment request covering multiple invoices" do
+      let(:other_invoice) { create(:invoice, organization: invoice.organization, customer: invoice.customer) }
+      let(:payment_request) do
+        create(:payment_request, organization: invoice.organization, customer: invoice.customer, invoices: [invoice, other_invoice])
+      end
+
+      before do
+        payment_receipt.payment.update!(payable: payment_request)
+        allow(other_invoice).to receive(:file_url).and_return("https://example.com/other.pdf")
+      end
+
+      context "when every invoice has a file attached" do
+        before do
+          other_invoice.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "blank.pdf")
+        end
+
+        it "renders the email" do
+          mailer = payment_receipt_mailer.with(payment_receipt:).created
+
+          expect(mailer.to).to eq([payment_request.customer.email])
+        end
+      end
+
+      context "when one invoice in the request is missing its file" do
+        it "raises FilesNotReadyError" do
+          expect {
+            payment_receipt_mailer.with(payment_receipt:).created.deliver_now
+          }.to raise_error(PaymentReceipts::FilesNotReadyError)
+        end
       end
     end
 
