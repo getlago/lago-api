@@ -86,13 +86,85 @@ RSpec.describe Customers::RefreshWalletJob do
         end
 
         context "when the error is an out of memory error" do
-          let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: ["function_runtime_out_of_memory"]}) }
+          before do
+            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(Integrations::Aggregator::OutOfMemoryError)
+          end
 
           it "raises the error and retries the job" do
             assert_performed_jobs(6, only: [described_class]) do
               expect do
                 described_class.perform_later(customer)
               end.to raise_error(Integrations::Aggregator::OutOfMemoryError)
+            end
+          end
+        end
+
+        context "when the error is a task in progress error" do
+          before do
+            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(Integrations::Aggregator::TaskInProgressError)
+          end
+
+          it "raises the error and retries the job" do
+            assert_performed_jobs(6, only: [described_class]) do
+              expect do
+                described_class.perform_later(customer)
+              end.to raise_error(Integrations::Aggregator::TaskInProgressError)
+            end
+          end
+        end
+
+        context "when the error is a task expired error" do
+          before do
+            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(Integrations::Aggregator::TaskExpiredError)
+          end
+
+          it "raises the error and retries the job" do
+            assert_performed_jobs(6, only: [described_class]) do
+              expect do
+                described_class.perform_later(customer)
+              end.to raise_error(Integrations::Aggregator::TaskExpiredError)
+            end
+          end
+        end
+
+        context "when the error is an orchestrator failure error" do
+          before do
+            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(Integrations::Aggregator::OrchestratorFailureError)
+          end
+
+          it "raises the error and retries the job" do
+            assert_performed_jobs(6, only: [described_class]) do
+              expect do
+                described_class.perform_later(customer)
+              end.to raise_error(Integrations::Aggregator::OrchestratorFailureError)
+            end
+          end
+        end
+
+        context "when the error is a server contention error" do
+          before do
+            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(Integrations::Aggregator::ServerContentionError)
+          end
+
+          it "raises the error and retries the job" do
+            assert_performed_jobs(6, only: [described_class]) do
+              expect do
+                described_class.perform_later(customer)
+              end.to raise_error(Integrations::Aggregator::ServerContentionError)
+            end
+          end
+        end
+
+        context "when the error is a timeout error" do
+          before do
+            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(Integrations::Aggregator::TimeoutError)
+          end
+
+          it "raises the error and retries the job" do
+            assert_performed_jobs(6, only: [described_class]) do
+              expect do
+                described_class.perform_later(customer)
+              end.to raise_error(Integrations::Aggregator::TimeoutError)
             end
           end
         end

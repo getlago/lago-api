@@ -9,6 +9,14 @@ module Integrations
       REQUEST_LIMIT_ERROR_CODE = "SSS_REQUEST_LIMIT_EXCEEDED"
       BAD_GATEWAY_ERROR = "502 Bad Gateway"
 
+      def self.retryable_errors
+        [
+          BadGatewayError, RequestLimitError, OutOfMemoryError,
+          TaskInProgressError, TaskExpiredError, OrchestratorFailureError,
+          ServerContentionError, TimeoutError
+        ]
+      end
+
       def initialize(integration:, options: {})
         @integration = integration
         @options = options
@@ -177,6 +185,18 @@ module Integrations
       def bad_gateway_error?(http_error)
         http_error.error_code.to_s == "502" ||
           http_error.error_body.include?(BAD_GATEWAY_ERROR)
+      end
+
+      def task_in_progress_error?(http_error)
+        code(http_error) == "action_script_failure" && message(http_error).include?("is in progress")
+      end
+
+      def task_expired_error?(http_error)
+        code(http_error) == "action_script_failure" && message(http_error).include?("expired")
+      end
+
+      def orchestrator_failure_error?(http_error)
+        code(http_error) == "action_script_failure" && message(http_error).include?("/v1/immediate failed")
       end
 
       def parse_response(response)

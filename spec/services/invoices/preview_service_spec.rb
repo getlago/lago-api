@@ -1625,7 +1625,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
           context "when there is Net::OpenTimeout error" do
             before do
               allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:new)
-                .and_raise(Net::OpenTimeout)
+                .and_raise(Integrations::Aggregator::TimeoutError)
             end
 
             it "uses zero taxes" do

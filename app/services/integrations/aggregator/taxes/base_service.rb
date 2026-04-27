@@ -6,6 +6,7 @@ module Integrations
       class BaseService < Integrations::Aggregator::BaseService
         SPECIAL_TAXATION_TYPES = %w[exempt notCollecting productNotTaxed jurisNotTaxed jurisHasNoTax].freeze
         CUSTOMER_ADDRESS_INVALID = "customerAddressCouldNotResolve"
+        OUT_OF_MEMORY_ERROR = "function_runtime_out_of_memory"
 
         def initialize
           super(integration:)
@@ -61,13 +62,10 @@ module Integrations
           else
             code, message = retrieve_error_details(body["failedInvoices"].first["validation_errors"])
 
-            # Temp fix for the API limit issue
-            message = "API limit" if message == "Internal server error: resource contention."
+            raise Integrations::Aggregator::OutOfMemoryError if message.include?(OUT_OF_MEMORY_ERROR)
+            raise Integrations::Aggregator::ServerContentionError, message if server_contention_error?(message)
 
-            unless message.include?("API limit")
-              deliver_tax_error_webhook(customer:, code:, message:) if customer.persisted? # Do not send this webhook in preview mode
-            end
-
+            deliver_tax_error_webhook(customer:, code:, message:) if customer.persisted? # Do not send this webhook in preview mode
             result.service_failure!(code:, message:)
           end
         end
@@ -107,6 +105,10 @@ module Integrations
               )
             end
           end
+        end
+
+        def server_contention_error?(message)
+          message.include?("API limit") || message.include?("resource contention")
         end
 
         def retrieve_error_details(validation_error)
