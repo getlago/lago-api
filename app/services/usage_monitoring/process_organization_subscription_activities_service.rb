@@ -16,10 +16,15 @@ module UsageMonitoring
 
       # NOTE: If we need to handle different delays per organization, this would be done here.
 
+      queue_name = if dedicated?
+        Utils::DedicatedWorkerConfig::DEDICATED_ALERTS_QUEUE.to_s
+      else
+        ProcessSubscriptionActivityJob.queue_name
+      end
+
       organization.subscription_activities.where(enqueued: false).select(:id).in_batches(of: BATCH_SIZE) do |batch|
-        jobs = []
-        batch.each do |subscription_activity|
-          jobs << ProcessSubscriptionActivityJob.new(subscription_activity.id)
+        jobs = batch.map do |sa|
+          ProcessSubscriptionActivityJob.new(sa.id).tap { |j| j.queue_name = queue_name }
         end
 
         ActiveRecord::Base.transaction do
@@ -37,5 +42,9 @@ module UsageMonitoring
     private
 
     attr_reader :organization
+
+    def dedicated?
+      Utils::DedicatedWorkerConfig.enabled_for?(organization.id)
+    end
   end
 end

@@ -86,6 +86,7 @@ RSpec.describe AppliedCoupons::RecreditService do
           customer:,
           organization:,
           frequency: :recurring,
+          frequency_duration: 3,
           frequency_duration_remaining: 2)
       end
 

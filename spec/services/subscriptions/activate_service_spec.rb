@@ -326,6 +326,23 @@ RSpec.describe Subscriptions::ActivateService do
     end
   end
 
+  context "when subscription is incomplete with a failed payment rule" do
+    let(:plan) { create(:plan, organization:, pay_in_advance: true) }
+    let(:subscription) do
+      create(:subscription, :incomplete, :with_activation_rules,
+        activation_rules_config: [{type: :payment, timeout_hours: 48, status: :failed}],
+        organization:, customer:, plan:)
+    end
+
+    it "does not activate the subscription" do
+      result
+
+      expect(subscription.reload).to be_incomplete
+      expect(SendWebhookJob).not_to have_been_enqueued
+      expect(BillSubscriptionJob).not_to have_been_enqueued
+    end
+  end
+
   context "when subscription is already active" do
     let(:subscription) { create(:subscription, organization:, customer:, plan:) }
 

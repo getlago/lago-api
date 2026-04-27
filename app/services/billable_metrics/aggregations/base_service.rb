@@ -7,6 +7,7 @@ module BillableMetrics
         :aggregator, # Aggregator instance, used in some charge models
         :aggregations, # Array of aggregation result when in a grouped by scenario
         :aggregation, # Aggregation result computed using the event store
+        :breakdowns, # Array of breakdowns when presentation_by is used
         :grouped_by, # Pricing group keys applied to this aggregation result
         :current_usage_units, # Number of aggregated units when computing the current usage
         :count, # Number of events used to compute the aggregation
@@ -57,6 +58,8 @@ module BillableMetrics
         @event = filters[:event]
         @grouped_by = filters[:grouped_by]
         @grouped_by_values = filters[:grouped_by_values]
+        @presentation_by = filters[:presentation_by]
+        @uniq_grouped_by_and_presentation_by = ((grouped_by || []) + (presentation_by || [])).uniq
 
         @boundaries = boundaries
 
@@ -125,7 +128,9 @@ module BillableMetrics
         :boundaries,
         :grouped_by,
         :grouped_by_values,
-        :bypass_aggregation
+        :presentation_by,
+        :bypass_aggregation,
+        :uniq_grouped_by_and_presentation_by
 
       delegate :billable_metric, to: :charge
 

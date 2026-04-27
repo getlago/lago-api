@@ -59,6 +59,8 @@ class Coupon < ApplicationRecord
 
   validates :percentage_rate, presence: true, if: :percentage?
 
+  validates :frequency_duration, presence: true, numericality: {greater_than: 0}, if: :recurring?
+
   validates :reusable, exclusion: [nil]
 
   default_scope -> { kept }

@@ -10,7 +10,7 @@ RSpec.describe Customers::RefreshWalletJob do
       before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", [customer.organization_id]) }
 
       it "routes to the dedicated queue" do
-        expect(described_class.new(customer).queue_name).to eq("dedicated")
+        expect(described_class.new(customer).queue_name).to eq("dedicated_wallets")
       end
     end
 
