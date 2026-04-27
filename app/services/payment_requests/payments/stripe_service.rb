@@ -71,6 +71,14 @@ module PaymentRequests
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
       rescue ActiveRecord::RecordNotUnique
+        # NOTE: Another writer (a parallel webhook worker, or PaymentProviders::Stripe::Payments::CreateService)
+        #       committed the Payment first. Hand the persisted row back so the
+        #       caller can still enqueue downstream side effects (e.g. SetPaymentMethodAndCreateReceiptJob).
+        payment = Payment.find_by(provider_payment_id: stripe_payment.id)
+        if payment
+          result.payment = payment
+          result.payable = payment.payable
+        end
         result
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
