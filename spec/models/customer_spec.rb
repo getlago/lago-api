@@ -1106,6 +1106,63 @@ RSpec.describe Customer do
         expect(customer.overdue_balance_cents).to eq 2_00
       end
     end
+
+    context "when an explicit currency parameter is provided" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 4_00)
+        create(:invoice, customer: customer, payment_overdue: true, currency: "EUR", total_amount_cents: 7_00)
+      end
+
+      it "returns overdue balance for the specified currency" do
+        expect(customer.overdue_balance_cents("EUR")).to eq 7_00
+        expect(customer.overdue_balance_cents("USD")).to eq 4_00
+      end
+    end
+  end
+
+  describe "#overdue_balances" do
+    let(:customer) { create(:customer, currency: "USD") }
+
+    context "when there are no overdue invoices" do
+      it "returns an empty hash" do
+        expect(customer.overdue_balances).to eq({})
+      end
+    end
+
+    context "when there are overdue invoices in multiple currencies" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 2_00)
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 3_00)
+        create(:invoice, customer: customer, payment_overdue: true, currency: "EUR", total_amount_cents: 10_00)
+      end
+
+      it "returns per-currency breakdown" do
+        expect(customer.overdue_balances).to eq("USD" => 5_00, "EUR" => 10_00)
+      end
+    end
+
+    context "when customer have paid and overdue invoices" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 2_00)
+        create(:invoice, customer: customer, payment_overdue: false, currency: "USD", total_amount_cents: 5_00)
+        create(:invoice, customer: customer, payment_overdue: false, currency: "EUR", total_amount_cents: 8_00)
+      end
+
+      it "only includes overdue invoices" do
+        expect(customer.overdue_balances).to eq("USD" => 2_00)
+      end
+    end
+
+    context "when invoices are self billed" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 2_00)
+        create(:invoice, :self_billed, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 3_00)
+      end
+
+      it "ignores self billed invoices" do
+        expect(customer.overdue_balances).to eq("USD" => 2_00)
+      end
+    end
   end
 
   describe "#reset_dunning_campaign!" do
@@ -1113,7 +1170,8 @@ RSpec.describe Customer do
       create(
         :customer,
         last_dunning_campaign_attempt: 5,
-        last_dunning_campaign_attempt_at: 1.day.ago
+        last_dunning_campaign_attempt_at: 1.day.ago,
+        dunning_currency_attempts: {"EUR" => 3, "USD" => 2}
       )
     end
 
@@ -1121,6 +1179,48 @@ RSpec.describe Customer do
       expect { customer.reset_dunning_campaign! && customer.reload }
         .to change(customer, :last_dunning_campaign_attempt).to(0)
         .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+        .and change(customer, :dunning_currency_attempts).to({})
+    end
+  end
+
+  describe "#reset_dunning_campaign_for_currency!" do
+    let(:last_dunning_campaign_attempt_at) { 1.day.ago }
+    let(:customer) do
+      create(
+        :customer,
+        last_dunning_campaign_attempt: 5,
+        last_dunning_campaign_attempt_at:,
+        dunning_currency_attempts: {"EUR" => 3, "USD" => 2}
+      )
+    end
+
+    it "resets only the specified currency to zero and keeps others" do
+      expect { customer.reset_dunning_campaign_for_currency!("EUR") && customer.reload }
+        .to change(customer, :dunning_currency_attempts).to({"EUR" => 0, "USD" => 2})
+        .and change(customer, :last_dunning_campaign_attempt).to(0)
+    end
+
+    it "preserves last_dunning_campaign_attempt_at when other currencies are active" do
+      customer.reset_dunning_campaign_for_currency!("EUR")
+      customer.reload
+      expect(customer.last_dunning_campaign_attempt_at).to be_within(1.second).of(last_dunning_campaign_attempt_at)
+    end
+
+    context "when all currencies are reset to zero" do
+      let(:customer) do
+        create(
+          :customer,
+          last_dunning_campaign_attempt: 5,
+          last_dunning_campaign_attempt_at:,
+          dunning_currency_attempts: {"EUR" => 3}
+        )
+      end
+
+      it "clears the timestamp so dunning can restart immediately" do
+        expect { customer.reset_dunning_campaign_for_currency!("EUR") && customer.reload }
+          .to change(customer, :dunning_currency_attempts).to({"EUR" => 0})
+          .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+      end
     end
   end
 

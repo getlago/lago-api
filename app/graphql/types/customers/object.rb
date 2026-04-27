@@ -89,6 +89,8 @@ module Types
       field :has_active_wallet, Boolean, null: false, description: "Define if a customer has an active wallet"
       field :has_credit_notes, Boolean, null: false, description: "Define if a customer has any credit note"
       field :has_overdue_invoices, Boolean, null: false, description: "Define if a customer has overdue invoices"
+      field :overdue_balances, [Types::Customers::OverdueBalance], null: false,
+        description: "Overdue balance per currency"
 
       field :can_edit_attributes, Boolean, null: false, method: :editable? do
         description "Check if customer attributes are editable"
@@ -124,6 +126,12 @@ module Types
 
       def has_overdue_invoices
         object.invoices.payment_overdue.any?
+      end
+
+      def overdue_balances
+        object.overdue_balances.map do |currency, amount_cents|
+          {currency:, amount_cents:}
+        end
       end
 
       def active_subscriptions_count
