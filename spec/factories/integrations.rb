@@ -31,6 +31,21 @@ FactoryBot.define do
     end
   end
 
+  factory :openid_connect_integration, class: "Integrations::OpenidConnectIntegration" do
+    organization
+    type { "Integrations::OpenidConnectIntegration" }
+    code { "openid_connect" }
+    name { "OpenID Connect Integration" }
+
+    settings do
+      {client_id: SecureRandom.uuid, domain: "foo.test", issuer: "https://accounts.foo.test"}
+    end
+
+    secrets do
+      {client_secret: SecureRandom.uuid}.to_json
+    end
+  end
+
   factory :anrok_integration, class: "Integrations::AnrokIntegration" do
     organization
     type { "Integrations::AnrokIntegration" }
