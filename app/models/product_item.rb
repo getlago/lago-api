@@ -75,7 +75,7 @@ end
 #  billable_metric_id    :uuid
 #  charge_id             :uuid
 #  organization_id       :uuid             not null
-#  product_id            :uuid             not null
+#  product_id            :uuid
 #
 # Indexes
 #

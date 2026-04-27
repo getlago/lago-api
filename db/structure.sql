@@ -4822,7 +4822,7 @@ CREATE TABLE public.product_item_filters (
 CREATE TABLE public.product_items (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
-    product_id uuid NOT NULL,
+    product_id uuid,
     billable_metric_id uuid,
     add_on_id uuid,
     charge_id uuid,

@@ -6,7 +6,7 @@ class CreateProductItems < ActiveRecord::Migration[8.0]
 
     create_table :product_items, id: :uuid do |t|
       t.references :organization, null: false, foreign_key: true, type: :uuid
-      t.references :product, null: false, foreign_key: true, type: :uuid
+      t.references :product, foreign_key: true, type: :uuid
       t.references :billable_metric, foreign_key: true, type: :uuid
       t.references :add_on, foreign_key: true, type: :uuid
       t.references :charge, foreign_key: true, type: :uuid
