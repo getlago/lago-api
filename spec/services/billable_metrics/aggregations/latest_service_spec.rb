@@ -19,12 +19,13 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
 
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:bypass_aggregation) { false }
-  let(:filters) { {grouped_by:, matching_filters:, ignored_filters:} }
+  let(:filters) { {grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }
 
   let(:subscription) { create(:subscription) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:grouped_by) { nil }
+  let(:presentation_by) { nil }
   let(:matching_filters) { {} }
   let(:ignored_filters) { [] }
 
@@ -319,6 +320,118 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
         expect(aggregation.grouped_by).to eq({"agent_name" => nil})
+      end
+    end
+  end
+
+  context "with presentation group keys" do
+    let(:presentation_by) { ["cloud"] }
+
+    let(:events) do
+      [
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.current - 2.days,
+          properties: {
+            total_count: 18,
+            cloud: "aws"
+          }
+        ),
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.current - 1.day,
+          properties: {
+            total_count: 14,
+            cloud: "aws"
+          }
+        ),
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.current - 1.day,
+          properties: {
+            total_count: -5,
+            cloud: "gcp"
+          }
+        )
+      ]
+    end
+
+    it "returns the aggregations per group" do
+      result = latest_service.aggregate
+
+      expect(result.breakdowns).to match_array([
+        {groups: {"cloud" => "aws"}, value: BigDecimal(14)},
+        {groups: {"cloud" => "gcp"}, value: BigDecimal(-5)}
+      ])
+    end
+
+    context "with grouped_by" do
+      let(:grouped_by) { ["agent_name"] }
+
+      let(:events) do
+        [
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: Time.current - 2.days,
+            properties: {
+              total_count: 10,
+              agent_name: "frodo",
+              cloud: "aws"
+            }
+          ),
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: Time.current - 1.day,
+            properties: {
+              total_count: 12,
+              agent_name: "frodo",
+              cloud: "gcp"
+            }
+          ),
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: Time.current - 1.day,
+            properties: {
+              total_count: 3,
+              agent_name: "aragorn",
+              cloud: "aws"
+            }
+          )
+        ]
+      end
+
+      it "returns the aggregations per group" do
+        result = latest_service.aggregate
+
+        expect(result.breakdowns).to match_array([
+          {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: BigDecimal(10)},
+          {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: BigDecimal(12)},
+          {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: BigDecimal(3)}
+        ])
       end
     end
   end

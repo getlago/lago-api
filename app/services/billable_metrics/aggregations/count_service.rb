@@ -10,6 +10,11 @@ module BillableMetrics
         result.current_usage_units = result.aggregation
         result.count = result.aggregation
         result.pay_in_advance_aggregation = BigDecimal(1)
+
+        if presentation_by.present?
+          result.breakdowns = event_store.grouped_count(uniq_grouped_by_and_presentation_by)
+        end
+
         result.options = {running_total: running_total(options, aggregation: result.aggregation)}
         result
       end
@@ -36,6 +41,10 @@ module BillableMetrics
           group_result.current_usage_units = aggregation[:value]
           group_result.options = {running_total: running_total(options, aggregation: group_result.aggregation)}
           group_result
+        end
+
+        if presentation_by.present?
+          result.breakdowns = event_store.grouped_count(uniq_grouped_by_and_presentation_by)
         end
 
         result
