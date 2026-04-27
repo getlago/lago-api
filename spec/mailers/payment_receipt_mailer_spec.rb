@@ -25,7 +25,11 @@ RSpec.describe PaymentReceiptMailer do
     end
 
     context "when pdfs are disabled" do
-      before { ENV["LAGO_DISABLE_PDF_GENERATION"] = "true" }
+      around do |example|
+        ENV["LAGO_DISABLE_PDF_GENERATION"] = "true"
+        example.run
+        ENV.delete("LAGO_DISABLE_PDF_GENERATION")
+      end
 
       it "does not attach the pdf" do
         mailer = payment_receipt_mailer.with(payment_receipt:).created
@@ -54,10 +58,42 @@ RSpec.describe PaymentReceiptMailer do
     context "when an invoice file is missing" do
       before { invoice.file.purge }
 
-      it "raises FilesNotReadyError" do
+      it "raises FilesNotReadyError including the missing invoice id" do
         expect {
           payment_receipt_mailer.with(payment_receipt:).created
-        }.to raise_error(PaymentReceipts::FilesNotReadyError, /invoice files missing/)
+        }.to raise_error(PaymentReceipts::FilesNotReadyError, /invoice files missing: #{invoice.id}/)
+      end
+    end
+
+    context "when the payment is for a payment request covering multiple invoices" do
+      let(:other_invoice) { create(:invoice, organization: invoice.organization, customer: invoice.customer) }
+      let(:payment_request) do
+        create(:payment_request, organization: invoice.organization, customer: invoice.customer, invoices: [invoice, other_invoice])
+      end
+
+      before do
+        payment_receipt.payment.update!(payable: payment_request)
+        allow(other_invoice).to receive(:file_url).and_return("https://example.com/other.pdf")
+      end
+
+      context "when every invoice has a file attached" do
+        before do
+          other_invoice.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "blank.pdf")
+        end
+
+        it "renders the email" do
+          mailer = payment_receipt_mailer.with(payment_receipt:).created
+
+          expect(mailer.to).to eq([payment_request.customer.email])
+        end
+      end
+
+      context "when one invoice in the request is missing its file" do
+        it "raises FilesNotReadyError including the missing invoice id" do
+          expect {
+            payment_receipt_mailer.with(payment_receipt:).created
+          }.to raise_error(PaymentReceipts::FilesNotReadyError, /invoice files missing: #{other_invoice.id}/)
+        end
       end
     end
 
