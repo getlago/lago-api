@@ -31,8 +31,8 @@ module TaskPrompt
     [from_time, to_time]
   end
 
-  def self.ask_for_timestamp(message)
-    input = ask(message)
+  def self.ask_for_timestamp(prompt)
+    input = ask(prompt)
     timestamp = Time.zone.parse(input)
     abort "Invalid timestamp: #{input}" unless timestamp
 

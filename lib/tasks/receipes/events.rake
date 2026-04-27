@@ -2,6 +2,8 @@
 
 require_relative "../../task_prompt"
 
+BATCH_SIZE = 1000
+
 # rubocop:disable Rails/Output,Rails/Exit
 namespace :receipes do
   namespace :events do
@@ -27,9 +29,17 @@ namespace :receipes do
         "from #{from_time.utc} to #{to_time.utc} (inclusive)."
       TaskPrompt.confirm!("Continue? (y/n): ")
 
-      events.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      deleted = 0
 
-      puts "Done. #{count} events soft-deleted."
+      # rubocop:disable Rails/SkipsModelValidations
+      events.in_batches(of: BATCH_SIZE) do |batch|
+        batch.update_all(deleted_at: Time.current)
+        deleted += BATCH_SIZE
+        print "\rDeleted #{[deleted, count].min}/#{count} events..."
+      end
+      # rubocop:enable Rails/SkipsModelValidations
+
+      puts "\nDone. #{count} events soft-deleted."
     end
   end
 end
