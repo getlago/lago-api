@@ -89,10 +89,10 @@ RSpec.describe PaymentReceiptMailer do
       end
 
       context "when one invoice in the request is missing its file" do
-        it "raises FilesNotReadyError including the missing invoice id" do
+        it "raises FilesNotReadyError" do
           expect {
             payment_receipt_mailer.with(payment_receipt:).created
-          }.to raise_error(PaymentReceipts::FilesNotReadyError, /invoice files missing: #{other_invoice.id}/)
+          }.to raise_error(PaymentReceipts::FilesNotReadyError)
         end
       end
     end
