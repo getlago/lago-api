@@ -88,8 +88,6 @@ module Types
     field :pricing_unit, resolver: Resolvers::PricingUnitResolver
     field :pricing_units, resolver: Resolvers::PricingUnitsResolver
     field :quote, resolver: Resolvers::QuoteResolver
-    field :quote_version, resolver: Resolvers::QuoteVersionResolver
-    field :quote_versions, resolver: Resolvers::QuoteVersionsResolver
     field :quotes, resolver: Resolvers::QuotesResolver
     field :role, resolver: Resolvers::RoleResolver
     field :roles, resolver: Resolvers::RolesResolver
