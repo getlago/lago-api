@@ -19,6 +19,7 @@ module Types
         field :charge, Types::Charges::Object, null: false
         field :filters, [Types::Customers::Usage::ProjectedChargeFilter], null: true
         field :grouped_usage, [Types::Customers::Usage::ProjectedGroupedUsage], null: false
+        field :presentation_breakdowns, [Types::Customers::Usage::PresentationBreakdown], null: true
 
         def id
           SecureRandom.uuid
@@ -67,11 +68,15 @@ module Types
         end
 
         def projected_units
-          calculate_projection(:projected_units, BigDecimal("0"))
+          calculate_projection(:projected_units, BigDecimal(0))
         end
 
         def projected_amount_cents
           calculate_projection(:projected_amount_cents, 0)
+        end
+
+        def presentation_breakdowns
+          Types::Fees::PresentationBreakdownBuilder.call(object)
         end
 
         private

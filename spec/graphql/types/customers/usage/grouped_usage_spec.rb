@@ -12,5 +12,6 @@ RSpec.describe Types::Customers::Usage::GroupedUsage do
     expect(subject).to have_field(:units).of_type("Float!")
     expect(subject).to have_field(:filters).of_type("[ChargeFilterUsage!]")
     expect(subject).to have_field(:grouped_by).of_type("JSON")
+    expect(subject).to have_field(:presentation_breakdowns).of_type("[PresentationBreakdownUsage!]")
   end
 end
