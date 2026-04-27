@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require_relative "../task_prompt"
+require_relative "../../task_prompt"
 
 # rubocop:disable Rails/Output,Rails/Exit
 namespace :receipes do
   namespace :events do
     desc "Soft-delete PG events for an organization within a time range"
-    task delete: :environment do
+    task delete_in_range: :environment do
       organization = TaskPrompt.ask_for_organization
       abort "This task only supports organizations using PostgreSQL events store." unless organization.postgres_events_store?
 
