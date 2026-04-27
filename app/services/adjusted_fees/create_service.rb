@@ -51,8 +51,10 @@ module AdjustedFees
       fixed_charge_id = fee.fixed_charge_id
       charge_filter_id = fee.charge_filter_id
 
-      refresh_result = Invoices::RefreshDraftService.call(invoice: invoice)
-      refresh_result.raise_if_error!
+      unless preview
+        refresh_result = Invoices::RefreshDraftService.call(invoice: invoice)
+        refresh_result.raise_if_error!
+      end
 
       result.adjusted_fee = adjusted_fee.reload
       result.fee = if fixed_charge_id

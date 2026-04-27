@@ -535,6 +535,17 @@ RSpec.describe AdjustedFees::CreateService do
       end
     end
 
+    context "when called from Invoices::RegenerateFromVoidedService flow (with preview: true)" do
+      it "returns success without calling RefreshDraftService" do
+        result = described_class.new(invoice:, params:, preview: true).call
+
+        expect(result).to be_success
+        expect(result.fee).to be_a(Fee)
+        expect(result.adjusted_fee).to be_a(AdjustedFee)
+        expect(Invoices::RefreshDraftService).not_to have_received(:call)
+      end
+    end
+
     context "when license is not premium" do
       it "returns forbidden status" do
         result = create_service.call
@@ -544,9 +555,11 @@ RSpec.describe AdjustedFees::CreateService do
         expect(result.error.code).to eq("feature_unavailable")
       end
 
-      it "returns the estimated adjusted fee" do
-        result = described_class.new(invoice:, params:, preview: true).call
-        expect(result).to be_success
+      context "when called from Invoices::RegenerateFromVoidedService flow (with preview: true)" do
+        it "skips license check" do
+          result = described_class.new(invoice:, params:, preview: true).call
+          expect(result).to be_success
+        end
       end
     end
   end
