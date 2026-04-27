@@ -12,11 +12,12 @@ class PaymentReceiptMailer < DocumentMailer
   def ensure_pdf
     PaymentReceipts::GeneratePdfService.new(payment_receipt: document).call
 
-    raise PaymentReceipts::FilesNotReadyError, "payment_receipt #{document.id} file missing" unless document.file.attached?
+    raise PaymentReceipts::FilesNotReadyError unless document.file.attached?
+    raise PaymentReceipts::FilesNotReadyError unless invoices.all? { |invoice| invoice.file.attached? }
+  end
 
-    invoices = document.payment.payable.is_a?(Invoice) ? [document.payment.payable] : document.payment.payable.invoices
-    missing_invoice_ids = invoices.reject { |invoice| invoice.file.attached? }.map(&:id)
-    raise PaymentReceipts::FilesNotReadyError, "invoice files missing: #{missing_invoice_ids.join(", ")}" if missing_invoice_ids.any?
+  def invoices
+    @invoices ||= document.payment.payable.is_a?(Invoice) ? [document.payment.payable] : document.payment.payable.invoices
   end
 
   def create_mail
