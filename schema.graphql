@@ -10443,16 +10443,6 @@ type Query {
   quote(id: ID!): Quote
 
   """
-  Query a quote version
-  """
-  quoteVersion(id: ID!): QuoteVersion
-
-  """
-  Query quote versions of an organization
-  """
-  quoteVersions(customers: [ID!], fromDate: ISO8601Date, limit: Int, numbers: [String!], owners: [ID!], page: Int, statuses: [StatusEnum!], toDate: ISO8601Date): QuoteVersionCollection!
-
-  """
   Query quotes of an organization
   """
   quotes(customers: [ID!], fromDate: ISO8601Date, limit: Int, numbers: [String!], owners: [ID!], page: Int, statuses: [StatusEnum!], toDate: ISO8601Date): QuoteCollection!
@@ -10739,21 +10729,6 @@ type QuoteVersion {
   version: Int!
   voidReason: VoidReasonEnum
   voidedAt: ISO8601DateTime
-}
-
-"""
-QuoteVersionCollection type
-"""
-type QuoteVersionCollection {
-  """
-  A collection of paginated QuoteVersionCollection
-  """
-  collection: [QuoteVersion!]!
-
-  """
-  Pagination Metadata for navigating the Pagination
-  """
-  metadata: CollectionMetadata!
 }
 
 enum RecurringTransactionIntervalEnum {
