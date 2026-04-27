@@ -43,7 +43,16 @@ class QuotesQuery < BaseQuery
   end
 
   def with_status(scope)
-    scope.joins(:current_version).where(quote_versions: {status: filters.statuses})
+    # check status of the current (latest) version
+    quote_ids = QuoteVersion
+      .where(
+        organization:,
+        status: filters.statuses
+      )
+      .where("sequential_id = (SELECT MAX(sequential_id) FROM quote_versions qv WHERE qv.quote_id = quote_versions.quote_id)")
+      .select(:quote_id)
+
+    scope.where(id: quote_ids)
   end
 
   def with_date(scope)

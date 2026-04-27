@@ -17,10 +17,12 @@ module Mutations
 
       def resolve(**args)
         customer = current_organization.customers.find_by(id: args[:customer_id])
+        subscription = customer&.subscriptions&.find_by(id: args[:subscription_id]) if args[:subscription_id]
         result = ::Quotes::CreateService.call(
           organization: current_organization,
           customer:,
-          params: args.except(:customer_id)
+          subscription:,
+          params: args.except(:customer_id, :subscription_id)
         )
         result.success? ? result.quote : result_error(result)
       end
