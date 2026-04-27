@@ -3250,9 +3250,9 @@ CREATE TABLE public.fees (
     precise_credit_notes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     fixed_charge_id uuid,
     duplicated_in_advance boolean DEFAULT false,
-    original_fee_id uuid
     subscription_rate_schedule_id uuid,
-    subscription_rate_schedule_cycle_id uuid
+    subscription_rate_schedule_cycle_id uuid,
+    original_fee_id uuid
 );
 
 
@@ -4826,7 +4826,7 @@ CREATE TABLE public.product_item_filters (
 CREATE TABLE public.product_items (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
-    product_id uuid NOT NULL,
+    product_id uuid,
     billable_metric_id uuid,
     add_on_id uuid,
     charge_id uuid,
