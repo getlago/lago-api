@@ -3,7 +3,9 @@
 class KarafkaApp < Karafka::App
   setup do |config|
     config.kafka = {
-      "bootstrap.servers": ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"]
+      "bootstrap.servers": ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"],
+      "topic.metadata.propagation.max.ms": 5000,
+      debug: "topic"
     }
 
     if ENV["LAGO_KAFKA_SECURITY_PROTOCOL"].present?
@@ -34,6 +36,12 @@ class KarafkaApp < Karafka::App
 
   Karafka.monitor.subscribe "error.occurred" do |event|
     Sentry.capture_exception(event[:error])
+  end
+
+  # Logs producer errors to Sentry.
+  Karafka.producer.monitor.subscribe "error.occurred" do |event|
+    Sentry.capture_exception(event[:error])
+    Rails.logger.error("Karafka producer error: #{event[:error].message}")
   end
 
   if ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"].present?
