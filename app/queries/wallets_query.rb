@@ -2,17 +2,19 @@
 
 class WalletsQuery < BaseQuery
   Result = BaseResult[:wallets]
-  Filters = BaseFilters[:external_customer_id]
+  Filters = BaseFilters[:external_customer_id, :currency]
 
   def call
     validate_filters
     return result if result.error.present?
 
     wallets = base_scope
-    wallets = paginate(wallets)
-    wallets = apply_consistent_ordering(wallets)
 
     wallets = with_external_customer_id(wallets) if filters.external_customer_id
+    wallets = with_currency(wallets) if filters.currency
+
+    wallets = paginate(wallets)
+    wallets = apply_consistent_ordering(wallets)
 
     result.wallets = wallets
     result
@@ -26,6 +28,10 @@ class WalletsQuery < BaseQuery
 
   def with_external_customer_id(scope)
     scope.where(customer_id: customer.select(:id))
+  end
+
+  def with_currency(scope)
+    scope.where(balance_currency: filters.currency)
   end
 
   def validate_filters

@@ -47,14 +47,14 @@ module WalletActions
     render_wallet(wallet)
   end
 
-  def wallet_index(external_customer_id:)
+  def wallet_index(external_customer_id:, currency:)
     result = WalletsQuery.call(
       organization: current_organization,
       pagination: {
         page: params[:page],
         limit: params[:per_page] || PER_PAGE
       },
-      filters: {external_customer_id: external_customer_id}
+      filters: {external_customer_id: external_customer_id, currency:}
     )
 
     if result.success?
