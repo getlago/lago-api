@@ -780,12 +780,17 @@ module Events
           )
         end
 
-        conditions = ignored_filters.map do |filters|
-          filters.map do |key, values|
+        conditions = ignored_filters.filter_map do |filters|
+          next if filters.empty?
+
+          clause = filters.filter_map do |key, values|
+            next if values.empty?
+
             ActiveRecord::Base.sanitize_sql_for_conditions(
               ["(coalesce(events_enriched_expanded.sorted_properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
             )
           end.join(" AND ")
+          clause.presence
         end
         sql = conditions.map { "(#{it})" }.join(" OR ")
         query = query.where(Arel::Nodes::Not.new(Arel::Nodes::SqlLiteral.new(sql))) if conditions.present?

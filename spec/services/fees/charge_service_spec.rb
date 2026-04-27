@@ -3688,6 +3688,42 @@ RSpec.describe Fees::ChargeService, :premium do
               end
             end
 
+            context "with percentage charge model and per transaction min/max", :premium do
+              let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value") }
+              let(:charge) do
+                create(
+                  :percentage_charge,
+                  plan: subscription.plan,
+                  billable_metric:,
+                  properties: {rate: "1", fixed_amount: "1", per_transaction_max_amount: "12", per_transaction_min_amount: "1.75"}
+                )
+              end
+
+              it "caches empty array and returns zero fee without raising on subsequent call" do
+                charge_subscription_service.call
+
+                cached_value = Rails.cache.read(cache_key)
+                expect(cached_value).to eq("[]")
+
+                second_result = charge_subscription_service.call
+                expect(second_result).to be_success
+                expect(second_result.fees.count).to eq(1)
+                expect(second_result.fees.first).to have_attributes(units: 0, amount_cents: 0, events_count: 0)
+                expect(second_result.fees.first.amount_details).to eq(
+                  "units" => "0.0",
+                  "free_units" => "0.0",
+                  "free_events" => 0,
+                  "paid_units" => "0.0",
+                  "rate" => "1.0",
+                  "per_unit_total_amount" => "0.0",
+                  "paid_events" => 0,
+                  "fixed_fee_unit_amount" => "0.0",
+                  "fixed_fee_total_amount" => "0.0",
+                  "min_max_adjustment_total_amount" => "0.0"
+                )
+              end
+            end
+
             context "with volume charge model" do
               let(:charge) do
                 create(

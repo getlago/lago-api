@@ -11115,6 +11115,7 @@ type Subscription {
   currentBillingPeriodEndingAt: ISO8601DateTime
   currentBillingPeriodStartedAt: ISO8601DateTime
   customer: Customer!
+  downgradePlanDate: ISO8601Date
   endingAt: ISO8601DateTime
   externalId: String!
   fees: [Fee!]
@@ -11133,6 +11134,8 @@ type Subscription {
   paymentMethodType: PaymentMethodTypeEnum
   periodEndDate: ISO8601Date
   plan: Plan!
+  previousPlan: Plan
+  previousSubscription: Subscription
   progressiveBillingDisabled: Boolean
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   skipInvoiceCustomSections: Boolean

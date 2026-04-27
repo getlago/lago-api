@@ -2,7 +2,7 @@
 
 module ChargeFilters
   class DestroyService < BaseService
-    include Charges::CascadeUpdatable
+    include ChargeFilters::FilterCascadable
 
     Result = BaseResult[:charge_filter]
 
@@ -16,7 +16,9 @@ module ChargeFilters
     def call
       return result.not_found_failure!(resource: "charge_filter") unless charge_filter
 
-      old_filters_attrs = capture_old_filters_attrs
+      # Capture values before the transaction discards them — to_h uses the kept
+      # scope and would return an empty hash after discard.
+      filter_values = charge_filter.to_h_with_discarded
 
       ActiveRecord::Base.transaction do
         charge_filter.values.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
@@ -25,7 +27,7 @@ module ChargeFilters
         result.charge_filter = charge_filter
       end
 
-      trigger_cascade(old_filters_attrs)
+      trigger_filter_cascade(action: "destroy", filter_values:)
 
       result
     rescue ActiveRecord::RecordInvalid => e
