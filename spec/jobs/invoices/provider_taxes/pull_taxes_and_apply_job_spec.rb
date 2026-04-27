@@ -21,6 +21,12 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob do
     expect(Invoices::ProviderTaxes::PullTaxesAndApplyService).to have_received(:call)
   end
 
+  describe "unique" do
+    it "has unique :until_executed constraint" do
+      expect(described_class.lock_strategy_class).to eq(ActiveJob::Uniqueness::Strategies::UntilExecuted)
+    end
+  end
+
   describe "retry_on" do
     [
       [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
