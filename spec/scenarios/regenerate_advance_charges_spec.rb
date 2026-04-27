@@ -12,8 +12,8 @@ require "rails_helper"
 #   5. Regenerate it with adjusted fee params
 #
 # This exercises three fixes:
-#   - duplicate_fee now clears pay_in_advance_event_transaction_id to avoid
-#     violating the idx_pay_in_advance_duplication_guard_charge unique index
+#   - the idx_pay_in_advance_duplication_guard_charge unique index now allows
+#     duplicate pay_in_advance_event_transaction_id on regenerated fees
 #   - create_invoice_subscriptions now runs for any voided invoice that had them,
 #     not only subscription-type invoices
 #   - AdjustedFees::CreateService only calls RefreshDraftService for draft
@@ -119,8 +119,7 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
       expect(regenerated_invoice.invoice_subscriptions).not_to be_empty
 
       regenerated_fee = regenerated_invoice.fees.first
-      expect(regenerated_fee.pay_in_advance_event_transaction_id).to be_nil
-      expect(regenerated_fee.original_fee_id).to eq(original_fee.id)
+      expect(regenerated_fee.pay_in_advance_event_transaction_id).to eq(original_fee.pay_in_advance_event_transaction_id)
       expect(regenerated_fee.units).to eq(5)
       expect(regenerated_fee.unit_amount_cents).to eq(2000)
       expect(regenerated_fee.amount_cents).to eq(10_000)
@@ -131,10 +130,11 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
   end
 
   context "when multiple void/regenerate cycles occur" do
-    it "preserves original_fee_id pointing to the root fee across the chain" do
+    it "preserves pay_in_advance_event_transaction_id across the chain" do
       advance_charges_invoice = create_advance_charges_invoice
       subscription = customer.subscriptions.sole
       original_fee = advance_charges_invoice.fees.first
+      original_transaction_id = original_fee.pay_in_advance_event_transaction_id
 
       # First cycle: void → regenerate
       void_invoice(advance_charges_invoice)
@@ -147,7 +147,7 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
 
       first_regenerated_invoice = first_result.invoice
       first_regenerated_fee = first_regenerated_invoice.fees.first
-      expect(first_regenerated_fee.original_fee_id).to eq(original_fee.id)
+      expect(first_regenerated_fee.pay_in_advance_event_transaction_id).to eq(original_transaction_id)
 
       # Second cycle: void the regenerated invoice → regenerate again
       void_invoice(first_regenerated_invoice)
@@ -162,9 +162,8 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
       second_regenerated_invoice = second_result.invoice
       second_regenerated_fee = second_regenerated_invoice.fees.first
 
-      # original_fee_id always points to the root fee, not the intermediate one
-      expect(second_regenerated_fee.original_fee_id).to eq(original_fee.id)
-      expect(second_regenerated_fee.pay_in_advance_event_transaction_id).to be_nil
+      # pay_in_advance_event_transaction_id is preserved across all regenerations
+      expect(second_regenerated_fee.pay_in_advance_event_transaction_id).to eq(original_transaction_id)
       expect(second_regenerated_fee.units).to eq(8)
       expect(second_regenerated_fee.unit_amount_cents).to eq(1500)
     end

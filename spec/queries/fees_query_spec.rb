@@ -181,7 +181,7 @@ RSpec.describe FeesQuery do
 
       context "when regenerated fees exist" do
         let!(:regenerated_fee) do
-          create(:fee, subscription:, organization:, original_fee: fee, pay_in_advance_event_transaction_id: nil)
+          create(:fee, subscription:, organization:, pay_in_advance_event_transaction_id: "transaction-id")
         end
 
         it "includes both the original and the regenerated fee" do
@@ -194,7 +194,7 @@ RSpec.describe FeesQuery do
 
         context "when multiple void/regenerate cycles occur" do
           let!(:second_regenerated_fee) do
-            create(:fee, subscription:, organization:, original_fee: fee, pay_in_advance_event_transaction_id: nil)
+            create(:fee, subscription:, organization:, pay_in_advance_event_transaction_id: "transaction-id")
           end
 
           it "includes all fees in the chain" do
