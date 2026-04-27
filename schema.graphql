@@ -6261,6 +6261,7 @@ Api Logs http method enums
 """
 enum HttpMethodEnum {
   delete
+  patch
   post
   put
 }
