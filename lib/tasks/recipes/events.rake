@@ -5,7 +5,7 @@ require_relative "../../task_prompt"
 BATCH_SIZE = 1000
 
 # rubocop:disable Rails/Output,Rails/Exit
-namespace :receipes do
+namespace :recipes do
   namespace :events do
     desc "Soft-delete PG events for an organization within a time range"
     task delete_in_range: :environment do

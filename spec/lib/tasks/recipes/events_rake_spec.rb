@@ -4,15 +4,15 @@ require "rails_helper"
 
 require "rake"
 
-RSpec.describe "receipes:events:delete_in_range" do # rubocop:disable RSpec/DescribeClass
-  let(:task) { Rake::Task["receipes:events:delete_in_range"] }
+RSpec.describe "recipes:events:delete_in_range" do # rubocop:disable RSpec/DescribeClass
+  let(:task) { Rake::Task["recipes:events:delete_in_range"] }
 
   let(:organization) { create(:organization) }
   let(:from_timestamp) { "2026-04-09 19:00:00" }
   let(:to_timestamp) { "2026-04-27 23:59:59" }
 
   before do
-    Rake.application.rake_require("tasks/receipes/events")
+    Rake.application.rake_require("tasks/recipes/events")
     Rake::Task.define_task(:environment)
     task.reenable
   end
