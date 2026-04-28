@@ -4,13 +4,13 @@ module AdjustedFees
   class CreateService < BaseService
     Result = BaseResult[:fee, :adjusted_fee]
 
-    # preview - if true, fee will not be saved to the database
-    # we use it for previewing fee on when frontend is regenerating invoice
-    def initialize(invoice:, params:, preview: false)
+    # regenerating_voided - used when regenerating fees from a voided invoice into a new invoice (Invoices::RegenerateFromVoidedService);
+    # if true, skips refreshing draft invoice and license check
+    def initialize(invoice:, params:, regenerating_voided: false)
       @invoice = invoice
       @organization = invoice.organization
       @params = params
-      @preview = preview
+      @regenerating_voided = regenerating_voided
 
       super
     end
@@ -51,7 +51,7 @@ module AdjustedFees
       fixed_charge_id = fee.fixed_charge_id
       charge_filter_id = fee.charge_filter_id
 
-      unless preview
+      unless regenerating_voided
         refresh_result = Invoices::RefreshDraftService.call(invoice: invoice)
         refresh_result.raise_if_error!
       end
@@ -69,14 +69,16 @@ module AdjustedFees
 
     private
 
-    attr_reader :organization, :invoice, :params, :preview
+    attr_reader :organization, :invoice, :params, :regenerating_voided
 
     def subscription
       @subscription ||= invoice.subscriptions.includes(plan: {charges: :filters, fixed_charges: nil}).find_by(id: params[:subscription_id])
     end
 
     def forbidden?
-      !preview && (!License.premium? || !invoice.draft?)
+      return false if regenerating_voided
+
+      !License.premium? || !invoice.draft?
     end
 
     def find_or_create_fee

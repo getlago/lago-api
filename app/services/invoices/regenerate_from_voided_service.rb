@@ -197,7 +197,7 @@ module Invoices
         AdjustedFees::CreateService.call(
           invoice: regenerated_invoice,
           params: adjusted_fee_params,
-          preview: true
+          regenerating_voided: true
         )
       end
     end
