@@ -14,14 +14,14 @@ namespace :recipes do
 
       from_time, to_time = TaskPrompt.ask_for_timestamp_range
 
-      subscriptions = organization.subscriptions.pluck(:external_id)
+      subscriptions = organization.subscriptions.distinct.pluck(:external_id)
 
       if subscriptions.empty?
         puts "No subscriptions found for this organization."
         next
       end
 
-      puts "Found #{subscriptions.size} subscriptions."
+      puts "Found #{subscriptions.size} distinct subscriptions."
 
       puts "\nThis will soft-delete events from \"#{organization.name}\" " \
         "from #{from_time.utc} to #{to_time.utc} (inclusive)."
