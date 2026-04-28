@@ -8,8 +8,7 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
   describe ".perform" do
     let(:organization) { create(:organization) }
     let(:lifetime_usage1) { create(:lifetime_usage, organization:, recalculate_invoiced_usage: true) }
-    let(:lifetime_usage2) { create(:lifetime_usage, organization:, recalculate_current_usage: true) }
-    let(:lifetime_usage3) { create(:lifetime_usage, organization:, recalculate_invoiced_usage: false, recalculate_current_usage: false) }
+    let(:lifetime_usage3) { create(:lifetime_usage, organization:, recalculate_invoiced_usage: false) }
 
     before do
       lifetime_usage1
