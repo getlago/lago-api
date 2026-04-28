@@ -55,7 +55,7 @@ RSpec.describe "recipes:events:delete_in_range" do # rubocop:disable RSpec/Descr
     end
   end
 
-  context "when no events match the time range" do
+  context "when organization has no subscriptions" do
     before { stub_stdin(organization.id, "y", from_timestamp, to_timestamp) }
 
     it "finishes without deleting anything" do
@@ -64,12 +64,23 @@ RSpec.describe "recipes:events:delete_in_range" do # rubocop:disable RSpec/Descr
   end
 
   context "when events exist in the time range" do
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, organization:) }
+
     let!(:event_in_range) do
-      create(:event, organization:, timestamp: Time.zone.parse("2026-04-10 12:00:00"))
+      create(:event,
+        organization_id: organization.id,
+        subscription:,
+        external_subscription_id: subscription.external_id,
+        timestamp: Time.zone.parse("2026-04-10 12:00:00"))
     end
 
     let!(:event_out_of_range) do
-      create(:event, organization:, timestamp: Time.zone.parse("2026-04-01 12:00:00"))
+      create(:event,
+        organization_id: organization.id,
+        subscription:,
+        external_subscription_id: subscription.external_id,
+        timestamp: Time.zone.parse("2026-04-01 12:00:00"))
     end
 
     context "when user confirms deletion" do
@@ -89,6 +100,28 @@ RSpec.describe "recipes:events:delete_in_range" do # rubocop:disable RSpec/Descr
       it "aborts without deleting events" do
         expect { task.invoke }.to raise_error(SystemExit)
         expect(event_in_range.reload.deleted_at).to be_nil
+      end
+    end
+
+    context "when events span multiple subscriptions" do
+      let(:other_subscription) { create(:subscription, customer:, organization:) }
+
+      let!(:event_other_sub) do
+        create(:event,
+          organization_id: organization.id,
+          subscription: other_subscription,
+          external_subscription_id: other_subscription.external_id,
+          timestamp: Time.zone.parse("2026-04-12 12:00:00"))
+      end
+
+      before { stub_stdin(organization.id, "y", from_timestamp, to_timestamp, "y") }
+
+      it "soft-deletes events across all subscriptions" do
+        task.invoke
+
+        expect(event_in_range.reload.deleted_at).to be_present
+        expect(event_other_sub.reload.deleted_at).to be_present
+        expect(event_out_of_range.reload.deleted_at).to be_nil
       end
     end
   end
