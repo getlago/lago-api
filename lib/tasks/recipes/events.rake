@@ -2,7 +2,7 @@
 
 require_relative "../../task_prompt"
 
-BATCH_SIZE = 1000
+BATCH_SIZE = 2000
 
 # rubocop:disable Rails/Output,Rails/Exit
 namespace :recipes do
@@ -14,32 +14,50 @@ namespace :recipes do
 
       from_time, to_time = TaskPrompt.ask_for_timestamp_range
 
-      events = Event.where(organization_id: organization.id)
-        .from_datetime(from_time)
-        .to_datetime(to_time)
+      subscriptions = organization.subscriptions.pluck(:external_id)
 
-      count = events.count
+      if subscriptions.empty?
+        puts "No subscriptions found for this organization."
+        next
+      end
 
-      if count.zero?
+      puts "Found #{subscriptions.size} subscriptions."
+
+      puts "\nThis will soft-delete events from \"#{organization.name}\" " \
+        "from #{from_time.utc} to #{to_time.utc} (inclusive)."
+      TaskPrompt.confirm!("Continue? (y/n): ")
+
+      total_deleted = 0
+
+      # rubocop:disable Rails/SkipsModelValidations
+      subscriptions.each_with_index do |external_id, index|
+        events = Event.where(
+          organization_id: organization.id,
+          external_subscription_id: external_id
+        ).from_datetime(from_time).to_datetime(to_time)
+
+        sub_deleted = 0
+        prefix = "[#{index + 1}/#{subscriptions.size}]"
+
+        events.in_batches(of: BATCH_SIZE) do |batch|
+          sub_deleted += batch.update_all(deleted_at: Time.current)
+          print "\r#{prefix} Subscription #{external_id}: #{sub_deleted} events deleted. Total: #{total_deleted + sub_deleted}"
+        end
+
+        if sub_deleted.zero?
+          print "\r#{prefix} Subscription #{external_id}: no events, skipped."
+        end
+
+        total_deleted += sub_deleted
+      end
+      # rubocop:enable Rails/SkipsModelValidations
+
+      if total_deleted.zero?
         puts "No events found in the given time range. Nothing to delete."
         next
       end
 
-      puts "\nThis will soft-delete #{count} events from \"#{organization.name}\" " \
-        "from #{from_time.utc} to #{to_time.utc} (inclusive)."
-      TaskPrompt.confirm!("Continue? (y/n): ")
-
-      deleted = 0
-
-      # rubocop:disable Rails/SkipsModelValidations
-      events.in_batches(of: BATCH_SIZE) do |batch|
-        batch.update_all(deleted_at: Time.current)
-        deleted += BATCH_SIZE
-        print "\rDeleted #{[deleted, count].min}/#{count} events..."
-      end
-      # rubocop:enable Rails/SkipsModelValidations
-
-      puts "\nDone. #{count} events soft-deleted."
+      puts "\nDone. #{total_deleted} events soft-deleted across #{subscriptions.size} subscriptions."
     end
   end
 end
