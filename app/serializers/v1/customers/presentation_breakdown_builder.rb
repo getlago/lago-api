@@ -3,34 +3,36 @@
 module V1
   module Customers
     class PresentationBreakdownBuilder
-      def self.call(fees)
-        new(fees).call
+      ALL = :all
+      UNGROUPED = :ungrouped
+      GROUPED = :grouped
+
+      def self.call(fees, filter:)
+        new(fees, filter:).call
       end
 
-      def initialize(fees)
+      def initialize(fees, filter:)
         @fees = fees
+        @filter = filter
       end
 
       def call
-        units_by_presentation = Hash.new { |hash, key| hash[key] = BigDecimal(0) }
+        Array(fees).flat_map do |fee|
+          next [] if filter == UNGROUPED && fee.grouped_by.present?
+          next [] if filter == GROUPED && fee.grouped_by.blank?
 
-        Array(fees).each do |fee|
-          fee.presentation_breakdowns.each do |breakdown|
-            units_by_presentation[breakdown.presentation_by] += BigDecimal((breakdown.units || 0).to_s)
+          fee.presentation_breakdowns.map do |breakdown|
+            {
+              presentation_by: breakdown.presentation_by,
+              units: breakdown.units.to_s
+            }
           end
-        end
-
-        units_by_presentation.map do |presentation_by, units|
-          {
-            presentation_by:,
-            units: units.to_s
-          }
         end
       end
 
       private
 
-      attr_reader :fees
+      attr_reader :fees, :filter
     end
   end
 end
