@@ -21,7 +21,7 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         create_regenerated_invoice
-        create_invoice_subscriptions if regenerated_invoice.invoice_type == "subscription"
+        create_invoice_subscriptions
         process_fees
         adjust_fees
         Invoices::ApplyInvoiceCustomSectionsService.call!(invoice: regenerated_invoice)
@@ -197,7 +197,7 @@ module Invoices
         AdjustedFees::CreateService.call(
           invoice: regenerated_invoice,
           params: adjusted_fee_params,
-          preview: true
+          regenerating_voided: true
         )
       end
     end
@@ -211,6 +211,7 @@ module Invoices
       dup_fee.precise_coupons_amount_cents = 0
       dup_fee.taxes_base_rate = 0
       dup_fee.taxes_rate = 0
+      dup_fee.original_fee = voided_fee.original_fee || voided_fee
       dup_fee.save!
       dup_fee
     end

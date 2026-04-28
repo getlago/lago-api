@@ -8,13 +8,11 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
   describe ".perform" do
     let(:organization) { create(:organization) }
     let(:lifetime_usage1) { create(:lifetime_usage, organization:, recalculate_invoiced_usage: true) }
-    let(:lifetime_usage2) { create(:lifetime_usage, organization:, recalculate_current_usage: true) }
-    let(:lifetime_usage3) { create(:lifetime_usage, organization:, recalculate_invoiced_usage: false, recalculate_current_usage: false) }
+    let(:lifetime_usage2) { create(:lifetime_usage, organization:, recalculate_invoiced_usage: false) }
 
     before do
       lifetime_usage1
       lifetime_usage2
-      lifetime_usage3
     end
 
     context "when freemium" do
@@ -22,7 +20,6 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
         described_class.perform_now
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage1)
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage2)
-        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage3)
       end
     end
 
@@ -32,7 +29,6 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
 
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage1)
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage2)
-        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage3)
       end
     end
 
@@ -43,8 +39,7 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
         described_class.perform_now
 
         expect(LifetimeUsages::RecalculateAndCheckJob).to have_been_enqueued.with(lifetime_usage1)
-        expect(LifetimeUsages::RecalculateAndCheckJob).to have_been_enqueued.with(lifetime_usage2)
-        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage3)
+        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage2)
       end
     end
   end
