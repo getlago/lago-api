@@ -242,5 +242,9 @@ module Types
     field :add_quote_plan, mutation: Mutations::Quotes::BillingItems::Plans::Add
     field :update_quote_plan, mutation: Mutations::Quotes::BillingItems::Plans::Update
     field :remove_quote_plan, mutation: Mutations::Quotes::BillingItems::Plans::Remove
+
+    field :add_quote_add_on, mutation: Mutations::Quotes::BillingItems::AddOns::Add
+    field :update_quote_add_on, mutation: Mutations::Quotes::BillingItems::AddOns::Update
+    field :remove_quote_add_on, mutation: Mutations::Quotes::BillingItems::AddOns::Remove
   end
 end
