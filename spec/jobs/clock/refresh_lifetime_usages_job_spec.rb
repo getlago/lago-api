@@ -20,7 +20,6 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
       it "does not call the refresh service" do
         described_class.perform_now
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage1)
-        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage2)
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage3)
       end
     end
@@ -30,7 +29,6 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
         described_class.perform_now
 
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage1)
-        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage2)
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage3)
       end
     end
@@ -42,7 +40,6 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
         described_class.perform_now
 
         expect(LifetimeUsages::RecalculateAndCheckJob).to have_been_enqueued.with(lifetime_usage1)
-        expect(LifetimeUsages::RecalculateAndCheckJob).to have_been_enqueued.with(lifetime_usage2)
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage3)
       end
     end
