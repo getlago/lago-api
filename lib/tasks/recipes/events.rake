@@ -41,11 +41,11 @@ namespace :recipes do
 
         events.in_batches(of: BATCH_SIZE) do |batch|
           sub_deleted += batch.update_all(deleted_at: Time.current)
-          print "\r#{prefix} Subscription #{external_id}: #{sub_deleted} events deleted. Total: #{total_deleted + sub_deleted}"
+          print "\r\e[K#{prefix} Subscription #{external_id}: #{sub_deleted} events deleted. Total: #{total_deleted + sub_deleted}"
         end
 
         if sub_deleted.zero?
-          print "\r#{prefix} Subscription #{external_id}: no events, skipped."
+          print "\r\e[K#{prefix} Subscription #{external_id}: no events, skipped."
         end
 
         total_deleted += sub_deleted
