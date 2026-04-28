@@ -804,79 +804,13 @@ module Events
       end
 
       def charge_id_based_query(from_datetime:, to_datetime:)
-        query = arel_table.where(
-          arel_table[:external_subscription_id].eq(subscription.external_id)
-            .and(arel_table[:organization_id].eq(subscription.organization_id))
-            .and(with_charge_id_condition)
-            .and(arel_table[:code].eq(code))
-        ).then { with_charge_filter_id(it) }
-        query = with_timestamp_boundaries(query, from_datetime, to_datetime)
-        query = apply_arel_grouped_by_values(query) if grouped_by_values?
-        query
+        arel_table.where(Arel.sql(charge_id_based_where_sql(from_datetime:, to_datetime:)))
       end
 
       # Fallback query filtering by code + properties instead of charge_id/charge_filter_id.
       # Used for events before subscription.started_at (from a previous subscription's charges).
       def code_based_fallback_query(from_datetime:)
-        query = arel_table.where(
-          arel_table[:external_subscription_id].eq(subscription.external_id)
-            .and(arel_table[:organization_id].eq(subscription.organization_id))
-            .and(arel_table[:code].eq(code))
-        )
-        query = arel_filters_scope(query)
-        query = with_timestamp_boundaries(query, from_datetime, nil)
-        query = query.where(arel_table[:timestamp].lt(subscription.started_at))
-        query = apply_arel_grouped_by_values(query) if grouped_by_values?
-        query
-      end
-
-      def arel_filters_scope(query)
-        matching_filters.each do |key, values|
-          query = query.where(
-            Arel::Nodes::SqlLiteral.new(sanitized_property_name(key.to_s)).in(values.map(&:to_s))
-          )
-        end
-
-        conditions = ignored_filters.filter_map do |filters|
-          next if filters.empty?
-
-          clause = filters.filter_map do |key, values|
-            next if values.empty?
-
-            ActiveRecord::Base.sanitize_sql_for_conditions(
-              ["(coalesce(events_enriched_expanded.sorted_properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
-            )
-          end.join(" AND ")
-          clause.presence
-        end
-        sql = conditions.map { "(#{it})" }.join(" OR ")
-        query = query.where(Arel::Nodes::Not.new(Arel::Nodes::SqlLiteral.new(sql))) if conditions.present?
-
-        query
-      end
-
-      def sanitized_property_name(property)
-        ActiveRecord::Base.sanitize_sql_for_conditions(
-          ["events_enriched_expanded.sorted_properties[?]", property]
-        )
-      end
-
-      def with_timestamp_boundaries(query, from_datetime, to_datetime)
-        query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
-        query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
-        query
-      end
-
-      def with_charge_id_condition
-        arel_table[:charge_id].eq(charge_id)
-      end
-
-      def with_charge_filter_id(query)
-        if charge_filter_id.present?
-          query.where(arel_table[:charge_filter_id].eq(charge_filter_id))
-        else
-          query.where(arel_table[:charge_filter_id].eq(""))
-        end
+        arel_table.where(Arel.sql(code_based_fallback_where_sql(from_datetime:)))
       end
 
       def apply_arel_grouped_by_values(query)
