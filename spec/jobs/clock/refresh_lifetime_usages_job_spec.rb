@@ -12,7 +12,7 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
 
     before do
       lifetime_usage1
-      lifetime_usage3
+      lifetime_usage2
     end
 
     context "when freemium" do
