@@ -8,7 +8,7 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
   describe ".perform" do
     let(:organization) { create(:organization) }
     let(:lifetime_usage1) { create(:lifetime_usage, organization:, recalculate_invoiced_usage: true) }
-    let(:lifetime_usage3) { create(:lifetime_usage, organization:, recalculate_invoiced_usage: false) }
+    let(:lifetime_usage2) { create(:lifetime_usage, organization:, recalculate_invoiced_usage: false) }
 
     before do
       lifetime_usage1
@@ -19,7 +19,7 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
       it "does not call the refresh service" do
         described_class.perform_now
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage1)
-        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage3)
+        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage2)
       end
     end
 
@@ -28,7 +28,7 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
         described_class.perform_now
 
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage1)
-        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage3)
+        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage2)
       end
     end
 
@@ -39,7 +39,7 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
         described_class.perform_now
 
         expect(LifetimeUsages::RecalculateAndCheckJob).to have_been_enqueued.with(lifetime_usage1)
-        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage3)
+        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage2)
       end
     end
   end
