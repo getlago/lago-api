@@ -250,5 +250,9 @@ module Types
     field :add_quote_coupon, mutation: Mutations::Quotes::BillingItems::Coupons::Add
     field :update_quote_coupon, mutation: Mutations::Quotes::BillingItems::Coupons::Update
     field :remove_quote_coupon, mutation: Mutations::Quotes::BillingItems::Coupons::Remove
+
+    field :add_quote_wallet_credit, mutation: Mutations::Quotes::BillingItems::WalletCredits::Add
+    field :update_quote_wallet_credit, mutation: Mutations::Quotes::BillingItems::WalletCredits::Update
+    field :remove_quote_wallet_credit, mutation: Mutations::Quotes::BillingItems::WalletCredits::Remove
   end
 end
