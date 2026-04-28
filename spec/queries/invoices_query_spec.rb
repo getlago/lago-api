@@ -870,4 +870,47 @@ RSpec.describe InvoicesQuery do
       end
     end
   end
+
+  context "with invoices in invisible statuses" do
+    let!(:generating_invoice) { create(:invoice, organization:, customer: customer_first, status: :generating, number: "GEN-1") }
+    let!(:open_invoice) { create(:invoice, organization:, customer: customer_first, status: :open, number: "OPEN-1") }
+    let!(:closed_invoice) { create(:invoice, organization:, customer: customer_first, status: :closed, number: "CLOSED-1") }
+
+    it "excludes them from the default listing" do
+      expect(returned_ids).not_to include(generating_invoice.id, open_invoice.id, closed_invoice.id)
+    end
+
+    context "when matched by the customer-search OR branch" do
+      let(:search_term) { "Rick" }
+
+      it "still excludes them" do
+        expect(returned_ids).not_to include(generating_invoice.id, open_invoice.id, closed_invoice.id)
+      end
+    end
+
+    context "when an invisible status is explicitly requested via filter" do
+      let(:filters) { {status: ["finalized", "open"]} }
+
+      it "ignores the invisible status and only returns visible ones" do
+        expect(returned_ids).not_to include(open_invoice.id, generating_invoice.id, closed_invoice.id)
+        expect(returned_ids).to match_array([invoice_first.id, invoice_second.id, invoice_third.id])
+      end
+    end
+
+    context "when only invisible statuses are requested via filter" do
+      let(:filters) { {status: ["open", "closed"]} }
+
+      it "returns no invoices" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when only a visible status is requested via filter" do
+      let(:filters) { {status: ["finalized"]} }
+
+      it "returns only invoices in that status" do
+        expect(returned_ids).to match_array([invoice_first.id, invoice_second.id, invoice_third.id])
+      end
+    end
+  end
 end

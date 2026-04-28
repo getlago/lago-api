@@ -123,8 +123,6 @@ class InvoicesQuery < BaseQuery
   end
 
   def with_status(scope)
-    # We always apply this filter by merging the VISIBLE_STATUS
-    # and the ones asked by the query
     visible_keys = Invoice::VISIBLE_STATUS.keys.map(&:to_s)
     statuses = if filters.status.present?
       Array(filters.status).map(&:to_s) & visible_keys
