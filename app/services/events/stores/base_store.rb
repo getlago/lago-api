@@ -85,6 +85,15 @@ module Events
         raise NotImplementedError
       end
 
+      # Returns [grouped_sum_result, grouped_count_result] as a single tuple.
+      # Stores that can answer both with one round trip should override this.
+      def grouped_sum_with_count
+        sums = grouped_sum
+        return [sums, []] if sums.blank?
+
+        [sums, grouped_count]
+      end
+
       def sum_precise_total_amount_cents
         raise NotImplementedError
       end

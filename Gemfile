@@ -116,6 +116,9 @@ gem "valvat"
 gem "csv", "~> 3.0"
 gem "ostruct"
 
+# Concurrency
+gem "async"
+
 gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", ref: "2abd2b3"
 
 group :development, :test, :staging do

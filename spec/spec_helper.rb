@@ -7,6 +7,9 @@ KnapsackPro::Adapters::RSpecAdapter.bind
 
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 ENV["RAILS_ENV"] = "test"
+# Force serial execution under transactional tests: child fibers checkout
+# their own connections that don't see the test's open transaction.
+ENV["LAGO_FIBER_CONCURRENCY"] = "1"
 require_relative "../config/environment"
 
 # Explicitly require monkey patches after loading dependencies.

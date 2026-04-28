@@ -54,6 +54,9 @@ module LagoApi
     end
 
     config.active_support.cache_format_version = 7.1
+    # Required for safe fiber-level DB connection isolation.
+    # Default is set to :thread
+    config.active_support.isolation_level = :fiber
 
     config.api_key_cache_ttl = 1.hour
   end

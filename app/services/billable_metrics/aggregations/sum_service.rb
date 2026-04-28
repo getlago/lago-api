@@ -46,10 +46,8 @@ module BillableMetrics
       def compute_grouped_by_aggregation(options: {})
         return empty_results if should_bypass_aggregation?
 
-        aggregations = event_store.grouped_sum
+        aggregations, counts = event_store.grouped_sum_with_count
         return empty_results if aggregations.blank?
-
-        counts = event_store.grouped_count
 
         if presentation_by.present?
           result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by)

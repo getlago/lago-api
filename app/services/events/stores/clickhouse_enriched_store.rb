@@ -461,15 +461,51 @@ module Events
 
       def grouped_sum
         Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
-            SELECT
-              sorted_grouped_by as groups,
-              sum(events.decimal_value) as value
-            FROM events
-            GROUP BY sorted_grouped_by
-          SQL
+          sql = with_ctes(
+            events_cte_queries(
+              deduplicated_columns: %w[decimal_value],
+              select: [arel_table[:sorted_grouped_by], arel_table[:decimal_value]]
+            ),
+            <<-SQL
+              SELECT
+                sorted_grouped_by as groups,
+                sum(events.decimal_value) as value
+              FROM events
+              GROUP BY sorted_grouped_by
+            SQL
+          )
 
           prepare_grouped_result(connection.select_all(sql))
+        end
+      end
+
+      # Single-query equivalent of grouped_sum + grouped_count.
+      # Same data scan, halves ClickHouse round trips per charge.
+      def grouped_sum_with_count
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(
+            events_cte_queries(
+              deduplicated_columns: %w[decimal_value],
+              select: [arel_table[:sorted_grouped_by], arel_table[:decimal_value]]
+            ),
+            <<-SQL
+              SELECT
+                sorted_grouped_by as groups,
+                sum(events.decimal_value) as value,
+                toDecimal32(count(), 0) as count_value
+              FROM events
+              GROUP BY sorted_grouped_by
+            SQL
+          )
+
+          rows = connection.select_all(sql).to_a
+          sums = rows.map do |row|
+            {groups: row["groups"].transform_values(&:presence), value: row["value"]}
+          end
+          counts = rows.map do |row|
+            {groups: row["groups"].transform_values(&:presence), value: row["count_value"]}
+          end
+          [sums, counts]
         end
       end
 

@@ -1472,6 +1472,24 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
+  if include_feature?(:grouped_sum_with_count)
+    describe "#grouped_sum_with_count" do
+      let(:grouped_by) { %w[region] }
+
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+      end
+
+      it "returns sums and counts in a single tuple matching grouped_sum/grouped_count" do
+        sums, counts = event_store.grouped_sum_with_count
+
+        expect(sums).to match_array(event_store.grouped_sum)
+        expect(counts).to match_array(event_store.grouped_count)
+      end
+    end
+  end
+
   if include_feature?(:sum_date_breakdown)
     describe "#sum_date_breakdown" do
       it "returns the sum grouped by day" do

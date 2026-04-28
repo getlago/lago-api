@@ -49,7 +49,7 @@ module Invoices
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_allowed_failure!(code: "no_active_subscription") if subscription.blank?
       return result.not_allowed_failure!(code: "full_usage_not_allowed") if usage_filters.full_usage && !querying_full_usage_allowed
-      return result.not_found_failure!(resource: "charge") if charges.empty? && usage_filters.has_charge_filter?
+      return result.not_found_failure!(resource: "charge") if usage_filters.has_charge_filter? && charges.empty?
 
       result.usage = compute_usage
       result.invoice = invoice
@@ -73,7 +73,8 @@ module Invoices
         .plan
         .charges
         .joins(:billable_metric)
-        .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
+        .includes(billable_metric: :organization, filters: {values: :billable_metric_filter})
+      charges = charges.includes(:taxes) if apply_taxes
       if usage_filters.filter_by_charge_id.present?
         charges = charges.where(id: usage_filters.filter_by_charge_id)
       elsif usage_filters.filter_by_charge_code.present?
@@ -116,12 +117,29 @@ module Invoices
     end
 
     def compute_charge_fees
-      fees = []
-      filters = event_filters(subscription, boundaries).charges
-      charges.find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
+      charges_array = charges.to_a
+      filters = event_filters_charges(charges_array)
+
+      fees = Lago::Fibers.map(charges_array) do |c|
+        ActiveRecord::Base.connection_pool.with_connection do
+          applied_filters = filters && (filters[c.id] || [])
+          charge_usage(c, applied_filters)
+        end
+      end.flatten
+
       return fees if usage_filters.has_charge_filter?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
+    end
+
+    # Returns the gate hash from BillingPeriodFilterService, or nil when none of the
+    # charges need it. The gate exists to bypass aggregation for empty filter buckets
+    # and to seed recurring-charge tracking — both irrelevant when every charge is
+    # filterless and non-recurring.
+    def event_filters_charges(charges_array)
+      return nil if charges_array.none? { |c| c.filters.any? || c.billable_metric.recurring? }
+
+      event_filters(subscription, boundaries).charges
     end
 
     def charge_usage(charge, applied_filters)
