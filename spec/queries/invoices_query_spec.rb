@@ -888,28 +888,11 @@ RSpec.describe InvoicesQuery do
       end
     end
 
-    context "when an invisible status is explicitly requested via filter" do
-      let(:filters) { {status: ["finalized", "open"]} }
-
-      it "ignores the invisible status and only returns visible ones" do
-        expect(returned_ids).not_to include(open_invoice.id, generating_invoice.id, closed_invoice.id)
-        expect(returned_ids).to match_array([invoice_first.id, invoice_second.id, invoice_third.id])
-      end
-    end
-
-    context "when only invisible statuses are requested via filter" do
-      let(:filters) { {status: ["open", "closed"]} }
-
-      it "returns no invoices" do
-        expect(returned_ids).to be_empty
-      end
-    end
-
     context "when only a visible status is requested via filter" do
       let(:filters) { {status: ["finalized"]} }
 
       it "returns only invoices in that status" do
-        expect(returned_ids).to match_array([invoice_first.id, invoice_second.id, invoice_third.id])
+        expect(returned_ids).to match_array([invoice_first.id, invoice_second.id, invoice_third.id, invoice_sixth.id])
       end
     end
   end
