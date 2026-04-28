@@ -20,8 +20,6 @@ class LifetimeUsage < ApplicationRecord
 
   default_scope -> { kept }
 
-  scope :needs_recalculation, -> { where(recalculate_current_usage: true).or(where(recalculate_invoiced_usage: true)) }
-
   def total_amount_cents
     historical_usage_amount_cents + invoiced_usage_amount_cents + current_usage_amount_cents
   end

@@ -15,6 +15,7 @@ RSpec.describe Fee do
   it { is_expected.to have_one(:customer).through(:subscription) }
   it { is_expected.to have_one(:pricing_unit_usage).dependent(:destroy) }
   it { is_expected.to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy) }
+  it { is_expected.to belong_to(:original_fee).class_name("Fee").optional }
 
   describe "#ordered_by_period" do
     let(:fee1) do
