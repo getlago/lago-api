@@ -164,13 +164,16 @@ module Plans
       (payload_filters || []).each do |fp|
         values = (fp[:values] || {}).deep_stringify_keys
         existing = current_by_values.delete(values)
+        new_properties = fp[:properties]&.deep_stringify_keys
+
+        next if existing && existing.properties == new_properties && existing.invoice_display_name == fp[:invoice_display_name]
 
         ChargeFilters::CascadeJob.perform_later(
           charge.id,
           existing ? "update" : "create",
           values,
           existing&.properties,
-          fp[:properties]&.deep_stringify_keys,
+          new_properties,
           fp[:invoice_display_name]
         )
       end

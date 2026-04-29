@@ -28,7 +28,7 @@ module Charges
       old_by_values = old_filters_attrs.index_by { |f| f[:values] }
 
       charge.filters.reset
-      charge.filters.includes(values: :billable_metric_filter).each do |filter|
+      charge.filters.includes(values: :billable_metric_filter).unscope(:order).find_each do |filter|
         values = filter.to_h
         old = old_by_values.delete(values)
 
