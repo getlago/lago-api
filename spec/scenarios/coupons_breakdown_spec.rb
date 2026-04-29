@@ -1387,8 +1387,11 @@ describe "Coupons breakdown Spec", :premium do
             subscription_invoice = progressive_subscription.invoices.order(:created_at).last
             expect(subscription_invoice.fees_amount_cents).to eq(50_00) # 30 units * $1 = $30 + subscription fee 20$
             expect(subscription_invoice.progressive_billing_credit_amount_cents).to eq(20_00)
-            expect(subscription_invoice.coupons_amount_cents).to eq(30_00)
-            expect(subscription_invoice.total_amount_cents).to eq(0)
+            # ISSUE-1007 sum semantics: coupon usage in this period across all invoices is
+            # 3 * $5 (pay_in_advance) + $20 (PB) = $35. Period budget = $50. Final invoice
+            # gets only the $15 remaining, not another $30.
+            expect(subscription_invoice.coupons_amount_cents).to eq(15_00)
+            expect(subscription_invoice.total_amount_cents).to eq(15_00) # $50 - $20 PB credit - $15 coupon
             expect(customer.applied_coupons.first.frequency_duration_remaining).to eq(nil) # Forever
             expect(customer.applied_coupons.first.status).to eq("active")
           end

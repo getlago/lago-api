@@ -289,11 +289,14 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       invoice.update!(invoice_type:, fees_amount_cents: 100, coupons_amount_cents: 100, sub_total_excluding_taxes_amount_cents: 0, total_amount_cents: 0)
     end
 
-    it "returns to_credit_amount of 0 when fees are fully discounted" do
+    it "returns gross fees so the coupon discount survives the PB" do
+      # ISSUE-1007: to_credit_amount no longer subtracts coupons_amount_cents.
+      # The gross fee amount is credited on the next invoice so the coupon's
+      # discount is transferred forward instead of being silently dropped.
       result = service.call
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(100)
-      expect(result.to_credit_amount).to be_zero
+      expect(result.to_credit_amount).to eq(100)
       expect(result.total_billed_amount_cents).to be_zero
       expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
@@ -310,11 +313,12 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       invoice.update!(invoice_type:, fees_amount_cents: 100, coupons_amount_cents: 30, sub_total_excluding_taxes_amount_cents: 70, taxes_amount_cents: 14, total_amount_cents: 84)
     end
 
-    it "returns net amount after coupons" do
+    it "returns gross fees regardless of coupons" do
+      # ISSUE-1007: gross fees, not net of coupons.
       result = service.call
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(100)
-      expect(result.to_credit_amount).to eq(70)
+      expect(result.to_credit_amount).to eq(100)
       expect(result.total_billed_amount_cents).to eq(84)
       expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
@@ -336,11 +340,12 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       invoice2.update!(invoice_type:, issuing_date: timestamp - 1.day, fees_amount_cents: 100, coupons_amount_cents: 20, sub_total_excluding_taxes_amount_cents: 80)
     end
 
-    it "returns to_credit_amount from most recent invoice after coupons" do
+    it "returns gross fees from the most recent invoice" do
+      # ISSUE-1007: gross, not net of coupons.
       result = service.call
       expect(result.progressive_billing_invoice).to eq(invoice2)
       expect(result.progressive_billed_amount).to eq(100)
-      expect(result.to_credit_amount).to eq(80)
+      expect(result.to_credit_amount).to eq(100)
       expect(result.total_billed_amount_cents).to eq(120)
       expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription1, invoice_subscription2)
     end
@@ -359,11 +364,12 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       existing_credit
     end
 
-    it "subtracts existing credits from net amount" do
+    it "subtracts existing PB credits from gross fees" do
+      # ISSUE-1007: 100 (gross) - 30 (existing PB credit) = 70. Coupons no longer subtracted.
       result = service.call
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(100)
-      expect(result.to_credit_amount).to eq(50)
+      expect(result.to_credit_amount).to eq(70)
       expect(result.total_billed_amount_cents).to eq(80)
       expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
@@ -382,35 +388,39 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       existing_credit_note
     end
 
-    it "subtracts existing credit notes from net amount" do
+    it "subtracts existing credit notes from gross fees" do
+      # ISSUE-1007: 100 (gross) - 20 (credit note) = 80. Coupons no longer subtracted.
       result = service.call
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(100)
-      expect(result.to_credit_amount).to eq(60)
+      expect(result.to_credit_amount).to eq(80)
       expect(result.total_billed_amount_cents).to eq(80)
       expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
   end
 
-  context "when coupons and existing credits would result in negative to_credit_amount" do
+  context "when existing credits and credit notes would result in negative to_credit_amount" do
     let(:invoice_subscription) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
     let(:invoice) { invoice_subscription.invoice }
     let(:charge) { create(:standard_charge, plan: subscription.plan) }
-    let(:fee) { create(:charge_fee, invoice:, subscription:, charge:, amount_cents: 100, precise_coupons_amount_cents: 60, taxes_amount_cents: 0) }
-    let(:existing_credit) { create(:credit, invoice:, progressive_billing_invoice: invoice, amount_cents: 50) }
+    let(:fee) { create(:charge_fee, invoice:, subscription:, charge:, amount_cents: 100, precise_coupons_amount_cents: 0, taxes_amount_cents: 0) }
+    let(:existing_credit) { create(:credit, invoice:, progressive_billing_invoice: invoice, amount_cents: 80) }
+    let(:existing_credit_note) { create(:credit_note, invoice:, credit_amount_cents: 50, total_amount_cents: 50, credit_status: :available) }
 
     before do
       fee
-      invoice.update!(invoice_type:, fees_amount_cents: 100, coupons_amount_cents: 60, sub_total_excluding_taxes_amount_cents: 40)
+      invoice.update!(invoice_type:, fees_amount_cents: 100, sub_total_excluding_taxes_amount_cents: 100)
       existing_credit
+      existing_credit_note
     end
 
-    it "returns 0 instead of negative value" do
+    it "returns 0 instead of a negative value" do
+      # 100 (gross) - 80 (PB credit) - 50 (CN) = -30 -> clamped to 0.
       result = service.call
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to be_zero
-      expect(result.total_billed_amount_cents).to eq(40)
+      expect(result.total_billed_amount_cents).to eq(100)
       expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
   end
@@ -482,10 +492,11 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
     end
 
     it "correctly calculates total_billed_amount_cents from multiple fees with varying coupons" do
+      # ISSUE-1007: to_credit_amount = gross fees (180), not net of coupons (140).
       result = service.call
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(180)
-      expect(result.to_credit_amount).to eq(140)
+      expect(result.to_credit_amount).to eq(180)
       expect(result.total_billed_amount_cents).to eq(140)
       expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end

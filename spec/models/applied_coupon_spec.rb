@@ -252,11 +252,11 @@ RSpec.describe AppliedCoupon do
           invoice_2_fee
         end
 
-        # Note: subscription_2 has 50 credits, becasue it's associated to invoice and invoice_2,
-        # but subscription has 20 credits, so the remaining amount is 80
-        it "calculates based on the minimum used amount across all subscriptions" do
+        # Sum semantics: subscription has $20 in this period (on `invoice`), subscription_2 has
+        # $20 (on `invoice`) + $30 (on `invoice_2`) = $50. Total used = $70. Remaining = $30.
+        it "sums credits across all subscriptions on the invoice" do
           invoice.reload
-          expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice: invoice)).to eq(80)
+          expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice: invoice)).to eq(30)
         end
       end
 
@@ -274,8 +274,10 @@ RSpec.describe AppliedCoupon do
           invoice_3_fee
         end
 
-        it "calculates based on the minimum used amount across all subscriptions" do
-          expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice: invoice_3)).to eq(100)
+        # Sum semantics: subscription_3 used $0 in its period, subscription_2 used $20 (on `invoice`).
+        # Total = $20. Remaining = $80.
+        it "sums across subscriptions even when one has no usage" do
+          expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice: invoice_3)).to eq(80)
         end
       end
     end
