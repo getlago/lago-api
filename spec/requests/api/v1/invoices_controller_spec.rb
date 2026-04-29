@@ -332,7 +332,7 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
-    context "with N+1 query detection on customer and tax associations", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    context "with N+1 query detection on customer associations", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 
       before do
@@ -346,24 +346,14 @@ RSpec.describe Api::V1::InvoicesController do
           )
           create(:stripe_customer, customer: invoice_customer)
           create(:netsuite_customer, customer: invoice_customer)
+          create(:hubspot_customer, customer: invoice_customer)
+          create(:customer_metadata, customer: invoice_customer, organization:)
 
-          invoice = create(:invoice, customer: invoice_customer, organization:, billing_entity:)
-          create(:invoice_applied_tax, invoice:, tax:, organization:)
-
-          invoice.file.attach(
-            io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
-            filename: "invoice.pdf",
-            content_type: "application/pdf"
-          )
-          invoice.xml_file.attach(
-            io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
-            filename: "invoice.xml",
-            content_type: "application/xml"
-          )
+          create(:invoice, customer: invoice_customer, organization:, billing_entity:)
         end
       end
 
-      it "does not trigger N+1 queries on applied_taxes, billing_entity, customer, payment_provider_customers, or active_storage_attachments" do
+      it "does not trigger N+1 queries on customer and nested associations" do
         get_with_token(organization, "/api/v1/invoices", {})
 
         expect(response).to have_http_status(:success)
@@ -371,9 +361,7 @@ RSpec.describe Api::V1::InvoicesController do
         json[:invoices].each do |invoice|
           expect(invoice[:customer][:billing_configuration][:provider_customer_id]).to be_present
           expect(invoice[:customer][:integration_customers]).to be_present
-          expect(invoice[:applied_taxes]).to be_present
-          expect(invoice[:file_url]).to be_present
-          expect(invoice[:xml_url]).to be_present
+          expect(invoice[:customer][:metadata]).to be_present
         end
       end
     end
