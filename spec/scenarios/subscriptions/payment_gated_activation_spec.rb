@@ -176,6 +176,26 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
   end
 
+  describe "zero-amount gated invoice (no charge to collect)" do
+    let(:plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 0)
+    end
+
+    it "marks the rule satisfied and activates without going through the payment chain" do
+      create_subscription(subscription_params)
+      perform_all_enqueued_jobs
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_active
+      expect(subscription.activation_rules.sole).to be_satisfied
+
+      invoice = subscription.invoices.sole
+      expect(invoice).to be_finalized
+      expect(invoice.total_amount_cents).to eq(0)
+      expect(invoice.payment_status).to eq("succeeded")
+    end
+  end
+
   describe "pay-in-arrears plan with pay-in-advance fixed charges" do
     let(:plan) do
       create(:plan, organization:, interval: "monthly", pay_in_advance: false, amount_cents: 1000)
@@ -198,5 +218,4 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(invoice.fees.subscription.count).to eq(0)
     end
   end
-
 end
