@@ -146,12 +146,45 @@ module Plans
       old_parent_filters_attrs = charge.filters.map(&:attributes)
       old_parent_applied_pricing_unit_attrs = charge.applied_pricing_unit&.attributes
 
+      # Filters are stripped from `params`; cascaded individually below.
+      # TODO: drop `old_parent_filters_attrs:` after Sidekiq drain — dead, filter cascade goes through ChargeFilters::CascadeJob now.
       Charges::UpdateChildrenJob.perform_later(
-        params: payload_charge.deep_stringify_keys,
+        params: payload_charge.except(:filters).deep_stringify_keys,
         old_parent_attrs:,
         old_parent_filters_attrs:,
         old_parent_applied_pricing_unit_attrs:
       )
+
+      cascade_filter_changes(charge, payload_charge[:filters]) if payload_charge.key?(:filters)
+    end
+
+    def cascade_filter_changes(charge, payload_filters)
+      current_by_values = charge.filters.includes(values: :billable_metric_filter).index_by(&:to_h)
+
+      (payload_filters || []).each do |fp|
+        values = (fp[:values] || {}).deep_stringify_keys
+        existing = current_by_values.delete(values)
+
+        ChargeFilters::CascadeJob.perform_later(
+          charge.id,
+          existing ? "update" : "create",
+          values,
+          existing&.properties,
+          fp[:properties]&.deep_stringify_keys,
+          fp[:invoice_display_name]
+        )
+      end
+
+      current_by_values.each_value do |existing|
+        ChargeFilters::CascadeJob.perform_later(
+          charge.id,
+          "destroy",
+          existing.to_h,
+          existing.properties,
+          nil,
+          existing.invoice_display_name
+        )
+      end
     end
 
     def cascade_fixed_charge_removal(fixed_charge)
