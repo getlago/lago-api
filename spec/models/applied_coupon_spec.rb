@@ -220,7 +220,8 @@ RSpec.describe AppliedCoupon do
                        charges_to_datetime: current_time.end_of_month})
       end
 
-      # this credit is associated to subscription 1 and subscription 2
+      # The credit is on the invoice itself (which has fees for both subscriptions).
+      # Sum semantics with de-duplication counts the credit once.
       before do
         invoice_subscription_2
         create(:credit,
@@ -231,11 +232,11 @@ RSpec.describe AppliedCoupon do
         invoice_fee_2
       end
 
-      it "calculates based on the minimum used amount across all subscriptions" do
+      it "counts a shared credit once across subscriptions" do
         expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice: invoice)).to eq(80)
       end
 
-      context "when each subscription has different remaining amount of the coupon" do
+      context "when a separate credit was applied on another invoice for one subscription only" do
         let(:invoice_2) { create(:invoice, :subscription, customer:, organization:, subscriptions: [subscription_2]) }
         let(:invoice_2_fee) do
           create(:fee, invoice: invoice_2, subscription: subscription_2, amount_cents: 20, organization:,
@@ -243,7 +244,7 @@ RSpec.describe AppliedCoupon do
                          charges_to_datetime: current_time.end_of_month})
         end
 
-        # this credit is associated only to subscription 2
+        # Credit specific to subscription_2's separate invoice in the same period.
         let(:credit_2) { create(:credit, applied_coupon:, invoice: invoice_2, amount_cents: 30, organization:) }
 
         before do
@@ -252,15 +253,15 @@ RSpec.describe AppliedCoupon do
           invoice_2_fee
         end
 
-        # Note: subscription_2 has 50 credits, becasue it's associated to invoice and invoice_2,
-        # but subscription has 20 credits, so the remaining amount is 80
-        it "calculates based on the minimum used amount across all subscriptions" do
+        # Total customer usage in the period = $20 (shared on `invoice`) + $30 (subscription_2's
+        # invoice_2) = $50. Remaining = $100 - $50 = $50.
+        it "sums distinct credits across all invoices in the period" do
           invoice.reload
-          expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice: invoice)).to eq(80)
+          expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice: invoice)).to eq(50)
         end
       end
 
-      context "when one of subscription has no usage" do
+      context "when one of the subscriptions has no usage" do
         let(:subscription_3) { create(:subscription, customer:, organization:) }
         let(:invoice_3) { create(:invoice, :subscription, customer:, organization:, subscriptions: [subscription_3, subscription_2]) }
         let(:invoice_3_fee) do
@@ -274,8 +275,12 @@ RSpec.describe AppliedCoupon do
           invoice_3_fee
         end
 
-        it "calculates based on the minimum used amount across all subscriptions" do
-          expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice: invoice_3)).to eq(100)
+        # invoice_3 has subs [3, 2]. Looking up credits in the period:
+        #   sub 3: invoice_3 (no credit) -> 0
+        #   sub 2: `invoice` (has $20 credit from parent before block) -> $20
+        # Unique invoices = [invoice_3, invoice]. Total credits = $20. Remaining = $80.
+        it "sums credits found via any subscription's billing period" do
+          expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice: invoice_3)).to eq(80)
         end
       end
     end
