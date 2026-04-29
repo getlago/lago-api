@@ -1548,4 +1548,133 @@ describe "Coupons breakdown Spec", :premium do
       end
     end
   end
+
+  # ISSUE-1007: documents how a $20 fixed-amount coupon interacts with progressive billing
+  # for a single-subscription, single-billing-period across the matrix of PB amounts.
+  #
+  # Customer's "paid" = sum of invoice totals; "refund" = sum of credit notes issued.
+  # Net cash-out = paid - refund.
+  context "PB invoice + $20 coupon matrix (ISSUE-1007)", transaction: false do
+    let(:start_time) { DateTime.new(2025, 1, 1) }
+    let(:bm) do
+      create_metric({name: "U", code: "u", aggregation_type: "sum_agg", field_name: "n"})
+      organization.billable_metrics.find_by(code: "u")
+    end
+
+    def setup_pb_plan(thresholds_cents)
+      create_plan({
+        name: "P", code: "pb", interval: "monthly",
+        amount_cents: 0, amount_currency: "EUR", pay_in_advance: false,
+        charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: false, properties: {amount: "1"}}],
+        usage_thresholds: thresholds_cents.map { |c| {amount_cents: c} }
+      })
+      organization.plans.find_by(code: "pb")
+    end
+
+    def apply_fixed_coupon(frequency)
+      create_coupon({
+        name: "C", code: "c", coupon_type: "fixed_amount",
+        frequency: frequency, amount_cents: 20_00, amount_currency: "EUR",
+        frequency_duration: (frequency == "recurring" ? 1 : nil),
+        expiration: "no_expiration", reusable: false
+      })
+      create_or_update_customer({external_id: "cust"})
+      apply_coupon({external_customer_id: "cust", coupon_code: "c"})
+    end
+
+    def create_sub(plan)
+      travel_to(start_time) { create_subscription({external_customer_id: "cust", external_id: "s", plan_code: plan.code}) }
+      Subscription.find_by(external_id: "s")
+    end
+
+    def end_of_month_billing
+      travel_to(start_time + 1.month) { perform_billing }
+    end
+
+    def customer_totals
+      customer = organization.customers.find_by(external_id: "cust")
+      {
+        paid: customer.invoices.sum(:total_amount_cents),
+        refund: CreditNote.where(invoice_id: customer.invoices.pluck(:id)).sum(:credit_amount_cents)
+      }
+    end
+
+    shared_examples "matrix case" do |coupon:, paid:, refund:|
+      it "with #{coupon} coupon: customer pays $#{paid / 100.0}, refund $#{refund / 100.0}" do
+        plan = setup_pb_plan(thresholds)
+        apply_fixed_coupon(coupon)
+        sub = create_sub(plan)
+        trigger_usage(sub)
+        end_of_month_billing
+
+        expect(customer_totals).to eq(paid: paid, refund: refund)
+      end
+    end
+
+    context "Sc1: 1 PB at $5, period total $35" do
+      let(:thresholds) { [5_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 5) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 30) }
+      end
+
+      include_examples "matrix case", coupon: "once", paid: 15_00, refund: 0
+      include_examples "matrix case", coupon: "forever", paid: 15_00, refund: 0
+    end
+
+    context "Sc2: 1 PB at $30, period total $35" do
+      let(:thresholds) { [30_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 30) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 5) }
+      end
+
+      include_examples "matrix case", coupon: "once", paid: 15_00, refund: 0
+      include_examples "matrix case", coupon: "forever", paid: 15_00, refund: 0
+    end
+
+    context "Sc3: 2 PBs at $5 and $30, period total $50" do
+      let(:thresholds) { [5_00, 30_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 5) }
+        travel_to(start_time + 10.days) { ingest_event(sub, bm, 25) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 20) }
+      end
+
+      include_examples "matrix case", coupon: "once", paid: 30_00, refund: 0
+      include_examples "matrix case", coupon: "forever", paid: 30_00, refund: 0
+    end
+
+    context "Sc4: PB at $40, usage clawed back to $0" do
+      let(:thresholds) { [40_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 40) }
+        Event.where(external_subscription_id: sub.external_id).destroy_all
+        perform_usage_update
+      end
+
+      include_examples "matrix case", coupon: "once", paid: 20_00, refund: 20_00
+      include_examples "matrix case", coupon: "forever", paid: 20_00, refund: 20_00
+    end
+
+    context "Sc5: PB at $40, usage clawed back to $20" do
+      let(:thresholds) { [40_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 40) }
+        Event.where(external_subscription_id: sub.external_id).destroy_all
+        travel_to(start_time + 10.days) { ingest_event(sub, bm, 20) }
+      end
+
+      # Known limitation: $10 of coupon stays stranded on the PB for usage that was
+      # clawed back. Refund is the proportional cash portion only ($10), not the full
+      # $20 needed for the customer to come out at $0 owed.
+      include_examples "matrix case", coupon: "once", paid: 20_00, refund: 10_00
+      include_examples "matrix case", coupon: "forever", paid: 20_00, refund: 10_00
+    end
+  end
 end
