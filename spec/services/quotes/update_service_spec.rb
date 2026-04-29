@@ -9,11 +9,7 @@ RSpec.describe Quotes::UpdateService do
   let(:membership) { create(:membership, organization:) }
   let(:owner) { membership.user }
   let(:quote) { create(:quote, organization:) }
-  let(:update_params) {
-    {
-      owners: [owner.id]
-    }
-  }
+  let(:update_params) { {owners: [owner.id]} }
 
   describe ".call" do
     let(:result) { update_service.call }
@@ -34,7 +30,7 @@ RSpec.describe Quotes::UpdateService do
       it "returns validation failure" do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:quotes]).to eq(["invalid_owner"])
+        expect(result.error.messages[:owners]).to eq(["invalid"])
       end
     end
 

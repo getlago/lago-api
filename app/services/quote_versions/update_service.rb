@@ -18,11 +18,7 @@ module QuoteVersions
       return result.forbidden_failure! unless quote_version.organization.feature_flag_enabled?(:order_forms)
       return result.not_allowed_failure!(code: "inappropriate_state") unless editable?
 
-      update_params = params.slice(
-        :billing_items,
-        :content
-      )
-      quote_version.update!(update_params)
+      quote_version.update!(params.slice(:billing_items, :content))
       result.quote_version = quote_version
 
       # TODO: SendWebhookJob.perform_after_commit("quote_version.updated", quote_version)
@@ -30,8 +26,6 @@ module QuoteVersions
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue ActiveRecord::ActiveRecordError => e
-      result.service_failure!(code: "update_failed", message: e.message, error: e)
     end
 
     private

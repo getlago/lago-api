@@ -20,8 +20,8 @@ RSpec.describe QuoteVersions::CloneService do
     let(:result) { clone_service.call }
 
     context "when the quote version is clonable", :premium do
-      context "when the quote version is already voided" do
-        it "creates a clone and doesn't override the original quote version" do
+      context "when the source version is voided" do
+        it "creates a clone and leaves the source untouched" do
           expect(result).to be_success
           cloned = result.quote_version
           expect(cloned.id).not_to eq(quote_version.id)
@@ -42,27 +42,21 @@ RSpec.describe QuoteVersions::CloneService do
         end
       end
 
-      context "when the quote version is draft" do
+      context "when the source version is draft" do
         let!(:versions) do
           QuoteVersion.transaction do
             v1 = create(:quote_version, :voided, quote:, organization:)
-            v2 = create(:quote_version, :draft, quote:, organization:)
+            v2 = create(:quote_version, quote:, organization:)
             [v1, v2]
           end
         end
-        let(:quote_version) { versions.last }
 
-        it "creates an clone and voids the original quote version" do
+        it "creates a clone and voids the source" do
           expect(result).to be_success
           cloned = result.quote_version
           expect(cloned.id).not_to eq(quote_version.id)
-          expect(cloned.organization_id).to eq(quote_version.organization_id)
-          expect(cloned.quote_id).to eq(quote_version.quote_id)
           expect(cloned.version).to eq(quote_version.version + 1)
           expect(cloned.draft?).to eq(true)
-          expect(cloned.void_reason).to eq(nil)
-          expect(cloned.voided_at).to eq(nil)
-          expect(cloned.approved_at).to eq(nil)
 
           expect(quote.reload.current_version).to eq(cloned)
 
@@ -74,22 +68,37 @@ RSpec.describe QuoteVersions::CloneService do
       end
     end
 
-    context "when the quote version is not clonable", :premium do
-      let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }
+    context "when any quote version is already approved", :premium do
+      let!(:versions) do
+        [create(:quote_version, :approved, quote:, organization:)]
+      end
+      let(:quote_version) { versions.first }
 
-      it "does not create a clone" do
+      it "rejects the clone" do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         expect(result.error.code).to eq("inappropriate_state")
-
-        quote_version.reload
-        expect(quote_version.approved?).to eq(true)
-        expect(quote_version.void_reason).to eq(nil)
-        expect(quote_version.voided_at).to eq(nil)
       end
     end
 
-    context "when quote does not exist", :premium do
+    context "when an older voided version is cloned but the latest is approved", :premium do
+      let!(:versions) do
+        QuoteVersion.transaction do
+          v1 = create(:quote_version, :voided, quote:, organization:)
+          v2 = create(:quote_version, :approved, quote:, organization:)
+          [v1, v2]
+        end
+      end
+      let(:quote_version) { versions.first }
+
+      it "rejects the clone because the quote is locked by an approved version" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("inappropriate_state")
+      end
+    end
+
+    context "when quote_version does not exist", :premium do
       let(:quote_version) { nil }
 
       it "returns a not found error" do

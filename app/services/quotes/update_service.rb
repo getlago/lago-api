@@ -17,9 +17,9 @@ module Quotes
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "quote") unless quote
       return result.forbidden_failure! unless quote.organization.feature_flag_enabled?(:order_forms)
-      return result.validation_failure!(errors: {quotes: ["invalid_owner"]}) unless check_owners(owners:)
+      return result.single_validation_failure!(field: :owners, error_code: "invalid") unless valid_owners?
 
-      sync_owners!(quote:, owners:) if params.has_key?(:owners)
+      sync_owners!(quote:) if params.has_key?(:owners)
 
       # TODO: SendWebhookJob.perform_after_commit("quote.updated", quote)
 
@@ -27,20 +27,15 @@ module Quotes
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue ActiveRecord::ActiveRecordError => e
-      result.service_failure!(code: "update_failed", message: e.message, error: e)
     end
 
     private
 
-    def check_owners(owners:)
+    def valid_owners?
       return true if owners.blank?
 
-      valid_owners = quote.organization.memberships.active.pluck(:user_id)
-      invalid_owners = owners - valid_owners
-      return false if invalid_owners.any?
-
-      true
+      known = quote.organization.memberships.active.where(user_id: owners).pluck(:user_id)
+      (owners - known).empty?
     end
 
     def normalize_owners(owners:)
@@ -50,7 +45,7 @@ module Quotes
       [owners.to_s]
     end
 
-    def sync_owners!(quote:, owners:)
+    def sync_owners!(quote:)
       QuoteOwner.transaction do
         current_owners = quote.owner_ids
 
@@ -58,10 +53,10 @@ module Quotes
         quote.quote_owners.where(user_id: owners_to_remove).delete_all if owners_to_remove.any?
 
         owners_to_add = owners - current_owners
-        owners_to_add.each do |user_id|
-          quote.quote_owners.create!(
-            organization_id: quote.organization_id,
-            user_id: user_id
+        if owners_to_add.any?
+          now = Time.current
+          quote.quote_owners.insert_all(
+            owners_to_add.map { |user_id| {organization_id: quote.organization_id, user_id: user_id, created_at: now, updated_at: now} }
           )
         end
       end

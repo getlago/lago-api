@@ -19,7 +19,10 @@ class Quote < ApplicationRecord
   has_many :owners, through: :quote_owners, source: :user, class_name: "User"
 
   has_many :versions, -> { order(sequential_id: :desc) }, class_name: "QuoteVersion"
-  has_one :current_version, -> { order(sequential_id: :desc) }, class_name: "QuoteVersion"
+  has_one :current_version,
+    -> { where(status: %w[draft approved]).order(sequential_id: :desc) },
+    class_name: "QuoteVersion"
+  has_one :latest_version, -> { order(sequential_id: :desc) }, class_name: "QuoteVersion"
 
   enum :order_type, ORDER_TYPES,
     instance_methods: false,

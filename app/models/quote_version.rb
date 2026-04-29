@@ -21,9 +21,6 @@ class QuoteVersion < ApplicationRecord
   belongs_to :organization
   belongs_to :quote
 
-  has_one :order_form
-  has_one :order, through: :order_form
-
   enum :status, STATUSES,
     default: :draft,
     validate: true
