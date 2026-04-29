@@ -2,7 +2,7 @@
 
 class QuotesQuery < BaseQuery
   Result = BaseResult[:quotes]
-  Filters = BaseFilters[:customers, :numbers, :statuses, :from_date, :to_date, :owners]
+  Filters = BaseFilters[:customers, :numbers, :statuses, :from_date, :to_date, :owners, :order_type]
 
   def call
     return result unless validate_filters.success?
@@ -13,6 +13,7 @@ class QuotesQuery < BaseQuery
     quotes = with_status(quotes) if filters.statuses.present?
     quotes = with_date(quotes) if filters.from_date.present? || filters.to_date.present?
     quotes = with_owners(quotes) if filters.owners.present?
+    quotes = with_order_type(quotes) if filters.order_type.present?
 
     # final ordering and pagination
     quotes = quotes.order(created_at: :desc)
@@ -69,5 +70,9 @@ class QuotesQuery < BaseQuery
       .distinct
 
     scope.where(id: quote_ids)
+  end
+
+  def with_order_type(scope)
+    scope.where(order_type: filters.order_type)
   end
 end
