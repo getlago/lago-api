@@ -396,6 +396,7 @@ module Events
 
       def grouped_last(columns = grouped_by)
         groups, column_names = grouped_arel_columns(columns)
+        distinct_on_names = grouped_by.present? ? group_names.join(", ") : nil
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
@@ -403,13 +404,24 @@ module Events
             deduplicated_columns: %w[decimal_value properties]
           )
 
-          sql = with_ctes(ctes_sql, <<-SQL)
-            SELECT
-              DISTINCT ON (#{column_names}) #{column_names},
-              property
-            FROM events
-            ORDER BY #{column_names}, events.timestamp DESC
-          SQL
+          sql = if distinct_on_names
+            with_ctes(ctes_sql, <<-SQL)
+              SELECT
+                DISTINCT ON (#{distinct_on_names}) #{column_names},
+                property
+              FROM events
+              ORDER BY #{distinct_on_names}, events.timestamp DESC
+            SQL
+          else
+            with_ctes(ctes_sql, <<-SQL)
+              SELECT
+                #{column_names},
+                property
+              FROM events
+              ORDER BY events.timestamp DESC
+              LIMIT 1
+            SQL
+          end
 
           prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
         end

@@ -1615,7 +1615,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_last(["cloud"])
 
           expect(result).to match_array([
-            {groups: {"cloud" => "aws"}, value: 10},
             {groups: {"cloud" => "gcp"}, value: 12}
           ])
         end
@@ -1634,7 +1633,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_last(["agent_name", "cloud"])
 
           expect(result).to match_array([
-            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
             {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7},
             {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3}
           ])

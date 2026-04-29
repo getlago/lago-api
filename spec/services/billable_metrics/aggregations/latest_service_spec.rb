@@ -372,7 +372,6 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
       result = latest_service.aggregate
 
       expect(result.breakdowns).to match_array([
-        {groups: {"cloud" => "aws"}, value: BigDecimal(14)},
         {groups: {"cloud" => "gcp"}, value: BigDecimal(-5)}
       ])
     end
@@ -428,7 +427,6 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
         result = latest_service.aggregate
 
         expect(result.breakdowns).to match_array([
-          {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: BigDecimal(10)},
           {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: BigDecimal(12)},
           {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: BigDecimal(3)}
         ])

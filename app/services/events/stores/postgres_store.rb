@@ -198,13 +198,22 @@ module Events
 
       def grouped_last(columns = grouped_by)
         sanitized_columns = columns.map { sanitized_property_name(it) }
+        distinct_on_columns = grouped_by.present? ? grouped_by.map { sanitized_property_name(it) } : []
 
-        sql = events
-          .order(Arel.sql((sanitized_columns + ["events.timestamp DESC, created_at DESC"]).join(", ")))
-          .select(
-            "DISTINCT ON (#{sanitized_columns.join(", ")}) #{sanitized_columns.join(", ")}, (#{sanitized_property_name})::numeric AS value"
-          )
-          .to_sql
+        sql = if distinct_on_columns.empty?
+          events
+            .order(Arel.sql("events.timestamp DESC, created_at DESC"))
+            .select("#{sanitized_columns.join(", ")}, (#{sanitized_property_name})::numeric AS value")
+            .limit(1)
+            .to_sql
+        else
+          events
+            .order(Arel.sql((distinct_on_columns + ["events.timestamp DESC, created_at DESC"]).join(", ")))
+            .select(
+              "DISTINCT ON (#{distinct_on_columns.join(", ")}) #{sanitized_columns.join(", ")}, (#{sanitized_property_name})::numeric AS value"
+            )
+            .to_sql
+        end
 
         prepare_grouped_result(select_all(sql).rows, columns: columns)
       end
