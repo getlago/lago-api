@@ -1545,4 +1545,75 @@ describe "Coupons breakdown Spec", :premium do
       end
     end
   end
+
+  # ISSUE-1007: when a forever/recurring coupon is shared across subscriptions, the per-period
+  # budget must be summed across them, not minimum-ed (otherwise a sub that didn't trigger any
+  # PB this period would unlock a second full discount on the final invoice).
+  context "when a coupon is shared across subscriptions and one triggers a PB invoice" do
+    it "applies the per-period budget once across both subscriptions", transaction: false do
+      create_metric({name: "Units", code: "bm_share", aggregation_type: "sum_agg", field_name: "total"})
+      bm = organization.billable_metrics.find_by(code: "bm_share")
+
+      # Plan A: $0 base, $1/unit charge with a $20 PB threshold.
+      create_plan({
+        name: "Plan A", code: "plan_a", interval: "monthly",
+        amount_cents: 0, amount_currency: "EUR", pay_in_advance: false,
+        charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: false, properties: {amount: "1"}}],
+        usage_thresholds: [{amount_cents: 20_00, threshold_display_name: "first"}]
+      })
+      plan_a = organization.plans.find_by(code: "plan_a")
+
+      # Plan B: flat $30 sub fee, no usage charges.
+      create_plan({
+        name: "Plan B", code: "plan_b", interval: "monthly",
+        amount_cents: 30_00, amount_currency: "EUR", pay_in_advance: false
+      })
+      plan_b = organization.plans.find_by(code: "plan_b")
+
+      # Forever $20 coupon — per-period budget.
+      create_coupon({
+        name: "Forever 20", code: "forever_20", coupon_type: "fixed_amount",
+        frequency: "forever", amount_cents: 20_00, amount_currency: "EUR",
+        expiration: "no_expiration", reusable: false
+      })
+      create_or_update_customer({external_id: "shared-cust"})
+      apply_coupon({external_customer_id: "shared-cust", coupon_code: "forever_20"})
+
+      time0 = DateTime.new(2025, 1, 1)
+      travel_to(time0) do
+        create_subscription({external_customer_id: "shared-cust", external_id: "sa", plan_code: plan_a.code})
+        create_subscription({external_customer_id: "shared-cust", external_id: "sb", plan_code: plan_b.code})
+      end
+
+      sub_a = Subscription.find_by(external_id: "sa")
+
+      # Sub A's usage exceeds the PB threshold mid-period, generating a PB invoice.
+      travel_to(time0 + 5.days) do
+        ingest_event(sub_a, bm, 30)
+        perform_all_enqueued_jobs
+      end
+
+      pb_invoice = sub_a.invoices.progressive_billing.first
+      expect(pb_invoice).to be_present
+      expect(pb_invoice.fees_amount_cents).to eq(30_00)
+      expect(pb_invoice.coupons_amount_cents).to eq(20_00) # full per-period budget consumed on PB
+      expect(pb_invoice.total_amount_cents).to eq(10_00)
+
+      # End of period: subscription invoice for both subs.
+      travel_to(time0 + 1.month) do
+        perform_billing
+      end
+
+      customer = organization.customers.find_by(external_id: "shared-cust")
+      sub_invoice = customer.invoices.where(invoice_type: :subscription).order(:created_at).last
+      expect(sub_invoice.fees_amount_cents).to eq(60_00) # $30 sub_b + $30 cumulative charges sub_a
+      expect(sub_invoice.progressive_billing_credit_amount_cents).to eq(30_00) # gross PB amount
+      # Per-period budget already exhausted on PB; final must NOT apply the coupon again.
+      expect(sub_invoice.coupons_amount_cents).to eq(0)
+      expect(sub_invoice.total_amount_cents).to eq(30_00)
+
+      # Customer total = $10 (PB) + $30 (final) = $40 = $60 fees - $20 coupon.
+      expect(customer.invoices.sum(:total_amount_cents)).to eq(40_00)
+    end
+  end
 end
