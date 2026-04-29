@@ -5739,6 +5739,7 @@ Organization Feature Flag Values
 enum FeatureFlagEnum {
   enriched_events_aggregation
   multi_currency
+  multi_entity_billing
   multiple_payment_methods
   non_persistable_charge_cache_optimization
   payment_gated_subscriptions
