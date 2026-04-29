@@ -17,6 +17,7 @@ module QuoteVersions
     def call
       return result.not_found_failure!(resource: "quote") unless quote
       return result.forbidden_failure! unless order_forms_enabled?(quote.organization)
+      return result.forbidden_failure!(code: "active_version_exists") if active_version_exists?
 
       quote_version = quote.versions.create!(
         organization: quote.organization,
@@ -30,6 +31,14 @@ module QuoteVersions
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique
+      result.forbidden_failure!(code: "active_version_exists")
+    end
+
+    private
+
+    def active_version_exists?
+      quote.versions.where(status: %w[draft approved]).exists?
     end
   end
 end

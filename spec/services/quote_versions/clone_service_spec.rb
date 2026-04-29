@@ -76,7 +76,7 @@ RSpec.describe QuoteVersions::CloneService do
 
       it "rejects the clone" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("inappropriate_state")
       end
     end
@@ -93,8 +93,30 @@ RSpec.describe QuoteVersions::CloneService do
 
       it "rejects the clone because the quote is locked by an approved version" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("inappropriate_state")
+      end
+    end
+
+
+    context "when an unrelated draft is the active version on the quote", :premium do
+      let!(:versions) do
+        QuoteVersion.transaction do
+          v_voided = create(:quote_version, :voided, quote:, organization:)
+          v_active = create(:quote_version, quote:, organization:)
+          [v_voided, v_active]
+        end
+      end
+      let(:quote_version) { versions.first } # cloning the older voided one
+
+      it "rejects the clone because the active version is not the source" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("inappropriate_state")
+
+        versions.last.reload
+        expect(versions.last.draft?).to eq(true)
+        expect(versions.last.voided_at).to eq(nil)
       end
     end
 

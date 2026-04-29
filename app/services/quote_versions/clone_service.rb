@@ -25,7 +25,7 @@ module QuoteVersions
     def call
       return result.not_found_failure!(resource: "quote_version") unless quote_version
       return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
-      return result.not_allowed_failure!(code: "inappropriate_state") unless clonable?
+      return result.forbidden_failure!(code: "inappropriate_state") unless clonable?
 
       cloned = QuoteVersion.transaction do
         void!(quote_version:)
@@ -38,6 +38,8 @@ module QuoteVersions
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique
+      result.forbidden_failure!(code: "active_version_exists")
     rescue CloneError => e
       result.service_failure!(code: "clone_failed", message: e.message, error: e)
     end
@@ -47,7 +49,8 @@ module QuoteVersions
     def clonable?
       return false if quote_version.quote.versions.where(status: :approved).exists?
 
-      true
+      active_draft = quote_version.quote.versions.where(status: :draft).first
+      active_draft.nil? || active_draft.id == quote_version.id
     end
 
     def create_next_version(quote_version:)
