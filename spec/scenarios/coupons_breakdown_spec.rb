@@ -1374,21 +1374,21 @@ describe "Coupons breakdown Spec", :premium do
             expect(latest_fee.pay_in_advance).to eq(true) # Pay in advance
           end
 
-          # Travel to time0 + 1 month, run subscription billing
-          # when applied forever, coupons are applied by subscription
-          # coupon usage after billing: 20$ progressive usage + 30$ subscription invoice; 3 * 5$ pay in advance invoice
+          # Travel to time0 + 1 month, run subscription billing.
+          # ISSUE-1007 sum semantics: coupon usage in period 1 across all invoices is
+          # 3 * $5 (pay_in_advance) + $20 (PB) = $35. Period budget = $50. Final invoice
+          # gets only the $15 remaining, not another $30.
           travel_to(time0 + 1.month) do
             perform_billing
 
-            # Check that invoices are generated
             customer = organization.customers.find_by(external_id: "customer-12345")
             expect(customer.invoices.count).to eq(5) # 3 pay in advance + 1 progressive_billing + 1 subscription
             progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
             subscription_invoice = progressive_subscription.invoices.order(:created_at).last
             expect(subscription_invoice.fees_amount_cents).to eq(50_00) # 30 units * $1 = $30 + subscription fee 20$
             expect(subscription_invoice.progressive_billing_credit_amount_cents).to eq(20_00)
-            expect(subscription_invoice.coupons_amount_cents).to eq(30_00)
-            expect(subscription_invoice.total_amount_cents).to eq(0)
+            expect(subscription_invoice.coupons_amount_cents).to eq(15_00) # remaining = $50 - $35 used
+            expect(subscription_invoice.total_amount_cents).to eq(15_00) # $50 - $20 PB - $15 coupon
             expect(customer.applied_coupons.first.frequency_duration_remaining).to eq(nil) # Forever
             expect(customer.applied_coupons.first.status).to eq("active")
           end
