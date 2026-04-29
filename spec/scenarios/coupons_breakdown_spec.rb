@@ -1616,4 +1616,130 @@ describe "Coupons breakdown Spec", :premium do
       expect(customer.invoices.sum(:total_amount_cents)).to eq(40_00)
     end
   end
+
+  # ISSUE-1007: the user-reported scenario. Three usage thresholds at $10, $300, $400 produce
+  # three PB invoices in one billing period. The $200 coupon must net out correctly against
+  # the period total of $450 ($50 sub fee + $400 of charges) regardless of frequency.
+  context "when there are three PB invoices in one billing period (ISSUE-1007)" do
+    def setup_three_pb_plan
+      create_metric({name: "Units", code: "bm_3pb", aggregation_type: "sum_agg", field_name: "total"})
+      bm = organization.billable_metrics.find_by(code: "bm_3pb")
+      create_plan({
+        name: "PB Plan", code: "pb_plan_3pb", interval: "monthly",
+        amount_cents: 50_00, amount_currency: "EUR", pay_in_advance: false,
+        charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: false, properties: {amount: "1"}}],
+        usage_thresholds: [
+          {amount_cents: 10_00, threshold_display_name: "first"},
+          {amount_cents: 300_00, threshold_display_name: "second"},
+          {amount_cents: 400_00, threshold_display_name: "third"}
+        ]
+      })
+      [organization.plans.find_by(code: "pb_plan_3pb"), bm]
+    end
+
+    def trigger_three_pbs(sub, bm, time0)
+      travel_to(time0 + 5.days) { ingest_event(sub, bm, 10) }
+      perform_all_enqueued_jobs
+      travel_to(time0 + 10.days) { ingest_event(sub, bm, 290) }
+      perform_all_enqueued_jobs
+      travel_to(time0 + 15.days) { ingest_event(sub, bm, 100) }
+      perform_all_enqueued_jobs
+    end
+
+    context "with a once $200 coupon" do
+      it "the customer pays $250 across PB1 + PB2 + PB3 + Final", transaction: false do
+        plan, bm = setup_three_pb_plan
+        create_coupon({
+          name: "Once 200", code: "once_200", coupon_type: "fixed_amount",
+          frequency: "once", amount_cents: 200_00, amount_currency: "EUR",
+          expiration: "no_expiration", reusable: false
+        })
+        create_or_update_customer({external_id: "c-once-3pb"})
+        apply_coupon({external_customer_id: "c-once-3pb", coupon_code: "once_200"})
+
+        time0 = DateTime.new(2025, 1, 1)
+        travel_to(time0) do
+          create_subscription({external_customer_id: "c-once-3pb", external_id: "s-once-3pb", plan_code: plan.code})
+        end
+        sub = Subscription.find_by(external_id: "s-once-3pb")
+
+        trigger_three_pbs(sub, bm, time0)
+
+        expect(sub.invoices.progressive_billing.count).to eq(3)
+        travel_to(time0 + 1.month) { perform_billing }
+
+        customer = organization.customers.find_by(external_id: "c-once-3pb")
+        # Period gross = $50 sub + $400 cumulative charges = $450. Once coupon gives $200 off.
+        expect(customer.invoices.sum(:total_amount_cents)).to eq(250_00)
+
+        applied = customer.applied_coupons.first
+        expect(applied.reload.status).to eq("terminated")
+      end
+    end
+
+    context "with a forever $200 coupon" do
+      it "the customer pays $250 in period 1 and $250 again in period 2", transaction: false do
+        plan, bm = setup_three_pb_plan
+        create_coupon({
+          name: "Forever 200", code: "forever_200", coupon_type: "fixed_amount",
+          frequency: "forever", amount_cents: 200_00, amount_currency: "EUR",
+          expiration: "no_expiration", reusable: false
+        })
+        create_or_update_customer({external_id: "c-forever-3pb"})
+        apply_coupon({external_customer_id: "c-forever-3pb", coupon_code: "forever_200"})
+
+        time0 = DateTime.new(2025, 1, 1)
+        travel_to(time0) do
+          create_subscription({external_customer_id: "c-forever-3pb", external_id: "s-forever-3pb", plan_code: plan.code})
+        end
+        sub = Subscription.find_by(external_id: "s-forever-3pb")
+
+        trigger_three_pbs(sub, bm, time0)
+        travel_to(time0 + 1.month) { perform_billing }
+        customer = organization.customers.find_by(external_id: "c-forever-3pb")
+        period1_total = customer.invoices.sum(:total_amount_cents)
+        expect(period1_total).to eq(250_00)
+
+        # Period 2: same usage; coupon must grant another $200 off.
+        trigger_three_pbs(sub, bm, time0 + 1.month)
+        travel_to(time0 + 2.months) { perform_billing }
+        period2_total = customer.invoices.sum(:total_amount_cents) - period1_total
+        expect(period2_total).to eq(250_00)
+      end
+    end
+
+    context "with a recurring $200 coupon for 1 period" do
+      it "applies $200 in period 1 only, then terminates", transaction: false do
+        plan, bm = setup_three_pb_plan
+        create_coupon({
+          name: "Recurring 200x1", code: "rec_200_1", coupon_type: "fixed_amount",
+          frequency: "recurring", amount_cents: 200_00, amount_currency: "EUR",
+          frequency_duration: 1,
+          expiration: "no_expiration", reusable: false
+        })
+        create_or_update_customer({external_id: "c-rec1-3pb"})
+        apply_coupon({external_customer_id: "c-rec1-3pb", coupon_code: "rec_200_1"})
+
+        time0 = DateTime.new(2025, 1, 1)
+        travel_to(time0) do
+          create_subscription({external_customer_id: "c-rec1-3pb", external_id: "s-rec1-3pb", plan_code: plan.code})
+        end
+        sub = Subscription.find_by(external_id: "s-rec1-3pb")
+
+        trigger_three_pbs(sub, bm, time0)
+        travel_to(time0 + 1.month) { perform_billing }
+        customer = organization.customers.find_by(external_id: "c-rec1-3pb")
+        expect(customer.invoices.sum(:total_amount_cents)).to eq(250_00)
+
+        applied = customer.applied_coupons.first
+        expect(applied.reload.status).to eq("terminated")
+
+        # Period 2: no coupon; full $450.
+        trigger_three_pbs(sub, bm, time0 + 1.month)
+        travel_to(time0 + 2.months) { perform_billing }
+        period2_total = customer.invoices.where("created_at > ?", time0 + 1.month).sum(:total_amount_cents)
+        expect(period2_total).to eq(450_00)
+      end
+    end
+  end
 end
