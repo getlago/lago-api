@@ -246,5 +246,9 @@ module Types
     field :add_quote_add_on, mutation: Mutations::Quotes::BillingItems::AddOns::Add
     field :update_quote_add_on, mutation: Mutations::Quotes::BillingItems::AddOns::Update
     field :remove_quote_add_on, mutation: Mutations::Quotes::BillingItems::AddOns::Remove
+
+    field :add_quote_coupon, mutation: Mutations::Quotes::BillingItems::Coupons::Add
+    field :update_quote_coupon, mutation: Mutations::Quotes::BillingItems::Coupons::Update
+    field :remove_quote_coupon, mutation: Mutations::Quotes::BillingItems::Coupons::Remove
   end
 end
