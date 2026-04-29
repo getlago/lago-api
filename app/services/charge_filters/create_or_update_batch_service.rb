@@ -2,6 +2,7 @@
 
 module ChargeFilters
   class CreateOrUpdateBatchService < BaseService
+    # TODO: drop `cascade_options` after Sidekiq drain — filter cascade goes through ChargeFilters::CascadeJob now.
     def initialize(charge:, filters_params:, cascade_options: {})
       @charge = charge
       @filters_params = filters_params

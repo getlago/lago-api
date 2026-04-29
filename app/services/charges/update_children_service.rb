@@ -4,6 +4,7 @@ module Charges
   class UpdateChildrenService < BaseService
     Result = BaseResult[:charge]
 
+    # TODO: drop `old_parent_filters_attrs` / `parent_filters` after Sidekiq drain — dead, filter cascade goes through ChargeFilters::CascadeJob now.
     def initialize(charge:, params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:, child_ids:)
       @charge = charge
       @params = params
