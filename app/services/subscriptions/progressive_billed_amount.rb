@@ -58,7 +58,10 @@ module Subscriptions
       result.progressive_billed_amount = result.progressive_billing_invoice.fees_amount_cents
 
       result.to_credit_amount = invoice.fees_amount_cents
-      result.to_credit_amount -= invoice.coupons_amount_cents
+      # TODO: confirm with product. It was added to avoid crediting back the coupons,
+      # but we should be able to apply these "credits" from PB invoice to normal invoice.
+      # The question is: do we want to keep the old behaviour or does it make more sense?
+      # result.to_credit_amount -= invoice.coupons_amount_cents
       result.to_credit_amount -= invoice.progressive_billing_credits.sum(:amount_cents)
       result.to_credit_amount -= invoice.credit_notes.where(credit_status: ["available", "consumed"]).sum(:credit_amount_cents)
 
