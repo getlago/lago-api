@@ -54,10 +54,10 @@ module Quotes
         quote.quote_owners.where(user_id: owners_to_remove).delete_all if owners_to_remove.any?
 
         owners_to_add = owners - current_owners
-        if owners_to_add.any?
-          now = Time.current
-          quote.quote_owners.insert_all(
-            owners_to_add.map { |user_id| {organization_id: quote.organization_id, user_id: user_id, created_at: now, updated_at: now} }
+        owners_to_add.each do |user_id|
+          quote.quote_owners.create!(
+            organization_id: quote.organization_id,
+            user_id: user_id
           )
         end
       end
