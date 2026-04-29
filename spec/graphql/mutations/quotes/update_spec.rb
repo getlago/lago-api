@@ -59,4 +59,25 @@ RSpec.describe Mutations::Quotes::Update do
       )
     end
   end
+
+  context "when quote is not found", :premium do
+    let(:input) do
+      {
+        id: "00000000-0000-0000-0000-000000000000",
+        owners: [membership.user.id]
+      }
+    end
+
+    it "returns a not found error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+
+      expect_not_found(result)
+    end
+  end
 end

@@ -61,4 +61,42 @@ RSpec.describe Mutations::QuoteVersions::Update do
       )
     end
   end
+
+  context "when quote version is not found", :premium do
+    let(:input) do
+      {
+        id: "00000000-0000-0000-0000-000000000000",
+        billingItems: {},
+        content: "Test content"
+      }
+    end
+
+    it "returns a not found error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+
+      expect_not_found(result)
+    end
+  end
+
+  context "when quote version is not in draft state", :premium do
+    let(:quote_version) { create(:quote_version, :voided, organization: membership.organization) }
+
+    it "returns a not allowed error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+
+      expect_graphql_error(result:, message: "inappropriate_state")
+    end
+  end
 end

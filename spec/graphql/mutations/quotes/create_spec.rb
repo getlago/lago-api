@@ -67,4 +67,54 @@ RSpec.describe Mutations::Quotes::Create do
       expect(quote["currentVersion"]).to eq(quote["versions"].first)
     end
   end
+
+  context "when customer is not found", :premium do
+    before { membership.organization.enable_feature_flag!(:order_forms) }
+
+    let(:input) do
+      {
+        customerId: "00000000-0000-0000-0000-000000000000",
+        orderType: "one_off",
+        content: "Test content",
+        billingItems: {}
+      }
+    end
+
+    it "returns a not found error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+
+      expect_not_found(result)
+    end
+  end
+
+  context "when subscription is required but missing", :premium do
+    before { membership.organization.enable_feature_flag!(:order_forms) }
+
+    let(:input) do
+      {
+        customerId: customer.id,
+        orderType: "subscription_amendment",
+        content: "Test content",
+        billingItems: {}
+      }
+    end
+
+    it "returns a not found error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+
+      expect_not_found(result)
+    end
+  end
 end
