@@ -106,13 +106,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
 
       it "returns the presentation breakdowns" do
         expect(result.breakdowns).to match_array([
-          {
-            groups: {},
-            breakdowns: match_array([
-              {presentation_by: {"cloud" => "aws"}, units: 1},
-              {presentation_by: {"cloud" => "gcp"}, units: 1}
-            ])
-          }
+          {groups: {"cloud" => "aws"}, value: 1},
+          {groups: {"cloud" => "gcp"}, value: 1}
         ])
       end
 
@@ -153,25 +148,10 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
 
         it "returns the presentation breakdowns per group" do
           expect(result.breakdowns).to match_array([
-            {
-              groups: {"agent_name" => "frodo"},
-              breakdowns: match_array([
-                {presentation_by: {"cloud" => "aws"}, units: 1},
-                {presentation_by: {"cloud" => "gcp"}, units: 1}
-              ])
-            },
-            {
-              groups: {"agent_name" => "aragorn"},
-              breakdowns: match_array([
-                {presentation_by: {"cloud" => "aws"}, units: 1}
-              ])
-            },
-            {
-              groups: {"agent_name" => nil},
-              breakdowns: match_array([
-                {presentation_by: {"cloud" => "gcp"}, units: 1}
-              ])
-            }
+            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 1},
+            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 1},
+            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 1},
+            {groups: {"agent_name" => nil, "cloud" => "gcp"}, value: 1}
           ])
         end
       end

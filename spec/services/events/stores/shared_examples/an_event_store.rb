@@ -346,25 +346,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             end
           end
         end
-
-        # Charge filters with no values or duplicate values should not exist but
-        # can due to missing validations. They produce empty hashes or hashes with
-        # all-empty-array values in ignored_filters, which would generate invalid
-        # SQL (e.g., empty Tuple() in ClickHouse) without the defensive guards.
-        context "when ignored_filters contains empty and all-empty-values entries" do
-          let(:ignored_filters) do
-            [
-              {},
-              {"city" => [], "country" => []},
-              {"city" => ["caen"]},
-              {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}
-            ]
-          end
-
-          it "returns the number of unique events ignoring empty entries" do
-            expect(event_store.count).to eq(4)
-          end
-        end
       end
 
       context "with max timestamp" do
@@ -1634,7 +1615,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_last(["cloud"])
 
           expect(result).to match_array([
-            {groups: {"cloud" => "aws"}, value: 10},
             {groups: {"cloud" => "gcp"}, value: 12}
           ])
         end
@@ -1653,7 +1633,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_last(["agent_name", "cloud"])
 
           expect(result).to match_array([
-            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
             {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7},
             {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3}
           ])

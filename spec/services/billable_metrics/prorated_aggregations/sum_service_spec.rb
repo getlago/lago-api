@@ -127,11 +127,11 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
     it "returns the presentation breakdowns" do
       result = sum_service.aggregate(options:)
 
-      aws = result.breakdowns.first[:breakdowns].find { |b| b[:presentation_by]["cloud"] == "aws" }
-      gcp = result.breakdowns.first[:breakdowns].find { |b| b[:presentation_by]["cloud"] == "gcp" }
+      aws = result.breakdowns.find { |b| b[:groups]["cloud"] == "aws" }
+      gcp = result.breakdowns.find { |b| b[:groups]["cloud"] == "gcp" }
 
-      expect(aws[:units]).to eq(24)
-      expect(gcp[:units]).to eq(7)
+      expect(aws[:value]).to eq(24)
+      expect(gcp[:value]).to eq(7)
     end
 
     context "with grouped_by" do
@@ -183,16 +183,13 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
       it "returns the presentation breakdowns per group" do
         result = sum_service.aggregate(options:)
 
-        aragorn = result.breakdowns.find { |b| b[:groups]["agent_name"] == "aragorn" }
-        frodo = result.breakdowns.find { |b| b[:groups]["agent_name"] == "frodo" }
+        aragorn_aws = result.breakdowns.find { |b| b[:groups] == {"agent_name" => "aragorn", "cloud" => "aws"} }
+        aragorn_gcp = result.breakdowns.find { |b| b[:groups] == {"agent_name" => "aragorn", "cloud" => "gcp"} }
+        frodo_aws = result.breakdowns.find { |b| b[:groups] == {"agent_name" => "frodo", "cloud" => "aws"} }
 
-        aragorn_aws = aragorn[:breakdowns].find { |b| b[:presentation_by]["cloud"] == "aws" }
-        aragorn_gcp = aragorn[:breakdowns].find { |b| b[:presentation_by]["cloud"] == "gcp" }
-        frodo_aws = frodo[:breakdowns].find { |b| b[:presentation_by]["cloud"] == "aws" }
-
-        expect(aragorn_aws[:units]).to eq(12)
-        expect(aragorn_gcp[:units]).to eq(7)
-        expect(frodo_aws[:units]).to eq(3)
+        expect(aragorn_aws[:value]).to eq(12)
+        expect(aragorn_gcp[:value]).to eq(7)
+        expect(frodo_aws[:value]).to eq(3)
       end
     end
   end

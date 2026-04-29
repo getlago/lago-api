@@ -396,6 +396,7 @@ module Events
 
       def grouped_last(columns = grouped_by)
         groups, column_names = grouped_arel_columns(columns)
+        distinct_on_names = grouped_by.present? ? group_names.join(", ") : nil
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
@@ -403,13 +404,24 @@ module Events
             deduplicated_columns: %w[decimal_value properties]
           )
 
-          sql = with_ctes(ctes_sql, <<-SQL)
-            SELECT
-              DISTINCT ON (#{column_names}) #{column_names},
-              property
-            FROM events
-            ORDER BY #{column_names}, events.timestamp DESC
-          SQL
+          sql = if distinct_on_names
+            with_ctes(ctes_sql, <<-SQL)
+              SELECT
+                DISTINCT ON (#{distinct_on_names}) #{column_names},
+                property
+              FROM events
+              ORDER BY #{distinct_on_names}, events.timestamp DESC
+            SQL
+          else
+            with_ctes(ctes_sql, <<-SQL)
+              SELECT
+                #{column_names},
+                property
+              FROM events
+              ORDER BY events.timestamp DESC
+              LIMIT 1
+            SQL
+          end
 
           prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
         end
@@ -672,17 +684,12 @@ module Events
           scope = scope.where("events_enriched.properties[?] IN (?)", key.to_s, values)
         end
 
-        conditions = ignored_filters.filter_map do |filters|
-          next if filters.empty?
-
-          clause = filters.filter_map do |key, values|
-            next if values.empty?
-
+        conditions = ignored_filters.map do |filters|
+          filters.map do |key, values|
             ActiveRecord::Base.sanitize_sql_for_conditions(
               ["(coalesce(events_enriched.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
             )
           end.join(" AND ")
-          clause.presence
         end
         sql = conditions.map { "(#{it})" }.join(" OR ")
         scope = scope.where.not(sql) if sql.present?
@@ -697,17 +704,12 @@ module Events
           )
         end
 
-        conditions = ignored_filters.filter_map do |filters|
-          next if filters.empty?
-
-          clause = filters.filter_map do |key, values|
-            next if values.empty?
-
+        conditions = ignored_filters.map do |filters|
+          filters.map do |key, values|
             ActiveRecord::Base.sanitize_sql_for_conditions(
               ["(coalesce(events_enriched.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
             )
           end.join(" AND ")
-          clause.presence
         end
         sql = conditions.map { "(#{it})" }.join(" OR ")
         scope = scope.where(Arel::Nodes::Not.new(Arel::Nodes::SqlLiteral.new(sql))) if conditions.present?
