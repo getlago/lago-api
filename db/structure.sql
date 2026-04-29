@@ -191,6 +191,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
+ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_56b3626631;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_5628a713de;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_533b639bac;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_52b72c9b0e;
@@ -382,6 +383,7 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on;
 DROP INDEX IF EXISTS public.index_subscriptions_on_external_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_ending_at_active;
 DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_subscription_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_organization_id;
@@ -3154,7 +3156,8 @@ CREATE TABLE public.subscriptions (
     last_received_event_on date,
     cancelation_reason public.subscription_cancelation_reasons,
     incompleted_at timestamp(6) without time zone,
-    activated_at timestamp(6) without time zone
+    activated_at timestamp(6) without time zone,
+    billing_entity_id uuid
 );
 
 
@@ -9013,6 +9016,13 @@ CREATE UNIQUE INDEX index_subscriptions_invoice_custom_sections_unique ON public
 
 
 --
+-- Name: index_subscriptions_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_on_billing_entity_id ON public.subscriptions USING btree (billing_entity_id);
+
+
+--
 -- Name: index_subscriptions_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10350,6 +10360,14 @@ ALTER TABLE ONLY public.entitlement_entitlement_values
 
 ALTER TABLE ONLY public.credits
     ADD CONSTRAINT fk_rails_5628a713de FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: subscriptions fk_rails_56b3626631; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT fk_rails_56b3626631 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
 
 
 --
@@ -11815,6 +11833,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260429133747'),
 ('20260424170418'),
 ('20260421123920'),
 ('20260421103557'),
