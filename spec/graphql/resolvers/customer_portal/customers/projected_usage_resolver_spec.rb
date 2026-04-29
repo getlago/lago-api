@@ -330,15 +330,81 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
         expect(graduated_charge_usage["presentationBreakdowns"]).to be_empty
 
         standard_charge_usage = charges_usage.find { |usage| usage["charge"]["chargeModel"] == "standard" }
-        expect(standard_charge_usage["presentationBreakdowns"]).to eq([
-          {"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}
-        ])
+        expect(standard_charge_usage["presentationBreakdowns"]).to be_empty
 
         grouped_usage = standard_charge_usage["groupedUsage"]
         expect(grouped_usage.first["presentationBreakdowns"]).to eq([
           {"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}
         ])
         expect(grouped_usage.second["presentationBreakdowns"]).to be_empty
+      end
+    end
+
+    context "with two charges without pricing_group_keys" do
+      let(:standard_charge) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          billable_metric: sum_metric,
+          properties: {
+            amount: 1.to_s,
+            presentation_group_keys: [{value: "cloud"}]
+          }
+        )
+      end
+      let(:presentation_metric) { create(:sum_billable_metric, organization:) }
+      let(:presentation_charge) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          billable_metric: presentation_metric,
+          properties: {
+            amount: "1",
+            presentation_group_keys: [{value: "cloud"}]
+          }
+        )
+      end
+
+      before do
+        presentation_charge
+        travel_to(Time.parse("2025-07-15T10:00:00Z")) do
+          create_list(
+            :event,
+            3,
+            organization:,
+            customer:,
+            subscription:,
+            code: presentation_metric.code,
+            timestamp: Time.zone.now,
+            properties: {cloud: "gcp", item_id: 1}
+          )
+        end
+      end
+
+      it "returns presentation breakdowns for both charges with no grouped_usage" do
+        travel_to(Time.parse("2025-07-15T10:00:00Z")) do
+          result = execute_graphql(
+            customer_portal_user: customer,
+            query:,
+            variables: {
+              subscriptionId: subscription.id
+            }
+          )
+
+          charges_usage = result["data"]["customerPortalCustomerProjectedUsage"]["chargesUsage"]
+          presentation_charge_usage = charges_usage.find { |u| u["billableMetric"]["code"] == presentation_metric.code }
+          sum_charge_usage = charges_usage.find { |u| u["billableMetric"]["code"] == sum_metric.code }
+
+          expect(presentation_charge_usage["groupedUsage"]).to be_empty
+          expect(presentation_charge_usage["presentationBreakdowns"]).to eq([
+            {"presentationBy" => {"cloud" => "gcp"}, "units" => "3.0"}
+          ])
+
+          expect(sum_charge_usage["groupedUsage"]).to be_empty
+          expect(sum_charge_usage["presentationBreakdowns"]).to eq([
+            {"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}
+          ])
+        end
       end
     end
   end

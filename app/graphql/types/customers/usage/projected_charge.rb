@@ -76,7 +76,7 @@ module Types
         end
 
         def presentation_breakdowns
-          Types::Fees::PresentationBreakdownBuilder.call(object)
+          Types::Fees::PresentationBreakdownBuilder.call(object, filter: Types::Fees::PresentationBreakdownBuilder::UNGROUPED)
         end
 
         private
