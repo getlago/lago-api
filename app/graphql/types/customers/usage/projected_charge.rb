@@ -76,7 +76,7 @@ module Types
         end
 
         def presentation_breakdowns
-          Types::Fees::PresentationBreakdownBuilder.call(object.select { |f| f.grouped_by.empty? })
+          Types::Fees::PresentationBreakdownBuilder.call(object, filter: Types::Fees::PresentationBreakdownBuilder::UNGROUPED)
         end
 
         private

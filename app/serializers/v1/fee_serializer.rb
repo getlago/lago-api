@@ -13,6 +13,7 @@ module V1
         lago_invoice_id: model.invoice_id,
         lago_true_up_fee_id: model.true_up_fee&.id,
         lago_true_up_parent_fee_id: model.true_up_parent_fee_id,
+        lago_original_fee_id: model.original_fee_id,
         lago_subscription_id: model.subscription_id,
         external_subscription_id: model.subscription&.external_id,
         lago_customer_id: model.customer&.id,

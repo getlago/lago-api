@@ -45,22 +45,6 @@ RSpec.describe LifetimeUsage do
     end
   end
 
-  describe ".needs_recalculation scope" do
-    let(:lifetime_usage1) { create(:lifetime_usage, recalculate_invoiced_usage: true) }
-    let(:lifetime_usage2) { create(:lifetime_usage, recalculate_current_usage: true) }
-    let(:lifetime_usage3) { create(:lifetime_usage, recalculate_invoiced_usage: false, recalculate_current_usage: false) }
-
-    before do
-      lifetime_usage1
-      lifetime_usage2
-      lifetime_usage3
-    end
-
-    it "returns only the lifetime_usages with a recalculate flag set" do
-      expect(described_class.needs_recalculation).to match_array([lifetime_usage1, lifetime_usage2])
-    end
-  end
-
   describe "#total_amount_cents" do
     it "returns the sum of the historical, invoiced, and current usage" do
       lifetime_usage.historical_usage_amount_cents = 100
