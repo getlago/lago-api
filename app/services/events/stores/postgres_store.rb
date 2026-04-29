@@ -355,14 +355,19 @@ module Events
           )
         end
 
-        conditions = ignored_filters.map do |filters|
-          filters.map do |key, values|
+        conditions = ignored_filters.filter_map do |filters|
+          next if filters.empty?
+
+          clause = filters.filter_map do |key, values|
+            next if values.empty?
+
             sanitize_sql_for_conditions(
               ["(coalesce(events.properties ->> ?, '') IN (?))", key.to_s, values.map(&:to_s)]
             )
           end.join(" AND ")
+          clause.presence
         end
-        sql = conditions.compact_blank.map { "(#{it})" }.join(" OR ")
+        sql = conditions.map { "(#{it})" }.join(" OR ")
         scope = scope.where.not(sql) if sql.present?
 
         scope

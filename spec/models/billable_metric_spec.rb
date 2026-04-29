@@ -116,4 +116,34 @@ RSpec.describe BillableMetric do
       end
     end
   end
+
+  describe "#attached_subscriptions" do
+    subject(:billable_metric) { create(:billable_metric, organization:) }
+
+    let(:organization) { create(:organization) }
+    let(:plan) { create(:plan, organization:) }
+    let(:other_plan) { create(:plan, organization:) }
+
+    it "returns subscriptions of plans that have a charge for this billable metric" do
+      create(:standard_charge, billable_metric:, plan:, organization:)
+      attached_subscription = create(:subscription, plan:, organization:)
+      create(:subscription, plan: other_plan, organization:)
+
+      expect(billable_metric.attached_subscriptions).to contain_exactly(attached_subscription)
+    end
+
+    it "returns an empty relation when no charge references the billable metric" do
+      create(:subscription, plan:, organization:)
+
+      expect(billable_metric.attached_subscriptions).to be_empty
+    end
+
+    it "returns a chainable ActiveRecord relation" do
+      create(:standard_charge, billable_metric:, plan:, organization:)
+      create(:subscription, plan:, organization:)
+      create(:subscription, :terminated, plan:, organization:)
+
+      expect(billable_metric.attached_subscriptions.active.count).to eq(1)
+    end
+  end
 end

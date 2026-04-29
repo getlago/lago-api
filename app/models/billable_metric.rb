@@ -70,8 +70,14 @@ class BillableMetric < ApplicationRecord
     %w[name code]
   end
 
-  def attached_to_subscriptions?
-    plans.joins(:subscriptions).exists?
+  def attached_subscriptions
+    Subscription.where(
+      plan_id: Charge.where(
+        billable_metric_id: id,
+        organization_id:
+      ).select(:plan_id),
+      organization_id:
+    )
   end
 
   def aggregation_type=(value)

@@ -42,11 +42,11 @@ module Types
       end
 
       def has_active_subscriptions
-        object.subscriptions.active.exists?
+        object.attached_subscriptions.active.exists?
       end
 
       def has_subscriptions
-        object.subscriptions.exists?
+        object.attached_subscriptions.exists?
       end
 
       def has_draft_invoices
