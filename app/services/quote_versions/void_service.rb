@@ -2,6 +2,8 @@
 
 module QuoteVersions
   class VoidService < BaseService
+    include OrderForms::Premium
+
     attr_reader :quote_version, :reason
 
     Result = BaseResult[:quote_version]
@@ -13,9 +15,8 @@ module QuoteVersions
     end
 
     def call
-      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "quote_version") unless quote_version
-      return result.forbidden_failure! unless quote_version.organization.feature_flag_enabled?(:order_forms)
+      return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
       return result.single_validation_failure!(field: :void_reason, error_code: "invalid") unless valid_reason?
       return result.not_allowed_failure!(code: "inappropriate_state") unless voidable?
 

@@ -2,6 +2,8 @@
 
 module Quotes
   class UpdateService < BaseService
+    include OrderForms::Premium
+
     attr_reader :quote, :params, :owners
 
     Result = BaseResult[:quote]
@@ -14,9 +16,8 @@ module Quotes
     end
 
     def call
-      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "quote") unless quote
-      return result.forbidden_failure! unless quote.organization.feature_flag_enabled?(:order_forms)
+      return result.forbidden_failure! unless order_forms_enabled?(quote.organization)
       return result.single_validation_failure!(field: :owners, error_code: "invalid") unless valid_owners?
 
       sync_owners!(quote:) if params.has_key?(:owners)

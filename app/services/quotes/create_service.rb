@@ -2,6 +2,8 @@
 
 module Quotes
   class CreateService < BaseService
+    include OrderForms::Premium
+
     attr_reader :organization, :customer, :subscription, :params, :owners
 
     Result = BaseResult[:quote]
@@ -21,7 +23,7 @@ module Quotes
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "subscription") if subscription_required? && subscription.blank?
       return result.not_found_failure!(resource: "subscription") if subscription.present? && !subscription_belongs_to_quote_scope?
-      return result.forbidden_failure! unless organization.feature_flag_enabled?(:order_forms)
+      return result.forbidden_failure! unless order_forms_enabled?(organization)
       return result.single_validation_failure!(field: :owners, error_code: "invalid") unless valid_owners?
 
       Quote.transaction do

@@ -2,6 +2,8 @@
 
 module QuoteVersions
   class UpdateService < BaseService
+    include OrderForms::Premium
+
     attr_reader :quote_version, :params
 
     Result = BaseResult[:quote_version]
@@ -13,9 +15,8 @@ module QuoteVersions
     end
 
     def call
-      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "quote_version") unless quote_version
-      return result.forbidden_failure! unless quote_version.organization.feature_flag_enabled?(:order_forms)
+      return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
       return result.not_allowed_failure!(code: "inappropriate_state") unless editable?
 
       quote_version.update!(params.slice(:billing_items, :content))
