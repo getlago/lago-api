@@ -3,12 +3,11 @@
 module QuoteVersions
   class CloneService < BaseService
     class CloneError < StandardError
-      attr_reader :cause, :error
+      attr_reader :source_result
 
-      def initialize(cause: nil, error: nil)
-        @cause = cause
-        @error = error
-        super("QuoteVersion clone failed due to #{cause.class}")
+      def initialize(source_result:)
+        @source_result = source_result
+        super("QuoteVersion clone failed: #{source_result&.error&.message}")
       end
     end
 
@@ -38,14 +37,14 @@ module QuoteVersions
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue CloneError, ActiveRecord::ActiveRecordError => e
+    rescue CloneError => e
       result.service_failure!(code: "clone_failed", message: e.message, error: e)
     end
 
     private
 
     def clonable?
-      return false if quote_version.approved?
+      return false if quote_version.quote.versions.where(status: :approved).exists?
 
       true
     end
@@ -54,7 +53,7 @@ module QuoteVersions
       quote_version.dup.tap do |cloned|
         cloned.status = :draft
         cloned.sequential_id = nil
-        cloned.share_token = nil # will be generated on saving
+        cloned.share_token = nil # regenerated on save
         cloned.void_reason = nil
         cloned.voided_at = nil
         cloned.approved_at = nil
@@ -70,7 +69,7 @@ module QuoteVersions
         reason: :superseded
       ).call
 
-      raise CloneError.new(error: void_result.error, cause: void_result) unless void_result&.success?
+      raise CloneError.new(source_result: void_result) unless void_result&.success?
     end
   end
 end

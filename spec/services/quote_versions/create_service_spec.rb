@@ -3,23 +3,16 @@
 require "rails_helper"
 
 RSpec.describe QuoteVersions::CreateService do
-  subject(:create_service) {
-    described_class.new(
-      organization:,
-      quote:,
-      params: create_params
-    )
-  }
+  subject(:create_service) do
+    described_class.new(quote:, params: create_params)
+  end
 
   let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
   let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
-  let(:create_params) {
-    {
-      billing_items: {},
-      content: "Test content"
-    }
-  }
+  let(:create_params) do
+    {billing_items: {}, content: "Test content"}
+  end
 
   describe ".call" do
     let(:result) { create_service.call }
@@ -37,18 +30,6 @@ RSpec.describe QuoteVersions::CreateService do
       end
     end
 
-    context "when organization does not exist", :premium do
-      let(:organization) { nil }
-      let(:customer) { create(:customer) }
-      let(:quote) { create(:quote) }
-
-      it "returns a not found error" do
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(result.error.message).to eq("organization_not_found")
-      end
-    end
-
     context "when quote does not exist", :premium do
       let(:quote) { nil }
 
@@ -60,6 +41,16 @@ RSpec.describe QuoteVersions::CreateService do
     end
 
     context "when license is not premium" do
+      it "returns forbidden status" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("feature_unavailable")
+      end
+    end
+
+    context "when feature flag is disabled", :premium do
+      let(:organization) { create(:organization) }
+
       it "returns forbidden status" do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)

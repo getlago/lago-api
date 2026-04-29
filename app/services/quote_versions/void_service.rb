@@ -16,7 +16,7 @@ module QuoteVersions
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "quote_version") unless quote_version
       return result.forbidden_failure! unless quote_version.organization.feature_flag_enabled?(:order_forms)
-      return result.validation_failure!(errors: {quote_version: ["invalid_void_reason"]}) unless valid_reason?(reason:)
+      return result.single_validation_failure!(field: :void_reason, error_code: "invalid") unless valid_reason?
       return result.not_allowed_failure!(code: "inappropriate_state") unless voidable?
 
       quote_version.update!(
@@ -33,17 +33,15 @@ module QuoteVersions
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue ActiveRecord::ActiveRecordError => e
-      result.service_failure!(code: "void_failed", message: e.message, error: e)
     end
 
     private
 
     def voidable?
-      quote_version.approved? || quote_version.draft?
+      quote_version.draft?
     end
 
-    def valid_reason?(reason:)
+    def valid_reason?
       return false if reason.blank?
 
       QuoteVersion::VOID_REASONS.has_key?(reason.to_s.to_sym)

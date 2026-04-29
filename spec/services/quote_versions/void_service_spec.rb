@@ -13,7 +13,7 @@ RSpec.describe QuoteVersions::VoidService do
     let(:result) { void_service.call }
 
     context "when quote is voidable", :premium do
-      it "voides the quote" do
+      it "voids the quote version" do
         freeze_time do
           expect(result).to be_success
           expect(result.quote_version.voided?).to eq(true)
@@ -25,10 +25,20 @@ RSpec.describe QuoteVersions::VoidService do
       end
     end
 
+    context "when quote version is approved", :premium do
+      let(:quote_version) { create(:quote_version, :approved, organization:) }
+
+      it "is not voidable" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("inappropriate_state")
+      end
+    end
+
     context "when quote isn't voidable", :premium do
       let(:quote_version) { create(:quote_version, :voided, organization:) }
 
-      it "returns validation failure" do
+      it "returns method not allowed" do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         expect(result.error.code).to eq("inappropriate_state")
@@ -42,7 +52,7 @@ RSpec.describe QuoteVersions::VoidService do
         it "returns validation failure" do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:quote_version]).to eq(["invalid_void_reason"])
+          expect(result.error.messages[:void_reason]).to eq(["invalid"])
         end
       end
 
@@ -52,7 +62,7 @@ RSpec.describe QuoteVersions::VoidService do
         it "returns validation failure" do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:quote_version]).to eq(["invalid_void_reason"])
+          expect(result.error.messages[:void_reason]).to eq(["invalid"])
         end
       end
     end

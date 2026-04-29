@@ -2,16 +2,6 @@
 
 module Quotes
   class CreateService < BaseService
-    class CreateError < StandardError
-      attr_reader :cause, :error
-
-      def initialize(cause: nil, error: nil)
-        @cause = cause
-        @error = error
-        super("Quote creation failed due to #{cause.class}")
-      end
-    end
-
     attr_reader :organization, :customer, :subscription, :params, :owners
 
     Result = BaseResult[:quote]
@@ -30,28 +20,18 @@ module Quotes
       return result.not_found_failure!(resource: "organization") unless organization
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "subscription") if subscription_required? && subscription.blank?
+      return result.not_found_failure!(resource: "subscription") if subscription.present? && !subscription_belongs_to_quote_scope?
       return result.forbidden_failure! unless organization.feature_flag_enabled?(:order_forms)
-      return result.validation_failure!(errors: {quotes: ["invalid_owner"]}) unless check_owners(owners:)
-
-      quote_create_params = params.slice(
-        :order_type
-      )
-      quote_version_create_params = params.slice(
-        :billing_items,
-        :content
-      )
+      return result.single_validation_failure!(field: :owners, error_code: "invalid") unless valid_owners?
 
       Quote.transaction do
         quote = organization.quotes.create!(
           customer:,
           subscription:,
-          **quote_create_params
+          **params.slice(:order_type)
         )
-        initialize_version!(
-          quote:,
-          version_params: quote_version_create_params
-        )
-        add_owners!(quote:, owners:)
+        initialize_version!(quote:)
+        add_owners!(quote:)
         result.quote = quote
       end
 
@@ -60,8 +40,6 @@ module Quotes
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue CreateError, ActiveRecord::ActiveRecordError => e
-      result.service_failure!(code: "create_failed", message: e.message, error: e)
     end
 
     private
@@ -70,32 +48,31 @@ module Quotes
       params[:order_type].to_s == "subscription_amendment"
     end
 
-    def check_owners(owners:)
+    def subscription_belongs_to_quote_scope?
+      subscription.organization_id == organization.id && subscription.customer_id == customer.id
+    end
+
+    def valid_owners?
       return true if owners.blank?
 
-      valid_owners = organization.memberships.active.pluck(:user_id)
-      invalid_owners = owners - valid_owners
-      return false if invalid_owners.any?
-
-      true
+      known = organization.memberships.active.where(user_id: owners).pluck(:user_id)
+      (owners - known).empty?
     end
 
-    def initialize_version!(quote:, version_params: {})
-      create_result = QuoteVersions::CreateService.new(
-        organization: quote.organization,
+    def initialize_version!(quote:)
+      QuoteVersions::CreateService.call!(
         quote: quote,
-        params: version_params
-      ).call
-
-      raise CreateError.new(error: create_result.error, cause: create_result) unless create_result&.success?
+        params: params.slice(:billing_items, :content)
+      )
     end
 
-    def add_owners!(quote:, owners:)
+    def add_owners!(quote:)
       return if owners.blank?
 
-      owners.each do |user_id|
-        quote.quote_owners.create!(organization:, user_id:)
-      end
+      now = Time.current
+      quote.quote_owners.insert_all(
+        owners.map { |user_id| {organization_id: organization.id, user_id: user_id, created_at: now, updated_at: now} }
+      )
     end
 
     def normalize_owners(owners:)
