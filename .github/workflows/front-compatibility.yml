@@ -18,14 +18,15 @@ name: Front compatibility (post-merge alert)
 # change.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'schema.graphql'
-  # Manual dispatch for testing: lets you point the check at any
-  # lago-front ref. Useful for verifying both directions — a branch you
-  # expect to pass, and one you've intentionally broken (e.g. by removing
-  # an enum case from useActivityLogsInformation.ts) to see the failure.
+  # Initial rollout is manual-only. Once we've validated the workflow
+  # works as expected via a few `workflow_dispatch` runs, a follow-up
+  # PR will add the automatic trigger:
+  #
+  #   push:
+  #     branches: [main]
+  #     paths: ['schema.graphql']
+  #
+  # which fires on any merge to main that actually modifies the schema.
   workflow_dispatch:
     inputs:
       front_ref:
