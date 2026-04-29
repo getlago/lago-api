@@ -67,4 +67,20 @@ RSpec.describe Resolvers::QuoteResolver do
     expect(response.dig("currentVersion", "status")).to eq(quote.current_version.status)
     expect(response.dig("currentVersion", "version")).to eq(quote.current_version.version)
   end
+
+  context "when the quote is not found" do
+    it "returns a not found error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          quoteId: "00000000-0000-0000-0000-000000000000"
+        }
+      )
+
+      expect_not_found(result)
+    end
+  end
 end
