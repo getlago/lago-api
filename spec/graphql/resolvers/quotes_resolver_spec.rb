@@ -49,6 +49,34 @@ RSpec.describe Resolvers::QuotesResolver do
     end
   end
 
+  context "with pagination" do
+    let(:query) do
+      <<~GQL
+        query {
+          quotes(page: 2, limit: 2) {
+            collection { id }
+            metadata { currentPage, totalCount, totalPages }
+          }
+        }
+      GQL
+    end
+
+    it "applies the pagination" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      response = result.dig("data", "quotes")
+      expect(response.dig("collection").count).to eq(1)
+      expect(response.dig("metadata", "currentPage")).to eq(2)
+      expect(response.dig("metadata", "totalPages")).to eq(2)
+      expect(response.dig("metadata", "totalCount")).to eq(3)
+    end
+  end
+
   context "when filtering by customer" do
     let(:other_customer) { create(:customer, organization:) }
     let!(:other_quote) { create(:quote, organization:, customer: other_customer) }

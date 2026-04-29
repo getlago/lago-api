@@ -3,8 +3,8 @@
 module Types
   module QuoteVersions
     class VoidReasonEnum < Types::BaseEnum
-      QuoteVersion::VOID_REASONS.keys.each do |status|
-        value status
+      QuoteVersion::VOID_REASONS.keys.each do |reason|
+        value reason
       end
     end
   end
