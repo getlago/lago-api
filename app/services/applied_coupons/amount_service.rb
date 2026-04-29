@@ -30,15 +30,14 @@ module AppliedCoupons
         return (discounted_value >= base_amount_cents) ? base_amount_cents : discounted_value.round
       end
 
-      if applied_coupon.recurring? || applied_coupon.forever?
-        return base_amount_cents if applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice:) > base_amount_cents
-
+      remaining_amount = if applied_coupon.recurring? || applied_coupon.forever?
         applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice:)
       else
-        return base_amount_cents if applied_coupon.remaining_amount > base_amount_cents
-
         applied_coupon.remaining_amount
       end
+      return base_amount_cents if remaining_amount > base_amount_cents
+
+      remaining_amount
     end
   end
 end
