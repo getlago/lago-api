@@ -99,10 +99,28 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
       expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end
 
-    it "enqueues GenerateDocumentsJob" do
+    it "enqueues GenerateDocumentsJob with notify false" do
       result
 
       expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.with(invoice:, notify: false)
+    end
+
+    context "with lago_premium", :premium do
+      it "enqueues GenerateDocumentsJob with notify true" do
+        result
+
+        expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.with(invoice:, notify: true)
+      end
+
+      context "when billing entity does not have invoice.finalized email setting" do
+        before { invoice.billing_entity.update!(email_settings: []) }
+
+        it "enqueues GenerateDocumentsJob with notify false" do
+          result
+
+          expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.with(invoice:, notify: false)
+        end
+      end
     end
 
     it "tracks invoice creation in segment" do
