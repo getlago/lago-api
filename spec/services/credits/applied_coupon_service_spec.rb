@@ -115,7 +115,7 @@ RSpec.describe Credits::AppliedCouponService do
 
         context "when applied coupon is recurring" do
           let(:coupon) { create(:coupon, frequency: "recurring", frequency_duration: 3) }
-          let(:applied_coupon) { create(:applied_coupon, customer:, coupon:, frequency: "recurring", frequency_duration_remaining: 1) }
+          let(:applied_coupon) { create(:applied_coupon, customer:, coupon:, frequency: "recurring", frequency_duration: 3, frequency_duration_remaining: 1) }
 
           context "when invoice is for subscription" do
             it "reduces frequency_duration" do

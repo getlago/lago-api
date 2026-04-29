@@ -2893,8 +2893,8 @@ RSpec.describe Invoices::CalculateFeesService do
     end
 
     context "when customer has applied recurring coupon" do
-      let(:coupon) { create(:coupon, organization:, coupon_type: "fixed_amount", amount_cents: 100, frequency: "recurring") }
-      let(:applied_coupon) { create(:applied_coupon, customer:, coupon:, frequency: "recurring", frequency_duration_remaining: 3) }
+      let(:coupon) { create(:coupon, organization:, coupon_type: "fixed_amount", amount_cents: 100, frequency: "recurring", frequency_duration: 3) }
+      let(:applied_coupon) { create(:applied_coupon, customer:, coupon:, frequency: "recurring", frequency_duration: 3, frequency_duration_remaining: 3) }
 
       before { applied_coupon }
 
@@ -2944,7 +2944,7 @@ RSpec.describe Invoices::CalculateFeesService do
       end
 
       context "when applied_coupon has frequency_duration_remaining of 1" do
-        let(:applied_coupon) { create(:applied_coupon, customer:, coupon:, frequency_duration_remaining: 1, frequency: "recurring") }
+        let(:applied_coupon) { create(:applied_coupon, customer:, coupon:, frequency: "recurring", frequency_duration: 1, frequency_duration_remaining: 1) }
 
         it "reduces frequency_duration and marks coupon as terminated" do
           expect { invoice_service.call }.to change { applied_coupon.reload.frequency_duration_remaining }.by(-1)
