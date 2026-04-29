@@ -4,7 +4,7 @@ class AddQuotes < ActiveRecord::Migration[8.0]
   def change
     create_enum :quote_status, %w[draft approved voided]
     create_enum :quote_void_reason, %w[manual superseded cascade_of_expired cascade_of_voided]
-    create_enum :order_type, %w[subscription_creation subscription_amendment one_off]
+    create_enum :quote_order_type, %w[subscription_creation subscription_amendment one_off]
 
     create_table :quotes, id: :uuid do |t|
       t.references :organization,
@@ -22,7 +22,7 @@ class AddQuotes < ActiveRecord::Migration[8.0]
       t.string :number, null: false
       t.integer :sequential_id, null: false
       t.enum :order_type,
-        enum_type: :order_type,
+        enum_type: :quote_order_type,
         null: false
       t.timestamps
 

@@ -1132,10 +1132,10 @@ DROP TYPE IF EXISTS public.subscription_activation_rule_types;
 DROP TYPE IF EXISTS public.subscription_activation_rule_statuses;
 DROP TYPE IF EXISTS public.quote_void_reason;
 DROP TYPE IF EXISTS public.quote_status;
+DROP TYPE IF EXISTS public.quote_order_type;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
-DROP TYPE IF EXISTS public.order_type;
 DROP TYPE IF EXISTS public.invoice_settlement_settlement_type;
 DROP TYPE IF EXISTS public.invoice_custom_section_type;
 DROP TYPE IF EXISTS public.inbound_webhook_status;
@@ -1317,17 +1317,6 @@ CREATE TYPE public.invoice_settlement_settlement_type AS ENUM (
 
 
 --
--- Name: order_type; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.order_type AS ENUM (
-    'subscription_creation',
-    'subscription_amendment',
-    'one_off'
-);
-
-
---
 -- Name: payment_method_types; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1356,6 +1345,17 @@ CREATE TYPE public.payment_payable_payment_status AS ENUM (
 CREATE TYPE public.payment_type AS ENUM (
     'provider',
     'manual'
+);
+
+
+--
+-- Name: quote_order_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.quote_order_type AS ENUM (
+    'subscription_creation',
+    'subscription_amendment',
+    'one_off'
 );
 
 
@@ -4754,7 +4754,7 @@ CREATE TABLE public.quotes (
     subscription_id uuid,
     number character varying NOT NULL,
     sequential_id integer NOT NULL,
-    order_type public.order_type NOT NULL,
+    order_type public.quote_order_type NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     CONSTRAINT quotes_constraint_sequential_id_positive CHECK ((sequential_id > 0))
