@@ -139,6 +139,32 @@ RSpec.describe Credits::CreditNoteService do
       end
     end
 
+    context "when credit notes have a different currency than the invoice" do
+      let(:credit_note_usd) do
+        create(
+          :credit_note,
+          total_amount_cents: 30,
+          total_amount_currency: "USD",
+          balance_amount_cents: 30,
+          balance_amount_currency: "USD",
+          credit_amount_cents: 30,
+          credit_amount_currency: "USD",
+          customer:
+        )
+      end
+
+      before { credit_note_usd }
+
+      it "only applies credit notes matching the invoice currency" do
+        result = credit_service.call
+
+        expect(result).to be_success
+        expect(result.credits.count).to eq(2)
+        expect(result.credits.map(&:credit_note)).to match_array([credit_note1, credit_note2])
+        expect(credit_note_usd.reload.balance_amount_cents).to eq(30)
+      end
+    end
+
     context "when credit amount is higher than invoice amount" do
       let(:amount_cents) { 10 }
 

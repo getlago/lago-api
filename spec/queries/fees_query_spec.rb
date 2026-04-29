@@ -178,6 +178,34 @@ RSpec.describe FeesQuery do
         expect(result).to be_success
         expect(result.fees.count).to eq(1)
       end
+
+      context "when regenerated fees exist" do
+        let!(:regenerated_fee) do
+          create(:fee, subscription:, organization:, pay_in_advance_event_transaction_id: "transaction-id")
+        end
+
+        it "includes both the original and the regenerated fee" do
+          result = fees_query.call
+
+          expect(result).to be_success
+          expect(result.fees.count).to eq(2)
+          expect(result.fees).to include(fee, regenerated_fee)
+        end
+
+        context "when multiple void/regenerate cycles occur" do
+          let!(:second_regenerated_fee) do
+            create(:fee, subscription:, organization:, pay_in_advance_event_transaction_id: "transaction-id")
+          end
+
+          it "includes all fees in the chain" do
+            result = fees_query.call
+
+            expect(result).to be_success
+            expect(result.fees.count).to eq(3)
+            expect(result.fees).to match_array([fee, regenerated_fee, second_regenerated_fee])
+          end
+        end
+      end
     end
 
     context "with created_at filters" do
