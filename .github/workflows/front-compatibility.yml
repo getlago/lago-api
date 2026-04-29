@@ -22,6 +22,16 @@ on:
     branches: [main]
     paths:
       - 'schema.graphql'
+  # Manual dispatch for testing: lets you point the check at any
+  # lago-front ref. Useful for verifying both directions — a branch you
+  # expect to pass, and one you've intentionally broken (e.g. by removing
+  # an enum case from useActivityLogsInformation.ts) to see the failure.
+  workflow_dispatch:
+    inputs:
+      front_ref:
+        description: 'lago-front ref to type-check against (branch, tag, or SHA)'
+        required: false
+        default: 'main'
 
 jobs:
   front-typecheck:
@@ -34,11 +44,13 @@ jobs:
         with:
           path: api
 
-      - name: Checkout lago-front main
+      - name: Checkout lago-front
         uses: actions/checkout@v6
         with:
           repository: getlago/lago-front
-          ref: main
+          # On scheduled push runs, always check main. On manual dispatch,
+          # use whatever ref the operator chose (defaults to main).
+          ref: ${{ github.event.inputs.front_ref || 'main' }}
           path: front
 
       - name: Set up pnpm
