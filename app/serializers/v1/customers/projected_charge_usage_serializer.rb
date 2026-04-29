@@ -16,7 +16,7 @@ module V1
             billable_metric: billable_metric_data(fee),
             filters: cached_filters(fees),
             grouped_usage: cached_grouped_usage(fees),
-            presentation_breakdowns: PresentationBreakdownSerializer.call(fees)
+            presentation_breakdowns: PresentationBreakdownBuilder.call(fees, filter: PresentationBreakdownBuilder::UNGROUPED)
           }
         end
       end
@@ -210,7 +210,7 @@ module V1
           **usage_data.except(:amount_currency),
           grouped_by: grouped_fees.first.grouped_by,
           filters: filters(grouped_fees),
-          presentation_breakdowns: PresentationBreakdownSerializer.call(grouped_fees)
+          presentation_breakdowns: PresentationBreakdownBuilder.call(grouped_fees, filter: PresentationBreakdownBuilder::GROUPED)
         }
       end
 
