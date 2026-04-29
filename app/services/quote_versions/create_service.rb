@@ -2,6 +2,8 @@
 
 module QuoteVersions
   class CreateService < BaseService
+    include OrderForms::Premium
+
     attr_reader :quote, :params
 
     Result = BaseResult[:quote_version]
@@ -13,9 +15,8 @@ module QuoteVersions
     end
 
     def call
-      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "quote") unless quote
-      return result.forbidden_failure! unless quote.organization.feature_flag_enabled?(:order_forms)
+      return result.forbidden_failure! unless order_forms_enabled?(quote.organization)
 
       quote_version = quote.versions.create!(
         organization: quote.organization,
