@@ -10466,7 +10466,7 @@ type Query {
   """
   Query quotes of an organization
   """
-  quotes(customers: [ID!], fromDate: ISO8601Date, limit: Int, numbers: [String!], owners: [ID!], page: Int, statuses: [StatusEnum!], toDate: ISO8601Date): QuoteCollection!
+  quotes(customers: [ID!], fromDate: ISO8601Date, limit: Int, numbers: [String!], orderType: [OrderTypeEnum!], owners: [ID!], page: Int, statuses: [StatusEnum!], toDate: ISO8601Date): QuoteCollection!
 
   """
   Query a single role

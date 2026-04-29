@@ -17,6 +17,9 @@ module Queries
       optional(:owners).maybe do
         array(:string, format?: Regex::UUID)
       end
+      optional(:order_type).maybe do
+        array(:string, included_in?: Quote::ORDER_TYPES.values)
+      end
     end
   end
 end
