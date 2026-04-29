@@ -47,6 +47,8 @@ module Invoices
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
+        skip_payment_gating_for_zero_amount if subscription.gated? && invoice.total_amount_cents.zero?
+
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)
         invoice.save!
@@ -84,6 +86,14 @@ module Invoices
 
     attr_reader :subscription, :timestamp, :customer, :organization
     attr_accessor :invoice
+
+    def skip_payment_gating_for_zero_amount
+      Subscriptions::ActivationRules::Payment::EvaluateService.call!(
+        rule: subscription.activation_rules.payment.sole,
+        status: :satisfied
+      )
+      Subscriptions::ActivationRules::ResolveSubscriptionStatusService.call!(subscription:)
+    end
 
     def fixed_charge_events
       @fixed_charge_events ||= subscription
