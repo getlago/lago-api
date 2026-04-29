@@ -61,9 +61,19 @@ jobs:
           # use whatever ref the operator chose (defaults to main).
           ref: ${{ github.event.inputs.front_ref || 'main' }}
           path: front
+          # Default fetch-depth is 1, which only resolves named refs and
+          # full 40-char SHAs. Setting 0 fetches full history so
+          # operators can paste short SHAs (e.g. `74b4f669`) into the
+          # dispatch input without it failing the fetch step.
+          fetch-depth: 0
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
+        with:
+          # lago-front declares its pnpm version in `packageManager`.
+          # Point the action at front's package.json so the version
+          # tracks whatever lago-front pins, no manual upkeep here.
+          package_json_file: front/package.json
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
