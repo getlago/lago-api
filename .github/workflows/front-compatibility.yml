@@ -29,8 +29,12 @@ on:
   # which fires on any merge to main that actually modifies the schema.
   workflow_dispatch:
     inputs:
+      api_ref:
+        description: 'lago-api ref — schema.graphql is taken from this commit (branch, tag, or SHA)'
+        required: false
+        default: 'main'
       front_ref:
-        description: 'lago-front ref to type-check against (branch, tag, or SHA)'
+        description: 'lago-front ref to type-check (branch, tag, or SHA)'
         required: false
         default: 'main'
 
@@ -43,6 +47,10 @@ jobs:
       - name: Checkout lago-api (this repo, the new schema)
         uses: actions/checkout@v6
         with:
+          # On push (auto-trigger, once enabled): defaults to the SHA
+          # that triggered the workflow — i.e. the merge commit on main.
+          # On manual dispatch: uses whatever ref the operator chose.
+          ref: ${{ github.event.inputs.api_ref || github.sha }}
           path: api
 
       - name: Checkout lago-front
