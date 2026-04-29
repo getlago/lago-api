@@ -71,10 +71,9 @@ module Quotes
     def add_owners!(quote:)
       return if owners.blank?
 
-      now = Time.current
-      quote.quote_owners.insert_all(
-        owners.map { |user_id| {organization_id: organization.id, user_id: user_id, created_at: now, updated_at: now} }
-      )
+      owners.each do |user_id|
+        quote.quote_owners.create!(organization:, user_id:)
+      end
     end
 
     def normalize_owners(owners:)
