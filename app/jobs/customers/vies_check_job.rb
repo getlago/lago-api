@@ -32,6 +32,11 @@ module Customers
     end
 
     def enqueue_pending_invoice_finalization(customer)
+      # status :open + tax_status :pending only occurs for gated invoices —
+      # EnsureCompletedViesCheckService keeps gated VIES-blocked invoices :open
+      # instead of transitioning them to :pending — so adding :open to the
+      # status set is enough to pick up gated cases without an explicit
+      # subscription_gated? check.
       customer.invoices
         .where(status: %i[pending open], tax_status: :pending)
         .find_each do |invoice|
