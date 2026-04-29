@@ -256,4 +256,58 @@ RSpec.describe Resolvers::QuotesResolver do
       expect(response.dig("metadata", "totalCount")).to eq(1)
     end
   end
+
+  context "with N+1 query detection", :with_bullet do
+    let(:query) do
+      <<~GQL
+        query {
+          quotes(limit: 10) {
+            collection {
+              id
+              customer { id }
+              organization { id }
+              subscription { id }
+              owners { id }
+              versions { id quote { id } organization { id } }
+              currentVersion { id quote { id } organization { id } }
+            }
+            metadata { totalCount }
+          }
+        }
+      GQL
+    end
+
+    let(:other_user) { create(:user) }
+    let(:subscription) { create(:subscription, organization:, customer:) }
+
+    before do
+      Quote.destroy_all
+      3.times do |i|
+        quote_customer = i.zero? ? customer : create(:customer, organization:)
+        quote = create(
+          :quote,
+          organization:,
+          customer: quote_customer,
+          subscription:,
+          order_type: :subscription_amendment
+        )
+        QuoteOwner.create!(organization:, quote:, user: membership.user)
+        QuoteOwner.create!(organization:, quote:, user: other_user)
+        create(:quote_version, :voided, organization:, quote:)
+        create(:quote_version, organization:, quote:)
+      end
+    end
+
+    it "does not trigger N+1 queries" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result.dig("data", "quotes", "collection").length).to eq(3)
+    end
+  end
 end

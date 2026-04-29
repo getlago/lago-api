@@ -83,4 +83,47 @@ RSpec.describe Resolvers::QuoteResolver do
       expect_not_found(result)
     end
   end
+
+  context "with N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    let(:other_user) { create(:user) }
+    let(:subscription) { create(:subscription, organization:, customer:) }
+    let(:quote) { create(:quote, organization:, customer:, subscription:, order_type: :subscription_amendment) }
+
+    let(:query) do
+      <<~GQL
+        query($quoteId: ID!) {
+          quote(id: $quoteId) {
+            id
+            customer { id }
+            organization { id }
+            subscription { id }
+            owners { id }
+            versions { id quote { id } organization { id } }
+            currentVersion { id quote { id } organization { id } }
+          }
+        }
+      GQL
+    end
+
+    before do
+      quote
+      QuoteOwner.create!(organization:, quote:, user: membership.user)
+      QuoteOwner.create!(organization:, quote:, user: other_user)
+      create(:quote_version, :voided, organization:, quote:)
+      create(:quote_version, organization:, quote:)
+    end
+
+    it "does not trigger N+1 queries" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {quoteId: quote.id}
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result.dig("data", "quote", "id")).to eq(quote.id)
+    end
+  end
 end
