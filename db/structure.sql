@@ -151,6 +151,7 @@ ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_7886e1bc34;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_77f2d4440d;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_778360c382;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_775eb0ecd8;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_76ceb88c74;
 ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS fk_rails_755d734f25;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_75577c354e;
@@ -569,6 +570,7 @@ DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_true_up_parent_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_fees_on_pay_in_advance_event_transaction_id;
+DROP INDEX IF EXISTS public.index_fees_on_original_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_on_invoiceable;
 DROP INDEX IF EXISTS public.index_fees_on_invoice_id;
@@ -581,6 +583,7 @@ DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
+DROP INDEX IF EXISTS public.index_events_on_organization_id_and_created_at;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_events_on_organization_id;
 DROP INDEX IF EXISTS public.index_events_on_created_at;
@@ -3089,7 +3092,8 @@ CREATE TABLE public.fees (
     billing_entity_id uuid NOT NULL,
     precise_credit_notes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     fixed_charge_id uuid,
-    duplicated_in_advance boolean DEFAULT false
+    duplicated_in_advance boolean DEFAULT false,
+    original_fee_id uuid
 );
 
 
@@ -6383,14 +6387,14 @@ CREATE INDEX idx_on_wallet_transaction_id_ac2826109e ON public.wallet_transactio
 -- Name: idx_pay_in_advance_duplication_guard_charge; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false));
+CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL));
 
 
 --
 -- Name: idx_pay_in_advance_duplication_guard_charge_filter; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge_filter ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id, charge_filter_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false));
+CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge_filter ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id, charge_filter_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL));
 
 
 --
@@ -7595,6 +7599,13 @@ CREATE INDEX index_events_on_organization_id_and_code ON public.events USING btr
 
 
 --
+-- Name: index_events_on_organization_id_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_organization_id_and_created_at ON public.events USING btree (organization_id, created_at DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_fees_on_add_on_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7676,6 +7687,13 @@ CREATE INDEX index_fees_on_invoiceable ON public.fees USING btree (invoiceable_t
 --
 
 CREATE INDEX index_fees_on_organization_id ON public.fees USING btree (organization_id);
+
+
+--
+-- Name: index_fees_on_original_fee_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_original_fee_id ON public.fees USING btree (original_fee_id);
 
 
 --
@@ -8774,7 +8792,7 @@ CREATE INDEX index_plans_taxes_on_tax_id ON public.plans_taxes USING btree (tax_
 -- Name: index_presentation_breakdowns_on_fee_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_presentation_breakdowns_on_fee_id ON public.presentation_breakdowns USING btree (fee_id);
+CREATE INDEX index_presentation_breakdowns_on_fee_id ON public.presentation_breakdowns USING btree (fee_id);
 
 
 --
@@ -10647,6 +10665,14 @@ ALTER TABLE ONLY public.commitments
 
 
 --
+-- Name: fees fk_rails_775eb0ecd8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_775eb0ecd8 FOREIGN KEY (original_fee_id) REFERENCES public.fees(id);
+
+
+--
 -- Name: refunds fk_rails_778360c382; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11789,6 +11815,11 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424170418'),
+('20260421123920'),
+('20260421103557'),
+('20260421021503'),
+('20260421013319'),
 ('20260420114717'),
 ('20260416124233'),
 ('20260416124232'),

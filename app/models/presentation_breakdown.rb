@@ -20,7 +20,7 @@ end
 #
 # Indexes
 #
-#  index_presentation_breakdowns_on_fee_id           (fee_id) UNIQUE
+#  index_presentation_breakdowns_on_fee_id           (fee_id)
 #  index_presentation_breakdowns_on_organization_id  (organization_id)
 #
 # Foreign Keys

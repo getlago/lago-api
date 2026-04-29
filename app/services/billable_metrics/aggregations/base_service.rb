@@ -7,6 +7,7 @@ module BillableMetrics
         :aggregator, # Aggregator instance, used in some charge models
         :aggregations, # Array of aggregation result when in a grouped by scenario
         :aggregation, # Aggregation result computed using the event store
+        :breakdowns, # Array of breakdowns when presentation_by is used
         :grouped_by, # Pricing group keys applied to this aggregation result
         :current_usage_units, # Number of aggregated units when computing the current usage
         :count, # Number of events used to compute the aggregation
@@ -33,9 +34,9 @@ module BillableMetrics
       ]
       PerEventAggregationResult = BaseResult[:event_aggregation]
 
-      def self.null_result(result = BaseService::Result.new, grouped_by_keys: nil, apply_aggregation: false)
+      def self.null_result(result, grouped_by_keys: nil, apply_aggregation: false)
         if apply_aggregation && grouped_by_keys.present?
-          result.aggregations = [null_result(grouped_by_keys: grouped_by_keys)]
+          result.aggregations = [null_result(BaseService::Result.new, grouped_by_keys: grouped_by_keys)]
         else
           result.grouped_by = grouped_by_keys.index_with { nil } if grouped_by_keys
           result.aggregation = 0
@@ -57,6 +58,8 @@ module BillableMetrics
         @event = filters[:event]
         @grouped_by = filters[:grouped_by]
         @grouped_by_values = filters[:grouped_by_values]
+        @presentation_by = filters[:presentation_by]
+        @uniq_grouped_by_and_presentation_by = ((grouped_by || []) + (presentation_by || [])).uniq
 
         @boundaries = boundaries
 
@@ -114,6 +117,13 @@ module BillableMetrics
         end
       end
 
+      # Exposes a null result that carries this aggregator instance, so downstream charge models
+      # can dispatch `per_event_aggregation` through the real aggregator rather than nil.
+      def empty_results
+        self.class.null_result(result, grouped_by_keys: grouped_by, apply_aggregation: true)
+        result
+      end
+
       protected
 
       attr_accessor :event_store_class,
@@ -125,7 +135,9 @@ module BillableMetrics
         :boundaries,
         :grouped_by,
         :grouped_by_values,
-        :bypass_aggregation
+        :presentation_by,
+        :bypass_aggregation,
+        :uniq_grouped_by_and_presentation_by
 
       delegate :billable_metric, to: :charge
 
@@ -193,11 +205,6 @@ module BillableMetrics
 
       def empty_result
         self.class.null_result(result)
-      end
-
-      def empty_results
-        self.class.null_result(result, grouped_by_keys: grouped_by, apply_aggregation: true)
-        result
       end
 
       # This method fetches the latest cached aggregation in current period. If such a record exists we know that

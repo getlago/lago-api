@@ -102,4 +102,101 @@ namespace :customers do
       Customers::TerminateRelationsService.call(customer: cust)
     end
   end
+
+  desc "Backfill EU auto-taxes for customers whose applied lago_eu_XX_standard no longer matches customers.country"
+  task :backfill_eu_auto_taxes, [:organization_id] => :environment do |_task, args|
+    organization_id = args[:organization_id]
+    abort "Missing organization_id argument\n\nUsage: rake customers:backfill_eu_auto_taxes[organization_id]" if organization_id.blank?
+
+    batch_size = (ENV["BATCH_SIZE"] || 500).to_i
+    abort "BATCH_SIZE must be positive" if batch_size <= 0
+
+    dry_run = ENV.fetch("DRY_RUN", "true") != "false"
+    mode = dry_run ? "DRY RUN" : "LIVE"
+
+    total_processed = 0
+    counters = {reapply: 0, vies_pending: 0, skipped: 0}
+
+    puts "Starting EU auto-taxes backfill [#{mode}] for organization #{organization_id} (batch_size: #{batch_size})..."
+
+    preview_customer = lambda do |customer|
+      result = nil
+      ActiveRecord::Base.transaction(requires_new: true) do
+        result = Customers::EuAutoTaxesService.call(
+          customer: customer,
+          new_record: false,
+          tax_attributes_changed: true
+        )
+        raise ActiveRecord::Rollback
+      end
+
+      current_eu_codes = customer.taxes.where("code ILIKE ?", "lago_eu%").pluck(:code)
+
+      if result.success?
+        counters[:reapply] += 1
+        puts "  [DRY RUN] customer=#{customer.id} country=#{customer.country} current_eu=#{current_eu_codes.inspect} -> target=#{result.tax_code} (would re-apply)"
+      elsif result.error.is_a?(BaseService::ServiceFailure) && result.error.code == "vies_check_pending"
+        counters[:vies_pending] += 1
+        puts "  [DRY RUN] customer=#{customer.id} country=#{customer.country} current_eu=#{current_eu_codes.inspect} would schedule VIES check"
+      else
+        code = result.error.respond_to?(:code) ? result.error.code : "unknown"
+        counters[:skipped] += 1
+        puts "  [DRY RUN] customer=#{customer.id} country=#{customer.country} current_eu=#{current_eu_codes.inspect} skipped (#{code})"
+      end
+    end
+
+    scope = Customer
+      .joins(applied_taxes: :tax)
+      .joins(:billing_entity)
+      .where(customers: {organization_id: organization_id})
+      .where(billing_entities: {eu_tax_management: true})
+      .where.not(customers: {country: nil})
+      .where("taxes.code ~ '^lago_eu_[a-z]{2}_standard$'")
+      .where("taxes.code <> CONCAT('lago_eu_', LOWER(customers.country), '_standard')")
+      .where("NOT EXISTS (SELECT 1 FROM pending_vies_checks pvc WHERE pvc.customer_id = customers.id)")
+      .distinct
+
+    if dry_run
+      candidate_ids = scope.pluck(:id)
+      puts "  Candidates found: #{candidate_ids.size}"
+
+      candidate_ids.each_slice(batch_size) do |ids|
+        Customer.where(id: ids).find_each(&preview_customer)
+
+        total_processed += ids.size
+        puts "  Batch processed: #{ids.size} customers (total: #{total_processed})"
+      end
+    else
+      loop do
+        customer_ids = scope.limit(batch_size).pluck(:id)
+        break if customer_ids.empty?
+
+        Customer.where(id: customer_ids).find_each do |customer|
+          result = Customers::EuAutoTaxesService.call(
+            customer: customer,
+            new_record: false,
+            tax_attributes_changed: true
+          )
+          next unless result.success?
+
+          preserved_codes = customer.taxes.where.not("code ILIKE 'lago_eu%'").pluck(:code)
+          tax_codes = (preserved_codes + [result.tax_code]).uniq
+
+          Customers::ApplyTaxesService.call!(customer: customer, tax_codes: tax_codes)
+        end
+
+        total_processed += customer_ids.size
+        puts "  Batch processed: #{customer_ids.size} customers (total: #{total_processed})"
+        break if customer_ids.size < batch_size
+      end
+    end
+
+    puts "Done [#{mode}]. Total processed: #{total_processed}."
+    if dry_run
+      puts "  Would re-apply: #{counters[:reapply]}"
+      puts "  Would schedule VIES check: #{counters[:vies_pending]}"
+      puts "  Would skip: #{counters[:skipped]}"
+    end
+  end
 end
+

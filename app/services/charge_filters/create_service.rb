@@ -2,7 +2,7 @@
 
 module ChargeFilters
   class CreateService < BaseService
-    include Charges::CascadeUpdatable
+    include ChargeFilters::FilterCascadable
 
     Result = BaseResult[:charge_filter]
 
@@ -18,8 +18,6 @@ module ChargeFilters
       return result.not_found_failure!(resource: "charge") unless charge
       return result.single_validation_failure!(field: :values, error_code: "value_is_mandatory") if params[:values].blank?
 
-      old_filters_attrs = capture_old_filters_attrs
-
       ActiveRecord::Base.transaction do
         charge_filter = charge.filters.create!(
           organization_id: charge.organization_id,
@@ -32,7 +30,12 @@ module ChargeFilters
         result.charge_filter = charge_filter
       end
 
-      trigger_cascade(old_filters_attrs)
+      trigger_filter_cascade(
+        action: "create",
+        filter_values: result.charge_filter.to_h,
+        new_properties: result.charge_filter.properties,
+        invoice_display_name: result.charge_filter.invoice_display_name
+      )
 
       result
     rescue ActiveRecord::RecordInvalid => e

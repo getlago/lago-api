@@ -238,7 +238,7 @@ GEM
       dry-initializer (~> 3.2)
       dry-schema (~> 1.14)
       zeitwerk (~> 2.6)
-    erb (6.0.2)
+    erb (6.0.4)
     erubi (1.13.1)
     event_stream_parser (1.0.0)
     execjs (2.10.0)

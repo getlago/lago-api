@@ -5,13 +5,101 @@ require "rails_helper"
 describe "Charge Models - Graduated Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:plan) { create(:plan, organization:, amount_cents: 0, pay_in_advance: false, interval: "monthly") }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+  let(:sum_billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "amount") }
+  let(:recurring_sum_billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "amount", recurring: true) }
+
+  before { tax }
 
   [true, false].each do |ff_enabled|
     context "with non_persistable_charge_cache_optimization #{ff_enabled ? "enabled" : "disabled"}" do
       before do
         organization.enable_feature_flag!(:non_persistable_charge_cache_optimization) if ff_enabled
+      end
+
+      describe "with sum_agg" do
+        describe "non-prorated graduated with no events (ING-13 regression)" do
+          it "returns zero customer usage without raising" do
+            travel_to(DateTime.new(2024, 3, 5)) do
+              create_subscription(
+                {
+                  external_customer_id: customer.external_id,
+                  external_id: customer.external_id,
+                  plan_code: plan.code
+                }
+              )
+            end
+
+            create(
+              :graduated_charge,
+              plan:,
+              billable_metric: sum_billable_metric,
+              properties: {
+                graduated_ranges: [
+                  {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "100"},
+                  {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "50"}
+                ]
+              }
+            )
+
+            travel_to(DateTime.new(2024, 3, 6)) do
+              # First call exercises the previously-crashing hydrate_non_persistable_fees path
+              # when the feature flag is enabled.
+              fetch_current_usage(customer:)
+              expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+              expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
+              expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(0)
+
+              # Second call proves stability across repeated invocations, matching the
+              # daily DailyUsages::ComputeJob invocation pattern.
+              fetch_current_usage(customer:)
+              expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+              expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
+              expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(0)
+            end
+          end
+        end
+
+        describe "prorated graduated with no events (ING-13 regression)" do
+          it "returns zero customer usage without raising (factory falls back from ProratedGraduatedService to GraduatedService)" do
+            travel_to(DateTime.new(2024, 3, 5)) do
+              create_subscription(
+                {
+                  external_customer_id: customer.external_id,
+                  external_id: customer.external_id,
+                  plan_code: plan.code
+                }
+              )
+            end
+
+            create(
+              :graduated_charge,
+              plan:,
+              billable_metric: recurring_sum_billable_metric,
+              prorated: true,
+              properties: {
+                graduated_ranges: [
+                  {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "100"},
+                  {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "50"}
+                ]
+              }
+            )
+
+            travel_to(DateTime.new(2024, 3, 6)) do
+              fetch_current_usage(customer:)
+              expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+              expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
+              expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(0)
+
+              fetch_current_usage(customer:)
+              expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+              expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
+              expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(0)
+            end
+          end
+        end
       end
 
       context "with basic graduated ranges" do

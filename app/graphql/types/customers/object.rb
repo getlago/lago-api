@@ -82,6 +82,10 @@ module Types
         GraphQL::Types::BigInt,
         null: false,
         description: "Credit notes credits balance available per customer"
+      field :credit_notes_balances,
+        [Types::Customers::CreditNotesBalance],
+        null: false,
+        description: "Credit notes credits balance available per customer per currency"
       field :credit_notes_credits_available_count,
         Integer,
         null: false,
@@ -151,6 +155,15 @@ module Types
 
       def credit_notes_balance_amount_cents
         object.credit_notes.finalized.sum("credit_notes.balance_amount_cents")
+      end
+
+      def credit_notes_balances
+        object.credit_notes
+          .finalized
+          .where("credit_notes.balance_amount_cents > 0")
+          .group("credit_notes.total_amount_currency")
+          .sum("credit_notes.balance_amount_cents")
+          .map { |currency, amount_cents| {currency:, amount_cents:} }
       end
 
       def billing_configuration
