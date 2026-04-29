@@ -17,41 +17,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
       field :versions, [Types::QuoteVersions::Object], null: false
 
-      def customer
-        dataloader
-          .with(Sources::ActiveRecordAssociation, :customer)
-          .load(object)
-      end
-
-      def organization
-        dataloader
-          .with(Sources::ActiveRecordAssociation, :organization)
-          .load(object)
-      end
-
-      def subscription
-        dataloader
-          .with(Sources::ActiveRecordAssociation, :subscription)
-          .load(object)
-      end
-
-      def owners
-        dataloader
-          .with(Sources::ActiveRecordAssociation, :owners)
-          .load(object)
-      end
-
-      def versions
-        dataloader
-          .with(Sources::ActiveRecordAssociation, :versions)
-          .load(object)
-      end
-
-      def current_version
-        dataloader
-          .with(Sources::ActiveRecordAssociation, :current_version)
-          .load(object)
-      end
+      dataload_association :customer, :organization, :subscription, :owners, :versions, :current_version
     end
   end
 end
