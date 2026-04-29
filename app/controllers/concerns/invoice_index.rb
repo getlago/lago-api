@@ -72,7 +72,6 @@ module InvoiceIndex
             :gocardless_customer,
             :cashfree_customer,
             :adyen_customer,
-            :flutterwave_customer,
             :moneyhash_customer,
             {integration_customers: :integration}
           ]
