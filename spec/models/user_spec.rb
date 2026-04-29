@@ -7,6 +7,19 @@ RSpec.describe User do
 
   it_behaves_like "paper_trail traceable"
 
+  describe "associations" do
+    it do
+      expect(subject).to have_many(:password_resets)
+      expect(subject).to have_many(:user_devices)
+      expect(subject).to have_many(:memberships)
+      expect(subject).to have_many(:organizations).through(:memberships).class_name("Organization")
+      expect(subject).to have_many(:active_memberships).class_name("Membership")
+      expect(subject).to have_many(:active_organizations).through(:active_memberships).source(:organization)
+      expect(subject).to have_many(:quote_owners).dependent(:destroy)
+      expect(subject).to have_many(:quotes).through(:quote_owners)
+    end
+  end
+
   describe "normalizations" do
     it "sanitizes email on assignment" do
       user = described_class.new(email: " hello@some\u200Bthing\u2013other.com ", password: "password")
