@@ -40,6 +40,40 @@ RSpec.describe QuoteVersions::CreateService do
       end
     end
 
+
+    context "when an active draft version already exists for the quote", :premium do
+      before { create(:quote_version, quote:, organization:) }
+
+      it "rejects with active_version_exists" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("active_version_exists")
+      end
+    end
+
+    context "when an approved version already exists for the quote", :premium do
+      before { create(:quote_version, :approved, quote:, organization:) }
+
+      it "rejects with active_version_exists" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("active_version_exists")
+      end
+    end
+
+    context "when a concurrent insert wins the unique-index race", :premium do
+      it "translates the RecordNotUnique into active_version_exists" do
+        allow(quote.versions).to receive(:create!).and_raise(ActiveRecord::RecordNotUnique)
+        allow(create_service).to receive(:active_version_exists?).and_return(false)
+        # The service holds its own reference to `quote`, so stub it via the instance.
+        allow(create_service).to receive(:quote).and_return(quote)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("active_version_exists")
+      end
+    end
+
     context "when license is not premium" do
       it "returns forbidden status" do
         expect(result).not_to be_success
