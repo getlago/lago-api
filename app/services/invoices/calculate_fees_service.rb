@@ -424,7 +424,7 @@ module Invoices
     end
 
     def reduce_coupon_usage
-      return unless invoice.invoice_subscriptions.any? { |inv_sub| inv_sub.invoicing_reason.include?("subscription") }
+      return unless subscription_invoice?
 
       customer.applied_coupons.active.recurring.each do |applied_coupon|
         # if a customer has an applied coupon, but it has not been used in this billing period, we shouldn't deduct usage of the coupon
@@ -433,6 +433,12 @@ module Invoices
         applied_coupon.frequency_duration_remaining -= 1
         applied_coupon.save!
         applied_coupon.mark_as_terminated! if applied_coupon.frequency_duration_remaining.zero?
+      end
+    end
+
+    def subscription_invoice?
+      invoice.invoice_subscriptions.any? do |inv_sub|
+        InvoiceSubscription::SUBSCRIPTION_INVOICING_REASONS.include?(inv_sub.invoicing_reason.to_s)
       end
     end
   end

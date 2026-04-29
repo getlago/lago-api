@@ -84,7 +84,9 @@ module Credits
     end
 
     def is_for_subscription_invoice?
-      invoice.invoice_subscriptions.any? { |invoice_subscription| invoice_subscription.invoicing_reason.include?("subscription") }
+      invoice.invoice_subscriptions.any? do |invoice_subscription|
+        InvoiceSubscription::SUBSCRIPTION_INVOICING_REASONS.include?(invoice_subscription.invoicing_reason.to_s)
+      end
     end
 
     def decrement_frequency_duration_remaining
