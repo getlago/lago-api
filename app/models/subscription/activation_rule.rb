@@ -32,9 +32,9 @@ class Subscription::ActivationRule < ApplicationRecord
 
   validates :type, presence: true, inclusion: {in: STI_MAPPING.keys}
 
-  scope :pending, -> { where(status: :pending) }
-  scope :expired, -> { where(status: :expired) }
   scope :expirable, -> { pending.where("expires_at <= ?", Time.current) }
+  scope :rejected, -> { where(status: REJECTED_STATUSES) }
+  scope :fulfilled, -> { where(status: FULFILLED_STATUSES) }
 
   def self.find_sti_class(type_name)
     STI_MAPPING.fetch(type_name).constantize
