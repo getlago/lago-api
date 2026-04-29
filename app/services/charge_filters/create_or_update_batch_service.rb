@@ -2,17 +2,9 @@
 
 module ChargeFilters
   class CreateOrUpdateBatchService < BaseService
-    # TODO: drop `cascade_options` after Sidekiq drain — filter cascade goes through ChargeFilters::CascadeJob now.
-    def initialize(charge:, filters_params:, cascade_options: {})
+    def initialize(charge:, filters_params:)
       @charge = charge
       @filters_params = filters_params
-      @cascade_updates = cascade_options[:cascade]
-      @parent_filters_attributes = cascade_options[:parent_filters] || []
-      @parent_filters = if parent_filters_attributes.blank?
-        ChargeFilter.none
-      else
-        ChargeFilter.with_discarded.where(id: parent_filters_attributes.map { |f| f["id"] })
-      end
 
       super
     end
@@ -37,28 +29,6 @@ module ChargeFilters
           #       that we are targeting the right one
           filter = filters.find do |f|
             f.to_h.sort == filter_param[:values].sort
-          end
-
-          # Skip cascade update if properties are already touched
-          if cascade_updates && filter && parent_filters
-            parent_filter = parent_filters.find do |pf|
-              pf.to_h.sort == filter.to_h.sort
-            end
-
-            if parent_filter.blank? || normalize_properties(parent_filter_properties(parent_filter)) != normalize_properties(filter.properties)
-              # Make sure that pricing/presentation group keys are cascaded even if properties are overridden
-              cascade_presentation_group_keys(filter, filter_param)
-              cascade_pricing_group_keys(filter, filter_param)
-              filter.save! if filter.changed?
-
-              PaperTrail.request.disable_model(filter.class)
-              # NOTE: Make sure update_at is touched even if not changed to keep the order
-              filter.touch # rubocop:disable Rails/SkipsModelValidations
-              PaperTrail.request.enable_model(filter.class)
-              result.filters << filter
-
-              next
-            end
           end
 
           filter ||= charge.filters.new(organization_id: charge.organization_id)
@@ -96,9 +66,7 @@ module ChargeFilters
         end
 
         # NOTE: remove old filters that were not created or updated
-        remove_query = charge.filters
-        remove_query = remove_query.where(id: inherited_filter_ids) if cascade_updates && parent_filters
-        remove_query.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
+        charge.filters.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
           remove_filter(it)
         end
       end
@@ -108,27 +76,15 @@ module ChargeFilters
 
     private
 
-    attr_reader :charge, :filters_params, :cascade_updates, :parent_filters, :parent_filters_attributes
+    attr_reader :charge, :filters_params
 
     def filters
       @filters ||= charge.filters.includes(values: :billable_metric_filter)
     end
 
-    def parent_filter_properties(parent_filter)
-      match = parent_filters_attributes.find do |f|
-        f["id"] == parent_filter.id
-      end
-
-      match["properties"]
-    end
-
     def remove_all
       ActiveRecord::Base.transaction do
-        if cascade_updates
-          charge.filters.where(id: inherited_filter_ids).unscope(:order).find_each { remove_filter(it) }
-        else
-          charge.filters.each { remove_filter(it) }
-        end
+        charge.filters.each { remove_filter(it) }
       end
     end
 
@@ -137,58 +93,8 @@ module ChargeFilters
       filter.discard!
     end
 
-    def inherited_filter_ids
-      return @inherited_filter_ids if defined? @inherited_filter_ids
-
-      @inherited_filter_ids = []
-
-      return @inherited_filter_ids if parent_filters.blank? || !cascade_updates
-
-      parent_filters.unscope(:order).find_each do |pf|
-        value = pf.to_h_with_discarded.sort
-
-        match = filters.find do |f|
-          value == f.to_h.sort
-        end
-
-        @inherited_filter_ids << match.id if match
-      end
-
-      @inherited_filter_ids
-    end
-
-    def cascade_pricing_group_keys(filter, params)
-      pricing_group_keys = params.dig(:properties, :pricing_group_keys) || params.dig(:properties, :grouped_by)
-
-      if pricing_group_keys
-        filter.properties["pricing_group_keys"] = pricing_group_keys
-        filter.properties.delete("grouped_by")
-      elsif filter.pricing_group_keys.present?
-        filter.properties.delete("pricing_group_keys")
-        filter.properties.delete("grouped_by")
-      end
-    end
-
-    def cascade_presentation_group_keys(filter, params)
-      presentation_group_keys = params.dig(:properties, :presentation_group_keys)
-
-      if presentation_group_keys
-        filter.properties["presentation_group_keys"] = presentation_group_keys
-      elsif filter.presentation_group_keys.present?
-        filter.properties.delete("presentation_group_keys")
-      end
-    end
-
     def empty_filter_values?
       filters_params.any? { |filter_param| filter_param[:values].blank? }
-    end
-
-    def normalize_properties(props)
-      return props unless props.is_a?(Hash)
-
-      props.transform_values do |v|
-        (v.is_a?(String) && v.match?(/\A-?\d+(\.\d+)?\z/)) ? v.to_f : v
-      end
     end
   end
 end

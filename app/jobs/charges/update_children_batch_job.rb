@@ -5,7 +5,7 @@ module Charges
     queue_as :low_priority
     retry_on WithAdvisoryLock::FailedToAcquireLock, wait: :polynomially_longer, attempts: 5
 
-    def perform(child_ids:, params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:)
+    def perform(child_ids:, params:, old_parent_attrs:, old_parent_applied_pricing_unit_attrs:)
       Rails.logger.info("Charges::UpdateChildrenBatchJob - Started the execution for parent charge with ID: #{old_parent_attrs["id"]}")
 
       charge = Charge.find_by(id: old_parent_attrs["id"])
@@ -14,7 +14,6 @@ module Charges
         charge:,
         params:,
         old_parent_attrs:,
-        old_parent_filters_attrs:,
         old_parent_applied_pricing_unit_attrs:,
         child_ids:
       )

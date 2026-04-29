@@ -8,7 +8,6 @@ RSpec.describe Charges::UpdateChildrenService do
       charge:,
       params:,
       old_parent_attrs:,
-      old_parent_filters_attrs:,
       old_parent_applied_pricing_unit_attrs:,
       child_ids:
     )
@@ -18,7 +17,6 @@ RSpec.describe Charges::UpdateChildrenService do
   let(:organization) { billable_metric.organization }
   let(:plan) { create(:plan, organization:) }
   let(:old_parent_attrs) { charge&.attributes }
-  let(:old_parent_filters_attrs) { charge&.filters&.map(&:attributes) }
   let(:old_parent_applied_pricing_unit_attrs) { charge&.applied_pricing_unit&.attributes }
   let(:charge) do
     create(
@@ -29,14 +27,6 @@ RSpec.describe Charges::UpdateChildrenService do
       properties: {
         amount: "300"
       }
-    )
-  end
-  let(:billable_metric_filter) do
-    create(
-      :billable_metric_filter,
-      billable_metric:,
-      key: "payment_method",
-      values: %w[card physical]
     )
   end
 
@@ -64,14 +54,10 @@ RSpec.describe Charges::UpdateChildrenService do
       properties: {
         amount: "400"
       },
-      applied_pricing_unit: {conversion_rate: 2.5},
-      filters: [
-        {
-          invoice_display_name: "Card filter",
-          properties: {amount: "90"},
-          values: {billable_metric_filter.key => ["card"]}
-        }
-      ]
+      applied_pricing_unit: {conversion_rate: 2.5}
+      # Filter cascade is no longer routed through this service — it goes
+      # via per-filter ChargeFilters::CascadeJob (see
+      # Charges::CascadeUpdatable / Plans::UpdateService).
     }
   end
 
@@ -94,20 +80,11 @@ RSpec.describe Charges::UpdateChildrenService do
     end
 
     context "when charge has children that has not been modified" do
-      it "updates child charge" do
+      it "cascades charge-level changes to the child" do
         update_service.call
 
         expect(child_charge.reload).to have_attributes(
           properties: {"amount" => "400"}
-        )
-
-        expect(child_charge.filters.first).to have_attributes(
-          invoice_display_name: "Card filter",
-          properties: {"amount" => "90"}
-        )
-        expect(child_charge.filters.first.values.first).to have_attributes(
-          billable_metric_filter_id: billable_metric_filter.id,
-          values: ["card"]
         )
         expect(child_charge.applied_pricing_unit.conversion_rate).to eq 2.5
       end
@@ -118,24 +95,11 @@ RSpec.describe Charges::UpdateChildrenService do
         end
       end
 
-      it "does not issue an extra child charge update from filter saves" do
-        child_charge_updates = []
+      it "does not cascade filters via this service" do
+        # Filters are cascaded via ChargeFilters::CascadeJob, not here.
+        expect(ChargeFilters::CreateOrUpdateBatchService).not_to receive(:call)
 
-        callback = lambda do |_name, _start, _finish, _id, payload|
-          sql = payload[:sql]
-          next unless sql.match?(/\AUPDATE\s+"charges"/i)
-
-          binds = payload[:type_casted_binds] || payload[:binds]
-          next unless Array(binds).include?(child_charge.id)
-
-          child_charge_updates << sql
-        end
-
-        ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
-          update_service.call
-        end
-
-        expect(child_charge_updates.size).to eq(1)
+        update_service.call
       end
     end
 

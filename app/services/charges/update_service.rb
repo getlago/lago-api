@@ -53,13 +53,15 @@ module Charges
           params: params.delete(:applied_pricing_unit).presence
         )
 
+        # In cascade mode, filter changes are dispatched per-filter via
+        # ChargeFilters::CascadeJob (see Charges::CascadeUpdatable /
+        # Plans::UpdateService). They must not be processed here — the legacy
+        # in-the-lock filter cascade is gone.
         filters = params.delete(:filters)
-        unless filters.nil?
-          # TODO: skip when `cascade` after Sidekiq drain — filter cascade goes through ChargeFilters::CascadeJob now.
+        if filters && !cascade
           ChargeFilters::CreateOrUpdateBatchService.call(
             charge:,
-            filters_params: filters.map(&:with_indifferent_access),
-            cascade_options:
+            filters_params: filters.map(&:with_indifferent_access)
           ).raise_if_error!
         end
 

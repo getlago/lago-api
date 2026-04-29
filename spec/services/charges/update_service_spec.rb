@@ -220,25 +220,23 @@ RSpec.describe Charges::UpdateService do
         let(:cascade_options) do
           {
             cascade: true,
-            parent_filters: [],
             equal_properties: true,
             equal_applied_pricing_unit_rate: true
           }
         end
 
-        it "updates charge properties and filters" do
+        it "updates charge properties" do
           subject
 
           expect(charge.reload).to have_attributes(properties: {"amount" => "400"})
+        end
 
-          expect(charge.filters.first).to have_attributes(
-            invoice_display_name: "Card filter",
-            properties: {"amount" => "90"}
-          )
-          expect(charge.filters.first.values.first).to have_attributes(
-            billable_metric_filter_id: billable_metric_filter.id,
-            values: ["card"]
-          )
+        it "does not cascade filters via this service" do
+          # Filters in cascade mode are dispatched per-filter via
+          # ChargeFilters::CascadeJob — they must not be processed here.
+          expect(ChargeFilters::CreateOrUpdateBatchService).not_to receive(:call)
+
+          subject
         end
 
         it "updates applied pricing unit's conversion rate" do
@@ -284,7 +282,6 @@ RSpec.describe Charges::UpdateService do
           let(:cascade_options) do
             {
               cascade: true,
-              parent_filters: [],
               equal_properties: false
             }
           end
@@ -422,7 +419,7 @@ RSpec.describe Charges::UpdateService do
             # not via the legacy lock-protected job.
             expect(args[:params]).not_to have_key("filters")
             expect(args[:old_parent_attrs]).to include("id" => charge.id)
-            expect(args[:old_parent_filters_attrs]).to be_an(Array)
+            expect(args).not_to have_key(:old_parent_filters_attrs)
           end
         end
 
