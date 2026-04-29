@@ -174,5 +174,31 @@ RSpec.describe QuotesQuery do
         end
       end
     end
+
+    describe "order_types" do
+      let(:one_off_quote) { create(:quote, :with_version, organization:, customer:, order_type: :one_off) }
+
+      before do
+        one_off_quote
+      end
+
+      context "when filtering by valid order_types" do
+        let(:filters) { {order_types: ["one_off"]} }
+
+        it "returns only quotes with the matching order type" do
+          expect(result).to be_success
+          expect(returned_ids).to eq([one_off_quote.id])
+        end
+      end
+
+      context "when filtering by invalid order_types" do
+        let(:filters) { {order_types: ["invalid_order_type"]} }
+
+        it "returns a validation failure" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+        end
+      end
+    end
   end
 end

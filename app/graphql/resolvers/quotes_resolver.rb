@@ -13,7 +13,7 @@ module Resolvers
     argument :from_date, GraphQL::Types::ISO8601Date, required: false
     argument :limit, Integer, required: false
     argument :numbers, [String], required: false
-    argument :order_type, [Types::Quotes::OrderTypeEnum], required: false
+    argument :order_types, [Types::Quotes::OrderTypeEnum], required: false
     argument :owners, [ID], required: false
     argument :page, Integer, required: false
     argument :statuses, [Types::QuoteVersions::StatusEnum], required: false
@@ -21,7 +21,7 @@ module Resolvers
 
     type Types::Quotes::Object.collection_type, null: false
 
-    def resolve(page: nil, limit: nil, customers: nil, numbers: nil, statuses: nil, from_date: nil, to_date: nil, owners: nil, order_type: nil)
+    def resolve(page: nil, limit: nil, customers: nil, numbers: nil, statuses: nil, from_date: nil, to_date: nil, owners: nil, order_types: nil)
       result = ::QuotesQuery.call(
         organization: current_organization,
         filters: {
@@ -31,7 +31,7 @@ module Resolvers
           from_date:,
           to_date:,
           owners:,
-          order_type:
+          order_types:
         },
         pagination: {
           page:,

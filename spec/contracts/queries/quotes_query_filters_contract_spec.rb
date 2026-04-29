@@ -152,4 +152,34 @@ RSpec.describe Queries::QuotesQueryFiltersContract do
       end
     end
   end
+
+  context "when filtering by order_types" do
+    context "when filter is valid" do
+      let(:filters) { {order_types: ["one_off"]} }
+
+      it "is valid" do
+        expect(result.success?).to be(true)
+      end
+    end
+
+    context "when order_types filter is invalid" do
+      context "when filter is a string" do
+        let(:filters) { {order_types: "wrong"} }
+
+        it "is invalid" do
+          expect(result.success?).to be(false)
+          expect(result.errors.to_h).to include({order_types: ["must be an array"]})
+        end
+      end
+
+      context "when filter is an array with invalid values" do
+        let(:filters) { {order_types: ["wrong"]} }
+
+        it "is invalid" do
+          expect(result.success?).to be(false)
+          expect(result.errors.to_h).to include({order_types: {0 => ["must be one of: subscription_creation, subscription_amendment, one_off"]}})
+        end
+      end
+    end
+  end
 end

@@ -199,4 +199,33 @@ RSpec.describe Resolvers::QuotesResolver do
       expect(response.dig("metadata", "totalCount")).to eq(1)
     end
   end
+
+  context "when filtering by order_types" do
+    let!(:one_off_quote) { create(:quote, organization:, customer:, order_type: :one_off) }
+
+    let(:query) do
+      <<~GQL
+        query {
+          quotes(limit: 5, orderTypes: [one_off]) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    it "returns quotes with the specified order type" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      response = result.dig("data", "quotes")
+      expect(response.dig("collection").count).to eq(1)
+      expect(response.dig("collection").first.dig("id")).to eq(one_off_quote.id)
+      expect(response.dig("metadata", "totalCount")).to eq(1)
+    end
+  end
 end
