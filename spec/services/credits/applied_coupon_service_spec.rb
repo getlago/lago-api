@@ -127,11 +127,72 @@ RSpec.describe Credits::AppliedCouponService do
             end
           end
 
-          context "when invoice is for charge" do
+          context "when invoice is a subscription_starting invoice" do
+            let(:invoice_subscription) do
+              create(
+                :invoice_subscription,
+                invoicing_reason: "subscription_starting",
+                invoice:,
+                timestamp: invoice.issuing_date,
+                charges_to_datetime: invoice.issuing_date,
+                charges_from_datetime: invoice.issuing_date - 1.month
+              )
+            end
+
+            it "reduces frequency_duration" do
+              result = credit_service.call
+
+              expect(result).to be_success
+              expect(applied_coupon.reload.frequency_duration_remaining).to eq(0)
+            end
+          end
+
+          context "when invoice is a subscription_terminating invoice" do
+            let(:invoice_subscription) do
+              create(
+                :invoice_subscription,
+                invoicing_reason: "subscription_terminating",
+                invoice:,
+                timestamp: invoice.issuing_date,
+                charges_to_datetime: invoice.issuing_date,
+                charges_from_datetime: invoice.issuing_date - 1.month
+              )
+            end
+
+            it "reduces frequency_duration" do
+              result = credit_service.call
+
+              expect(result).to be_success
+              expect(applied_coupon.reload.frequency_duration_remaining).to eq(0)
+            end
+          end
+
+          context "when invoice is for an in_advance_charge" do
             let(:invoice_subscription) do
               create(
                 :invoice_subscription,
                 invoicing_reason: "in_advance_charge",
+                invoice:,
+                timestamp: invoice.issuing_date,
+                charges_to_datetime: invoice.issuing_date,
+                charges_from_datetime: invoice.issuing_date - 1.month
+              )
+            end
+
+            it "does not reduce frequency_duration" do
+              result = credit_service.call
+
+              expect(result).to be_success
+              expect(applied_coupon.reload.frequency_duration_remaining).to eq(1)
+              expect(applied_coupon.reload).not_to be_terminated
+            end
+          end
+
+          context "when invoice is a progressive_billing invoice" do
+            let(:invoice_subscription) do
+              create(
+                :invoice_subscription,
+                invoicing_reason: "progressive_billing",
                 invoice:,
                 timestamp: invoice.issuing_date,
                 charges_to_datetime: invoice.issuing_date,
