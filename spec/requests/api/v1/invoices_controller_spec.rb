@@ -332,6 +332,40 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "with N+1 query detection on customer associations", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+      before do
+        [customer.billing_entity, other_billing_entity].each do |billing_entity|
+          invoice_customer = create(
+            :customer,
+            organization:,
+            billing_entity:,
+            payment_provider: "stripe",
+            payment_provider_code: "stripe_code"
+          )
+          create(:stripe_customer, customer: invoice_customer)
+          create(:netsuite_customer, customer: invoice_customer)
+          create(:hubspot_customer, customer: invoice_customer)
+          create(:customer_metadata, customer: invoice_customer, organization:)
+
+          create(:invoice, customer: invoice_customer, organization:, billing_entity:)
+        end
+      end
+
+      it "does not trigger N+1 queries on customer and nested associations" do
+        get_with_token(organization, "/api/v1/invoices", {})
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].count).to eq(2)
+        json[:invoices].each do |invoice|
+          expect(invoice[:customer][:billing_configuration][:provider_customer_id]).to be_present
+          expect(invoice[:customer][:integration_customers]).to be_present
+          expect(invoice[:customer][:metadata]).to be_present
+        end
+      end
+    end
+
     context "with unknown params" do
       before do
         allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
