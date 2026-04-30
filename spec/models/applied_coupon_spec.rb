@@ -136,6 +136,7 @@ RSpec.describe AppliedCoupon do
       it "remaining decreases by the credit, present? is true" do
         expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice:)).to eq(70)
         expect(applied_coupon.credits_applied_in_billing_period_present?(invoice)).to be(true)
+        expect(applied_coupon.credits_sum_for_invoice_subscription(invoice_subscription, invoice)).to eq(30)
       end
     end
 
@@ -149,6 +150,7 @@ RSpec.describe AppliedCoupon do
       it "ignores voided-invoice credits" do
         expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice:)).to eq(100)
         expect(applied_coupon.credits_applied_in_billing_period_present?(invoice)).to be(false)
+        expect(applied_coupon.credits_sum_for_invoice_subscription(invoice_subscription, invoice)).to eq(0)
       end
     end
 
@@ -162,6 +164,7 @@ RSpec.describe AppliedCoupon do
       it "excludes credits outside the billing period" do
         expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice:)).to eq(100)
         expect(applied_coupon.credits_applied_in_billing_period_present?(invoice)).to be(false)
+        expect(applied_coupon.credits_sum_for_invoice_subscription(invoice_subscription, invoice)).to eq(0)
       end
     end
 
@@ -200,6 +203,9 @@ RSpec.describe AppliedCoupon do
         it "counts the credit once per subscription on that invoice" do
           # Sub uses $20, sub_2 uses $20 (same credit, counted twice). Sum=$40, remaining=$60.
           expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice:)).to eq(60)
+          # this is only for the first subscription
+          expect(applied_coupon.credits_sum_for_invoice_subscription(invoice_subscription, invoice)).to eq(20)
+          expect(applied_coupon.credits_applied_in_billing_period_present?(invoice)).to be(true)
         end
       end
 
@@ -214,6 +220,7 @@ RSpec.describe AppliedCoupon do
         it "sums credits per-subscription across all in-period invoices" do
           # sub: $20. sub_2: $20 (shared) + $30 (other) = $50. Sum=$70, remaining=$30.
           expect(applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice:)).to eq(30)
+          expect(applied_coupon.credits_sum_for_invoice_subscription(invoice_subscription, invoice)).to eq(20)
         end
       end
 
