@@ -9950,7 +9950,7 @@ type Query {
   """
   Query customer portal subscriptions
   """
-  customerPortalSubscriptions(limit: Int, page: Int, planCode: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  customerPortalSubscriptions(currency: String, limit: Int, page: Int, planCode: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query a customer portal user
@@ -10301,7 +10301,7 @@ type Query {
   """
   Query payment requests of an organization
   """
-  paymentRequests(externalCustomerId: String, limit: Int, page: Int, paymentStatus: InvoicePaymentStatusTypeEnum): PaymentRequestCollection!
+  paymentRequests(currency: String, externalCustomerId: String, limit: Int, page: Int, paymentStatus: InvoicePaymentStatusTypeEnum): PaymentRequestCollection!
 
   """
   Query payments of an organization
@@ -10427,7 +10427,7 @@ type Query {
   """
   Query subscriptions of an organization
   """
-  subscriptions(externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  subscriptions(currency: String, externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query all Superset dashboards with embedded configuration and guest tokens
