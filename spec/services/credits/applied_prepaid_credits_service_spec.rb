@@ -661,6 +661,35 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
     end
 
+    context "when wallet currency does not match invoice currency" do
+      let(:wallets) { [eur_wallet, usd_wallet] }
+      let(:eur_wallet) do
+        create(:wallet, :with_inbound_transaction, name: "eur wallet", customer:, balance_cents: 1000, currency: "EUR")
+      end
+      let(:usd_wallet) do
+        create(:wallet, :with_inbound_transaction, name: "usd wallet", customer:, balance_cents: 1000, currency: "USD")
+      end
+
+      it "only applies credits from wallets matching the invoice currency" do
+        expect(result).to be_success
+        expect(result.wallet_transactions.count).to eq(1)
+        expect(result.wallet_transactions.first.wallet_id).to eq(eur_wallet.id)
+        expect(result.prepaid_credit_amount_cents).to eq(100)
+      end
+    end
+
+    context "when no wallets match the invoice currency" do
+      let(:wallets) do
+        [create(:wallet, name: "usd wallet", customer:, balance_cents: 1000, currency: "USD")]
+      end
+
+      it "returns early with no credits applied" do
+        expect(result).to be_success
+        expect(result.prepaid_credit_amount_cents).to eq(0)
+        expect(result.wallet_transactions).to eq([])
+      end
+    end
+
     context "when there is a concurrent lock" do
       before do
         stub_const("Customers::LockService::ACQUIRE_LOCK_TIMEOUT", 1.second)
