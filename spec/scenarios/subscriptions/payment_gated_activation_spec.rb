@@ -223,5 +223,6 @@ describe "Payment Gated Subscription Activation Scenarios" do
       # 4. PullTaxesAndApplyService succeeds → triggers payment only
       # 5. Payment succeeds → subscription activates, invoice finalized
       raise "not implemented"
+    end
   end
 end
