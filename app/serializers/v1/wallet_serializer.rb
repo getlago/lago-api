@@ -50,9 +50,7 @@ module V1
     end
 
     def active_recurring_transaction_rules
-      model.recurring_transaction_rules.select do |rule|
-        rule.active? && (rule.expiration_at.nil? || rule.expiration_at > Time.current)
-      end
+      model.recurring_transaction_rules.select(&:currently_active?)
     end
 
     def limitations

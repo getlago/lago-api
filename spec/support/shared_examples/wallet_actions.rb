@@ -1183,4 +1183,28 @@ RSpec.shared_examples "a wallet index endpoint" do
       expect(json[:wallets].first[:lago_id]).to eq(brl_wallet.id)
     end
   end
+
+  context "with N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    let(:params) { {} }
+
+    before do
+      [wallet, create(:wallet, customer:), create(:wallet, customer:)].each do |w|
+        create(:wallet_target, wallet: w)
+        create(:wallet_applied_invoice_custom_section, wallet: w)
+        create(:recurring_transaction_rule, wallet: w)
+      end
+    end
+
+    it "does not trigger N+1 queries on wallet associations" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallets].count).to eq(3)
+      json[:wallets].each do |wallet_payload|
+        expect(wallet_payload[:applies_to][:billable_metric_codes]).to be_present
+        expect(wallet_payload[:recurring_transaction_rules]).to be_present
+        expect(wallet_payload[:applied_invoice_custom_sections]).to be_present
+      end
+    end
+  end
 end
