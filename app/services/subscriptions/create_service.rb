@@ -119,17 +119,6 @@ module Subscriptions
       plan.yearly_amount_cents < current_subscription.plan.yearly_amount_cents
     end
 
-    def should_be_billed_today?(sub)
-      sub.active? && sub.subscription_at.today? && plan.pay_in_advance? && !sub.in_trial_period?
-    end
-
-    def fixed_charges_billed_today?(sub)
-      return false if !(sub.active? && sub.started_at.today?)
-      return false if sub.fixed_charges.pay_in_advance.none?
-
-      !sub.plan.pay_in_advance? || sub.in_trial_period?
-    end
-
     def create_subscription
       new_subscription = Subscription.new(
         organization_id: customer.organization_id,
