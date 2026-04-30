@@ -24,17 +24,23 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ValidateService do
 
   describe "#valid?" do
     context "with valid payment rule" do
+      before { create(:payment_method, customer:, organization:) }
+
       it { is_expected.to be_valid }
     end
 
     context "when timeout_hours is absent" do
       let(:rule) { {type: "payment"} }
 
+      before { create(:payment_method, customer:, organization:) }
+
       it { is_expected.to be_valid }
     end
 
     context "when timeout_hours is zero" do
       let(:rule) { {type: "payment", timeout_hours: 0} }
+
+      before { create(:payment_method, customer:, organization:) }
 
       it { is_expected.to be_valid }
     end
@@ -61,16 +67,36 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ValidateService do
       context "when payment_method_type is manual" do
         let(:payment_method_params) { {payment_method_type: "manual"} }
 
-        it "is invalid with invalid_for_payment_activation_rules error" do
+        it "is invalid with manual_payment_method_invalid_for_payment_activation_rules error" do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[:payment_method]).to eq(["invalid_for_payment_activation_rules"])
+          expect(result.error.messages[:payment_method]).to eq(["manual_payment_method_invalid_for_payment_activation_rules"])
         end
       end
 
       context "when payment_method_type is provider" do
         let(:payment_method_params) { {payment_method_type: "provider"} }
 
-        it { is_expected.to be_valid }
+        context "when customer has a default payment method" do
+          before { create(:payment_method, customer:, organization:) }
+
+          it { is_expected.to be_valid }
+        end
+
+        context "when customer has no default payment method" do
+          it "is invalid with customer_has_no_default_payment_method error" do
+            expect(validate_service).not_to be_valid
+            expect(result.error.messages[:payment_method]).to eq(["customer_has_no_default_payment_method"])
+          end
+        end
+      end
+
+      context "when payment_method params include a payment_method_id" do
+        let(:payment_method) { create(:payment_method, customer:, organization:, is_default: false) }
+        let(:payment_method_params) { {payment_method_type: "provider", payment_method_id: payment_method.id} }
+
+        it "is valid when the payment method id is provided" do
+          expect(validate_service).to be_valid
+        end
       end
     end
 
@@ -79,16 +105,36 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ValidateService do
         context "when subscription payment_method_type is manual" do
           let(:subscription) { create(:subscription, customer:, plan:, organization:, payment_method_type: "manual") }
 
-          it "is invalid with invalid_for_payment_activation_rules error" do
+          it "is invalid with manual_payment_method_invalid_for_payment_activation_rules error" do
             expect(validate_service).not_to be_valid
-            expect(result.error.messages[:payment_method]).to eq(["invalid_for_payment_activation_rules"])
+            expect(result.error.messages[:payment_method]).to eq(["manual_payment_method_invalid_for_payment_activation_rules"])
           end
         end
 
         context "when subscription payment_method_type is provider" do
           let(:subscription) { create(:subscription, customer:, plan:, organization:, payment_method_type: "provider") }
 
-          it { is_expected.to be_valid }
+          context "when customer has a default payment method" do
+            before { create(:payment_method, customer:, organization:) }
+
+            it { is_expected.to be_valid }
+          end
+
+          context "when subscription has its own payment_method_id" do
+            let(:subscription_payment_method) { create(:payment_method, customer:, organization:, is_default: false) }
+            let(:subscription) { create(:subscription, customer:, plan:, organization:, payment_method_type: "provider", payment_method: subscription_payment_method) }
+
+            it "is valid even when customer has no default payment method" do
+              expect(validate_service).to be_valid
+            end
+          end
+
+          context "when subscription has no payment_method_id and customer has no default payment method" do
+            it "is invalid with customer_has_no_default_payment_method error" do
+              expect(validate_service).not_to be_valid
+              expect(result.error.messages[:payment_method]).to eq(["customer_has_no_default_payment_method"])
+            end
+          end
         end
       end
 
@@ -98,15 +144,35 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ValidateService do
         context "when customer has a payment provider" do
           let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
 
-          it { is_expected.to be_valid }
+          context "when customer has a default payment method" do
+            before { create(:payment_method, customer:, organization:) }
+
+            it { is_expected.to be_valid }
+          end
+
+          context "when customer has no default payment method" do
+            it "is invalid with customer_has_no_default_payment_method error" do
+              expect(validate_service).not_to be_valid
+              expect(result.error.messages[:payment_method]).to eq(["customer_has_no_default_payment_method"])
+            end
+          end
+
+          context "when customer has payment methods but none is default" do
+            before { create(:payment_method, customer:, organization:, is_default: false) }
+
+            it "is invalid with customer_has_no_default_payment_method error" do
+              expect(validate_service).not_to be_valid
+              expect(result.error.messages[:payment_method]).to eq(["customer_has_no_default_payment_method"])
+            end
+          end
         end
 
         context "when customer has no payment provider" do
           let(:customer) { create(:customer, organization:, payment_provider: nil) }
 
-          it "is invalid with no_linked_payment_provider error" do
+          it "is invalid with customer_has_no_linked_payment_provider error" do
             expect(validate_service).not_to be_valid
-            expect(result.error.messages[:payment_method]).to eq(["no_linked_payment_provider"])
+            expect(result.error.messages[:payment_method]).to eq(["customer_has_no_linked_payment_provider"])
           end
         end
       end

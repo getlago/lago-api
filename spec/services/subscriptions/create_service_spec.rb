@@ -1392,6 +1392,8 @@ RSpec.describe Subscriptions::CreateService do
         }
       end
 
+      before { create(:payment_method, customer:, organization:) }
+
       context "when subscription_at is in the past" do
         let(:subscription_at) { (Time.current - 5.days).iso8601 }
 
