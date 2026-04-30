@@ -180,6 +180,123 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       let(:service_call) { regenerate_result }
     end
 
+    describe "presentation_breakdowns handling" do
+      before do
+        create(:presentation_breakdown, fee: original_fee, presentation_by: {"department" => "eng"}, units: 6)
+        create(:presentation_breakdown, fee: original_fee, presentation_by: {"department" => "sales"}, units: 4)
+      end
+
+      context "when adjusting units" do
+        let(:fees_params) do
+          [
+            {
+              id: original_fee.id,
+              subscription_id: subscription.id,
+              units: 3
+            }
+          ]
+        end
+
+        it "regenerates the fee without presentation_breakdowns" do
+          regenerated_fee = regenerate_result.invoice.fees.first
+
+          expect(regenerated_fee.presentation_breakdowns).to be_empty
+        end
+      end
+
+      context "when adjusting unit amount but keeping units" do
+        let(:fees_params) do
+          [
+            {
+              id: original_fee.id,
+              subscription_id: subscription.id,
+              units: original_fee.units,
+              unit_amount_cents: 99.99
+            }
+          ]
+        end
+
+        it "preserves the breakdowns on the regenerated fee" do
+          regenerated_fee = regenerate_result.invoice.fees.first
+
+          expect(regenerated_fee.presentation_breakdowns.map { |b| b.units.to_f })
+            .to match_array([6.0, 4.0])
+        end
+      end
+
+      context "when adjusting display name only" do
+        let(:fees_params) do
+          [
+            {
+              id: original_fee.id,
+              subscription_id: subscription.id,
+              invoice_display_name: "renamed",
+              units: original_fee.units
+            }
+          ]
+        end
+
+        it "preserves the breakdowns on the regenerated fee" do
+          regenerated_fee = regenerate_result.invoice.fees.first
+
+          expect(regenerated_fee.invoice_display_name).to eq("renamed")
+          expect(regenerated_fee.presentation_breakdowns.map(&:presentation_by))
+            .to match_array([{"department" => "eng"}, {"department" => "sales"}])
+        end
+      end
+
+      context "when the voided fee is a fixed_charge fee with adjusted units" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, charge_model: "standard", properties: {amount: "10"}) }
+
+        let(:original_invoice) do
+          travel_to(DateTime.new(2023, 1, 15)) { perform_billing }
+          invoice = subscription.invoices.first
+
+          create(
+            :fixed_charge_fee,
+            invoice:,
+            subscription:,
+            fixed_charge:,
+            amount_cents: 5000,
+            precise_amount_cents: 5000.0,
+            units: 5,
+            unit_amount_cents: 1000,
+            precise_unit_amount: 10,
+            properties: {
+              fixed_charges_from_datetime: subscription.started_at.beginning_of_day,
+              fixed_charges_to_datetime: subscription.started_at.end_of_month.end_of_day
+            }
+          )
+
+          invoice.update!(status: :voided)
+          invoice
+        end
+
+        let(:fixed_charge_fee) { original_invoice.fees.find_by(fee_type: :fixed_charge) }
+        let(:fees_params) do
+          [
+            {
+              id: fixed_charge_fee.id,
+              subscription_id: subscription.id,
+              units: 9
+            }
+          ]
+        end
+
+        before do
+          create(:presentation_breakdown, fee: fixed_charge_fee, presentation_by: {"region" => "eu"}, units: 3)
+          create(:presentation_breakdown, fee: fixed_charge_fee, presentation_by: {"region" => "us"}, units: 2)
+        end
+
+        it "regenerates the fixed-charge fee without presentation_breakdowns" do
+          regenerated_fee = regenerate_result.invoice.fees.find_by(fixed_charge_id: fixed_charge.id)
+
+          expect(regenerated_fee.units).to eq(9)
+          expect(regenerated_fee.presentation_breakdowns).to be_empty
+        end
+      end
+    end
+
     context "with updated units" do
       let(:fees_params) do
         [

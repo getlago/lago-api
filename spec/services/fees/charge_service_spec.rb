@@ -4466,4 +4466,100 @@ RSpec.describe Fees::ChargeService, :premium do
       end
     end
   end
+
+  describe "presentation_breakdowns interaction with adjusted fees" do
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
+    end
+    let(:charge) do
+      create(
+        :standard_charge,
+        plan: subscription.plan,
+        billable_metric:,
+        properties: {
+          amount: "20",
+          pricing_group_keys: ["cloud"],
+          presentation_group_keys: [{value: "region"}]
+        }
+      )
+    end
+
+    let(:invoice) { create(:invoice, customer:, organization:, status: :draft) }
+
+    before do
+      create(
+        :event, organization:, subscription:,
+        code: billable_metric.code,
+        timestamp: Time.zone.parse("2022-03-16"),
+        properties: {cloud: "aws", value: 10, region: "eu"}
+      )
+      create(
+        :event, organization:, subscription:,
+        code: billable_metric.code,
+        timestamp: Time.zone.parse("2022-03-16"),
+        properties: {cloud: "aws", value: 5, region: "us"}
+      )
+      adjusted_fee
+    end
+
+    context "when the adjustment changes units" do
+      let(:adjusted_fee) do
+        create(
+          :adjusted_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          properties: {
+            charges_from_datetime: boundaries.charges_from_datetime,
+            charges_to_datetime: boundaries.charges_to_datetime
+          },
+          fee_type: :charge,
+          adjusted_units: true,
+          adjusted_amount: false,
+          units: 3,
+          grouped_by: {"cloud" => "aws"}
+        )
+      end
+
+      it "does not build presentation_breakdowns on the fee replaced by an adjustment" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        aws_fee = result.fees.find { |f| f.grouped_by["cloud"] == "aws" }
+        expect(aws_fee.units).to eq(3)
+        expect(aws_fee.presentation_breakdowns).to be_empty
+      end
+    end
+
+    context "when the adjustment only renames the fee" do
+      let(:adjusted_fee) do
+        create(
+          :adjusted_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          properties: {
+            charges_from_datetime: boundaries.charges_from_datetime,
+            charges_to_datetime: boundaries.charges_to_datetime
+          },
+          fee_type: :charge,
+          adjusted_units: false,
+          adjusted_amount: false,
+          invoice_display_name: "renamed",
+          grouped_by: {"cloud" => "aws"}
+        )
+      end
+
+      it "still builds presentation_breakdowns from current events on the adjusted fee" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        aws_fee = result.fees.find { |f| f.grouped_by["cloud"] == "aws" }
+        expect(aws_fee.presentation_breakdowns.map(&:presentation_by))
+          .to match_array([{"region" => "eu"}, {"region" => "us"}])
+        expect(aws_fee.presentation_breakdowns.map { |b| b.units.to_f })
+          .to match_array([10.0, 5.0])
+      end
+    end
+  end
 end

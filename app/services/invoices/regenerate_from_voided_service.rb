@@ -173,6 +173,7 @@ module Invoices
           fee.precise_amount_cents = units * unit_cents
         end
 
+        fee.presentation_breakdowns.destroy_all if fee.units_changed?
         fee.save!
       end
     end
@@ -213,6 +214,15 @@ module Invoices
       dup_fee.taxes_rate = 0
       dup_fee.original_fee = voided_fee.original_fee || voided_fee
       dup_fee.save!
+
+      voided_fee.presentation_breakdowns.each do |breakdown|
+        dup_fee.presentation_breakdowns.create!(
+          organization_id: breakdown.organization_id,
+          presentation_by: breakdown.presentation_by,
+          units: breakdown.units
+        )
+      end
+
       dup_fee
     end
 

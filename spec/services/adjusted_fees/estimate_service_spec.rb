@@ -429,4 +429,91 @@ RSpec.describe AdjustedFees::EstimateService do
       end
     end
   end
+
+  describe "presentation_breakdowns" do
+    context "when adjusting subscription fees" do
+      before do
+        create(:presentation_breakdown, fee: fee_subscription, presentation_by: {"department" => "eng"}, units: 6)
+        create(:presentation_breakdown, fee: fee_subscription, presentation_by: {"department" => "sales"}, units: 4)
+        fee_subscription.reload
+      end
+
+      context "when adjusting units" do
+        let(:params) do
+          {
+            fee_id: fee_subscription.id,
+            subscription_id: fee_subscription.subscription_id,
+            units: 5
+          }
+        end
+
+        it "returns the fee without presentation_breakdowns" do
+          expect(result.fee.presentation_breakdowns).to be_empty
+        end
+      end
+
+      context "when adjusting display name only" do
+        let(:params) do
+          {
+            fee_id: fee_subscription.id,
+            subscription_id: fee_subscription.subscription_id,
+            invoice_display_name: "renamed"
+          }
+        end
+
+        it "preserves the existing presentation_breakdowns on the fee" do
+          expect(result.fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([6.0, 4.0])
+        end
+      end
+    end
+
+    context "when adjusting charge fees" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:charge) do
+        create(
+          :standard_charge,
+          billable_metric:,
+          plan:,
+          properties: {amount: "10", presentation_group_keys: [{value: "department"}]}
+        )
+      end
+      let(:charge_fee) do
+        create(:charge_fee, invoice:, subscription:, charge:, precise_unit_amount: 10.00, units: 5)
+      end
+
+      before do
+        create(:presentation_breakdown, fee: charge_fee, presentation_by: {"department" => "eng"}, units: 3)
+        create(:presentation_breakdown, fee: charge_fee, presentation_by: {"department" => "sales"}, units: 2)
+      end
+
+      context "when adjusting units" do
+        let(:params) { {fee_id: charge_fee.id, units: 8} }
+
+        it "returns a fee without presentation_breakdowns" do
+          expect(result.fee.presentation_breakdowns).to be_empty
+        end
+      end
+    end
+
+    context "when adjusting fixed charge fees" do
+      let(:add_on) { create(:add_on, organization:) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, properties: {amount: "25"}) }
+      let(:fixed_charge_fee) do
+        create(:fixed_charge_fee, invoice:, subscription:, fixed_charge:, precise_unit_amount: 25.00, units: 8)
+      end
+
+      before do
+        create(:presentation_breakdown, fee: fixed_charge_fee, presentation_by: {"region" => "eu"}, units: 5)
+        create(:presentation_breakdown, fee: fixed_charge_fee, presentation_by: {"region" => "us"}, units: 3)
+      end
+
+      context "when adjusting units" do
+        let(:params) { {fee_id: fixed_charge_fee.id, units: 12} }
+
+        it "returns a fee without presentation_breakdowns" do
+          expect(result.fee.presentation_breakdowns).to be_empty
+        end
+      end
+    end
+  end
 end

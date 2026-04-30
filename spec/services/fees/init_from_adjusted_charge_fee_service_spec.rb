@@ -250,6 +250,48 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService do
     end
   end
 
+  context "with presentation_breakdowns on the source fee" do
+    let(:source_fee) do
+      create(:charge_fee, invoice:, subscription:, charge:, units: source_units)
+    end
+
+    before do
+      create(:presentation_breakdown, fee: source_fee, presentation_by: {"department" => "eng"}, units: 6)
+      create(:presentation_breakdown, fee: source_fee, presentation_by: {"department" => "sales"}, units: 4)
+      adjusted_fee.update!(fee: source_fee)
+    end
+
+    context "when adjusted units differ from the source fee units" do
+      let(:source_units) { 10 }
+
+      it "returns a brand-new fee with no presentation_breakdowns built" do
+        result = init_service.call
+
+        expect(result).to be_success
+        expect(result.fee.presentation_breakdowns).to be_empty
+      end
+
+      it "does not destroy the breakdowns persisted on the source fee" do
+        expect { init_service.call }.not_to change(PresentationBreakdown, :count)
+      end
+    end
+
+    context "when adjusted units match the source fee units" do
+      let(:source_units) { adjusted_fee.units }
+
+      it "still returns a brand-new fee with no presentation_breakdowns built" do
+        result = init_service.call
+
+        expect(result).to be_success
+        expect(result.fee.presentation_breakdowns).to be_empty
+      end
+
+      it "does not destroy the breakdowns persisted on the source fee" do
+        expect { init_service.call }.not_to change(PresentationBreakdown, :count)
+      end
+    end
+  end
+
   context "with charge model error" do
     let(:error_result) do
       BaseService::Result.new.tap do |result|
