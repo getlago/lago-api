@@ -11,10 +11,18 @@ module ChargeModels
     def amount_details
       {
         graduated_ranges: ranges.each_with_object([]) do |range, amounts|
-          amounts << ChargeModels::AmountDetails::RangeGraduatedService.call(range:, total_units: units)
+          amounts << ChargeModels::AmountDetails::RangeGraduatedService.call(range:, total_units: units, adjacent_model: adjacent_ranges?)
           break amounts if range[:to_value].nil? || range[:to_value] >= units
         end
       }
+    end
+
+    def adjacent_ranges?
+      return false if ranges.size < 2
+
+      ranges.each_cons(2).all? do |prev, curr|
+        BigDecimal(curr[:from_value].to_s) == BigDecimal((prev[:to_value] || 0).to_s)
+      end
     end
 
     def compute_amount

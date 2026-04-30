@@ -37,6 +37,12 @@ module Clockwork
       .perform_later
   end
 
+  if Utils::DedicatedWorkerConfig.any?
+    every(Utils::DedicatedWorkerConfig.refresh_interval, "schedule:process_dedicated_orgs_subscription_activities") do
+      Clock::ProcessDedicatedOrgsSubscriptionActivitiesJob.perform_later
+    end
+  end
+
   lifetime_usage_refresh_interval = ENV["LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS"].presence || 5.minutes
   every(lifetime_usage_refresh_interval.to_i.seconds, "schedule:refresh_lifetime_usages") do
     unless ENV["LAGO_DISABLE_LIFETIME_USAGE_REFRESH"] == "true"
@@ -47,11 +53,17 @@ module Clockwork
   end
 
   if ENV["LAGO_MEMCACHE_SERVERS"].present? || ENV["LAGO_REDIS_CACHE_URL"].present?
-    every(5.minutes, "schedule:refresh_wallets_ongoing_balance") do
-      unless ENV["LAGO_DISABLE_WALLET_REFRESH"] == "true"
+    unless ENV["LAGO_DISABLE_WALLET_REFRESH"] == "true"
+      every(5.minutes, "schedule:refresh_wallets_ongoing_balance") do
         Clock::RefreshWalletsOngoingBalanceJob
           .set(sentry: {"slug" => "lago_refresh_wallets_ongoing_balance", "cron" => "*/5 * * * *"})
           .perform_later
+      end
+
+      if Utils::DedicatedWorkerConfig.any?
+        every(Utils::DedicatedWorkerConfig.refresh_interval, "schedule:refresh_dedicated_org_wallets") do
+          Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob.perform_later
+        end
       end
     end
   end
@@ -176,15 +188,10 @@ module Clockwork
 
   # NOTE: Enable wallets and lifetime usage refresh from the events-processor
   if ENV["LAGO_REDIS_STORE_URL"].present? && ENV["LAGO_CLICKHOUSE_ENABLED"].present?
-    every(1.minute, "schedule:refresh_flagged_subscriptions") do
-      # DEPRECATED: Drains legacy Redis SET key. Remove once subscription_refreshed is fully drained.
+    every(10.seconds, "schedule:refresh_flagged_subscriptions") do
       Clock::ConsumeSubscriptionRefreshedQueueJob
-        .set(sentry: {"slug" => "lago_refresh_flagged_subscriptions", "cron" => "*/1 * * * *"})
+        .set(sentry: {"slug" => "lago_refresh_flagged_subscriptions"})
         .perform_later
-
-      Clock::ConsumeSubscriptionRefreshedQueueJob
-        .set(sentry: {"slug" => "lago_refresh_flagged_subscriptions_v2", "cron" => "*/1 * * * *"})
-        .perform_later("v2")
     end
   end
 end

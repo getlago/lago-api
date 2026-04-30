@@ -42,7 +42,7 @@ module FixedCharges
         result.fixed_charge = fixed_charge
 
         if fixed_charge.units_previously_changed?
-          FixedCharges::EmitEventsForActiveSubscriptionsService.call!(
+          FixedCharges::EmitEventsService.call!(
             fixed_charge:,
             apply_units_immediately: params[:apply_units_immediately],
             timestamp:

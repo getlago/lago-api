@@ -21,6 +21,20 @@ input AcceptInviteInput {
   token: String!
 }
 
+enum ActivationRuleStatusEnum {
+  declined
+  expired
+  failed
+  inactive
+  not_applicable
+  pending
+  satisfied
+}
+
+enum ActivationRuleTypeEnum {
+  payment
+}
+
 """
 Base activity log
 """
@@ -267,6 +281,16 @@ enum ActivityTypeEnum {
   plan.updated
   """
   plan_updated
+
+  """
+  subscription.canceled
+  """
+  subscription_canceled
+
+  """
+  subscription.incomplete
+  """
+  subscription_incomplete
 
   """
   subscription.started
@@ -964,6 +988,11 @@ input BillingEntityUpdateAppliedDunningCampaignInput {
 enum BillingTimeEnum {
   anniversary
   calendar
+}
+
+enum CancelationReasonEnum {
+  payment_failed
+  timeout
 }
 
 type CashfreeProvider {
@@ -3281,6 +3310,7 @@ input CreateSubscriptionChargeFilterInput {
 Create Subscription input arguments
 """
 input CreateSubscriptionInput {
+  activationRules: [SubscriptionActivationRuleInput!]
   billingTime: BillingTimeEnum!
 
   """
@@ -4224,6 +4254,7 @@ type CurrentOrganization {
   name: String!
   netPaymentTerm: Int!
   premiumIntegrations: [PremiumIntegrationTypeEnum!]!
+  slug: String!
   state: String
   stripePaymentProviders: [StripeProvider!]
   taxIdentificationNumber: String
@@ -4280,6 +4311,11 @@ type Customer {
   Credit notes credits balance available per customer
   """
   creditNotesBalanceAmountCents: BigInt!
+
+  """
+  Credit notes credits balance available per customer per currency
+  """
+  creditNotesBalances: [CustomerCreditNotesBalance!]!
 
   """
   Number of available credits from credit notes per customer
@@ -4416,6 +4452,11 @@ type CustomerCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type CustomerCreditNotesBalance {
+  amountCents: BigInt!
+  currency: CurrencyEnum!
 }
 
 type CustomerMetadata {
@@ -5685,6 +5726,8 @@ enum EventTypeEnum {
   plan_created
   plan_deleted
   plan_updated
+  subscription_canceled
+  subscription_incomplete
   subscription_started
   subscription_terminated
   subscription_termination_alert
@@ -5706,8 +5749,10 @@ Organization Feature Flag Values
 enum FeatureFlagEnum {
   enriched_events_aggregation
   multi_currency
+  multi_entity_billing
   multiple_payment_methods
   non_persistable_charge_cache_optimization
+  payment_gated_subscriptions
   postgres_enriched_events
   wallet_traceability
 }
@@ -5806,10 +5851,10 @@ type FeeAmountDetailsGraduatedPercentageRange {
 
 type FeeAmountDetailsGraduatedRange {
   flatUnitAmount: String
-  fromValue: BigInt
+  fromValue: Float
   perUnitAmount: String
   perUnitTotalAmount: String
-  toValue: BigInt
+  toValue: Float
   totalWithFlatAmount: String
   units: String
 }
@@ -6170,30 +6215,30 @@ input GoogleRegisterUserInput {
 
 type GraduatedPercentageRange {
   flatAmount: String!
-  fromValue: BigInt!
+  fromValue: Float!
   rate: String!
-  toValue: BigInt
+  toValue: Float
 }
 
 input GraduatedPercentageRangeInput {
   flatAmount: String!
-  fromValue: BigInt!
+  fromValue: Float!
   rate: String!
-  toValue: BigInt
+  toValue: Float
 }
 
 type GraduatedRange {
   flatAmount: String!
-  fromValue: BigInt!
+  fromValue: Float!
   perUnitAmount: String!
-  toValue: BigInt
+  toValue: Float
 }
 
 input GraduatedRangeInput {
   flatAmount: String!
-  fromValue: BigInt!
+  fromValue: Float!
   perUnitAmount: String!
-  toValue: BigInt
+  toValue: Float
 }
 
 type GraphqlSubscription {
@@ -8873,6 +8918,7 @@ type Organization {
   id: ID!
   logoUrl: String
   name: String!
+  slug: String!
   timezone: TimezoneEnum
 }
 
@@ -9904,7 +9950,7 @@ type Query {
   """
   Query customer portal subscriptions
   """
-  customerPortalSubscriptions(limit: Int, page: Int, planCode: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  customerPortalSubscriptions(currency: String, limit: Int, page: Int, planCode: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query a customer portal user
@@ -10265,7 +10311,7 @@ type Query {
   """
   Query payment requests of an organization
   """
-  paymentRequests(externalCustomerId: String, limit: Int, page: Int, paymentStatus: InvoicePaymentStatusTypeEnum): PaymentRequestCollection!
+  paymentRequests(currency: String, externalCustomerId: String, limit: Int, page: Int, paymentStatus: InvoicePaymentStatusTypeEnum): PaymentRequestCollection!
 
   """
   Query payments of an organization
@@ -10391,7 +10437,7 @@ type Query {
   """
   Query subscriptions of an organization
   """
-  subscriptions(externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  subscriptions(currency: String, externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query all Superset dashboards with embedded configuration and guest tokens
@@ -11064,6 +11110,7 @@ input SetAsDefaultInput {
 enum StatusTypeEnum {
   active
   canceled
+  incomplete
   pending
   terminated
 }
@@ -11078,14 +11125,18 @@ type StripeProvider {
 }
 
 type Subscription {
+  activatedAt: ISO8601DateTime
+  activationRules: [SubscriptionActivationRule!]!
   activityLogs: [ActivityLog!]
   billingTime: BillingTimeEnum
+  cancelationReason: CancelationReasonEnum
   canceledAt: ISO8601DateTime
   charges: [Charge!]
   createdAt: ISO8601DateTime!
   currentBillingPeriodEndingAt: ISO8601DateTime
   currentBillingPeriodStartedAt: ISO8601DateTime
   customer: Customer!
+  downgradePlanDate: ISO8601Date
   endingAt: ISO8601DateTime
   externalId: String!
   fees: [Fee!]
@@ -11104,6 +11155,8 @@ type Subscription {
   paymentMethodType: PaymentMethodTypeEnum
   periodEndDate: ISO8601Date
   plan: Plan!
+  previousPlan: Plan
+  previousSubscription: Subscription
   progressiveBillingDisabled: Boolean
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   skipInvoiceCustomSections: Boolean
@@ -11113,6 +11166,22 @@ type Subscription {
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
   usageThresholds: [UsageThreshold!]!
+}
+
+type SubscriptionActivationRule {
+  createdAt: ISO8601DateTime!
+  expiresAt: ISO8601DateTime
+  id: ID!
+  status: ActivationRuleStatusEnum!
+  timeoutHours: Int
+  type: ActivationRuleTypeEnum!
+  updatedAt: ISO8601DateTime!
+}
+
+input SubscriptionActivationRuleInput {
+  id: ID
+  timeoutHours: Int
+  type: ActivationRuleTypeEnum!
 }
 
 """
@@ -12732,6 +12801,7 @@ input UpdateOrganizationInput {
   legalNumber: String
   logo: String
   netPaymentTerm: Int
+  slug: String
   state: String
   taxIdentificationNumber: String
   timezone: TimezoneEnum
@@ -12930,6 +13000,8 @@ input UpdateSubscriptionFixedChargeInput {
 Update Subscription input arguments
 """
 input UpdateSubscriptionInput {
+  activationRules: [SubscriptionActivationRuleInput!]
+
   """
   A unique identifier for the client performing the mutation.
   """

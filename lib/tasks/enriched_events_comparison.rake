@@ -1,180 +1,150 @@
 # frozen_string_literal: true
 
+require "json"
+
 namespace :enriched_events do
   desc "Compare ClickhouseStore vs ClickhouseEnrichedStore usage for given subscription IDs"
   task :compare, [:subscription_id] => :environment do |_task, args|
     Rails.logger.level = Logger::Severity::ERROR
 
-    abort "Usage: [QUIET=true] [DEDUPLICATE=true] rake enriched_events:compare[sub_id_1,sub_id_2,...]\n\n" unless args[:subscription_id]
+    abort "Usage: [QUIET=true] [DEDUPLICATE=true] [FORMAT=json] rake enriched_events:compare[sub_id_1,sub_id_2,...]\n\n" unless args[:subscription_id]
     abort "[SKIP] Clickhouse is not enabled on this system" if ENV["LAGO_CLICKHOUSE_ENABLED"].blank?
 
     quiet = ENV.fetch("QUIET", "false") == "true"
     deduplicate = ENV.fetch("DEDUPLICATE", "false") == "true"
+    format_json = ENV.fetch("FORMAT", "").downcase == "json"
+
+    log = format_json ? ->(_msg) {} : ->(msg) { puts msg }
+    json_results = [] if format_json
 
     subscription_ids = [args[:subscription_id]] + args.extras
     total_diffs = 0
+    total_legacy_elapsed = 0.0
+    total_enriched_elapsed = 0.0
 
     subscription_ids.each do |sub_id|
-      puts "\n#{"=" * 80}"
-      puts "Subscription: #{sub_id}"
-      puts "=" * 80
+      log.call("\n#{"=" * 80}")
+      log.call("Subscription: #{sub_id}")
+      log.call("=" * 80)
 
       subscription = Subscription.includes(:customer, plan: :organization).find_by(id: sub_id)
 
       if subscription.nil?
-        puts "[SKIP] Subscription not found"
+        log.call("[SKIP] Subscription not found")
+        json_results&.push({subscription_id: sub_id, status: "skipped", reason: "Subscription not found"})
         next
       end
 
       organization = subscription.plan.organization
 
       unless organization.clickhouse_events_store?
-        puts "[SKIP] Organization #{organization.id} does not use ClickHouse"
+        log.call("[SKIP] Organization #{organization.id} does not use ClickHouse")
+        json_results&.push({subscription_id: sub_id, status: "skipped", reason: "Organization does not use ClickHouse"})
         next
       end
 
-      flag_was_enabled = organization.feature_flag_enabled?(:enriched_events_aggregation)
-      legacy_fees = nil
-      enriched_fees = nil
+      comparison_result = Events::Stores::Clickhouse::EnrichedStoreMigration::ComparisonService.call(
+        subscription:,
+        deduplicate:
+      )
 
-      begin
-        ActiveRecord::Base.transaction do
-          # Run with existing store (feature flag OFF)
-          organization.disable_feature_flag!(:enriched_events_aggregation) if flag_was_enabled
-          organization.update!(clickhouse_deduplication_enabled: deduplicate)
-          organization.reload
-
-          puts "\nRunning legacy ClickhouseStore..."
-          legacy_result = Invoices::CustomerUsageService.call(
-            customer: subscription.customer,
-            subscription: subscription,
-            with_cache: false,
-            apply_taxes: false
-          )
-
-          if legacy_result.success?
-            legacy_fees = legacy_result.usage.fees
-          else
-            puts "[ERROR] Legacy usage computation failed: #{legacy_result.error&.message}"
-          end
-
-          raise ActiveRecord::Rollback
-        end
-
-        ActiveRecord::Base.transaction do
-          # Run with enriched store (feature flag ON)
-          organization.enable_feature_flag!(:enriched_events_aggregation)
-          organization.update!(clickhouse_deduplication_enabled: deduplicate)
-          organization.reload
-
-          puts "Running enriched ClickhouseEnrichedStore..."
-          enriched_result = Invoices::CustomerUsageService.call(
-            customer: subscription.customer,
-            subscription: subscription,
-            with_cache: false,
-            apply_taxes: false
-          )
-
-          if enriched_result.success?
-            enriched_fees = enriched_result.usage.fees
-          else
-            puts "[ERROR] Enriched usage computation failed: #{enriched_result.error&.message}"
-          end
-
-          raise ActiveRecord::Rollback
-        end
-      rescue => e
-        puts "[ERROR] Unexpected error: #{e.message}"
-        puts e.backtrace.first(5).join("\n")
+      unless comparison_result.success?
+        log.call("[ERROR] Comparison failed: #{comparison_result.error&.message}")
+        json_results&.push({subscription_id: sub_id, status: "error", reason: comparison_result.error&.message})
         next
       end
 
-      next if legacy_fees.nil? || enriched_fees.nil?
+      legacy_elapsed = comparison_result.legacy_elapsed
+      enriched_elapsed = comparison_result.enriched_elapsed
+      total_legacy_elapsed += legacy_elapsed
+      total_enriched_elapsed += enriched_elapsed
 
-      # Build lookup by composite key
-      fee_key = ->(fee) {
-        grouped = fee.grouped_by.presence || {}
-        [fee.charge_id, fee.charge_filter_id, grouped]
-      }
+      sub_diffs = comparison_result.diff_count
+      total_diffs += sub_diffs
+      fee_details = [] if format_json
 
-      legacy_by_key = legacy_fees.index_by { |f| fee_key.call(f) }
-      enriched_by_key = enriched_fees.index_by { |f| fee_key.call(f) }
+      comparison_result.fee_details.each do |detail|
+        parts = ["charge=#{detail.charge_id}"]
+        parts << "filter=#{detail.charge_filter_id}" if detail.charge_filter_id
+        parts << "metric=#{detail.billable_metric_code}" if detail.billable_metric_code
+        parts << "grouped_by=#{detail.grouped_by}" if detail.grouped_by.present?
+        parts << "agg=#{detail.aggregation_type}" if detail.aggregation_type
+        parts << "model=#{detail.charge_model}" if detail.charge_model
+        parts << "from=#{detail.from}" if detail.from
+        parts << "to=#{detail.to}" if detail.to
+        label = parts.join(" ")
 
-      all_keys = (legacy_by_key.keys + enriched_by_key.keys).uniq
-      sub_diffs = 0
-
-      all_keys.each do |key|
-        legacy_fee = legacy_by_key[key]
-        enriched_fee = enriched_by_key[key]
-
-        label = fee_label(legacy_fee || enriched_fee)
-
-        if legacy_fee && !enriched_fee
-          sub_diffs += 1
-          puts "  [ONLY IN LEGACY]  #{label}"
-        elsif enriched_fee && !legacy_fee
-          sub_diffs += 1
-          puts "  [ONLY IN ENRICHED] #{label}"
-        else
-          compared_fields = {
-            units: [legacy_fee.units, enriched_fee.units],
-            amount_cents: [legacy_fee.amount_cents, enriched_fee.amount_cents],
-            events_count: [legacy_fee.events_count, enriched_fee.events_count],
-            total_aggregated_units: [legacy_fee.total_aggregated_units, enriched_fee.total_aggregated_units]
-          }
-
-          diffs = compared_fields.select { |_, (l, e)| l != e }
-
-          if diffs.empty?
-            puts "  [MATCH] #{label}" unless quiet
-          else
-            sub_diffs += 1
-            puts "  [DIFF]  #{label}"
-            diffs.each do |field, (legacy_val, enriched_val)|
-              delta = compute_delta(legacy_val, enriched_val)
-              puts "          #{field}: legacy=#{legacy_val.inspect} enriched=#{enriched_val.inspect} (delta: #{delta})"
+        case detail.status
+        when "only_in_legacy"
+          log.call("  [ONLY IN LEGACY]  #{label}")
+        when "only_in_enriched"
+          log.call("  [ONLY IN ENRICHED] #{label}")
+        when "diff"
+          log.call("  [DIFF]  #{label}")
+          unless format_json
+            detail.diffs.each do |field, values|
+              log.call("          #{field}: legacy=#{values.legacy} enriched=#{values.enriched}")
             end
           end
+        when "match"
+          log.call("  [MATCH] #{label}") unless quiet
+        end
+
+        if format_json && (detail.status != "match" || !quiet)
+          fee_details << detail.to_h
         end
       end
 
-      total_diffs += sub_diffs
-      puts "\n  Summary: #{all_keys.size} fee(s), #{sub_diffs} difference(s)"
+      timing_info = build_timing(legacy_elapsed, enriched_elapsed)
+      log.call("\n  Summary: #{comparison_result.fee_details.size} fee(s), #{sub_diffs} difference(s)")
+      log.call("  Timing: legacy=#{legacy_elapsed.round(3)}s enriched=#{enriched_elapsed.round(3)}s #{timing_info[:comparison]}")
+
+      if format_json
+        json_results << {
+          subscription_id: sub_id,
+          status: "compared",
+          timing: {legacy_seconds: legacy_elapsed.round(3), enriched_seconds: enriched_elapsed.round(3), speedup: timing_info[:speedup]},
+          fee_count: comparison_result.fee_details.size,
+          diff_count: sub_diffs,
+          fees: fee_details
+        }
+      end
     end
 
-    puts "\n#{"=" * 80}"
-    puts "Total differences across all subscriptions: #{total_diffs}"
-    puts "=" * 80
+    total_timing = build_timing(total_legacy_elapsed, total_enriched_elapsed)
+    log.call("\n#{"=" * 80}")
+    log.call("Total differences across all subscriptions: #{total_diffs}")
+    log.call("Total timing: legacy=#{total_legacy_elapsed.round(3)}s enriched=#{total_enriched_elapsed.round(3)}s #{total_timing[:comparison]}")
+    log.call("=" * 80)
+
+    if format_json
+      output = {
+        generated_at: Time.current.iso8601,
+        options: {quiet: quiet, deduplicate: deduplicate},
+        total_diffs: total_diffs,
+        total_subscriptions: subscription_ids.size,
+        total_timing: {legacy_seconds: total_legacy_elapsed.round(3), enriched_seconds: total_enriched_elapsed.round(3), speedup: total_timing[:speedup]},
+        subscriptions: json_results
+      }
+      puts JSON.pretty_generate(output)
+    end
   end
 
   private
 
-  def fee_label(fee)
-    parts = ["charge=#{fee.charge_id}"]
-    if fee.billable_metric
-      parts << "metric=#{fee.billable_metric.code}"
-      parts << "agg=#{fee.billable_metric.aggregation_type}"
-    end
-    parts << "model=#{fee.charge&.charge_model}" if fee.charge
-    parts << "filter=#{fee.charge_filter.to_h} filter_id=#{fee.charge_filter_id}" if fee.charge_filter_id
-    grouped = fee.grouped_by.presence
-    parts << "grouped_by=#{grouped}" if grouped
-    parts << "from=#{fee.properties["charges_from_datetime"]}" if fee.properties["charges_from_datetime"]
-    parts << "to=#{fee.properties["charges_to_datetime"]}" if fee.properties["charges_to_datetime"]
-    parts.join(" ")
-  end
-
-  def compute_delta(legacy_val, enriched_val)
-    return "N/A" if legacy_val.nil? || enriched_val.nil?
-
-    diff = enriched_val.to_d - legacy_val.to_d
-    if legacy_val.to_d.zero?
-      diff.zero? ? "0" : "#{diff} (from zero)"
+  def build_timing(legacy_elapsed, enriched_elapsed)
+    if enriched_elapsed.zero?
+      {speedup: nil, comparison: "enriched=0s"}
+    elsif legacy_elapsed.zero?
+      {speedup: nil, comparison: "legacy=0s"}
     else
-      pct = (diff / legacy_val.to_d * 100).round(4)
-      "#{diff} (#{pct}%)"
+      speedup = (legacy_elapsed / enriched_elapsed).round(2)
+      comparison = if speedup >= 1.0
+        "speedup=#{speedup}x (enriched is faster)"
+      else
+        "slowdown=#{(1.0 / speedup).round(2)}x (enriched is slower)"
+      end
+      {speedup: speedup, comparison: comparison}
     end
-  rescue
-    "N/A"
   end
 end

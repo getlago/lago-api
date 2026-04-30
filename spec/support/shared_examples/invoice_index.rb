@@ -61,6 +61,15 @@ RSpec.shared_examples "an invoice index endpoint" do
     end
   end
 
+  context "when preloading offset amounts" do
+    let(:params) { {} }
+    let(:preloadable_invoices) { create_list(:invoice, 2, customer:, organization:) }
+
+    before { preloadable_invoices }
+
+    include_examples "preloads offset amounts"
+  end
+
   context "with issuing_date params" do
     let(:params) do
       {issuing_date_from: 2.days.ago.to_date, issuing_date_to: Date.tomorrow.to_date}
@@ -437,6 +446,43 @@ RSpec.shared_examples "an invoice index endpoint" do
 
         expect(response).to have_http_status(:success)
         expect(json[:invoices].pluck(:lago_id)).to eq([invoice_with_payment_settlement.id])
+      end
+    end
+  end
+
+  context "with N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    let(:params) { {} }
+    let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+    before do
+      [customer.billing_entity, other_billing_entity].each do |billing_entity|
+        invoice = create(:invoice, customer:, organization:, billing_entity:)
+        create(:invoice_applied_tax, invoice:, tax:, organization:)
+        create(:invoice_metadata, invoice:, organization:)
+
+        invoice.file.attach(
+          io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
+          filename: "invoice.pdf",
+          content_type: "application/pdf"
+        )
+        invoice.xml_file.attach(
+          io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
+          filename: "invoice.xml",
+          content_type: "application/xml"
+        )
+      end
+    end
+
+    it "does not trigger N+1 queries on invoice associations" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:invoices].count).to eq(2)
+      json[:invoices].each do |invoice|
+        expect(invoice[:applied_taxes]).to be_present
+        expect(invoice[:metadata]).to be_present
+        expect(invoice[:file_url]).to be_present
+        expect(invoice[:xml_url]).to be_present
       end
     end
   end

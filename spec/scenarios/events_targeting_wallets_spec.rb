@@ -20,8 +20,8 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
       )
     end
 
-    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 20_000, credits_balance: 200.0) }
-    let(:wallet2) { create(:wallet, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 25_000, credits_balance: 250.0) }
+    let(:wallet1) { create(:wallet, :with_inbound_transaction, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 20_000, credits_balance: 200.0) }
+    let(:wallet2) { create(:wallet, :with_inbound_transaction, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 25_000, credits_balance: 250.0) }
 
     before do
       organization.update!(premium_integrations: ["events_targeting_wallets"])
@@ -243,8 +243,8 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
       )
     end
 
-    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 15_000, credits_balance: 150.0) }
-    let(:wallet2) { create(:wallet, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 10_000, credits_balance: 100.0) }
+    let(:wallet1) { create(:wallet, :with_inbound_transaction, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 15_000, credits_balance: 150.0) }
+    let(:wallet2) { create(:wallet, :with_inbound_transaction, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 10_000, credits_balance: 100.0) }
 
     before do
       organization.update!(premium_integrations: ["events_targeting_wallets"])
@@ -328,8 +328,8 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
       )
     end
 
-    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 15_000, credits_balance: 150.0) }
-    let(:default_wallet) { create(:wallet, customer:, code: "default_wallet", name: "Default Wallet", balance_cents: 10_000, credits_balance: 100.0, priority: 1) }
+    let(:wallet1) { create(:wallet, :with_inbound_transaction, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 15_000, credits_balance: 150.0) }
+    let(:default_wallet) { create(:wallet, :with_inbound_transaction, customer:, code: "default_wallet", name: "Default Wallet", balance_cents: 10_000, credits_balance: 100.0, priority: 1) }
 
     before do
       organization.update!(premium_integrations: ["events_targeting_wallets"])
@@ -429,8 +429,8 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
       )
     end
 
-    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 20_000, credits_balance: 200.0, priority: 1) }
-    let(:wallet2) { create(:wallet, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 25_000, credits_balance: 250.0, priority: 2) }
+    let(:wallet1) { create(:wallet, :with_inbound_transaction, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 20_000, credits_balance: 200.0, priority: 1) }
+    let(:wallet2) { create(:wallet, :with_inbound_transaction, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 25_000, credits_balance: 250.0, priority: 2) }
 
     before do
       # Organization does NOT have events_targeting_wallets enabled

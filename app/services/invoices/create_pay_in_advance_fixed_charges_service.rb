@@ -14,7 +14,7 @@ module Invoices
     end
 
     def call
-      return result unless subscription.active?
+      return result unless subscription.active? || subscription.gated?
       return result if fixed_charge_events.empty?
 
       # Calculate fees for all fixed charge events
@@ -26,6 +26,7 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         create_generating_invoice
+        invoice.status = :open if subscription.gated?
         fees.each do |fee|
           fee.invoice = invoice
           fee.save!
@@ -58,7 +59,9 @@ module Invoices
         return result
       end
 
-      unless invoice.closed?
+      if subscription.gated?
+        Invoices::Payments::CreateService.call_async(invoice:)
+      elsif !invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
         deliver_webhooks
         Utils::ActivityLog.produce(invoice, "invoice.created")
@@ -115,7 +118,7 @@ module Invoices
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :subscription,
-        currency: customer.currency,
+        currency: subscription.plan_amount_currency,
         datetime: Time.zone.at(timestamp),
         charge_in_advance: true
       ) do |inv|

@@ -32,11 +32,14 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :downgrade_plan_date, GraphQL::Types::ISO8601Date
       field :next_name, String, null: true
       field :next_plan, Types::Plans::Object
       field :next_subscription, Types::Subscriptions::Object
       field :next_subscription_at, GraphQL::Types::ISO8601DateTime
       field :next_subscription_type, Types::Subscriptions::NextSubscriptionTypeEnum
+      field :previous_plan, Types::Plans::Object
+      field :previous_subscription, Types::Subscriptions::Object
 
       field :activity_logs, [Types::ActivityLogs::Object], null: true
       field :charges, [Types::Charges::Object], null: true
@@ -51,8 +54,16 @@ module Types
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum
       field :progressive_billing_disabled, Boolean
 
+      field :activated_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :activation_rules, [Types::Subscriptions::ActivationRuleType], null: false
+      field :cancelation_reason, Types::Subscriptions::CancelationReasonEnum, null: true
+
       def next_plan
         object.next_subscription&.plan
+      end
+
+      def previous_plan
+        object.previous_subscription&.plan
       end
 
       def next_name

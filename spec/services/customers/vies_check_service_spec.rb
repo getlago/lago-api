@@ -105,10 +105,10 @@ RSpec.describe Customers::ViesCheckService do
           allow_any_instance_of(Valvat).to receive(:exists?).and_call_original # rubocop:disable RSpec/AnyInstance
         end
 
-        it "returns the billing entity country tax code and vies_check details" do
+        it "returns the customer country tax code and vies_check details" do
           result = vies_check_service.call
 
-          expect(result.tax_code).to eq("lago_eu_fr_standard")
+          expect(result.tax_code).to eq("lago_eu_de_standard")
           expect(result.vies_check).to eq({valid: false, valid_format: false})
         end
 
@@ -207,10 +207,10 @@ RSpec.describe Customers::ViesCheckService do
         end
 
         context "when the customer country is in europe" do
-          it "returns the billing entity country tax code" do
+          it "returns the customer country tax code" do
             result = vies_check_service.call
 
-            expect(result.tax_code).to eq("lago_eu_fr_standard")
+            expect(result.tax_code).to eq("lago_eu_de_standard")
           end
         end
 

@@ -61,7 +61,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
         unit_amount_cents: 1000,
         precise_unit_amount: 10.0
       )
-      expect(result.invoice.currency).to eq(customer.currency)
+      expect(result.invoice.currency).to eq(subscription.plan_amount_currency)
       expect(result.invoice.fees_amount_cents).to eq(10000)
       expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(10000)
       expect(result.invoice.taxes_amount_cents).to eq(2000) # factory default 20% tax
@@ -282,9 +282,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
     end
 
     context "with active wallet" do
-      let(:wallet) do
-        create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0)
-      end
+      let(:wallet) { create(:wallet, :with_inbound_transaction, customer:, balance_cents: 1000, credits_balance: 10.0) }
 
       before { wallet }
 
@@ -662,6 +660,41 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
 
         expect(result).to be_success
         expect(result.invoice).to be_nil
+      end
+    end
+
+    context "when subscription is gated" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+          customer:, plan:, organization:)
+      end
+
+      it "creates an open invoice" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to be_open
+      end
+
+      it "does not send invoice.created webhook" do
+        invoice_service.call
+
+        expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
+      end
+
+      it "does not generate documents" do
+        invoice_service.call
+
+        expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
+      end
+
+      it "triggers payment" do
+        allow(Invoices::Payments::CreateService).to receive(:call_async)
+
+        invoice_service.call
+
+        expect(Invoices::Payments::CreateService).to have_received(:call_async)
       end
     end
   end

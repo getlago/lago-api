@@ -191,7 +191,7 @@ module PaymentProviderCustomers
     def checkout_url_params
       params = {
         amount: 5.0,
-        amount_currency: customer.currency.presence || "USD",
+        amount_currency: customer.currency.presence || customer.organization_default_currency,
         flow_id: moneyhash_payment_provider.flow_id,
         billing_data: moneyhash_customer.mh_billing_data,
         customer: moneyhash_customer.provider_customer_id,

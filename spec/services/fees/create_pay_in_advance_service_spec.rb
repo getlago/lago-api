@@ -408,7 +408,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         )
       end
 
-      it "does not persist the fee" do
+      it "does not persist the fee and defers taxes to the caller" do
         result = fee_service.call
 
         expect(result).to be_success
@@ -538,6 +538,76 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         expect(cached_aggregation.max_aggregation).to eq(9)
         expect(cached_aggregation.max_aggregation_with_proration).to be_nil
         expect(cached_aggregation.grouped_by).to eq({})
+      end
+    end
+
+    context "when charge is non-invoiceable" do
+      let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:, invoiceable: false) }
+
+      it "applies local taxes eagerly" do
+        result = fee_service.call
+
+        expect(result).to be_success
+
+        fee = result.fees.first
+        expect(fee.applied_taxes.count).to eq(1)
+        expect(fee.taxes_rate).to eq(20.0)
+        expect(fee.taxes_amount_cents).to eq(2)
+      end
+
+      context "when customer has tax provider integration" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+        let(:response) { instance_double(Net::HTTPOK) }
+        let(:lago_client) { instance_double(LagoHttpClient::Client) }
+        let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
+        let(:body) do
+          p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
+          json = File.read(p)
+
+          response_data = JSON.parse(json)
+          response_data["succeededInvoices"].first["fees"].first["item_id"] = fee_id
+          response_data["succeededInvoices"].first["fees"].first["tax_breakdown"].first["rate"] = "0.10"
+          response_data["succeededInvoices"].first["fees"].first["tax_breakdown"].first["tax_amount"] = 1
+
+          response_data.to_json
+        end
+        let(:fee_id) { "fee_placeholder" }
+
+        let(:integration_collection_mapping) do
+          create(
+            :netsuite_collection_mapping,
+            integration:,
+            mapping_type: :fallback_item,
+            settings: {external_id: "1", external_account_code: "11", external_name: ""}
+          )
+        end
+
+        before do
+          integration_collection_mapping
+          integration_customer
+
+          allow(LagoHttpClient::Client).to receive(:new)
+            .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+            .and_return(lago_client)
+          allow(lago_client).to receive(:post_with_response).and_return(response)
+          allow(response).to receive(:body).and_return(body)
+          allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *_args| # rubocop:disable RSpec/AnyInstance
+            fee_id
+          end
+        end
+
+        it "applies provider taxes instead of local taxes" do
+          result = fee_service.call
+
+          expect(result).to be_success
+
+          fee = result.fees.first
+          # Provider returns 2 tax breakdown entries (tax_exempt + exempt)
+          expect(fee.applied_taxes.count).to eq(2)
+          expect(fee.applied_taxes.map(&:tax_name)).to include("GST/HST")
+          expect(fee.taxes_amount_cents).to eq(1)
+        end
       end
     end
   end

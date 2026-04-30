@@ -61,11 +61,11 @@ module Wallets
       wallet = Wallet.new(attributes)
 
       ActiveRecord::Base.transaction do
-        if params[:currency].present?
-          Customers::UpdateCurrencyService.call!(customer: customer, currency: params[:currency])
+        if currency.present? && (!multi_currency_enabled? || customer.currency.blank?)
+          Customers::UpdateCurrencyService.call!(customer: customer, currency:)
         end
 
-        wallet.currency = wallet.customer.currency
+        wallet.currency = multi_currency_enabled? ? (currency || wallet.customer.currency) : wallet.customer.currency
         wallet.save!
 
         validate_wallet_initial_amount! wallet
@@ -140,6 +140,14 @@ module Wallets
       params[:organization_id]
     end
 
+    def currency
+      params[:currency]
+    end
+
+    def multi_currency_enabled?
+      customer.organization.feature_flag_enabled?(:multi_currency)
+    end
+
     def valid?
       Wallets::ValidateService.new(result, **params).valid?
     end
@@ -198,7 +206,7 @@ module Wallets
     end
 
     def traceable?
-      customer.organization.feature_flag_enabled?(:wallet_traceability) && customer.wallets.active.where(traceable: false).none?
+      customer.wallets.active.where(traceable: false).none?
     end
   end
 end

@@ -17,6 +17,7 @@ module DailyUsages
       invoice.invoice_subscriptions.each do |invoice_subscription|
         subscription = subscriptions.find { |s| s.id == invoice_subscription.subscription_id }
         next if subscription.blank?
+        next unless charge_boundaries_valid?(invoice_subscription)
         next if existing_daily_usage(invoice_subscription).present?
 
         usage = invoice_usage(subscription, invoice_subscription)
@@ -96,6 +97,13 @@ module DailyUsages
         usage_date: usage_date(invoice_subscription),
         subscription_id: invoice_subscription.subscription_id
       )
+    end
+
+    def charge_boundaries_valid?(invoice_subscription)
+      return false if invoice_subscription.charges_from_datetime.nil?
+      return false if invoice_subscription.charges_to_datetime.nil?
+
+      invoice_subscription.charges_from_datetime <= invoice_subscription.charges_to_datetime
     end
 
     def usage_date(invoice_subscription)

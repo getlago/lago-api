@@ -20,6 +20,15 @@ RSpec.describe Resolvers::SubscriptionResolver do
           }
           nextSubscriptionType
           nextSubscriptionAt
+          downgradePlanDate
+          previousPlan {
+            id
+            name
+          }
+          previousSubscription {
+            id
+            downgradePlanDate
+          }
           usageThresholds { amountCents thresholdDisplayName recurring }
         }
       }
@@ -117,6 +126,75 @@ RSpec.describe Resolvers::SubscriptionResolver do
       )
 
       expect_graphql_error(result:, message: "Resource not found")
+    end
+  end
+
+  context "when subscription has a pending downgrade" do
+    let(:plan) { create(:plan, organization:, amount_cents: 500_00) }
+    let(:lower_plan) { create(:plan, organization:, amount_cents: 100_00) }
+    let(:subscription) do
+      create(:subscription, :anniversary, customer:, plan:, subscription_at: Time.zone.parse("2026-04-22 00:00:00"), started_at: Time.zone.parse("2026-04-22 00:00:00"))
+    end
+    let(:pending_subscription) do
+      create(:subscription, :pending, customer:, plan: lower_plan, previous_subscription: subscription)
+    end
+
+    before { pending_subscription }
+
+    it "returns downgradePlanDate computed from the current billing period" do
+      travel_to Time.zone.parse("2026-04-25 12:00:00") do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {subscriptionId: subscription.id}
+        )
+
+        subscription_response = result["data"]["subscription"]
+        expect(subscription_response["downgradePlanDate"]).to eq("2026-05-22")
+        expect(subscription_response["nextSubscriptionType"]).to eq("downgrade")
+      end
+    end
+
+    it "exposes previousPlan and previousSubscription.downgradePlanDate on the pending subscription" do
+      travel_to Time.zone.parse("2026-04-25 12:00:00") do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {subscriptionId: pending_subscription.id}
+        )
+
+        subscription_response = result["data"]["subscription"]
+        expect(subscription_response["previousPlan"]).to include(
+          "id" => plan.id,
+          "name" => plan.name
+        )
+        expect(subscription_response["downgradePlanDate"]).to be_nil
+        expect(subscription_response["previousSubscription"]).to include(
+          "id" => subscription.id,
+          "downgradePlanDate" => "2026-05-22"
+        )
+      end
+    end
+  end
+
+  context "when subscription has no previous subscription" do
+    it "returns null for previousPlan, previousSubscription and downgradePlanDate" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {subscriptionId: subscription.id}
+      )
+
+      subscription_response = result["data"]["subscription"]
+      expect(subscription_response["previousPlan"]).to be_nil
+      expect(subscription_response["previousSubscription"]).to be_nil
+      expect(subscription_response["downgradePlanDate"]).to be_nil
     end
   end
 

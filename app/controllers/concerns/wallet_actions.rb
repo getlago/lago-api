@@ -47,14 +47,14 @@ module WalletActions
     render_wallet(wallet)
   end
 
-  def wallet_index(external_customer_id:)
+  def wallet_index(external_customer_id:, currency:)
     result = WalletsQuery.call(
       organization: current_organization,
       pagination: {
         page: params[:page],
         limit: params[:per_page] || PER_PAGE
       },
-      filters: {external_customer_id: external_customer_id}
+      filters: {external_customer_id: external_customer_id, currency:}
     )
 
     if result.success?
@@ -64,7 +64,7 @@ module WalletActions
           ::V1::WalletSerializer,
           collection_name: "wallets",
           meta: pagination_metadata(result.wallets),
-          includes: %i[recurring_transaction_rules limitations]
+          includes: %i[recurring_transaction_rules limitations applied_invoice_custom_sections]
         )
       )
     else
@@ -193,7 +193,7 @@ module WalletActions
       json: ::V1::WalletSerializer.new(
         wallet,
         root_name: "wallet",
-        includes: %i[recurring_transaction_rules limitations]
+        includes: %i[recurring_transaction_rules limitations applied_invoice_custom_sections]
       )
     )
   end

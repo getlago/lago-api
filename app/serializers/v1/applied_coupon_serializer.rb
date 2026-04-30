@@ -8,6 +8,7 @@ module V1
         lago_coupon_id: model.coupon.id,
         coupon_code: model.coupon.code,
         coupon_name: model.coupon.name,
+        coupon_description: model.coupon.description,
         coupon_status: model.coupon.status,
         coupon_deleted_at: model.coupon.deleted_at&.iso8601,
         lago_customer_id: model.customer.id,

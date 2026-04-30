@@ -44,6 +44,16 @@ RSpec.describe Invoices::Payments::DeliverErrorWebhookService do
       end
     end
 
+    context "when the invoice is a subscription invoice and open" do
+      let(:invoice) { create(:invoice, invoice_type: :subscription, status: :open) }
+
+      it "does not send any webhook" do
+        expect do
+          webhook_service.call_async
+        end.not_to have_enqueued_job(SendWebhookJob)
+      end
+    end
+
     context "when the invoice is credit?" do
       let(:invoiceable) { create(:wallet_transaction) }
       let(:fee) { create(:fee, fee_type: :credit, invoice: invoice, invoiceable:) }

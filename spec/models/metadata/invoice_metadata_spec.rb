@@ -12,7 +12,12 @@ RSpec.describe Metadata::InvoiceMetadata do
     {key:, value:, invoice:, organization: invoice.organization}
   end
 
-  it { is_expected.to belong_to(:organization) }
+  describe "associations" do
+    it do
+      expect(subject).to belong_to(:invoice).touch(true)
+      expect(subject).to belong_to(:organization)
+    end
+  end
 
   describe "validations" do
     context "when uniqueness condition is satisfied" do

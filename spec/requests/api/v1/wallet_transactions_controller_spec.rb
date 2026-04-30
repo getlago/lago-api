@@ -68,7 +68,7 @@ RSpec.describe Api::V1::WalletTransactionsController do
     end
 
     context "with voided credits" do
-      let(:wallet) { create(:wallet, customer:, credits_balance: 20, balance_cents: 2000) }
+      let(:wallet) { create(:wallet, :with_inbound_transaction, customer:, credits_balance: 20, balance_cents: 2000) }
       let(:params) do
         {
           wallet_id:,
@@ -370,6 +370,17 @@ RSpec.describe Api::V1::WalletTransactionsController do
       it "returns not_found error" do
         subject
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "with applied_invoice_custom_sections in response" do
+      before { create(:wallet_transaction_applied_invoice_custom_section, wallet_transaction:) }
+
+      it "includes applied_invoice_custom_sections in the serialized response" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transaction][:applied_invoice_custom_sections].count).to eq(1)
       end
     end
   end

@@ -192,7 +192,37 @@ RSpec.describe Charges::Validators::GraduatedService do
       end
     end
 
+    context "with decimal adjacent ranges" do
+      let(:ranges) do
+        [
+          {from_value: 0, to_value: 0.1, per_unit_amount: "10", flat_amount: "0"},
+          {from_value: 0.1, to_value: 1, per_unit_amount: "5", flat_amount: "0"},
+          {from_value: 1, to_value: nil, per_unit_amount: "2", flat_amount: "0"}
+        ]
+      end
+
+      it { expect(validation_service).to be_valid }
+    end
+
+    context "with decimal adjacent ranges that have a gap" do
+      let(:ranges) do
+        [
+          {from_value: 0, to_value: 0.1, per_unit_amount: "10", flat_amount: "0"},
+          {from_value: 0.5, to_value: nil, per_unit_amount: "5", flat_amount: "0"}
+        ]
+      end
+
+      it "is invalid" do
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error.messages[:graduated_ranges]).to include("invalid_graduated_ranges")
+      end
+    end
+
     it_behaves_like "pricing_group_keys property validation" do
+      let(:properties) { {"graduated_ranges" => ranges}.merge(grouping_properties) }
+    end
+
+    it_behaves_like "presentation_group_keys property validation" do
       let(:properties) { {"graduated_ranges" => ranges}.merge(grouping_properties) }
     end
   end

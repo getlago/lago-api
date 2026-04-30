@@ -56,6 +56,8 @@ Lago/NoDropColumnOrTable:
     - "db/migrate/20260116121019_remove_role_from_invites.rb"
     - "db/migrate/20260119162712_drop_subscription_fixed_charge_units_overrides.rb"
     - "db/migrate/20260129145352_drop_properties_from_enriched_events.rb"
+    - "db/migrate/20260409151451_create_enriched_store_migrations.rb"
+    - "db/migrate/20260409161142_create_enriched_store_subscription_migrations.rb"
 
 # TODO: Fix these services
 Lago/ServiceCall:

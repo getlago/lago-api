@@ -87,11 +87,13 @@ end
 #
 # Indexes
 #
-#  index_webhooks_for_query                          (organization_id,webhook_endpoint_id,webhook_type,updated_at)
-#  index_webhooks_on_endpoint_and_timestamps         (webhook_endpoint_id,updated_at,created_at)
-#  index_webhooks_on_endpoint_status_and_timestamps  (webhook_endpoint_id,status,updated_at)
-#  index_webhooks_on_organization_id                 (organization_id)
-#  index_webhooks_on_webhook_endpoint_id             (webhook_endpoint_id)
+#  index_webhooks_for_query                                      (organization_id,webhook_endpoint_id,webhook_type,updated_at)
+#  index_webhooks_on_endpoint_and_timestamps                     (webhook_endpoint_id,updated_at,created_at)
+#  index_webhooks_on_endpoint_status_and_timestamps              (webhook_endpoint_id,status,updated_at)
+#  index_webhooks_on_object_type_and_object_id_and_webhook_type  (object_type,object_id,webhook_type)
+#  index_webhooks_on_organization_id                             (organization_id)
+#  index_webhooks_on_updated_at_for_cleanup                      (updated_at)
+#  index_webhooks_on_webhook_endpoint_id                         (webhook_endpoint_id)
 #
 # Foreign Keys
 #

@@ -247,7 +247,7 @@ RSpec.shared_examples "a wallet create endpoint" do
       expect(recurring_rules.first[:trigger]).to eq("interval")
       expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
       custom_section = recurring_rules.first[:applied_invoice_custom_sections].first
-      expect(custom_section[:invoice_custom_section_id]).to eq(section_1.id)
+      expect(custom_section[:invoice_custom_section][:lago_id]).to eq(section_1.id)
       expect(recurring_rules.first[:payment_method][:payment_method_type]).to eq("provider")
       expect(recurring_rules.first[:payment_method][:payment_method_id]).to eq(payment_method.id)
     end
@@ -592,6 +592,16 @@ RSpec.shared_examples "a wallet create endpoint" do
       expect(json[:error_details][:code]).to eq(["value_already_exist"])
     end
   end
+
+  context "with applied_invoice_custom_sections in response" do
+    it "includes applied_invoice_custom_sections in the serialized response" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      wallet = Wallet.find(json[:wallet][:lago_id])
+      expect(json[:wallet][:applied_invoice_custom_sections].count).to eq(wallet.applied_invoice_custom_sections.count)
+    end
+  end
 end
 
 RSpec.shared_examples "a wallet update endpoint" do
@@ -756,7 +766,7 @@ RSpec.shared_examples "a wallet update endpoint" do
       expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
       expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
       custom_section = recurring_rules.first[:applied_invoice_custom_sections].first
-      expect(custom_section[:invoice_custom_section_id]).to eq(section_1.id)
+      expect(custom_section[:invoice_custom_section][:lago_id]).to eq(section_1.id)
       expect(recurring_rules.first[:payment_method][:payment_method_type]).to eq("provider")
       expect(recurring_rules.first[:payment_method][:payment_method_id]).to eq(payment_method.id)
 
@@ -1012,6 +1022,17 @@ RSpec.shared_examples "a wallet update endpoint" do
       expect(json[:error_details][:code]).to eq(["value_already_exist"])
     end
   end
+
+  context "with applied_invoice_custom_sections in response" do
+    before { create(:wallet_applied_invoice_custom_section, wallet:) }
+
+    it "includes applied_invoice_custom_sections in the serialized response" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:applied_invoice_custom_sections].count).to eq(1)
+    end
+  end
 end
 
 RSpec.shared_examples "a wallet show endpoint" do
@@ -1034,6 +1055,17 @@ RSpec.shared_examples "a wallet show endpoint" do
     it "returns not found" do
       subject
       expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  context "with applied_invoice_custom_sections in response" do
+    before { create(:wallet_applied_invoice_custom_section, wallet:) }
+
+    it "includes applied_invoice_custom_sections in the serialized response" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:applied_invoice_custom_sections].count).to eq(1)
     end
   end
 end
@@ -1078,6 +1110,17 @@ RSpec.shared_examples "a wallet terminate endpoint" do
       expect(response).to have_http_status(:not_found)
     end
   end
+
+  context "with applied_invoice_custom_sections in response" do
+    before { create(:wallet_applied_invoice_custom_section, wallet:) }
+
+    it "includes applied_invoice_custom_sections in the serialized response" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:applied_invoice_custom_sections].count).to eq(1)
+    end
+  end
 end
 
 RSpec.shared_examples "a wallet index endpoint" do
@@ -1112,6 +1155,32 @@ RSpec.shared_examples "a wallet index endpoint" do
       expect(json[:meta][:prev_page]).to eq(nil)
       expect(json[:meta][:total_pages]).to eq(2)
       expect(json[:meta][:total_count]).to eq(2)
+    end
+  end
+
+  context "with applied_invoice_custom_sections in response" do
+    let(:params) { {} }
+
+    before { create(:wallet_applied_invoice_custom_section, wallet:) }
+
+    it "includes applied_invoice_custom_sections in the serialized response" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallets].first[:applied_invoice_custom_sections].count).to eq(1)
+    end
+  end
+
+  context "with currency filter" do
+    let!(:brl_wallet) { create(:wallet, customer:, currency: "BRL") }
+    let(:params) { {currency: "BRL"} }
+
+    it "returns only wallets with matching currency" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallets].count).to eq(1)
+      expect(json[:wallets].first[:lago_id]).to eq(brl_wallet.id)
     end
   end
 end

@@ -174,6 +174,17 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
           )
           .on_queue(webhook_queue)
       end
+
+      context "when customer has no currency" do
+        let(:customer) { create(:customer, organization:, currency: nil) }
+
+        it "falls back to the organization default currency" do
+          generate_checkout_url
+          expect(payment_links_api).to have_received(:payment_links).with(
+            hash_including(amount: hash_including(currency: organization.default_currency))
+          )
+        end
+      end
     end
   end
 

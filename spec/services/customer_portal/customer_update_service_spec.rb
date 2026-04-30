@@ -83,6 +83,18 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     end
   end
 
+  context "with email containing unicode lookalike characters" do
+    let(:update_args) do
+      {
+        email: "hello@something\u2013other.com"
+      }
+    end
+
+    it "sanitizes the email before saving" do
+      expect(result.customer.email).to eq("hello@something-other.com")
+    end
+  end
+
   context "when organization has eu tax management" do
     let(:organization) { customer.organization }
     let(:tax_code) { "lago_eu_fr_standard" }

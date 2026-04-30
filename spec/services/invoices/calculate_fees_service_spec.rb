@@ -2006,7 +2006,7 @@ RSpec.describe Invoices::CalculateFeesService do
 
     context "with applied prepaid credits" do
       let(:timestamp) { Time.zone.now.beginning_of_month }
-      let(:wallet) { create(:wallet, customer: subscription.customer, balance: "0.30", credits_balance: "0.30") }
+      let(:wallet) { create(:wallet, :with_inbound_transaction, customer: subscription.customer, balance: "0.30", credits_balance: "0.30") }
 
       let(:plan) do
         create(:plan, interval: "monthly")
@@ -2074,7 +2074,9 @@ RSpec.describe Invoices::CalculateFeesService do
       let(:coupon1) { create(:coupon, organization:, coupon_type: "percentage", limited_billable_metrics: true, percentage_rate: 50.00) }
       let(:coupon2) { create(:coupon, organization:) }
       let(:coupon_target) { create(:coupon_billable_metric, coupon: coupon1, billable_metric: billable_metric1) }
-      let(:wallet) { create(:wallet, organization:, customer: subscription.customer, balance: "50_000", credits_balance: "50_000", allowed_fee_types: %w[charge]) }
+      let(:wallet) do
+        create(:wallet, :with_inbound_transaction, organization:, customer: subscription.customer, balance: "50_000", credits_balance: "50_000", allowed_fee_types: %w[charge])
+      end
       let(:applied_coupon) do
         create(
           :applied_coupon,
@@ -2357,6 +2359,25 @@ RSpec.describe Invoices::CalculateFeesService do
         expect(result).to be_success
         expect(result.invoice.fees.fixed_charge.count).to eq(0)
       end
+    end
+  end
+
+  context "when subscription is incomplete" do
+    let(:status) { :incomplete }
+    let(:timestamp) { Time.zone.parse("07 Mar 2022") }
+    let(:started_at) { Time.zone.parse("07 Mar 2022") }
+    let(:billing_time) { :anniversary }
+    let(:pay_in_advance) { true }
+    let(:fixed_charge) do
+      create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "10"}, units: 10, pay_in_advance: true)
+    end
+
+    it "creates subscription and fixed charge fees" do
+      result = invoice_service.call
+
+      expect(result).to be_success
+      expect(invoice.fees.subscription.count).to eq(1)
+      expect(invoice.fees.fixed_charge.count).to eq(1)
     end
   end
 

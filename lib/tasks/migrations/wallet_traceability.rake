@@ -4,20 +4,30 @@ require "csv"
 require "parallel"
 
 class WalletMigration
-  def initialize(dry_run: true, limit: nil, batch_size: 1000, output_limit: 50,
-    thread_count: 0, output_file: nil, scope: Wallet.where(traceable: false))
+  def self.default_error_log_file
+    File.join(Dir.tmpdir, "wallet_migration_errors_#{Time.current.strftime("%Y%m%d%H%M%S")}.csv")
+  end
+
+  def initialize(dry_run: true, limit: nil, batch_size: 1000, error_display_limit: 50,
+    thread_count: 0, error_log_file: nil, cursor: nil, scope: Wallet.where(traceable: false))
     @scope = scope
     @dry_run = dry_run
     @limit = limit
-    @batch_size = batch_size
-    @output_limit = output_limit
+    @batch_size = limit ? [batch_size, limit].min : batch_size
+    @error_display_limit = error_display_limit
     @thread_count = thread_count
-    @output_file = output_file
+    @error_log_file = error_log_file || self.class.default_error_log_file
+    validate_error_log_file!
+    parse_cursor(cursor)
   end
 
   def run
     puts "Wallet migration — mode: #{@dry_run ? "DRY-RUN (validation only)" : "BACKFILL (writing data)"}"
-    puts "Limit: #{@limit || "all"}, Batch size: #{@batch_size}, Threads: #{@thread_count.zero? ? "sequential" : @thread_count}"
+    puts "Customer limit: #{@limit || "all"}, Batch size: #{@batch_size}, Threads: #{@thread_count.zero? ? "sequential" : @thread_count}"
+    puts "Cursor: #{@cursor_start}"
+    if @limit
+      puts "Next cursor: #{@next_cursor_start || "none (all remaining records fit within limit)"}"
+    end
     puts "=" * 60
 
     if @dry_run
@@ -31,6 +41,35 @@ class WalletMigration
 
   attr_reader :scope
 
+  def validate_error_log_file!
+    FileUtils.touch(@error_log_file)
+  rescue SystemCallError => e
+    raise "Cannot write to error log file #{@error_log_file}: #{e.message}"
+  end
+
+  UUID_REGEX = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+
+  def parse_cursor(cursor)
+    if cursor
+      raise "Invalid CURSOR format: #{cursor}" unless cursor.match?(UUID_REGEX)
+
+      @cursor_start = cursor
+    else
+      @cursor_start = scope.order(:customer_id).pick(:customer_id)
+    end
+
+    @next_cursor_start = compute_next_cursor
+  end
+
+  def compute_next_cursor
+    return unless @limit
+
+    query = scope
+    query = query.where(Wallet.arel_table[:customer_id].gteq(@cursor_start)) if @cursor_start
+    query.order(:customer_id).select(:customer_id).distinct
+      .offset(@limit).limit(1).pick(:customer_id)
+  end
+
   # ---------------------------------------------------------------------------
   # Dry-run: validate without writing
   # ---------------------------------------------------------------------------
@@ -38,13 +77,12 @@ class WalletMigration
   def run_validation
     mutex = Mutex.new
     total_wallets = 0
+    customers_validated = 0
     migratable_wallets = 0
     problematic_wallets = []
-    wallet_count = scope.count
+    progress_total = progress_count
 
     iterate_customers_in_batches do |customer_ids|
-      batch_wallet_count = 0
-
       Parallel.each(customer_ids, in_threads: @thread_count) do |customer_id|
         ActiveRecord::Base.connection_pool.with_connection do
           wallets = scope.where(customer_id: customer_id).includes(:customer, :organization, :wallet_transactions).to_a
@@ -52,26 +90,17 @@ class WalletMigration
             issues = validate_wallet(wallet)
             mutex.synchronize do
               total_wallets += 1
-              batch_wallet_count += 1
               if issues.empty?
                 migratable_wallets += 1
               else
-                problematic_wallets << {
-                  wallet_id: wallet.id,
-                  customer_id: wallet.customer_id,
-                  customer_name: wallet.customer.name,
-                  organization_id: wallet.organization_id,
-                  organization_name: wallet.organization.name,
-                  created_at: wallet.created_at,
-                  issues: issues
-                }
+                problematic_wallets << build_wallet_error(wallet, issues)
               end
             end
           end
+          mutex.synchronize { customers_validated += 1 }
         end
       end
-      mutex.synchronize { print_progress("Validating", total_wallets, wallet_count) }
-      batch_wallet_count
+      mutex.synchronize { print_progress("Validating", customers_validated, progress_total) }
     end
 
     clear_progress
@@ -206,8 +235,8 @@ class WalletMigration
 
     if problematic_wallets.any?
       puts "\n" + "=" * 60
-      puts "PROBLEMATIC WALLETS (first #{@output_limit}):"
-      problematic_wallets.first(@output_limit).each do |pw|
+      puts "PROBLEMATIC WALLETS (first #{@error_display_limit}):"
+      problematic_wallets.first(@error_display_limit).each do |pw|
         puts "  Wallet #{pw[:wallet_id]}:"
         puts "    - Customer: #{pw[:customer_name]} (#{pw[:customer_id]})"
         puts "    - Org: #{pw[:organization_name]} (#{pw[:organization_id]})"
@@ -217,7 +246,7 @@ class WalletMigration
         remaining = pw[:issues].size - 3
         puts "      - ... and #{remaining} more issues" if remaining > 0
       end
-      hidden = problematic_wallets.size - @output_limit
+      hidden = problematic_wallets.size - @error_display_limit
       puts "  ... and #{hidden} more problematic wallets" if hidden > 0
     end
 
@@ -225,7 +254,7 @@ class WalletMigration
     percentage = (total_wallets > 0) ? (migratable_wallets.to_f / total_wallets * 100).round(2) : 0
     puts "Migration readiness: #{percentage}%"
 
-    if @output_file && problematic_wallets.any?
+    if @error_log_file && problematic_wallets.any?
       export_csv(problematic_wallets, headers: %w[wallet_id customer_id customer_name organization_id organization_name created_at issues]) do |pw|
         [pw[:wallet_id], pw[:customer_id], pw[:customer_name], pw[:organization_id], pw[:organization_name], pw[:created_at].to_date, pw[:issues].join(" | ")]
       end
@@ -240,41 +269,49 @@ class WalletMigration
     mutex = Mutex.new
     customers_processed = 0
     wallets_processed = 0
-    errors = []
-    wallet_count = scope.count
+    errored_wallets = []
+    progress_total = progress_count
 
     iterate_customers_in_batches do |customer_ids|
-      batch_wallet_count = 0
-
       Parallel.each(customer_ids, in_threads: @thread_count) do |customer_id|
         ActiveRecord::Base.connection_pool.with_connection do
+          customer = Customer.new(id: customer_id).freeze
+          current_wallet = nil
           ApplicationRecord.transaction do
-            ApplicationRecord.with_advisory_lock!("customer-#{customer_id}", timeout_seconds: 10, transaction: true) do
-              wallets = scope.where(customer_id: customer_id).includes(wallet_transactions: :fundings).to_a
+            Customers::LockService.call(customer:, scope: :prepaid_credit) do
+              wallets = scope.where(customer_id: customer_id).includes(:customer, :organization, wallet_transactions: :fundings).to_a
               next if wallets.empty?
 
-              wallets.each { |wallet| backfill_wallet_transactions(wallet) }
+              wallets.each do |wallet|
+                current_wallet = wallet
+                issues = validate_wallet(wallet)
+                if issues.any?
+                  raise issues.join("; ")
+                end
+
+                backfill_wallet_transactions(wallet)
+              end
 
               Wallet.where(id: wallets.map(&:id)).update_all(traceable: true) # rubocop:disable Rails/SkipsModelValidations
 
               mutex.synchronize do
                 wallets_processed += wallets.size
-                batch_wallet_count += wallets.size
                 customers_processed += 1
               end
-            rescue => e
-              mutex.synchronize { errors << {customer_id: customer_id, error: e.message} }
-              raise ActiveRecord::Rollback
             end
+          rescue => e
+            mutex.synchronize do
+              errored_wallets << build_wallet_error(current_wallet, [e.message])
+            end
+            raise ActiveRecord::Rollback
           end
         end
       end
-      mutex.synchronize { print_progress("Backfilling", wallets_processed + errors.size, wallet_count) }
-      batch_wallet_count
+      mutex.synchronize { print_progress("Backfilling", customers_processed + errored_wallets.size, progress_total) }
     end
 
     clear_progress
-    print_backfill_summary(customers_processed, wallets_processed, errors)
+    print_backfill_summary(customers_processed, wallets_processed, errored_wallets)
   end
 
   def backfill_wallet_transactions(wallet)
@@ -344,22 +381,43 @@ class WalletMigration
     end
   end
 
-  def print_backfill_summary(customers_processed, wallets_processed, errors)
+  def build_wallet_error(wallet, issues)
+    {
+      wallet_id: wallet&.id || "unknown",
+      customer_id: wallet&.customer_id || "unknown",
+      customer_name: wallet&.customer&.name || "unknown",
+      organization_id: wallet&.organization_id || "unknown",
+      organization_name: wallet&.organization&.name || "unknown",
+      created_at: wallet&.created_at,
+      issues: issues
+    }
+  end
+
+  def print_backfill_summary(customers_processed, wallets_processed, errored_wallets)
     puts "\n" + "=" * 60
     puts "Customers processed: #{customers_processed}"
     puts "Wallets processed: #{wallets_processed}"
-    puts "Errors: #{errors.size}"
+    puts "Errors: #{errored_wallets.size}"
 
-    if errors.any?
-      puts "\nErrors (first 20):"
-      errors.first(20).each do |e|
-        puts "  Customer #{e[:customer_id]}: #{e[:error]}"
+    if errored_wallets.any?
+      puts "\nErrors (first #{@error_display_limit}):"
+      errored_wallets.first(@error_display_limit).each do |pw|
+        puts "  Wallet #{pw[:wallet_id]}:"
+        puts "    - Customer: #{pw[:customer_name]} (#{pw[:customer_id]})"
+        puts "    - Org: #{pw[:organization_name]} (#{pw[:organization_id]})"
+        puts "    - Created At: #{pw[:created_at]&.to_date}"
+        puts "    - Issues:"
+        pw[:issues].first(3).each { |issue| puts "      - #{issue}" }
+        remaining = pw[:issues].size - 3
+        puts "      - ... and #{remaining} more issues" if remaining > 0
       end
+      hidden = errored_wallets.size - @error_display_limit
+      puts "  ... and #{hidden} more errored wallets" if hidden > 0
     end
 
-    if @output_file && errors.any?
-      export_csv(errors, headers: %w[customer_id error]) do |e|
-        [e[:customer_id], e[:error]]
+    if @error_log_file && errored_wallets.any?
+      export_csv(errored_wallets, headers: %w[wallet_id customer_id customer_name organization_id organization_name created_at issues]) do |pw|
+        [pw[:wallet_id], pw[:customer_id], pw[:customer_name], pw[:organization_id], pw[:organization_name], pw[:created_at]&.to_date, pw[:issues].join(" | ")]
       end
     end
   end
@@ -369,38 +427,42 @@ class WalletMigration
   # ---------------------------------------------------------------------------
 
   def export_csv(records, headers:)
-    CSV.open(@output_file, "w") do |csv|
+    CSV.open(@error_log_file, "w") do |csv|
       csv << headers
       records.each { |record| csv << yield(record) }
     end
-    puts "CSV exported to #{@output_file} (#{records.size} records)"
+    puts "CSV exported to #{@error_log_file} (#{records.size} records)"
   end
 
   # ---------------------------------------------------------------------------
   # Shared helpers
   # ---------------------------------------------------------------------------
 
+  def windowed_scope
+    query = scope
+    query = query.where(Wallet.arel_table[:customer_id].gteq(@cursor_start)) if @cursor_start
+    query = query.where(Wallet.arel_table[:customer_id].lt(@next_cursor_start)) if @next_cursor_start
+    query
+  end
+
+  def progress_count
+    windowed_scope.select(:customer_id).distinct.count
+  end
+
   # Iterates distinct customer IDs in batches using cursor-based pagination.
-  # The block must return the number of wallets processed in that batch.
-  # The limit is best-effort: we stop fetching new customer batches once the
-  # cumulative wallet count reaches @limit, but all wallets for a customer
-  # are always processed atomically.
+  # The window is bounded by @cursor_start (inclusive) and @next_cursor_start (exclusive).
   def iterate_customers_in_batches
-    wallets_processed = 0
     last_customer_id = nil
 
     loop do
-      break if @limit && wallets_processed >= @limit
-
-      query = scope
+      query = windowed_scope
       query = query.where(Wallet.arel_table[:customer_id].gt(last_customer_id)) if last_customer_id
       customer_ids = query.order(:customer_id).distinct.limit(@batch_size).pluck(:customer_id)
       break if customer_ids.empty?
 
       last_customer_id = customer_ids.last
 
-      batch_wallet_count = yield(customer_ids)
-      wallets_processed += batch_wallet_count
+      yield(customer_ids)
     end
   end
 
@@ -420,23 +482,43 @@ class WalletMigration
 end
 
 namespace :migrations do
-  desc "Migrate wallets to traceable (dry_run=true by default)"
+  desc "Migrate wallets to traceable (DRY_RUN=true by default)"
   task wallet_traceability: :environment do
     Rails.logger.level = :info
 
-    dry_run = ENV.fetch("dry_run", "true") != "false"
-    include_terminated = ENV["include_terminated"] == "true"
+    dry_run = ENV.fetch("DRY_RUN", "true") != "false"
+    include_terminated = ENV["INCLUDE_TERMINATED"] == "true"
     scope = Wallet.where(traceable: false)
     scope = scope.active unless include_terminated
-    scope = scope.where(organization_id: ENV["organization_id"]) if ENV["organization_id"].present?
+    scope = scope.where(organization_id: ENV["ORGANIZATION_ID"]) if ENV["ORGANIZATION_ID"].present?
 
     options = {scope:, dry_run:}
-    options[:limit] = ENV["limit"].to_i if ENV["limit"].present?
-    options[:batch_size] = ENV["batch_size"].to_i if ENV["batch_size"].present?
-    options[:output_limit] = ENV["output_limit"].to_i if ENV["output_limit"].present?
-    options[:thread_count] = ENV["thread_count"].to_i if ENV["thread_count"].present?
-    options[:output_file] = ENV["output_file"] if ENV["output_file"].present?
+    options[:limit] = parse_positive_integer("LIMIT") if ENV["LIMIT"].present?
+    options[:batch_size] = parse_positive_integer("BATCH_SIZE") if ENV["BATCH_SIZE"].present?
+    options[:error_display_limit] = parse_positive_integer("ERROR_DISPLAY_LIMIT") if ENV["ERROR_DISPLAY_LIMIT"].present?
+    options[:thread_count] = parse_non_negative_integer("THREAD_COUNT") if ENV["THREAD_COUNT"].present?
+    options[:error_log_file] = ENV["ERROR_LOG_FILE"] if ENV["ERROR_LOG_FILE"].present?
+
+    options[:cursor] = ENV["CURSOR"] if ENV["CURSOR"].present?
 
     WalletMigration.new(**options).run
+  end
+
+  def parse_positive_integer(name)
+    value = ENV[name]
+    integer = Integer(value)
+    raise "#{name} must be a positive integer, got: #{value}" unless integer > 0
+    integer
+  rescue ArgumentError
+    raise "#{name} must be a positive integer, got: #{value}"
+  end
+
+  def parse_non_negative_integer(name)
+    value = ENV[name]
+    integer = Integer(value)
+    raise "#{name} must be a non-negative integer, got: #{value}" unless integer >= 0
+    integer
+  rescue ArgumentError
+    raise "#{name} must be a non-negative integer, got: #{value}"
   end
 end

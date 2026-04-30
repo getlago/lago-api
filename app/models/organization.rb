@@ -6,6 +6,7 @@ class Organization < ApplicationRecord
   include Currencies
   include Organizations::AuthenticationMethods
   include HasFeatureFlags
+  include Organizations::Sluggable
 
   self.ignored_columns += [:clickhouse_aggregation]
 
@@ -49,6 +50,7 @@ class Organization < ApplicationRecord
   has_many :pricing_units
   has_many :customers
   has_many :subscriptions
+  has_many :activation_rules, class_name: "Subscription::ActivationRule"
   has_many :invoices
   has_many :credit_notes
   has_many :fees
@@ -97,6 +99,7 @@ class Organization < ApplicationRecord
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
   has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
+  has_one :enriched_store_migration
 
   has_many :invoice_custom_sections
   has_many :manual_invoice_custom_sections, -> { where(section_type: "manual") }, class_name: "InvoiceCustomSection"
@@ -169,6 +172,8 @@ class Organization < ApplicationRecord
 
   validate :validate_premium_integrations
   validate :validate_email_settings
+
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
   before_create :set_hmac_key
   after_create :generate_document_number_prefix
@@ -335,6 +340,7 @@ end
 #  net_payment_term                 :integer          default(0), not null
 #  pre_filter_events                :boolean          default(FALSE), not null
 #  premium_integrations             :string           default([]), not null, is an Array
+#  slug                             :string           not null
 #  state                            :string
 #  tax_identification_number        :string
 #  timezone                         :string           default("UTC"), not null
@@ -348,4 +354,5 @@ end
 #
 #  index_organizations_on_api_key   (api_key) UNIQUE
 #  index_organizations_on_hmac_key  (hmac_key) UNIQUE
+#  index_organizations_on_slug      (slug) UNIQUE
 #

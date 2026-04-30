@@ -60,6 +60,15 @@ RSpec.describe Organizations::UpdateService do
       expect(result.organization.document_locale).to eq("fr")
     end
 
+    context "with email containing unicode lookalike characters" do
+      let(:params) { {email: "hello@something\u2013other.com"} }
+
+      it "sanitizes the email before saving" do
+        result = update_service.call
+        expect(result.organization.email).to eq("hello@something-other.com")
+      end
+    end
+
     it "updates default billing_entity" do
       result = update_service.call
 
@@ -110,6 +119,67 @@ RSpec.describe Organizations::UpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:document_number_prefix]).to eq(["value_is_too_long"])
+      end
+    end
+
+    context "when slug is sent" do
+      before { params[:slug] = "new-slug" }
+
+      it "updates the organization slug" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.organization.slug).to eq("new-slug")
+      end
+    end
+
+    context "when slug has mixed case and whitespace" do
+      before { params[:slug] = "  My-Slug  " }
+
+      it "normalizes the slug before saving" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.organization.slug).to eq("my-slug")
+      end
+    end
+
+    context "when slug is invalid" do
+      before { params[:slug] = "INVALID SLUG!" }
+
+      it "returns an error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:slug]).to be_present
+      end
+    end
+
+    context "when slug is already taken" do
+      before do
+        create(:organization, slug: "taken-slug")
+        params[:slug] = "taken-slug"
+      end
+
+      it "returns an error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:slug]).to be_present
+      end
+    end
+
+    context "when slug is a reserved word" do
+      before { params[:slug] = "customers" }
+
+      it "returns an error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:slug]).to be_present
       end
     end
 

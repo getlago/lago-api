@@ -31,6 +31,7 @@ class Subscription < ApplicationRecord
     class_name: "Clickhouse::ActivityLog",
     foreign_key: :external_subscription_id,
     primary_key: :external_id
+  has_many :activation_rules, class_name: "Subscription::ActivationRule"
   has_many :applied_invoice_custom_sections,
     class_name: "Subscription::AppliedInvoiceCustomSection",
     dependent: :destroy
@@ -43,6 +44,8 @@ class Subscription < ApplicationRecord
 
   has_many :alerts, ->(s) { where(organization_id: s.organization_id) }, class_name: "UsageMonitoring::Alert", foreign_key: :subscription_external_id, primary_key: :external_id
 
+  delegate :amount_currency, to: :plan, prefix: true
+
   validates :external_id, :billing_time, presence: true
   validate :validate_external_id, on: :create
 
@@ -50,8 +53,11 @@ class Subscription < ApplicationRecord
     :pending,
     :active,
     :terminated,
-    :canceled
+    :canceled,
+    :incomplete
   ].freeze
+
+  CANCELATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout"}.freeze
 
   BILLING_TIME = %i[
     calendar
@@ -65,10 +71,13 @@ class Subscription < ApplicationRecord
   enum :billing_time, BILLING_TIME
   enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES, prefix: true
   enum :on_termination_invoice, ON_TERMINATION_INVOICES, prefix: true
+  enum :cancelation_reason, CANCELATION_REASONS
 
   validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
+  validates :started_at, presence: true, if: -> { incomplete? }
 
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
+  scope :expirable, -> { incomplete.joins(:activation_rules).merge(Subscription::ActivationRule.expirable) }
 
   # NOTE: SQL query to get subscription_at into customer timezone
   def self.subscription_at_in_timezone_sql
@@ -96,6 +105,7 @@ class Subscription < ApplicationRecord
 
   def mark_as_active!(timestamp = Time.current)
     self.started_at ||= timestamp
+    self.activated_at ||= timestamp
     self.lifetime_usage ||= previous_subscription&.lifetime_usage || build_lifetime_usage(organization:)
     self.lifetime_usage.recalculate_invoiced_usage = true
     active!
@@ -109,6 +119,23 @@ class Subscription < ApplicationRecord
   def mark_as_canceled!
     self.canceled_at ||= Time.current
     canceled!
+  end
+
+  def mark_as_incomplete!(timestamp = Time.current)
+    self.started_at ||= timestamp
+    incomplete!
+  end
+
+  def pending_rules?
+    activation_rules.pending.any?
+  end
+
+  def gated?
+    pending_rules? && incomplete?
+  end
+
+  def payment_gated?
+    incomplete? && activation_rules.payment.pending.any?
   end
 
   def upgraded?
@@ -166,10 +193,9 @@ class Subscription < ApplicationRecord
   end
 
   def validate_external_id
-    return unless active?
-    return unless organization.subscriptions.active.exists?(external_id:)
+    return unless active? || incomplete?
+    return unless organization.subscriptions.where(status:).exists?(external_id:)
 
-    # NOTE: We want unique external id per organization.
     errors.add(:external_id, :value_already_exist)
   end
 
@@ -309,6 +335,7 @@ end
 # Indexes
 #
 #  index_subscriptions_on_customer_id                          (customer_id)
+#  index_subscriptions_on_ending_at_active                     (ending_at) WHERE ((status = 1) AND (ending_at IS NOT NULL))
 #  index_subscriptions_on_external_id                          (external_id)
 #  index_subscriptions_on_last_received_event_on               (last_received_event_on)
 #  index_subscriptions_on_last_received_event_on_null          (id) WHERE (last_received_event_on IS NULL)

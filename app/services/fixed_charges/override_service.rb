@@ -32,7 +32,7 @@ module FixedCharges
         end
         new_fixed_charge.save!
 
-        FixedCharges::EmitEventsForActiveSubscriptionsService.call!(
+        FixedCharges::EmitEventsService.call!(
           fixed_charge: new_fixed_charge,
           subscription:,
           apply_units_immediately: !!params[:apply_units_immediately]

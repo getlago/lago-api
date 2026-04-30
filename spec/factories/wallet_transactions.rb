@@ -10,6 +10,7 @@ FactoryBot.define do
     credit_amount { "1.00" }
     settled_at { Time.zone.now }
     name { "Custom Transaction Name" }
+    remaining_amount_cents { (transaction_type.to_s == "inbound") ? (credit_amount.to_d * 100).to_i : nil }
     invoice_requires_successful_payment { false }
 
     trait :failed do

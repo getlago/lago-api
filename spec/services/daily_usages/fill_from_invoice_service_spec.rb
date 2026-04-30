@@ -49,6 +49,60 @@ RSpec.describe DailyUsages::FillFromInvoiceService do
       end
     end
 
+    # More context in spec/scenarios/daily_usages/yearly_plan_with_monthly_fixed_charges_spec.rb
+    context "when invoice_subscription has nil charges_from_datetime" do
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription:,
+          invoice:,
+          timestamp:,
+          from_datetime: Time.parse("2025-06-06 04:00:00.000000000 +0000"),
+          to_datetime: Time.parse("2025-07-01 03:59:59.999999000 +0000"),
+          charges_from_datetime: nil,
+          charges_to_datetime: nil
+        )
+      end
+
+      before do
+        charge = create(:standard_charge, plan: subscription.plan)
+        create(:charge_fee, invoice:, charge:, units: 12, amount_cents: 1200, subscription:)
+      end
+
+      it "skips the invoice_subscription" do
+        travel_to(timestamp) do
+          expect { fill_service.call }.not_to change(DailyUsage, :count)
+        end
+      end
+    end
+
+    # TODO: investigate why this happens
+    context "when invoice_subscription has charges_from_datetime > charges_to_datetime" do
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription:,
+          invoice:,
+          timestamp:,
+          from_datetime: Time.parse("2025-06-06 04:00:00.000000000 +0000"),
+          to_datetime: Time.parse("2025-07-01 03:59:59.999999000 +0000"),
+          charges_from_datetime: Time.parse("2025-07-01 03:59:59.999999000 +0000"),
+          charges_to_datetime: Time.parse("2025-06-07 04:00:00.000000000 +0000")
+        )
+      end
+
+      before do
+        charge = create(:standard_charge, plan: subscription.plan)
+        create(:charge_fee, invoice:, charge:, units: 12, amount_cents: 1200, subscription:)
+      end
+
+      it "skips the invoice_subscription" do
+        travel_to(timestamp) do
+          expect { fill_service.call }.not_to change(DailyUsage, :count)
+        end
+      end
+    end
+
     context "when there is usage" do
       before do
         charge = create(:standard_charge, plan: subscription.plan)

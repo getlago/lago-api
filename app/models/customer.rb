@@ -114,6 +114,8 @@ class Customer < ApplicationRecord
   has_one :default_payment_method, -> { where(is_default: true) }, class_name: "PaymentMethod"
   has_one :pending_vies_check
 
+  delegate :default_currency, to: :organization, prefix: true
+
   PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash].freeze
 
   default_scope -> { kept }
@@ -167,6 +169,8 @@ class Customer < ApplicationRecord
     # NOTE: Null byte injection. Prevent 500 errors.
     normalizes attribute, with: ->(value) { value.delete("\u0000").presence }
   end
+
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[id name firstname lastname legal_name external_id email]

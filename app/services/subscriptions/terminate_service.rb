@@ -16,6 +16,7 @@ module Subscriptions
 
     def call
       return result.not_found_failure!(resource: "subscription") if subscription.blank?
+      return result.not_allowed_failure!(code: "subscription_incomplete") if subscription.incomplete?
 
       ActiveRecord::Base.transaction do
         if subscription.pending?

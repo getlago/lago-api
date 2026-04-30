@@ -72,6 +72,7 @@ RSpec.describe Types::Customers::Object do
 
     expect(subject).to have_field(:active_subscriptions_count).of_type("Int!")
     expect(subject).to have_field(:credit_notes_balance_amount_cents).of_type("BigInt!")
+    expect(subject).to have_field(:credit_notes_balances).of_type("[CustomerCreditNotesBalance!]!")
     expect(subject).to have_field(:credit_notes_credits_available_count).of_type("Int!")
     expect(subject).to have_field(:has_active_wallet).of_type("Boolean!")
     expect(subject).to have_field(:has_credit_notes).of_type("Boolean!")

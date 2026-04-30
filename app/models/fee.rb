@@ -17,6 +17,7 @@ class Fee < ApplicationRecord
   belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
   belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
+  belongs_to :original_fee, class_name: "Fee", optional: true # Points to the root fee in a void/regenerate chain
   belongs_to :organization
   belongs_to :billing_entity
   belongs_to :fixed_charge, -> { with_discarded }, optional: true
@@ -33,6 +34,7 @@ class Fee < ApplicationRecord
 
   has_many :applied_taxes, class_name: "Fee::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
+  has_many :presentation_breakdowns, dependent: :destroy
 
   monetize :amount_cents
   monetize :taxes_amount_cents, with_model_currency: :currency
@@ -359,6 +361,7 @@ end
 #  invoice_id                          :uuid
 #  invoiceable_id                      :uuid
 #  organization_id                     :uuid             not null
+#  original_fee_id                     :uuid
 #  pay_in_advance_event_id             :uuid
 #  pay_in_advance_event_transaction_id :string
 #  subscription_id                     :uuid
@@ -366,8 +369,8 @@ end
 #
 # Indexes
 #
-#  idx_pay_in_advance_duplication_guard_charge         (pay_in_advance_event_transaction_id,charge_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false))
-#  idx_pay_in_advance_duplication_guard_charge_filter  (pay_in_advance_event_transaction_id,charge_id,charge_filter_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false))
+#  idx_pay_in_advance_duplication_guard_charge         (pay_in_advance_event_transaction_id,charge_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL))
+#  idx_pay_in_advance_duplication_guard_charge_filter  (pay_in_advance_event_transaction_id,charge_id,charge_filter_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL))
 #  index_fees_on_add_on_id                             (add_on_id)
 #  index_fees_on_applied_add_on_id                     (applied_add_on_id)
 #  index_fees_on_billing_entity_id                     (billing_entity_id)
@@ -380,6 +383,7 @@ end
 #  index_fees_on_invoice_id                            (invoice_id)
 #  index_fees_on_invoiceable                           (invoiceable_type,invoiceable_id)
 #  index_fees_on_organization_id                       (organization_id)
+#  index_fees_on_original_fee_id                       (original_fee_id)
 #  index_fees_on_pay_in_advance_event_transaction_id   (pay_in_advance_event_transaction_id) WHERE (deleted_at IS NULL)
 #  index_fees_on_subscription_id                       (subscription_id)
 #  index_fees_on_true_up_parent_fee_id                 (true_up_parent_fee_id)
@@ -394,6 +398,7 @@ end
 #  fk_rails_...  (group_id => groups.id)
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (original_fee_id => fees.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)
 #  fk_rails_...  (true_up_parent_fee_id => fees.id)
 #

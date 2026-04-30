@@ -27,6 +27,13 @@ RSpec.describe PaymentRequest do
   it { is_expected.to belong_to(:customer) }
   it { is_expected.to belong_to(:dunning_campaign).optional }
 
+  describe "normalizations" do
+    it "sanitizes email on assignment" do
+      payment_request.email = " hello@some\u200Bthing\u2013other.com "
+      expect(payment_request.email).to eq("hello@something-other.com")
+    end
+  end
+
   describe "Validations" do
     it "is valid with valid attributes" do
       expect(payment_request).to be_valid

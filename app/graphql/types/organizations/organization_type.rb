@@ -19,6 +19,7 @@ module Types
       field :default_currency, Types::CurrencyEnum, null: false
       field :logo_url, String
       field :name, String, null: false
+      field :slug, String, null: false
       field :timezone, Types::TimezoneEnum, null: true
 
       field :accessible_by_current_session, Boolean, null: false

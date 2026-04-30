@@ -60,6 +60,43 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
       )
     end
 
+    context "with taxes" do
+      let(:billing_entity_tax) { create(:tax, organization:, code: "be_vat", name: "BE VAT", rate: 20.0) }
+
+      before do
+        create(:billing_entity_applied_tax, billing_entity: customer.billing_entity, tax: billing_entity_tax)
+      end
+
+      it "returns fees with taxes applied" do
+        result = estimate_service.call
+
+        expect(result).to be_success
+
+        fee = result.fees.first
+        expect(fee.applied_taxes.size).to eq(1)
+        expect(fee.applied_taxes.first.tax_code).to eq("be_vat")
+        expect(fee.taxes_rate).to eq(20.0)
+        expect(fee.taxes_amount_cents).to be_positive
+      end
+
+      context "when customer has customer-specific taxes" do
+        let(:customer_tax) { create(:tax, organization:, code: "customer_vat", name: "Customer VAT", rate: 8.0) }
+
+        before do
+          create(:customer_applied_tax, customer:, tax: customer_tax)
+        end
+
+        it "applies customer taxes over billing entity taxes" do
+          result = estimate_service.call
+
+          fee = result.fees.first
+          expect(fee.applied_taxes.size).to eq(1)
+          expect(fee.applied_taxes.first.tax_code).to eq("customer_vat")
+          expect(fee.taxes_rate).to eq(8.0)
+        end
+      end
+    end
+
     context "when charge model is dynamic" do
       let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
       let(:charge) { create(:dynamic_charge, :pay_in_advance, plan:, billable_metric:) }

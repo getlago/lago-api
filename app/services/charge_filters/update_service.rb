@@ -2,7 +2,7 @@
 
 module ChargeFilters
   class UpdateService < BaseService
-    include Charges::CascadeUpdatable
+    include ChargeFilters::FilterCascadable
 
     Result = BaseResult[:charge_filter]
 
@@ -17,7 +17,7 @@ module ChargeFilters
     def call
       return result.not_found_failure!(resource: "charge_filter") unless charge_filter
 
-      old_filters_attrs = capture_old_filters_attrs
+      old_properties = charge_filter.properties.deep_dup
 
       ActiveRecord::Base.transaction do
         charge_filter.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
@@ -27,7 +27,13 @@ module ChargeFilters
         result.charge_filter = charge_filter
       end
 
-      trigger_cascade(old_filters_attrs)
+      trigger_filter_cascade(
+        action: "update",
+        filter_values: charge_filter.to_h,
+        old_properties:,
+        new_properties: charge_filter.properties,
+        invoice_display_name: charge_filter.invoice_display_name
+      )
 
       result
     rescue ActiveRecord::RecordInvalid => e

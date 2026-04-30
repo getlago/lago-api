@@ -217,4 +217,63 @@ RSpec.describe ::V1::SubscriptionSerializer do
       expect(result["subscription"]["plan"]["fixed_charges"]).to be_nil
     end
   end
+
+  context "when payment_gated_subscriptions feature flag is enabled" do
+    let(:organization) { create(:organization, feature_flags: ["payment_gated_subscriptions"]) }
+    let(:activated_at) { Time.zone.parse("2026-04-13T10:00:00Z") }
+    let(:subscription) do
+      create(
+        :subscription,
+        organization:,
+        cancelation_reason: Subscription::CANCELATION_REASONS[:payment_failed],
+        activated_at:
+      )
+    end
+
+    it "serializes cancelation_reason and activated_at" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["subscription"]).to include(
+        "cancelation_reason" => Subscription::CANCELATION_REASONS[:payment_failed],
+        "activated_at" => activated_at.iso8601
+      )
+    end
+
+    context "when subscription does not have activation_rules" do
+      it "serializes activation_rules as an empty array" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["subscription"]["activation_rules"]).to eq([])
+      end
+    end
+
+    context "when subscription has activation_rules" do
+      let(:activation_rule) { create(:subscription_activation_rule, subscription:, organization:) }
+
+      before { activation_rule }
+
+      it "serializes activation_rules" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["subscription"]["activation_rules"]).to contain_exactly(
+          include(
+            "lago_id" => activation_rule.id,
+            "type" => Subscription::ActivationRule::TYPES[:payment],
+            "timeout_hours" => activation_rule.timeout_hours,
+            "status" => activation_rule.status
+          )
+        )
+      end
+    end
+  end
+
+  context "when payment_gated_subscriptions feature flag is disabled" do
+    it "does not serialize feature-flagged fields" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["subscription"]).not_to have_key("cancelation_reason")
+      expect(result["subscription"]).not_to have_key("activated_at")
+      expect(result["subscription"]).not_to have_key("activation_rules")
+    end
+  end
 end

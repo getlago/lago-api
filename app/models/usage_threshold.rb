@@ -31,7 +31,7 @@ class UsageThreshold < ApplicationRecord
   end
 
   def currency
-    plan&.amount_currency || subscription&.customer&.currency || organization.default_currency
+    plan&.amount_currency || subscription&.plan_amount_currency || organization.default_currency
   end
 
   private

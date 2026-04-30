@@ -264,6 +264,14 @@
     ],
     "RO": [
       {
+        "effective_from": "2025-08-01",
+        "rates": {
+          "reduced1": 5,
+          "reduced2": 9,
+          "standard": 21
+        }
+      },
+      {
         "effective_from": "2017-01-01",
         "rates": {
           "reduced1": 5,
@@ -289,6 +297,13 @@
       }
     ],
     "EE": [
+      {
+        "effective_from": "2025-07-01",
+        "rates": {
+          "reduced": 13,
+          "standard": 24
+        }
+      },
       {
         "effective_from": "2025-01-01",
         "rates": {

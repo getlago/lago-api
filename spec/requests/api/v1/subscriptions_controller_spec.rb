@@ -611,6 +611,162 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         expect(subscription.progressive_billing_disabled).to be(true)
       end
     end
+
+    context "with applied_invoice_custom_sections in response" do
+      it "includes applied_invoice_custom_sections in the serialized response" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(json[:subscription][:applied_invoice_custom_sections]).to be_an(Array)
+        expect(json[:subscription][:applied_invoice_custom_sections].count).to eq(subscription.applied_invoice_custom_sections.count)
+      end
+    end
+
+    context "with activation_rules" do
+      let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+      let(:subscription_at) { (Time.current + 5.days).iso8601 }
+
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code: plan.code,
+          external_id: SecureRandom.uuid,
+          billing_time: "anniversary",
+          subscription_at:,
+          activation_rules: [{type: "payment", timeout_hours: 48}]
+        }
+      end
+
+      context "when feature flag is enabled" do
+        before { organization.enable_feature_flag!(:payment_gated_subscriptions) }
+
+        it "creates subscription with activation rules and returns them" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:subscription][:status]).to eq("pending")
+          expect(json[:subscription][:cancelation_reason]).to be_nil
+          expect(json[:subscription][:activated_at]).to be_nil
+          expect(json[:subscription][:activation_rules].size).to eq(1)
+          expect(json[:subscription][:activation_rules].first).to include(
+            lago_id: String,
+            type: "payment",
+            timeout_hours: 48,
+            status: "inactive",
+            expires_at: nil
+          )
+        end
+
+        context "when timeout_hours is omitted" do
+          let(:params) do
+            {
+              external_customer_id: customer.external_id,
+              plan_code: plan.code,
+              external_id: SecureRandom.uuid,
+              billing_time: "anniversary",
+              subscription_at:,
+              activation_rules: [{type: "payment"}]
+            }
+          end
+
+          it "persists rule with default timeout_hours of 0" do
+            subject
+
+            expect(response).to have_http_status(:ok)
+            expect(json[:subscription][:activation_rules].first[:timeout_hours]).to eq(0)
+          end
+        end
+      end
+
+      context "when feature flag is disabled" do
+        it "persists rules but does not include them in response" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+
+          subscription = Subscription.find(json[:subscription][:lago_id])
+          expect(subscription.activation_rules.count).to eq(1)
+
+          expect(json[:subscription]).not_to have_key(:activation_rules)
+          expect(json[:subscription]).not_to have_key(:cancelation_reason)
+          expect(json[:subscription]).not_to have_key(:activated_at)
+        end
+      end
+
+      context "with invalid rule type" do
+        let(:params) do
+          {
+            external_customer_id: customer.external_id,
+            plan_code: plan.code,
+            external_id: SecureRandom.uuid,
+            billing_time: "anniversary",
+            subscription_at:,
+            activation_rules: [{type: "unknown"}]
+          }
+        end
+
+        it "returns an unprocessable_entity error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq({activation_rules: %w[invalid_type]})
+        end
+      end
+
+      context "with negative timeout_hours" do
+        let(:params) do
+          {
+            external_customer_id: customer.external_id,
+            plan_code: plan.code,
+            external_id: SecureRandom.uuid,
+            billing_time: "anniversary",
+            subscription_at:,
+            activation_rules: [{type: "payment", timeout_hours: -1}]
+          }
+        end
+
+        it "returns an unprocessable_entity error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq({timeout_hours: %w[value_must_be_positive_or_zero]})
+        end
+      end
+
+      context "with manual payment method" do
+        let(:params) do
+          {
+            external_customer_id: customer.external_id,
+            plan_code: plan.code,
+            external_id: SecureRandom.uuid,
+            billing_time: "anniversary",
+            subscription_at:,
+            activation_rules: [{type: "payment", timeout_hours: 48}],
+            payment_method: {payment_method_type: "manual"}
+          }
+        end
+
+        it "returns an unprocessable_entity error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq({payment_method: %w[invalid_for_payment_activation_rules]})
+        end
+      end
+
+      context "when customer has no payment provider" do
+        let(:customer) { create(:customer, organization:, payment_provider: nil) }
+
+        it "returns an unprocessable_entity error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq({payment_method: %w[no_linked_payment_provider]})
+        end
+      end
+    end
   end
 
   describe "DELETE /api/v1/subscriptions/:external_id" do
@@ -767,6 +923,18 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       it "returns a not found error" do
         subject
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "with applied_invoice_custom_sections in response" do
+      before { create(:subscription_applied_invoice_custom_section, subscription:) }
+
+      it "includes applied_invoice_custom_sections as an array in the serialized response" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:applied_invoice_custom_sections]).to be_an(Array)
+        expect(json[:subscription][:applied_invoice_custom_sections].count).to eq(1)
       end
     end
   end
@@ -1462,6 +1630,92 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         end
       end
     end
+
+    context "with applied_invoice_custom_sections in response" do
+      let(:update_params) { {name: "updated"} }
+      let(:subscription) { create(:subscription, customer:, plan:) }
+
+      before { create(:subscription_applied_invoice_custom_section, subscription:) }
+
+      it "includes applied_invoice_custom_sections as an array in the serialized response" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:applied_invoice_custom_sections]).to be_an(Array)
+        expect(json[:subscription][:applied_invoice_custom_sections].count).to eq(1)
+      end
+    end
+
+    context "with activation_rules" do
+      let(:subscription) { create(:subscription, :pending, customer:, plan:, subscription_at: Time.current + 3.days) }
+      let(:update_params) { {activation_rules: [{type: "payment", timeout_hours: 24}]} }
+
+      context "when feature flag is enabled" do
+        before { organization.enable_feature_flag!(:payment_gated_subscriptions) }
+
+        it "persists and returns activation rules" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:subscription][:activation_rules].size).to eq(1)
+          expect(json[:subscription][:activation_rules].first).to include(
+            lago_id: String,
+            type: "payment",
+            timeout_hours: 24,
+            status: "inactive"
+          )
+        end
+
+        context "when timeout_hours is omitted" do
+          let(:update_params) { {activation_rules: [{type: "payment"}]} }
+
+          it "persists rule with default timeout_hours of 0" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:subscription][:activation_rules].first[:timeout_hours]).to eq(0)
+          end
+        end
+      end
+
+      context "when feature flag is disabled" do
+        it "persists rules but does not include them in response" do
+          subject
+
+          expect(response).to have_http_status(:success)
+
+          subscription.reload
+          expect(subscription.activation_rules.count).to eq(1)
+
+          expect(json[:subscription]).not_to have_key(:activation_rules)
+          expect(json[:subscription]).not_to have_key(:cancelation_reason)
+          expect(json[:subscription]).not_to have_key(:activated_at)
+        end
+      end
+
+      context "when subscription is active" do
+        let(:subscription) { create(:subscription, customer:, plan:) }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq({activation_rules: %w[subscription_not_pending]})
+        end
+      end
+
+      context "when subscription is incomplete" do
+        let(:subscription) { create(:subscription, :incomplete, customer:, plan:) }
+        let(:update_params) { {name: "new name"} }
+
+        it "returns a method not allowed error" do
+          subject
+
+          expect(response).to have_http_status(:method_not_allowed)
+          expect(json[:code]).to eq("subscription_incomplete")
+        end
+      end
+    end
   end
 
   describe "GET /api/v1/subscriptions/:external_id" do
@@ -1581,6 +1835,18 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           lago_id: matching_subscription.id,
           external_id: matching_subscription.external_id
         )
+      end
+    end
+
+    context "with applied_invoice_custom_sections in response" do
+      before { create(:subscription_applied_invoice_custom_section, subscription:) }
+
+      it "includes applied_invoice_custom_sections as an array in the serialized response" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:applied_invoice_custom_sections]).to be_an(Array)
+        expect(json[:subscription][:applied_invoice_custom_sections].count).to eq(1)
       end
     end
   end

@@ -125,4 +125,66 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
       "units" => "99"
     )
   end
+
+  context "with activation rules" do
+    let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+
+    let(:mutation) do
+      <<~GQL
+        mutation($input: CreateSubscriptionInput!) {
+          createSubscription(input: $input) {
+            id
+            status
+            cancelationReason
+            activationRules {
+              id
+              type
+              timeoutHours
+              status
+              expiresAt
+              createdAt
+              updatedAt
+            }
+          }
+        }
+      GQL
+    end
+
+    it "creates a subscription with activation rules" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            planId: plan.id,
+            billingTime: "anniversary",
+            subscriptionAt: (Time.current + 5.days).iso8601,
+            activationRules: [
+              {type: "payment", timeoutHours: 48}
+            ]
+          }
+        }
+      )
+
+      result_data = result["data"]["createSubscription"]
+
+      expect(result_data).to include(
+        "status" => "pending",
+        "cancelationReason" => nil
+      )
+      expect(result_data["activationRules"].size).to eq(1)
+      expect(result_data["activationRules"].first).to include(
+        "id" => String,
+        "type" => "payment",
+        "timeoutHours" => 48,
+        "status" => "inactive",
+        "createdAt" => String,
+        "expiresAt" => nil,
+        "updatedAt" => String
+      )
+    end
+  end
 end

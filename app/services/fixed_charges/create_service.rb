@@ -42,7 +42,7 @@ module FixedCharges
           taxes_result.raise_if_error!
         end
 
-        FixedCharges::EmitEventsForActiveSubscriptionsService.call!(
+        FixedCharges::EmitEventsService.call!(
           fixed_charge:,
           apply_units_immediately: !!params[:apply_units_immediately],
           timestamp:

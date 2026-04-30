@@ -67,6 +67,8 @@ module EInvoices
       end
 
       def allowances_per_tax_rate
+        fees_total = invoice.fees.sum(:precise_amount_cents)
+
         invoice.fees.group_by(&:taxes_rate).map do |tax_rate, fees|
           total_amount = fees.sum(&:precise_amount_cents)
 
@@ -76,7 +78,8 @@ module EInvoices
 
             [tax_rate, total_amount - charged_amount]
           else
-            [tax_rate, total_amount.fdiv(invoice.fees.sum(:precise_amount_cents)) * allowances]
+            proportion = fees_total.zero? ? 0 : total_amount.fdiv(fees_total)
+            [tax_rate, proportion * allowances]
           end
         end.to_h
       end

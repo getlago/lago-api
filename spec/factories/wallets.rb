@@ -13,6 +13,7 @@ FactoryBot.define do
     balance_cents { 0 }
     consumed_credits { 0 }
     invoice_requires_successful_payment { false }
+    traceable { true }
 
     trait :terminated do
       status { "terminated" }
@@ -25,6 +26,20 @@ FactoryBot.define do
     trait :with_top_up_limits do
       paid_top_up_min_amount_cents { rand(100..1000) }
       paid_top_up_max_amount_cents { rand(2000..5000) }
+    end
+
+    trait :with_inbound_transaction do
+      after(:create) do |wallet|
+        create(:wallet_transaction,
+          wallet:,
+          organization: wallet.organization,
+          transaction_type: :inbound,
+          transaction_status: :granted,
+          status: :settled,
+          amount: wallet.credits_balance,
+          credit_amount: wallet.credits_balance,
+          remaining_amount_cents: wallet.balance_cents)
+      end
     end
   end
 end

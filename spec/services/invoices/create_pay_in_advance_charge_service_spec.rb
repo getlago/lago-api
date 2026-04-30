@@ -102,7 +102,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         precise_unit_amount: 0.01111111111
       )
 
-      expect(result.invoice.currency).to eq(customer.currency)
+      expect(result.invoice.currency).to eq(subscription.plan_amount_currency)
       expect(result.invoice.fees_amount_cents).to eq(10)
 
       expect(result.invoice.taxes_amount_cents).to eq(2)
@@ -256,7 +256,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
     end
 
     context "when customer has wallet with positive balance" do
-      before { create(:wallet, customer:, balance_cents: 100, credits_balance: 100) }
+      before { create(:wallet, :with_inbound_transaction, customer:, balance_cents: 100, credits_balance: 100) }
 
       it "uses the prepaid credits" do
         allow(Credits::AppliedPrepaidCreditsService).to receive(:call).and_call_original

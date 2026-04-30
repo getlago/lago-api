@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 module FixedCharges
-  class EmitEventsForActiveSubscriptionsService < BaseService
+  class EmitEventsService < BaseService
+    Result = BaseResult[:fixed_charge_events]
+
     def initialize(fixed_charge:, subscription: nil, apply_units_immediately: false, timestamp: Time.current.to_i)
       @fixed_charge = fixed_charge
       @subscription = subscription
@@ -11,12 +13,12 @@ module FixedCharges
     end
 
     def call
-      subscriptions.each do |subscription|
+      result.fixed_charge_events = subscriptions.map do |subscription|
         ::FixedChargeEvents::CreateService.call!(
           subscription:,
           fixed_charge:,
           timestamp: apply_units_immediately ? timestamp : next_billing_period(subscription)
-        )
+        ).fixed_charge_event
       end
 
       result
@@ -31,11 +33,11 @@ module FixedCharges
       # This handles cases like plan overrides where the subscription hasn't been updated yet
       # otherwise, emit events for all active subscriptions on the plan
       if subscription
-        # Only emit events for active subscriptions, even when explicitly provided
+        # Emit events for active and incomplete subscriptions
         # Pending subscriptions will have events created when they activate
-        subscription.active? ? [subscription] : []
+        (subscription.active? || subscription.incomplete?) ? [subscription] : []
       else
-        fixed_charge.plan.subscriptions.active
+        fixed_charge.plan.subscriptions.where(status: %i[active incomplete])
       end
     end
 

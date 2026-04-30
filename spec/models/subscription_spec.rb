@@ -15,7 +15,8 @@ RSpec.describe Subscription do
         pending: 0,
         active: 1,
         terminated: 2,
-        canceled: 3
+        canceled: 3,
+        incomplete: 4
       )
       expect(subject).to define_enum_for(:billing_time).with_values(
         calendar: 0,
@@ -29,6 +30,9 @@ RSpec.describe Subscription do
         .backed_by_column_of_type(:enum)
         .with_values(generate: "generate", skip: "skip")
         .with_prefix(:on_termination_invoice)
+      expect(subject).to define_enum_for(:cancelation_reason)
+        .backed_by_column_of_type(:enum)
+        .with_values(payment_failed: "payment_failed", timeout: "timeout")
     end
   end
 
@@ -57,6 +61,7 @@ RSpec.describe Subscription do
       expect(subject).to have_many(:entitlements).class_name("Entitlement::Entitlement")
       expect(subject).to have_many(:entitlement_removals).class_name("Entitlement::SubscriptionFeatureRemoval")
       expect(subject).to have_many(:alerts).class_name("UsageMonitoring::Alert")
+      expect(subject).to have_many(:activation_rules).class_name("Subscription::ActivationRule")
     end
   end
 
@@ -81,6 +86,33 @@ RSpec.describe Subscription do
         result = described_class.starting_in_the_future
 
         expect(result).to match_array([pending_subscription_without_previous])
+      end
+    end
+
+    describe ".expirable" do
+      let(:expirable_subscription) do
+        create(:subscription, :incomplete).tap do |sub|
+          create(:subscription_activation_rule, subscription: sub, status: :pending, expires_at: 1.hour.ago)
+        end
+      end
+
+      before do
+        expirable_subscription
+
+        # incomplete with future expiry — not expirable yet
+        sub = create(:subscription, :incomplete)
+        create(:subscription_activation_rule, subscription: sub, status: :pending, expires_at: 1.hour.from_now)
+
+        # incomplete with no expiry — not expirable
+        sub2 = create(:subscription, :incomplete)
+        create(:subscription_activation_rule, subscription: sub2, status: :inactive)
+
+        # active subscription — not expirable
+        create(:subscription)
+      end
+
+      it "returns only incomplete subscriptions with expirable activation rules" do
+        expect(described_class.expirable).to match_array([expirable_subscription])
       end
     end
   end
@@ -141,6 +173,193 @@ RSpec.describe Subscription do
           expect(new_subscription).not_to be_valid
         end
       end
+
+      context "when external_id is taken by an incomplete subscription" do
+        let(:external_id) { subscription.external_id }
+
+        before { subscription.incomplete! }
+
+        it "allows an active subscription with the same external_id" do
+          expect(new_subscription).to be_valid
+        end
+      end
+
+      context "when an active and incomplete subscription both exist with the same external_id" do
+        let(:external_id) { subscription.external_id }
+
+        before do
+          create(
+            :subscription,
+            plan:,
+            status: :incomplete,
+            started_at: Time.current,
+            external_id:,
+            customer: create(:customer, organization:)
+          )
+        end
+
+        it "rejects a second active subscription" do
+          expect(new_subscription).not_to be_valid
+        end
+      end
+
+      context "when creating an incomplete subscription and one already exists" do
+        let(:external_id) { subscription.external_id }
+
+        before { subscription.incomplete! }
+
+        it "rejects a second incomplete subscription" do
+          incomplete_sub = build(
+            :subscription,
+            plan:,
+            status: :incomplete,
+            started_at: Time.current,
+            external_id:,
+            customer: create(:customer, organization:)
+          )
+          expect(incomplete_sub).not_to be_valid
+        end
+      end
+    end
+
+    describe "started_at validation" do
+      context "when status is active" do
+        it "is valid without started_at" do
+          sub = build(:subscription, started_at: nil)
+          expect(sub).to be_valid
+        end
+      end
+
+      context "when status is incomplete" do
+        it "is invalid without started_at" do
+          sub = build(:subscription, :incomplete, started_at: nil)
+          expect(sub).not_to be_valid
+          expect(sub.errors[:started_at]).to be_present
+        end
+      end
+
+      context "when status is pending" do
+        it "is valid without started_at" do
+          sub = build(:subscription, :pending)
+          expect(sub).to be_valid
+        end
+      end
+    end
+  end
+
+  describe "#mark_as_incomplete!" do
+    let(:subscription) { create(:subscription, :pending) }
+
+    it "sets started_at and changes status to incomplete" do
+      freeze_time do
+        subscription.mark_as_incomplete!
+
+        expect(subscription.status).to eq("incomplete")
+        expect(subscription.started_at).to eq(Time.current)
+        expect(subscription.activated_at).to be_nil
+      end
+    end
+  end
+
+  describe "#pending_rules?" do
+    subject(:pending_rules?) { subscription.pending_rules? }
+
+    let(:subscription) { create(:subscription) }
+
+    context "when there are pending activation rules" do
+      before { create(:subscription_activation_rule, subscription:, status: :pending) }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when there are no pending activation rules" do
+      before do
+        create(:subscription_activation_rule, subscription:, status: :inactive)
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when activation rules are satisfied" do
+      before do
+        create(:subscription_activation_rule, subscription:, status: :satisfied)
+      end
+
+      it { is_expected.to be(false) }
+    end
+  end
+
+  describe "#gated?" do
+    subject(:gated?) { subscription.gated? }
+
+    context "when incomplete with pending rules" do
+      let(:subscription) { create(:subscription, :incomplete) }
+
+      before { create(:subscription_activation_rule, subscription:, status: :pending) }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when active with pending rules" do
+      let(:subscription) { create(:subscription) }
+
+      before { create(:subscription_activation_rule, subscription:, status: :pending) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when incomplete without satisfied rules" do
+      let(:subscription) { create(:subscription, :incomplete) }
+
+      before { create(:subscription_activation_rule, subscription:, status: :satisfied) }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
+  describe "#payment_gated?" do
+    subject(:payment_gated?) { subscription.payment_gated? }
+
+    context "when incomplete with pending payment rule" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}])
+      end
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when incomplete with satisfied payment rule" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "satisfied"}])
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when active with pending payment rule" do
+      let(:subscription) do
+        create(:subscription, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}])
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when pending with pending payment rule" do
+      let(:subscription) do
+        create(:subscription, :pending, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}])
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when incomplete with no activation rules" do
+      let(:subscription) { create(:subscription, :incomplete) }
+
+      it { is_expected.to be(false) }
     end
   end
 
@@ -590,18 +809,37 @@ RSpec.describe Subscription do
   end
 
   describe "#mark_as_active!" do
-    subject(:subscription) { create(:subscription, status: :pending) }
+    subject(:subscription) { create(:subscription, :pending) }
 
-    it "changes the status to active" do
-      expect { subscription.mark_as_active! }
-        .to change(subscription, :status).from("pending").to("active")
+    it "changes the status to active and sets started_at and activated_at" do
+      freeze_time do
+        expect { subscription.mark_as_active! }
+          .to change(subscription, :status).from("pending").to("active")
 
-      expect(subscription.started_at).to be_present
-      expect(subscription.lifetime_usage).to be_present
+        expect(subscription.started_at).to eq(Time.current)
+        expect(subscription.activated_at).to eq(Time.current)
+        expect(subscription.lifetime_usage).to be_present
+      end
+    end
+
+    context "when subscription was incomplete (already has started_at)" do
+      subject(:subscription) { create(:subscription, :incomplete) }
+
+      it "preserves started_at and sets activated_at" do
+        original_started_at = subscription.started_at
+
+        freeze_time do
+          expect { subscription.mark_as_active! }
+            .to change(subscription, :status).from("incomplete").to("active")
+
+          expect(subscription.started_at).to eq(original_started_at)
+          expect(subscription.activated_at).to eq(Time.current)
+        end
+      end
     end
 
     context "with a previous subscription" do
-      subject(:subscription) { create(:subscription, status: :pending, previous_subscription:) }
+      subject(:subscription) { create(:subscription, :pending, previous_subscription:) }
 
       let(:previous_subscription) { create(:subscription, :terminated) }
       let(:lifetime_usage) { create(:lifetime_usage, subscription: previous_subscription) }

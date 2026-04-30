@@ -1,0 +1,98 @@
+name: Front compatibility (post-merge alert)
+
+# Runs after a schema-changing commit lands on main. Validates that the
+# committed schema.graphql is still consumable by lago-front main — i.e.
+# that no schema change broke frontend type-checking via codegen.
+#
+# This is intentionally NOT a PR check: it doesn't gate API merges or
+# require coordination work from API authors. It's a late alert: when
+# something here turns red, frontend type-check will be broken and the
+# front team should open a fix PR in lago-front.
+#
+# When this workflow fails, GitHub sends the standard failed-workflow
+# notification email to the commit author and to anyone watching this
+# repo's Actions — that's the alert. No issue is auto-opened.
+#
+# Path filter on schema.graphql — most commits don't change the schema,
+# so the workflow rarely runs. Cost: a few minutes of CI per schema
+# change.
+
+on:
+  # Initial rollout is manual-only. Once we've validated the workflow
+  # works as expected via a few `workflow_dispatch` runs, a follow-up
+  # PR will add the automatic trigger:
+  #
+  #   push:
+  #     branches: [main]
+  #     paths: ['schema.graphql']
+  #
+  # which fires on any merge to main that actually modifies the schema.
+  workflow_dispatch:
+    inputs:
+      api_ref:
+        description: 'lago-api ref — schema.graphql is taken from this commit (branch, tag, or SHA)'
+        required: false
+        default: 'main'
+      front_ref:
+        description: 'lago-front ref to type-check (branch, tag, or SHA)'
+        required: false
+        default: 'main'
+
+jobs:
+  front-typecheck:
+    name: Front typecheck against new schema
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout lago-api (this repo, the new schema)
+        uses: actions/checkout@v6
+        with:
+          # On push (auto-trigger, once enabled): defaults to the SHA
+          # that triggered the workflow — i.e. the merge commit on main.
+          # On manual dispatch: uses whatever ref the operator chose.
+          ref: ${{ github.event.inputs.api_ref || github.sha }}
+          path: api
+
+      - name: Checkout lago-front
+        uses: actions/checkout@v6
+        with:
+          repository: getlago/lago-front
+          # On scheduled push runs, always check main. On manual dispatch,
+          # use whatever ref the operator chose (defaults to main).
+          ref: ${{ github.event.inputs.front_ref || 'main' }}
+          path: front
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          # Inherit the version from lago-front's own package.json
+          # (engines.node) so this workflow tracks any node bump on the
+          # front side without manual upkeep here.
+          node-version-file: front/package.json
+          cache: pnpm
+          cache-dependency-path: front/pnpm-lock.yaml
+
+      - name: Install front dependencies
+        working-directory: front
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages (prebuild)
+        working-directory: front
+        run: pnpm prebuild
+
+      - name: Regenerate front types from new schema
+        working-directory: front
+        env:
+          # graphql-codegen accepts file paths in its `schema:` field.
+          # codegen.yml reads ${CODEGEN_API}; pointing it at the API
+          # PR's checked-in schema.graphql skips the API boot step
+          # entirely — no docker compose, no resolvers, just the schema.
+          CODEGEN_API: ../api/schema.graphql
+        run: pnpm codegen
+
+      - name: Type-check front
+        working-directory: front
+        run: pnpm tsc --noEmit

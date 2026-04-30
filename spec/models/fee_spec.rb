@@ -8,12 +8,14 @@ RSpec.describe Fee do
   it { is_expected.to belong_to(:add_on).optional }
   it { is_expected.to belong_to(:charge).optional }
   it { is_expected.to belong_to(:fixed_charge).optional }
+  it { is_expected.to have_many(:presentation_breakdowns) }
   it { is_expected.to have_one(:fixed_charge_add_on).through(:fixed_charge) }
   it { is_expected.to have_one(:adjusted_fee).dependent(:nullify) }
   it { is_expected.to have_one(:billable_metric).through(:charge) }
   it { is_expected.to have_one(:customer).through(:subscription) }
   it { is_expected.to have_one(:pricing_unit_usage).dependent(:destroy) }
   it { is_expected.to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy) }
+  it { is_expected.to belong_to(:original_fee).class_name("Fee").optional }
 
   describe "#ordered_by_period" do
     let(:fee1) do
@@ -654,24 +656,26 @@ RSpec.describe Fee do
 
     context "when fee_type is credit" do
       let(:wallet) { create(:wallet, balance_cents: 500, customer: invoice.customer) }
-      let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: 500) }
       let(:invoice) { create(:invoice, invoice_type: :credit) }
       let(:fee) { create(:fee, fee_type: :credit, amount_cents:, invoice:, invoiceable: wallet_transaction) }
 
-      it "returns the minimum of remaining amount and wallet available amount" do
+      it "returns the remaining amount of the inbound transaction" do
         expect(subject).to eq(500)
       end
 
-      context "when wallet balance exceeds remaining amount" do
+      context "when remaining amount exceeds fee remaining amount" do
         let(:wallet) { create(:wallet, balance_cents: 1500, customer: invoice.customer) }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: 1500) }
 
-        it "returns the remaining amount" do
+        it "returns the fee remaining amount" do
           expect(subject).to eq(1000)
         end
       end
 
       context "when credit note items reduce remaining amount" do
         let(:wallet) { create(:wallet, balance_cents: 1500, customer: invoice.customer) }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: 1500) }
 
         before { create(:credit_note_item, fee:, amount_cents: 300) }
 
@@ -694,12 +698,12 @@ RSpec.describe Fee do
     end
 
     context "when fee is credit" do
-      let(:wallet) { create(:wallet, balance_cents: 500, customer: invoice.customer) }
-      let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+      let(:wallet) { create(:wallet, balance_cents: 2000, customer: invoice.customer) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: 500) }
       let(:invoice) { create(:invoice, invoice_type: :credit) }
       let(:fee) { create(:fee, fee_type: :credit, amount_cents: 1000, invoice:, invoiceable: wallet_transaction) }
 
-      it "returns the wallet balance" do
+      it "returns the remaining amount of the inbound transaction" do
         expect(subject).to eq(500)
       end
 
@@ -711,20 +715,20 @@ RSpec.describe Fee do
         end
       end
 
-      context "when wallet is traceable" do
-        let(:wallet) { create(:wallet, balance_cents: 2000, customer: invoice.customer, traceable: true) }
-        let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: 500) }
+      context "when remaining_amount_cents is nil" do
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: nil) }
 
-        it "returns the remaining amount of the inbound transaction" do
-          expect(subject).to eq(500)
+        it "returns 0" do
+          expect(subject).to eq(0)
         end
+      end
 
-        context "when remaining_amount_cents is nil" do
-          let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: nil) }
+      context "when wallet is not traceable" do
+        let(:wallet) { create(:wallet, balance_cents: 500, customer: invoice.customer, traceable: false) }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
 
-          it "returns 0" do
-            expect(subject).to eq(0)
-          end
+        it "returns the wallet balance" do
+          expect(subject).to eq(500)
         end
       end
 
@@ -790,9 +794,9 @@ RSpec.describe Fee do
         let(:invoice) { create(:invoice, invoice_type: :credit, payment_status: :succeeded) }
         let(:wallet) { create(:wallet, balance_cents: 500, customer: invoice.customer) }
 
-        before { fee.update(invoiceable: create(:wallet_transaction, wallet:)) }
+        before { fee.update(invoiceable: create(:wallet_transaction, wallet:, remaining_amount_cents: 500)) }
 
-        it "returns wallet balance" do
+        it "returns the remaining amount of the inbound transaction" do
           expect(subject).to eq(500)
         end
       end

@@ -28,20 +28,9 @@ RSpec.describe BillingEntities::Taxes::RemoveTaxesService do
         expect(result).to be_success
       end
 
-      context "when there are draft invoices in this billing entity" do
-        let(:invoice1) { create(:invoice, :draft, organization:, billing_entity:) }
-        let(:invoice2) { create(:invoice, organization:, billing_entity:) }
-
-        before do
-          invoice1
-          invoice2
-        end
-
-        it "sets to refresh draft invoice of this billing entity" do
-          service.call
-          expect(invoice1.reload.ready_to_be_refreshed).to be_truthy
-          expect(invoice2.reload.ready_to_be_refreshed).to be_falsey
-        end
+      it "enqueues the refresh draft invoices job" do
+        expect { service.call }.to have_enqueued_job(BillingEntities::Taxes::RefreshDraftInvoicesJob)
+          .with(billing_entity.id)
       end
 
       context "when some taxes are not applied to the billing entity" do

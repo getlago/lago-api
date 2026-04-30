@@ -51,6 +51,27 @@ describe Clock::RefreshWalletsOngoingBalanceJob, job: true do
           expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(customer)
         end
       end
+
+      context "when the customer's organization is handled by the dedicated worker" do
+        before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", [organization.id]) }
+
+        it "does not schedule refresh job for customers in the dedicated organization" do
+          subject
+          expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(customer)
+        end
+
+        context "with a customer in a non-dedicated organization" do
+          let(:other_organization) { create(:organization) }
+          let(:other_customer) { create(:customer, organization: other_organization, awaiting_wallet_refresh: true) }
+
+          before { create(:wallet, customer: other_customer) }
+
+          it "still schedules refresh job for customers outside the dedicated list" do
+            subject
+            expect(Customers::RefreshWalletJob).to have_been_enqueued.with(other_customer)
+          end
+        end
+      end
     end
   end
 end

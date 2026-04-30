@@ -145,6 +145,23 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
         expect(invoice.reload.tax_status).to eq("pending")
       end
 
+      context "when invoice is subscription_gated" do
+        let(:subscription) do
+          create(:subscription, :incomplete, :with_activation_rules,
+            activation_rules_config: [{type: :payment, timeout_hours: 48, status: :pending}],
+            plan:, subscription_at: started_at, started_at:, created_at: started_at)
+        end
+
+        before { invoice.update!(status: :open) }
+
+        it "keeps invoice status as open and sets tax_status to pending" do
+          totals_service.call
+
+          expect(invoice.reload).to be_open
+          expect(invoice.reload).to be_tax_pending
+        end
+      end
+
       context "when invoice is draft" do
         before { invoice.update!(status: :draft) }
 

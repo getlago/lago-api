@@ -33,7 +33,7 @@ RSpec.describe Events::BillingPeriodFilterService do
     end
 
     context "when previous fees exist" do
-      let(:fee) { create(:charge_fee, subscription:, charge: recurring_charge, charge_filter:) }
+      let(:fee) { create(:charge_fee, subscription:, charge: recurring_charge, charge_filter:, units: 2.4) }
 
       let(:invoice_subscription) do
         create(
@@ -77,6 +77,30 @@ RSpec.describe Events::BillingPeriodFilterService do
       end
     end
 
+    context "when previous fees exist and have no units" do
+      let(:invoice) { create(:invoice, organization:) }
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          invoice:,
+          subscription:,
+          organization:,
+          charges_from_datetime: boundaries.charges_from_datetime - 1.month
+        )
+      end
+
+      let(:fee) { create(:charge_fee, subscription:, charge: recurring_charge, charge_filter:, units: 0, invoice:) }
+
+      before { invoice_subscription }
+
+      it "returns empty hash" do
+        result = filter_service.call
+
+        expect(result).to be_success
+        expect(result.charges).to eq({})
+      end
+    end
+
     context "when subscription has previous_subscription_id" do
       let(:old_plan) { create(:plan, organization:) }
       let(:previous_subscription) do
@@ -107,7 +131,8 @@ RSpec.describe Events::BillingPeriodFilterService do
             subscription: previous_subscription,
             charge: old_charge,
             charge_filter_id: nil,
-            created_at: started_at - 1.day
+            created_at: started_at - 1.day,
+            units: 2.4
           )
         end
 
@@ -132,7 +157,8 @@ RSpec.describe Events::BillingPeriodFilterService do
             subscription: previous_subscription,
             charge: old_charge,
             charge_filter: old_filter,
-            created_at: started_at - 1.day
+            created_at: started_at - 1.day,
+            units: 2.4
           )
         end
 
@@ -141,6 +167,32 @@ RSpec.describe Events::BillingPeriodFilterService do
 
           expect(result).to be_success
           expect(result.charges).to eq({recurring_charge.id => [nil]})
+        end
+      end
+
+      context "when old has filters with no units and current does not" do
+        let(:charge_filter) { nil }
+        let(:charge_filter_value) { nil }
+        let(:recurring_charge) { create(:standard_charge, plan:, billable_metric: recurring_billable_metric) }
+        let(:old_charge) { create(:standard_charge, plan: old_plan, billable_metric: recurring_billable_metric) }
+        let(:old_filter) { create(:charge_filter, charge: old_charge) }
+
+        before do
+          create(
+            :charge_fee,
+            subscription: previous_subscription,
+            charge: old_charge,
+            charge_filter: old_filter,
+            created_at: started_at - 1.day,
+            units: 0
+          )
+        end
+
+        it "returns empty hash" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to eq({})
         end
       end
 
@@ -153,7 +205,8 @@ RSpec.describe Events::BillingPeriodFilterService do
             subscription: previous_subscription,
             charge: old_charge,
             charge_filter_id: nil,
-            created_at: started_at - 1.day
+            created_at: started_at - 1.day,
+            units: 2.4
           )
         end
 
@@ -175,7 +228,8 @@ RSpec.describe Events::BillingPeriodFilterService do
             subscription: previous_subscription,
             charge: old_charge,
             charge_filter: old_filter,
-            created_at: started_at - 1.day
+            created_at: started_at - 1.day,
+            units: 2.4
           )
         end
 
@@ -197,21 +251,44 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
         let(:oldest_charge) { create(:standard_charge, plan: oldest_plan, billable_metric: recurring_billable_metric) }
 
-        before do
+        let(:fee) do
           create(
             :charge_fee,
             subscription: oldest_subscription,
             charge: oldest_charge,
             charge_filter_id: nil,
-            created_at: started_at - 2.months + 1.day
+            created_at: started_at - 2.months + 1.day,
+            units: 2.4
           )
         end
+
+        before { fee }
 
         it "picks up fees from the entire chain" do
           result = filter_service.call
 
           expect(result).to be_success
           expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+        end
+
+        context "when previous fees have no units" do
+          let(:fee) do
+            create(
+              :charge_fee,
+              subscription: oldest_subscription,
+              charge: oldest_charge,
+              charge_filter_id: nil,
+              created_at: started_at - 2.months + 1.day,
+              units: 0
+            )
+          end
+
+          it "returns empty hash" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to eq({})
+          end
         end
       end
 
@@ -234,14 +311,16 @@ RSpec.describe Events::BillingPeriodFilterService do
             subscription: previous_subscription,
             charge: old_charge,
             charge_filter: old_filter,
-            created_at: started_at - 1.day
+            created_at: started_at - 1.day,
+            units: 2.4
           )
           create(
             :charge_fee,
             subscription: previous_subscription,
             charge: old_charge,
             charge_filter_id: nil,
-            created_at: started_at - 1.day
+            created_at: started_at - 1.day,
+            units: 2.4
           )
         end
 

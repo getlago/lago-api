@@ -44,10 +44,11 @@ module ChargeFilters
               pf.to_h.sort == filter.to_h.sort
             end
 
-            if parent_filter.blank? || parent_filter_properties(parent_filter) != filter.properties
-              # Make sure that pricing group keys are cascaded even if properties are overridden
+            if parent_filter.blank? || normalize_properties(parent_filter_properties(parent_filter)) != normalize_properties(filter.properties)
+              # Make sure that pricing/presentation group keys are cascaded even if properties are overridden
+              cascade_presentation_group_keys(filter, filter_param)
               cascade_pricing_group_keys(filter, filter_param)
-              filter.save!
+              filter.save! if filter.changed?
 
               PaperTrail.request.disable_model(filter.class)
               # NOTE: Make sure update_at is touched even if not changed to keep the order
@@ -167,8 +168,26 @@ module ChargeFilters
       end
     end
 
+    def cascade_presentation_group_keys(filter, params)
+      presentation_group_keys = params.dig(:properties, :presentation_group_keys)
+
+      if presentation_group_keys
+        filter.properties["presentation_group_keys"] = presentation_group_keys
+      elsif filter.presentation_group_keys.present?
+        filter.properties.delete("presentation_group_keys")
+      end
+    end
+
     def empty_filter_values?
       filters_params.any? { |filter_param| filter_param[:values].blank? }
+    end
+
+    def normalize_properties(props)
+      return props unless props.is_a?(Hash)
+
+      props.transform_values do |v|
+        (v.is_a?(String) && v.match?(/\A-?\d+(\.\d+)?\z/)) ? v.to_f : v
+      end
     end
   end
 end

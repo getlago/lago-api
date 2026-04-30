@@ -19,7 +19,15 @@ module Subscriptions
     end
 
     def call
-      return result unless valid?(customer:, plan:, subscription_at:, ending_at: params[:ending_at], payment_method: params[:payment_method])
+      return result unless valid?(
+        customer:,
+        plan:,
+        subscription_at:,
+        ending_at: params[:ending_at],
+        payment_method: params[:payment_method],
+        activation_rules: params[:activation_rules],
+        subscription_type:
+      )
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
       return result.validation_failure!(errors: {external_customer_id: ["value_is_mandatory"]}) if params[:external_customer_id].blank? && api_context?
 
@@ -43,7 +51,12 @@ module Subscriptions
           .raise_if_error!
 
         customer.with_lock do
-          # Refresh current_subscription inside the lock to avoid stale data
+          if customer.subscriptions.incomplete
+              .exists?(["id = ? OR external_id = ?", params[:subscription_id], external_id])
+            result.validation_failure!(errors: {subscription: ["subscription_incomplete"]})
+            result.raise_if_error!
+          end
+
           @current_subscription = editable_subscriptions
             .find_by("id = ? OR external_id = ?", params[:subscription_id], external_id)
 
@@ -137,6 +150,7 @@ module Subscriptions
 
       if new_subscription.subscription_at > Time.current
         new_subscription.pending!
+        apply_activation_rules(new_subscription)
       elsif new_subscription.subscription_at < Time.current
         new_subscription.mark_as_active!(new_subscription.subscription_at)
       else
@@ -264,8 +278,17 @@ module Subscriptions
       end
     end
 
+    def apply_activation_rules(subscription)
+      return unless params[:activation_rules]&.present?
+
+      Subscriptions::ActivationRules::ApplyService.call!(
+        subscription:,
+        activation_rules: params[:activation_rules]
+      )
+    end
+
     def editable_subscriptions
-      return nil unless customer
+      return Subscription.none unless customer
 
       @editable_subscriptions ||= customer.subscriptions.active
         .or(customer.subscriptions.starting_in_the_future)

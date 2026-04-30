@@ -5,7 +5,7 @@ module SubscriptionIndex
   extend ActiveSupport::Concern
 
   def subscription_index(external_customer_id: nil)
-    filters = params.permit(:plan_code, :overriden, :overridden, status: [])
+    filters = params.permit(:plan_code, :overriden, :overridden, :currency, status: [])
     filters[:status] = ["active"] if filters[:status].blank?
     filters[:external_customer_id] = external_customer_id
     result = SubscriptionsQuery.call(
@@ -26,7 +26,8 @@ module SubscriptionIndex
           subscriptions,
           ::V1::SubscriptionSerializer,
           collection_name: "subscriptions",
-          meta: pagination_metadata(subscriptions)
+          meta: pagination_metadata(subscriptions),
+          organization: current_organization
         )
       )
     else

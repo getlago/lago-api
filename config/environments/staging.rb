@@ -56,10 +56,9 @@ Rails.application.configure do
         url: ENV["LAGO_REDIS_CACHE_URL"],
         pool: {size: ENV.fetch("LAGO_REDIS_CACHE_POOL_SIZE", 5)},
         error_handler: lambda { |method:, returning:, exception:|
-          Rails.logger.error(exception.message)
-          Rails.logger.error(exception.backtrace.join("\n"))
+          Rails.logger.warn(exception.message)
 
-          Sentry.capture_exception(exception)
+          Sentry.capture_exception(exception, level: :warning)
         }
       }
   end

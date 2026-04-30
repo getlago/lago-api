@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService do
+RSpec.describe FixedCharges::EmitEventsService do
   subject(:service) do
     described_class.new(fixed_charge:, subscription:)
   end
@@ -57,15 +57,16 @@ RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService do
     it "creates fixed charge events for all active subscriptions" do
       expect { result }.to change(FixedChargeEvent, :count).by(2)
 
-      event_1 = FixedChargeEvent.find_by(subscription: active_subscription_1, fixed_charge:)
-      event_2 = FixedChargeEvent.find_by(subscription: active_subscription_2, fixed_charge:)
+      events = result.fixed_charge_events
+      expect(events.size).to eq(2)
 
-      expect(event_1).to be_present
+      event_1 = events.find { |e| e.subscription_id == active_subscription_1.id }
+      event_2 = events.find { |e| e.subscription_id == active_subscription_2.id }
+
       expect(event_1.organization).to eq(active_subscription_1.organization)
       expect(event_1.units).to eq(fixed_charge.units)
       expect(event_1.timestamp).to be_within(1.second).of(active_subscription_1.started_at.beginning_of_day + 1.month)
 
-      expect(event_2).to be_present
       expect(event_2.organization).to eq(active_subscription_2.organization)
       expect(event_2.units).to eq(fixed_charge.units)
       expect(event_2.timestamp).to be_within(1.second).of(1.month.from_now.beginning_of_month)
@@ -75,6 +76,41 @@ RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService do
       result
 
       expect(FixedChargeEvent.where(subscription: terminated_subscription, fixed_charge:)).not_to exist
+    end
+
+    context "when there are incomplete subscriptions" do
+      let(:incomplete_subscription) do
+        create(
+          :subscription,
+          :incomplete,
+          :anniversary,
+          plan:,
+          customer: customer_1,
+          started_at: 1.day.ago,
+          subscription_at: 1.day.ago
+        )
+      end
+
+      before { incomplete_subscription }
+
+      it "creates fixed charge events for incomplete subscriptions" do
+        expect { result }.to change(FixedChargeEvent, :count)
+
+        expect(result.fixed_charge_events.map(&:subscription_id)).to include(incomplete_subscription.id)
+      end
+    end
+
+    context "when a provided subscription is incomplete" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :anniversary, plan:, started_at: 1.day.ago, subscription_at: 1.day.ago)
+      end
+
+      it "creates fixed charge event for the incomplete subscription" do
+        expect { result }.to change(FixedChargeEvent, :count).by(1)
+
+        expect(result.fixed_charge_events.size).to eq(1)
+        expect(result.fixed_charge_events.first.subscription_id).to eq(subscription.id)
+      end
     end
 
     context "when there are no active subscriptions" do

@@ -29,6 +29,8 @@ module Fees
 
       fees.each { |f| f.pay_in_advance_event_id = nil }
 
+      apply_taxes(fees)
+
       result.fees = fees
       result
     rescue BaseService::FailedResult => e
@@ -94,6 +96,16 @@ module Fees
 
     def estimated_charge_fees(charge)
       Fees::CreatePayInAdvanceService.call!(charge:, event:, estimate: true).fees
+    end
+
+    def apply_taxes(fees)
+      if customer&.tax_customer.present?
+        Fees::ApplyProviderTaxesToStandaloneFeesService.call!(
+          customer:, fees:, currency: subscriptions.first.plan.amount_currency
+        )
+      else
+        fees.each { |fee| Fees::ApplyTaxesService.call!(fee:) }
+      end
     end
   end
 end
