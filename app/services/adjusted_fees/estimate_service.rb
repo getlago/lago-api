@@ -156,7 +156,6 @@ module AdjustedFees
     end
 
     def initialize_fee
-      return initialize_fee_for_subscription if params[:fee_type] == "subscription"
       return initialize_fee_for_fixed_charge if params[:fixed_charge_id].present?
 
       subscription = invoice.subscriptions.includes(plan: {charges: :filters}).find_by(id: params[:invoice_subscription_id])
@@ -185,17 +184,6 @@ module AdjustedFees
         charge_filter_id: params[:charge_filter_id]
       )
       fee || initialize_empty_fee(subscription, charge, :charge)
-    end
-
-    def initialize_fee_for_subscription
-      subscription = invoice.subscriptions.find_by(id: params[:invoice_subscription_id])
-
-      unless subscription
-        result.not_found_failure!(resource: "subscription")
-        return
-      end
-
-      initialize_empty_fee(subscription, nil, :subscription)
     end
 
     def initialize_fee_for_fixed_charge
@@ -234,15 +222,6 @@ module AdjustedFees
           {
             fixed_charges_from_datetime: invoice_subscription.fixed_charges_from_datetime,
             fixed_charges_to_datetime: invoice_subscription.fixed_charges_to_datetime
-          }
-        when :subscription
-          {
-            charges_from_datetime: invoice_subscription.charges_from_datetime,
-            charges_to_datetime: invoice_subscription.charges_to_datetime,
-            fixed_charges_from_datetime: invoice_subscription.fixed_charges_from_datetime,
-            fixed_charges_to_datetime: invoice_subscription.fixed_charges_to_datetime,
-            from_datetime: invoice_subscription.from_datetime,
-            to_datetime: invoice_subscription.to_datetime
           }
         end
       )
