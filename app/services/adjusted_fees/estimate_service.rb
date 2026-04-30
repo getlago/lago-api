@@ -28,6 +28,8 @@ module AdjustedFees
         init_from_charge_fee(adjusted_fee)
       end
 
+      reset_presentation_breakdowns(estimated_fee)
+
       apply_taxes_and_assign_ids(estimated_fee) unless customer.tax_customer
       result.fee = estimated_fee
       result
@@ -93,6 +95,10 @@ module AdjustedFees
       fee.invoice_display_name = adjusted_fee.invoice_display_name if params[:invoice_display_name].present?
 
       fee
+    end
+
+    def reset_presentation_breakdowns(fee)
+      fee.presentation_breakdowns = []
     end
 
     def initialize_adjusted_fee(fee, params)
