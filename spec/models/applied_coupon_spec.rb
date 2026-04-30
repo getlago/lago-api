@@ -99,7 +99,7 @@ RSpec.describe AppliedCoupon do
     let(:period_end) { Time.current.end_of_month }
     let(:invoice) do
       create(:invoice, :subscription, customer:, organization:, billing_entity:, subscriptions: [subscription]).tap do |inv|
-        inv.invoice_subscriptions.update_all(timestamp: Time.current, charges_from_datetime: period_start, charges_to_datetime: period_end)
+        inv.invoice_subscriptions.update_all(timestamp: Time.current, charges_from_datetime: period_start, charges_to_datetime: period_end) # rubocop:disable Rails/SkipsModelValidations
       end
     end
     let(:invoice_subscription) { invoice.invoice_subscriptions.first }
@@ -112,7 +112,7 @@ RSpec.describe AppliedCoupon do
     def add_period_invoice(offset: 0.months, voided: false, subs: [subscription])
       traits = voided ? [:voided] : []
       create(:invoice, :subscription, *traits, customer:, organization:, billing_entity:, subscriptions: subs).tap do |inv|
-        inv.invoice_subscriptions.update_all(timestamp: Time.current + offset, charges_from_datetime: period_start + offset, charges_to_datetime: period_end + offset)
+        inv.invoice_subscriptions.update_all(timestamp: Time.current + offset, charges_from_datetime: period_start + offset, charges_to_datetime: period_end + offset) # rubocop:disable Rails/SkipsModelValidations
       end
     end
 
@@ -173,7 +173,7 @@ RSpec.describe AppliedCoupon do
       end
     end
 
-    context "memoization" do
+    context "when called multiple times for the same invoice" do
       it "caches per invoice id" do
         first_call = applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice:)
         second_call = applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice:)

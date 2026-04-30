@@ -327,106 +327,54 @@ describe "Coupons breakdown Spec", :premium do
   end
 
   context "when progressive billing and multiple subscriptions with multiple invoices" do
+    def setup_test_billable_metric
+      create_metric({name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1"})
+      organization.billable_metrics.find_by(code: "bm1")
+    end
+
+    def setup_pia_plan(bm)
+      create_plan({
+        name: "Pay in Advance Plan", code: "pay_in_advance_plan", interval: "monthly",
+        amount_cents: 0, amount_currency: "EUR", pay_in_advance: false,
+        charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: true, properties: {amount: "1"}}]
+      })
+      organization.plans.find_by(code: "pay_in_advance_plan")
+    end
+
+    def setup_pb_plan(bm, thresholds: [20_00, 50_00])
+      create_plan({
+        name: "Progressive Billing Plan", code: "progressive_plan", interval: "monthly",
+        amount_cents: 20_00, amount_currency: "EUR", pay_in_advance: false,
+        charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: false, properties: {amount: "1"}}],
+        usage_thresholds: thresholds.each_with_index.map { |c, i| {amount_cents: c, threshold_display_name: "Threshold #{i + 1}"} }
+      })
+      organization.plans.find_by(code: "progressive_plan")
+    end
+
+    def setup_pb_test_customer_and_subs(coupon_attrs, pia_plan, pb_plan, time0)
+      create_coupon(coupon_attrs)
+      create_or_update_customer({external_id: "customer-12345"})
+      apply_coupon({external_customer_id: "customer-12345", coupon_code: coupon_attrs[:code]})
+
+      travel_to(time0) do
+        create_subscription({external_customer_id: "customer-12345", external_id: "sub_pay_in_advance", plan_code: pia_plan.code}) if pia_plan
+        create_subscription({external_customer_id: "customer-12345", external_id: "sub_progressive", plan_code: pb_plan.code}) if pb_plan
+      end
+      organization.customers.find_by(external_id: "customer-12345")
+    end
+
     context "when coupon is single use" do
       it "applies the coupon, calculating the remaining amount", transaction: false do
-        # Create billable metric
-        create_metric({name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1"})
-        bm = organization.billable_metrics.find_by(code: "bm1")
-
-        # Create plan with pay_in_advance charge
-        create_plan(
-          {
-            name: "Pay in Advance Plan",
-            code: "pay_in_advance_plan",
-            interval: "monthly",
-            amount_cents: 0,
-            amount_currency: "EUR",
-            pay_in_advance: false,
-            charges: [
-              {
-                billable_metric_id: bm.id,
-                charge_model: "standard",
-                pay_in_advance: true,
-                properties: {amount: "1"}
-              }
-            ]
-          }
-        )
-        pay_in_advance_plan = organization.plans.find_by(code: "pay_in_advance_plan")
-
-        # Create plan with progressive billing
-        create_plan(
-          {
-            name: "Progressive Billing Plan",
-            code: "progressive_plan",
-            interval: "monthly",
-            amount_cents: 20_00, # $20
-            amount_currency: "EUR",
-            pay_in_advance: false,
-            charges: [
-              {
-                billable_metric_id: bm.id,
-                charge_model: "standard",
-                pay_in_advance: false,
-                properties: {amount: "1"} # $1 per unit
-              }
-            ],
-            usage_thresholds: [
-              {
-                amount_cents: 20_00, # $20 threshold
-                threshold_display_name: "First threshold"
-              },
-              {
-                amount_cents: 50_00, # $50 threshold
-                threshold_display_name: "Second threshold"
-              }
-            ]
-          }
-        )
-        progressive_plan = organization.plans.find_by(code: "progressive_plan")
-
-        # Create single use coupon
-        create_coupon(
-          {
-            name: "Single Use Coupon",
-            code: "single_use_coupon",
-            coupon_type: "fixed_amount",
-            frequency: "once",
-            amount_cents: 100_00, # $100
-            amount_currency: "EUR",
-            expiration: "no_expiration",
-            reusable: false
-          }
-        )
-
-        # Create customer and subscriptions
-        create_or_update_customer({external_id: "customer-12345"})
-        customer = organization.customers.find_by(external_id: "customer-12345")
-
-        # Apply coupon to customer
-        apply_coupon({external_customer_id: "customer-12345", coupon_code: "single_use_coupon"})
-
-        # Start subscriptions at time0
+        bm = setup_test_billable_metric
+        pay_in_advance_plan = setup_pia_plan(bm)
+        progressive_plan = setup_pb_plan(bm)
         time0 = DateTime.new(2025, 1, 1)
-        travel_to(time0) do
-          # Create pay in advance subscription
-          create_subscription(
-            {
-              external_customer_id: "customer-12345",
-              external_id: "sub_pay_in_advance",
-              plan_code: pay_in_advance_plan.code
-            }
-          )
-
-          # Create progressive billing subscription
-          create_subscription(
-            {
-              external_customer_id: "customer-12345",
-              external_id: "sub_progressive",
-              plan_code: progressive_plan.code
-            }
-          )
-        end
+        customer = setup_pb_test_customer_and_subs(
+          {name: "Single Use Coupon", code: "single_use_coupon", coupon_type: "fixed_amount",
+           frequency: "once", amount_cents: 100_00, amount_currency: "EUR",
+           expiration: "no_expiration", reusable: false},
+          pay_in_advance_plan, progressive_plan, time0
+        )
 
         # time0 + 5 days: send an event (5 units)
         travel_to(time0 + 5.days) do
@@ -580,105 +528,16 @@ describe "Coupons breakdown Spec", :premium do
     context "when coupon is recurring" do
       context "when recurring once" do
         it "applies the coupon only during one billing period, calculating the remaining amount", transaction: false do
-          # Create billable metric
-          create_metric({name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1"})
-          bm = organization.billable_metrics.find_by(code: "bm1")
-
-          # Create plan with pay_in_advance charge
-          create_plan(
-            {
-              name: "Pay in Advance Plan",
-              code: "pay_in_advance_plan",
-              interval: "monthly",
-              amount_cents: 0,
-              amount_currency: "EUR",
-              pay_in_advance: false,
-              charges: [
-                {
-                  billable_metric_id: bm.id,
-                  charge_model: "standard",
-                  pay_in_advance: true,
-                  properties: {amount: "1"}
-                }
-              ]
-            }
-          )
-          pay_in_advance_plan = organization.plans.find_by(code: "pay_in_advance_plan")
-
-          # Create plan with progressive billing
-          create_plan(
-            {
-              name: "Progressive Billing Plan",
-              code: "progressive_plan",
-              interval: "monthly",
-              amount_cents: 20_00, # $20
-              amount_currency: "EUR",
-              pay_in_advance: false,
-              charges: [
-                {
-                  billable_metric_id: bm.id,
-                  charge_model: "standard",
-                  pay_in_advance: false,
-                  properties: {amount: "1"} # $1 per unit
-                }
-              ],
-              usage_thresholds: [
-                {
-                  amount_cents: 20_00, # $20 threshold
-                  threshold_display_name: "First threshold"
-                },
-                {
-                  amount_cents: 50_00, # $50 threshold
-                  threshold_display_name: "Second threshold"
-                }
-              ]
-            }
-          )
-          progressive_plan = organization.plans.find_by(code: "progressive_plan")
-
-          # Create recurring coupon with frequency equal 1 month
-          create_coupon(
-            {
-              name: "Single Use Coupon",
-              code: "single_use_coupon",
-              coupon_type: "fixed_amount",
-              frequency: "recurring",
-              frequency_duration: 1,
-              amount_cents: 100_00, # $100
-              amount_currency: "EUR",
-              expiration: "no_expiration",
-              reusable: false
-            }
-          )
-
-          # Create customer and subscriptions
-          create_or_update_customer({external_id: "customer-12345"})
-          customer = organization.customers.find_by(external_id: "customer-12345")
-
-          # Apply coupon to customer
-          apply_coupon({external_customer_id: "customer-12345", coupon_code: "single_use_coupon"})
-
-          # Start subscriptions at time0
+          bm = setup_test_billable_metric
+          pay_in_advance_plan = setup_pia_plan(bm)
+          progressive_plan = setup_pb_plan(bm)
           time0 = DateTime.new(2025, 1, 1)
-          travel_to(time0) do
-            # Create pay in advance subscription
-            create_subscription(
-              {
-                external_customer_id: "customer-12345",
-                external_id: "sub_pay_in_advance",
-                plan_code: pay_in_advance_plan.code
-              }
-            )
-
-            # Create progressive billing subscription
-            create_subscription(
-              {
-                external_customer_id: "customer-12345",
-                external_id: "sub_progressive",
-                plan_code: progressive_plan.code
-              }
-            )
-          end
+          customer = setup_pb_test_customer_and_subs(
+            {name: "Single Use Coupon", code: "single_use_coupon", coupon_type: "fixed_amount",
+             frequency: "recurring", frequency_duration: 1, amount_cents: 100_00, amount_currency: "EUR",
+             expiration: "no_expiration", reusable: false},
+            pay_in_advance_plan, progressive_plan, time0
+          )
 
           # time0 + 5 days: send an event (5 units)
           travel_to(time0 + 5.days) do
@@ -830,63 +689,15 @@ describe "Coupons breakdown Spec", :premium do
         end
 
         it "does not terminate if nothing was billed" do
-          # Create billable metric
-          create_metric({name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1"})
-          bm = organization.billable_metrics.find_by(code: "bm1")
-
-          # Create plan with pay_in_advance charge
-          create_plan(
-            {
-              name: "Pay in Advance Plan",
-              code: "pay_in_advance_plan",
-              interval: "monthly",
-              amount_cents: 0,
-              amount_currency: "EUR",
-              pay_in_advance: false,
-              charges: [
-                {
-                  billable_metric_id: bm.id,
-                  charge_model: "standard",
-                  pay_in_advance: true,
-                  properties: {amount: "1"}
-                }
-              ]
-            }
-          )
-          pay_in_advance_plan = organization.plans.find_by(code: "pay_in_advance_plan")
-
-          create_coupon(
-            {
-              name: "Recurring Coupon",
-              code: "recurring_coupon",
-              coupon_type: "fixed_amount",
-              frequency: "recurring",
-              frequency_duration: 1,
-              amount_cents: 100_00, # $100
-              amount_currency: "EUR",
-              expiration: "no_expiration",
-              reusable: false
-            }
-          )
-
-          create_or_update_customer({external_id: "customer-12345"})
-          customer = organization.customers.find_by(external_id: "customer-12345")
-
-          # Apply coupon to customer
-          apply_coupon({external_customer_id: "customer-12345", coupon_code: "recurring_coupon"})
-
-          # Start subscription at time0
+          bm = setup_test_billable_metric
+          pay_in_advance_plan = setup_pia_plan(bm)
           time0 = DateTime.new(2025, 1, 1)
-          travel_to(time0) do
-            # Create subscription
-            create_subscription(
-              {
-                external_customer_id: "customer-12345",
-                external_id: "sub_pay_in_advance",
-                plan_code: pay_in_advance_plan.code
-              }
-            )
-          end
+          customer = setup_pb_test_customer_and_subs(
+            {name: "Recurring Coupon", code: "recurring_coupon", coupon_type: "fixed_amount",
+             frequency: "recurring", frequency_duration: 1, amount_cents: 100_00, amount_currency: "EUR",
+             expiration: "no_expiration", reusable: false},
+            pay_in_advance_plan, nil, time0
+          )
 
           travel_to(time0 + 1.month) do
             perform_billing
@@ -903,105 +714,16 @@ describe "Coupons breakdown Spec", :premium do
 
       context "when recurring multiple times" do
         it "applies the coupon multiple times, calculating the remaining amount", transaction: false do
-          # Create billable metric
-          create_metric({name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1"})
-          bm = organization.billable_metrics.find_by(code: "bm1")
-
-          # Create plan with pay_in_advance charge
-          create_plan(
-            {
-              name: "Pay in Advance Plan",
-              code: "pay_in_advance_plan",
-              interval: "monthly",
-              amount_cents: 0,
-              amount_currency: "EUR",
-              pay_in_advance: false,
-              charges: [
-                {
-                  billable_metric_id: bm.id,
-                  charge_model: "standard",
-                  pay_in_advance: true,
-                  properties: {amount: "1"}
-                }
-              ]
-            }
-          )
-          pay_in_advance_plan = organization.plans.find_by(code: "pay_in_advance_plan")
-
-          # Create plan with progressive billing
-          create_plan(
-            {
-              name: "Progressive Billing Plan",
-              code: "progressive_plan",
-              interval: "monthly",
-              amount_cents: 20_00, # $20
-              amount_currency: "EUR",
-              pay_in_advance: false,
-              charges: [
-                {
-                  billable_metric_id: bm.id,
-                  charge_model: "standard",
-                  pay_in_advance: false,
-                  properties: {amount: "1"} # $1 per unit
-                }
-              ],
-              usage_thresholds: [
-                {
-                  amount_cents: 20_00, # $20 threshold
-                  threshold_display_name: "First threshold"
-                },
-                {
-                  amount_cents: 50_00, # $50 threshold
-                  threshold_display_name: "Second threshold"
-                }
-              ]
-            }
-          )
-          progressive_plan = organization.plans.find_by(code: "progressive_plan")
-
-          # Create recurring coupon with frequency equal 3 months
-          create_coupon(
-            {
-              name: "Recurring Coupon",
-              code: "recurring_coupon",
-              coupon_type: "fixed_amount",
-              frequency: "recurring",
-              frequency_duration: 3,
-              amount_cents: 100_00, # $100
-              amount_currency: "EUR",
-              expiration: "no_expiration",
-              reusable: false
-            }
-          )
-
-          # Create customer and subscriptions
-          create_or_update_customer({external_id: "customer-12345"})
-          customer = organization.customers.find_by(external_id: "customer-12345")
-
-          # Apply coupon to customer
-          apply_coupon({external_customer_id: "customer-12345", coupon_code: "recurring_coupon"})
-
-          # Start subscriptions at time0
+          bm = setup_test_billable_metric
+          pay_in_advance_plan = setup_pia_plan(bm)
+          progressive_plan = setup_pb_plan(bm)
           time0 = DateTime.new(2025, 1, 1)
-          travel_to(time0) do
-            # Create pay in advance subscription
-            create_subscription(
-              {
-                external_customer_id: "customer-12345",
-                external_id: "sub_pay_in_advance",
-                plan_code: pay_in_advance_plan.code
-              }
-            )
-
-            # Create progressive billing subscription
-            create_subscription(
-              {
-                external_customer_id: "customer-12345",
-                external_id: "sub_progressive",
-                plan_code: progressive_plan.code
-              }
-            )
-          end
+          customer = setup_pb_test_customer_and_subs(
+            {name: "Recurring Coupon", code: "recurring_coupon", coupon_type: "fixed_amount",
+             frequency: "recurring", frequency_duration: 3, amount_cents: 100_00, amount_currency: "EUR",
+             expiration: "no_expiration", reusable: false},
+            pay_in_advance_plan, progressive_plan, time0
+          )
 
           # time0 + 5 days: send events (5 units for pay in advance, 10 units for progressive billing)
           travel_to(time0 + 5.days) do
@@ -1208,109 +930,16 @@ describe "Coupons breakdown Spec", :premium do
 
       context "when recurring forever" do
         it "applies the coupon multiple times, calculating the remaining amount", transaction: false do
-          # Create billable metric
-          create_metric({name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1"})
-          bm = organization.billable_metrics.find_by(code: "bm1")
-
-          # Create plan with pay_in_advance charge
-          create_plan(
-            {
-              name: "Pay in Advance Plan",
-              code: "pay_in_advance_plan",
-              interval: "monthly",
-              amount_cents: 0,
-              amount_currency: "EUR",
-              pay_in_advance: false,
-              charges: [
-                {
-                  billable_metric_id: bm.id,
-                  charge_model: "standard",
-                  pay_in_advance: true,
-                  properties: {amount: "1"}
-                }
-              ]
-            }
-          )
-          pay_in_advance_plan = organization.plans.find_by(code: "pay_in_advance_plan")
-
-          # Create plan with progressive billing
-          create_plan(
-            {
-              name: "Progressive Billing Plan",
-              code: "progressive_plan",
-              interval: "monthly",
-              amount_cents: 20_00, # $20
-              amount_currency: "EUR",
-              pay_in_advance: false,
-              charges: [
-                {
-                  billable_metric_id: bm.id,
-                  charge_model: "standard",
-                  pay_in_advance: false,
-                  properties: {amount: "1"} # $1 per unit
-                }
-              ],
-              usage_thresholds: [
-                {
-                  amount_cents: 20_00, # $20 threshold
-                  threshold_display_name: "First threshold"
-                },
-                {
-                  amount_cents: 50_00, # $50 threshold
-                  threshold_display_name: "Second threshold"
-                },
-                {
-                  amount_cents: 80_00, # $80 threshold
-                  threshold_display_name: "Second threshold"
-                }
-              ]
-            }
-          )
-          progressive_plan = organization.plans.find_by(code: "progressive_plan")
-
-          # Create recurring coupon with frequency forever (nil frequency_duration)
-          create_coupon(
-            {
-              name: "Forever Recurring Coupon",
-              code: "forever_recurring_coupon",
-              coupon_type: "fixed_amount",
-              frequency: "forever",
-              frequency_duration: nil, # Forever
-              amount_cents: 50_00,
-              amount_currency: "EUR",
-              expiration: "no_expiration",
-              reusable: false
-            }
-          )
-
-          # Create customer and subscriptions
-          create_or_update_customer({external_id: "customer-12345"})
-          customer = organization.customers.find_by(external_id: "customer-12345")
-
-          # Apply coupon to customer
-          apply_coupon({external_customer_id: "customer-12345", coupon_code: "forever_recurring_coupon"})
-
-          # Start subscriptions at time0
+          bm = setup_test_billable_metric
+          pay_in_advance_plan = setup_pia_plan(bm)
+          progressive_plan = setup_pb_plan(bm, thresholds: [20_00, 50_00, 80_00])
           time0 = DateTime.new(2025, 1, 1)
-          travel_to(time0) do
-            # Create pay in advance subscription
-            create_subscription(
-              {
-                external_customer_id: "customer-12345",
-                external_id: "sub_pay_in_advance",
-                plan_code: pay_in_advance_plan.code
-              }
-            )
-
-            # Create progressive billing subscription
-            create_subscription(
-              {
-                external_customer_id: "customer-12345",
-                external_id: "sub_progressive",
-                plan_code: progressive_plan.code
-              }
-            )
-          end
+          customer = setup_pb_test_customer_and_subs(
+            {name: "Forever Recurring Coupon", code: "forever_recurring_coupon", coupon_type: "fixed_amount",
+             frequency: "forever", frequency_duration: nil, amount_cents: 50_00, amount_currency: "EUR",
+             expiration: "no_expiration", reusable: false},
+            pay_in_advance_plan, progressive_plan, time0
+          )
 
           # time0 + 5 days: send events (5 units for pay in advance, 10 units for progressive billing)
           travel_to(time0 + 5.days) do
@@ -1554,7 +1183,7 @@ describe "Coupons breakdown Spec", :premium do
   #
   # Customer's "paid" = sum of invoice totals; "refund" = sum of credit notes issued.
   # Net cash-out = paid - refund.
-  context "PB invoice + $20 coupon matrix (ISSUE-1007)", transaction: false do
+  context "with PB invoice and $20 coupon matrix (ISSUE-1007)", transaction: false do
     let(:start_time) { DateTime.new(2025, 1, 1) }
     let(:bm) do
       create_metric({name: "U", code: "u", aggregation_type: "sum_agg", field_name: "n"})
@@ -1575,7 +1204,7 @@ describe "Coupons breakdown Spec", :premium do
       create_coupon({
         name: "C", code: "c", coupon_type: "fixed_amount",
         frequency: frequency, amount_cents: 20_00, amount_currency: "EUR",
-        frequency_duration: (frequency == "recurring" ? 1 : nil),
+        frequency_duration: ((frequency == "recurring") ? 1 : nil),
         expiration: "no_expiration", reusable: false
       })
       create_or_update_customer({external_id: "cust"})
@@ -1611,7 +1240,7 @@ describe "Coupons breakdown Spec", :premium do
       end
     end
 
-    context "Sc1: 1 PB at $5, period total $35" do
+    context "with Sc1: 1 PB at $5, period total $35" do
       let(:thresholds) { [5_00] }
 
       def trigger_usage(sub)
@@ -1623,7 +1252,7 @@ describe "Coupons breakdown Spec", :premium do
       include_examples "matrix case", coupon: "forever", paid: 15_00, refund: 0
     end
 
-    context "Sc2: 1 PB at $30, period total $35" do
+    context "with Sc2: 1 PB at $30, period total $35" do
       let(:thresholds) { [30_00] }
 
       def trigger_usage(sub)
@@ -1635,7 +1264,7 @@ describe "Coupons breakdown Spec", :premium do
       include_examples "matrix case", coupon: "forever", paid: 15_00, refund: 0
     end
 
-    context "Sc3: 2 PBs at $5 and $30, period total $50" do
+    context "with Sc3: 2 PBs at $5 and $30, period total $50" do
       let(:thresholds) { [5_00, 30_00] }
 
       def trigger_usage(sub)
@@ -1648,7 +1277,7 @@ describe "Coupons breakdown Spec", :premium do
       include_examples "matrix case", coupon: "forever", paid: 30_00, refund: 0
     end
 
-    context "Sc4: PB at $40, usage clawed back to $0" do
+    context "with Sc4: PB at $40, usage clawed back to $0" do
       let(:thresholds) { [40_00] }
 
       def trigger_usage(sub)
@@ -1661,7 +1290,7 @@ describe "Coupons breakdown Spec", :premium do
       include_examples "matrix case", coupon: "forever", paid: 20_00, refund: 20_00
     end
 
-    context "Sc5: PB at $40, usage clawed back to $20" do
+    context "with Sc5: PB at $40, usage clawed back to $20" do
       let(:thresholds) { [40_00] }
 
       def trigger_usage(sub)
