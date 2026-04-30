@@ -74,7 +74,7 @@ module Subscriptions
       )
 
       after_commit do
-        bill_subscription
+        bill_subscription(skip_charges: true)
         notify_started
       end
     end
