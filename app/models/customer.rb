@@ -413,8 +413,14 @@ end
 #  index_customers_on_awaiting_wallet_refresh          (awaiting_wallet_refresh)
 #  index_customers_on_billing_entity_id                (billing_entity_id)
 #  index_customers_on_deleted_at                       (deleted_at)
+#  index_customers_on_email                            (email) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_external_id                      (organization_id,external_id)
 #  index_customers_on_external_id_and_organization_id  (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_customers_on_firstname                        (firstname) WHERE (deleted_at IS NULL) USING gin
+#  index_customers_on_gin_external_id                  (external_id) WHERE (deleted_at IS NULL) USING gin
+#  index_customers_on_lastname                         (lastname) WHERE (deleted_at IS NULL) USING gin
+#  index_customers_on_legal_name                       (legal_name) WHERE (deleted_at IS NULL) USING gin
+#  index_customers_on_name                             (name) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_org_id_and_sequential_id_unique  (organization_id,sequential_id) UNIQUE WHERE (sequential_id IS NOT NULL)
 #  index_customers_on_sequential_id                    (sequential_id)
 #
