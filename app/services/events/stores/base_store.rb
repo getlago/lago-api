@@ -140,7 +140,7 @@ module Events
         @timezone ||= customer.applicable_timezone
       end
 
-      attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :presentation_by, :charge_id, :charge_filter_id
+      attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :charge_id, :charge_filter_id
 
       protected
 

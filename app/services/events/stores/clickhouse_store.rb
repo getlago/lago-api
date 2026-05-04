@@ -316,7 +316,6 @@ module Events
       def grouped_unique_count(columns = grouped_by)
         duplicated_unique_count_store = dup
         duplicated_unique_count_store.grouped_by = columns
-        duplicated_unique_count_store.presentation_by = nil
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: duplicated_unique_count_store)
@@ -609,7 +608,6 @@ module Events
       def grouped_weighted_sum(columns = grouped_by, initial_value: 0, initial_values: [])
         duplicated_weighted_sum_store = dup
         duplicated_weighted_sum_store.grouped_by = columns
-        duplicated_weighted_sum_store.presentation_by = nil
 
         baseline_initial_values = if initial_values.present?
           initial_values

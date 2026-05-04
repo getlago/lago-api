@@ -150,10 +150,8 @@ module Events
 
       def grouped_unique_count(columns = grouped_by)
         # NOTE: Important to use a dup to avoid mutate the current object (self) to associate the columns
-        # also, set presentation_by to nil to avoid any confusion in the query building having duplicated keys
         duplicated_unique_count_store = dup
         duplicated_unique_count_store.grouped_by = columns
-        duplicated_unique_count_store.presentation_by = nil
 
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: duplicated_unique_count_store)
 
@@ -313,10 +311,8 @@ module Events
 
       def grouped_weighted_sum(columns = grouped_by, initial_value: 0, initial_values: [])
         # NOTE: Important to use a dup to avoid mutate the current object (self) to associate the columns
-        # also, set presentation_by to nil to avoid any confusion in the query building having duplicated keys
         duplicated_weighted_sum_store = dup
         duplicated_weighted_sum_store.grouped_by = columns
-        duplicated_weighted_sum_store.presentation_by = nil
 
         baseline_initial_values = if initial_values.present?
           initial_values
