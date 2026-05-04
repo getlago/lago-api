@@ -943,11 +943,9 @@ DROP SEQUENCE IF EXISTS public.versions_id_seq;
 DROP TABLE IF EXISTS public.versions;
 DROP TABLE IF EXISTS public.users;
 DROP TABLE IF EXISTS public.user_devices;
-DROP TABLE IF EXISTS public.usage_monitoring_triggered_alerts;
 DROP SEQUENCE IF EXISTS public.usage_monitoring_subscription_activities_id_seq;
 DROP TABLE IF EXISTS public.usage_monitoring_subscription_activities;
 DROP TABLE IF EXISTS public.usage_monitoring_alerts;
-DROP TABLE IF EXISTS public.usage_monitoring_alert_thresholds;
 DROP TABLE IF EXISTS public.subscriptions_invoice_custom_sections;
 DROP TABLE IF EXISTS public.subscription_activation_rules;
 DROP TABLE IF EXISTS public.schema_migrations;
@@ -992,6 +990,10 @@ DROP VIEW IF EXISTS public.exports_wallet_transaction_consumptions;
 DROP TABLE IF EXISTS public.wallet_transaction_consumptions;
 DROP VIEW IF EXISTS public.exports_usage_thresholds;
 DROP TABLE IF EXISTS public.usage_thresholds;
+DROP VIEW IF EXISTS public.exports_usage_monitoring_triggered_alerts;
+DROP TABLE IF EXISTS public.usage_monitoring_triggered_alerts;
+DROP VIEW IF EXISTS public.exports_usage_monitoring_alert_thresholds;
+DROP TABLE IF EXISTS public.usage_monitoring_alert_thresholds;
 DROP VIEW IF EXISTS public.exports_taxes;
 DROP TABLE IF EXISTS public.taxes;
 DROP VIEW IF EXISTS public.exports_subscriptions;
@@ -3880,6 +3882,77 @@ CREATE VIEW public.exports_taxes AS
 
 
 --
+-- Name: usage_monitoring_alert_thresholds; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_monitoring_alert_thresholds (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    usage_monitoring_alert_id uuid NOT NULL,
+    value numeric(30,5) NOT NULL,
+    code character varying,
+    recurring boolean DEFAULT false NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_usage_monitoring_alert_thresholds; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_usage_monitoring_alert_thresholds AS
+ SELECT ath.id AS lago_id,
+    ath.organization_id,
+    ath.usage_monitoring_alert_id AS lago_alert_id,
+    ath.value,
+    ath.code,
+    ath.recurring,
+    ath.created_at,
+    ath.updated_at
+   FROM public.usage_monitoring_alert_thresholds ath;
+
+
+--
+-- Name: usage_monitoring_triggered_alerts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_monitoring_triggered_alerts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    usage_monitoring_alert_id uuid NOT NULL,
+    subscription_id uuid,
+    current_value numeric(30,5) NOT NULL,
+    previous_value numeric(30,5) NOT NULL,
+    crossed_thresholds jsonb DEFAULT '{}'::jsonb,
+    triggered_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    wallet_id uuid,
+    CONSTRAINT chk_triggered_alerts_subscription_xor_wallet CHECK (((subscription_id IS NOT NULL) <> (wallet_id IS NOT NULL)))
+);
+
+
+--
+-- Name: exports_usage_monitoring_triggered_alerts; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_usage_monitoring_triggered_alerts AS
+ SELECT ta.id AS lago_id,
+    ta.organization_id,
+    ta.usage_monitoring_alert_id AS lago_alert_id,
+    ta.subscription_id AS lago_subscription_id,
+    ta.wallet_id AS lago_wallet_id,
+    ta.current_value,
+    ta.previous_value,
+    ta.crossed_thresholds,
+    ta.triggered_at,
+    ta.created_at,
+    ta.updated_at
+   FROM public.usage_monitoring_triggered_alerts ta;
+
+
+--
 -- Name: usage_thresholds; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4751,22 +4824,6 @@ CREATE TABLE public.subscriptions_invoice_custom_sections (
 
 
 --
--- Name: usage_monitoring_alert_thresholds; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.usage_monitoring_alert_thresholds (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    usage_monitoring_alert_id uuid NOT NULL,
-    value numeric(30,5) NOT NULL,
-    code character varying,
-    recurring boolean DEFAULT false NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
 -- Name: usage_monitoring_alerts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4820,26 +4877,6 @@ CREATE SEQUENCE public.usage_monitoring_subscription_activities_id_seq
 --
 
 ALTER SEQUENCE public.usage_monitoring_subscription_activities_id_seq OWNED BY public.usage_monitoring_subscription_activities.id;
-
-
---
--- Name: usage_monitoring_triggered_alerts; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.usage_monitoring_triggered_alerts (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    usage_monitoring_alert_id uuid NOT NULL,
-    subscription_id uuid,
-    current_value numeric(30,5) NOT NULL,
-    previous_value numeric(30,5) NOT NULL,
-    crossed_thresholds jsonb DEFAULT '{}'::jsonb,
-    triggered_at timestamp(6) without time zone NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    wallet_id uuid,
-    CONSTRAINT chk_triggered_alerts_subscription_xor_wallet CHECK (((subscription_id IS NOT NULL) <> (wallet_id IS NOT NULL)))
-);
 
 
 --
@@ -11815,6 +11852,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260430102814'),
+('20260430102813'),
 ('20260424170418'),
 ('20260421123920'),
 ('20260421103557'),
@@ -12804,4 +12843,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-
