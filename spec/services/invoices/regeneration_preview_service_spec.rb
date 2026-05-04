@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Invoices::RegenerationPreviewService do
-  subject(:draft_service) { described_class.new(invoice:) }
+  subject(:preview_service) { described_class.new(invoice:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -34,8 +34,8 @@ RSpec.describe Invoices::RegenerationPreviewService do
       fee
     end
 
-    it "builds a draft invoice with fees" do
-      result = draft_service.call
+    it "builds a preview invoice with fees" do
+      result = preview_service.call
 
       expect(result).to be_success
       expect(result.invoice.id).to eq(invoice.id)
@@ -44,7 +44,7 @@ RSpec.describe Invoices::RegenerationPreviewService do
     end
 
     it "calls ApplyTaxesService for fee" do
-      draft_service.call
+      preview_service.call
 
       expect(Fees::ApplyTaxesService).to have_received(:call!).at_least(:once).with(fee:)
     end
@@ -67,15 +67,15 @@ RSpec.describe Invoices::RegenerationPreviewService do
 
       before { charge_fee }
 
-      it "builds a draft invoice with all fees" do
-        result = draft_service.call
+      it "builds a preview invoice with all fees" do
+        result = preview_service.call
 
         expect(result).to be_success
         expect(result.invoice.fees.size).to eq(2)
       end
 
       it "calls ApplyTaxesService for each fee" do
-        draft_service.call
+        preview_service.call
 
         expect(Fees::ApplyTaxesService).to have_received(:call!).at_least(:once).with(fee:)
         expect(Fees::ApplyTaxesService).to have_received(:call!).at_least(:once).with(fee: charge_fee)
@@ -89,12 +89,12 @@ RSpec.describe Invoices::RegenerationPreviewService do
       before { applied_tax }
 
       it "applies taxes and assigns ids to applied taxes" do
-        result = draft_service.call
-        draft_applied_tax = result.invoice.applied_taxes.first
+        result = preview_service.call
+        preview_applied_tax = result.invoice.applied_taxes.first
 
-        expect(draft_applied_tax).not_to be_nil
-        expect(draft_applied_tax.invoice_id).to eq(invoice.id)
-        expect(draft_applied_tax.tax_rate).to eq(12)
+        expect(preview_applied_tax).not_to be_nil
+        expect(preview_applied_tax.invoice_id).to eq(invoice.id)
+        expect(preview_applied_tax.tax_rate).to eq(12)
         expect(result.invoice.taxes_rate).to eq(12)
       end
     end
