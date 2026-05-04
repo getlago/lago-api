@@ -7,6 +7,7 @@ class Wallet < ApplicationRecord
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
   belongs_to :payment_method, optional: true
+  belongs_to :billing_entity, optional: true
 
   has_many :wallet_transactions
   has_many :recurring_transaction_rules
@@ -63,6 +64,10 @@ class Wallet < ApplicationRecord
 
   def self.in_application_order
     order(:priority, :created_at)
+  end
+
+  def billing_entity
+    super || customer&.billing_entity
   end
 
   def mark_as_terminated!(timestamp = Time.zone.now)
@@ -157,6 +162,7 @@ end
 #  traceable                           :boolean          default(FALSE), not null
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null
+#  billing_entity_id                   :uuid
 #  customer_id                         :uuid             not null
 #  organization_id                     :uuid             not null
 #  payment_method_id                   :uuid
@@ -164,6 +170,7 @@ end
 # Indexes
 #
 #  index_uniq_wallet_code_per_customer               (customer_id,code) UNIQUE WHERE (status = 0)
+#  index_wallets_on_billing_entity_id                (billing_entity_id)
 #  index_wallets_on_customer_id                      (customer_id)
 #  index_wallets_on_organization_id                  (organization_id)
 #  index_wallets_on_organization_id_and_customer_id  (organization_id,customer_id)
@@ -172,6 +179,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (payment_method_id => payment_methods.id)
