@@ -47,7 +47,7 @@ module Invoices
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
-        skip_payment_gating_for_zero_amount if subscription.payment_gated? && invoice.total_amount_cents.zero?
+        skip_payment_gating_for_zero_amount if subscription.payment_gated? && invoice.total_amount_cents.zero? && !invoice.tax_pending?
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)
