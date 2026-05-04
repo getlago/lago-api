@@ -9,6 +9,10 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob do
 
   let(:result) { BaseService::Result.new }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [{invoice:}] }
+  end
+
   before do
     allow(Invoices::ProviderTaxes::PullTaxesAndApplyService).to receive(:call)
       .with(invoice:)
