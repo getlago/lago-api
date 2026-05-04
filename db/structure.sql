@@ -191,6 +191,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
+ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_56b3626631;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_5628a713de;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_533b639bac;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_52b72c9b0e;
@@ -200,6 +201,7 @@ ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_521
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_51ac39a0c6;
 ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS fk_rails_51077e7c0e;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_50d46d3679;
+ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_4ff087c52e;
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_4aa58496c3;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_49fcc221b0;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_4934f27a06;
@@ -336,6 +338,7 @@ DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_customer_id;
+DROP INDEX IF EXISTS public.index_wallets_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_on_organization_id;
@@ -382,6 +385,7 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on;
 DROP INDEX IF EXISTS public.index_subscriptions_on_external_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_ending_at_active;
 DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_subscription_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_organization_id;
@@ -3154,7 +3158,8 @@ CREATE TABLE public.subscriptions (
     last_received_event_on date,
     cancelation_reason public.subscription_cancelation_reasons,
     incompleted_at timestamp(6) without time zone,
-    activated_at timestamp(6) without time zone
+    activated_at timestamp(6) without time zone,
+    billing_entity_id uuid
 );
 
 
@@ -4063,7 +4068,8 @@ CREATE TABLE public.wallets (
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     traceable boolean DEFAULT false NOT NULL,
-    code character varying
+    code character varying,
+    billing_entity_id uuid
 );
 
 
@@ -9013,6 +9019,13 @@ CREATE UNIQUE INDEX index_subscriptions_invoice_custom_sections_unique ON public
 
 
 --
+-- Name: index_subscriptions_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_on_billing_entity_id ON public.subscriptions USING btree (billing_entity_id);
+
+
+--
 -- Name: index_subscriptions_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9332,6 +9345,13 @@ CREATE INDEX index_wallets_invoice_custom_sections_on_wallet_id ON public.wallet
 --
 
 CREATE UNIQUE INDEX index_wallets_invoice_custom_sections_unique ON public.wallets_invoice_custom_sections USING btree (wallet_id, invoice_custom_section_id);
+
+
+--
+-- Name: index_wallets_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallets_on_billing_entity_id ON public.wallets USING btree (billing_entity_id);
 
 
 --
@@ -10281,6 +10301,14 @@ ALTER TABLE ONLY public.billing_entities
 
 
 --
+-- Name: wallets fk_rails_4ff087c52e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallets
+    ADD CONSTRAINT fk_rails_4ff087c52e FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
+
+
+--
 -- Name: payment_provider_customers fk_rails_50d46d3679; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10350,6 +10378,14 @@ ALTER TABLE ONLY public.entitlement_entitlement_values
 
 ALTER TABLE ONLY public.credits
     ADD CONSTRAINT fk_rails_5628a713de FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: subscriptions fk_rails_56b3626631; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT fk_rails_56b3626631 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
 
 
 --
@@ -11815,6 +11851,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260429133747'),
+('20260429123434'),
 ('20260424170418'),
 ('20260421123920'),
 ('20260421103557'),
