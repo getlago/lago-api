@@ -395,7 +395,7 @@ module Events
 
       def grouped_last(columns = grouped_by)
         groups, column_names = grouped_arel_columns(columns)
-        distinct_on_names = grouped_by.present? ? group_names.join(", ") : nil
+        distinct_on_names = grouped_by.present? ? grouped_arel_columns.last : nil
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
@@ -782,14 +782,6 @@ module Events
           columns.map.with_index { |col, i| Arel::Nodes::SqlLiteral.new(sanitized_property_name(col)).as("g_#{i}") },
           names.join(", ")
         ]
-      end
-
-      def group_names
-        @group_names ||= Array.new(grouped_by.count) { |index| "g_#{index}" }
-      end
-
-      def joined_group_names
-        @joined_group_names ||= group_names.join(", ")
       end
 
       def grouped_by_columns(values)
