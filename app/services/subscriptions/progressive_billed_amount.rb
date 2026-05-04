@@ -58,7 +58,6 @@ module Subscriptions
       result.progressive_billed_amount = result.progressive_billing_invoice.fees_amount_cents
 
       result.to_credit_amount = invoice.fees_amount_cents
-      result.to_credit_amount -= invoice.coupons_amount_cents
       result.to_credit_amount -= invoice.progressive_billing_credits.sum(:amount_cents)
       result.to_credit_amount -= invoice.credit_notes.where(credit_status: ["available", "consumed"]).sum(:credit_amount_cents)
 
