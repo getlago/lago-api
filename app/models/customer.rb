@@ -103,6 +103,7 @@ class Customer < ApplicationRecord
   has_one :cashfree_customer, class_name: "PaymentProviderCustomers::CashfreeCustomer"
   has_one :adyen_customer, class_name: "PaymentProviderCustomers::AdyenCustomer"
   has_one :flutterwave_customer, class_name: "PaymentProviderCustomers::FlutterwaveCustomer"
+  has_one :paystack_customer, class_name: "PaymentProviderCustomers::PaystackCustomer"
   has_one :netsuite_customer, class_name: "IntegrationCustomers::NetsuiteCustomer"
   has_one :anrok_customer, class_name: "IntegrationCustomers::AnrokCustomer"
   has_one :avalara_customer, class_name: "IntegrationCustomers::AvalaraCustomer"
@@ -116,7 +117,7 @@ class Customer < ApplicationRecord
 
   delegate :default_currency, to: :organization, prefix: true
 
-  PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash].freeze
+  PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash paystack].freeze
 
   default_scope -> { kept }
   sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
@@ -277,6 +278,8 @@ class Customer < ApplicationRecord
       adyen_customer
     when :moneyhash
       moneyhash_customer
+    when :paystack
+      paystack_customer
     end
   end
 
