@@ -220,16 +220,50 @@ describe "Payment Gated Subscription Activation Scenarios" do
   end
 
   describe "gated subscription with pending VIES check" do
-    it "completes the flow: gated → VIES pending → VIES resolved → payment → activation" do
-      pending "requires CreateService integration with ActivateService gated path (PR #5370)"
+    let(:vat_number) { "IT12345678901" }
+    let(:organization) do
+      create(:organization, country: "FR", webhook_url: nil, eu_tax_management: true,
+        billing_entities: [create(:billing_entity, country: "FR", eu_tax_management: true)])
+    end
+    let(:billing_entity) { organization.billing_entities.first }
+    let(:customer) do
+      create(:customer, organization:, billing_entity:, country: "IT", currency: "EUR",
+        tax_identification_number: vat_number)
+    end
 
-      # 1. Create subscription with payment gating + customer has pending VIES check
-      # 2. Invoice created as open, tax_status: pending (VIES blocks tax calculation)
-      # 3. No payment triggered yet (can't pay without taxes)
-      # 4. VIES resolves → ViesCheckJob picks up the open invoice
-      # 5. FinalizePendingViesInvoiceService applies taxes, triggers payment only
-      # 6. Payment succeeds → subscription activates, invoice finalized
-      raise "not implemented"
+    before do
+      create(:pending_vies_check, customer:, tax_identification_number: vat_number)
+    end
+
+    it "stays gated until VIES resolves, then activates on payment success" do
+      # Stage 1: Create subscription — invoice goes :open with tax_status :pending (VIES blocks taxes)
+      create_subscription(subscription_params)
+      perform_all_enqueued_jobs
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.activation_rules.sole).to be_pending
+
+      invoice = subscription.invoices.sole
+      expect(invoice).to be_open
+      expect(invoice.tax_status).to eq("pending")
+
+      # Stage 2: VIES resolves — FinalizePendingViesInvoiceService applies taxes and triggers payment
+      mock_vies_check!(vat_number)
+      Customers::ViesCheckJob.perform_now(customer)
+      perform_all_enqueued_jobs
+
+      invoice.reload
+      expect(invoice.tax_status).to eq("succeeded")
+      expect(invoice).to be_open
+
+      # Stage 3: Stripe webhook — payment succeeded, subscription activates
+      simulate_stripe_webhook(status: "succeeded")
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.activation_rules.sole).to be_satisfied
+      expect(invoice.reload).to be_finalized
     end
   end
 
