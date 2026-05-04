@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Invoices
-  class RegenerationPreviewService < BaseService
+  class BuildRegenerationPreviewService < BaseService
     Result = BaseResult[:invoice]
 
     def initialize(invoice:)

@@ -54105,6 +54105,35 @@
               "deprecationReason": null
             },
             {
+              "name": "invoiceBuildRegenerationPreview",
+              "description": "Build a preview of a single Invoice of an organization for regeneration.",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the invoice",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "Invoice",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "invoiceCollections",
               "description": "Query invoice collections of an organization",
               "args": [
@@ -54287,35 +54316,6 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "InvoiceCustomSectionCollection",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "invoiceRegenerationPreview",
-              "description": "Build a preview of a single Invoice of an organization for regeneration.",
-              "args": [
-                {
-                  "name": "id",
-                  "description": "Uniq ID of the invoice",
-                  "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "ID",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "type": {
-                "kind": "OBJECT",
-                "name": "Invoice",
                 "ofType": null
               },
               "isDeprecated": false,

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Resolvers
-  class InvoiceRegenerationPreviewResolver < Resolvers::BaseResolver
+  class InvoiceBuildRegenerationPreviewResolver < Resolvers::BaseResolver
     include AuthenticableApiUser
     include RequiredOrganization
 
@@ -15,7 +15,7 @@ module Resolvers
 
     def resolve(id:)
       invoice = current_organization.invoices.visible.find(id)
-      result = Invoices::RegenerationPreviewService.call(invoice: invoice)
+      result = Invoices::BuildRegenerationPreviewService.call(invoice: invoice)
       result.success? ? result.invoice : result_error(result)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "invoice")

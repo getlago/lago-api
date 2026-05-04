@@ -2,12 +2,12 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::InvoiceRegenerationPreviewResolver do
+RSpec.describe Resolvers::InvoiceBuildRegenerationPreviewResolver do
   let(:required_permission) { "invoices:view" }
   let(:query) do
     <<~GQL
       query($id: ID!) {
-        invoiceRegenerationPreview(id: $id) {
+        invoiceBuildRegenerationPreview(id: $id) {
           id
           number
           feesAmountCents
@@ -104,7 +104,7 @@ RSpec.describe Resolvers::InvoiceRegenerationPreviewResolver do
       }
     )
 
-    data = result["data"]["invoiceRegenerationPreview"]
+    data = result["data"]["invoiceBuildRegenerationPreview"]
 
     expect(data["id"]).to eq(invoice.id)
     expect(data["number"]).to eq(invoice.number)

@@ -10158,6 +10158,16 @@ type Query {
   ): Invoice
 
   """
+  Build a preview of a single Invoice of an organization for regeneration.
+  """
+  invoiceBuildRegenerationPreview(
+    """
+    Uniq ID of the invoice
+    """
+    id: ID!
+  ): Invoice
+
+  """
   Query invoice collections of an organization
   """
   invoiceCollections(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, isCustomerTinEmpty: Boolean): FinalizedInvoiceCollectionCollection!
@@ -10188,16 +10198,6 @@ type Query {
   Query invoice_custom_sections
   """
   invoiceCustomSections(limit: Int, page: Int): InvoiceCustomSectionCollection
-
-  """
-  Build a preview of a single Invoice of an organization for regeneration.
-  """
-  invoiceRegenerationPreview(
-    """
-    Uniq ID of the invoice
-    """
-    id: ID!
-  ): Invoice
 
   """
   Query invoiced usage of an organization

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::RegenerationPreviewService do
+RSpec.describe Invoices::BuildRegenerationPreviewService do
   subject(:preview_service) { described_class.new(invoice:) }
 
   let(:organization) { create(:organization) }
