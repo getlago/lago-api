@@ -84,7 +84,15 @@ module Resolvers
 
       return result_error(result) unless result.success?
 
-      Invoice.preload_offset_amounts(result.invoices)
+      Invoice.preload_offset_amounts(
+        result.invoices.preload(
+          :fees,
+          :regenerated_invoice,
+          :error_details,
+          :billing_entity,
+          {customer: :billing_entity}
+        )
+      )
     end
   end
 end
