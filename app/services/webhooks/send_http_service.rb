@@ -76,6 +76,10 @@ module Webhooks
       webhook.last_retried_at = Time.zone.now
       webhook.status = retrying ? :retrying : :failed
       webhook.save!
+
+      if error.is_a?(Net::OpenTimeout) || error.is_a?(Net::ReadTimeout)
+        webhook.webhook_endpoint.update!(slow_response: true)
+      end
     end
 
     def wait_value
