@@ -74,7 +74,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         grouped_by: {"card_type" => "visa"},
         charge_filter: nil,
         pricing_unit_usage:,
-        presentation_breakdowns: presentation_breakdowns
+        presentation_breakdowns:
       )
     ]
   end
@@ -135,12 +135,10 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
 
   context "when contains presentation breakdowns" do
     let(:presentation_breakdowns) do
-      presentation_breakdown_class = Struct.new(:presentation_by, :units, keyword_init: true)
-
       [
-        presentation_breakdown_class.new(presentation_by: "card_type", units: "7"),
-        presentation_breakdown_class.new(presentation_by: "card_type", units: "1"),
-        presentation_breakdown_class.new(presentation_by: "country", units: "3")
+        build(:presentation_breakdown, presentation_by: {"card_type" => "visa"}, units: "7"),
+        build(:presentation_breakdown, presentation_by: {"card_type" => "mastercard"}, units: "1"),
+        build(:presentation_breakdown, presentation_by: {"country" => "br"}, units: "3")
       ]
     end
 
@@ -160,9 +158,9 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
 
       expect(result["charges"].first["grouped_usage"].first["presentation_breakdowns"]).to match_array(
         [
-          {"presentation_by" => "card_type", "units" => "7"},
-          {"presentation_by" => "card_type", "units" => "1"},
-          {"presentation_by" => "country", "units" => "3"}
+          {"presentation_by" => {"card_type" => "visa"}, "units" => "7.0"},
+          {"presentation_by" => {"card_type" => "mastercard"}, "units" => "1.0"},
+          {"presentation_by" => {"country" => "br"}, "units" => "3.0"}
         ]
       )
     end
@@ -256,7 +254,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           charge_filter:,
           charge_filter_id: charge_filter.id,
           pricing_unit_usage:,
-          presentation_breakdowns: presentation_breakdowns
+          presentation_breakdowns:
         )
       end
     end
@@ -384,7 +382,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           charge_filter: charge_filter_1,
           charge_filter_id: charge_filter_1.id,
           pricing_unit_usage:,
-          presentation_breakdowns: presentation_breakdowns
+          presentation_breakdowns:
         ),
         OpenStruct.new(
           charge_id: charge.id,
@@ -404,7 +402,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           charge_filter: charge_filter_2,
           charge_filter_id: charge_filter_2.id,
           pricing_unit_usage:,
-          presentation_breakdowns: presentation_breakdowns
+          presentation_breakdowns:
         )
       ]
     end
@@ -473,7 +471,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           grouped_by: {"region" => "us-east", "tier" => "premium"},
           charge_filter: nil,
           pricing_unit_usage:,
-          presentation_breakdowns: presentation_breakdowns
+          presentation_breakdowns:
         ),
         OpenStruct.new(
           charge_id: charge.id,
@@ -492,7 +490,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           grouped_by: {"region" => "us-west", "tier" => "standard"},
           charge_filter: nil,
           pricing_unit_usage:,
-          presentation_breakdowns: presentation_breakdowns
+          presentation_breakdowns:
         ),
         OpenStruct.new(
           charge_id: charge.id,
@@ -511,7 +509,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           grouped_by: {"region" => "eu-central", "tier" => "premium"},
           charge_filter: nil,
           pricing_unit_usage:,
-          presentation_breakdowns: presentation_breakdowns
+          presentation_breakdowns:
         )
       ]
     end
@@ -597,7 +595,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           charge_filter: charge_filter,
           charge_filter_id: charge_filter.id,
           pricing_unit_usage:,
-          presentation_breakdowns: presentation_breakdowns
+          presentation_breakdowns:
         ),
         OpenStruct.new(
           charge_id: charge.id,
@@ -617,7 +615,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           charge_filter: charge_filter,
           charge_filter_id: charge_filter.id,
           pricing_unit_usage:,
-          presentation_breakdowns: presentation_breakdowns
+          presentation_breakdowns:
         )
       ]
     end
@@ -695,7 +693,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           grouped_by: nil,
           charge_filter: nil,
           pricing_unit_usage:,
-          presentation_breakdowns: presentation_breakdowns
+          presentation_breakdowns:
         ),
         OpenStruct.new(
           charge_id: charge_2.id,
@@ -714,7 +712,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           grouped_by: nil,
           charge_filter: nil,
           pricing_unit_usage:,
-          presentation_breakdowns: presentation_breakdowns
+          presentation_breakdowns:
         )
       ]
     end
@@ -780,7 +778,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           grouped_by: nil,
           charge_filter: nil,
           pricing_unit_usage:,
-          presentation_breakdowns: presentation_breakdowns
+          presentation_breakdowns:
         )
       ]
     end
