@@ -374,7 +374,7 @@ RSpec.shared_examples "a credit note index endpoint" do
     end
   end
 
-  context "with credit notes containing all associations", :with_bullet do
+  context "with credit notes containing all associations", :bullet do
     before do
       # NOTE: Bullet cannot track ActiveStorage's internal blob access through the attachment proxy
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "ActiveStorage::Attachment", association: :blob)
@@ -445,7 +445,7 @@ RSpec.shared_examples "a credit note index endpoint" do
       end
     end
 
-    it "returns metadata for each credit note", :with_bullet do
+    it "returns metadata for each credit note", :bullet do
       subject
 
       expect(response).to have_http_status(:success)
