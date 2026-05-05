@@ -14,7 +14,7 @@ class UsageFilters
   attr_reader :filter_by_charge_id, :filter_by_charge_code, :filter_by_metric_code, :filter_by_group, :filter_by_presentation, :skip_grouping, :full_usage
 
   def self.init_from_params(params)
-    group = params[:filter_by_group]
+    group = params[:group] || params[:filter_by_group]
     group = JSON.parse(group) if group.is_a?(String)
     group = group.to_unsafe_h if group.respond_to?(:to_unsafe_h)
 
@@ -23,9 +23,9 @@ class UsageFilters
     presentation = Array(presentation) if presentation.present?
 
     new(
-      filter_by_charge_id: params[:filter_by_charge_id],
-      filter_by_charge_code: params[:filter_by_charge_code],
-      filter_by_metric_code: params[:filter_by_metric_code],
+      filter_by_charge_id: params[:charge_id] || params[:filter_by_charge_id],
+      filter_by_charge_code: params[:charge_code] || params[:filter_by_charge_code],
+      filter_by_metric_code: params[:billable_metric_code] || params[:filter_by_metric_code],
       filter_by_group: group,
       filter_by_presentation: presentation,
       skip_grouping: ActiveModel::Type::Boolean.new.cast(params[:skip_grouping]),
