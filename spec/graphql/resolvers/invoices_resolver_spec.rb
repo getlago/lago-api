@@ -728,4 +728,80 @@ RSpec.describe Resolvers::InvoicesResolver do
       end
     end
   end
+
+  context "with N+1 query detection on associations", bullet: {unused_eager_loading: false} do
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(limit: 5) {
+            collection {
+              id
+              status
+              taxStatus
+              paymentStatus
+              paymentOverdue
+              number
+              issuingDate
+              totalAmountCents
+              totalDueAmountCents
+              totalPaidAmountCents
+              currency
+              voidable
+              paymentDisputeLostAt
+              taxProviderVoidable
+              invoiceType
+              creditableAmountCents
+              refundableAmountCents
+              offsettableAmountCents
+              associatedActiveWalletPresent
+              voidedInvoiceId
+              regeneratedInvoiceId
+              customer {
+                id
+                externalId
+                name
+                displayName
+                applicableTimezone
+                paymentProvider
+                hasActiveWallet
+                email
+                deletedAt
+                __typename
+              }
+              errorDetails {
+                errorCode
+                errorDetails
+                __typename
+              }
+              billingEntity {
+                id
+                name
+                code
+                email
+                einvoicing
+                emailSettings
+                __typename
+              }
+              payments {
+                createdAt
+                paymentMethodId
+                __typename
+              }
+            }
+          }
+        }
+      GQL
+    end
+
+    it "does not trigger N+1 queries on associations" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect(result["data"]["invoices"]["collection"].count).to eq(2)
+    end
+  end
 end
