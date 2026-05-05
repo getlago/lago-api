@@ -46,7 +46,9 @@ module Customers
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
 
-        customer.billing_entity = billing_entity if new_customer || (customer.editable? && params.key?(:billing_entity_code))
+        if new_customer || (params.key?(:billing_entity_code) && (organization.feature_flag_enabled?(:multi_entity_billing) || customer.editable?))
+          customer.billing_entity = billing_entity
+        end
         customer.name = params[:name] if params.key?(:name)
         customer.country = params[:country]&.upcase if params.key?(:country)
         customer.address_line1 = params[:address_line1] if params.key?(:address_line1)

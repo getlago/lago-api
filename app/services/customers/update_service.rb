@@ -96,10 +96,13 @@ module Customers
       # NOTE: Some fields are not editable if customer is attached to subscriptions:
       #       external_id,
       #       account_type,
-      #       billing_entity_id
+      #       billing_entity_id (gated by editable? unless multi_entity_billing flag is enabled)
+      if args.key?(:billing_entity_code) && (organization.feature_flag_enabled?(:multi_entity_billing) || customer.editable?)
+        customer.billing_entity = billing_entity
+      end
+
       if customer.editable?
         customer.external_id = args[:external_id] if args.key?(:external_id)
-        customer.billing_entity = billing_entity if args.key?(:billing_entity_code)
 
         if organization.revenue_share_enabled?
           customer.account_type = args[:account_type] if args.key?(:account_type)
