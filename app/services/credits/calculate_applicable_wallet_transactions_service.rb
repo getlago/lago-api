@@ -79,8 +79,8 @@ module Credits
         next if fee.sub_total_excluding_taxes_amount_cents == 0
 
         cap = fee.sub_total_excluding_taxes_amount_cents +
-              fee.taxes_precise_amount_cents -
-              fee.precise_credit_notes_amount_cents
+          fee.taxes_precise_amount_cents -
+          fee.precise_credit_notes_amount_cents
 
         next if cap <= 0
         key = [fee.fee_type, fee.charge&.billable_metric_id]
@@ -92,6 +92,21 @@ module Credits
 
       ordered = remaining.sort_by { |_, v| -v }.to_h
       reconcile_remaining_amounts(ordered)
+    end
+
+    def reconcile_remaining_amounts(ordered_remaining_amounts)
+      return ordered_remaining_amounts if ordered_remaining_amounts.empty?
+
+      precise_total = ordered_remaining_amounts.values.sum
+      difference = invoice.total_amount_cents - precise_total
+
+      # Only reconcile small rounding differences (at most 1 cent per fee bucket).
+      return ordered_remaining_amounts if difference <= 0
+      return ordered_remaining_amounts if difference > ordered_remaining_amounts.size
+
+      largest_key = ordered_remaining_amounts.keys.first
+      ordered_remaining_amounts[largest_key] += difference
+      ordered_remaining_amounts
     end
 
     def wallets_already_applied?
@@ -119,10 +134,10 @@ module Credits
 
     def wallets
       @wallets ||= begin
-                     scope = customer.wallets.active.includes(:wallet_targets).with_positive_balance
-                     scope = scope.where(balance_currency: invoice.currency) if invoice.currency.present?
-                     scope.in_application_order
-                   end
+        scope = customer.wallets.active.includes(:wallet_targets).with_positive_balance
+        scope = scope.where(balance_currency: invoice.currency) if invoice.currency.present?
+        scope.in_application_order
+      end
     end
   end
 end

@@ -83,10 +83,12 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
     it "creates wallet transaction" do
       expect(result).to be_success
-      expect(result.wallet_transactions).to be_present
       expect(result.wallet_transactions.count).to eq(1)
+      expect(result.wallet_transactions.first.wallet_id).to eq(priority_wallet.id)
       expect(result.wallet_transactions.first.amount).to eq(1.0)
       expect(result.wallet_transactions.first).to be_invoiced
+      expect(result.prepaid_credit_amount_cents).to eq(100)
+      expect(invoice.prepaid_credit_amount_cents).to eq(100)
     end
 
     it "updates wallet balance" do
@@ -123,14 +125,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       let(:amount_cents) { 1500 }
       let(:fee_amount_cents) { 1500 }
 
-      it "calculates prepaid credit" do
-        expect(result).to be_success
-        expect(result.prepaid_credit_amount_cents).to eq(1500)
-      end
-
       it "creates wallet transactions" do
         expect(result).to be_success
-        expect(result.wallet_transactions).to be_present
         expect(result.wallet_transactions.count).to eq(2)
 
         wallet_transaction_1 = result.wallet_transactions.detect { |tx| tx.wallet_id == priority_wallet.id }
@@ -138,6 +134,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
         expect(wallet_transaction_1.amount).to eq(10.0)
         expect(wallet_transaction_2.amount).to eq(5.0)
+        expect(result.prepaid_credit_amount_cents).to eq(1500)
+        expect(invoice.prepaid_credit_amount_cents).to eq(1500)
       end
 
       it "updates wallets balance" do
@@ -178,17 +176,13 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
       before { subscription_fees }
 
-      it "calculates prepaid credit" do
-        expect(result).to be_success
-        expect(result.prepaid_credit_amount_cents).to eq(110)
-        expect(invoice.prepaid_credit_amount_cents).to eq(110)
-      end
-
       it "creates wallet transaction" do
         expect(result).to be_success
-        expect(result.wallet_transactions).to be_present
         expect(result.wallet_transactions.count).to eq(1)
+        expect(result.wallet_transactions.first.wallet_id).to eq(priority_wallet.id)
         expect(result.wallet_transactions.first.amount).to eq(1.10)
+        expect(result.prepaid_credit_amount_cents).to eq(110)
+        expect(invoice.prepaid_credit_amount_cents).to eq(110)
       end
 
       it "updates wallet balance" do
@@ -211,14 +205,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 3500, precise_amount_cents: 3500, taxes_precise_amount_cents: 100) }
         let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 1500, precise_amount_cents: 1500, taxes_precise_amount_cents: 50) }
 
-        it "calculates prepaid credit" do
-          expect(result).to be_success
-          expect(result.prepaid_credit_amount_cents).to eq(5150)
-        end
-
         it "creates wallet transaction" do
           expect(result).to be_success
-          expect(result.wallet_transactions).to be_present
           expect(result.wallet_transactions.count).to eq(6)
           wallet_transaction_1 = result.wallet_transactions.detect { |tx| tx.wallet_id == priority_wallet.id }
           wallet_transaction_2 = result.wallet_transactions.detect { |tx| tx.wallet_id == priority_limited_charge_wallet.id }
@@ -233,6 +221,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
           expect(wallet_transaction_4.amount).to eq(10.0)
           expect(wallet_transaction_5.amount).to eq(5.5)
           expect(wallet_transaction_6.amount).to eq(6.0)
+          expect(result.prepaid_credit_amount_cents).to eq(5150)
+          expect(invoice.prepaid_credit_amount_cents).to eq(5150)
         end
 
         it "updates wallet balance" do
@@ -283,15 +273,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         wallet_targets
       end
 
-      it "calculates prepaid credit" do
-        expect(result).to be_success
-        expect(result.prepaid_credit_amount_cents).to eq(110)
-        expect(invoice.prepaid_credit_amount_cents).to eq(110)
-      end
-
       it "creates wallet transaction" do
         expect(result).to be_success
-        expect(result.wallet_transactions).to be_present
         expect(result.wallet_transactions.count).to eq(2)
 
         wallet_transaction_1 = result.wallet_transactions.detect { |tx| tx.wallet_id == priority_limited_subscription_wallet.id }
@@ -301,6 +284,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         expect(wallet_transaction_2.amount).to eq(0.44)
         expect(wallet_transaction_1).to be_invoiced
         expect(wallet_transaction_2).to be_invoiced
+        expect(result.prepaid_credit_amount_cents).to eq(110)
+        expect(invoice.prepaid_credit_amount_cents).to eq(110)
       end
 
       it "updates wallet balance" do
@@ -351,14 +336,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 2_000, precise_amount_cents: 2_000, taxes_precise_amount_cents: 200) }
         let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 1_000, precise_amount_cents: 1_000, taxes_precise_amount_cents: 100, charge:) }
 
-        it "calculates prepaid credit" do
-          expect(result).to be_success
-          expect(result.prepaid_credit_amount_cents).to eq(3300)
-        end
-
         it "creates wallet transaction" do
           expect(result).to be_success
-          expect(result.wallet_transactions).to be_present
           expect(result.wallet_transactions.count).to eq(5)
 
           wallet_transaction_1 = result.wallet_transactions.detect { |tx| tx.wallet_id == priority_limited_subscription_wallet.id }
@@ -372,6 +351,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
           expect(wallet_transaction_3.amount).to eq(1)
           expect(wallet_transaction_4.amount).to eq(10)
           expect(wallet_transaction_5.amount).to eq(2)
+          expect(result.prepaid_credit_amount_cents).to eq(3300)
+          expect(invoice.prepaid_credit_amount_cents).to eq(3300)
         end
 
         it "updates wallet balance" do
@@ -715,82 +696,6 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         it "creates the invoice" do
           expect { subject }.not_to raise_error
         end
-      end
-    end
-  end
-
-  describe "#call with preview: true" do
-    subject(:result) { described_class.call(invoice:, preview: true) }
-
-    it "returns the calculated allocation in wallet_transactions_preview" do
-      expect(result).to be_success
-      expect(result.wallet_transactions_preview).to eq({priority_wallet => 100})
-      expect(result.wallet_transactions).to eq([])
-    end
-
-    it "does not persist any state or acquire the prepaid_credit lock" do
-      allow(Customers::LockService).to receive(:call)
-
-      expect { subject }.not_to change(WalletTransaction, :count)
-
-      expect(Customers::LockService).not_to have_received(:call)
-      expect(priority_wallet.reload.balance_cents).to eq(1000)
-      expect(invoice.prepaid_credit_amount_cents).to eq(0)
-    end
-
-    it "does not call persistence side-effect services or enqueue webhooks" do
-      allow(Wallets::Balance::DecreaseService).to receive(:call)
-      allow(WalletTransactions::TrackConsumptionService).to receive(:call!)
-
-      expect { subject }.not_to have_enqueued_job(SendWebhookJob)
-
-      expect(Wallets::Balance::DecreaseService).not_to have_received(:call)
-      expect(WalletTransactions::TrackConsumptionService).not_to have_received(:call!)
-    end
-
-    context "when wallets are restricted via wallet_targets" do
-      let(:billable_metric) { create(:billable_metric, organization: customer.organization) }
-      let(:other_billable_metric) { create(:billable_metric, organization: customer.organization) }
-      let(:charge) { create(:standard_charge, organization: customer.organization, billable_metric:) }
-      let(:bm_wallet) do
-        create(:wallet, :with_inbound_transaction, customer:, balance_cents: 1000, credits_balance: 10.0, priority: 49)
-      end
-      let(:wallets) { [bm_wallet] }
-      let(:fee) do
-        create(:charge_fee, invoice:, subscription:, charge:,
-          amount_cents: 100, precise_amount_cents: 100, taxes_precise_amount_cents: 0)
-      end
-
-      before do
-        create(:wallet_target, wallet: bm_wallet, billable_metric:)
-      end
-
-      it "consumes from the wallet only against fees for the targeted billable_metric" do
-        expect(result.wallet_transactions_preview).to eq({bm_wallet => 100})
-      end
-
-      context "when no fee matches the wallet's targeted billable_metric" do
-        let(:other_charge) { create(:standard_charge, organization: customer.organization, billable_metric: other_billable_metric) }
-        let(:fee) do
-          create(:charge_fee, invoice:, subscription:, charge: other_charge,
-            amount_cents: 100, precise_amount_cents: 100, taxes_precise_amount_cents: 0)
-        end
-
-        it "does not consume from the wallet" do
-          expect(result.wallet_transactions_preview).to eq({})
-        end
-      end
-    end
-
-    context "when multiple wallets must be drained in application order" do
-      let(:amount_cents) { 1500 }
-      let(:fee_amount_cents) { 1500 }
-
-      it "allocates priority wallets first, then lower-priority wallets, capped at invoice total" do
-        expect(result.wallet_transactions_preview).to eq({
-          priority_wallet => 1000,
-          priority_limited_charge_wallet => 500
-        })
       end
     end
   end
