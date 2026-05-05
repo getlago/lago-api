@@ -190,6 +190,68 @@ RSpec.describe Api::V1::Plans::Charges::FiltersController do
         expect(ChargeFilters::CascadeJob).to have_received(:perform_later)
       end
     end
+
+    context "with presentation_group_keys" do
+      context "when presentation_group_keys is an empty array" do
+        let(:create_params) do
+          {
+            invoice_display_name: "US Region Filter",
+            properties: {amount: "50", presentation_group_keys: []},
+            values: {billable_metric_filter.key => ["us"]}
+          }
+        end
+
+        it "creates a filter without storing presentation_group_keys" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:filter][:properties][:presentation_group_keys]).to be_nil
+        end
+      end
+
+      context "when presentation_group_keys contains only value" do
+        let(:create_params) do
+          {
+            invoice_display_name: "US Region Filter",
+            properties: {amount: "50", presentation_group_keys: [{value: "region"}]},
+            values: {billable_metric_filter.key => ["us"]}
+          }
+        end
+
+        it "creates a filter with presentation_group_keys" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:filter][:properties][:presentation_group_keys]).to eq([{value: "region"}])
+        end
+      end
+
+      context "when presentation_group_keys contains both value and options" do
+        let(:create_params) do
+          {
+            invoice_display_name: "US Region Filter",
+            properties: {
+              amount: "50",
+              presentation_group_keys: [
+                {value: "region", options: {display_in_invoice: true}},
+                {value: "country"}
+              ]
+            },
+            values: {billable_metric_filter.key => ["us"]}
+          }
+        end
+
+        it "creates a filter with presentation_group_keys including options" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:filter][:properties][:presentation_group_keys]).to eq([
+            {value: "region", options: {display_in_invoice: true}},
+            {value: "country"}
+          ])
+        end
+      end
+    end
   end
 
   describe "PUT /api/v1/plans/:plan_code/charges/:charge_code/filters/:id" do
@@ -242,6 +304,65 @@ RSpec.describe Api::V1::Plans::Charges::FiltersController do
         subject
 
         expect(response).to be_not_found_error("charge_filter")
+      end
+    end
+
+    context "with presentation_group_keys" do
+      context "when presentation_group_keys contains only value" do
+        let(:update_params) do
+          {
+            properties: {amount: "100", presentation_group_keys: [{value: "region"}]}
+          }
+        end
+
+        it "updates the filter with presentation_group_keys" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:filter][:properties][:presentation_group_keys]).to eq([{value: "region"}])
+        end
+      end
+
+      context "when presentation_group_keys contains both value and options" do
+        let(:update_params) do
+          {
+            properties: {
+              amount: "100",
+              presentation_group_keys: [
+                {value: "region", options: {display_in_invoice: true}},
+                {value: "country"}
+              ]
+            }
+          }
+        end
+
+        it "updates the filter with presentation_group_keys including options" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:filter][:properties][:presentation_group_keys]).to eq([
+            {value: "region", options: {display_in_invoice: true}},
+            {value: "country"}
+          ])
+        end
+      end
+
+      context "when removing existing presentation_group_keys" do
+        let(:charge_filter) do
+          create(:charge_filter, charge:, properties: {"amount" => "10", "presentation_group_keys" => [{"value" => "region"}]})
+        end
+        let(:update_params) do
+          {
+            properties: {amount: "100", presentation_group_keys: []}
+          }
+        end
+
+        it "removes presentation_group_keys from the filter" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:filter][:properties][:presentation_group_keys]).to be_nil
+        end
       end
     end
   end
