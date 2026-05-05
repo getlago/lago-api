@@ -57,6 +57,20 @@ RSpec.describe DailyUsages::ComputeService do
         end
       end
 
+      context "when the only consumed charge is free (zero amount)" do
+        let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "0"}) }
+
+        it "creates a daily usage based on consumed units" do
+          travel_to(timestamp) do
+            expect { compute_service.call }.to change(DailyUsage, :count).by(1)
+
+            daily_usage = DailyUsage.order(created_at: :asc).last
+            expect(daily_usage.usage["charges_usage"].count).to eq(1)
+            expect(daily_usage.usage["amount_cents"]).to eq(0)
+          end
+        end
+      end
+
       it "creates a daily usage" do
         travel_to(timestamp) do
           expect { compute_service.call }.to change(DailyUsage, :count).by(1)
