@@ -253,6 +253,10 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           entitlement_value3
         end
 
+        before do
+          allow(SendWebhookJob).to receive(:perform_after_commit)
+        end
+
         it "does not trigger N+1 queries when updating multiple features and privileges" do
           result
 
