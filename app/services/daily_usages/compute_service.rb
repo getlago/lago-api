@@ -19,9 +19,9 @@ module DailyUsages
         return result
       end
 
-      if current_usage.total_amount_cents.positive?
-        current_usage.fees = current_usage.fees.select { |f| f.units.positive? }
+      current_usage.fees = current_usage.fees.select { |f| non_empty_fee?(f) }
 
+      if current_usage.fees.any?
         daily_usage = DailyUsage.new(
           organization: subscription.organization,
           customer: subscription.customer,
@@ -94,6 +94,10 @@ module DailyUsages
 
     def usage_date
       @usage_date ||= date_in_timezone - 1.day
+    end
+
+    def non_empty_fee?(fee)
+      fee.units.positive? || fee.amount_cents.positive? || fee.events_count.to_i.positive?
     end
   end
 end

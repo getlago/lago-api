@@ -40,9 +40,9 @@ module DailyUsages
             previous_daily_usage = nil
           end
 
-          if usage.total_amount_cents.positive?
-            usage.fees = usage.fees.select { |f| f.units.positive? }
+          usage.fees = usage.fees.select { |f| non_empty_fee?(f) }
 
+          if usage.fees.any?
             daily_usage = DailyUsage.new(
               organization:,
               customer: subscription.customer,
@@ -104,6 +104,10 @@ module DailyUsages
 
     def timezone
       @timezone ||= subscription.customer.applicable_timezone
+    end
+
+    def non_empty_fee?(fee)
+      fee.units.positive? || fee.amount_cents.positive? || fee.events_count.to_i.positive?
     end
   end
 end
