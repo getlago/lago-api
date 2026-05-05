@@ -46,7 +46,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         grouped_by: {"card_type" => "visa"},
         charge_filter: nil,
         pricing_unit_usage:,
-        presentation_breakdowns: presentation_breakdowns
+        presentation_breakdowns:
       )
     ]
   end
@@ -93,26 +93,42 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
 
   context "when contains presentation breakdowns" do
     let(:presentation_breakdowns) do
-      presentation_breakdown_class = Struct.new(:presentation_by, :units, keyword_init: true)
-
       [
-        presentation_breakdown_class.new(presentation_by: {"card_type" => "visa"}, units: "7"),
-        presentation_breakdown_class.new(presentation_by: {"card_type" => "visa"}, units: "1"),
-        presentation_breakdown_class.new(presentation_by: {"country" => "pt"}, units: "3")
+        build(:presentation_breakdown, presentation_by: {"card_type" => "visa"}, units: "8"),
+        build(:presentation_breakdown, presentation_by: {"card_type" => "mastercard"}, units: "1"),
+        build(:presentation_breakdown, presentation_by: {"country" => "pt"}, units: "3")
       ]
     end
+
+    it "serializes the breakdowns" do
+      expect(result["charges"].first["presentation_breakdowns"]).to eq([])
+      expect(result["charges"].first["grouped_usage"].first["presentation_breakdowns"]).to match_array(
+        [
+          {"presentation_by" => {"card_type" => "visa"}, "units" => "8.0"},
+          {"presentation_by" => {"card_type" => "mastercard"}, "units" => "1.0"},
+          {"presentation_by" => {"country" => "pt"}, "units" => "3.0"}
+        ]
+      )
+    end
+  end
+
+  context "when usage contains two objects, one with grouped_by and other without grouped_by" do
+    let(:other_charge) { create(:standard_charge, plan: charge.plan) }
+    let(:other_billable_metric) { other_charge.billable_metric }
+    let(:empty_group_presentation_breakdowns) { [] }
+    let(:visa_group_presentation_breakdowns) { [] }
 
     let(:usage) do
       [
         OpenStruct.new(
           charge_id: charge.id,
-          subscription: subscription,
+          subscription:,
           billable_metric: billable_metric,
           charge: charge,
-          units: "10",
-          total_aggregated_units: "10",
-          events_count: 12,
-          amount_cents: 100,
+          units: "2",
+          total_aggregated_units: "2",
+          events_count: 2,
+          amount_cents: 20,
           amount_currency: "EUR",
           properties: {
             "from_datetime" => from_datetime.to_s,
@@ -124,24 +140,106 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           name: billable_metric.name,
           code: billable_metric.code,
           aggregation_type: billable_metric.aggregation_type,
+          grouped_by: {},
+          charge_filter: nil,
+          pricing_unit_usage: pricing_unit_usage,
+          presentation_breakdowns: empty_group_presentation_breakdowns
+        ),
+        OpenStruct.new(
+          charge_id: other_charge.id,
+          subscription:,
+          billable_metric: other_billable_metric,
+          charge: other_charge,
+          units: "8",
+          total_aggregated_units: "8",
+          events_count: 10,
+          amount_cents: 80,
+          amount_currency: "EUR",
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
+          invoice_display_name: other_charge.invoice_display_name,
+          lago_id: other_billable_metric.id,
+          name: other_billable_metric.name,
+          code: other_billable_metric.code,
+          aggregation_type: other_billable_metric.aggregation_type,
           grouped_by: {"card_type" => "visa"},
           charge_filter: nil,
-          pricing_unit_usage:,
-          presentation_breakdowns:
+          pricing_unit_usage: pricing_unit_usage,
+          presentation_breakdowns: visa_group_presentation_breakdowns
         )
       ]
     end
 
-    it "serializes the breakdowns" do
-      expect(result["charges"].first["presentation_breakdowns"]).to eq([])
+    it "serializes grouped usage including empty group" do
+      expect(result["charges"].length).to eq(2)
 
-      expect(result["charges"].first["grouped_usage"].first["presentation_breakdowns"]).to match_array(
-        [
-          {"presentation_by" => {"card_type" => "visa"}, "units" => "7"},
-          {"presentation_by" => {"card_type" => "visa"}, "units" => "1"},
-          {"presentation_by" => {"country" => "pt"}, "units" => "3"}
+      empty_group_charge = result["charges"].find { |c| c.dig("charge", "lago_id") == charge.id }
+      visa_group_charge = result["charges"].find { |c| c.dig("charge", "lago_id") == other_charge.id }
+
+      expect(empty_group_charge).to include(
+        "units" => "2.0",
+        "total_aggregated_units" => "2.0",
+        "events_count" => 2,
+        "amount_cents" => 20,
+        "grouped_usage" => [],
+        "presentation_breakdowns" => []
+      )
+
+      expect(visa_group_charge).to include(
+        "units" => "8.0",
+        "total_aggregated_units" => "8.0",
+        "events_count" => 10,
+        "amount_cents" => 80,
+        "grouped_usage" => [
+          {
+            "amount_cents" => 80,
+            "pricing_unit_details" => nil,
+            "events_count" => 10,
+            "units" => "8.0",
+            "total_aggregated_units" => "8.0",
+            "grouped_by" => {"card_type" => "visa"},
+            "filters" => [],
+            "presentation_breakdowns" => []
+          }
         ]
       )
+    end
+
+    context "when contains presentation breakdowns" do
+      let(:empty_group_presentation_breakdowns) do
+        [
+          build(:presentation_breakdown, presentation_by: {"card_type" => "visa"}, units: "8"),
+          build(:presentation_breakdown, presentation_by: {"country" => "pt"}, units: "3")
+        ]
+      end
+      let(:visa_group_presentation_breakdowns) do
+        [
+          build(:presentation_breakdown, presentation_by: {"card_type" => "mastercard"}, units: "1")
+        ]
+      end
+
+      it "serializes breakdowns for ungrouped and grouped usage" do
+        empty_group_charge = result["charges"].find { |c| c.dig("charge", "lago_id") == charge.id }
+        visa_group_charge = result["charges"].find { |c| c.dig("charge", "lago_id") == other_charge.id }
+
+        expect(empty_group_charge["grouped_usage"]).to eq([])
+        expect(empty_group_charge["presentation_breakdowns"]).to match_array(
+          [
+            {"presentation_by" => {"card_type" => "visa"}, "units" => "8.0"},
+            {"presentation_by" => {"country" => "pt"}, "units" => "3.0"}
+          ]
+        )
+
+        expect(visa_group_charge["presentation_breakdowns"]).to eq([])
+        expect(visa_group_charge["grouped_usage"].first["presentation_breakdowns"]).to match_array(
+          [
+            {"presentation_by" => {"card_type" => "mastercard"}, "units" => "1.0"}
+          ]
+        )
+      end
     end
   end
 
@@ -218,7 +316,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           charge_filter:,
           charge_filter_id: charge_filter.id,
           pricing_unit_usage:,
-          presentation_breakdowns: presentation_breakdowns
+          presentation_breakdowns:
         )
       end
     end
