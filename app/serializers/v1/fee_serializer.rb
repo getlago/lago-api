@@ -56,7 +56,8 @@ module V1
         refunded_at: model.refunded_at&.iso8601,
         amount_details: model.amount_details,
         self_billed: model.invoice&.self_billed || false,
-        pricing_unit_details:
+        pricing_unit_details:,
+        presentation_breakdowns: V1::Customers::PresentationBreakdownBuilder.call([model], filter: V1::Customers::PresentationBreakdownBuilder::ALL)
       }
 
       payload.merge!(model.date_boundaries) if model.charge? || model.subscription? || model.add_on? || model.fixed_charge?

@@ -11,7 +11,8 @@ RSpec.describe ::V1::FeeSerializer do
       properties: {
         from_datetime: Time.current,
         to_datetime: Time.current
-      }
+      },
+      presentation_breakdowns: [build(:presentation_breakdown)]
     )
   end
 
@@ -55,7 +56,8 @@ RSpec.describe ::V1::FeeSerializer do
       "refunded_at" => fee.refunded_at&.iso8601,
       "amount_details" => fee.amount_details,
       "self_billed" => fee.invoice.self_billed,
-      "pricing_unit_details" => nil
+      "pricing_unit_details" => nil,
+      "presentation_breakdowns" => [{"presentation_by" => {"department" => "engineering"}, "units" => BigDecimal(60).to_s}]
     )
     expect(result["fee"]["item"]).to include(
       "type" => fee.fee_type,

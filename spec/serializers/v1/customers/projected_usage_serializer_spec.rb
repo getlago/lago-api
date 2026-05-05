@@ -43,7 +43,8 @@ RSpec.describe ::V1::Customers::ProjectedUsageSerializer do
             "from_datetime" => from_datetime.iso8601,
             "to_datetime" => to_datetime.iso8601,
             "charges_duration" => 30
-          }
+          },
+          presentation_breakdowns: []
         )
       ]
     )
@@ -57,7 +58,7 @@ RSpec.describe ::V1::Customers::ProjectedUsageSerializer do
       "Fees::ProjectionService::Result",
       projected_units: BigDecimal("60.0"),
       projected_amount_cents: 75,
-      projected_pricing_unit_amount_cents: BigDecimal("0")
+      projected_pricing_unit_amount_cents: BigDecimal(0)
     )
 
     allow(::Fees::ProjectionService).to receive(:call).and_return(
