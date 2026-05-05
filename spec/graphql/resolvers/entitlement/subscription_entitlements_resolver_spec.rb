@@ -124,7 +124,7 @@ RSpec.describe Resolvers::Entitlement::SubscriptionEntitlementsResolver, :premiu
     end
   end
 
-  it "does not trigger N+1 queries for privileges", :with_bullet do
+  it "does not trigger N+1 queries for privileges", :bullet do
     features = create_list(:feature, 3, organization:)
     features.each do |feature|
       privilege = create(:privilege, feature:)

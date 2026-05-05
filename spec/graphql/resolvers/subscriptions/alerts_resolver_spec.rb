@@ -113,7 +113,7 @@ RSpec.describe Resolvers::Subscriptions::AlertsResolver do
   #     GQL
   #   end
   #
-  #   it "eager loads the relationships", with_bullet: true do
+  #   it "eager loads the relationships", :bullet do
   #     create_list(:billable_metric_current_usage_amount_alert, 3, organization:, subscription_external_id: subscription.external_id, thresholds: [10])
   #
   #     Bullet.start_request

@@ -332,7 +332,7 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
-    context "with N+1 query detection on customer associations", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    context "with N+1 query detection on customer associations", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 
       before do

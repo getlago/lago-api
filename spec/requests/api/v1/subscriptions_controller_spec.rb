@@ -1789,7 +1789,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
-    context "with N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    context "with N+1 query detection", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
       before do
         prev = create(:subscription, customer:, plan: create(:plan, organization:), status: :terminated)
         nxt = create(:subscription, customer:, plan: create(:plan, organization:), status: :pending)
