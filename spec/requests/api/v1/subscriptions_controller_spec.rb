@@ -752,7 +752,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           subject
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq({payment_method: %w[invalid_for_payment_activation_rules]})
+          expect(json[:error_details]).to eq({payment_method: %w[manual_payment_method_invalid_for_payment_activation_rules]})
         end
       end
 
@@ -763,7 +763,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           subject
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq({payment_method: %w[no_linked_payment_provider]})
+          expect(json[:error_details]).to eq({payment_method: %w[customer_has_no_linked_payment_provider]})
         end
       end
     end
@@ -1649,6 +1649,8 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
     context "with activation_rules" do
       let(:subscription) { create(:subscription, :pending, customer:, plan:, subscription_at: Time.current + 3.days) }
       let(:update_params) { {activation_rules: [{type: "payment", timeout_hours: 24}]} }
+
+      before { create(:payment_method, customer:, organization:) }
 
       context "when feature flag is enabled" do
         before { organization.enable_feature_flag!(:payment_gated_subscriptions) }

@@ -150,6 +150,8 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
       GQL
     end
 
+    before { create(:payment_method, customer:, organization:) }
+
     it "creates a subscription with activation rules" do
       result = execute_graphql(
         current_user: membership.user,

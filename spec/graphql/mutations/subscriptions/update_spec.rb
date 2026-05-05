@@ -149,6 +149,8 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
   end
 
   context "with activation rules" do
+    before { create(:payment_method, customer: subscription.customer, organization:) }
+
     let(:query) do
       <<~GQL
         mutation($input: UpdateSubscriptionInput!) {

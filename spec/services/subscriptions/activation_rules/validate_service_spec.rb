@@ -24,6 +24,8 @@ RSpec.describe Subscriptions::ActivationRules::ValidateService do
     }
   end
 
+  before { create(:payment_method, customer:, organization:) }
+
   describe "#valid?" do
     context "when activation_rules is an empty array" do
       let(:activation_rules) { [] }
