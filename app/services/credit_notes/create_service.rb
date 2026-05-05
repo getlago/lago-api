@@ -250,6 +250,8 @@ module CreditNotes
         CreditNotes::Refunds::GocardlessCreateJob.perform_later(credit_note)
       when PaymentProviders::AdyenProvider
         CreditNotes::Refunds::AdyenCreateJob.perform_later(credit_note)
+      when PaymentProviders::PaystackProvider
+        CreditNotes::Refunds::PaystackCreateJob.perform_later(credit_note)
       end
     end
 

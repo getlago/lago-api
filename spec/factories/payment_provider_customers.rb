@@ -43,4 +43,12 @@ FactoryBot.define do
 
     provider_customer_id { SecureRandom.uuid }
   end
+
+  factory :paystack_customer, class: "PaymentProviderCustomers::PaystackCustomer" do
+    customer
+    organization { customer.organization }
+    payment_provider { association(:paystack_provider, organization: organization) }
+
+    provider_customer_id { "CUS_#{SecureRandom.hex(8)}" }
+  end
 end

@@ -87,6 +87,10 @@ module V1
       when :moneyhash
         configuration[:provider_customer_id] = model.moneyhash_customer&.provider_customer_id
         configuration.merge!(model.moneyhash_customer&.settings&.symbolize_keys || {})
+      when :paystack
+        configuration[:provider_customer_id] = model.paystack_customer&.provider_customer_id
+        configuration[:provider_payment_methods] = model.paystack_customer&.provider_payment_methods
+        configuration.merge!(model.paystack_customer&.settings&.symbolize_keys || {})
       end
 
       configuration
