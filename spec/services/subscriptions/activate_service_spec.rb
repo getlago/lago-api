@@ -58,16 +58,26 @@ RSpec.describe Subscriptions::ActivateService do
         expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
           .to have_been_enqueued.with(subscription:)
       end
+
+      context "when activating during subscription creation" do
+        subject(:result) { described_class.call(subscription:, timestamp:, during_creation: true) }
+
+        it "does not enqueue Hubspot::UpdateJob" do
+          result
+
+          expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).not_to have_been_enqueued
+        end
+      end
     end
 
     context "when plan is pay in advance and not in trial" do
       let(:plan) { create(:plan, organization:, pay_in_advance: true) }
 
-      it "enqueues BillSubscriptionJob" do
+      it "enqueues BillSubscriptionJob with skip_charges true" do
         result
 
         expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription], anything, invoicing_reason: :subscription_starting, skip_charges: false)
+          .with([subscription], anything, invoicing_reason: :subscription_starting, skip_charges: true)
       end
 
       it "does not enqueue CreatePayInAdvanceFixedChargesJob" do

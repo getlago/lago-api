@@ -119,17 +119,6 @@ module Subscriptions
       plan.yearly_amount_cents < current_subscription.plan.yearly_amount_cents
     end
 
-    def should_be_billed_today?(sub)
-      sub.active? && sub.subscription_at.today? && plan.pay_in_advance? && !sub.in_trial_period?
-    end
-
-    def fixed_charges_billed_today?(sub)
-      return false if !(sub.active? && sub.started_at.today?)
-      return false if sub.fixed_charges.pay_in_advance.none?
-
-      !sub.plan.pay_in_advance? || sub.in_trial_period?
-    end
-
     def create_subscription
       new_subscription = Subscription.new(
         organization_id: customer.organization_id,
@@ -148,50 +137,16 @@ module Subscriptions
         new_subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
-      if new_subscription.subscription_at > Time.current
-        new_subscription.pending!
-        apply_activation_rules(new_subscription)
-      elsif new_subscription.subscription_at < Time.current
-        new_subscription.mark_as_active!(new_subscription.subscription_at)
+      timezone = customer.applicable_timezone
+      today = Time.current.in_time_zone(timezone).to_date
+      subscription_date = new_subscription.subscription_at.in_time_zone(timezone).to_date
+
+      if subscription_date == today
+        handle_today_subscription(new_subscription)
+      elsif subscription_date < today
+        handle_past_subscription(new_subscription)
       else
-        new_subscription.mark_as_active!
-      end
-
-      if new_subscription.active?
-        EmitFixedChargeEventsService.call!(
-          subscriptions: [new_subscription],
-          timestamp: new_subscription.started_at + 1.second
-        )
-
-        after_commit do
-          if fixed_charges_billed_today?(new_subscription)
-            Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(
-              new_subscription,
-              new_subscription.started_at + 1.second
-            )
-          end
-        end
-      end
-
-      if should_be_billed_today?(new_subscription)
-        # NOTE: Since job is launched from inside a db transaction
-        #       we must wait for it to be committed before processing the job.
-        #       We do not set offset anymore but instead retry jobs
-        after_commit do
-          BillSubscriptionJob.perform_later(
-            [new_subscription],
-            Time.zone.now.to_i,
-            invoicing_reason: :subscription_starting,
-            skip_charges: true
-          )
-        end
-      end
-
-      if new_subscription.active?
-        after_commit do
-          SendWebhookJob.perform_later("subscription.started", new_subscription)
-          Utils::ActivityLog.produce(new_subscription, "subscription.started")
-        end
+        handle_future_subscription(new_subscription)
       end
 
       if new_subscription.should_sync_hubspot_subscription?
@@ -199,6 +154,31 @@ module Subscriptions
       end
 
       new_subscription
+    end
+
+    def handle_today_subscription(new_subscription)
+      new_subscription.pending!
+      apply_activation_rules(new_subscription)
+      ActivateService.call!(subscription: new_subscription, during_creation: true)
+    end
+
+    def handle_past_subscription(new_subscription)
+      new_subscription.mark_as_active!(new_subscription.subscription_at)
+
+      EmitFixedChargeEventsService.call!(
+        subscriptions: [new_subscription],
+        timestamp: new_subscription.started_at + 1.second
+      )
+
+      after_commit do
+        SendWebhookJob.perform_later("subscription.started", new_subscription)
+        Utils::ActivityLog.produce(new_subscription, "subscription.started")
+      end
+    end
+
+    def handle_future_subscription(new_subscription)
+      new_subscription.pending!
+      apply_activation_rules(new_subscription)
     end
 
     def upgrade_subscription
