@@ -283,6 +283,16 @@ enum ActivityTypeEnum {
   plan_updated
 
   """
+  subscription.canceled
+  """
+  subscription_canceled
+
+  """
+  subscription.incomplete
+  """
+  subscription_incomplete
+
+  """
   subscription.started
   """
   subscription_started
@@ -4303,6 +4313,11 @@ type Customer {
   creditNotesBalanceAmountCents: BigInt!
 
   """
+  Credit notes credits balance available per customer per currency
+  """
+  creditNotesBalances: [CustomerCreditNotesBalance!]!
+
+  """
   Number of available credits from credit notes per customer
   """
   creditNotesCreditsAvailableCount: Int!
@@ -4437,6 +4452,11 @@ type CustomerCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type CustomerCreditNotesBalance {
+  amountCents: BigInt!
+  currency: CurrencyEnum!
 }
 
 type CustomerMetadata {
@@ -5729,6 +5749,7 @@ Organization Feature Flag Values
 enum FeatureFlagEnum {
   enriched_events_aggregation
   multi_currency
+  multi_entity_billing
   multiple_payment_methods
   non_persistable_charge_cache_optimization
   payment_gated_subscriptions
@@ -9929,7 +9950,7 @@ type Query {
   """
   Query customer portal subscriptions
   """
-  customerPortalSubscriptions(limit: Int, page: Int, planCode: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  customerPortalSubscriptions(currency: String, limit: Int, page: Int, planCode: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query a customer portal user
@@ -10280,7 +10301,7 @@ type Query {
   """
   Query payment requests of an organization
   """
-  paymentRequests(externalCustomerId: String, limit: Int, page: Int, paymentStatus: InvoicePaymentStatusTypeEnum): PaymentRequestCollection!
+  paymentRequests(currency: String, externalCustomerId: String, limit: Int, page: Int, paymentStatus: InvoicePaymentStatusTypeEnum): PaymentRequestCollection!
 
   """
   Query payments of an organization
@@ -10406,7 +10427,7 @@ type Query {
   """
   Query subscriptions of an organization
   """
-  subscriptions(externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  subscriptions(currency: String, externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query all Superset dashboards with embedded configuration and guest tokens

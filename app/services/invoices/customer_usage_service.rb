@@ -78,6 +78,8 @@ module Invoices
         charges = charges.where(id: usage_filters.filter_by_charge_id)
       elsif usage_filters.filter_by_charge_code.present?
         charges = charges.where(code: usage_filters.filter_by_charge_code)
+      elsif usage_filters.filter_by_metric_code.present?
+        charges = charges.where(billable_metrics: {code: usage_filters.filter_by_metric_code})
       end
       @charges = charges
     end

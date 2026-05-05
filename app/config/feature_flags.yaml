@@ -25,3 +25,7 @@ multi_currency:
 payment_gated_subscriptions:
   description: "Enable payment-gated subscription activation rules"
   owners: ["@osmarluz", "@ancorcruz"]
+
+multi_entity_billing:
+  description: "Allow customers to have billing objects across multiple billing entities"
+  owners: ["@lovrocolic", "@feliperodrigues", "@mariohd"]

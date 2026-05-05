@@ -151,6 +151,7 @@ ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_7886e1bc34;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_77f2d4440d;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_778360c382;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_775eb0ecd8;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_76ceb88c74;
 ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS fk_rails_755d734f25;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_75577c354e;
@@ -190,6 +191,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
+ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_56b3626631;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_5628a713de;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_533b639bac;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_52b72c9b0e;
@@ -199,6 +201,7 @@ ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_521
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_51ac39a0c6;
 ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS fk_rails_51077e7c0e;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_50d46d3679;
+ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_4ff087c52e;
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_4aa58496c3;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_49fcc221b0;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_4934f27a06;
@@ -335,6 +338,7 @@ DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_customer_id;
+DROP INDEX IF EXISTS public.index_wallets_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_on_organization_id;
@@ -381,6 +385,7 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on;
 DROP INDEX IF EXISTS public.index_subscriptions_on_external_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_ending_at_active;
 DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_subscription_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_organization_id;
@@ -569,6 +574,7 @@ DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_true_up_parent_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_fees_on_pay_in_advance_event_transaction_id;
+DROP INDEX IF EXISTS public.index_fees_on_original_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_on_invoiceable;
 DROP INDEX IF EXISTS public.index_fees_on_invoice_id;
@@ -581,6 +587,7 @@ DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
+DROP INDEX IF EXISTS public.index_events_on_organization_id_and_created_at;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_events_on_organization_id;
 DROP INDEX IF EXISTS public.index_events_on_created_at;
@@ -3089,7 +3096,8 @@ CREATE TABLE public.fees (
     billing_entity_id uuid NOT NULL,
     precise_credit_notes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     fixed_charge_id uuid,
-    duplicated_in_advance boolean DEFAULT false
+    duplicated_in_advance boolean DEFAULT false,
+    original_fee_id uuid
 );
 
 
@@ -3150,7 +3158,8 @@ CREATE TABLE public.subscriptions (
     last_received_event_on date,
     cancelation_reason public.subscription_cancelation_reasons,
     incompleted_at timestamp(6) without time zone,
-    activated_at timestamp(6) without time zone
+    activated_at timestamp(6) without time zone,
+    billing_entity_id uuid
 );
 
 
@@ -4059,7 +4068,8 @@ CREATE TABLE public.wallets (
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     traceable boolean DEFAULT false NOT NULL,
-    code character varying
+    code character varying,
+    billing_entity_id uuid
 );
 
 
@@ -6383,14 +6393,14 @@ CREATE INDEX idx_on_wallet_transaction_id_ac2826109e ON public.wallet_transactio
 -- Name: idx_pay_in_advance_duplication_guard_charge; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false));
+CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL));
 
 
 --
 -- Name: idx_pay_in_advance_duplication_guard_charge_filter; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge_filter ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id, charge_filter_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false));
+CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge_filter ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id, charge_filter_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL));
 
 
 --
@@ -7595,6 +7605,13 @@ CREATE INDEX index_events_on_organization_id_and_code ON public.events USING btr
 
 
 --
+-- Name: index_events_on_organization_id_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_organization_id_and_created_at ON public.events USING btree (organization_id, created_at DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_fees_on_add_on_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7676,6 +7693,13 @@ CREATE INDEX index_fees_on_invoiceable ON public.fees USING btree (invoiceable_t
 --
 
 CREATE INDEX index_fees_on_organization_id ON public.fees USING btree (organization_id);
+
+
+--
+-- Name: index_fees_on_original_fee_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_original_fee_id ON public.fees USING btree (original_fee_id);
 
 
 --
@@ -8995,6 +9019,13 @@ CREATE UNIQUE INDEX index_subscriptions_invoice_custom_sections_unique ON public
 
 
 --
+-- Name: index_subscriptions_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_on_billing_entity_id ON public.subscriptions USING btree (billing_entity_id);
+
+
+--
 -- Name: index_subscriptions_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9314,6 +9345,13 @@ CREATE INDEX index_wallets_invoice_custom_sections_on_wallet_id ON public.wallet
 --
 
 CREATE UNIQUE INDEX index_wallets_invoice_custom_sections_unique ON public.wallets_invoice_custom_sections USING btree (wallet_id, invoice_custom_section_id);
+
+
+--
+-- Name: index_wallets_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallets_on_billing_entity_id ON public.wallets USING btree (billing_entity_id);
 
 
 --
@@ -10263,6 +10301,14 @@ ALTER TABLE ONLY public.billing_entities
 
 
 --
+-- Name: wallets fk_rails_4ff087c52e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallets
+    ADD CONSTRAINT fk_rails_4ff087c52e FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
+
+
+--
 -- Name: payment_provider_customers fk_rails_50d46d3679; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10332,6 +10378,14 @@ ALTER TABLE ONLY public.entitlement_entitlement_values
 
 ALTER TABLE ONLY public.credits
     ADD CONSTRAINT fk_rails_5628a713de FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: subscriptions fk_rails_56b3626631; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT fk_rails_56b3626631 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
 
 
 --
@@ -10644,6 +10698,14 @@ ALTER TABLE ONLY public.integrations
 
 ALTER TABLE ONLY public.commitments
     ADD CONSTRAINT fk_rails_76ceb88c74 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: fees fk_rails_775eb0ecd8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_775eb0ecd8 FOREIGN KEY (original_fee_id) REFERENCES public.fees(id);
 
 
 --
@@ -11789,7 +11851,13 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260429133747'),
+('20260429123434'),
+('20260424170418'),
 ('20260421123920'),
+('20260421103557'),
+('20260421021503'),
+('20260421013319'),
 ('20260420114717'),
 ('20260416124233'),
 ('20260416124232'),

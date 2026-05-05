@@ -34,6 +34,8 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         billing_entities_created
         billing_entities_updated
         billing_entities_deleted
+        subscription_canceled
+        subscription_incomplete
         subscription_started
         subscription_terminated
         subscription_updated

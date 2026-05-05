@@ -43,10 +43,14 @@ module V1
 
     def recurring_transaction_rules
       ::CollectionSerializer.new(
-        model.recurring_transaction_rules.active,
+        active_recurring_transaction_rules,
         ::V1::Wallets::RecurringTransactionRuleSerializer,
         collection_name: "recurring_transaction_rules"
       ).serialize
+    end
+
+    def active_recurring_transaction_rules
+      model.recurring_transaction_rules.select(&:currently_active?)
     end
 
     def limitations

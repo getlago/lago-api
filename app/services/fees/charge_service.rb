@@ -133,8 +133,11 @@ module Fees
         fees = hydrate_non_persistable_fees(properties:, charge_filter:)
       end
 
-      # Preserve preloaded billable_metric on all fees (including cached ones) to avoid N+1 queries
-      fees.each { |fee| fee.association(:billable_metric).target = billable_metric }
+      # Preserve preloaded associations on all fees (including cached ones) to avoid N+1 queries
+      fees.each do |fee|
+        fee.association(:billable_metric).target = billable_metric
+        fee.association(:charge_filter).target = charge_filter if charge_filter&.id
+      end
 
       result.fees.concat(fees.compact)
     end
@@ -270,7 +273,7 @@ module Fees
         precise_unit_amount:,
         amount_details: amount_result.amount_details,
         grouped_by: amount_result.grouped_by || {},
-        charge_filter_id: charge_filter&.id,
+        charge_filter: charge_filter&.persisted? ? charge_filter : nil,
         pricing_unit_usage:
       )
 
