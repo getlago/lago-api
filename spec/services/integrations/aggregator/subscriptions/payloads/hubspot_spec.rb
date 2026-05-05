@@ -18,7 +18,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Payloads::Hubspot do
 
   let(:subscription_url) do
     url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
-    URI.join(url, "/customer/#{customer.id}/subscription/#{subscription.id}/overview").to_s
+    URI.join(url, "/#{customer.organization.slug}/customer/#{customer.id}/subscription/#{subscription.id}/overview").to_s
   end
 
   before do

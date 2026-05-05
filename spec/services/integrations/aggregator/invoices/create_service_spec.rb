@@ -131,7 +131,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
   let(:invoice_url) do
     url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
 
-    URI.join(url, "/customer/#{invoice.customer.id}/", "invoice/#{invoice.id}/overview").to_s
+    URI.join(url, "/#{invoice.customer.organization.slug}/customer/#{invoice.customer.id}/", "invoice/#{invoice.id}/overview").to_s
   end
 
   let(:due_date) { invoice.payment_due_date.strftime("%-m/%-d/%Y") }
