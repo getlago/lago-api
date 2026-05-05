@@ -159,7 +159,7 @@ module Subscriptions
     def handle_today_subscription(new_subscription)
       new_subscription.pending!
       apply_activation_rules(new_subscription)
-      ActivateService.call!(subscription: new_subscription)
+      ActivateService.call!(subscription: new_subscription, during_creation: true)
     end
 
     def handle_past_subscription(new_subscription)

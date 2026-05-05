@@ -4,9 +4,10 @@ module Subscriptions
   class ActivateService < BaseService
     Result = BaseResult[:subscription]
 
-    def initialize(subscription:, timestamp: Time.current)
+    def initialize(subscription:, timestamp: Time.current, during_creation: false)
       @subscription = subscription
       @timestamp = timestamp
+      @during_creation = during_creation
       super
     end
 
@@ -26,7 +27,7 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :timestamp
+    attr_reader :subscription, :timestamp, :during_creation
 
     def activate_from_pending
       ActivationRules::EvaluateService.call!(subscription:)
@@ -82,6 +83,11 @@ module Subscriptions
     def notify_started
       SendWebhookJob.perform_later("subscription.started", subscription)
       Utils::ActivityLog.produce(subscription, "subscription.started")
+
+      # Skip Hubspot UpdateJob when activating during subscription creation —
+      # CreateService fires Hubspot::CreateJob after this, which captures the
+      # active state and avoids a redundant Update that would race with Create.
+      return if during_creation
 
       if subscription.should_sync_hubspot_subscription?
         Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)

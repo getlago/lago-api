@@ -133,6 +133,11 @@ RSpec.describe Subscriptions::CreateService do
         create_service.call
         expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).to have_received(:perform_later)
       end
+
+      it "does not enqueue Hubspot::UpdateJob (CreateJob captures the active state)" do
+        create_service.call
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).not_to have_been_enqueued
+      end
     end
 
     it "produces an activity log" do
