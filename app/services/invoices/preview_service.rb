@@ -267,8 +267,7 @@ module Invoices
       return unless invoice.total_amount_cents&.positive?
 
       wallets_transactions = Credits::AppliedPrepaidCreditsService.call!(invoice:, preview: true).wallet_transactions_preview
-      amount_cents = wallets_transactions.sum {|_k, v| v }
-
+      amount_cents = wallets_transactions.sum { |_k, v| v }
 
       invoice.prepaid_credit_amount_cents += amount_cents
       invoice.total_amount_cents -= amount_cents
