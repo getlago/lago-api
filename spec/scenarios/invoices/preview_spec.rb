@@ -81,4 +81,62 @@ describe "Invoice Preview Scenarios", :premium do
       end
     end
   end
+
+  context "when wallet has allowed_fee_types restriction" do
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 2_000) }
+    let(:wallet) { create(:wallet, customer:, organization:, balance_cents: 500, credits_balance: 5.0, allowed_fee_types: %w[fixed_charge]) }
+    let(:preview_params) do
+      {
+        customer: {external_id: customer.external_id},
+        plan_code: plan.code,
+        billing_time: "calendar"
+      }
+    end
+
+    context "when the preview invoice contains only subscription fees" do
+      before { wallet }
+
+      it "does not calculate wallet credit to subscription fees" do
+        travel_to(DateTime.parse("2026-03-01 12:00:00")) do
+          post_with_token(organization, "/api/v1/invoices/preview", preview_params)
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice]).to include(
+            fees_amount_cents: 2_000,
+            prepaid_credit_amount_cents: 0,
+            total_amount_cents: 2_000
+          )
+        end
+      end
+    end
+
+    context "when the preview invoice contains a mix of matching and non-matching fees" do
+      let(:fixed_charge) { create(:fixed_charge, plan:, units: 1, charge_model: "standard", properties: {amount: "3"}) }
+
+      before do
+        fixed_charge
+        wallet
+      end
+
+      it "calculates wallet credit only to matching fee types, capped at the fee amount" do
+        travel_to(DateTime.parse("2026-03-01 12:00:00")) do
+          # subscription fee = 2000 cents (full March, calendar billing)
+          # fixed_charge fee = 1 unit * 3 EUR = 300 cents
+          # wallet 500 cents is restricted to fixed_charge fees,
+          # so it can only consume against the 300 cents fixed_charge fee
+          # prepaid_credit_amount_cents = 300, NOT 500
+          post_with_token(organization, "/api/v1/invoices/preview", preview_params)
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice]).to include(
+            fees_amount_cents: 2_300,
+            prepaid_credit_amount_cents: 300,
+            total_amount_cents: 2_000
+          )
+          expect(wallet.reload.balance_cents).to eq(500)
+        end
+      end
+    end
+  end
 end
