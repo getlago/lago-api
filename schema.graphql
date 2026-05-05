@@ -10188,6 +10188,16 @@ type Query {
   ): Invoice
 
   """
+  Build a preview of a single Invoice of an organization for regeneration.
+  """
+  invoiceBuildRegenerationPreview(
+    """
+    Uniq ID of the invoice
+    """
+    id: ID!
+  ): Invoice
+
+  """
   Query invoice collections of an organization
   """
   invoiceCollections(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, isCustomerTinEmpty: Boolean): FinalizedInvoiceCollectionCollection!
