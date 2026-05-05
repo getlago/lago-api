@@ -7,6 +7,9 @@ module Types
       argument :amount, String, required: false
       argument :pricing_group_keys, [String], required: false
 
+      # NOTE: presentation group keys
+      argument :presentation_group_keys, [Types::Charges::PresentationGroupKeyInput], required: false
+
       # NOTE: Graduated charge model
       argument :graduated_ranges, [Types::ChargeModels::GraduatedRangeInput], required: false
 

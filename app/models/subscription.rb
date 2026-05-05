@@ -11,8 +11,8 @@ class Subscription < ApplicationRecord
   belongs_to :previous_subscription, class_name: "Subscription", optional: true
   belongs_to :organization
   belongs_to :payment_method, optional: true
+  belongs_to :billing_entity, optional: true
 
-  has_one :billing_entity, through: :customer
   has_many :next_subscriptions, class_name: "Subscription", foreign_key: :previous_subscription_id
   has_many :events
   has_many :invoice_subscriptions
@@ -103,6 +103,10 @@ class Subscription < ApplicationRecord
     %w[customer plan]
   end
 
+  def billing_entity
+    super || customer&.billing_entity
+  end
+
   def mark_as_active!(timestamp = Time.current)
     self.started_at ||= timestamp
     self.activated_at ||= timestamp
@@ -132,6 +136,10 @@ class Subscription < ApplicationRecord
 
   def gated?
     pending_rules? && incomplete?
+  end
+
+  def payment_gated?
+    incomplete? && activation_rules.payment.pending.any?
   end
 
   def upgraded?
@@ -321,6 +329,7 @@ end
 #  trial_ended_at               :datetime
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
+#  billing_entity_id            :uuid
 #  customer_id                  :uuid             not null
 #  external_id                  :string           not null
 #  organization_id              :uuid             not null
@@ -330,6 +339,7 @@ end
 #
 # Indexes
 #
+#  index_subscriptions_on_billing_entity_id                    (billing_entity_id)
 #  index_subscriptions_on_customer_id                          (customer_id)
 #  index_subscriptions_on_ending_at_active                     (ending_at) WHERE ((status = 1) AND (ending_at IS NOT NULL))
 #  index_subscriptions_on_external_id                          (external_id)
@@ -345,6 +355,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (payment_method_id => payment_methods.id)

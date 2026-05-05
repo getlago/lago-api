@@ -15,6 +15,11 @@ module BillableMetrics
 
         result.aggregation = compute_aggregation_value(event_store.last)
         result.count = event_store.count
+
+        if presentation_by.present?
+          result.breakdowns = event_store.grouped_last(uniq_grouped_by_and_presentation_by)
+        end
+
         result.options = options
         result
       rescue ActiveRecord::StatementInvalid => e
@@ -40,6 +45,10 @@ module BillableMetrics
           count = counts.find { |c| c[:groups] == aggregation[:groups] } || {}
           group_result.count = count[:value] || 0
           group_result
+        end
+
+        if presentation_by.present?
+          result.breakdowns = event_store.grouped_last(uniq_grouped_by_and_presentation_by)
         end
 
         result

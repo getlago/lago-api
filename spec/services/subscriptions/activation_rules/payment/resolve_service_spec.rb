@@ -87,6 +87,90 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
       expect(SendWebhookJob).to have_been_enqueued.with("subscription.started", subscription)
     end
 
+    it "sends an invoice.created webhook" do
+      result
+
+      expect(SendWebhookJob).to have_been_enqueued.with("invoice.created", invoice)
+    end
+
+    it "produces an invoice.created activity log" do
+      result
+
+      expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
+    end
+
+    it "enqueues GenerateDocumentsJob with notify false" do
+      result
+
+      expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.with(invoice:, notify: false)
+    end
+
+    context "with lago_premium", :premium do
+      it "enqueues GenerateDocumentsJob with notify true" do
+        result
+
+        expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.with(invoice:, notify: true)
+      end
+
+      context "when billing entity does not have invoice.finalized email setting" do
+        before { invoice.billing_entity.update!(email_settings: []) }
+
+        it "enqueues GenerateDocumentsJob with notify false" do
+          result
+
+          expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.with(invoice:, notify: false)
+        end
+      end
+    end
+
+    it "tracks invoice creation in segment" do
+      allow(Utils::SegmentTrack).to receive(:invoice_created)
+
+      result
+
+      expect(Utils::SegmentTrack).to have_received(:invoice_created).with(invoice)
+    end
+
+    context "when invoice should be synced to accounting integration" do
+      before { allow(invoice).to receive(:should_sync_invoice?).and_return(true) }
+
+      it "enqueues Aggregator::Invoices::CreateJob" do
+        result
+
+        expect(Integrations::Aggregator::Invoices::CreateJob).to have_been_enqueued.with(invoice:)
+      end
+    end
+
+    context "when invoice should not be synced to accounting integration" do
+      before { allow(invoice).to receive(:should_sync_invoice?).and_return(false) }
+
+      it "does not enqueue Aggregator::Invoices::CreateJob" do
+        result
+
+        expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when invoice should be synced to hubspot" do
+      before { allow(invoice).to receive(:should_sync_hubspot_invoice?).and_return(true) }
+
+      it "enqueues Aggregator::Invoices::Hubspot::CreateJob" do
+        result
+
+        expect(Integrations::Aggregator::Invoices::Hubspot::CreateJob).to have_been_enqueued.with(invoice:)
+      end
+    end
+
+    context "when invoice should not be synced to hubspot" do
+      before { allow(invoice).to receive(:should_sync_hubspot_invoice?).and_return(false) }
+
+      it "does not enqueue Aggregator::Invoices::Hubspot::CreateJob" do
+        result
+
+        expect(Integrations::Aggregator::Invoices::Hubspot::CreateJob).not_to have_been_enqueued
+      end
+    end
+
     context "when subscription is already active (idempotency)" do
       let(:subscription) { create(:subscription, organization:, customer:, plan:) }
 

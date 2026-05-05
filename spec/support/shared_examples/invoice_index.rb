@@ -450,12 +450,16 @@ RSpec.shared_examples "an invoice index endpoint" do
     end
   end
 
-  context "with file attachments N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+  context "with N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
     let(:params) { {} }
+    let(:other_billing_entity) { create(:billing_entity, organization:) }
 
     before do
-      invoices = create_list(:invoice, 3, customer:, organization:)
-      invoices.each do |invoice|
+      [customer.billing_entity, other_billing_entity].each do |billing_entity|
+        invoice = create(:invoice, customer:, organization:, billing_entity:)
+        create(:invoice_applied_tax, invoice:, tax:, organization:)
+        create(:invoice_metadata, invoice:, organization:)
+
         invoice.file.attach(
           io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
           filename: "invoice.pdf",
@@ -469,12 +473,14 @@ RSpec.shared_examples "an invoice index endpoint" do
       end
     end
 
-    it "does not trigger N+1 queries for file_url and xml_url" do
+    it "does not trigger N+1 queries on invoice associations" do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:invoices].count).to eq(3)
+      expect(json[:invoices].count).to eq(2)
       json[:invoices].each do |invoice|
+        expect(invoice[:applied_taxes]).to be_present
+        expect(invoice[:metadata]).to be_present
         expect(invoice[:file_url]).to be_present
         expect(invoice[:xml_url]).to be_present
       end

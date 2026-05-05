@@ -226,6 +226,22 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       end
     end
 
+    context "when privilege value is nil" do
+      let(:entitlements_params) do
+        {
+          "seats" => {
+            "max" => nil
+          }
+        }
+      end
+
+      it "returns a validation failure with privilege-prefixed errors" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({"privilege.value": ["value_is_mandatory"]})
+      end
+    end
+
     context "when privilege value is not in select_options" do
       let(:privilege) { create(:privilege, organization:, feature:, code: "invitation", value_type: "select", config: {select_options: ["email", "phone", "slack"]}) }
       let(:entitlements_params) do

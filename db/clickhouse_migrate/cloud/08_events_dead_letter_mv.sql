@@ -17,7 +17,11 @@ AS SELECT
   event.external_subscription_id AS external_subscription_id,
   event.code AS code,
   event.transaction_id AS transaction_id,
-  toDateTime64OrNull(toString(event.timestamp), 3) AS timestamp,
+  coalesce(
+    toDateTime64OrNull(toString(event.timestamp), 3),
+    toDateTime64(toFloat64OrNull(event.timestamp), 3),
+    toDateTime64(event.ingested_at, 3)
+  ) AS timestamp,
   toDateTime64(event.ingested_at, 3) AS ingested_at,
   failed_at,
   event,

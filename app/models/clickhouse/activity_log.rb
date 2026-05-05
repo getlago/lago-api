@@ -68,6 +68,8 @@ module Clickhouse
       billing_entities_created: "billing_entities.created",
       billing_entities_updated: "billing_entities.updated",
       billing_entities_deleted: "billing_entities.deleted",
+      subscription_canceled: "subscription.canceled",
+      subscription_incomplete: "subscription.incomplete",
       subscription_started: "subscription.started",
       subscription_terminated: "subscription.terminated",
       subscription_updated: "subscription.updated",

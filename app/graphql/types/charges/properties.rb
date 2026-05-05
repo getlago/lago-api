@@ -10,6 +10,9 @@ module Types
       # NOTE: Graduated charge model
       field :graduated_ranges, [Types::ChargeModels::GraduatedRange], null: true
 
+      # NOTE: presentation group keys for all charge models
+      field :presentation_group_keys, [Types::Charges::PresentationGroupKey], null: true
+
       # NOTE: Graduated percentage modle
       field :graduated_percentage_ranges, [Types::ChargeModels::GraduatedPercentageRange], null: true
 

@@ -250,7 +250,7 @@ module Events
         end
       end
 
-      def grouped_count
+      def grouped_count(_columns = grouped_by)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value], select: [arel_table[:sorted_grouped_by]]), <<-SQL)
             SELECT
@@ -334,7 +334,7 @@ module Events
         end
       end
 
-      def grouped_unique_count
+      def grouped_unique_count(_columns = grouped_by)
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
@@ -404,7 +404,7 @@ module Events
         end
       end
 
-      def grouped_max
+      def grouped_max(_columns = grouped_by)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(
             deduplicated_columns: %w[decimal_value],
@@ -434,7 +434,7 @@ module Events
         end
       end
 
-      def grouped_last
+      def grouped_last(_columns = grouped_by)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
             SELECT
@@ -459,7 +459,7 @@ module Events
         end
       end
 
-      def grouped_sum
+      def grouped_sum(_columns = grouped_by)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
             SELECT
@@ -613,7 +613,7 @@ module Events
         BigDecimal(result["aggregation"].presence || 0)
       end
 
-      def grouped_weighted_sum(initial_values: [])
+      def grouped_weighted_sum(_columns = grouped_by, initial_values: [])
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Clickhouse::WeightedSumQuery.new(store: self)
 

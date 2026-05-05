@@ -15,10 +15,7 @@ module Invoices
         return result
       end
 
-      ActiveRecord::Base.transaction do
-        invoice.status = :finalized
-        invoice.save!
-      end
+      invoice.finalized!
 
       result.invoice = invoice
       result

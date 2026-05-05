@@ -112,6 +112,41 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
       end
     end
 
+    context "when paid_credits and granted_credits are explicitly null" do
+      let(:recurring_transaction_rule) do
+        create(:recurring_transaction_rule, wallet:, paid_credits: 200, granted_credits: 200)
+      end
+      let(:params) do
+        [
+          {
+            lago_id: recurring_transaction_rule.id,
+            method: "target",
+            trigger: "interval",
+            interval: "monthly",
+            target_ongoing_balance: "5300",
+            paid_credits: nil,
+            granted_credits: nil,
+            threshold_credits: nil
+          }
+        ]
+      end
+
+      it "coerces nil credit values to 0.0 instead of raising NotNullViolation" do
+        rule = result.wallet.reload.recurring_transaction_rules.active.first
+
+        expect(rule).to have_attributes(
+          id: recurring_transaction_rule.id,
+          method: "target",
+          trigger: "interval",
+          interval: "monthly",
+          target_ongoing_balance: 5300.0,
+          paid_credits: 0.0,
+          granted_credits: 0.0,
+          threshold_credits: 0.0
+        )
+      end
+    end
+
     context "when empty array is sent as argument" do
       let(:params) { [] }
 
