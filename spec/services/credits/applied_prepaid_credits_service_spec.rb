@@ -718,4 +718,80 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
     end
   end
+
+  describe "#call with preview: true" do
+    subject(:result) { described_class.call(invoice:, preview: true) }
+
+    it "returns the calculated allocation in wallet_transactions_preview" do
+      expect(result).to be_success
+      expect(result.wallet_transactions_preview).to eq({priority_wallet => 100})
+      expect(result.wallet_transactions).to eq([])
+    end
+
+    it "does not persist any state or acquire the prepaid_credit lock" do
+      allow(Customers::LockService).to receive(:call)
+
+      expect { subject }.not_to change(WalletTransaction, :count)
+
+      expect(Customers::LockService).not_to have_received(:call)
+      expect(priority_wallet.reload.balance_cents).to eq(1000)
+      expect(invoice.prepaid_credit_amount_cents).to eq(0)
+    end
+
+    it "does not call persistence side-effect services or enqueue webhooks" do
+      allow(Wallets::Balance::DecreaseService).to receive(:call)
+      allow(WalletTransactions::TrackConsumptionService).to receive(:call!)
+
+      expect { subject }.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(Wallets::Balance::DecreaseService).not_to have_received(:call)
+      expect(WalletTransactions::TrackConsumptionService).not_to have_received(:call!)
+    end
+
+    context "when wallets are restricted via wallet_targets" do
+      let(:billable_metric) { create(:billable_metric, organization: customer.organization) }
+      let(:other_billable_metric) { create(:billable_metric, organization: customer.organization) }
+      let(:charge) { create(:standard_charge, organization: customer.organization, billable_metric:) }
+      let(:bm_wallet) do
+        create(:wallet, :with_inbound_transaction, customer:, balance_cents: 1000, credits_balance: 10.0, priority: 49)
+      end
+      let(:wallets) { [bm_wallet] }
+      let(:fee) do
+        create(:charge_fee, invoice:, subscription:, charge:,
+          amount_cents: 100, precise_amount_cents: 100, taxes_precise_amount_cents: 0)
+      end
+
+      before do
+        create(:wallet_target, wallet: bm_wallet, billable_metric:)
+      end
+
+      it "consumes from the wallet only against fees for the targeted billable_metric" do
+        expect(result.wallet_transactions_preview).to eq({bm_wallet => 100})
+      end
+
+      context "when no fee matches the wallet's targeted billable_metric" do
+        let(:other_charge) { create(:standard_charge, organization: customer.organization, billable_metric: other_billable_metric) }
+        let(:fee) do
+          create(:charge_fee, invoice:, subscription:, charge: other_charge,
+            amount_cents: 100, precise_amount_cents: 100, taxes_precise_amount_cents: 0)
+        end
+
+        it "does not consume from the wallet" do
+          expect(result.wallet_transactions_preview).to eq({})
+        end
+      end
+    end
+
+    context "when multiple wallets must be drained in application order" do
+      let(:amount_cents) { 1500 }
+      let(:fee_amount_cents) { 1500 }
+
+      it "allocates priority wallets first, then lower-priority wallets, capped at invoice total" do
+        expect(result.wallet_transactions_preview).to eq({
+          priority_wallet => 1000,
+          priority_limited_charge_wallet => 500
+        })
+      end
+    end
+  end
 end
