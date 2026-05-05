@@ -22,10 +22,7 @@ module V1
           next [] if filter == GROUPED && fee.grouped_by.blank?
 
           fee.presentation_breakdowns.map do |breakdown|
-            {
-              presentation_by: breakdown.presentation_by,
-              units: breakdown.units.to_s
-            }
+            ::V1::PresentationBreakdownSerializer.new(breakdown).serialize
           end
         end
       end
