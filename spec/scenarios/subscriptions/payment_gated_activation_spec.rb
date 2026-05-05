@@ -268,15 +268,64 @@ describe "Payment Gated Subscription Activation Scenarios" do
   end
 
   describe "gated subscription with provider tax failure" do
-    it "completes the flow: gated → tax failure → retry → payment → activation" do
-      pending "requires CreateService integration with ActivateService gated path (PR #5370)"
+    let(:tax_integration) { create(:anrok_integration, organization:) }
+    let(:tax_integration_customer) { create(:anrok_customer, integration: tax_integration, customer:) }
+    let(:anrok_client) { instance_double(LagoHttpClient::Client) }
+    let(:anrok_finalized_endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
+    let(:anrok_draft_endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+    let(:failure_body) { File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")) }
+    let(:success_body_template) { JSON.parse(File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json"))) }
 
-      # 1. Create subscription with payment gating + customer has tax provider
-      # 2. Invoice created as open, tax provider fails → invoice status: failed
-      # 3. User retries → RetryService sets status back to open (not pending)
-      # 4. PullTaxesAndApplyService succeeds → triggers payment only
-      # 5. Payment succeeds → subscription activates, invoice finalized
-      raise "not implemented"
+    before do
+      tax_integration_customer
+      allow(LagoHttpClient::Client).to receive(:new).and_call_original
+      allow(LagoHttpClient::Client).to receive(:new).with(anrok_finalized_endpoint, anything).and_return(anrok_client)
+      allow(LagoHttpClient::Client).to receive(:new).with(anrok_draft_endpoint, anything).and_return(anrok_client)
+      stub_anrok_response(failure_body)
+    end
+
+    def stub_anrok_response(body)
+      response = instance_double(Net::HTTPOK)
+      allow(response).to receive(:body).and_return(body)
+      allow(anrok_client).to receive(:post_with_response).and_return(response)
+    end
+
+    def success_body_for(invoice)
+      body = success_body_template.deep_dup
+      body["succeededInvoices"].first["fees"].first["item_id"] = invoice.fees.first.id
+      body.to_json
+    end
+
+    it "fails on tax error, retries successfully, then activates on payment success" do
+      # Stage 1: Create subscription — Anrok fails → invoice :failed
+      create_subscription(subscription_params)
+      perform_all_enqueued_jobs
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.activation_rules.sole).to be_pending
+
+      invoice = subscription.invoices.sole
+      expect(invoice).to be_failed
+      expect(invoice.tax_status).to eq("failed")
+
+      # Stage 2: Re-stub Anrok to succeed, then retry. Invoice goes :open with taxes
+      # applied; FinalizePendingViesInvoiceService triggers payment for the gated case.
+      stub_anrok_response(success_body_for(invoice))
+      Invoices::RetryService.call!(invoice:)
+      perform_all_enqueued_jobs
+
+      invoice.reload
+      expect(invoice).to be_open
+      expect(invoice.tax_status).to eq("succeeded")
+
+      # Stage 3: Stripe webhook — payment succeeded, subscription activates
+      simulate_stripe_webhook(status: "succeeded")
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.activation_rules.sole).to be_satisfied
+      expect(invoice.reload).to be_finalized
     end
   end
 end
