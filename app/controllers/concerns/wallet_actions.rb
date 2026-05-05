@@ -60,7 +60,13 @@ module WalletActions
     if result.success?
       render(
         json: ::CollectionSerializer.new(
-          result.wallets.includes(:recurring_transaction_rules),
+          result.wallets.includes(
+            :customer,
+            :metadata,
+            :billable_metrics,
+            {applied_invoice_custom_sections: :invoice_custom_section},
+            {recurring_transaction_rules: {applied_invoice_custom_sections: :invoice_custom_section}}
+          ),
           ::V1::WalletSerializer,
           collection_name: "wallets",
           meta: pagination_metadata(result.wallets),

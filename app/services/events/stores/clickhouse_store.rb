@@ -226,8 +226,8 @@ module Events
         end
       end
 
-      def grouped_count
-        groups, group_names = grouped_arel_columns
+      def grouped_count(columns = grouped_by)
+        groups, column_names = grouped_arel_columns(columns)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
@@ -237,13 +237,13 @@ module Events
 
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
-              #{group_names},
+              #{column_names},
               toDecimal32(count(), 0)
             FROM events
-            GROUP BY #{group_names}
+            GROUP BY #{column_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows)
+          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
         end
       end
 
@@ -334,9 +334,12 @@ module Events
         end
       end
 
-      def grouped_unique_count
+      def grouped_unique_count(columns = grouped_by)
+        duplicated_unique_count_store = dup
+        duplicated_unique_count_store.grouped_by = columns
+
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: duplicated_unique_count_store)
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
               sanitize_colon(query.grouped_query),
@@ -347,7 +350,7 @@ module Events
             ]
           )
 
-          prepare_grouped_result(connection.select_all(sql).rows)
+          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
         end
       end
 
@@ -380,8 +383,8 @@ module Events
         end
       end
 
-      def grouped_max
-        groups, group_names = grouped_arel_columns
+      def grouped_max(columns = grouped_by)
+        groups, column_names = grouped_arel_columns(columns)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
@@ -391,13 +394,13 @@ module Events
 
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
-              #{group_names},
+              #{column_names},
               MAX(property)
             FROM events
-            GROUP BY #{group_names}
+            GROUP BY #{column_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows)
+          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
         end
       end
 
@@ -411,8 +414,9 @@ module Events
         BigDecimal(value)
       end
 
-      def grouped_last
-        groups, group_names = grouped_arel_columns
+      def grouped_last(columns = grouped_by)
+        groups, column_names = grouped_arel_columns(columns)
+        distinct_on_names = grouped_by.present? ? grouped_arel_columns.last : nil
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
@@ -420,15 +424,26 @@ module Events
             deduplicated_columns: %w[decimal_value properties]
           )
 
-          sql = with_ctes(ctes_sql, <<-SQL)
-            SELECT
-              DISTINCT ON (#{group_names}) #{group_names},
-              property
-            FROM events
-            ORDER BY #{group_names}, events.timestamp DESC
-          SQL
+          sql = if distinct_on_names
+            with_ctes(ctes_sql, <<-SQL)
+              SELECT
+                DISTINCT ON (#{distinct_on_names}) #{column_names},
+                property
+              FROM events
+              ORDER BY #{distinct_on_names}, events.timestamp DESC
+            SQL
+          else
+            with_ctes(ctes_sql, <<-SQL)
+              SELECT
+                #{column_names},
+                property
+              FROM events
+              ORDER BY events.timestamp DESC
+              LIMIT 1
+            SQL
+          end
 
-          prepare_grouped_result(connection.select_all(sql).rows)
+          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
         end
       end
 
@@ -475,24 +490,24 @@ module Events
         end
       end
 
-      def grouped_sum
-        groups, group_names = grouped_arel_columns
+      def grouped_sum(columns = grouped_by)
+        groups, column_names = grouped_arel_columns(columns)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
             select: groups + [arel_table[:decimal_value].as("property")],
-            deduplicated_columns: %w[decimal_value]
+            deduplicated_columns: %w[decimal_value properties]
           )
 
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
-              #{group_names},
+              #{column_names},
               sum(events.property)
             FROM events
-            GROUP BY #{group_names}
+            GROUP BY #{column_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows)
+          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
         end
       end
 
@@ -611,30 +626,27 @@ module Events
         BigDecimal(result["aggregation"].presence || 0)
       end
 
-      def grouped_weighted_sum(initial_values: [])
+      def grouped_weighted_sum(columns = grouped_by, initial_value: 0, initial_values: [])
+        duplicated_weighted_sum_store = dup
+        duplicated_weighted_sum_store.grouped_by = columns
+
+        baseline_initial_values = if initial_values.present?
+          initial_values
+        elsif initial_value.to_d.nonzero?
+          [{groups: {}, value: initial_value}]
+        else
+          []
+        end
+
+        formatted_initial_values = duplicated_weighted_sum_store.formatted_weighted_sum_initial_values(baseline_initial_values)
+        return [] if formatted_initial_values.empty?
+
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          query = Clickhouse::WeightedSumQuery.new(store: self)
-
-          # NOTE: build the list of initial values for each groups
-          #       from the events in the period
-          formated_initial_values = grouped_count.map do |group|
-            value = 0
-            previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
-            value = previous_group[:value] if previous_group
-            {groups: group[:groups], value:}
-          end
-
-          # NOTE: add the initial values for groups that are not in the events
-          initial_values.each do |intial_value|
-            next if formated_initial_values.find { |g| g[:groups] == intial_value[:groups] }
-
-            formated_initial_values << intial_value
-          end
-          return [] if formated_initial_values.empty?
+          query = Clickhouse::WeightedSumQuery.new(store: duplicated_weighted_sum_store)
 
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
-              sanitize_colon(query.grouped_query(initial_values: formated_initial_values)),
+              sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
@@ -643,7 +655,7 @@ module Events
             ]
           )
 
-          prepare_grouped_result(connection.select_all(sql).rows, decimal: true)
+          prepare_grouped_result(connection.select_all(sql).rows, decimal: true, columns: columns)
         end
       end
 
@@ -775,13 +787,13 @@ module Events
       # NOTE: returns the values for each groups
       #       The result format will be an array of hash with the format:
       #       [{ groups: { 'cloud' => 'aws', 'region' => 'us_east_1' }, value: 12.9 }, ...]
-      def prepare_grouped_result(rows, timestamp: false, decimal: false)
+      def prepare_grouped_result(rows, timestamp: false, decimal: false, columns: grouped_by)
         rows.map do |row|
           last_group = timestamp ? -2 : -1
           groups = row.flatten[...last_group].map(&:presence)
 
           result = {
-            groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            groups: columns.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
             value: decimal ? BigDecimal(row.last.presence || 0) : row.last
           }
 
@@ -795,21 +807,12 @@ module Events
         @arel_table ||= ::Clickhouse::EventsEnriched.arel_table
       end
 
-      def grouped_arel_columns
+      def grouped_arel_columns(columns = grouped_by)
+        names = Array.new(columns.count) { |i| "g_#{i}" }
         [
-          grouped_by.map.with_index do |group, index|
-            Arel::Nodes::SqlLiteral.new(sanitized_property_name(group)).as("g_#{index}")
-          end,
-          group_names.join(", ")
+          columns.map.with_index { |col, i| Arel::Nodes::SqlLiteral.new(sanitized_property_name(col)).as("g_#{i}") },
+          names.join(", ")
         ]
-      end
-
-      def group_names
-        @group_names ||= Array.new(grouped_by.count) { |index| "g_#{index}" }
-      end
-
-      def joined_group_names
-        @joined_group_names ||= group_names.join(", ")
       end
 
       def grouped_by_columns(values)
@@ -820,6 +823,23 @@ module Events
 
       def operation_type_sql
         "events_enriched.sorted_properties['operation_type']"
+      end
+
+      def formatted_weighted_sum_initial_values(initial_values)
+        formatted_initial_values = grouped_count.map do |group|
+          value = 0
+          previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
+          value = previous_group[:value] if previous_group
+          {groups: group[:groups], value:}
+        end
+
+        initial_values.each do |initial_value|
+          next if formatted_initial_values.find { |g| g[:groups] == initial_value[:groups] }
+
+          formatted_initial_values << initial_value
+        end
+
+        formatted_initial_values
       end
     end
   end
