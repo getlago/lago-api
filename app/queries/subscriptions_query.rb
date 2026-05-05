@@ -74,7 +74,7 @@ class SubscriptionsQuery < BaseQuery
 
   def with_external_customer(scope)
     customers = Customer.where(external_id: filters.external_customer_id)
-    scope.where(customer_id: customers.ids)
+    scope.where(customer_id: customers.select(:id))
   end
 
   def with_plan_code(scope)
