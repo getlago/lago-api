@@ -15,6 +15,11 @@ module BillableMetrics
 
         result.aggregation = event_store.max || 0
         result.count = event_store.count
+
+        if presentation_by.present?
+          result.breakdowns = event_store.grouped_max(uniq_grouped_by_and_presentation_by)
+        end
+
         result.options = options
         result
       rescue ActiveRecord::StatementInvalid => e
@@ -39,6 +44,10 @@ module BillableMetrics
           group_result.count = count[:value] || 0
 
           group_result
+        end
+
+        if presentation_by.present?
+          result.breakdowns = event_store.grouped_max(uniq_grouped_by_and_presentation_by)
         end
 
         result
