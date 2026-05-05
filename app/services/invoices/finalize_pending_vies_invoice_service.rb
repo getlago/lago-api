@@ -29,6 +29,9 @@ module Invoices
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         invoice.tax_status = "succeeded"
+
+        skip_payment_gating_for_zero_amount if invoice.subscription_gated? && invoice.total_amount_cents.zero?
+
         Invoices::TransitionToFinalStatusService.call(invoice:)
 
         invoice.save!
@@ -59,6 +62,17 @@ module Invoices
     private
 
     attr_reader :invoice
+
+    def skip_payment_gating_for_zero_amount
+      gated = invoice.subscriptions.find(&:gated?)
+      return unless gated
+
+      Subscriptions::ActivationRules::Payment::EvaluateService.call!(
+        rule: gated.activation_rules.payment.sole,
+        status: :satisfied
+      )
+      Subscriptions::ActivationRules::ResolveSubscriptionStatusService.call!(subscription: gated)
+    end
 
     def customer
       @customer ||= invoice.customer
