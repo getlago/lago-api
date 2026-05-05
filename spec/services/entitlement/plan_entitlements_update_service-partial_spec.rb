@@ -251,9 +251,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           entitlement3
           entitlement_value2
           entitlement_value3
-        end
 
-        before do
           allow(SendWebhookJob).to receive(:perform_after_commit)
         end
 
