@@ -11,10 +11,6 @@ module Credits
     end
 
     def call
-      if wallets_already_applied?
-        return result.service_failure!(code: "already_applied", message: "Prepaid credits already applied")
-      end
-
       result.wallet_transactions ||= {}
       return result if wallets.empty?
 
@@ -107,13 +103,6 @@ module Credits
       largest_key = ordered_remaining_amounts.keys.first
       ordered_remaining_amounts[largest_key] += difference
       ordered_remaining_amounts
-    end
-
-    def wallets_already_applied?
-      return false unless invoice
-      return false unless invoice.persisted?
-
-      WalletTransaction.exists?(invoice_id: invoice.id, wallet_id: wallets.map(&:id))
     end
 
     def applicable_fee?(fee_key:, targets:, types:, wallet:)

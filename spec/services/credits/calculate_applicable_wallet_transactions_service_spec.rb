@@ -105,16 +105,6 @@ RSpec.describe Credits::CalculateApplicableWalletTransactionsService do
       end
     end
 
-    context "when already applied" do
-      before { create(:wallet_transaction, wallet: wallets.first, invoice:, transaction_type: "outbound") }
-
-      it "returns 'already_applied' service failure" do
-        expect(result).not_to be_success
-        expect(result.error.code).to eq("already_applied")
-        expect(result.error.error_message).to eq("Prepaid credits already applied")
-      end
-    end
-
     context "with fee type limitations" do
       let(:subscription_fees) { [fee, fee2] }
       let(:amount_cents) { 110 }
