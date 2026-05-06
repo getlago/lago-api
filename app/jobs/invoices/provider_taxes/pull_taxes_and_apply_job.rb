@@ -5,6 +5,8 @@ module Invoices
     class PullTaxesAndApplyJob < ApplicationJob
       queue_as "providers"
 
+      unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
+
       retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
       retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 6
       retry_on OpenSSL::SSL::SSLError, wait: :polynomially_longer, attempts: 6

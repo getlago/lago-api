@@ -40,6 +40,7 @@ RSpec.describe Resolvers::PlanResolver do
             properties {
               amount
               pricingGroupKeys
+              presentationGroupKeys { value options { displayInInvoice } }
               freeUnits
               packageSize
               fixedAmount
@@ -193,13 +194,27 @@ RSpec.describe Resolvers::PlanResolver do
 
   context "when plan has charges" do
     before do
-      create(:standard_charge, billable_metric:, plan:)
+      create(
+        :standard_charge,
+        billable_metric:,
+        plan:,
+        properties: {
+          amount: "100",
+          presentation_group_keys: [
+            {"value" => "region", "options" => {"display_in_invoice" => true}}
+          ]
+        }
+      )
     end
 
     it "returns true for has charges" do
       plan_response = result["data"]["plan"]
 
       expect(plan_response["hasCharges"]).to eq(true)
+
+      expect(plan_response["charges"].sole.dig("properties", "presentationGroupKeys")).to eq([
+        {"value" => "region", "options" => {"displayInInvoice" => true}}
+      ])
     end
   end
 

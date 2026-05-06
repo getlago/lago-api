@@ -51,8 +51,8 @@ RSpec.describe DailyUsages::ComputeService do
     context "when there is usage" do
       before { event }
 
-      context "when usage contains charges usage with 0 units due to filters" do
-        it "does not include fees with 0 units" do
+      context "when usage contains charges with no consumption due to filters" do
+        it "does not include fees with no consumption" do
           billable_metric_filter = create(:billable_metric_filter, billable_metric:)
           charge_filter = create(:charge_filter, charge:, properties: {amount: "10"})
           create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: [billable_metric_filter.values.first])
@@ -61,6 +61,20 @@ RSpec.describe DailyUsages::ComputeService do
             expect { compute_service.call }.to change(DailyUsage, :count).by(1)
             daily_usage = DailyUsage.order(created_at: :asc).last
             expect(daily_usage.usage["charges_usage"].count).to eq(1)
+          end
+        end
+      end
+
+      context "when the only consumed charge is free (zero amount)" do
+        let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "0"}) }
+
+        it "creates a daily usage based on consumed units" do
+          travel_to(timestamp) do
+            expect { compute_service.call }.to change(DailyUsage, :count).by(1)
+
+            daily_usage = DailyUsage.order(created_at: :asc).last
+            expect(daily_usage.usage["charges_usage"].count).to eq(1)
+            expect(daily_usage.usage["amount_cents"]).to eq(0)
           end
         end
       end

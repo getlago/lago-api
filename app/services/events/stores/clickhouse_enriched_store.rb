@@ -6,6 +6,9 @@ module Events
       include Events::Stores::Utils::QueryHelpers
       include Events::Stores::Utils::ClickhouseSqlHelpers
 
+      DEDUP_KEY_COLUMNS = %w[charge_id charge_filter_id external_subscription_id organization_id timestamp transaction_id].freeze
+      DEDUP_FALLBACK_KEY_COLUMNS = %w[external_subscription_id organization_id timestamp transaction_id].freeze
+
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           order_clause = ordered ? "ORDER BY timestamp ASC" : ""
@@ -61,77 +64,90 @@ module Events
 
         effective_to = to_datetime.presence || applicable_to_datetime.presence
 
-        if needs_code_based_fallback?(force_from:)
-          current_sql = deduplicated_events_sql(
-            from_datetime: subscription.started_at,
-            to_datetime: effective_to,
-            deduplicated_columns:
-          ).to_sql
+        # Should we include recurring events from previous subscription by relying on the code instead of the charge_id
+        use_fallback = needs_code_based_fallback?(force_from:)
+        current_from = use_fallback ? subscription.started_at : (from_datetime if force_from || use_from_boundary)
 
-          fallback_sql = code_based_fallback_dedup_sql(
-            from_datetime: (from_datetime if force_from),
-            deduplicated_columns:
-          ).to_sql
+        ctes = {
+          "latest_enriched_current" => latest_enriched_current_sql(from_datetime: current_from, to_datetime: effective_to)
+        }
+        second_passes = [deduplicated_events_sql(from_datetime: current_from, to_datetime: effective_to, deduplicated_columns:)]
 
-          base_sql = "(#{current_sql}) UNION ALL (#{fallback_sql})"
-        else
-          base_sql = deduplicated_events_sql(
-            from_datetime: (from_datetime if force_from || use_from_boundary),
-            to_datetime: effective_to,
-            deduplicated_columns:
-          ).to_sql
+        if use_fallback
+          fallback_from = (from_datetime if force_from)
+          ctes["latest_enriched_fallback"] = latest_enriched_fallback_sql(from_datetime: fallback_from)
+          second_passes << code_based_fallback_dedup_sql(from_datetime: fallback_from, deduplicated_columns:)
         end
+
+        ctes["events_enriched_expanded"] = (second_passes.size == 1) ? second_passes.first : second_passes.map { "(#{it})" }.join(" UNION ALL ")
 
         query = Arel::Table.new(:events_enriched_expanded)
         query = query.order(arel_table[:timestamp].desc, arel_table[order_column.to_sym]) if ordered
-        query = apply_arel_grouped_by_values(query) if grouped_by_values?
 
-        {
-          "events_enriched_expanded" => base_sql, # Override events table name with deduplicated events
-          "events" => query.project(select).to_sql
-        }
+        ctes["events"] = query.project(select).to_sql
+        ctes
       end
 
-      # Clickhouse cannot guarantee that events_enriched_expanded will be deduplicated all the time.
-      # To address this problem, we implement deduplication at query time by grouping events on
-      # transaction_id and timestamp (unicity key) and using `argMax` to keep the most recent event.
+      # ClickHouse cannot guarantee that events_enriched_expanded will be deduplicated all the time,
+      # so we deduplicate at query time using a two-pass strategy:
+      # 1. `latest_enriched_current_sql` groups events by their dedup key and gets the latest enriched_at.
+      # 2. `deduplicated_events_sql` filters `latest_enriched_current` and uses `INNER ANY JOIN` to
+      #    fetch the requested columns from events_enriched_expanded. `ANY JOIN` returns at most one
+      #    matching row, so duplicated enriched_at are filtered at the join layer.
+      # This replaces a previous implementation with `argMax` which caused ClickHouse OOM on large subscriptions.
+      def latest_enriched_current_sql(from_datetime:, to_datetime:)
+        <<~SQL.squish
+          SELECT #{DEDUP_KEY_COLUMNS.join(", ")}, max(enriched_at) AS max_enriched_at
+          FROM events_enriched_expanded
+          WHERE #{charge_id_based_where_sql(from_datetime:, to_datetime:, include_grouped_by_values: false)}
+          GROUP BY #{DEDUP_KEY_COLUMNS.join(", ")}
+        SQL
+      end
+
       def deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: [])
-        query = charge_id_based_query(from_datetime:, to_datetime:)
+        extra_columns = dedup_selected_columns(deduplicated_columns)
+        selected_columns = (DEDUP_KEY_COLUMNS.map { "l.#{it}" } + extra_columns).join(", ")
+        join_conditions = (DEDUP_KEY_COLUMNS.map { "e.#{it} = l.#{it}" } + ["e.enriched_at = l.max_enriched_at"]).join(" AND ")
 
-        dedup_columns = dedup_argmax_columns(deduplicated_columns)
-
-        query = query.group(
-          arel_table[:charge_id],
-          arel_table[:charge_filter_id],
-          *dedup_group_by_columns
-        )
-        query.project(
-          [
-            arel_table[:charge_id],
-            arel_table[:charge_filter_id],
-            *dedup_group_by_columns
-          ] + dedup_columns
-        )
+        <<~SQL.squish
+          SELECT #{selected_columns}
+          FROM latest_enriched_current AS l
+          INNER ANY JOIN events_enriched_expanded AS e ON #{join_conditions}
+          WHERE #{charge_id_based_where_sql(from_datetime:, to_datetime:, alias_prefix: "e")}
+        SQL
       end
 
-      # Code-based fallback dedup query for events before subscription.started_at.
-      # Groups by the same dedup_group_by_columns used elsewhere (transaction_id, timestamp,
-      # external_subscription_id, organization_id, etc.) to collapse duplicate rows from
-      # multiple charges matching the same event, without using real charge_id/charge_filter_id.
+      # Code-based fallback for recurring charges.
+      # First pass: groups events on the smaller dedup key (no charge_id/charge_filter_id)
+      # because fallback events come from a previous subscription's charges, so charge_ids are irrelevant.
+      # Matching/ignored filters and grouped_by_values are deferred to the second pass to keep
+      # the dedup grouping based on the base columns only (org, code, subscription, timestamp, transaction).
+      def latest_enriched_fallback_sql(from_datetime:)
+        <<~SQL.squish
+          SELECT #{DEDUP_FALLBACK_KEY_COLUMNS.join(", ")}, max(enriched_at) AS max_enriched_at
+          FROM events_enriched_expanded
+          WHERE #{code_based_fallback_where_sql(from_datetime:, include_grouped_by_values: false, include_filters: false)}
+          GROUP BY #{DEDUP_FALLBACK_KEY_COLUMNS.join(", ")}
+        SQL
+      end
+
+      # Code-based fallback second pass for events before subscription.started_at.
       # Projects dummy charge_id/charge_filter_id for UNION compatibility with deduplicated_events_sql.
       def code_based_fallback_dedup_sql(from_datetime:, deduplicated_columns: [])
-        query = code_based_fallback_query(from_datetime:)
+        extra_columns = dedup_selected_columns(deduplicated_columns)
+        selected_columns = (
+          ["'' AS charge_id", "'' AS charge_filter_id"] +
+          DEDUP_FALLBACK_KEY_COLUMNS.map { "l.#{it}" } +
+          extra_columns
+        ).join(", ")
+        join_conditions = (DEDUP_FALLBACK_KEY_COLUMNS.map { "e.#{it} = l.#{it}" } + ["e.enriched_at = l.max_enriched_at"]).join(" AND ")
 
-        dedup_columns = dedup_argmax_columns(deduplicated_columns)
-
-        query = query.group(*dedup_group_by_columns)
-        query.project(
-          [
-            Arel::Nodes::SqlLiteral.new("''").as("charge_id"),
-            Arel::Nodes::SqlLiteral.new("''").as("charge_filter_id"),
-            *dedup_group_by_columns
-          ] + dedup_columns
-        )
+        <<~SQL.squish
+          SELECT #{selected_columns}
+          FROM latest_enriched_fallback AS l
+          INNER ANY JOIN events_enriched_expanded AS e ON #{join_conditions}
+          WHERE #{code_based_fallback_where_sql(from_datetime:, alias_prefix: "e")}
+        SQL
       end
 
       # DEPRECATED: This method will be replaced by distinct_charges_and_filters
@@ -714,28 +730,85 @@ module Events
         "events_enriched_expanded.sorted_properties['operation_type']"
       end
 
-      def dedup_group_by_columns
-        [
-          arel_table[:external_subscription_id],
-          arel_table[:organization_id],
-          arel_table[:timestamp],
-          arel_table[:transaction_id]
-        ]
-      end
-
-      def dedup_argmax_columns(deduplicated_columns)
+      def dedup_selected_columns(deduplicated_columns)
         columns = deduplicated_columns.dup
         columns << "sorted_grouped_by" if grouped_by.present? || grouped_by_values.present?
 
-        group_by_column_names = dedup_group_by_columns.map { it.name.to_s }
-        excluded_column_names = group_by_column_names + %w[charge_id charge_filter_id]
+        columns.uniq.reject { DEDUP_KEY_COLUMNS.include?(it) }.map { "e.#{it}" }
+      end
 
-        columns
-          .uniq
-          .reject { excluded_column_names.include?(it) }
-          .map do
-            Arel::Nodes::NamedFunction.new("argMax", [arel_table[it.to_sym], arel_table[:enriched_at]]).as(it)
+      def charge_id_based_where_sql(from_datetime:, to_datetime:, alias_prefix: nil, include_grouped_by_values: true)
+        prefix = alias_prefix ? "#{alias_prefix}." : ""
+
+        conditions = [
+          sql_condition("#{prefix}organization_id = ?", subscription.organization_id),
+          sql_condition("#{prefix}code = ?", code),
+          sql_condition("#{prefix}external_subscription_id = ?", subscription.external_id),
+          sql_condition("#{prefix}charge_id = ?", charge_id),
+          sql_condition("#{prefix}charge_filter_id = ?", charge_filter_id || "")
+        ]
+
+        conditions << sql_condition("#{prefix}timestamp >= ?", from_datetime) if from_datetime
+        conditions << sql_condition("#{prefix}timestamp <= ?", to_datetime) if to_datetime
+        conditions << grouped_by_values_sql_condition(prefix) if include_grouped_by_values && grouped_by_values?
+
+        conditions.join(" AND ")
+      end
+
+      def code_based_fallback_where_sql(from_datetime:, alias_prefix: nil, include_grouped_by_values: true, include_filters: true)
+        prefix = alias_prefix ? "#{alias_prefix}." : ""
+
+        conditions = [
+          sql_condition("#{prefix}organization_id = ?", subscription.organization_id),
+          sql_condition("#{prefix}code = ?", code),
+          sql_condition("#{prefix}external_subscription_id = ?", subscription.external_id),
+          sql_condition("#{prefix}timestamp < ?", subscription.started_at)
+        ]
+
+        conditions << sql_condition("#{prefix}timestamp >= ?", from_datetime) if from_datetime
+
+        if include_filters
+          matching_filters.each do |key, values|
+            conditions << sql_condition("#{prefix}sorted_properties[?] IN (?)", key.to_s, values.map(&:to_s))
           end
+
+          ignored_clauses = ignored_filters.filter_map do |filters|
+            next if filters.empty?
+
+            inner = filters.filter_map do |key, values|
+              next if values.empty?
+
+              sql_condition("(coalesce(#{prefix}sorted_properties[?], '') IN (?))", key.to_s, values.map(&:to_s))
+            end.join(" AND ")
+            inner.presence
+          end
+          conditions << "NOT (#{ignored_clauses.map { "(#{it})" }.join(" OR ")})" if ignored_clauses.any?
+        end
+
+        conditions << grouped_by_values_via_properties_sql_condition(prefix) if include_grouped_by_values && grouped_by_values?
+
+        conditions.join(" AND ")
+      end
+
+      def grouped_by_values_sql_condition(prefix)
+        map_args = grouped_by_values
+          .sort_by { |k, _| k }
+          .flat_map { |k, v| [quote(k), quote(v.presence || "")] }
+          .join(", ")
+        "#{prefix}sorted_grouped_by = map(#{map_args})"
+      end
+
+      # Fallback events come from a previous subscription's charges, so `sorted_grouped_by`
+      # reflects that charge's configuration and may not match the current grouped_by keys.
+      # Filter against `sorted_properties` directly to stay charge-agnostic.
+      def grouped_by_values_via_properties_sql_condition(prefix)
+        grouped_by_values.map do |key, value|
+          if value.present?
+            sql_condition("#{prefix}sorted_properties[?] = ?", key.to_s, value.to_s)
+          else
+            sql_condition("coalesce(#{prefix}sorted_properties[?], '') = ''", key.to_s)
+          end
+        end.join(" AND ")
       end
 
       def needs_code_based_fallback?(force_from:)
@@ -747,90 +820,13 @@ module Events
       end
 
       def charge_id_based_query(from_datetime:, to_datetime:)
-        query = arel_table.where(
-          arel_table[:external_subscription_id].eq(subscription.external_id)
-            .and(arel_table[:organization_id].eq(subscription.organization_id))
-            .and(with_charge_id_condition)
-            .and(arel_table[:code].eq(code))
-        ).then { with_charge_filter_id(it) }
-        query = with_timestamp_boundaries(query, from_datetime, to_datetime)
-        query = apply_arel_grouped_by_values(query) if grouped_by_values?
-        query
+        arel_table.where(Arel.sql(charge_id_based_where_sql(from_datetime:, to_datetime:)))
       end
 
       # Fallback query filtering by code + properties instead of charge_id/charge_filter_id.
       # Used for events before subscription.started_at (from a previous subscription's charges).
       def code_based_fallback_query(from_datetime:)
-        query = arel_table.where(
-          arel_table[:external_subscription_id].eq(subscription.external_id)
-            .and(arel_table[:organization_id].eq(subscription.organization_id))
-            .and(arel_table[:code].eq(code))
-        )
-        query = arel_filters_scope(query)
-        query = with_timestamp_boundaries(query, from_datetime, nil)
-        query = query.where(arel_table[:timestamp].lt(subscription.started_at))
-        query = apply_arel_grouped_by_values(query) if grouped_by_values?
-        query
-      end
-
-      def arel_filters_scope(query)
-        matching_filters.each do |key, values|
-          query = query.where(
-            Arel::Nodes::SqlLiteral.new(sanitized_property_name(key.to_s)).in(values.map(&:to_s))
-          )
-        end
-
-        conditions = ignored_filters.filter_map do |filters|
-          next if filters.empty?
-
-          clause = filters.filter_map do |key, values|
-            next if values.empty?
-
-            ActiveRecord::Base.sanitize_sql_for_conditions(
-              ["(coalesce(events_enriched_expanded.sorted_properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
-            )
-          end.join(" AND ")
-          clause.presence
-        end
-        sql = conditions.map { "(#{it})" }.join(" OR ")
-        query = query.where(Arel::Nodes::Not.new(Arel::Nodes::SqlLiteral.new(sql))) if conditions.present?
-
-        query
-      end
-
-      def sanitized_property_name(property)
-        ActiveRecord::Base.sanitize_sql_for_conditions(
-          ["events_enriched_expanded.sorted_properties[?]", property]
-        )
-      end
-
-      def with_timestamp_boundaries(query, from_datetime, to_datetime)
-        query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
-        query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
-        query
-      end
-
-      def with_charge_id_condition
-        arel_table[:charge_id].eq(charge_id)
-      end
-
-      def with_charge_filter_id(query)
-        if charge_filter_id.present?
-          query.where(arel_table[:charge_filter_id].eq(charge_filter_id))
-        else
-          query.where(arel_table[:charge_filter_id].eq(""))
-        end
-      end
-
-      def apply_arel_grouped_by_values(query)
-        # NOTE: grouped_by is populated from a sorted Map(String, String) converted into a String
-        #       to make it comparable, we need to sort the group keys and replace nil values with empty strings
-        groups = grouped_by_values
-          .sort_by { |key, _| key }
-          .flat_map { |k, v| [Arel::Nodes.build_quoted(k), Arel::Nodes.build_quoted(v.presence || "")] }
-
-        map_fn = Arel::Nodes::NamedFunction.new("map", groups)
-        query.where(arel_table[:sorted_grouped_by].eq(map_fn))
+        arel_table.where(Arel.sql(code_based_fallback_where_sql(from_datetime:)))
       end
 
       def prepare_grouped_result(result, decimal: false, groups_key: :groups, value_key: :value)

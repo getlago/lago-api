@@ -21,33 +21,34 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
   let(:is_recurring) { false }
   let(:expected_projected_units) do
     if is_recurring
-      BigDecimal("10")
+      BigDecimal(10)
     else
-      (ratio > 0) ? (BigDecimal("10") / BigDecimal(ratio.to_s)).round(1) : BigDecimal("0")
+      (ratio > 0) ? (BigDecimal(10) / BigDecimal(ratio.to_s)).round(1) : BigDecimal(0)
     end
   end
   let(:expected_projected_amount_cents) do
     if is_recurring
       100
     else
-      (ratio > 0) ? (BigDecimal("100") / BigDecimal(ratio.to_s)).round.to_i : 0
+      (ratio > 0) ? (BigDecimal(100) / BigDecimal(ratio.to_s)).round.to_i : 0
     end
   end
   let(:expected_pricing_unit_projected_amount_cents) do
     if is_recurring
       200
     else
-      (ratio > 0) ? (BigDecimal("200") / BigDecimal(ratio.to_s)).round.to_i : 0
+      (ratio > 0) ? (BigDecimal(200) / BigDecimal(ratio.to_s)).round.to_i : 0
     end
   end
   let(:greater_expected_pricing_unit_projected_amount_cents) do
     if is_recurring
       600
     else
-      (ratio > 0) ? (BigDecimal("600") / BigDecimal(ratio.to_s)).round.to_i : 0
+      (ratio > 0) ? (BigDecimal(600) / BigDecimal(ratio.to_s)).round.to_i : 0
     end
   end
   let(:pricing_unit_usage) { nil }
+  let(:presentation_breakdowns) { [] }
 
   let(:usage) do
     [
@@ -72,7 +73,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         aggregation_type: billable_metric.aggregation_type,
         grouped_by: {"card_type" => "visa"},
         charge_filter: nil,
-        pricing_unit_usage:
+        pricing_unit_usage:,
+        presentation_breakdowns:
       )
     ]
   end
@@ -114,6 +116,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         "aggregation_type" => billable_metric.aggregation_type
       },
       "filters" => [],
+      "presentation_breakdowns" => [],
       "grouped_usage" => [
         {
           "amount_cents" => 100,
@@ -123,10 +126,44 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           "units" => "10.0",
           "projected_units" => expected_projected_units.to_s,
           "grouped_by" => {"card_type" => "visa"},
-          "filters" => []
+          "filters" => [],
+          "presentation_breakdowns" => []
         }
       ]
     )
+  end
+
+  context "when contains presentation breakdowns" do
+    let(:presentation_breakdowns) do
+      [
+        build(:presentation_breakdown, presentation_by: {"card_type" => "visa"}, units: "7"),
+        build(:presentation_breakdown, presentation_by: {"card_type" => "mastercard"}, units: "1"),
+        build(:presentation_breakdown, presentation_by: {"country" => "br"}, units: "3")
+      ]
+    end
+
+    it "serializes the breakdowns" do
+      projection_result = instance_double(
+        "ProjectionResult",
+        projected_units: expected_projected_units,
+        projected_amount_cents: expected_projected_amount_cents,
+        projected_pricing_unit_amount_cents: expected_pricing_unit_projected_amount_cents
+      )
+
+      allow(::Fees::ProjectionService).to receive(:call).and_return(
+        instance_double("ServiceResult", raise_if_error!: projection_result)
+      )
+
+      expect(result["charges"].first["presentation_breakdowns"]).to eq([])
+
+      expect(result["charges"].first["grouped_usage"].first["presentation_breakdowns"]).to match_array(
+        [
+          {"presentation_by" => {"card_type" => "visa"}, "units" => "7.0"},
+          {"presentation_by" => {"card_type" => "mastercard"}, "units" => "1.0"},
+          {"presentation_by" => {"country" => "br"}, "units" => "3.0"}
+        ]
+      )
+    end
   end
 
   context "when charge configured to use pricing units" do
@@ -171,6 +208,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           "aggregation_type" => billable_metric.aggregation_type
         },
         "filters" => [],
+        "presentation_breakdowns" => [],
         "grouped_usage" => [
           {
             "amount_cents" => 100,
@@ -185,7 +223,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
             "units" => "10.0",
             "projected_units" => expected_projected_units.to_s,
             "grouped_by" => {"card_type" => "visa"},
-            "filters" => []
+            "filters" => [],
+            "presentation_breakdowns" => []
           }
         ]
       )
@@ -214,16 +253,17 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           grouped_by: {"card_type" => "visa"},
           charge_filter:,
           charge_filter_id: charge_filter.id,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdowns:
         )
       end
     end
 
     let(:expected_filter_projected_units) do
       if is_recurring
-        BigDecimal("30")
+        BigDecimal(30)
       else
-        (ratio > 0) ? (BigDecimal("30") / BigDecimal(ratio.to_s)).round(2) : BigDecimal("0")
+        (ratio > 0) ? (BigDecimal(30) / BigDecimal(ratio.to_s)).round(2) : BigDecimal(0)
       end
     end
     let(:expected_filter_projected_amount_cents) do
@@ -341,7 +381,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           grouped_by: nil,
           charge_filter: charge_filter_1,
           charge_filter_id: charge_filter_1.id,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdowns:
         ),
         OpenStruct.new(
           charge_id: charge.id,
@@ -360,7 +401,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           grouped_by: nil,
           charge_filter: charge_filter_2,
           charge_filter_id: charge_filter_2.id,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdowns:
         )
       ]
     end
@@ -368,14 +410,14 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
     it "handles multiple filters with different projection calculations" do
       projection_result_1 = instance_double(
         "ProjectionResult",
-        projected_units: BigDecimal("10"),
+        projected_units: BigDecimal(10),
         projected_amount_cents: 100,
         projected_pricing_unit_amount_cents: 150
       )
 
       projection_result_2 = instance_double(
         "ProjectionResult",
-        projected_units: BigDecimal("14"),
+        projected_units: BigDecimal(14),
         projected_amount_cents: 140,
         projected_pricing_unit_amount_cents: 210
       )
@@ -428,7 +470,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           },
           grouped_by: {"region" => "us-east", "tier" => "premium"},
           charge_filter: nil,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdowns:
         ),
         OpenStruct.new(
           charge_id: charge.id,
@@ -446,7 +489,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           },
           grouped_by: {"region" => "us-west", "tier" => "standard"},
           charge_filter: nil,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdowns:
         ),
         OpenStruct.new(
           charge_id: charge.id,
@@ -464,7 +508,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           },
           grouped_by: {"region" => "eu-central", "tier" => "premium"},
           charge_filter: nil,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdowns:
         )
       ]
     end
@@ -472,21 +517,21 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
     it "handles multiple groups with independent projection calculations" do
       projection_result_1 = instance_double(
         "ProjectionResult",
-        projected_units: BigDecimal("6"),
+        projected_units: BigDecimal(6),
         projected_amount_cents: 60,
         projected_pricing_unit_amount_cents: 90
       )
 
       projection_result_2 = instance_double(
         "ProjectionResult",
-        projected_units: BigDecimal("8"),
+        projected_units: BigDecimal(8),
         projected_amount_cents: 80,
         projected_pricing_unit_amount_cents: 120
       )
 
       projection_result_3 = instance_double(
         "ProjectionResult",
-        projected_units: BigDecimal("10"),
+        projected_units: BigDecimal(10),
         projected_amount_cents: 100,
         projected_pricing_unit_amount_cents: 150
       )
@@ -549,7 +594,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           grouped_by: {"datacenter" => "dc1"},
           charge_filter: charge_filter,
           charge_filter_id: charge_filter.id,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdowns:
         ),
         OpenStruct.new(
           charge_id: charge.id,
@@ -568,7 +614,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           grouped_by: {"datacenter" => "dc2"},
           charge_filter: charge_filter,
           charge_filter_id: charge_filter.id,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdowns:
         )
       ]
     end
@@ -576,14 +623,14 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
     it "correctly handles fees with both filters and grouping" do
       projection_result_1 = instance_double(
         "ProjectionResult",
-        projected_units: BigDecimal("4"),
+        projected_units: BigDecimal(4),
         projected_amount_cents: 40,
         projected_pricing_unit_amount_cents: 60
       )
 
       projection_result_2 = instance_double(
         "ProjectionResult",
-        projected_units: BigDecimal("6"),
+        projected_units: BigDecimal(6),
         projected_amount_cents: 60,
         projected_pricing_unit_amount_cents: 90
       )
@@ -645,7 +692,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           },
           grouped_by: nil,
           charge_filter: nil,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdowns:
         ),
         OpenStruct.new(
           charge_id: charge_2.id,
@@ -663,7 +711,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           },
           grouped_by: nil,
           charge_filter: nil,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdowns:
         )
       ]
     end
@@ -671,14 +720,14 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
     it "handles multiple charges with independent calculations" do
       projection_result_1 = instance_double(
         "ProjectionResult",
-        projected_units: BigDecimal("20"),
+        projected_units: BigDecimal(20),
         projected_amount_cents: 200,
         projected_pricing_unit_amount_cents: 300
       )
 
       projection_result_2 = instance_double(
         "ProjectionResult",
-        projected_units: BigDecimal("40"),
+        projected_units: BigDecimal(40),
         projected_amount_cents: 400,
         projected_pricing_unit_amount_cents: 600
       )
@@ -728,7 +777,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           },
           grouped_by: nil,
           charge_filter: nil,
-          pricing_unit_usage:
+          pricing_unit_usage:,
+          presentation_breakdowns:
         )
       ]
     end
@@ -736,7 +786,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
     it "calls projection service only once per unique fee set" do
       projection_result = instance_double(
         "ProjectionResult",
-        projected_units: BigDecimal("10"),
+        projected_units: BigDecimal(10),
         projected_amount_cents: 100,
         projected_pricing_unit_amount_cents: 150
       )
@@ -765,7 +815,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
     it "returns current values for recurring charges" do
       projection_result = instance_double(
         "ProjectionResult",
-        projected_units: BigDecimal("10"),
+        projected_units: BigDecimal(10),
         projected_amount_cents: 100,
         projected_pricing_unit_amount_cents: 200
       )
