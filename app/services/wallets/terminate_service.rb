@@ -19,6 +19,8 @@ module Wallets
           end
           SendWebhookJob.perform_later("wallet.terminated", wallet)
         end
+
+        wallet.customer.flag_wallets_for_refresh
       end
 
       result.wallet = wallet

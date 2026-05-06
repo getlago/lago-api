@@ -91,6 +91,8 @@ module Wallets
 
       schedule_top_up(wallet)
 
+      customer.flag_wallets_for_refresh
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
