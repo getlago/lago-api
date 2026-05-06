@@ -277,19 +277,14 @@ module Events
               GROUP BY sorted_grouped_by
             SQL
           else
-            map_args = columns.sort.flat_map do |col|
-              [
-                ActiveRecord::Base.sanitize_sql_for_conditions(["?", col.to_s]),
-                ActiveRecord::Base.sanitize_sql_for_conditions(["events.sorted_properties[?]", col.to_s])
-              ]
-            end
+            map_args, col_expressions = sorted_properties_map_args(columns)
 
             sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value sorted_properties]), <<-SQL)
               SELECT
                 map(#{map_args.join(", ")}) as groups,
                 toDecimal32(count(), 0) as value
               FROM events
-              GROUP BY #{map_args.each_slice(2).map(&:last).join(", ")}
+              GROUP BY #{col_expressions.join(", ")}
             SQL
           end
 
@@ -454,19 +449,14 @@ module Events
               GROUP BY sorted_grouped_by
             SQL
           else
-            map_args = columns.sort.flat_map do |col|
-              [
-                ActiveRecord::Base.sanitize_sql_for_conditions(["?", col.to_s]),
-                ActiveRecord::Base.sanitize_sql_for_conditions(["events.sorted_properties[?]", col.to_s])
-              ]
-            end
+            map_args, col_expressions = sorted_properties_map_args(columns)
 
             sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
               SELECT
                 map(#{map_args.join(", ")}) as groups,
                 MAX(events.decimal_value) as value
               FROM events
-              GROUP BY #{map_args.each_slice(2).map(&:last).join(", ")}
+              GROUP BY #{col_expressions.join(", ")}
             SQL
           end
 
@@ -498,12 +488,7 @@ module Events
               ORDER BY sorted_grouped_by, timestamp DESC
             SQL
           else
-            map_args = columns.sort.flat_map do |col|
-              [
-                ActiveRecord::Base.sanitize_sql_for_conditions(["?", col.to_s]),
-                ActiveRecord::Base.sanitize_sql_for_conditions(["events.sorted_properties[?]", col.to_s])
-              ]
-            end
+            map_args, = sorted_properties_map_args(columns)
 
             sql = if grouped_by.blank?
               with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
@@ -551,19 +536,14 @@ module Events
               GROUP BY sorted_grouped_by
             SQL
           else
-            map_args = columns.sort.flat_map do |col|
-              [
-                ActiveRecord::Base.sanitize_sql_for_conditions(["?", col.to_s]),
-                ActiveRecord::Base.sanitize_sql_for_conditions(["events.sorted_properties[?]", col.to_s])
-              ]
-            end
+            map_args, col_expressions = sorted_properties_map_args(columns)
 
             sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
               SELECT
                 map(#{map_args.join(", ")}) as groups,
                 sum(events.decimal_value) as value
               FROM events
-              GROUP BY #{map_args.each_slice(2).map(&:last).join(", ")}
+              GROUP BY #{col_expressions.join(", ")}
             SQL
           end
 
@@ -790,12 +770,8 @@ module Events
       def grouped_arel_columns(columns = nil)
         return [[arel_table[:sorted_grouped_by].as("grouped_by")], group_names] if columns.blank?
 
-        map_sql = columns.sort.flat_map do |col|
-          [
-            ActiveRecord::Base.sanitize_sql_for_conditions(["?", col.to_s]),
-            ActiveRecord::Base.sanitize_sql_for_conditions(["sorted_properties[?]", col.to_s])
-          ]
-        end.join(", ")
+        map_args, = sorted_properties_map_args(columns, table: nil)
+        map_sql = map_args.join(", ")
 
         grouped_by_node = Arel::Nodes::As.new(
           Arel::Nodes::SqlLiteral.new("map(#{map_sql})"),
@@ -820,6 +796,19 @@ module Events
 
       def grouped_by_count
         1
+      end
+
+      def sorted_properties_map_args(columns, table: "events")
+        prefix = table ? "#{table}." : ""
+
+        map_args = columns.sort.flat_map do |col|
+          [
+            ActiveRecord::Base.sanitize_sql_for_conditions(["?", col.to_s]),
+            ActiveRecord::Base.sanitize_sql_for_conditions(["#{prefix}sorted_properties[?]", col.to_s])
+          ]
+        end
+
+        [map_args, map_args.each_slice(2).map(&:last)]
       end
 
       def operation_type_sql
