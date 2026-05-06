@@ -43,8 +43,8 @@ RSpec.describe DailyUsages::ComputeService do
     context "when there is usage" do
       before { event }
 
-      context "when usage contains charges usage with 0 units due to filters" do
-        it "does not include fees with 0 units" do
+      context "when usage contains charges with no consumption due to filters" do
+        it "does not include fees with no consumption" do
           billable_metric_filter = create(:billable_metric_filter, billable_metric:)
           charge_filter = create(:charge_filter, charge:, properties: {amount: "10"})
           create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: [billable_metric_filter.values.first])
