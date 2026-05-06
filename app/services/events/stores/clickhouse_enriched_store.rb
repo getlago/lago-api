@@ -467,15 +467,43 @@ module Events
         end
       end
 
-      def grouped_last(_columns = grouped_by)
+      def grouped_last(columns = grouped_by)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
-            SELECT
-              DISTINCT ON (sorted_grouped_by) sorted_grouped_by as groups,
-              events.decimal_value as value
-            FROM events
-            ORDER BY sorted_grouped_by, timestamp DESC
-          SQL
+          if columns == grouped_by
+            sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+              SELECT
+                DISTINCT ON (sorted_grouped_by) sorted_grouped_by as groups,
+                events.decimal_value as value
+              FROM events
+              ORDER BY sorted_grouped_by, timestamp DESC
+            SQL
+          else
+            map_args = columns.sort.flat_map do |col|
+              [
+                ActiveRecord::Base.sanitize_sql_for_conditions(["?", col.to_s]),
+                ActiveRecord::Base.sanitize_sql_for_conditions(["events.sorted_properties[?]", col.to_s])
+              ]
+            end
+
+            sql = if grouped_by.blank?
+              with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
+                SELECT
+                  map(#{map_args.join(", ")}) as groups,
+                  events.decimal_value as value
+                FROM events
+                ORDER BY timestamp DESC
+                LIMIT 1
+              SQL
+            else
+              with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
+                SELECT
+                  DISTINCT ON (sorted_grouped_by) map(#{map_args.join(", ")}) as groups,
+                  events.decimal_value as value
+                FROM events
+                ORDER BY sorted_grouped_by, timestamp DESC
+              SQL
+            end
+          end
 
           prepare_grouped_result(connection.select_all(sql))
         end
