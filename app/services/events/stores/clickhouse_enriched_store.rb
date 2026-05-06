@@ -367,9 +367,12 @@ module Events
         end
       end
 
-      def grouped_unique_count(_columns = grouped_by)
+      def grouped_unique_count(columns = grouped_by)
+        duplicated_unique_count_store = dup
+        duplicated_unique_count_store.grouped_by = columns
+
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: duplicated_unique_count_store)
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
               sanitize_colon(query.grouped_query),
@@ -781,11 +784,22 @@ module Events
         @arel_table ||= ::Clickhouse::EventsEnrichedExpanded.arel_table
       end
 
-      def grouped_arel_columns
-        [
-          [arel_table[:sorted_grouped_by].as("grouped_by")],
-          group_names
-        ]
+      def grouped_arel_columns(columns = nil)
+        return [[arel_table[:sorted_grouped_by].as("grouped_by")], group_names] if columns.blank?
+
+        map_sql = columns.sort.flat_map do |col|
+          [
+            ActiveRecord::Base.sanitize_sql_for_conditions(["?", col.to_s]),
+            ActiveRecord::Base.sanitize_sql_for_conditions(["sorted_properties[?]", col.to_s])
+          ]
+        end.join(", ")
+
+        grouped_by_node = Arel::Nodes::As.new(
+          Arel::Nodes::SqlLiteral.new("map(#{map_sql})"),
+          Arel::Nodes::SqlLiteral.new("grouped_by")
+        )
+
+        [[grouped_by_node], ["grouped_by"]]
       end
 
       def group_names
