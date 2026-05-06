@@ -50,7 +50,8 @@ module Api
                 :fixed_charge_add_on,
                 :invoice,
                 :invoiceable,
-                :true_up_fee
+                :true_up_fee,
+                :presentation_breakdowns
               ),
               ::V1::FeeSerializer,
               collection_name: "fees",
