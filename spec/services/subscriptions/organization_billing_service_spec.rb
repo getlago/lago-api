@@ -919,5 +919,113 @@ RSpec.describe Subscriptions::OrganizationBillingService do
         end
       end
     end
+
+    context "when grouping subscriptions by billing entity" do
+      let(:organization) { create(:organization, feature_flags: ["multi_entity_billing"]) }
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+      let(:interval) { :monthly }
+      let(:billing_time) { :anniversary }
+      let(:current_date) { subscription_at.next_month }
+
+      before { subscription.destroy }
+
+      context "when subscriptions have different billing entities" do
+        let(:subscription_default_entity) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+        let(:subscription_other_entity) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            billing_entity: other_billing_entity,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+
+        before do
+          subscription_default_entity
+          subscription_other_entity
+        end
+
+        it "produces separate billing jobs per billing entity" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription_default_entity], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription_other_entity], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+
+        context "without feature flag" do
+          let(:organization) { create(:organization) }
+
+          it "groups them into a single billing job" do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with(
+                contain_exactly(subscription_default_entity, subscription_other_entity),
+                current_date.to_i,
+                invoicing_reason: :subscription_periodic
+              )
+          end
+        end
+      end
+
+      context "when subscriptions share the same effective billing entity" do
+        let(:subscription1) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+        let(:subscription2) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            billing_entity: customer.billing_entity,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+
+        before do
+          subscription1
+          subscription2
+        end
+
+        it "groups them into a single billing job" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(
+              contain_exactly(subscription1, subscription2),
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic
+            )
+        end
+      end
+    end
   end
 end

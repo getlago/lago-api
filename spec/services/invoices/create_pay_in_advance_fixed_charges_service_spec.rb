@@ -696,6 +696,26 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
 
         expect(Invoices::Payments::CreateService).to have_received(:call_async)
       end
+
+      context "when invoice total is zero" do
+        let(:fixed_charge_event) do
+          create(:fixed_charge_event, subscription:, fixed_charge:, units: 0,
+            timestamp: Time.zone.at(timestamp))
+        end
+        let(:rule) { subscription.activation_rules.payment.sole }
+
+        it "marks the payment activation rule as satisfied" do
+          invoice_service.call
+
+          expect(rule.reload).to be_satisfied
+        end
+
+        it "activates the subscription" do
+          invoice_service.call
+
+          expect(subscription.reload).to be_active
+        end
+      end
     end
   end
 end

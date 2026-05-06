@@ -46,7 +46,9 @@ module Customers
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
 
-        customer.billing_entity = billing_entity if new_customer || (customer.editable? && params.key?(:billing_entity_code))
+        if new_customer || (params.key?(:billing_entity_code) && allow_billing_entity_update?(customer))
+          customer.billing_entity = billing_entity
+        end
         customer.name = params[:name] if params.key?(:name)
         customer.country = params[:country]&.upcase if params.key?(:country)
         customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
@@ -175,6 +177,10 @@ module Customers
       input_types = integration_customers&.map { |c| c.to_h.deep_symbolize_keys }&.map { |c| c[:integration_type] }
 
       input_types.length == input_types.uniq.length
+    end
+
+    def allow_billing_entity_update?(customer)
+      organization.feature_flag_enabled?(:multi_entity_billing) || customer.editable?
     end
 
     def create_metadata(customer:, args:)

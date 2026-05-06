@@ -613,6 +613,23 @@ RSpec.describe Invoices::SubscriptionService do
 
         expect(Invoices::Payments::CreateService).to have_received(:call_async)
       end
+
+      context "when invoice total is zero" do
+        let(:plan) { create(:plan, interval: "monthly", pay_in_advance: true, amount_cents: 0) }
+        let(:rule) { subscription.activation_rules.payment.sole }
+
+        it "marks the payment activation rule as satisfied" do
+          invoice_service.call
+
+          expect(rule.reload).to be_satisfied
+        end
+
+        it "activates the subscription" do
+          invoice_service.call
+
+          expect(subscription.reload).to be_active
+        end
+      end
     end
 
     context "when an error occurs" do
