@@ -83,6 +83,8 @@ module Wallets
         end
 
         create_metadata(wallet, params[:metadata]) if !params[:metadata].nil?
+
+        customer.flag_wallets_for_refresh
       end
 
       result.wallet = wallet
@@ -90,8 +92,6 @@ module Wallets
       SendWebhookJob.perform_after_commit("wallet.created", wallet)
 
       schedule_top_up(wallet)
-
-      customer.flag_wallets_for_refresh
 
       result
     rescue ActiveRecord::RecordInvalid => e

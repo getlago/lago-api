@@ -25,7 +25,7 @@ RSpec.describe Wallets::TerminateService do
     end
 
     it "sends a `wallet.terminated` webhook" do
-      expect { terminate_service.call }.to have_enqueued_job(SendWebhookJob).with("wallet.terminated", Wallet)
+      expect { terminate_service.call }.to have_enqueued_job_after_commit(SendWebhookJob).with("wallet.terminated", Wallet)
     end
 
     context "when the customer has another active wallet" do
