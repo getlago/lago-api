@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Credits::CalculateApplicableWalletTransactionsService do
+RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
   let(:invoice) do
     create(
       :invoice,

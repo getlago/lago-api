@@ -23,7 +23,7 @@ module Credits
       ActiveRecord::Base.transaction do
         Customers::LockService.call(customer:, scope: :prepaid_credit) do
           # per each wallet we create a single wallet transaction. wallets_transaction_amounts is a hash with wallet and total transaction amount
-          wallets_transaction_amounts = CalculateApplicableWalletTransactionsService.call!(invoice:).wallet_transactions
+          wallets_transaction_amounts = AllocatePrepaidCreditsByWalletsService.call!(invoice:).wallet_transactions
 
           wallets_transaction_amounts.each do |wallet, amount_cents|
             wallet_transaction = create_wallet_transaction(wallet, amount_cents)

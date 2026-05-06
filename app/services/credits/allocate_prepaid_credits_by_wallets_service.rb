@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Credits
-  class CalculateApplicableWalletTransactionsService < BaseService
+  class AllocatePrepaidCreditsByWalletsService < BaseService
     Result = BaseResult[:wallet_transactions]
 
     def initialize(invoice:)

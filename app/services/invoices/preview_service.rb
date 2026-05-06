@@ -266,7 +266,7 @@ module Invoices
       return unless customer.persisted?
       return unless invoice.total_amount_cents&.positive?
 
-      wallets_transactions = Credits::CalculateApplicableWalletTransactionsService.call!(invoice:).wallet_transactions
+      wallets_transactions = Credits::AllocatePrepaidCreditsByWalletsService.call!(invoice:).wallet_transactions
       amount_cents = wallets_transactions.sum { |_k, v| v }
 
       invoice.prepaid_credit_amount_cents += amount_cents
