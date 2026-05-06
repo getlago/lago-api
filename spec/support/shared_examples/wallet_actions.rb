@@ -661,6 +661,63 @@ RSpec.shared_examples "a wallet create endpoint" do
   end
 end
 
+RSpec.shared_examples "a wallet create endpoint with billing_entity_id" do
+  let(:create_params) do
+    {
+      external_customer_id: customer.external_id,
+      rate_amount: "1",
+      name: "Wallet1",
+      currency: "EUR"
+    }
+  end
+
+  context "when multi_entity_billing is enabled" do
+    before { organization.update!(feature_flags: ["multi_entity_billing"]) }
+
+    context "when billing_entity_id is provided" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+
+      before { create_params[:billing_entity_id] = billing_entity.id }
+
+      it "assigns the billing entity to the wallet" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet = Wallet.find(json[:wallet][:lago_id])
+        expect(wallet.billing_entity_id).to eq(billing_entity.id)
+      end
+    end
+
+    context "when billing_entity_id does not match any entity" do
+      before { create_params[:billing_entity_id] = SecureRandom.uuid }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
+  context "when multi_entity_billing is not enabled" do
+    context "when billing_entity_id is provided" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+
+      before { create_params[:billing_entity_id] = billing_entity.id }
+
+      it "does not assign a billing entity" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet = Wallet.find(json[:wallet][:lago_id])
+        expect(wallet.billing_entity_id).to be_nil
+      end
+    end
+  end
+end
+
 RSpec.shared_examples "a wallet update endpoint" do
   let(:wallet) { create(:wallet, customer:) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }

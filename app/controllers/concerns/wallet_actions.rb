@@ -97,6 +97,7 @@ module WalletActions
       :transaction_name,
       :transaction_priority,
       :billing_entity_code,
+      :billing_entity_id,
       metadata: {},
       transaction_metadata: [
         :key,

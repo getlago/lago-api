@@ -206,7 +206,9 @@ module Wallets
     def billing_entity
       return @billing_entity if defined? @billing_entity
 
-      @billing_entity = if params[:billing_entity_code].present?
+      @billing_entity = if params[:billing_entity_id].present?
+        BillingEntity.find_by(id: params[:billing_entity_id])
+      elsif params[:billing_entity_code].present?
         BillingEntity.find_by(code: params[:billing_entity_code])
       else
         customer.billing_entity

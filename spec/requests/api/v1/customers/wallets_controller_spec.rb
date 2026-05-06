@@ -73,6 +73,12 @@ RSpec.describe Api::V1::Customers::WalletsController do
         end
       end
     end
+
+    it_behaves_like "a wallet create endpoint with billing_entity_id" do
+      subject do
+        post_with_token(organization, "/api/v1/customers/#{external_id}/wallets", {wallet: create_params})
+      end
+    end
   end
 
   describe "PUT /api/v1/customers/:customer_external_id/wallets/:code" do

@@ -28,6 +28,12 @@ RSpec.describe Api::V1::WalletsController do
         end
       end
     end
+
+    it_behaves_like "a wallet create endpoint with billing_entity_id" do
+      subject do
+        post_with_token(organization, "/api/v1/wallets", {wallet: create_params})
+      end
+    end
   end
 
   describe "PUT /api/v1/wallets/:id" do
