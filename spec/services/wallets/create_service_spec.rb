@@ -989,6 +989,92 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "when multi_entity_billing is enabled" do
+      let!(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
+
+      before do
+        organization.update!(feature_flags: ["multi_entity_billing"])
+      end
+
+      context "when billing_entity_code is provided" do
+        let(:params) do
+          {
+            name: "New Wallet",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits: "0.00",
+            granted_credits: "0.00",
+            billing_entity_code: "be_code"
+          }
+        end
+
+        it "assigns the billing entity to the wallet" do
+          expect(service_result).to be_success
+
+          wallet = service_result.wallet
+          expect(wallet.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+
+      context "when billing_entity_code is not provided" do
+        it "falls back to the customer billing entity" do
+          expect(service_result).to be_success
+
+          wallet = service_result.wallet
+          expect(wallet.billing_entity_id).to eq(customer.billing_entity.id)
+        end
+      end
+
+      context "when billing_entity_code does not match any entity" do
+        let(:params) do
+          {
+            name: "New Wallet",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits: "0.00",
+            granted_credits: "0.00",
+            billing_entity_code: "nonexistent"
+          }
+        end
+
+        it "returns a not found error" do
+          expect(service_result).not_to be_success
+          expect(service_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(service_result.error.resource).to eq("billing_entity")
+        end
+      end
+    end
+
+    context "when multi_entity_billing is not enabled" do
+      let(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
+
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          paid_credits: "0.00",
+          granted_credits: "0.00",
+          billing_entity_code: "be_code"
+        }
+      end
+
+      before { billing_entity }
+
+      it "does not assign the billing entity even if code is provided" do
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.billing_entity_id).to be_nil
+      end
+    end
+
     context "when neither code nor name is provided" do
       let(:params) do
         {

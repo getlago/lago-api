@@ -602,6 +602,63 @@ RSpec.shared_examples "a wallet create endpoint" do
       expect(json[:wallet][:applied_invoice_custom_sections].count).to eq(wallet.applied_invoice_custom_sections.count)
     end
   end
+
+  context "when multi_entity_billing is enabled" do
+    before { organization.update!(feature_flags: ["multi_entity_billing"]) }
+
+    context "when billing_entity_code is provided" do
+      let(:billing_entity) { create(:billing_entity, organization:, code: "be_wallet") }
+
+      before { create_params[:billing_entity_code] = billing_entity.code }
+
+      it "assigns the billing entity to the wallet" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet = Wallet.find(json[:wallet][:lago_id])
+        expect(wallet.billing_entity_id).to eq(billing_entity.id)
+      end
+    end
+
+    context "when billing_entity_code is not provided" do
+      it "falls back to the customer billing entity" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet = Wallet.find(json[:wallet][:lago_id])
+        expect(wallet.billing_entity_id).to eq(customer.billing_entity.id)
+      end
+    end
+
+    context "when billing_entity_code does not match any entity" do
+      before { create_params[:billing_entity_code] = "nonexistent" }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
+  context "when multi_entity_billing is not enabled" do
+    context "when billing_entity_code is provided" do
+      let(:billing_entity) { create(:billing_entity, organization:, code: "be_wallet") }
+
+      before { create_params[:billing_entity_code] = billing_entity.code }
+
+      it "does not assign a billing entity" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet = Wallet.find(json[:wallet][:lago_id])
+        expect(wallet.billing_entity_id).to be_nil
+      end
+    end
+  end
 end
 
 RSpec.shared_examples "a wallet update endpoint" do
