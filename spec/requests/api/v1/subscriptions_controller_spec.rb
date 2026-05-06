@@ -752,7 +752,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           subject
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq({payment_method: %w[manual_payment_method_invalid_for_payment_activation_rules]})
+          expect(json[:error_details]).to eq({customer: %w[manual_payment_method_invalid_for_payment_activation_rules]})
         end
       end
 
@@ -763,7 +763,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           subject
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq({payment_method: %w[customer_has_no_linked_payment_provider]})
+          expect(json[:error_details]).to eq({customer: %w[no_linked_payment_provider]})
         end
       end
     end

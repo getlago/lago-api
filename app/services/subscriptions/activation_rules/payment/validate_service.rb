@@ -26,54 +26,51 @@ module Subscriptions
         end
 
         def valid_payment_method?
-          return true if payment_provider? && payment_method_available?
+          if effective_payment_method_type.present?
+            return true if effective_payment_method_type_provider? && resolved_payment_method.present?
+          elsif customer_payment_provider? && resolved_payment_method.present?
+            return true
+          end
 
-          add_error(field: :payment_method, error_code: failure_error_code)
+          add_error(field: :customer, error_code: failure_error_code)
         end
 
-        def payment_provider?
-          return custom_payment_method_type_provider? if custom_payment_method?
-          return subscription_payment_method_type_provider? if args[:subscription]
-
-          customer_payment_provider?
+        def effective_payment_method_type_provider?
+          effective_payment_method_type == PaymentMethod::PAYMENT_METHOD_TYPES[:provider]
         end
 
-        def payment_method_available?
-          return custom_payment_method_id? || customer&.default_payment_method.present? if custom_payment_method?
-          return args[:subscription].payment_method_id.present? || customer&.default_payment_method.present? if args[:subscription]
+        def effective_payment_method_type
+          return args[:payment_method][:payment_method_type] if args[:payment_method]&.key?(:payment_method_type)
 
-          customer&.default_payment_method.present?
+          args[:subscription]&.payment_method_type
+        end
+
+        def effective_payment_method_id
+          return args[:payment_method][:payment_method_id] if args[:payment_method]&.key?(:payment_method_id)
+
+          args[:subscription]&.payment_method_id
+        end
+
+        def resolved_payment_method
+          return args[:customer].payment_methods.find_by(id: effective_payment_method_id) if effective_payment_method_id.present?
+
+          args[:customer].default_payment_method
         end
 
         def failure_error_code
-          return "customer_has_no_linked_payment_provider" if !custom_payment_method? && args[:subscription].nil? && !customer_payment_provider?
-          return "customer_has_no_default_payment_method" if payment_provider?
+          if effective_payment_method_type.present?
+            return "manual_payment_method_invalid_for_payment_activation_rules" unless effective_payment_method_type_provider?
+          elsif !customer_payment_provider?
+            return "no_linked_payment_provider"
+          end
 
-          "manual_payment_method_invalid_for_payment_activation_rules"
-        end
+          return "payment_method_not_found" if effective_payment_method_id.present?
 
-        def custom_payment_method?
-          args[:payment_method].present?
-        end
-
-        def custom_payment_method_type_provider?
-          args[:payment_method][:payment_method_type] == PaymentMethod::PAYMENT_METHOD_TYPES[:provider]
-        end
-
-        def custom_payment_method_id?
-          custom_payment_method? && args[:payment_method][:payment_method_id].present?
-        end
-
-        def subscription_payment_method_type_provider?
-          args[:subscription].payment_method_type == PaymentMethod::PAYMENT_METHOD_TYPES[:provider]
+          "no_default_payment_method"
         end
 
         def customer_payment_provider?
-          args[:customer]&.payment_provider.present?
-        end
-
-        def customer
-          @customer ||= args[:customer] || args[:subscription]&.customer
+          args[:customer].payment_provider.present?
         end
       end
     end
