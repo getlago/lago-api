@@ -97,7 +97,7 @@ module Customers
       #       external_id,
       #       account_type,
       #       billing_entity_id (gated by editable? unless multi_entity_billing flag is enabled)
-      if args.key?(:billing_entity_code) && (organization.feature_flag_enabled?(:multi_entity_billing) || customer.editable?)
+      if args.key?(:billing_entity_code) && allow_billing_entity_update?
         customer.billing_entity = billing_entity
       end
 
@@ -214,6 +214,10 @@ module Customers
       return true if metadata.count <= ::Metadata::CustomerMetadata::COUNT_PER_CUSTOMER
 
       false
+    end
+
+    def allow_billing_entity_update?
+      organization.feature_flag_enabled?(:multi_entity_billing) || customer.editable?
     end
 
     def assign_premium_attributes(customer, args)
