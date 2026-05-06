@@ -3353,6 +3353,7 @@ Create Subscription input arguments
 """
 input CreateSubscriptionInput {
   activationRules: [SubscriptionActivationRuleInput!]
+  billingEntityId: ID
   billingTime: BillingTimeEnum!
 
   """
