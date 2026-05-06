@@ -58,7 +58,7 @@ module Wallets
 
       InvoiceCustomSections::AttachToResourceService.call(resource: wallet, params:)
       SendWebhookJob.perform_later("wallet.updated", wallet)
-      Customers::RefreshWalletsService.call(customer: wallet.customer)
+      Customers::RefreshWalletsService.call(customer: wallet.customer) if needs_refresh?
 
       result.wallet = wallet
       result
@@ -121,6 +121,7 @@ module Wallets
         next if existing_wallet_billable_metric_ids.include?(bm.id)
 
         WalletTarget.create!(wallet:, billable_metric: bm, organization_id: wallet.organization_id)
+        @wallet_targets_changed = true
       end
 
       sanitize_wallet_billable_metrics(existing_wallet_billable_metric_ids) if existing_wallet_billable_metric_ids.present?
@@ -129,8 +130,18 @@ module Wallets
     def sanitize_wallet_billable_metrics(existing_wallet_billable_metric_ids)
       not_needed_wallet_target_ids = existing_wallet_billable_metric_ids - billable_metrics.pluck(:id)
       not_needed_wallet_target_ids.each do |wallet_billable_metric_id|
-        WalletTarget.find_by(wallet:, billable_metric_id: wallet_billable_metric_id, organization: wallet.organization)&.destroy!
+        target = WalletTarget.find_by(wallet:, billable_metric_id: wallet_billable_metric_id, organization: wallet.organization)
+        next unless target
+
+        target.destroy!
+        @wallet_targets_changed = true
       end
+    end
+
+    def needs_refresh?
+      return true if @wallet_targets_changed
+
+      (wallet.saved_changes.keys & Wallet::REFRESH_RELEVANT_ATTRIBUTES).any?
     end
 
     def billable_metric_identifiers
