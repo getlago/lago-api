@@ -711,13 +711,16 @@ module Events
         BigDecimal(result["aggregation"].presence || 0)
       end
 
-      def grouped_weighted_sum(_columns = grouped_by, initial_values: [])
+      def grouped_weighted_sum(columns = grouped_by, initial_values: [])
+        duplicated_weighted_sum_store = dup
+        duplicated_weighted_sum_store.grouped_by = columns
+
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          query = Clickhouse::WeightedSumQuery.new(store: self)
+          query = Clickhouse::WeightedSumQuery.new(store: duplicated_weighted_sum_store)
 
           # NOTE: build the list of initial values for each groups
           #       from the events in the period
-          formatted_initial_values = grouped_count.map do |group|
+          formatted_initial_values = grouped_count(columns).map do |group|
             value = 0
             previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
             value = previous_group[:value] if previous_group
