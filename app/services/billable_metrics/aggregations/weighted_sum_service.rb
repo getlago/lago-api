@@ -19,6 +19,10 @@ module BillableMetrics
         result.total_aggregated_units = result.variation
         result.options = {}
 
+        if presentation_by.present?
+          result.breakdowns = event_store.grouped_weighted_sum(uniq_grouped_by_and_presentation_by, initial_value:)
+        end
+
         if billable_metric.recurring?
           result.total_aggregated_units = latest_value + result.variation
           result.recurring_updated_at = event_store.last_event&.timestamp || from_datetime
@@ -44,6 +48,10 @@ module BillableMetrics
         if billable_metric.recurring?
           latest_values = grouped_latest_values
           last_events = event_store.grouped_last_event
+        end
+
+        if presentation_by.present?
+          result.breakdowns = event_store.grouped_weighted_sum(uniq_grouped_by_and_presentation_by, initial_values: grouped_latest_values)
         end
 
         result.aggregations = aggregations.map do |aggregation|

@@ -38,6 +38,28 @@ RSpec.describe RecurringTransactionRule do
     end
   end
 
+  describe "#currently_active?" do
+    it "returns true for active rules with no expiration" do
+      rule = build_stubbed(:recurring_transaction_rule, status: :active, expiration_at: nil)
+      expect(rule.currently_active?).to be true
+    end
+
+    it "returns true for active rules expiring in the future" do
+      rule = build_stubbed(:recurring_transaction_rule, status: :active, expiration_at: 1.day.from_now)
+      expect(rule.currently_active?).to be true
+    end
+
+    it "returns false for active rules whose expiration has passed" do
+      rule = build_stubbed(:recurring_transaction_rule, status: :active, expiration_at: 1.day.ago)
+      expect(rule.currently_active?).to be false
+    end
+
+    it "returns false for terminated rules" do
+      rule = build_stubbed(:recurring_transaction_rule, status: :terminated, expiration_at: nil)
+      expect(rule.currently_active?).to be false
+    end
+  end
+
   describe "#mark_as_terminated!" do
     let(:recurring_transaction_rule) { create(:recurring_transaction_rule, status: :active) }
 

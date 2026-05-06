@@ -54,6 +54,7 @@ RSpec.describe Resolvers::InvoiceResolver do
               units
               preciseUnitAmount
               chargeFilter { invoiceDisplayName values }
+              presentationBreakdowns { presentationBy units }
               appliedTaxes {
                 taxCode
                 taxName
@@ -77,6 +78,7 @@ RSpec.describe Resolvers::InvoiceResolver do
             itemCode
             itemName
             creditableAmountCents
+            presentationBreakdowns { presentationBy units }
             charge {
               id
               billableMetric {
@@ -123,7 +125,7 @@ RSpec.describe Resolvers::InvoiceResolver do
       charges_to_datetime: Time.current.end_of_month - 1.month,
       fixed_charges_from_datetime: Time.current.beginning_of_month + 1.month,
       fixed_charges_to_datetime: Time.current.end_of_month + 1.month
-    })
+    }, presentation_breakdowns: [build(:presentation_breakdown, organization:)])
   end
   let(:charge_fee) do
     create(:charge_fee, subscription:, invoice:, amount_cents: 10, properties: {
@@ -133,7 +135,7 @@ RSpec.describe Resolvers::InvoiceResolver do
       charges_to_datetime: Time.current.end_of_month - 1.month,
       fixed_charges_from_datetime: Time.current.beginning_of_month + 1.month,
       fixed_charges_to_datetime: Time.current.end_of_month + 1.month
-    })
+    }, presentation_breakdowns: [build(:presentation_breakdown, organization:)])
   end
   let(:fixed_charge_fee) do
     create(:fixed_charge_fee, subscription:, invoice:, amount_cents: 10, properties: {
@@ -143,7 +145,7 @@ RSpec.describe Resolvers::InvoiceResolver do
       charges_to_datetime: Time.current.end_of_month - 1.month,
       fixed_charges_from_datetime: Time.current.beginning_of_month + 1.month,
       fixed_charges_to_datetime: Time.current.end_of_month + 1.month
-    })
+    }, presentation_breakdowns: [build(:presentation_breakdown, organization:)])
   end
 
   before do
@@ -183,16 +185,25 @@ RSpec.describe Resolvers::InvoiceResolver do
     expect(subscription_fee["id"]).to eq(fee.id)
     expect(subscription_fee["properties"]["fromDatetime"]).to eq(Time.current.beginning_of_month.to_datetime.iso8601)
     expect(subscription_fee["properties"]["toDatetime"]).to eq(Time.current.end_of_month.to_datetime.iso8601)
+    expect(subscription_fee["presentationBreakdowns"]).to eq([
+      {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
+    ])
 
     charge_fee_result = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "charge" }
     expect(charge_fee_result["id"]).to eq(charge_fee.id)
     expect(charge_fee_result["properties"]["fromDatetime"]).to eq((Time.current.beginning_of_month - 1.month).to_datetime.iso8601)
     expect(charge_fee_result["properties"]["toDatetime"]).to eq((Time.current.end_of_month - 1.month).to_datetime.iso8601)
+    expect(charge_fee_result["presentationBreakdowns"]).to eq([
+      {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
+    ])
 
     fixed_charge_fee_result = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "fixed_charge" }
     expect(fixed_charge_fee_result["id"]).to eq(fixed_charge_fee.id)
     expect(fixed_charge_fee_result["properties"]["fromDatetime"]).to eq((Time.current.beginning_of_month + 1.month).to_datetime.iso8601)
     expect(fixed_charge_fee_result["properties"]["toDatetime"]).to eq((Time.current.end_of_month + 1.month).to_datetime.iso8601)
+    expect(fixed_charge_fee_result["presentationBreakdowns"]).to eq([
+      {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
+    ])
   end
 
   it "includes filters for the fee" do
@@ -231,7 +242,16 @@ RSpec.describe Resolvers::InvoiceResolver do
       unit_amount_cents: 20
     )
 
-    fee_with_usage = create(:fee, subscription:, invoice:, charge:, amount_cents: 100, organization:, pricing_unit_usage:)
+    fee_with_usage = create(
+      :fee,
+      subscription:,
+      invoice:,
+      charge:,
+      amount_cents: 100,
+      organization:,
+      pricing_unit_usage:,
+      presentation_breakdowns: [build(:presentation_breakdown, organization:)]
+    )
 
     result = execute_graphql(
       current_user: membership.user,
@@ -252,6 +272,9 @@ RSpec.describe Resolvers::InvoiceResolver do
     expect(fee_data["pricingUnitUsage"]["shortName"]).to eq(pricing_unit_usage.short_name)
     expect(fee_data["pricingUnitUsage"]["pricingUnit"]["code"]).to eq(pricing_unit.code)
     expect(fee_data["pricingUnitUsage"]["pricingUnit"]["name"]).to eq(pricing_unit.name)
+    expect(fee_data["presentationBreakdowns"]).to eq([
+      {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
+    ])
   end
 
   context "when invoice is not found" do
@@ -285,7 +308,17 @@ RSpec.describe Resolvers::InvoiceResolver do
         values: [billable_metric_filter.values.first]
       )
     end
-    let(:fee) { create(:charge_fee, subscription:, invoice:, charge_filter:, charge:, amount_cents: 10) }
+    let(:fee) do
+      create(
+        :charge_fee,
+        subscription:,
+        invoice:,
+        charge_filter:,
+        charge:,
+        amount_cents: 10,
+        presentation_breakdowns: [build(:presentation_breakdown, organization:)]
+      )
+    end
 
     let(:charge) do
       create(:standard_charge, :deleted, billable_metric:)
@@ -319,7 +352,14 @@ RSpec.describe Resolvers::InvoiceResolver do
     let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }
     let(:add_on) { create(:add_on, organization:) }
     let(:applied_add_on) { create(:applied_add_on, add_on:, customer:) }
-    let(:fee) { create(:add_on_fee, invoice:, applied_add_on:) }
+    let(:fee) do
+      create(
+        :add_on_fee,
+        invoice:,
+        applied_add_on:,
+        presentation_breakdowns: [build(:presentation_breakdown, organization:)]
+      )
+    end
 
     it "returns a single invoice" do
       result = execute_graphql(
@@ -344,6 +384,9 @@ RSpec.describe Resolvers::InvoiceResolver do
         "itemCode" => add_on.code,
         "itemName" => add_on.name
       )
+      expect(data["fees"].first["presentationBreakdowns"]).to eq([
+        {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
+      ])
     end
 
     context "with a deleted add_on" do
@@ -373,6 +416,9 @@ RSpec.describe Resolvers::InvoiceResolver do
           "itemCode" => add_on.code,
           "itemName" => add_on.name
         )
+        expect(data["fees"].first["presentationBreakdowns"]).to eq([
+          {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
+        ])
       end
     end
   end
@@ -405,7 +451,14 @@ RSpec.describe Resolvers::InvoiceResolver do
 
   context "with a credit invoice" do
     let(:invoice) { create(:invoice, :credit, customer:, organization:) }
-    let(:fee) { create(:credit_fee, invoice:, invoiceable: wallet_transaction) }
+    let(:fee) do
+      create(
+        :credit_fee,
+        invoice:,
+        invoiceable: wallet_transaction,
+        presentation_breakdowns: [build(:presentation_breakdown, organization:)]
+      )
+    end
     let(:wallet_transaction) { create(:wallet_transaction, organization:, wallet:) }
     let(:wallet) { create(:wallet, organization:, name: "wallet name") }
 
@@ -418,6 +471,9 @@ RSpec.describe Resolvers::InvoiceResolver do
       graphql_wallet_transaction = data.dig("fees", 0, "walletTransaction")
       expect(graphql_wallet_transaction["name"]).to eq("Custom Transaction Name")
       expect(graphql_wallet_transaction["walletName"]).to eq("wallet name")
+      expect(data.dig("fees", 0, "presentationBreakdowns")).to eq([
+        {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
+      ])
     end
   end
 end

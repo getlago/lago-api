@@ -42,7 +42,7 @@ RSpec.describe Subscription do
       expect(subject).to belong_to(:plan)
       expect(subject).to belong_to(:previous_subscription).optional
       expect(subject).to belong_to(:organization)
-      expect(subject).to have_one(:billing_entity).through(:customer)
+      expect(subject).to belong_to(:billing_entity).optional
       expect(subject).to have_many(:applied_invoice_custom_sections).class_name("Subscription::AppliedInvoiceCustomSection").dependent(:destroy)
       expect(subject).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
       expect(subject).to have_many(:next_subscriptions).class_name("Subscription").with_foreign_key(:previous_subscription_id)
@@ -68,6 +68,28 @@ RSpec.describe Subscription do
   describe "Clickhouse associations", clickhouse: true do
     it do
       expect(subject).to have_many(:activity_logs).class_name("Clickhouse::ActivityLog")
+    end
+  end
+
+  describe "#billing_entity" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+
+    context "when subscription has a billing_entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:subscription) { create(:subscription, customer:, billing_entity:) }
+
+      it "returns the subscription billing_entity" do
+        expect(subscription.billing_entity).to eq(billing_entity)
+      end
+    end
+
+    context "when subscription does not have a billing_entity" do
+      let(:subscription) { create(:subscription, customer:, billing_entity: nil) }
+
+      it "falls back to the customer billing_entity" do
+        expect(subscription.billing_entity).to eq(customer.billing_entity)
+      end
     end
   end
 

@@ -18,12 +18,13 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { {event: pay_in_advance_event, grouped_by:, matching_filters:, ignored_filters:} }
+  let(:filters) { {event: pay_in_advance_event, grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }
 
   let(:subscription) { create(:subscription, started_at: Time.zone.parse("2022-12-01 00:00:00")) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:grouped_by) { nil }
+  let(:presentation_by) { nil }
   let(:matching_filters) { {} }
   let(:ignored_filters) { [] }
 
@@ -89,6 +90,108 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
     expect(result.aggregation).to eq(9.64517) # 5 + (12*6/31) + (12*6/31)
     expect(result.pay_in_advance_aggregation).to be_zero
     expect(result.count).to eq(4)
+  end
+
+  context "with presentation group keys" do
+    let(:presentation_by) { ["cloud"] }
+
+    let(:latest_events) do
+      create_list(
+        :event,
+        2,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        customer:,
+        subscription:,
+        timestamp: from_datetime + 25.days,
+        properties: {
+          total_count: 12,
+          cloud: "aws"
+        }
+      ) + [
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: from_datetime + 25.days,
+          properties: {
+            total_count: 7,
+            cloud: "gcp"
+          }
+        )
+      ]
+    end
+
+    it "returns the presentation breakdowns" do
+      result = sum_service.aggregate(options:)
+
+      aws = result.breakdowns.find { |b| b[:groups]["cloud"] == "aws" }
+      gcp = result.breakdowns.find { |b| b[:groups]["cloud"] == "gcp" }
+
+      expect(aws[:value]).to eq(24)
+      expect(gcp[:value]).to eq(7)
+    end
+
+    context "with grouped_by" do
+      let(:grouped_by) { ["agent_name"] }
+      let(:latest_events) do
+        [
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: from_datetime + 25.days,
+            properties: {
+              total_count: 12,
+              agent_name: "aragorn",
+              cloud: "aws"
+            }
+          ),
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: from_datetime + 25.days,
+            properties: {
+              total_count: 7,
+              agent_name: "aragorn",
+              cloud: "gcp"
+            }
+          ),
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: from_datetime + 25.days,
+            properties: {
+              total_count: 3,
+              agent_name: "frodo",
+              cloud: "aws"
+            }
+          )
+        ]
+      end
+
+      it "returns the presentation breakdowns per group" do
+        result = sum_service.aggregate(options:)
+
+        aragorn_aws = result.breakdowns.find { |b| b[:groups] == {"agent_name" => "aragorn", "cloud" => "aws"} }
+        aragorn_gcp = result.breakdowns.find { |b| b[:groups] == {"agent_name" => "aragorn", "cloud" => "gcp"} }
+        frodo_aws = result.breakdowns.find { |b| b[:groups] == {"agent_name" => "frodo", "cloud" => "aws"} }
+
+        expect(aragorn_aws[:value]).to eq(12)
+        expect(aragorn_gcp[:value]).to eq(7)
+        expect(frodo_aws[:value]).to eq(3)
+      end
+    end
   end
 
   context "when aggregation is performed on billing date for pay in advance case" do

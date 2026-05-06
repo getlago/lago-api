@@ -51,6 +51,10 @@ class RecurringTransactionRule < ApplicationRecord
   }
   scope :expired, -> { where("recurring_transaction_rules.expiration_at::timestamp(0) <= ?", Time.current) }
 
+  def currently_active?
+    active? && (expiration_at.nil? || expiration_at > Time.current)
+  end
+
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp
     terminated!
