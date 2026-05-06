@@ -475,15 +475,32 @@ module Events
         end
       end
 
-      def grouped_sum(_columns = grouped_by)
+      def grouped_sum(columns = grouped_by)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
-            SELECT
-              sorted_grouped_by as groups,
-              sum(events.decimal_value) as value
-            FROM events
-            GROUP BY sorted_grouped_by
-          SQL
+          if columns == grouped_by
+            sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+              SELECT
+                sorted_grouped_by as groups,
+                sum(events.decimal_value) as value
+              FROM events
+              GROUP BY sorted_grouped_by
+            SQL
+          else
+            map_args = columns.sort.flat_map do |col|
+              [
+                ActiveRecord::Base.sanitize_sql_for_conditions(["?", col.to_s]),
+                ActiveRecord::Base.sanitize_sql_for_conditions(["events.sorted_properties[?]", col.to_s])
+              ]
+            end
+
+            sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
+              SELECT
+                map(#{map_args.join(", ")}) as groups,
+                sum(events.decimal_value) as value
+              FROM events
+              GROUP BY #{map_args.each_slice(2).map(&:last).join(", ")}
+            SQL
+          end
 
           prepare_grouped_result(connection.select_all(sql))
         end
