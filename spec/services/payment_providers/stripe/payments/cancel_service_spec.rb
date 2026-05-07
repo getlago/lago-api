@@ -40,8 +40,21 @@ RSpec.describe PaymentProviders::Stripe::Payments::CancelService do
         .with(body: hash_including("cancellation_reason" => "abandoned"))
     end
 
-    it "returns a successful result" do
+    it "returns a successful result with the payment" do
       expect(result).to be_success
+      expect(result.payment).to eq(payment)
+    end
+
+    it "writes the canceled status from the Stripe response onto the payment" do
+      result
+
+      expect(payment.reload.status).to eq("canceled")
+    end
+
+    it "maps the canceled status to a failed payable_payment_status" do
+      result
+
+      expect(payment.reload.payable_payment_status).to eq("failed")
     end
   end
 
@@ -64,6 +77,10 @@ RSpec.describe PaymentProviders::Stripe::Payments::CancelService do
       result
 
       expect(Rails.logger).to have_received(:info).with(a_string_matching(/Stripe.*not cancelable.*succeeded/))
+    end
+
+    it "does not mutate the payment record" do
+      expect { result }.not_to change { payment.reload.attributes }
     end
   end
 
