@@ -2,6 +2,8 @@
 
 module BillableMetricFilters
   class CreateOrUpdateBatchService < BaseService
+    BATCH_SIZE = 1_000
+
     def initialize(billable_metric:, filters_params:)
       @billable_metric = billable_metric
       @filters_params = filters_params
@@ -17,6 +19,8 @@ module BillableMetricFilters
 
         return result
       end
+
+      return result.validation_failure!(errors: {values: ["value_is_mandatory"]}) if any_filter_params_values_blank?
 
       ActiveRecord::Base.transaction do
         filters_params.each do |filter_param|
@@ -35,7 +39,7 @@ module BillableMetricFilters
                   *deleted_values
                 )
 
-              filter_values.each { |filter_value| discard_filter_value(filter_value, new_values:) }
+              discard_filter_values_in_batches(filter_values, new_values:)
             end
           end
 
@@ -60,6 +64,12 @@ module BillableMetricFilters
 
     attr_reader :billable_metric, :filters_params
 
+    def any_filter_params_values_blank?
+      filters_params.any? do |filter_param|
+        filter_param[:values].blank?
+      end
+    end
+
     def discard_all_filters
       ActiveRecord::Base.transaction do
         billable_metric.filters.each { discard_filter(it) }
@@ -67,26 +77,80 @@ module BillableMetricFilters
     end
 
     def discard_filter(filter)
-      filter.filter_values.each { discard_filter_value(it) }
+      discard_filter_values_in_batches(filter.filter_values)
+
       filter.discard!
     end
 
-    def discard_filter_value(filter_value, new_values: [])
-      deleted_values = filter_value.values - new_values
+    def discard_filter_values_in_batches(filter_values, new_values: [])
+      filter_values.unscope(:order).in_batches(of: BATCH_SIZE) do |filter_value_batch|
+        values_to_trim, values_to_discard = filter_value_batch.partition { |fv| trimmable?(fv, new_values) }
 
-      if deleted_values.any?
-        values = filter_value.values - deleted_values
-
-        if values.any?
-          filter_value.update!(values:)
-          return
-        end
+        bulk_update_trimmed_filter_values(values_to_trim, new_values)
+        discard_filter_values_and_emptied_charge_filters(values_to_discard)
       end
+    end
 
-      filter_value.discard!
-      return if filter_value.charge_filter.values.where.not(id: filter_value.id).exists?
+    def trimmable?(filter_value, new_values)
+      filter_value.values.intersect?(new_values)
+    end
 
-      filter_value.charge_filter.discard! unless filter_value.charge_filter.discarded?
+    def bulk_update_trimmed_filter_values(filter_values, new_values)
+      return if filter_values.empty?
+
+      filter_values.group_by { |fv| fv.values & new_values }.each do |result_values, group|
+        ChargeFilterValue.where(id: group.map(&:id)).update_all( # rubocop:disable Rails/SkipsModelValidations
+          values: result_values, updated_at: Time.current
+        )
+      end
+    end
+
+    def discard_filter_values_and_emptied_charge_filters(filter_values)
+      return if filter_values.empty?
+
+      filter_value_ids = filter_values.map(&:id)
+      bulk_discard_filter_values(filter_value_ids)
+      bulk_discard_emptied_charge_filters_for(filter_value_ids)
+    end
+
+    def bulk_discard_filter_values(filter_value_ids)
+      ChargeFilterValue
+        .where(id: filter_value_ids)
+        .update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    def bulk_discard_emptied_charge_filters_for(filter_value_ids)
+      charge_filter_ids_to_discard = emptied_charge_filter_ids_for(filter_value_ids)
+      return if charge_filter_ids_to_discard.empty?
+
+      ChargeFilter
+        .where(id: charge_filter_ids_to_discard, deleted_at: nil)
+        .unscope(:order)
+        .update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    def emptied_charge_filter_ids_for(filter_value_ids)
+      charge_filter_ids = charge_filter_ids_referenced_by(filter_value_ids)
+      return [] if charge_filter_ids.empty?
+
+      charge_filter_ids - charge_filter_ids_with_kept_values(charge_filter_ids)
+    end
+
+    def charge_filter_ids_referenced_by(filter_value_ids)
+      ChargeFilterValue
+        .with_discarded
+        .where(id: filter_value_ids)
+        .unscope(:order)
+        .distinct
+        .pluck(:charge_filter_id)
+    end
+
+    def charge_filter_ids_with_kept_values(charge_filter_ids)
+      ChargeFilterValue
+        .where(deleted_at: nil, charge_filter_id: charge_filter_ids)
+        .unscope(:order)
+        .distinct
+        .pluck(:charge_filter_id)
     end
   end
 end
