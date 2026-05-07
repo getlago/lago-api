@@ -30,13 +30,14 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateJob do
 
       before { create(:netsuite_customer, integration:, customer:) }
 
-      it "schedules the next attempt at least 5 minutes later" do
+      it "schedules the next attempt at least 6 minutes later" do
         freeze_time do
           described_class.perform_now(invoice:)
 
           retry_at = ActiveJob::Base.queue_adapter.enqueued_jobs.last[:at]
-          # NOTE: Tolerance covers ActiveJob's 15% retry jitter (up to ~45s on a 5-minute wait).
-          expect(retry_at).to be_within(50.seconds).of(5.minutes.from_now.to_f)
+          # NOTE: ActiveJob applies up to 15% positive jitter on top of the configured wait,
+          # so the retry lands in [6 minutes, 6 minutes + 15%] from now.
+          expect(retry_at).to be_between(6.minutes.from_now.to_f, 7.minutes.from_now.to_f)
         end
       end
     end
