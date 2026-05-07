@@ -56,7 +56,7 @@ module PaymentProviders
           update_result = payment_service_klass(metadata)
             .new
             .update_payment_status(provider_payment_id:, status: "Cancelled", metadata:)
-          return update_result.raise_if_error!
+          update_result.raise_if_error!
         when "REFUND"
           service = CreditNotes::Refunds::AdyenService.new
 
