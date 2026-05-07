@@ -170,7 +170,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
       let(:event_json) do
         JSON.parse(event_response_json)["notificationItems"]
           .first&.dig("NotificationRequestItem")
-          .merge("success" => "false").to_json
+          &.merge("success" => "false").to_json
       end
 
       let(:event_response_json) do
