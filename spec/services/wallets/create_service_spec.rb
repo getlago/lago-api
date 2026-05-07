@@ -1070,6 +1070,56 @@ RSpec.describe Wallets::CreateService do
         end
       end
 
+      context "when billing_entity_id belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+        let!(:other_billing_entity) { create(:billing_entity, organization: other_organization) }
+
+        let(:params) do
+          {
+            name: "New Wallet",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits: "0.00",
+            granted_credits: "0.00",
+            billing_entity_id: other_billing_entity.id
+          }
+        end
+
+        it "returns a not found error" do
+          expect(service_result).not_to be_success
+          expect(service_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(service_result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when billing_entity_code belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+        let!(:other_billing_entity) { create(:billing_entity, organization: other_organization, code: "other_org_be") }
+
+        let(:params) do
+          {
+            name: "New Wallet",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits: "0.00",
+            granted_credits: "0.00",
+            billing_entity_code: "other_org_be"
+          }
+        end
+
+        before { other_billing_entity }
+
+        it "returns a not found error" do
+          expect(service_result).not_to be_success
+          expect(service_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(service_result.error.resource).to eq("billing_entity")
+        end
+      end
+
       context "when billing_entity_id does not match any entity" do
         let(:params) do
           {
