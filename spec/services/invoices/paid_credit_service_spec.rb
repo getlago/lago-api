@@ -76,6 +76,13 @@ RSpec.describe Invoices::PaidCreditService do
       let(:service_call) { invoice_service.call }
     end
 
+    it_behaves_like "applies invoice_custom_sections from resource" do
+      let(:service_call) { invoice_service.call }
+      let(:resource_with_custom_section) { wallet_transaction }
+      let(:applied_section_factory) { :wallet_transaction_applied_invoice_custom_section }
+      let(:resource_association_key) { :wallet_transaction }
+    end
+
     it "does not enqueue an SendEmailJob" do
       expect do
         invoice_service.call

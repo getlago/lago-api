@@ -194,6 +194,13 @@ RSpec.describe Invoices::RefreshDraftService do
       let(:service_call) { refresh_service.call }
     end
 
+    it_behaves_like "applies invoice_custom_sections from resource" do
+      let(:service_call) { refresh_service.call }
+      let(:resource_with_custom_section) { subscription }
+      let(:applied_section_factory) { :subscription_applied_invoice_custom_section }
+      let(:resource_association_key) { :subscription }
+    end
+
     context "when there is a tax_integration set up" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }

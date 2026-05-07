@@ -109,6 +109,13 @@ RSpec.describe Invoices::SubscriptionService do
       let(:service_call) { invoice_service.call }
     end
 
+    it_behaves_like "applies invoice_custom_sections from resource" do
+      let(:service_call) { invoice_service.call }
+      let(:resource_with_custom_section) { subscription }
+      let(:applied_section_factory) { :subscription_applied_invoice_custom_section }
+      let(:resource_association_key) { :subscription }
+    end
+
     it "enqueues a SendWebhookJob" do
       expect do
         invoice_service.call
