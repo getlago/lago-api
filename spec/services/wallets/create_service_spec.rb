@@ -1040,12 +1040,12 @@ RSpec.describe Wallets::CreateService do
         end
       end
 
-      context "when billing_entity_code is not provided" do
-        it "falls back to the customer billing entity" do
+      context "when neither billing_entity_code nor billing_entity_id is provided" do
+        it "creates the wallet without a billing entity" do
           expect(service_result).to be_success
 
           wallet = service_result.wallet
-          expect(wallet.billing_entity_id).to eq(customer.billing_entity.id)
+          expect(wallet.billing_entity_id).to be_nil
         end
       end
 

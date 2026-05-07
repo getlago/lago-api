@@ -621,14 +621,14 @@ RSpec.shared_examples "a wallet create endpoint" do
       end
     end
 
-    context "when billing_entity_code is not provided" do
-      it "falls back to the customer billing entity" do
+    context "when neither billing_entity_code nor billing_entity_id is provided" do
+      it "creates the wallet without a billing entity" do
         subject
 
         expect(response).to have_http_status(:success)
 
         wallet = Wallet.find(json[:wallet][:lago_id])
-        expect(wallet.billing_entity_id).to eq(customer.billing_entity.id)
+        expect(wallet.billing_entity_id).to be_nil
       end
     end
 
