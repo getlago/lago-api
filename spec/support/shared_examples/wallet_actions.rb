@@ -1184,7 +1184,7 @@ RSpec.shared_examples "a wallet index endpoint" do
     end
   end
 
-  context "with N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+  context "with N+1 query detection", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
     let(:params) { {} }
 
     before do

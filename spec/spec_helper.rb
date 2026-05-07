@@ -159,14 +159,6 @@ RSpec.configure do |config|
       end
     end
 
-    if metadata[:with_bullet] || metadata[:bullet]
-      Bullet.enable = true
-      bullet_metadata = example.metadata[:bullet] || {}
-      Bullet.n_plus_one_query_enable = bullet_metadata.fetch(:n_plus_one_query, true)
-      Bullet.unused_eager_loading_enable = bullet_metadata.fetch(:unused_eager_loading, true)
-      Bullet.start_request
-    end
-
     if metadata[:cache]
       Rails.cache = if example.metadata[:cache].to_sym == :memory
         ActiveSupport::Cache.lookup_store(:memory_store)
@@ -178,14 +170,6 @@ RSpec.configure do |config|
         raise "Unknown cache store: #{example.metadata[:cache]}"
       end
     end
-  end
-
-  config.after do |example|
-    if example.metadata[:with_bullet] || example.metadata[:bullet]
-      Bullet.perform_out_of_channel_notifications if Bullet.notification?
-      Bullet.end_request
-    end
-    Bullet.enable = false
   end
 
   config.around do |example|
@@ -214,11 +198,26 @@ RSpec.configure do |config|
     end
   end
 
-  config.around do |example|
-    if example.metadata[:premium]
-      lago_premium!(&example)
-    else
-      example.run
+  config.around(:example, :premium) do |example|
+    lago_premium!(&example)
+  end
+
+  config.around(:example, :bullet) do |example|
+    bullet = example.metadata[:bullet].is_a?(Hash) ? example.metadata[:bullet] : {}
+
+    example.example_group.before do
+      Bullet.enable = true
+      Bullet.n_plus_one_query_enable = bullet.fetch(:n_plus_one_query, true)
+      Bullet.unused_eager_loading_enable = bullet.fetch(:unused_eager_loading, true)
+      Bullet.start_request
     end
+
+    example.example_group.after do
+      Bullet.perform_out_of_channel_notifications if Bullet.notification?
+      Bullet.end_request
+      Bullet.enable = false
+    end
+
+    example.run
   end
 end
