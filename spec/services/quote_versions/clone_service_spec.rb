@@ -98,7 +98,6 @@ RSpec.describe QuoteVersions::CloneService do
       end
     end
 
-
     context "when an unrelated draft is the active version on the quote", :premium do
       let!(:versions) do
         QuoteVersion.transaction do
