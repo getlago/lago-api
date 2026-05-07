@@ -2878,6 +2878,7 @@ Create Wallet Input
 """
 input CreateCustomerWalletInput {
   appliesTo: AppliesToInput
+  billingEntityId: ID
 
   """
   A unique identifier for the client performing the mutation.
