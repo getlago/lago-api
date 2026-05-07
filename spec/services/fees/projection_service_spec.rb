@@ -187,8 +187,8 @@ RSpec.describe Fees::ProjectionService do
           result = service.call
 
           expect(result).to be_success
-          expect(result.projected_presentation_breakdowns).to eq([
-            {presentation_by: {"department" => "engineering"}, units: 30.0}
+          expect(result.projected_presentation_breakdowns).to match_array([
+            have_attributes(presentation_by: {"department" => "engineering"}, units: 30.0)
           ])
         end
       end
@@ -298,8 +298,8 @@ RSpec.describe Fees::ProjectionService do
           result = service.call
 
           expect(result).to be_success
-          expect(result.projected_presentation_breakdowns).to eq([
-            {presentation_by: {"department" => "engineering"}, units: 60.0}
+          expect(result.projected_presentation_breakdowns).to match_array([
+            have_attributes(presentation_by: {"department" => "engineering"}, units: 60.0)
           ])
         end
       end

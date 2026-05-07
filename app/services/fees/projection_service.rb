@@ -37,7 +37,7 @@ module Fees
         result.projected_amount_cents = current_amount_cents
         result.projected_units = current_units
         result.projected_pricing_unit_amount_cents = current_pricing_unit_amount_cents
-        result.projected_presentation_breakdowns = current_presentation_breakdowns
+        result.projected_presentation_breakdowns = fees.flat_map(&:presentation_breakdowns)
         return result
       end
 
@@ -167,13 +167,9 @@ module Fees
 
     def project_presentation_breakdowns
       fees.flat_map(&:presentation_breakdowns).map do |bd|
-        {presentation_by: bd.presentation_by, units: bd.units * period_ratio}
-      end
-    end
-
-    def current_presentation_breakdowns
-      fees.flat_map(&:presentation_breakdowns).map do |bd|
-        {presentation_by: bd.presentation_by, units: bd.units}
+        dup_breakdown = bd.dup
+        dup_breakdown.units = (BigDecimal(bd.units) * period_ratio)
+        dup_breakdown
       end
     end
   end

@@ -57,7 +57,7 @@ module V1
         {
           projected_units: projection[:units].to_s,
           projected_amount_cents: projection[:amount_cents].to_i,
-          projected_presentation_breakdowns: format_projected_presentation_breakdowns(projection[:presentation_breakdowns])
+          projected_presentation_breakdowns: projection[:presentation_breakdowns].map { |breakdown| ::V1::PresentationBreakdownSerializer.new(breakdown).serialize }
         }
       end
 
@@ -242,13 +242,9 @@ module V1
 
         # NOTE: Since the memoization is done by object_id, we try as much as possible to reuse the memoized calculated data
         projection_fees = (ungrouped_fees.length == fees.length) ? fees : ungrouped_fees
-        raw = memoized_projection(projection_fees)[:presentation_breakdowns] || []
-        format_projected_presentation_breakdowns(raw)
-      end
 
-      def format_projected_presentation_breakdowns(breakdowns)
-        Array(breakdowns).map do |bd|
-          {presentation_by: bd[:presentation_by], units: bd[:units].to_s}
+        (memoized_projection(projection_fees)[:presentation_breakdowns] || []).map do |breakdown|
+          ::V1::PresentationBreakdownSerializer.new(breakdown).serialize
         end
       end
     end

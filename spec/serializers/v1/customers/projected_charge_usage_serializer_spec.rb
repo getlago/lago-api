@@ -51,9 +51,9 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
   let(:presentation_breakdowns) { [] }
   let(:expected_projected_presentation_breakdowns) do
     [
-      {presentation_by: {"card_type" => "visa"}, units: 3.5},
-      {presentation_by: {"card_type" => "mastercard"}, units: 0.5},
-      {presentation_by: {"country" => "br"}, units: 1.5}
+      build(:presentation_breakdown, presentation_by: {"card_type" => "visa"}, units: 3.5),
+      build(:presentation_breakdown, presentation_by: {"card_type" => "mastercard"}, units: 0.5),
+      build(:presentation_breakdown, presentation_by: {"country" => "br"}, units: 1.5)
     ]
   end
 
@@ -125,6 +125,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
       },
       "filters" => [],
       "presentation_breakdowns" => [],
+      "projected_presentation_breakdowns" => [],
       "grouped_usage" => [
         {
           "amount_cents" => 100,
@@ -233,6 +234,7 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         },
         "filters" => [],
         "presentation_breakdowns" => [],
+        "projected_presentation_breakdowns" => [],
         "grouped_usage" => [
           {
             "amount_cents" => 100,
