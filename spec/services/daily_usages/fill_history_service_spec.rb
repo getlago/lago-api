@@ -66,6 +66,53 @@ RSpec.describe DailyUsages::FillHistoryService do
         end
       end
     end
+
+    context "when an existing daily_usage covers a date in the middle of the range" do
+      let(:from_date) { Date.parse("2024-10-14") }
+      let(:to_date) { Date.parse("2024-10-16") }
+      let(:existing_daily_usage) do
+        create(
+          :daily_usage,
+          organization:,
+          customer:,
+          subscription:,
+          external_subscription_id: subscription.external_id,
+          usage_date: Date.parse("2024-10-15"),
+          from_datetime: Time.zone.parse("2024-10-01 00:00:00"),
+          to_datetime: Time.zone.parse("2024-10-31 23:59:59.999999"),
+          usage: {"amount_cents" => 0, "taxes_amount_cents" => 0, "total_amount_cents" => 0, "charges_usage" => []}
+        )
+      end
+
+      before do
+        create(:standard_charge, plan:, billable_metric:)
+        create(
+          :event,
+          organization:,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: Time.zone.parse("2024-10-14 10:00:00"),
+          created_at: Time.zone.parse("2024-10-14 10:00:00")
+        )
+        existing_daily_usage
+      end
+
+      it "uses the existing daily_usage as the baseline for the next iteration's diff" do
+        allow(DailyUsages::ComputeDiffService).to receive(:call).and_call_original
+
+        travel_to(Time.zone.parse("2024-10-17 12:00:00")) { call_service }
+
+        expect(DailyUsages::ComputeDiffService).to have_received(:call)
+          .with(hash_including(previous_daily_usage: existing_daily_usage))
+      end
+
+      it "does not overwrite the existing daily_usage" do
+        travel_to(Time.zone.parse("2024-10-17 12:00:00")) do
+          expect { call_service }.to change(DailyUsage, :count).by(2)
+        end
+        expect(DailyUsage.find_by(usage_date: Date.parse("2024-10-15"))).to eq(existing_daily_usage)
+      end
+    end
   end
 
   describe "#to" do
