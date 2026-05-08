@@ -459,6 +459,21 @@ RSpec.describe LagoHttpClient::Client do
       end
     end
 
+    context "with json_body" do
+      before do
+        stub_request(:get, url)
+          .with(
+            body: '{"filter":"active"}',
+            headers: {"Content-Type" => "application/json"}
+          )
+          .to_return(body: "{}", status: 200)
+      end
+
+      it "sends a JSON-encoded body with application/json content type" do
+        expect(client.get(json_body: {filter: "active"})).to eq({})
+      end
+    end
+
     context "when response body is blank" do
       before do
         stub_request(:get, url).to_return(body: "", status: 200)
