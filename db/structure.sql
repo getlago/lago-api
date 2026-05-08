@@ -1979,7 +1979,8 @@ CREATE TABLE public.cached_aggregations (
     grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
     charge_filter_id uuid,
     current_amount numeric,
-    event_transaction_id character varying
+    event_transaction_id character varying,
+    presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 
 
@@ -12215,6 +12216,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260508134715'),
 ('20260504134804'),
 ('20260430102814'),
 ('20260430102813'),
@@ -13210,3 +13212,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
