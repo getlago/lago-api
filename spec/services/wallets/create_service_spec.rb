@@ -63,6 +63,10 @@ RSpec.describe Wallets::CreateService do
       expect(Utils::ActivityLog).to have_produced("wallet.created").after_commit.with(wallet)
     end
 
+    it "flags the customer for ongoing balance refresh" do
+      expect { service_result }.to change { customer.reload.awaiting_wallet_refresh }.from(false).to(true)
+    end
+
     it "enqueues the WalletTransaction::CreateJob" do
       expect { service_result }.to have_enqueued_job_after_commit(WalletTransactions::CreateJob).with({
         organization_id: organization.id,

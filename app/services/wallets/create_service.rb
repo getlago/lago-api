@@ -83,6 +83,8 @@ module Wallets
         end
 
         create_metadata(wallet, params[:metadata]) if !params[:metadata].nil?
+
+        customer.flag_wallets_for_refresh
       end
 
       result.wallet = wallet
