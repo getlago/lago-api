@@ -2,7 +2,7 @@
 
 module Invoices
   class CreateOneOffService < BaseService
-    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil, payment_method_params: nil, invoice_custom_section: {})
+    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil, payment_method_params: nil, invoice_custom_section: {}, billing_entity_id: nil, billing_entity_code: nil)
       @customer = customer
       @currency = currency || customer&.currency
       @fees = fees
@@ -11,6 +11,8 @@ module Invoices
       @voided_invoice_id = voided_invoice_id
       @payment_method_params = payment_method_params
       @invoice_custom_section = invoice_custom_section
+      @billing_entity_id = billing_entity_id
+      @billing_entity_code = billing_entity_code
 
       super(nil)
     end
@@ -26,6 +28,9 @@ module Invoices
       return result.not_found_failure!(resource: "fees") if fees.blank?
       return result.not_found_failure!(resource: "add_on") unless add_ons.count == add_on_identifiers.count
       return result unless valid_payment_method?
+
+      resolve_billing_entity
+      return result if result.failure?
 
       tax_deferred = false
 
@@ -88,17 +93,33 @@ module Invoices
     private
 
     attr_accessor :timestamp, :currency, :customer, :fees, :invoice, :skip_psp, :voided_invoice_id, :payment_method_params, :invoice_custom_section
+    attr_reader :billing_entity_id, :billing_entity_code, :billing_entity
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :one_off,
         currency:,
-        datetime: Time.zone.at(timestamp)
+        datetime: Time.zone.at(timestamp),
+        billing_entity:
       )
       invoice_result.raise_if_error!
 
       @invoice = invoice_result.invoice
+    end
+
+    def resolve_billing_entity
+      multi_entity_enabled = customer.organization.feature_flag_enabled?(:multi_entity_billing)
+
+      if multi_entity_enabled && billing_entity_id.present?
+        @billing_entity = customer.organization.billing_entities.find_by(id: billing_entity_id)
+        result.not_found_failure!(resource: "billing_entity") if @billing_entity.nil?
+      elsif multi_entity_enabled && billing_entity_code.present?
+        @billing_entity = customer.organization.billing_entities.find_by(code: billing_entity_code)
+        result.not_found_failure!(resource: "billing_entity") if @billing_entity.nil?
+      else
+        @billing_entity = customer.billing_entity
+      end
     end
 
     def create_one_off_fees(invoice)
@@ -106,7 +127,7 @@ module Invoices
     end
 
     def should_deliver_email?
-      License.premium? && customer.billing_entity.email_settings.include?("invoice.finalized")
+      License.premium? && invoice.billing_entity.email_settings.include?("invoice.finalized")
     end
 
     def add_ons
