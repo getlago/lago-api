@@ -3085,6 +3085,8 @@ input CreateInvoiceCustomSectionInput {
 Create Invoice input arguments
 """
 input CreateInvoiceInput {
+  billingEntityId: ID
+
   """
   A unique identifier for the client performing the mutation.
   """
@@ -5909,6 +5911,8 @@ enum FeeTypesEnum {
 Create Invoice input arguments
 """
 input FetchDraftInvoiceTaxesInput {
+  billingEntityId: ID
+
   """
   A unique identifier for the client performing the mutation.
   """
