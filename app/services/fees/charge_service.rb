@@ -109,8 +109,10 @@ module Fees
           return []
         end
 
+        breakdowns_by_group = breakdowns_by_grouped_by(aggregation_result)
+
         if billable_metric.recurring?
-          persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter)
+          persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter, breakdowns_by_group)
         end
 
         charge_model_result = apply_charge_model(aggregation_result:, properties:)
@@ -123,7 +125,7 @@ module Fees
           charge_model_result,
           properties:,
           charge_filter:,
-          breakdowns: aggregation_result.breakdowns
+          breakdowns_by_group:
         )
 
         filter_non_persistable_fees_for_caching(charge_fees)
@@ -157,10 +159,10 @@ module Fees
         calculate_projected_usage:
       ).apply
 
-      fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns: [])
+      fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns_by_group: {})
     end
 
-    def fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns:)
+    def fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns_by_group:)
       charge_model_result.grouped_results.map do |amount_result|
         # TODO: check if this is still needed as we now skip certain zero units fees
         next if current_usage && charge_filter && amount_result.units.zero? && !with_zero_units_filters
@@ -168,26 +170,36 @@ module Fees
         fee = init_fee(amount_result, properties:, charge_filter:)
         next if fee.nil?
 
-        build_breakdowns_for_fee(fee:, breakdowns:)
+        build_breakdowns_for_fee(fee:, breakdowns_by_group:)
 
         fee
       end.compact
     end
 
-    def build_breakdowns_for_fee(fee:, breakdowns:)
-      Array(breakdowns).each do |breakdown|
-        if fee.grouped_by.empty?
-          presentation_by = breakdown[:groups]
-        else
-          next unless fee.grouped_by.all? { |k, v| breakdown[:groups][k] == v }
-          presentation_by = breakdown[:groups].reject { |k, _| fee.grouped_by.key?(k) }
-        end
-
+    def build_breakdowns_for_fee(fee:, breakdowns_by_group:)
+      breakdowns_by_group.fetch(fee.grouped_by, []).each do |breakdown|
         fee.presentation_breakdowns.build(
-          presentation_by:,
+          presentation_by: breakdown[:groups],
           units: breakdown[:value],
           organization_id: charge.organization_id
         )
+      end
+    end
+
+    def breakdowns_by_grouped_by(aggregation_result)
+      all_breakdowns = Array(aggregation_result.breakdowns)
+      return {} if all_breakdowns.empty?
+
+      aggregations = Array(aggregation_result.aggregations).presence || [aggregation_result]
+
+      aggregations.each_with_object({}) do |aggregation, result|
+        grouped_by = aggregation.grouped_by || {}
+        next if result.key?(grouped_by)
+
+        pricing_group_keys = grouped_by.keys
+        result[grouped_by] = all_breakdowns
+          .select { |b| b[:groups].slice(*pricing_group_keys) == grouped_by }
+          .map { |b| b.merge(groups: b[:groups].except(*pricing_group_keys)) }
       end
     end
 
@@ -404,7 +416,7 @@ module Fees
       )
     end
 
-    def persist_recurring_value(aggregation_results, charge_filter)
+    def persist_recurring_value(aggregation_results, charge_filter, breakdowns_by_group)
       return if current_usage
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
@@ -414,16 +426,19 @@ module Fees
 
       # NOTE: persist current recurring value for next period
       aggregation_results.each do |aggregation_result|
+        grouped_by = aggregation_result.grouped_by || {}
+
         result.cached_aggregations << CachedAggregation.find_or_initialize_by(
           organization_id: billable_metric.organization_id,
           external_subscription_id: subscription.external_id,
           charge_id: charge.id,
           charge_filter_id: charge_filter&.id,
-          grouped_by: aggregation_result.grouped_by || {},
+          grouped_by:,
           timestamp: aggregation_result.recurring_updated_at
         ) do |aggregation|
           aggregation.current_aggregation = aggregation_result.total_aggregated_units || aggregation_result.aggregation
           aggregation.current_amount = aggregation_result.custom_aggregation&.[](:amount)
+          aggregation.presentation_breakdowns = breakdowns_by_group.fetch(grouped_by, [])
           aggregation.save!
         end
       end
