@@ -17,6 +17,12 @@ module Integrations
         discard_on BaseService::NonRetryableFailure
 
         def perform(invoice:)
+          if executions > 1
+            find_result = Integrations::Aggregator::Invoices::FindService.call(invoice:)
+            find_result.raise_if_error!
+            return if find_result.external_id.present?
+          end
+
           result = Integrations::Aggregator::Invoices::CreateService.call(invoice:)
           result.raise_if_error!
         end
