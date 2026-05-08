@@ -310,7 +310,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(invoice.tax_status).to eq("failed")
 
       # Stage 2: Re-stub Anrok to succeed, then retry. Invoice goes :open with taxes
-      # applied; FinalizePendingViesInvoiceService triggers payment for the gated case.
+      # applied; PullTaxesAndApplyService triggers payment for the gated case.
       stub_anrok_response(success_body_for(invoice))
       Invoices::RetryService.call!(invoice:)
       perform_all_enqueued_jobs
