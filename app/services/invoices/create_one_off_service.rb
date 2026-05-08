@@ -30,7 +30,7 @@ module Invoices
       return result unless valid_payment_method?
 
       resolve_billing_entity
-      return result if result.failure?
+      return result unless result.success?
 
       tax_deferred = false
 
@@ -109,17 +109,19 @@ module Invoices
     end
 
     def resolve_billing_entity
-      multi_entity_enabled = customer.organization.feature_flag_enabled?(:multi_entity_billing)
-
-      if multi_entity_enabled && billing_entity_id.present?
+      if multi_entity_enabled? && billing_entity_id.present?
         @billing_entity = customer.organization.billing_entities.find_by(id: billing_entity_id)
         result.not_found_failure!(resource: "billing_entity") if @billing_entity.nil?
-      elsif multi_entity_enabled && billing_entity_code.present?
+      elsif multi_entity_enabled? && billing_entity_code.present?
         @billing_entity = customer.organization.billing_entities.find_by(code: billing_entity_code)
         result.not_found_failure!(resource: "billing_entity") if @billing_entity.nil?
       else
         @billing_entity = customer.billing_entity
       end
+    end
+
+    def multi_entity_enabled?
+      customer.organization.feature_flag_enabled?(:multi_entity_billing)
     end
 
     def create_one_off_fees(invoice)
