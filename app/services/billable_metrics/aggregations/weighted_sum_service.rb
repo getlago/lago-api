@@ -21,6 +21,7 @@ module BillableMetrics
 
         if presentation_by.present?
           result.breakdowns = event_store.grouped_weighted_sum(uniq_grouped_by_and_presentation_by, initial_value:)
+          result.breakdowns = @latest_cached_breakdowns || [] if result.breakdowns.empty?
         end
 
         if billable_metric.recurring?
@@ -52,6 +53,7 @@ module BillableMetrics
 
         if presentation_by.present?
           result.breakdowns = event_store.grouped_weighted_sum(uniq_grouped_by_and_presentation_by, initial_values: grouped_latest_values)
+          result.breakdowns = @grouped_latest_cached_breakdowns || [] if result.breakdowns.empty?
         end
 
         result.aggregations = aggregations.map do |aggregation|
@@ -100,7 +102,11 @@ module BillableMetrics
         query = query.where(charge_filter_id: charge_filter.id) if charge_filter
         cached_aggregation = query.first
 
-        return @latest_value = cached_aggregation.current_aggregation if cached_aggregation
+        if cached_aggregation
+          @latest_cached_breakdowns = cached_aggregation.presentation_breakdowns if presentation_by.present?
+          return @latest_value = cached_aggregation.current_aggregation
+        end
+
         return @latest_value = BigDecimal(latest_value_from_events) if subscription.previous_subscription_id?
 
         @latest_value = BigDecimal(0)
@@ -140,7 +146,11 @@ module BillableMetrics
         query = query.where(charge_filter_id: charge_filter.id) if charge_filter
 
         if query.all.any?
+          @grouped_latest_cached_breakdowns = []
           return @grouped_latest_values = query.map do |cached_aggregation|
+            if presentation_by.present?
+              @grouped_latest_cached_breakdowns.concat(cached_aggregation.presentation_breakdowns)
+            end
             {
               groups: cached_aggregation.grouped_by,
               value: cached_aggregation.current_aggregation
