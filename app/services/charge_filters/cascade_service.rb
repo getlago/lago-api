@@ -113,13 +113,6 @@ module ChargeFilters
         child_filter.properties.delete("pricing_group_keys")
         child_filter.properties.delete("grouped_by")
       end
-
-      presentation_group_keys = new_properties&.dig("presentation_group_keys")
-      if presentation_group_keys
-        child_filter.properties["presentation_group_keys"] = presentation_group_keys
-      elsif child_filter.presentation_group_keys.present?
-        child_filter.properties.delete("presentation_group_keys")
-      end
     end
 
     def normalize_properties(props)
