@@ -8,7 +8,7 @@ module Integrations
 
         # NOTE: NetSuite waits longer to avoid racing in-flight Nango calls; others use polynomial backoff.
         # 6 minutes covers Nango's 5-minute upstream NetSuite action timeout with a safety margin.
-        READ_TIMEOUT_WAIT_BY_PROVIDER_KEY = {
+        DELAY_BY_PROVIDER_KEY = {
           "netsuite" => 6.minutes
         }.freeze
 
@@ -33,7 +33,7 @@ module Integrations
             raise
           end
 
-          wait_strategy = READ_TIMEOUT_WAIT_BY_PROVIDER_KEY.fetch(integration_provider_key, :polynomially_longer)
+          wait_strategy = DELAY_BY_PROVIDER_KEY.fetch(integration_provider_key, :polynomially_longer)
 
           retry_job(
             wait: determine_delay(seconds_or_duration_or_algorithm: wait_strategy, executions: executions_count),
