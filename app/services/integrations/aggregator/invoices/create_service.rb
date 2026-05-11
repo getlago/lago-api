@@ -70,13 +70,15 @@ module Integrations
         def call_async
           return result.not_found_failure!(resource: "invoice") unless invoice
 
-          ::Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:, find_first: @find_first)
+          ::Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:, find_first:)
 
           result.invoice_id = invoice.id
           result
         end
 
         private
+
+        attr_reader :find_first
 
         def process_hash_result(body)
           external_id = body["succeededInvoices"]&.first.try(:[], "id")
