@@ -18,8 +18,8 @@ module V1
 
       def call
         Array(fees).flat_map do |fee|
-          next [] if filter == UNGROUPED && fee.grouped_by.present?
-          next [] if filter == GROUPED && fee.grouped_by.blank?
+          next [] if filter == UNGROUPED && (fee.grouped_by.present? || fee.charge_filter_id.present?)
+          next [] if filter == GROUPED && (fee.grouped_by.blank? || fee.charge_filter_id.present?)
 
           fee.presentation_breakdowns.map do |breakdown|
             ::V1::PresentationBreakdownSerializer.new(breakdown).serialize

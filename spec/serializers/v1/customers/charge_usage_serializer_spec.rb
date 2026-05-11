@@ -339,6 +339,21 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       )
     end
 
+    context "when contains presentation breakdowns" do
+      let(:presentation_breakdowns) do
+        [build(:presentation_breakdown, presentation_by: {"cloud" => "aws"}, units: 4)]
+      end
+
+      it "serializes presentation_breakdowns in the filter" do
+        filter_data = result["charges"].first["filters"].first
+        expect(filter_data["presentation_breakdowns"]).to eq([
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"},
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"},
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"}
+        ])
+      end
+    end
+
     context "when charge configured to use pricing units" do
       let(:pricing_unit_usage) do
         PricingUnitUsage.new(amount_cents: 200, conversion_rate: 0.5, short_name: "CR")

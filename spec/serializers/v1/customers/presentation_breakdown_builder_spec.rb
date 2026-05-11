@@ -5,38 +5,39 @@ require "rails_helper"
 RSpec.describe ::V1::Customers::PresentationBreakdownBuilder do
   subject(:result) { described_class.call(fees, filter:) }
 
-  let(:breakdown_class) { Struct.new(:presentation_by, :units, keyword_init: true) }
-  let(:fee_class) { Struct.new(:presentation_breakdowns, :grouped_by, keyword_init: true) }
   let(:filter) { described_class::UNGROUPED }
-
-  let(:fees) do
-    [
-      fee_class.new(
-        grouped_by: nil,
-        presentation_breakdowns: [
-          breakdown_class.new(presentation_by: {"cloud" => "aws"}, units: "1.2"),
-          breakdown_class.new(presentation_by: {"cloud" => "gcp"}, units: "3")
-        ]
-      ),
-      fee_class.new(
-        grouped_by: nil,
-        presentation_breakdowns: [
-          breakdown_class.new(presentation_by: {"cloud" => "aws"}, units: "0.3")
-        ]
-      )
-    ]
+  let(:fee1) do
+    build(
+      :charge_fee,
+      grouped_by: {},
+      presentation_breakdowns: [
+        build(:presentation_breakdown, presentation_by: {"cloud" => "aws"}, units: 1.2),
+        build(:presentation_breakdown, presentation_by: {"cloud" => "gcp"}, units: 3)
+      ]
+    )
   end
+
+  let(:fee2) do
+    build(
+      :charge_fee,
+      grouped_by: {},
+      presentation_breakdowns: [
+        build(:presentation_breakdown, presentation_by: {"cloud" => "aws"}, units: 0.3)
+      ]
+    )
+  end
+  let(:fees) { [fee1, fee2] }
 
   it "returns one entry per breakdown with stringified units" do
     expect(result).to eq([
       {presentation_by: {"cloud" => "aws"}, units: "1.2"},
-      {presentation_by: {"cloud" => "gcp"}, units: "3"},
+      {presentation_by: {"cloud" => "gcp"}, units: "3.0"},
       {presentation_by: {"cloud" => "aws"}, units: "0.3"}
     ])
   end
 
   context "when a fee has no presentation_breakdowns" do
-    let(:fees) { [fee_class.new(grouped_by: nil, presentation_breakdowns: [])] }
+    let(:fees) { [build(:charge_fee, grouped_by: {}, presentation_breakdowns: [])] }
 
     it "returns an empty array" do
       expect(result).to eq([])
@@ -45,25 +46,57 @@ RSpec.describe ::V1::Customers::PresentationBreakdownBuilder do
 
   describe "filtering" do
     let(:ungrouped_fee) do
-      fee_class.new(
-        grouped_by: nil,
-        presentation_breakdowns: [breakdown_class.new(presentation_by: {"region" => "us"}, units: "1")]
+      build(
+        :charge_fee,
+        grouped_by: {},
+        presentation_breakdowns: [
+          build(:presentation_breakdown, presentation_by: {"region" => "us"}, units: 1)
+        ]
       )
     end
+
     let(:grouped_fee) do
-      fee_class.new(
+      build(
+        :charge_fee,
         grouped_by: {"region" => "eu"},
-        presentation_breakdowns: [breakdown_class.new(presentation_by: {"region" => "eu"}, units: "2")]
+        presentation_breakdowns: [
+          build(:presentation_breakdown, presentation_by: {"region" => "eu"}, units: 2)
+        ]
       )
     end
-    let(:fees) { [ungrouped_fee, grouped_fee] }
+
+    # Fee with charge_filter_id and blank grouped_by — excluded from UNGROUPED and GROUPED
+    let(:filtered_ungrouped_fee) do
+      build(
+        :charge_fee,
+        grouped_by: {},
+        charge_filter_id: SecureRandom.uuid,
+        presentation_breakdowns: [
+          build(:presentation_breakdown, presentation_by: {"region" => "us"}, units: 3)
+        ]
+      )
+    end
+
+    # Fee with charge_filter_id and present grouped_by — excluded from GROUPED
+    let(:filtered_grouped_fee) do
+      build(
+        :charge_fee,
+        grouped_by: {"region" => "eu"},
+        charge_filter_id: SecureRandom.uuid,
+        presentation_breakdowns: [
+          build(:presentation_breakdown, presentation_by: {"region" => "eu"}, units: 4)
+        ]
+      )
+    end
+
+    let(:fees) { [ungrouped_fee, grouped_fee, filtered_ungrouped_fee, filtered_grouped_fee] }
 
     context "when filter is UNGROUPED" do
       let(:filter) { described_class::UNGROUPED }
 
-      it "includes only fees with blank grouped_by" do
+      it "includes only fees with blank grouped_by and no charge_filter_id" do
         expect(result).to eq([
-          {presentation_by: {"region" => "us"}, units: "1"}
+          {presentation_by: {"region" => "us"}, units: "1.0"}
         ])
       end
     end
@@ -71,9 +104,9 @@ RSpec.describe ::V1::Customers::PresentationBreakdownBuilder do
     context "when filter is GROUPED" do
       let(:filter) { described_class::GROUPED }
 
-      it "includes only fees with present grouped_by" do
+      it "includes only fees with present grouped_by and no charge_filter_id" do
         expect(result).to eq([
-          {presentation_by: {"region" => "eu"}, units: "2"}
+          {presentation_by: {"region" => "eu"}, units: "2.0"}
         ])
       end
     end
@@ -81,10 +114,12 @@ RSpec.describe ::V1::Customers::PresentationBreakdownBuilder do
     context "when filter is ALL" do
       let(:filter) { described_class::ALL }
 
-      it "includes breakdowns from all fees regardless of grouped_by" do
+      it "includes breakdowns from all fees regardless of grouped_by or charge_filter_id" do
         expect(result).to eq([
-          {presentation_by: {"region" => "us"}, units: "1"},
-          {presentation_by: {"region" => "eu"}, units: "2"}
+          {presentation_by: {"region" => "us"}, units: "1.0"},
+          {presentation_by: {"region" => "eu"}, units: "2.0"},
+          {presentation_by: {"region" => "us"}, units: "3.0"},
+          {presentation_by: {"region" => "eu"}, units: "4.0"}
         ])
       end
     end

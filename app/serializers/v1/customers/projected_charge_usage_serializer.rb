@@ -180,7 +180,8 @@ module V1
         {
           **usage_data.except(:amount_currency),
           invoice_display_name: charge_filter&.invoice_display_name,
-          values: charge_filter&.to_h
+          values: charge_filter&.to_h,
+          presentation_breakdowns: PresentationBreakdownBuilder.call(grouped_fees, filter: PresentationBreakdownBuilder::ALL)
         }
       end
 

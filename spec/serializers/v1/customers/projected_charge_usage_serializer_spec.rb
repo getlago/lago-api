@@ -307,6 +307,33 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
       )
     end
 
+    context "when contains presentation breakdowns" do
+      let(:presentation_breakdowns) do
+        [build(:presentation_breakdown, presentation_by: {"cloud" => "aws"}, units: 4)]
+      end
+
+      before do
+        individual_projection_result = instance_double(
+          "ProjectionResult",
+          projected_units: expected_filter_projected_units / 3,
+          projected_amount_cents: expected_filter_projected_amount_cents / 3,
+          projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
+        )
+        allow(::Fees::ProjectionService).to receive(:call).and_return(
+          instance_double("ServiceResult", raise_if_error!: individual_projection_result)
+        )
+      end
+
+      it "serializes presentation_breakdowns in the filter" do
+        filter_data = result["charges"].first["filters"].first
+        expect(filter_data["presentation_breakdowns"]).to eq([
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"},
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"},
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"}
+        ])
+      end
+    end
+
     context "when charge configured to use pricing units" do
       let(:pricing_unit_usage) do
         PricingUnitUsage.new(amount_cents: 200, conversion_rate: 0.5, short_name: "CR")
