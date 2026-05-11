@@ -28,6 +28,7 @@ module Subscriptions
 
         subscription_groups = group_by_payment_method(billing_subscriptions)
         subscription_groups = group_by_currency(subscription_groups)
+        subscription_groups = group_by_billing_entity(subscription_groups)
 
         subscription_groups.each do |subscriptions|
           BillSubscriptionJob.perform_later(
@@ -527,6 +528,14 @@ module Subscriptions
 
       subscription_groups.flat_map do |subscriptions|
         subscriptions.group_by { |sub| sub.plan.amount_currency }.values
+      end
+    end
+
+    def group_by_billing_entity(subscription_groups)
+      return subscription_groups unless organization.feature_flag_enabled?(:multi_entity_billing)
+
+      subscription_groups.flat_map do |subscriptions|
+        subscriptions.group_by { |sub| sub.billing_entity_id || sub.customer.billing_entity_id }.values
       end
     end
 

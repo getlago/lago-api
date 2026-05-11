@@ -50,15 +50,15 @@ module PaymentRequests
           return result
         end
 
-        result.payment = payment
-        result.payable = payment.payable
-
         processing = status == "processing"
         payment.status = status
 
         payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
         payment.payable_payment_status = payable_payment_status
         payment.save!
+
+        result.payment = payment
+        result.payable = payment.payable
 
         update_payable_payment_status(payment_status: payable_payment_status, processing:)
         update_invoices_payment_status(payment_status: payable_payment_status, processing:)
@@ -71,6 +71,14 @@ module PaymentRequests
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
       rescue ActiveRecord::RecordNotUnique
+        # NOTE: Another writer (a parallel webhook worker, or PaymentProviders::Stripe::Payments::CreateService)
+        #       committed the Payment first. Return the persisted row so the
+        #       caller can still enqueue downstream side effects (e.g. SetPaymentMethodAndCreateReceiptJob).
+        payment = Payment.find_by(provider_payment_id: stripe_payment.id)
+        if payment
+          result.payment = payment
+          result.payable = payment.payable
+        end
         result
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)

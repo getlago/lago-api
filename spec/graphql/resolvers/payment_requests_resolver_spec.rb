@@ -52,6 +52,24 @@ RSpec.describe Resolvers::PaymentRequestsResolver do
   end
 
   describe "filters" do
+    context "with currency" do
+      let(:filters) { "limit: 5, currency: \"BRL\"" }
+      let!(:brl_payment_request) { create(:payment_request, organization:, customer:, amount_currency: "BRL") }
+
+      it "returns only payment requests with matching currency" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:
+        )
+        response = result["data"]["paymentRequests"]
+
+        expect(response["collection"].count).to eq(1)
+        expect(response["collection"].first["id"]).to eq(brl_payment_request.id)
+      end
+    end
+
     context "with paymentStatus" do
       let(:filters) { "limit: 5, paymentStatus: succeeded" }
 
@@ -70,7 +88,7 @@ RSpec.describe Resolvers::PaymentRequestsResolver do
         expect(PaymentRequestsQuery).to have_received(:call).with(
           organization: organization,
           pagination: {limit: 5, page: nil},
-          filters: {external_customer_id: nil, payment_status: "succeeded"}
+          filters: {external_customer_id: nil, payment_status: "succeeded", currency: nil}
         )
 
         payment_requests_response = result["data"]["paymentRequests"]

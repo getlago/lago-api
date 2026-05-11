@@ -52,6 +52,7 @@ RSpec.describe Mutations::Plans::Create, :premium do
             }
             properties {
               amount,
+              presentationGroupKeys { value options { displayInInvoice } }
               freeUnits,
               packageSize,
               rate,
@@ -67,7 +68,9 @@ RSpec.describe Mutations::Plans::Create, :premium do
             filters {
               invoiceDisplayName
               values
-              properties { amount }
+              properties {
+                amount
+              }
             }
           }
           fixedCharges {
@@ -146,7 +149,17 @@ RSpec.describe Mutations::Plans::Create, :premium do
             {
               billableMetricId: billable_metrics[0].id,
               chargeModel: "standard",
-              properties: {amount: "100.00"},
+              properties: {
+                amount: "100.00",
+                presentationGroupKeys: [
+                  {
+                    value: "region",
+                    options: {
+                      displayInInvoice: true
+                    }
+                  }
+                ]
+              },
               taxCodes: [charge_tax.code],
               appliedPricingUnit: {
                 code: pricing_unit.code,
@@ -155,7 +168,9 @@ RSpec.describe Mutations::Plans::Create, :premium do
               filters: [
                 {
                   invoiceDisplayName: "Payment Method",
-                  properties: {amount: "100.00"},
+                  properties: {
+                    amount: "100.00"
+                  },
                   values: {billable_metric_filter.key => %w[card sepa]}
                 }
               ]
@@ -331,6 +346,9 @@ RSpec.describe Mutations::Plans::Create, :premium do
 
     standard_charge = result_data["charges"][0]
     expect(standard_charge["properties"]["amount"]).to eq("100.00")
+    expect(standard_charge.dig("properties", "presentationGroupKeys")).to eq([
+      {"value" => "region", "options" => {"displayInInvoice" => true}}
+    ])
     expect(standard_charge["chargeModel"]).to eq("standard")
     expect(standard_charge["taxes"].count).to eq(1)
     expect(standard_charge["taxes"].first["code"]).to eq(charge_tax.code)

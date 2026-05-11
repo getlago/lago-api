@@ -29,7 +29,7 @@ module Api
         end
 
         def index
-          wallet_index(external_customer_id: customer.external_id)
+          wallet_index(external_customer_id: customer.external_id, currency: params[:currency])
         end
 
         private

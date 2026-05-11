@@ -9,7 +9,8 @@ class SubscriptionsQuery < BaseQuery
     :customer,
     :overriden, # overriden is a legacy typo kept for backward compatibility
     :overridden,
-    :exclude_next_subscriptions
+    :exclude_next_subscriptions,
+    :currency
   ]
 
   def call
@@ -29,6 +30,7 @@ class SubscriptionsQuery < BaseQuery
     subscriptions = with_external_customer(subscriptions) if filters.external_customer_id
     subscriptions = with_plan_code(subscriptions) if filters.plan_code
     subscriptions = with_overridden(subscriptions) unless overridden_filter.nil?
+    subscriptions = with_currency(subscriptions) if filters.currency
 
     subscriptions = paginate(subscriptions)
 
@@ -37,11 +39,14 @@ class SubscriptionsQuery < BaseQuery
   end
 
   def base_scope
-    if organization.present?
+    scope = if organization.present?
       Subscription.where(organization:)
     else
       Subscription.where(customer: filters.customer)
-    end.joins(:customer, :plan).ransack(search_params)
+    end.includes(:customer, :plan)
+
+    scope = scope.joins(:customer, :plan) if search_term.present?
+    scope.ransack(search_params)
   end
 
   def search_params
@@ -68,7 +73,8 @@ class SubscriptionsQuery < BaseQuery
   end
 
   def with_external_customer(scope)
-    scope.joins(:customer).where(customers: {external_id: filters.external_customer_id})
+    customers = Customer.where(external_id: filters.external_customer_id)
+    scope.where(customer_id: customers.select(:id))
   end
 
   def with_plan_code(scope)
@@ -85,6 +91,10 @@ class SubscriptionsQuery < BaseQuery
     else
       scope.joins(:plan).where(plans: {parent_id: nil})
     end
+  end
+
+  def with_currency(scope)
+    scope.joins(:plan).where(plans: {amount_currency: filters.currency})
   end
 
   def with_excluded_next_subscriptions(scope)

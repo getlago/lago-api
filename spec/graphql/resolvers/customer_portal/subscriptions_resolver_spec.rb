@@ -64,6 +64,31 @@ RSpec.describe Resolvers::CustomerPortal::SubscriptionsResolver do
     end
   end
 
+  context "with currency filter" do
+    let(:brl_plan) { create(:plan, organization:, amount_currency: "BRL") }
+    let!(:brl_subscription) { create(:subscription, customer:, plan: brl_plan) }
+
+    let(:query) do
+      <<~GQL
+        query {
+          customerPortalSubscriptions(currency: "#{brl_plan.amount_currency}", status: [active]) {
+            collection { id }
+            metadata { totalCount }
+          }
+        }
+      GQL
+    end
+
+    it "returns only subscriptions with matching currency" do
+      result = execute_graphql(customer_portal_user: customer, query:)
+      response = result["data"]["customerPortalSubscriptions"]
+
+      expect(response["collection"].count).to eq(1)
+      expect(response["collection"].first["id"]).to eq(brl_subscription.id)
+      expect(response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
+
   context "without customer portal user" do
     it "returns an error" do
       result = execute_graphql(query:)

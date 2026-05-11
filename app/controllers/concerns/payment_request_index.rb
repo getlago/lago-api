@@ -5,7 +5,7 @@ module PaymentRequestIndex
   extend ActiveSupport::Concern
 
   def payment_request_index(external_customer_id:)
-    filters = params.permit(:payment_status)
+    filters = params.permit(:payment_status, :currency)
     filters[:external_customer_id] = external_customer_id
     result = PaymentRequestsQuery.call(
       organization: current_organization,

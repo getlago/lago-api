@@ -46,15 +46,19 @@ module PaymentProviders
             {api_key: provider_customer.payment_provider.secret_key}
           )
 
-          PaymentMethods::CardDetails.new(
-            type: pm.type,
-            last4: pm.card&.last4,
-            brand: pm.card&.display_brand,
-            expiration_month: pm.card&.exp_month,
-            expiration_year: pm.card&.exp_year,
-            card_holder_name: nil,
-            issuer: nil
-          ).to_h
+          if pm.type == "card"
+            PaymentMethods::CardDetails.new(
+              type: pm.type,
+              last4: pm.card&.last4,
+              brand: pm.card&.display_brand,
+              expiration_month: pm.card&.exp_month,
+              expiration_year: pm.card&.exp_year,
+              card_holder_name: nil,
+              issuer: nil
+            ).to_h
+          else
+            {type: pm.type}
+          end
         end
       end
     end

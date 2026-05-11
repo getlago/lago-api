@@ -18,6 +18,7 @@ module Subscriptions
         elsif any_rule_failed?
           subscription.mark_as_canceled!
           SendWebhookJob.perform_after_commit("subscription.canceled", subscription)
+          Utils::ActivityLog.produce_after_commit(subscription, "subscription.canceled")
         end
 
         result.subscription = subscription
@@ -33,7 +34,7 @@ module Subscriptions
       end
 
       def any_rule_failed?
-        subscription.activation_rules.where(status: Subscription::ActivationRule::REJECTED_STATUSES).exists?
+        subscription.activation_rules.rejected.exists?
       end
     end
   end

@@ -317,6 +317,37 @@ RSpec.describe SubscriptionsQuery do
     end
   end
 
+  context "with currency filter" do
+    let(:eur_plan) { create(:plan, organization:, amount_currency: "EUR") }
+    let(:usd_plan) { create(:plan, organization:, amount_currency: "USD") }
+    let(:eur_subscription) { create(:subscription, customer:, plan: eur_plan) }
+    let(:usd_subscription) { create(:subscription, customer:, plan: usd_plan) }
+    let(:subscription) { nil }
+
+    before do
+      eur_subscription
+      usd_subscription
+    end
+
+    context "when currency filter is provided" do
+      let(:filters) { {currency: "EUR"} }
+
+      it "returns only subscriptions with matching currency" do
+        expect(result).to be_success
+        expect(result.subscriptions).to eq([eur_subscription])
+      end
+    end
+
+    context "when currency filter is not provided" do
+      let(:filters) { {} }
+
+      it "returns all subscriptions" do
+        expect(result).to be_success
+        expect(result.subscriptions).to match_array([eur_subscription, usd_subscription])
+      end
+    end
+  end
+
   context "with exclude_next_subscriptions filter" do
     let(:subscription) { create(:subscription, customer:, plan:, status: :active) }
     let(:next_subscription) { create(:subscription, previous_subscription: subscription, customer:, plan:, status: :pending) }

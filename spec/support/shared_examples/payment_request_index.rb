@@ -28,6 +28,24 @@ RSpec.shared_examples "a payment request index endpoint" do
     end
   end
 
+  context "with currency filter" do
+    let!(:usd_payment_request) { create(:payment_request, customer:, amount_currency: "USD") }
+    let(:params) { {currency: "EUR"} }
+
+    before do
+      payment_request
+      usd_payment_request
+    end
+
+    it "returns only payment requests with matching currency" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:payment_requests].count).to eq(1)
+      expect(json[:payment_requests].first[:lago_id]).to eq(payment_request.id)
+    end
+  end
+
   context "with payment_status filter" do
     let(:second_payment_request) { create(:payment_request, :succeeded, customer:) }
     let(:params) { {payment_status: "pending"} }

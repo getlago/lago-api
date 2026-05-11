@@ -11,6 +11,7 @@ RSpec.describe Types::Charges::Properties do
 
     expect(subject).to have_field(:graduated_ranges).of_type("[GraduatedRange!]")
 
+    expect(subject).to have_field(:presentation_group_keys).of_type("[PresentationGroupKey!]")
     expect(subject).to have_field(:graduated_percentage_ranges).of_type("[GraduatedPercentageRange!]")
 
     expect(subject).to have_field(:free_units).of_type("BigInt")

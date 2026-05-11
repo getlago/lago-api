@@ -33,7 +33,7 @@ module Entitlement
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
     rescue ActiveRecord::RecordInvalid => e
-      if e.record.is_a?(Entitlement::EntitlementValue)
+      if e.record.is_a?(EntitlementValue)
         errors = e.record.errors.messages.transform_keys { |key| :"privilege.#{key}" }
         result.validation_failure!(errors:)
       else

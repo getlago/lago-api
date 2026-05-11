@@ -42,7 +42,7 @@ RSpec.describe Subscription do
       expect(subject).to belong_to(:plan)
       expect(subject).to belong_to(:previous_subscription).optional
       expect(subject).to belong_to(:organization)
-      expect(subject).to have_one(:billing_entity).through(:customer)
+      expect(subject).to belong_to(:billing_entity).optional
       expect(subject).to have_many(:applied_invoice_custom_sections).class_name("Subscription::AppliedInvoiceCustomSection").dependent(:destroy)
       expect(subject).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
       expect(subject).to have_many(:next_subscriptions).class_name("Subscription").with_foreign_key(:previous_subscription_id)
@@ -68,6 +68,28 @@ RSpec.describe Subscription do
   describe "Clickhouse associations", clickhouse: true do
     it do
       expect(subject).to have_many(:activity_logs).class_name("Clickhouse::ActivityLog")
+    end
+  end
+
+  describe "#billing_entity" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+
+    context "when subscription has a billing_entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:subscription) { create(:subscription, customer:, billing_entity:) }
+
+      it "returns the subscription billing_entity" do
+        expect(subscription.billing_entity).to eq(billing_entity)
+      end
+    end
+
+    context "when subscription does not have a billing_entity" do
+      let(:subscription) { create(:subscription, customer:, billing_entity: nil) }
+
+      it "falls back to the customer billing_entity" do
+        expect(subscription.billing_entity).to eq(customer.billing_entity)
+      end
     end
   end
 
@@ -312,6 +334,52 @@ RSpec.describe Subscription do
       let(:subscription) { create(:subscription, :incomplete) }
 
       before { create(:subscription_activation_rule, subscription:, status: :satisfied) }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
+  describe "#payment_gated?" do
+    subject(:payment_gated?) { subscription.payment_gated? }
+
+    context "when incomplete with pending payment rule" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}])
+      end
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when incomplete with satisfied payment rule" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "satisfied"}])
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when active with pending payment rule" do
+      let(:subscription) do
+        create(:subscription, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}])
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when pending with pending payment rule" do
+      let(:subscription) do
+        create(:subscription, :pending, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}])
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when incomplete with no activation rules" do
+      let(:subscription) { create(:subscription, :incomplete) }
 
       it { is_expected.to be(false) }
     end

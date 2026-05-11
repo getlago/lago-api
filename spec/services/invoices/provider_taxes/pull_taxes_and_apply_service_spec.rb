@@ -141,6 +141,23 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
       end
     end
 
+    context "when invoice was finalized by a concurrent job" do
+      before do
+        allow(invoice).to receive(:reload).and_wrap_original do |method|
+          method.call
+          invoice.update(status: "finalized")
+          invoice
+        end
+      end
+
+      it "returns early without emitting webhook or activity log" do
+        result = pull_taxes_service.call
+
+        expect(result).to be_success
+        expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
+      end
+    end
+
     context "when taxes are fetched successfully" do
       it "marks the invoice as finalized" do
         expect { pull_taxes_service.call }
@@ -510,6 +527,70 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
             .to eq("action_script_failure")
           expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error_message"])
             .to eq("Error starting integration 'netsuite-customer-create': {\n  \"name\": \"TRPCClientError\",\n  \"message\": \"fetch failed\"\n}")
+        end
+      end
+    end
+
+    context "when invoice is subscription_gated" do
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: :payment, timeout_hours: 48, status: :pending}],
+          customer:, organization:)
+      end
+      let(:invoice) do
+        create(:invoice, :with_subscriptions, customer:, organization:, status: :open,
+          currency: "EUR", subscriptions: [subscription])
+      end
+
+      before do
+        invoice.update!(tax_status: :pending)
+      end
+
+      it "allows processing and triggers payment only" do
+        allow(Invoices::Payments::CreateService).to receive(:call_async)
+
+        result = pull_taxes_service.call
+
+        expect(result).to be_success
+        expect(Invoices::Payments::CreateService).to have_received(:call_async)
+        expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
+      end
+
+      context "when invoice total is zero after tax computation" do
+        let(:rule) { subscription.activation_rules.payment.sole }
+        let(:fee_subscription) do
+          create(:fee, invoice:, subscription:, fee_type: :subscription, amount_cents: 0)
+        end
+        let(:fee_charge) do
+          create(:fee, invoice:, charge:, fee_type: :charge, total_aggregated_units: 0, amount_cents: 0)
+        end
+        let(:body) do
+          {
+            succeededInvoices: [{
+              id: invoice.id,
+              issuing_date: Time.current.to_date.iso8601,
+              sub_total_excluding_taxes: 0,
+              taxes_amount_cents: 0,
+              currency: "EUR",
+              fees: [
+                {item_id: fee_subscription.id, amount_cents: 0, tax_amount_cents: 0, tax_breakdown: []},
+                {item_id: fee_charge.id, amount_cents: 0, tax_amount_cents: 0, tax_breakdown: []}
+              ]
+            }],
+            failedInvoices: []
+          }.to_json
+        end
+
+        it "marks the payment activation rule as satisfied" do
+          pull_taxes_service.call
+
+          expect(rule.reload).to be_satisfied
+        end
+
+        it "activates the subscription" do
+          pull_taxes_service.call
+
+          expect(subscription.reload).to be_active
         end
       end
     end

@@ -91,6 +91,35 @@ RSpec.describe PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodSer
         expect(payment_method.details["expiration_year"]).to eq(2025)
       end
 
+      context "when payment method type is not card" do
+        let(:stripe_payment_method) do
+          Stripe::PaymentMethod.construct_from(
+            id: payment_method_id,
+            object: "payment_method",
+            type: "link",
+            customer: provider_customer_id,
+            link: {email: "this@test.email"},
+            billing_details: {
+              address: {city: nil, country: "US", line1: nil, line2: nil, postal_code: "94105", state: nil},
+              email: "this@test.email",
+              name: nil,
+              phone: nil
+            },
+            metadata: {}
+          )
+        end
+
+        it "creates a payment method with only the type" do
+          result = service.call
+
+          payment_method = customer.payment_methods.order(created_at: :desc).first
+
+          expect(result).to be_success
+          expect(payment_method.provider_method_id).to eq(payment_method_id)
+          expect(payment_method.details).to eq("type" => "link")
+        end
+      end
+
       context "when payment method already exists in Lago" do
         let!(:existing_payment_method) do
           create(

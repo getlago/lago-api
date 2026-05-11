@@ -288,10 +288,19 @@ module Events
           :with_ctes,
           :charges_duration,
           :events_cte_queries,
-          :joined_group_names,
           :grouped_arel_columns,
           :operation_type_sql,
           to: :store
+
+        def joined_group_names
+          _, names = grouped_arel_columns
+
+          if names.is_a?(Array)
+            return names.join(", ")
+          end
+
+          names
+        end
 
         def events_cte_sql
           # NOTE: Common table expression returning event's timestamp, property name and operation type.

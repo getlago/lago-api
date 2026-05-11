@@ -12,7 +12,8 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
-      return result unless invoice.pending? && invoice.tax_pending?
+      return result if !invoice.pending? && !invoice.subscription_gated?
+      return result unless invoice.tax_pending?
       return result if customer.tax_customer
       return result if customer.vies_check_in_progress?
 
@@ -28,6 +29,9 @@ module Invoices
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         invoice.tax_status = "succeeded"
+
+        skip_payment_gating_for_zero_amount if invoice.subscription_payment_gated? && invoice.total_amount_cents.zero?
+
         Invoices::TransitionToFinalStatusService.call(invoice:)
 
         invoice.save!
@@ -36,7 +40,9 @@ module Invoices
         result.invoice = invoice
       end
 
-      if invoice.finalized?
+      if invoice.subscription_gated?
+        after_commit { create_payment }
+      elsif invoice.finalized?
         after_commit do
           SendWebhookJob.perform_later(webhook_type, invoice)
           Utils::ActivityLog.produce(invoice, webhook_type)
@@ -56,6 +62,17 @@ module Invoices
     private
 
     attr_reader :invoice
+
+    def skip_payment_gating_for_zero_amount
+      gated = invoice.subscriptions.find(&:payment_gated?)
+      return unless gated
+
+      Subscriptions::ActivationRules::Payment::EvaluateService.call!(
+        rule: gated.activation_rules.payment.sole,
+        status: :satisfied
+      )
+      Subscriptions::ActivationRules::ResolveSubscriptionStatusService.call!(subscription: gated)
+    end
 
     def customer
       @customer ||= invoice.customer

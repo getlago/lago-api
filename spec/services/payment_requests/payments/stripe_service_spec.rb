@@ -644,6 +644,34 @@ RSpec.describe PaymentRequests::Payments::StripeService do
               status: "succeeded"
             )
           end
+
+          context "when a concurrent writer has already persisted the payment" do
+            let(:payment) do
+              create(
+                :payment,
+                payable: payment_request,
+                provider_payment_id: stripe_payment.id,
+                payment_provider: stripe_payment_provider,
+                payment_provider_customer: stripe_customer
+              )
+            end
+
+            before do
+              payment
+              # Force the initial lookup to miss so the service falls through to handle_missing_payment.
+              # The rescue's re-fetch then finds the row the winning writer (a parallel webhook worker
+              # or PaymentProviders::Stripe::Payments::CreateService) committed in the meantime.
+              allow(Payment).to receive(:find_by)
+                .with(provider_payment_id: stripe_payment.id)
+                .and_return(nil, payment)
+            end
+
+            it "returns a success result with the persisted payment" do
+              expect(result).to be_success
+              expect(result.payment).to eq(payment)
+              expect(result.payable).to eq(payment_request)
+            end
+          end
         end
       end
     end

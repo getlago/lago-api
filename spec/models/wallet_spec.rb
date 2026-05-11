@@ -11,6 +11,7 @@ RSpec.describe Wallet do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:customer)
+      expect(subject).to belong_to(:billing_entity).optional
       expect(subject).to have_many(:applied_invoice_custom_sections).class_name("Wallet::AppliedInvoiceCustomSection").dependent(:destroy)
       expect(subject).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
       expect(subject).to have_one(:metadata).class_name("Metadata::ItemMetadata").dependent(:destroy)
@@ -21,6 +22,28 @@ RSpec.describe Wallet do
 
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
+  describe "#billing_entity" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+
+    context "when wallet has a billing_entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:wallet) { create(:wallet, customer:, billing_entity:) }
+
+      it "returns the wallet billing_entity" do
+        expect(wallet.billing_entity).to eq(billing_entity)
+      end
+    end
+
+    context "when wallet does not have a billing_entity" do
+      let(:wallet) { create(:wallet, customer:, billing_entity: nil) }
+
+      it "falls back to the customer billing_entity" do
+        expect(wallet.billing_entity).to eq(customer.billing_entity)
+      end
+    end
   end
 
   describe ".with_positive_balance" do

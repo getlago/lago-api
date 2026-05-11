@@ -7,6 +7,7 @@ module Resolvers
 
       description "Query customer portal subscriptions"
 
+      argument :currency, String, required: false
       argument :limit, Integer, required: false
       argument :page, Integer, required: false
       argument :plan_code, String, required: false
@@ -14,7 +15,7 @@ module Resolvers
 
       type Types::Subscriptions::Object.collection_type, null: false
 
-      def resolve(page: nil, limit: nil, plan_code: nil, status: nil)
+      def resolve(page: nil, limit: nil, plan_code: nil, status: nil, currency: nil)
         result = SubscriptionsQuery.call(
           organization: nil,
           pagination: {page:, limit:},
@@ -22,6 +23,7 @@ module Resolvers
             external_customer_id: context[:customer_portal_user].external_id,
             plan_code:,
             status:,
+            currency:,
             customer: context[:customer_portal_user]
           }
         )

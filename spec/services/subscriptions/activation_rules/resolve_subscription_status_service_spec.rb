@@ -59,6 +59,12 @@ RSpec.describe Subscriptions::ActivationRules::ResolveSubscriptionStatusService 
 
       expect(SendWebhookJob).to have_been_enqueued.with("subscription.canceled", subscription)
     end
+
+    it "produces a subscription.canceled activity log" do
+      result
+
+      expect(Utils::ActivityLog).to have_produced("subscription.canceled").after_commit.with(subscription)
+    end
   end
 
   context "when a rule has expired" do

@@ -23,6 +23,10 @@ module Wallets
           # Normalize transaction_name to nil if empty
           rule_attributes[:transaction_name] = rule_attributes[:transaction_name].presence if rule_attributes.key?(:transaction_name)
 
+          %i[paid_credits granted_credits threshold_credits].each do |credit_attr|
+            rule_attributes[credit_attr] = 0.0 if rule_attributes.key?(credit_attr) && rule_attributes[credit_attr].nil?
+          end
+
           if rule_attributes.key?(:payment_method)
             rule_attributes[:payment_method_type] = rule_attributes[:payment_method][:payment_method_type] if rule_attributes[:payment_method].key?(:payment_method_type)
             rule_attributes[:payment_method_id] = rule_attributes[:payment_method][:payment_method_id] if rule_attributes[:payment_method].key?(:payment_method_id)

@@ -18,8 +18,6 @@ module Subscriptions
           result.rules << rule
         end
 
-        ResolveSubscriptionStatusService.call!(subscription:)
-
         result.subscription = subscription
         result
       end

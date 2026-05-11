@@ -12,7 +12,7 @@ module Invoices
       def call
         return result.not_found_failure!(resource: "invoice") unless invoice
         return result.not_found_failure!(resource: "integration_customer") unless customer.tax_customer
-        return result unless invoice.pending? || invoice.draft?
+        return result unless invoice.pending? || invoice.draft? || invoice.subscription_gated?
         return result unless invoice.tax_pending?
 
         invoice.error_details.tax_error.discard_all # rubocop:disable Lago/DiscardAll
@@ -34,6 +34,9 @@ module Invoices
         provider_taxes = taxes_result.fees
 
         ActiveRecord::Base.transaction do
+          invoice.reload
+          return result if invoice.finalized? || invoice.voided? || invoice.closed?
+
           unless invoice.draft?
             invoice.issuing_date = issuing_date
             invoice.payment_due_date = payment_due_date
@@ -46,6 +49,9 @@ module Invoices
 
           invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
           invoice.tax_status = "succeeded"
+
+          skip_payment_gating_for_zero_amount if invoice.subscription_payment_gated? && invoice.total_amount_cents.zero?
+
           Invoices::TransitionToFinalStatusService.call(invoice:) unless invoice.draft?
 
           invoice.save!
@@ -54,7 +60,9 @@ module Invoices
           result.invoice = invoice
         end
 
-        if invoice.finalized?
+        if invoice.subscription_gated?
+          Invoices::Payments::CreateService.call_async(invoice:)
+        elsif invoice.finalized?
           SendWebhookJob.perform_later("invoice.created", invoice)
           Utils::ActivityLog.produce(invoice, "invoice.created")
           GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
@@ -78,6 +86,17 @@ module Invoices
       private
 
       attr_accessor :invoice
+
+      def skip_payment_gating_for_zero_amount
+        gated = invoice.subscriptions.find(&:payment_gated?)
+        return unless gated
+
+        Subscriptions::ActivationRules::Payment::EvaluateService.call!(
+          rule: gated.activation_rules.payment.sole,
+          status: :satisfied
+        )
+        Subscriptions::ActivationRules::ResolveSubscriptionStatusService.call!(subscription: gated)
+      end
 
       def should_deliver_email?
         License.premium? &&

@@ -40,6 +40,7 @@ module Resolvers
       includes = [
         :customer,
         :error_details,
+        :metadata,
         {invoice: :billing_entity},
         items: {
           fee: [

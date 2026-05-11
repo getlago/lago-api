@@ -60,6 +60,21 @@ RSpec.describe Invoices::EnsureCompletedViesCheckService do
           expect(invoice.tax_status).to eq("pending")
         end
 
+        context "when invoice is subscription_gated" do
+          let(:subscription) do
+            create(:subscription, :incomplete, :with_activation_rules,
+              activation_rules_config: [{type: :payment, timeout_hours: 48, status: :pending}],
+              customer:, organization:)
+          end
+          let(:invoice) { create(:invoice, :with_subscriptions, customer:, organization:, billing_entity:, status: :open, subscriptions: [subscription]) }
+
+          it "keeps invoice status as open and sets tax_status to pending" do
+            expect(result).to be_failure
+            expect(invoice.reload).to be_open
+            expect(invoice).to be_tax_pending
+          end
+        end
+
         context "when finalizing is false" do
           subject(:result) { described_class.call(invoice:, finalizing: false) }
 

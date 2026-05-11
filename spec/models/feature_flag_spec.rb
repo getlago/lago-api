@@ -8,6 +8,10 @@ RSpec.describe FeatureFlag do
       expect(described_class.valid?("multiple_payment_methods")).to be(true)
     end
 
+    it "returns true for the multi_entity_billing flag" do
+      expect(described_class.valid?("multi_entity_billing")).to be(true)
+    end
+
     it "returns false for an invalid flag" do
       expect(described_class.valid?("invalid_flag")).to be(false)
     end

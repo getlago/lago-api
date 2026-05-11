@@ -2,33 +2,66 @@
 
 require "spec_helper"
 
-RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedService, :clickhouse,
-  skip: "Temporarily disabled as it fails randomly because of the Clickhouse automatic deduplication" do
+RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedService, :clickhouse do
   subject(:clean_service) { described_class.new(subscription:, timestamp:) }
 
   let(:organization) { create(:organization, clickhouse_events_store: true) }
   let(:subscription) { create(:subscription, organization:) }
   let(:timestamp) { Time.current }
 
+  # ReplacingMergeTree dedupes rows sharing the ORDER BY tuple at merge time, which prevents
+  # the issue the service is supposed to clean.
+  # TRUNCATE before each test gives us a clean slate (no inactive parts/mutations),
+  # and inserting all rows in a single block with `optimize_on_insert=0` keeps every duplicate
+  # inside the same data part so the engine has nothing to merge across.
+  before do
+    ::Clickhouse::EventsEnriched.connection.execute("TRUNCATE TABLE events_enriched")
+  end
+
+  def insert_enriched_events(rows)
+    conn = ::Clickhouse::EventsEnriched.connection
+    values = rows.map { |row|
+      "(" + [
+        conn.quote(row[:organization_id]),
+        conn.quote(row[:external_subscription_id]),
+        conn.quote(row[:code]),
+        conn.quote(row[:timestamp].utc.strftime("%Y-%m-%d %H:%M:%S.%3N")),
+        conn.quote(row[:transaction_id]),
+        "{}",
+        "'21.0'",
+        conn.quote(row[:enriched_at].utc.strftime("%Y-%m-%d %H:%M:%S.%3N"))
+      ].join(", ") + ")"
+    }.join(", ")
+
+    sql = <<~SQL.squish
+      INSERT INTO events_enriched
+        (organization_id, external_subscription_id, code, timestamp, transaction_id, properties, value, enriched_at)
+      VALUES #{values}
+    SQL
+
+    conn.execute(sql, format: nil, settings: {optimize_on_insert: 0})
+  end
+
   describe "#call" do
     let(:transaction_id) { SecureRandom.uuid }
     let(:timestamp) { Time.current.change(usec: 0) }
+    let(:base_enriched_at) { Time.current.change(usec: 0) - 10.minutes }
 
-    let(:base_enriched_at) { Time.current - 10.minutes }
-
-    before do
-      3.times do |i|
-        create(
-          :clickhouse_events_enriched,
+    let(:duplicated_rows) do
+      Array.new(3) do |i|
+        {
           organization_id: organization.id,
           external_subscription_id: subscription.external_id,
           transaction_id: transaction_id,
           timestamp: timestamp,
           code: "event_code",
           enriched_at: base_enriched_at + i.minutes
-        )
+        }
       end
+    end
 
+    before do
+      insert_enriched_events(duplicated_rows)
       allow(Subscriptions::ChargeCacheService).to receive(:expire_for_subscription)
     end
 
@@ -50,15 +83,14 @@ RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedService, :clickhouse,
       let(:other_code) { "other_event_code" }
 
       before do
-        create(
-          :clickhouse_events_enriched,
+        insert_enriched_events([{
           organization_id: organization.id,
           external_subscription_id: subscription.external_id,
           transaction_id: transaction_id,
           timestamp: timestamp,
           code: other_code,
           enriched_at: base_enriched_at
-        )
+        }])
       end
 
       it "does not delete events with a different code" do
@@ -71,19 +103,16 @@ RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedService, :clickhouse,
     end
 
     context "when duplicate events share the same enriched_at timestamp" do
-      before do
-        ::Clickhouse::EventsEnriched.where(transaction_id:, timestamp:).delete_all
-
-        2.times do
-          create(
-            :clickhouse_events_enriched,
+      let(:duplicated_rows) do
+        Array.new(2) do
+          {
             organization_id: organization.id,
             external_subscription_id: subscription.external_id,
             transaction_id: transaction_id,
             timestamp: timestamp,
             code: "event_code",
             enriched_at: base_enriched_at
-          )
+          }
         end
       end
 

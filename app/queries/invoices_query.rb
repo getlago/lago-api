@@ -27,7 +27,7 @@ class InvoicesQuery < BaseQuery
   def call
     return result unless validate_filters.success?
 
-    invoices = base_scope.result.includes(:customer, file_attachment: :blob, xml_file_attachment: :blob)
+    invoices = base_scope.result.includes(:customer).preload(file_attachment: :blob, xml_file_attachment: :blob)
     invoices = with_customers_filter(invoices)
 
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
@@ -36,7 +36,7 @@ class InvoicesQuery < BaseQuery
     invoices = with_customer_id(invoices) if filters.customer_id.present?
     invoices = with_invoice_type(invoices) if filters.invoice_type.present?
     invoices = with_issuing_date_range(invoices) if filters.issuing_date_from || filters.issuing_date_to
-    invoices = with_status(invoices) if filters.status.present?
+    invoices = with_status(invoices)
     invoices = with_payment_status(invoices) if filters.payment_status.present?
     invoices = with_payment_dispute_lost(invoices) unless filters.payment_dispute_lost.nil?
     invoices = with_payment_overdue(invoices) unless filters.payment_overdue.nil?
@@ -67,7 +67,7 @@ class InvoicesQuery < BaseQuery
   end
 
   def base_scope
-    organization.invoices.visible.ransack(search_params)
+    organization.invoices.ransack(search_params)
   end
 
   def search_params
@@ -81,7 +81,9 @@ class InvoicesQuery < BaseQuery
   end
 
   def with_customers_filter(scope)
-    return scope if search_term.blank? || filters.customer_id.present?
+    return scope if search_term.blank?
+    return scope if filters.customer_id.present?
+    return scope if filters.customer_external_id.present?
 
     matching_customer_ids = organization.customers
       .ransack(
@@ -94,7 +96,7 @@ class InvoicesQuery < BaseQuery
       ).result.select(:id)
 
     scope.or(
-      organization.invoices.visible.where(customer_id: matching_customer_ids)
+      organization.invoices.where(customer_id: matching_customer_ids)
     )
   end
 
@@ -123,7 +125,13 @@ class InvoicesQuery < BaseQuery
   end
 
   def with_status(scope)
-    scope.where(status: filters.status)
+    visible_keys = Invoice::VISIBLE_STATUS.keys.map(&:to_s)
+    statuses = if filters.status.present?
+      Array(filters.status).map(&:to_s) & visible_keys
+    else
+      visible_keys
+    end
+    scope.where(status: statuses)
   end
 
   def with_payment_status(scope)

@@ -40,9 +40,9 @@ module DailyUsages
             previous_daily_usage = nil
           end
 
-          if usage.total_amount_cents.positive?
-            usage.fees = usage.fees.select { |f| f.units.positive? }
+          usage.fees = usage.fees.select(&:non_zero?)
 
+          if usage.fees.any?
             daily_usage = DailyUsage.new(
               organization:,
               customer: subscription.customer,

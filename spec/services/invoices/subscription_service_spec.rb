@@ -613,6 +613,45 @@ RSpec.describe Invoices::SubscriptionService do
 
         expect(Invoices::Payments::CreateService).to have_received(:call_async)
       end
+
+      context "when invoice total is zero" do
+        let(:plan) { create(:plan, interval: "monthly", pay_in_advance: true, amount_cents: 0) }
+        let(:rule) { subscription.activation_rules.payment.sole }
+
+        it "marks the payment activation rule as satisfied" do
+          invoice_service.call
+
+          expect(rule.reload).to be_satisfied
+        end
+
+        it "activates the subscription" do
+          invoice_service.call
+
+          expect(subscription.reload).to be_active
+        end
+      end
+
+      context "when tax is pending" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+        let(:rule) { subscription.activation_rules.payment.sole }
+
+        before { integration_customer }
+
+        it "does not fire the zero-amount activation shortcut" do
+          invoice_service.call
+
+          expect(rule.reload).to be_pending
+          expect(subscription.reload).to be_incomplete
+        end
+
+        it "keeps the invoice open with tax_status pending" do
+          result = invoice_service.call
+
+          expect(result.invoice).to be_open
+          expect(result.invoice.tax_status).to eq("pending")
+        end
+      end
     end
 
     context "when an error occurs" do
