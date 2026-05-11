@@ -538,6 +538,43 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         expect(cached_aggregation.max_aggregation).to eq(9)
         expect(cached_aggregation.max_aggregation_with_proration).to be_nil
         expect(cached_aggregation.grouped_by).to eq({})
+        expect(cached_aggregation.presentation_breakdowns).to eq([])
+      end
+
+      context "with presentation_group_keys" do
+        let(:charge) do
+          create(:standard_charge, :pay_in_advance, billable_metric:, plan:,
+            properties: {amount: "10", pricing_group_keys: ["cloud"], presentation_group_keys: [{"value" => "region"}]})
+        end
+        let(:event_properties) { {"cloud" => "aws", "region" => "us-east-1"} }
+        let(:aggregation_result) do
+          BaseService::Result.new.tap do |result|
+            result.amount = 10
+            result.count = 1
+            result.units = 9
+            result.current_aggregation = 9
+            result.max_aggregation = 9
+            result.max_aggregation_with_proration = nil
+            result.breakdowns = [{groups: {"cloud" => "aws", "region" => "us-east-1"}, value: 9}]
+          end
+        end
+
+        it "stores presentation_breakdowns stripped of pricing group keys" do
+          fee_service.call
+
+          cached_aggregation = CachedAggregation.last
+          expect(cached_aggregation.presentation_breakdowns.map { |b| b["groups"] }).to eq([{"region" => "us-east-1"}])
+          expect(cached_aggregation.presentation_breakdowns.map { |b| b["value"] }).to eq([9])
+        end
+
+        it "builds presentation_breakdowns on the fee stripped of pricing group keys" do
+          result = fee_service.call
+
+          fee = result.fees.first
+          expect(fee.presentation_breakdowns.map(&:presentation_by)).to eq([{"region" => "us-east-1"}])
+          expect(fee.presentation_breakdowns.map { |b| b.units.to_i }).to eq([9])
+          expect(fee.presentation_breakdowns).to all(have_attributes(organization_id: organization.id))
+        end
       end
     end
 
