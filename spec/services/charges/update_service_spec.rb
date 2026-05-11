@@ -418,8 +418,6 @@ RSpec.describe Charges::UpdateService do
 
           expect(Charges::UpdateChildrenJob).to have_received(:perform_later) do |args|
             expect(args[:params]).to include("charge_model", "properties")
-            # Filters are cascaded via per-filter ChargeFilters::CascadeJob,
-            # not via the legacy lock-protected job.
             expect(args[:params]).not_to have_key("filters")
             expect(args[:old_parent_attrs]).to include("id" => charge.id)
             expect(args[:old_parent_filters_attrs]).to be_an(Array)

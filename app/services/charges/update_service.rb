@@ -55,7 +55,7 @@ module Charges
 
         filters = params.delete(:filters)
         unless filters.nil?
-          # TODO: skip when `cascade` after Sidekiq drain — filter cascade goes through ChargeFilters::CascadeJob now.
+          # TODO: skip when `cascade` — filter cascade goes through ChargeFilters::CascadeJob
           ChargeFilters::CreateOrUpdateBatchService.call(
             charge:,
             filters_params: filters.map(&:with_indifferent_access),

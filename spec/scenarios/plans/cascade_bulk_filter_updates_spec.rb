@@ -2,12 +2,6 @@
 
 require "rails_helper"
 
-# Tests filter-level cascade for the bulk plan update path
-# (PUT /api/v1/plans/:code, which goes through Plans::UpdateService).
-#
-# The plan-level update enqueues a charge-level cascade for non-filter changes
-# AND one ChargeFilters::CascadeJob per changed filter — avoiding the
-# advisory-lock contention of the legacy charge-level cascade.
 RSpec.describe "Cascade bulk filter updates via Plans::UpdateService", :premium do
   include ScenariosHelper
 
