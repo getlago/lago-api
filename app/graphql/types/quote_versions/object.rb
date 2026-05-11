@@ -19,6 +19,8 @@ module Types
       field :void_reason, Types::QuoteVersions::VoidReasonEnum, null: true
       field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
       # TODO: field :order_form, Types::OrderForms::Object, null: true
+
+      dataload_association :organization, :quote
     end
   end
 end
