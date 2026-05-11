@@ -41,8 +41,8 @@ module Integrations
           )
         end
 
-        def perform(invoice:)
-          if executions > 1
+        def perform(invoice:, find_first: false)
+          if find_first || executions > 1
             find_result = Integrations::Aggregator::Invoices::FindService.call(invoice:)
             find_result.raise_if_error!
             return if find_result.external_id.present?
