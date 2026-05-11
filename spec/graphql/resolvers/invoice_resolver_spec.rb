@@ -344,7 +344,7 @@ RSpec.describe Resolvers::InvoiceResolver do
       expect(data["customer"]["id"]).to eq(customer.id)
       expect(data["customer"]["name"]).to eq(customer.name)
       expect(data["invoiceSubscriptions"][0]["subscription"]["id"]).to eq(subscription.id)
-      expect(data["invoiceSubscriptions"][0]["fees"][0]["id"]).to eq(fee.id)
+      expect(data["invoiceSubscriptions"][0]["fees"]).to include(a_hash_including("id" => fee.id))
     end
   end
 
@@ -380,11 +380,12 @@ RSpec.describe Resolvers::InvoiceResolver do
       expect(data["status"]).to eq(invoice.status)
       expect(data["customer"]["id"]).to eq(customer.id)
       expect(data["customer"]["name"]).to eq(customer.name)
-      expect(data["fees"].first).to include(
+      add_on_fee = data["fees"].find { |f| f["itemType"] == "add_on" }
+      expect(add_on_fee).to include(
         "itemCode" => add_on.code,
         "itemName" => add_on.name
       )
-      expect(data["fees"].first["presentationBreakdowns"]).to eq([
+      expect(add_on_fee["presentationBreakdowns"]).to eq([
         {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
       ])
     end
@@ -411,12 +412,12 @@ RSpec.describe Resolvers::InvoiceResolver do
         expect(data["status"]).to eq(invoice.status)
         expect(data["customer"]["id"]).to eq(customer.id)
         expect(data["customer"]["name"]).to eq(customer.name)
-        expect(data["fees"].first).to include(
-          "itemType" => "add_on",
+        add_on_fee = data["fees"].find { |f| f["itemType"] == "add_on" }
+        expect(add_on_fee).to include(
           "itemCode" => add_on.code,
           "itemName" => add_on.name
         )
-        expect(data["fees"].first["presentationBreakdowns"]).to eq([
+        expect(add_on_fee["presentationBreakdowns"]).to eq([
           {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
         ])
       end

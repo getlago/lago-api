@@ -36,7 +36,7 @@ module Invoices
         )
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
-        skip_payment_gating_for_zero_amount if subscription_payment_gated? && invoice.total_amount_cents.zero?
+        skip_payment_gating_for_zero_amount if subscription_payment_gated? && invoice.total_amount_cents.zero? && !invoice.tax_pending?
 
         set_invoice_generated_status unless invoice.pending?
         invoice.save!
