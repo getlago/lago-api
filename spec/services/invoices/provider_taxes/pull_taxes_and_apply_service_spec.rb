@@ -555,6 +555,44 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(Invoices::Payments::CreateService).to have_received(:call_async)
         expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
       end
+
+      context "when invoice total is zero after tax computation" do
+        let(:rule) { subscription.activation_rules.payment.sole }
+        let(:fee_subscription) do
+          create(:fee, invoice:, subscription:, fee_type: :subscription, amount_cents: 0)
+        end
+        let(:fee_charge) do
+          create(:fee, invoice:, charge:, fee_type: :charge, total_aggregated_units: 0, amount_cents: 0)
+        end
+        let(:body) do
+          {
+            succeededInvoices: [{
+              id: invoice.id,
+              issuing_date: Time.current.to_date.iso8601,
+              sub_total_excluding_taxes: 0,
+              taxes_amount_cents: 0,
+              currency: "EUR",
+              fees: [
+                {item_id: fee_subscription.id, amount_cents: 0, tax_amount_cents: 0, tax_breakdown: []},
+                {item_id: fee_charge.id, amount_cents: 0, tax_amount_cents: 0, tax_breakdown: []}
+              ]
+            }],
+            failedInvoices: []
+          }.to_json
+        end
+
+        it "marks the payment activation rule as satisfied" do
+          pull_taxes_service.call
+
+          expect(rule.reload).to be_satisfied
+        end
+
+        it "activates the subscription" do
+          pull_taxes_service.call
+
+          expect(subscription.reload).to be_active
+        end
+      end
     end
   end
 end

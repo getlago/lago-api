@@ -716,6 +716,27 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
           expect(subscription.reload).to be_active
         end
       end
+
+      context "when tax is pending" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+        let(:rule) { subscription.activation_rules.payment.sole }
+
+        before { integration_customer }
+
+        it "does not fire the zero-amount activation shortcut" do
+          invoice_service.call
+
+          expect(rule.reload).to be_pending
+          expect(subscription.reload).to be_incomplete
+        end
+
+        it "keeps the invoice open" do
+          result = invoice_service.call
+
+          expect(result.invoice).to be_open
+        end
+      end
     end
   end
 end
