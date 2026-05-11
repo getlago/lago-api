@@ -5,7 +5,9 @@ require "rails_helper"
 RSpec.describe Integrations::Aggregator::Invoices::CreateJob do
   subject(:create_job) { described_class }
 
-  let(:invoice) { create(:invoice) }
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
   let(:result) { BaseService::Result.new }
   let(:find_result) { BaseService::Result.new }
 
@@ -68,6 +70,45 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateJob do
       it "discards the job and does not call CreateService" do
         expect { create_job.perform_now }.not_to raise_error
         expect(Integrations::Aggregator::Invoices::CreateService).not_to have_received(:call)
+      end
+    end
+  end
+
+  describe "Net::ReadTimeout retry" do
+    before do
+      allow(Integrations::Aggregator::Invoices::CreateService).to receive(:call).and_raise(Net::ReadTimeout.new)
+    end
+
+    context "when the invoice is for a NetSuite integration" do
+      let(:integration) { create(:netsuite_integration, organization:) }
+
+      before { create(:netsuite_customer, integration:, customer:) }
+
+      it "schedules the next attempt at least 6 minutes later" do
+        freeze_time do
+          described_class.perform_now(invoice:)
+
+          retry_at = ActiveJob::Base.queue_adapter.enqueued_jobs.last[:at]
+          # NOTE: ActiveJob applies up to 15% positive jitter on top of the configured wait,
+          # so the retry lands in [6 minutes, 6 minutes + 15%] from now.
+          expect(retry_at).to be_between(6.minutes.from_now.to_f, 7.minutes.from_now.to_f)
+        end
+      end
+    end
+
+    context "when the invoice is for a non-NetSuite integration" do
+      let(:integration) { create(:xero_integration, organization:) }
+
+      before { create(:xero_customer, integration:, customer:) }
+
+      it "schedules the next attempt with polynomial backoff" do
+        freeze_time do
+          described_class.perform_now(invoice:)
+
+          retry_at = ActiveJob::Base.queue_adapter.enqueued_jobs.last[:at]
+          # NOTE: First polynomial retry is ~3s (1**4 + 2) plus up to 15% jitter; well under a minute.
+          expect(retry_at).to be < 1.minute.from_now.to_f
+        end
       end
     end
   end
