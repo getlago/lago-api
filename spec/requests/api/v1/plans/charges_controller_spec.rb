@@ -214,13 +214,11 @@ RSpec.describe Api::V1::Plans::ChargesController do
           }
         end
 
-        it "creates a charge with filter presentation_group_keys" do
+        it "ignores charge filter presentation_group_keys" do
           subject
 
           expect(response).to have_http_status(:success)
-          expect(json[:charge][:filters].first[:properties][:presentation_group_keys]).to eq([
-            {value: "region", options: {display_in_invoice: true}}
-          ])
+          expect(json[:charge][:filters].first[:properties]).not_to have_key(:presentation_group_keys)
         end
       end
     end

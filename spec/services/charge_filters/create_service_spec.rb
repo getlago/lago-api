@@ -153,5 +153,23 @@ RSpec.describe ChargeFilters::CreateService do
         })
       end
     end
+
+    context "with presentation_group_keys in properties" do
+      let(:params) do
+        {
+          invoice_display_name: "Domestic Filter",
+          properties: {amount: "50", presentation_group_keys: [{value: "region"}]},
+          values: {card_location_filter.key => ["domestic"]}
+        }
+      end
+
+      it "ignores presentation_group_keys" do
+        expect(service).to be_success
+
+        charge_filter = service.charge_filter
+        expect(charge_filter.properties).to eq({"amount" => "50"})
+        expect(charge_filter.properties).not_to have_key("presentation_group_keys")
+      end
+    end
   end
 end
