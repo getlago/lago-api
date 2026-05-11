@@ -16,4 +16,19 @@ RSpec.describe EventsChargedInAdvanceConsumer do
         .at(Events::Stores::ClickhouseStore::CLICKHOUSE_MERGE_DELAY.from_now)
     end
   end
+
+  context "when the organization is skipped" do
+    let(:organization_id) { SecureRandom.uuid }
+    let(:event) { build(:common_event, organization_id: organization_id) }
+
+    around do |example|
+      ENV["LAGO_SKIPPED_ORGANIZATION_ID"] = organization_id
+      example.run
+      ENV.delete("LAGO_SKIPPED_ORGANIZATION_ID")
+    end
+
+    it "does not enqueue a pay in advance job" do
+      expect { consumer.consume }.not_to have_enqueued_job(Events::PayInAdvanceJob)
+    end
+  end
 end
