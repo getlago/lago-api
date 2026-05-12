@@ -20,7 +20,6 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
 
     context "when there are existing filters" do
       let(:filter) { create(:billable_metric_filter, billable_metric:, key: "region") }
-      let!(:filter_without_values) { create(:billable_metric_filter, billable_metric:, key: "cloud") }
 
       let(:charge) { create(:standard_charge, billable_metric:) }
       let(:charge_filter) { create(:charge_filter, charge:) }
@@ -33,7 +32,10 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
         )
       end
 
-      before { filter_value }
+      before do
+        create(:billable_metric_filter, billable_metric:, key: "cloud")
+        filter_value
+      end
 
       it "discards all filters and the related values" do
         expect { service }.to change { BillableMetricFilter.with_discarded.discarded.count }.from(0).to(2)
@@ -43,7 +45,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
 
       context "when a charge_filter has filter_values from multiple billable_metric_filters" do
         let(:other_filter) { create(:billable_metric_filter, billable_metric:, key: "cloud") }
-        let!(:other_filter_value) do
+        let(:other_filter_value) do
           create(
             :charge_filter_value,
             charge_filter:,
@@ -51,6 +53,8 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
             values: [other_filter.values.first]
           )
         end
+
+        before { other_filter_value }
 
         it "discards all filters, all filter_values, and the shared charge_filter" do
           expect { service }.to change { BillableMetricFilter.with_discarded.discarded.count }.from(0).to(3)
