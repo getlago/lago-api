@@ -49,7 +49,7 @@ class Coupon < ApplicationRecord
   monetize :amount_cents, disable_validation: true, allow_nil: true
 
   validates :name, presence: true
-  validates :code, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
+  validates :code, presence: true, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
 
   validates :amount_cents, presence: true, if: :fixed_amount?
   validates :amount_cents, numericality: {greater_than: 0}, allow_nil: true
