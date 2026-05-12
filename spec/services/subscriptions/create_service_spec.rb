@@ -1707,5 +1707,163 @@ RSpec.describe Subscriptions::CreateService do
         end
       end
     end
+
+    describe "billing entity binding on downgrade" do
+      let(:current_entity) { create(:billing_entity, organization:, code: "entity-x") }
+      let(:target_entity) { create(:billing_entity, organization:, code: "entity-y") }
+      let(:old_plan) { create(:plan, amount_cents: 100, organization:) }
+      let(:plan) { create(:plan, amount_cents: 50, organization:) }
+
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: old_plan,
+          status: :active,
+          subscription_at: Time.current,
+          started_at: Time.current,
+          external_id:,
+          billing_entity: current_entity
+        )
+      end
+
+      before { CurrentContext.source = "api" }
+
+      context "when multi_entity_billing flag is OFF" do
+        before { subscription.mark_as_active! }
+
+        it "carries over current_subscription.billing_entity_id to the pending subscription" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to eq(current_entity.id)
+        end
+
+        it "carries over NULL when current_subscription is not bound to any entity" do
+          subscription.update!(billing_entity_id: nil)
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to be_nil
+        end
+
+        it "ignores billing_entity_code param and still carries over from current_subscription" do
+          params[:billing_entity_code] = target_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to eq(current_entity.id)
+        end
+      end
+
+      context "when multi_entity_billing flag is ON" do
+        before do
+          subscription.mark_as_active!
+          organization.enable_feature_flag!(:multi_entity_billing)
+        end
+
+        it "carries over current_subscription.billing_entity_id when no param is provided" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to eq(current_entity.id)
+        end
+
+        it "persists NULL when current_subscription is not bound and no param is provided" do
+          subscription.update!(billing_entity_id: nil)
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to be_nil
+        end
+
+        it "binds the pending subscription to the entity matched by billing_entity_code" do
+          params[:billing_entity_code] = target_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to eq(target_entity.id)
+        end
+
+        it "leaves the current subscription bound to its original entity when the param overrides it" do
+          params[:billing_entity_code] = target_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.reload.billing_entity_id).to eq(current_entity.id)
+        end
+
+        it "binds the pending subscription to the entity matched by billing_entity_id" do
+          params[:billing_entity_id] = target_entity.id
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to eq(target_entity.id)
+        end
+
+        it "fails with billing_entity_not_found when billing_entity_code is unknown" do
+          params[:billing_entity_code] = "unknown-entity-code"
+
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("billing_entity_not_found")
+        end
+
+        it "fails with billing_entity_not_found when billing_entity_id is unknown" do
+          params[:billing_entity_id] = SecureRandom.uuid
+
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("billing_entity_not_found")
+        end
+      end
+
+      context "when re-downgrading a starting_in_the_future subscription" do
+        let(:subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan: old_plan,
+            status: :pending,
+            subscription_at: 1.day.from_now,
+            external_id:,
+            billing_entity: current_entity
+          )
+        end
+
+        before do
+          subscription
+          organization.enable_feature_flag!(:multi_entity_billing)
+        end
+
+        it "re-binds the pending subscription when billing_entity_code is provided" do
+          params[:billing_entity_code] = target_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(subscription.id)
+          expect(result.subscription.reload.billing_entity_id).to eq(target_entity.id)
+        end
+
+        it "leaves the pending subscription's billing entity untouched when no param is provided" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(subscription.id)
+          expect(result.subscription.reload.billing_entity_id).to eq(current_entity.id)
+        end
+      end
+    end
   end
 end
