@@ -1791,6 +1791,58 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           expect(json[:code]).to eq("subscription_incomplete")
         end
       end
+
+      context "when updating billing_entity" do
+        let(:subscription) { create(:subscription, customer:, plan:) }
+        let(:new_billing_entity) { create(:billing_entity, organization:) }
+
+        context "with multi_entity_billing feature flag enabled" do
+          before { organization.update!(feature_flags: ["multi_entity_billing"]) }
+
+          context "with billing_entity_code" do
+            let(:update_params) { {billing_entity_code: new_billing_entity.code} }
+
+            it "updates the subscription's billing entity" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+            end
+          end
+
+          context "with billing_entity_id" do
+            let(:update_params) { {billing_entity_id: new_billing_entity.id} }
+
+            it "updates the subscription's billing entity" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+            end
+          end
+
+          context "with an unknown billing_entity_code" do
+            let(:update_params) { {billing_entity_code: "does-not-exist"} }
+
+            it "returns a not found error" do
+              subject
+
+              expect(response).to be_not_found_error("billing_entity")
+            end
+          end
+        end
+
+        context "with multi_entity_billing feature flag disabled" do
+          let(:update_params) { {billing_entity_code: new_billing_entity.code} }
+
+          it "silently ignores billing_entity_code and returns success" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(subscription.reload.billing_entity_id).to be_nil
+          end
+        end
+      end
     end
   end
 

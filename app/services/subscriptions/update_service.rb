@@ -64,6 +64,11 @@ module Subscriptions
           subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
         end
 
+        if params.key?(:billing_entity_id) || params.key?(:billing_entity_code)
+          resolved = resolve_billing_entity
+          subscription.billing_entity = resolved if resolved
+        end
+
         subscription.plan = handle_plan_override.plan if params.key?(:plan_overrides)
 
         if params.key?(:usage_thresholds)
@@ -148,6 +153,21 @@ module Subscriptions
           Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, subscription.started_at + 1.second)
         end
       end
+    end
+
+    def resolve_billing_entity
+      return nil unless subscription.organization.feature_flag_enabled?(:multi_entity_billing)
+
+      attrs = if params[:billing_entity_id].present?
+        {id: params[:billing_entity_id]}
+      elsif params[:billing_entity_code].present?
+        {code: params[:billing_entity_code]}
+      end
+      return nil unless attrs
+
+      subscription.organization.billing_entities.find_by!(attrs)
+    rescue ActiveRecord::RecordNotFound
+      result.not_found_failure!(resource: "billing_entity").raise_if_error!
     end
 
     def handle_plan_override

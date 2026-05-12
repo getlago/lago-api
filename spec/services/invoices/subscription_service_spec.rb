@@ -101,6 +101,58 @@ RSpec.describe Invoices::SubscriptionService do
       expect(result.invoice).to be_finalized
     end
 
+    context "when the subscription has its own billing_entity" do
+      let(:subscription_billing_entity) { create(:billing_entity, organization:) }
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          billing_entity: subscription_billing_entity,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at
+        )
+      end
+
+      it "stamps the generated invoice with the subscription's entity" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.billing_entity_id).to eq(subscription_billing_entity.id)
+      end
+
+      it "stamps generated fees with the subscription's entity" do
+        result = invoice_service.call
+
+        expect(result.invoice.fees.subscription.first.billing_entity_id).to eq(subscription_billing_entity.id)
+      end
+    end
+
+    context "when batched subscriptions resolve to different billing entities" do
+      let(:other_entity) { create(:billing_entity, organization:) }
+      let(:other_subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          billing_entity: other_entity,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at
+        )
+      end
+      let(:subscriptions) { [subscription, other_subscription] }
+
+      it "returns a validation failure rather than producing a mixed-entity invoice" do
+        result = invoice_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:billing_entity]).to eq(["mixed_billing_entities"])
+      end
+    end
+
     it_behaves_like "syncs invoice" do
       let(:service_call) { invoice_service.call }
     end
