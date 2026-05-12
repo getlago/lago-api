@@ -36,10 +36,9 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
       before { filter_value }
 
       it "discards all filters and the related values" do
-        expect { service }.to change { filter.reload.discarded? }.to(true)
-          .and change { filter_without_values.reload.discarded? }.to(true)
-          .and change { filter_value.reload.discarded? }.to(true)
-          .and change { charge_filter.reload.discarded? }.to(true)
+        expect { service }.to change { BillableMetricFilter.with_discarded.discarded.count }.from(0).to(2)
+          .and change { ChargeFilterValue.with_discarded.discarded.count }.from(0).to(1)
+          .and change { ChargeFilter.with_discarded.discarded.count }.from(0).to(1)
       end
 
       context "when a charge_filter has filter_values from multiple billable_metric_filters" do
@@ -53,12 +52,10 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
           )
         end
 
-        it "discards both filters, all filter_values, and the shared charge_filter" do
-          expect { service }.to change { filter.reload.discarded? }.to(true)
-            .and change { other_filter.reload.discarded? }.to(true)
-            .and change { filter_value.reload.discarded? }.to(true)
-            .and change { other_filter_value.reload.discarded? }.to(true)
-            .and change { charge_filter.reload.discarded? }.to(true)
+        it "discards all filters, all filter_values, and the shared charge_filter" do
+          expect { service }.to change { BillableMetricFilter.with_discarded.discarded.count }.from(0).to(3)
+            .and change { ChargeFilterValue.with_discarded.discarded.count }.from(0).to(2)
+            .and change { ChargeFilter.with_discarded.discarded.count }.from(0).to(1)
         end
       end
     end

@@ -120,37 +120,24 @@ module BillableMetricFilters
     end
 
     def bulk_discard_emptied_charge_filters_for(filter_value_ids)
-      charge_filter_ids_to_discard = emptied_charge_filter_ids_for(filter_value_ids)
-      return if charge_filter_ids_to_discard.empty?
-
-      ChargeFilter
-        .where(id: charge_filter_ids_to_discard, deleted_at: nil)
-        .unscope(:order)
-        .update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    end
-
-    def emptied_charge_filter_ids_for(filter_value_ids)
-      charge_filter_ids = charge_filter_ids_referenced_by(filter_value_ids)
-      return [] if charge_filter_ids.empty?
-
-      charge_filter_ids - charge_filter_ids_with_kept_values(charge_filter_ids)
-    end
-
-    def charge_filter_ids_referenced_by(filter_value_ids)
-      ChargeFilterValue
+      charge_filter_ids = ChargeFilterValue
         .with_discarded
         .where(id: filter_value_ids)
         .unscope(:order)
         .distinct
-        .pluck(:charge_filter_id)
-    end
+        .select(:charge_filter_id)
 
-    def charge_filter_ids_with_kept_values(charge_filter_ids)
-      ChargeFilterValue
-        .where(deleted_at: nil, charge_filter_id: charge_filter_ids)
+      return if charge_filter_ids.empty?
+
+      ChargeFilter
+        .where(id: charge_filter_ids, deleted_at: nil)
+        .where.not(
+          id: ChargeFilterValue
+            .where(deleted_at: nil, charge_filter_id: charge_filter_ids)
+            .select(:charge_filter_id)
+        )
         .unscope(:order)
-        .distinct
-        .pluck(:charge_filter_id)
+        .update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end
