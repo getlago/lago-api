@@ -31,7 +31,7 @@ module Lago
 
     def sidekiq
       redis_config = {
-        url:,
+        url: ENV["REDIS_URL"].presence,
         ssl_params: {
           verify_mode: OpenSSL::SSL::VERIFY_NONE
         }
@@ -39,6 +39,20 @@ module Lago
 
       add_sentinels(redis_config)
       add_password(redis_config)
+
+      redis_config.merge(extra_options)
+    end
+
+    def cache
+      redis_config = {
+        url: ENV["LAGO_REDIS_CACHE_URL"].presence,
+        ssl_params: {
+          verify_mode: OpenSSL::SSL::VERIFY_NONE
+        }
+      }.compact
+
+      add_cache_sentinels(redis_config)
+      add_cache_password(redis_config)
 
       redis_config.merge(extra_options)
     end
@@ -56,12 +70,29 @@ module Lago
       config[:name] = ENV.fetch("LAGO_REDIS_SIDEKIQ_MASTER_NAME", "master").presence || "master"
     end
 
-    def url
-      ENV["REDIS_URL"].presence
-    end
-
     def add_password(config)
       password = ENV["REDIS_PASSWORD"].presence
+      return unless password
+
+      config[:password] = password
+    end
+
+    def add_cache_sentinels(config)
+      sentinels = ENV["LAGO_REDIS_CACHE_SENTINELS"].presence
+      return unless sentinels
+
+      config[:sentinels] = parse_sentinels(sentinels)
+      config[:role] = :master
+      config[:name] = ENV.fetch("LAGO_REDIS_CACHE_MASTER_NAME", "master").presence || "master"
+
+      sentinel_password = ENV["LAGO_REDIS_CACHE_SENTINEL_PASSWORD"].presence
+      if sentinel_password
+        config[:sentinel_password] = sentinel_password
+      end
+    end
+
+    def add_cache_password(config)
+      password = ENV["LAGO_REDIS_CACHE_PASSWORD"].presence
       return unless password
 
       config[:password] = password
