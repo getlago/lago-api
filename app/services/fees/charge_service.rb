@@ -168,10 +168,28 @@ module Fees
         fee = init_fee(amount_result, properties:, charge_filter:)
         next if fee.nil?
 
-        build_breakdowns_for_fee(fee:, breakdowns:)
+        unless adjusted_units_overridden?(amount_result:, fee:, charge_filter:)
+          build_breakdowns_for_fee(fee:, breakdowns:)
+        end
 
         fee
       end.compact
+    end
+
+    def adjusted_units_overridden?(amount_result:, fee:, charge_filter:)
+      return false unless applicable_adjusted_fee(amount_result:, charge_filter:)
+
+      amount_result.units != fee.units
+    end
+
+    def applicable_adjusted_fee(amount_result:, charge_filter:)
+      return nil if current_usage
+      return nil unless invoice&.draft?
+
+      adjusted = adjusted_fee(charge_filter:, grouped_by: amount_result.grouped_by)
+      return nil if adjusted.nil? || adjusted.adjusted_display_name?
+
+      adjusted
     end
 
     def build_breakdowns_for_fee(fee:, breakdowns:)
@@ -200,19 +218,18 @@ module Fees
     def init_fee(amount_result, properties:, charge_filter:)
       # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
       # Base fee creation flow handles case when only name has been adjusted
-      if !current_usage && invoice&.draft? && (adjusted = adjusted_fee(
-        charge_filter:,
-        grouped_by: amount_result.grouped_by
-      )) && !adjusted.adjusted_display_name?
+      if (adjusted = applicable_adjusted_fee(amount_result:, charge_filter:))
         adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
           adjusted_fee: adjusted,
           boundaries:,
           properties:
         )
-        return result.fail_with_error!(adjustement_result.error) unless adjustement_result.success?
+        unless adjustement_result.success?
+          result.fail_with_error!(adjustement_result.error)
+          return nil
+        end
 
-        result.fees << adjustement_result.fee
-        return
+        return adjustement_result.fee
       end
 
       # Prevent trying to create a fee with negative units or amount.
