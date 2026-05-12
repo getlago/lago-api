@@ -24,8 +24,26 @@ class PaymentsQuery < BaseQuery
 
   def base_scope
     Payment.where.not(customer_id: nil)
-      .for_organization(organization)
+      .where(organization:)
+      .where.not(payable_id: nil)
+      .where(visible_payable_condition)
       .ransack(search_params)
+  end
+
+  def visible_payable_condition
+    ActiveRecord::Base.sanitize_sql_array([
+      <<~SQL.squish,
+        CASE payments.payable_type
+          WHEN 'Invoice' THEN EXISTS(
+            SELECT 1 FROM invoices
+            WHERE invoices.id = payments.payable_id
+            AND invoices.status IN (:visible_statuses)
+          )
+          ELSE TRUE
+        END
+      SQL
+      {visible_statuses: Invoice::VISIBLE_STATUS.values}
+    ])
   end
 
   def search_params
@@ -72,7 +90,15 @@ class PaymentsQuery < BaseQuery
   def filter_by_invoice(scope)
     invoice_id = filters.invoice_id
 
-    scope.joins("LEFT JOIN invoices_payment_requests ON invoices_payment_requests.payment_request_id = payments.payable_id")
-      .where("invoices.id = :invoice_id OR invoices_payment_requests.invoice_id = :invoice_id", invoice_id:)
+    scope.joins(<<~SQL.squish)
+      LEFT JOIN invoices_payment_requests
+        ON invoices_payment_requests.payment_request_id = payments.payable_id
+        AND payments.payable_type = 'PaymentRequest'
+    SQL
+      .where(
+        "(payments.payable_type = 'Invoice' AND payments.payable_id = :invoice_id) " \
+        "OR invoices_payment_requests.invoice_id = :invoice_id",
+        invoice_id:
+      )
   end
 end
