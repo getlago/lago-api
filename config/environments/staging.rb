@@ -2,6 +2,7 @@
 
 require "active_support/core_ext/integer/time"
 require "opentelemetry/sdk"
+require "lago/redis_config_builder"
 
 Rails.application.configure do
   # Used for GraphiQL
@@ -50,17 +51,18 @@ Rails.application.configure do
     config.cache_store = :mem_cache_store, ENV["LAGO_MEMCACHE_SERVERS"].split(",")
 
   elsif ENV["LAGO_REDIS_CACHE_URL"].present?
-    config.cache_store =
-      :redis_cache_store,
-      {
-        url: ENV["LAGO_REDIS_CACHE_URL"],
+    cache_store_config = Lago::RedisConfigBuilder.new
+      .with_options(
         pool: {size: ENV.fetch("LAGO_REDIS_CACHE_POOL_SIZE", 5)},
         error_handler: lambda { |method:, returning:, exception:|
           Rails.logger.warn(exception.message)
 
           Sentry.capture_exception(exception, level: :warning)
         }
-      }
+      )
+      .cache
+
+    config.cache_store = :redis_cache_store, cache_store_config
   end
 
   if ENV["LAGO_SMTP_ADDRESS"].present? && !ENV["LAGO_SMTP_ADDRESS"].empty?
