@@ -38,11 +38,15 @@ class PaymentsQuery < BaseQuery
             SELECT 1 FROM invoices
             WHERE invoices.id = payments.payable_id
             AND invoices.status IN (:visible_statuses)
+            AND organization_id = :organization_id
           )
           ELSE TRUE
         END
       SQL
-      {visible_statuses: Invoice::VISIBLE_STATUS.values}
+      {
+        visible_statuses: Invoice::VISIBLE_STATUS.values,
+        organization_id: organization.id
+      }
     ])
   end
 
