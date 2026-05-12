@@ -5810,14 +5810,22 @@ type Fee implements InvoiceItem {
   itemName: String!
   itemType: String!
   offsettableAmountCents: BigInt!
+  payInAdvance: Boolean!
+  preciseAmountCents: Float!
+  preciseCouponsAmountCents: Float!
+  preciseTotalAmountCents: Float!
   preciseUnitAmount: Float!
   presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitUsage: PricingUnitUsage
   properties: FeeProperties
+  subTotalExcludingTaxesAmountCents: BigInt!
+  subTotalExcludingTaxesPreciseAmountCents: Float!
   subscription: Subscription
   succeededAt: ISO8601DateTime
   taxesAmountCents: BigInt!
+  taxesPreciseAmountCents: Float!
   taxesRate: Float
+  totalAmountCents: BigInt!
   trueUpFee: Fee
   trueUpParentFee: Fee
   units: Float!
