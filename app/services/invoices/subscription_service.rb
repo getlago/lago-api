@@ -23,6 +23,10 @@ module Invoices
     def call
       return result if active_subscriptions.empty? && recurring
 
+      if mixed_billing_entities?
+        return result.validation_failure!(errors: {billing_entity: ["mixed_billing_entities"]})
+      end
+
       create_generating_invoice unless invoice
       invoice.status = :open if subscription_gated?
       result.invoice = invoice
@@ -143,6 +147,7 @@ module Invoices
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
+        billing_entity: invoice_billing_entity,
         invoice_type: :subscription,
         invoicing_reason:,
         currency:,
@@ -163,6 +168,25 @@ module Invoices
       return false if subscription_gated?
 
       @grace_period ||= customer.applicable_invoice_grace_period.positive?
+    end
+
+    def invoice_billing_entity
+      subscriptions.first&.billing_entity || customer.billing_entity
+    end
+
+    # Subscriptions batched into one invoice must resolve to the same billing
+    # entity. Pre-multi-entity this was guaranteed because all subscriptions
+    # inherited from customer.billing_entity. Now that subscription.billing_entity_id
+    # is mutable, an operator can move one of N subscriptions to a different
+    # entity and leave the rest. Refuse to invoice in that case rather than
+    # produce an invoice whose header and fees disagree. Upstream batching
+    # (OrganizationBillingService) is the right long-term home for the split.
+    def mixed_billing_entities?
+      resolved_billing_entity_ids.uniq.size > 1
+    end
+
+    def resolved_billing_entity_ids
+      subscriptions.map { |s| s.billing_entity_id || s.customer.billing_entity_id }
     end
 
     def set_invoice_generated_status
