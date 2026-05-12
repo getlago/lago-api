@@ -4273,6 +4273,42 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(gcp_fee).to have_attributes(units: 5)
         end
       end
+
+      context "when the charge also defines charge_filters" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan,
+            billable_metric:,
+            properties: {amount: "20", pricing_group_keys: %w[region cloud]}
+          )
+        end
+
+        let(:region_filter) do
+          create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
+        end
+
+        let(:eu_filter) do
+          create(
+            :charge_filter,
+            charge:,
+            properties: {amount: "30", pricing_group_keys: %w[region cloud]}
+          )
+        end
+
+        before do
+          create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter: region_filter, values: ["eu"])
+        end
+
+        it "does not raise a FrozenError when merging filter_by_group into matching_filters" do
+          expect { charge_subscription_service.call }.not_to raise_error
+        end
+
+        it "still produces a successful result" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+        end
+      end
     end
 
     context "with filter_by_presentation" do
