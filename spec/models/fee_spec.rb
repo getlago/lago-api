@@ -868,6 +868,40 @@ RSpec.describe Fee do
     end
   end
 
+  describe "#grouped_or_filtered?" do
+    it "returns false when grouped_by is blank and charge_filter_id is nil" do
+      fee = build(:charge_fee, grouped_by: {}, charge_filter_id: nil)
+      expect(fee).not_to be_grouped_or_filtered
+    end
+
+    it "returns true when grouped_by is present" do
+      fee = build(:charge_fee, grouped_by: {"cloud" => "aws"})
+      expect(fee).to be_grouped_or_filtered
+    end
+
+    it "returns true when charge_filter_id is present" do
+      fee = build(:charge_fee, grouped_by: {}, charge_filter_id: SecureRandom.uuid)
+      expect(fee).to be_grouped_or_filtered
+    end
+  end
+
+  describe "#ungrouped_or_filtered?" do
+    it "returns false when grouped_by is present and charge_filter_id is nil" do
+      fee = build(:charge_fee, grouped_by: {"cloud" => "aws"}, charge_filter_id: nil)
+      expect(fee).not_to be_ungrouped_or_filtered
+    end
+
+    it "returns true when grouped_by is blank" do
+      fee = build(:charge_fee, grouped_by: {}, charge_filter_id: nil)
+      expect(fee).to be_ungrouped_or_filtered
+    end
+
+    it "returns true when charge_filter_id is present" do
+      fee = build(:charge_fee, grouped_by: {"cloud" => "aws"}, charge_filter_id: SecureRandom.uuid)
+      expect(fee).to be_ungrouped_or_filtered
+    end
+  end
+
   describe "#basic_rate_percentage?" do
     let(:fee) { create(:fee, fee_type: :charge, charge:, amount_cents: 1000, total_aggregated_units: 1) }
     let(:charge) { create(:standard_charge) }

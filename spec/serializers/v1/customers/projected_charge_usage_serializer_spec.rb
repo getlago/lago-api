@@ -51,38 +51,20 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
   let(:presentation_breakdowns) { [] }
 
   let(:usage) do
-    [
-      OpenStruct.new(
-        charge_id: charge.id,
-        subscription: subscription,
-        billable_metric: billable_metric,
-        charge: charge,
-        units: "10",
-        events_count: 12,
-        amount_cents: 100,
-        amount_currency: "EUR",
-        properties: {
-          "from_datetime" => from_datetime.to_s,
-          "to_datetime" => to_datetime.to_s,
-          "charges_duration" => charges_duration
-        },
-        invoice_display_name: charge.invoice_display_name,
-        lago_id: billable_metric.id,
-        name: billable_metric.name,
-        code: billable_metric.code,
-        aggregation_type: billable_metric.aggregation_type,
-        grouped_by: {"card_type" => "visa"},
-        charge_filter: nil,
-        pricing_unit_usage:,
-        presentation_breakdowns:
-      )
-    ]
+    [build(:charge_fee,
+      charge:,
+      subscription:,
+      units: "10",
+      events_count: 12,
+      amount_cents: 100,
+      amount_currency: "EUR",
+      grouped_by: {"card_type" => "visa"},
+      charge_filter: nil,
+      pricing_unit_usage:,
+      presentation_breakdowns:)]
   end
 
-  before do
-    allow(Date).to receive(:current).and_return(fixed_date)
-    allow(Time).to receive(:current).and_return(fixed_date.to_time)
-  end
+  around { |example| travel_to(fixed_date) { example.run } }
 
   it "serializes the projected fee" do
     projection_result = instance_double(
@@ -235,28 +217,17 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
     let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric: billable_metric) }
     let(:charge_filter) { create(:charge_filter, charge: charge, invoice_display_name: nil) }
     let(:usage) do
-      Array.new(3) do
-        OpenStruct.new(
-          charge_id: charge.id,
-          subscription: subscription,
-          billable_metric: billable_metric,
-          charge: charge,
-          units: "10.0",
-          events_count: 12,
-          amount_cents: 100,
-          amount_currency: "EUR",
-          properties: {
-            "from_datetime" => from_datetime.to_s,
-            "to_datetime" => to_datetime.to_s,
-            "charges_duration" => charges_duration
-          },
-          grouped_by: {"card_type" => "visa"},
-          charge_filter:,
-          charge_filter_id: charge_filter.id,
-          pricing_unit_usage:,
-          presentation_breakdowns:
-        )
-      end
+      build_list(:charge_fee, 3,
+        charge:,
+        subscription:,
+        units: "10.0",
+        events_count: 12,
+        amount_cents: 100,
+        amount_currency: "EUR",
+        grouped_by: {"card_type" => "visa"},
+        charge_filter:,
+        pricing_unit_usage:,
+        presentation_breakdowns:)
     end
 
     let(:expected_filter_projected_units) do
@@ -391,46 +362,28 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
     let(:charge_filter_2) { create(:charge_filter, charge: charge, invoice_display_name: "Filter 2") }
     let(:usage) do
       [
-        OpenStruct.new(
-          charge_id: charge.id,
-          subscription: subscription,
-          billable_metric: billable_metric,
-          charge: charge,
+        build(:charge_fee,
+          charge:,
+          subscription:,
           units: "5.0",
           events_count: 8,
           amount_cents: 50,
           amount_currency: "EUR",
-          properties: {
-            "from_datetime" => from_datetime.to_s,
-            "to_datetime" => to_datetime.to_s,
-            "charges_duration" => charges_duration
-          },
-          grouped_by: nil,
+          grouped_by: {},
           charge_filter: charge_filter_1,
-          charge_filter_id: charge_filter_1.id,
           pricing_unit_usage:,
-          presentation_breakdowns:
-        ),
-        OpenStruct.new(
-          charge_id: charge.id,
-          subscription: subscription,
-          billable_metric: billable_metric,
-          charge: charge,
+          presentation_breakdowns:),
+        build(:charge_fee,
+          charge:,
+          subscription:,
           units: "7.0",
           events_count: 10,
           amount_cents: 70,
           amount_currency: "EUR",
-          properties: {
-            "from_datetime" => from_datetime.to_s,
-            "to_datetime" => to_datetime.to_s,
-            "charges_duration" => charges_duration
-          },
-          grouped_by: nil,
+          grouped_by: {},
           charge_filter: charge_filter_2,
-          charge_filter_id: charge_filter_2.id,
           pricing_unit_usage:,
-          presentation_breakdowns:
-        )
+          presentation_breakdowns:)
       ]
     end
 
@@ -481,63 +434,39 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
   describe "multiple grouped usage scenarios" do
     let(:usage) do
       [
-        OpenStruct.new(
-          charge_id: charge.id,
-          subscription: subscription,
-          billable_metric: billable_metric,
-          charge: charge,
+        build(:charge_fee,
+          charge:,
+          subscription:,
           units: "3.0",
           events_count: 5,
           amount_cents: 30,
           amount_currency: "EUR",
-          properties: {
-            "from_datetime" => from_datetime.to_s,
-            "to_datetime" => to_datetime.to_s,
-            "charges_duration" => charges_duration
-          },
           grouped_by: {"region" => "us-east", "tier" => "premium"},
           charge_filter: nil,
           pricing_unit_usage:,
-          presentation_breakdowns:
-        ),
-        OpenStruct.new(
-          charge_id: charge.id,
-          subscription: subscription,
-          billable_metric: billable_metric,
-          charge: charge,
+          presentation_breakdowns:),
+        build(:charge_fee,
+          charge:,
+          subscription:,
           units: "4.0",
           events_count: 7,
           amount_cents: 40,
           amount_currency: "EUR",
-          properties: {
-            "from_datetime" => from_datetime.to_s,
-            "to_datetime" => to_datetime.to_s,
-            "charges_duration" => charges_duration
-          },
           grouped_by: {"region" => "us-west", "tier" => "standard"},
           charge_filter: nil,
           pricing_unit_usage:,
-          presentation_breakdowns:
-        ),
-        OpenStruct.new(
-          charge_id: charge.id,
-          subscription: subscription,
-          billable_metric: billable_metric,
-          charge: charge,
+          presentation_breakdowns:),
+        build(:charge_fee,
+          charge:,
+          subscription:,
           units: "5.0",
           events_count: 8,
           amount_cents: 50,
           amount_currency: "EUR",
-          properties: {
-            "from_datetime" => from_datetime.to_s,
-            "to_datetime" => to_datetime.to_s,
-            "charges_duration" => charges_duration
-          },
           grouped_by: {"region" => "eu-central", "tier" => "premium"},
           charge_filter: nil,
           pricing_unit_usage:,
-          presentation_breakdowns:
-        )
+          presentation_breakdowns:)
       ]
     end
 
@@ -604,46 +533,28 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
     let(:charge_filter) { create(:charge_filter, charge: charge, invoice_display_name: "Mixed Filter") }
     let(:usage) do
       [
-        OpenStruct.new(
-          charge_id: charge.id,
-          subscription: subscription,
-          billable_metric: billable_metric,
-          charge: charge,
+        build(:charge_fee,
+          charge:,
+          subscription:,
           units: "2.0",
           events_count: 3,
           amount_cents: 20,
           amount_currency: "EUR",
-          properties: {
-            "from_datetime" => from_datetime.to_s,
-            "to_datetime" => to_datetime.to_s,
-            "charges_duration" => charges_duration
-          },
           grouped_by: {"datacenter" => "dc1"},
-          charge_filter: charge_filter,
-          charge_filter_id: charge_filter.id,
+          charge_filter:,
           pricing_unit_usage:,
-          presentation_breakdowns:
-        ),
-        OpenStruct.new(
-          charge_id: charge.id,
-          subscription: subscription,
-          billable_metric: billable_metric,
-          charge: charge,
+          presentation_breakdowns:),
+        build(:charge_fee,
+          charge:,
+          subscription:,
           units: "3.0",
           events_count: 4,
           amount_cents: 30,
           amount_currency: "EUR",
-          properties: {
-            "from_datetime" => from_datetime.to_s,
-            "to_datetime" => to_datetime.to_s,
-            "charges_duration" => charges_duration
-          },
           grouped_by: {"datacenter" => "dc2"},
-          charge_filter: charge_filter,
-          charge_filter_id: charge_filter.id,
+          charge_filter:,
           pricing_unit_usage:,
-          presentation_breakdowns:
-        )
+          presentation_breakdowns:)
       ]
     end
 
@@ -661,9 +572,6 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         projected_amount_cents: 60,
         projected_pricing_unit_amount_cents: 90
       )
-
-      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[0]]).and_return(projection_result_1)
-      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[1]]).and_return(projection_result_2)
 
       allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[0]]).and_return(projection_result_1)
       allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[1]]).and_return(projection_result_2)
@@ -703,44 +611,28 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
     let(:charge_2) { create(:standard_charge) }
     let(:usage) do
       [
-        OpenStruct.new(
-          charge_id: charge.id,
-          subscription: subscription,
-          billable_metric: billable_metric,
-          charge: charge,
+        build(:charge_fee,
+          charge:,
+          subscription:,
           units: "10.0",
           events_count: 15,
           amount_cents: 100,
           amount_currency: "EUR",
-          properties: {
-            "from_datetime" => from_datetime.to_s,
-            "to_datetime" => to_datetime.to_s,
-            "charges_duration" => charges_duration
-          },
-          grouped_by: nil,
+          grouped_by: {},
           charge_filter: nil,
           pricing_unit_usage:,
-          presentation_breakdowns:
-        ),
-        OpenStruct.new(
-          charge_id: charge_2.id,
-          subscription: subscription,
-          billable_metric: charge_2.billable_metric,
+          presentation_breakdowns:),
+        build(:charge_fee,
           charge: charge_2,
+          subscription:,
           units: "20.0",
           events_count: 25,
           amount_cents: 200,
           amount_currency: "EUR",
-          properties: {
-            "from_datetime" => from_datetime.to_s,
-            "to_datetime" => to_datetime.to_s,
-            "charges_duration" => charges_duration
-          },
-          grouped_by: nil,
+          grouped_by: {},
           charge_filter: nil,
           pricing_unit_usage:,
-          presentation_breakdowns:
-        )
+          presentation_breakdowns:)
       ]
     end
 
@@ -787,27 +679,17 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
 
   describe "memoization behavior" do
     let(:usage) do
-      [
-        OpenStruct.new(
-          charge_id: charge.id,
-          subscription: subscription,
-          billable_metric: billable_metric,
-          charge: charge,
-          units: "5.0",
-          events_count: 8,
-          amount_cents: 50,
-          amount_currency: "EUR",
-          properties: {
-            "from_datetime" => from_datetime.to_s,
-            "to_datetime" => to_datetime.to_s,
-            "charges_duration" => charges_duration
-          },
-          grouped_by: nil,
-          charge_filter: nil,
-          pricing_unit_usage:,
-          presentation_breakdowns:
-        )
-      ]
+      [build(:charge_fee,
+        charge:,
+        subscription:,
+        units: "5.0",
+        events_count: 8,
+        amount_cents: 50,
+        amount_currency: "EUR",
+        grouped_by: {},
+        charge_filter: nil,
+        pricing_unit_usage:,
+        presentation_breakdowns:)]
     end
 
     it "calls projection service only once per unique fee set" do
