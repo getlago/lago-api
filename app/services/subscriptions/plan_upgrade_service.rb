@@ -76,8 +76,6 @@ module Subscriptions
         billing_time: current_subscription.billing_time,
         ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
         consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : current_subscription.consolidate_invoice,
-        # fallback_id uses the raw FK column, not Subscription#billing_entity (which would
-        # materialize customer.billing_entity, collapsing the "inherit at billing time" intent).
         billing_entity: resolve_billing_entity(
           customer: current_subscription.customer,
           params:,

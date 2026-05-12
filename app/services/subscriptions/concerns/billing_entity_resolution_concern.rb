@@ -7,10 +7,6 @@ module Subscriptions
 
       private
 
-      # The fallback path is intentionally unconditional on the multi_entity_billing flag:
-      # carrying over a previous subscription's binding preserves an explicit choice made
-      # while the flag was on, even if it is later toggled off. On single-entity orgs the
-      # fallback FK is NULL for every subscription, so this branch is a no-op.
       def resolve_billing_entity(customer:, params:, fallback_id: nil)
         if customer.organization.feature_flag_enabled?(:multi_entity_billing)
           attrs = if params[:billing_entity_id].present?
