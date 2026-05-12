@@ -198,6 +198,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       end
 
       context "when a network timeout occurs" do
+        let(:error_code) { 500 }
+
         before do
           allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(Net::ReadTimeout)
         end

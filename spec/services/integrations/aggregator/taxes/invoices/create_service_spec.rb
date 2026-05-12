@@ -375,6 +375,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
       end
 
       context "when a network timeout occurs" do
+        let(:body) { "" }
+
         before { stub_request(:post, endpoint).to_raise(Net::ReadTimeout) }
 
         it "raises TimeoutError" do
