@@ -452,17 +452,17 @@ RSpec.describe AdjustedFees::EstimateService do
         end
       end
 
-      context "when adjusting display name only" do
+      context "when keeping units the same" do
         let(:params) do
           {
             fee_id: fee_subscription.id,
             subscription_id: fee_subscription.subscription_id,
-            invoice_display_name: "renamed"
+            amount: 10
           }
         end
 
-        it "preserves the existing presentation_breakdowns on the fee" do
-          expect(result.fee.presentation_breakdowns.map { |b| b.units.to_f }).to match_array([6.0, 4.0])
+        it "returns the fee without presentation_breakdowns" do
+          expect(result.fee.presentation_breakdowns).to be_empty
         end
       end
     end
@@ -493,6 +493,14 @@ RSpec.describe AdjustedFees::EstimateService do
           expect(result.fee.presentation_breakdowns).to be_empty
         end
       end
+
+      context "when keeping units the same" do
+        let(:params) { {fee_id: charge_fee.id, amount: 5} }
+
+        it "returns the fee without presentation_breakdowns" do
+          expect(result.fee.presentation_breakdowns).to be_empty
+        end
+      end
     end
 
     context "when adjusting fixed charge fees" do
@@ -511,6 +519,14 @@ RSpec.describe AdjustedFees::EstimateService do
         let(:params) { {fee_id: fixed_charge_fee.id, units: 12} }
 
         it "returns a fee without presentation_breakdowns" do
+          expect(result.fee.presentation_breakdowns).to be_empty
+        end
+      end
+
+      context "when keeping units the same" do
+        let(:params) { {fee_id: fixed_charge_fee.id, amount: 8} }
+
+        it "returns the fee without presentation_breakdowns" do
           expect(result.fee.presentation_breakdowns).to be_empty
         end
       end

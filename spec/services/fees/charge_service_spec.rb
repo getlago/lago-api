@@ -4531,7 +4531,7 @@ RSpec.describe Fees::ChargeService, :premium do
       end
     end
 
-    context "when the adjustment only renames the fee" do
+    context "when the adjustment keeps units the same" do
       let(:adjusted_fee) do
         create(
           :adjusted_fee,
@@ -4543,14 +4543,16 @@ RSpec.describe Fees::ChargeService, :premium do
             charges_to_datetime: boundaries.charges_to_datetime
           },
           fee_type: :charge,
-          adjusted_units: false,
-          adjusted_amount: false,
+          adjusted_units: true,
+          adjusted_amount: true,
           invoice_display_name: "renamed",
+          units: 15,
+          unit_amount_cents: 100,
           grouped_by: {"cloud" => "aws"}
         )
       end
 
-      it "still builds presentation_breakdowns from current events on the adjusted fee" do
+      it "builds presentation_breakdowns from current events on the adjusted fee" do
         result = charge_subscription_service.call
         expect(result).to be_success
 
