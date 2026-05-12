@@ -15,7 +15,7 @@ module Integrations
 
           throttle!(:netsuite)
 
-          external_id = http_client.get(headers:, json_body: {tranid: invoice.number})
+          external_id = http_client.get(headers:, body: {tranid: invoice.number}, content_type: "application/json")
 
           return result if external_id.blank?
 

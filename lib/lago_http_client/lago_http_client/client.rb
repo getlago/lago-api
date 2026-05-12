@@ -99,15 +99,17 @@ module LagoHttpClient
       end
     end
 
-    def get(headers: {}, params: nil, body: nil, json_body: nil)
+    def get(headers: {}, params: nil, body: nil, content_type: nil)
       path = params ? "#{uri.path}?#{URI.encode_www_form(params)}" : uri.path
       req = Net::HTTP::Get.new(path)
 
-      if json_body.present?
-        req["Content-Type"] = "application/json"
-        req.body = json_body.to_json
-      elsif body.present?
-        req.body = URI.encode_www_form(body)
+      if body.present?
+        req["Content-Type"] = content_type if content_type
+        req.body = if content_type == "application/json"
+          body.to_json
+        else
+          URI.encode_www_form(body)
+        end
       end
 
       headers.keys.each do |key|

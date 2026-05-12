@@ -33,7 +33,7 @@ RSpec.describe Integrations::Aggregator::Invoices::FindService do
   describe "#call" do
     context "when the invoice is found upstream" do
       before do
-        allow(lago_client).to receive(:get).with(headers:, json_body: request_body).and_return("12345")
+        allow(lago_client).to receive(:get).with(headers:, body: request_body, content_type: "application/json").and_return("12345")
       end
 
       it "creates an IntegrationResource with the returned external_id" do
@@ -62,7 +62,7 @@ RSpec.describe Integrations::Aggregator::Invoices::FindService do
 
     context "when the invoice is not found upstream" do
       before do
-        allow(lago_client).to receive(:get).with(headers:, json_body: request_body).and_return(nil)
+        allow(lago_client).to receive(:get).with(headers:, body: request_body, content_type: "application/json").and_return(nil)
       end
 
       it "does not create an IntegrationResource" do
@@ -138,7 +138,7 @@ RSpec.describe Integrations::Aggregator::Invoices::FindService do
       let(:http_error) { LagoHttpClient::HttpError.new(error_code, body, nil) }
 
       before do
-        allow(lago_client).to receive(:get).with(headers:, json_body: request_body).and_raise(http_error)
+        allow(lago_client).to receive(:get).with(headers:, body: request_body, content_type: "application/json").and_raise(http_error)
       end
 
       context "with a server error" do
@@ -173,7 +173,7 @@ RSpec.describe Integrations::Aggregator::Invoices::FindService do
       let(:http_error) { LagoHttpClient::HttpError.new(429, body, nil) }
 
       before do
-        allow(lago_client).to receive(:get).with(headers:, json_body: request_body).and_raise(http_error)
+        allow(lago_client).to receive(:get).with(headers:, body: request_body, content_type: "application/json").and_raise(http_error)
       end
 
       it "raises a RequestLimitError" do
