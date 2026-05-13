@@ -75,6 +75,7 @@ module Invoices
       xml_file&.unlink
     end
 
+    # INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing].freeze
     def template
       if invoice.self_billed?
         "invoices/v#{invoice.version_number}/self_billed"
