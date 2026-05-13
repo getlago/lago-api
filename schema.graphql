@@ -3369,6 +3369,7 @@ input CreateSubscriptionInput {
   customerId: ID!
   endingAt: ISO8601DateTime
   externalId: String
+  invoiceConsolidationEnabled: Boolean
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
@@ -11370,6 +11371,7 @@ type Subscription {
   fees: [Fee!]
   fixedCharges: [FixedCharge!]
   id: ID!
+  invoiceConsolidationEnabled: Boolean!
   lifetimeUsage: SubscriptionLifetimeUsage
   name: String
   nextName: String
@@ -13264,6 +13266,7 @@ input UpdateSubscriptionInput {
   clientMutationId: String
   endingAt: ISO8601DateTime
   id: ID!
+  invoiceConsolidationEnabled: Boolean
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput

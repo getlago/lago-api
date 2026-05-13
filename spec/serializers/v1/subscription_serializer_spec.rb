@@ -97,7 +97,8 @@ RSpec.describe ::V1::SubscriptionSerializer do
           "trial_ended_at" => nil,
           "current_billing_period_started_at" => "2024-05-01T00:00:00Z",
           "current_billing_period_ending_at" => "2024-05-31T23:59:59Z",
-          "progressive_billing_disabled" => false
+          "progressive_billing_disabled" => false,
+          "invoice_consolidation_enabled" => true
         )
 
         expect(result["subscription"]["customer"]["lago_id"]).to be_present

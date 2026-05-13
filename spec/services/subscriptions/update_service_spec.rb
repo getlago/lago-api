@@ -207,6 +207,29 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
+      context "when updating invoice_consolidation_enabled" do
+        let(:params) { {invoice_consolidation_enabled: false} }
+
+        it "updates invoice_consolidation_enabled to false" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.invoice_consolidation_enabled).to be(false)
+        end
+
+        context "when re-enabling consolidation" do
+          let(:subscription) { create(:subscription, invoice_consolidation_enabled: false) }
+          let(:params) { {invoice_consolidation_enabled: true} }
+
+          it "updates invoice_consolidation_enabled to true" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.invoice_consolidation_enabled).to be(true)
+          end
+        end
+      end
+
       context "when updating payment method" do
         let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
         let(:params) { {payment_method: payment_method_params} }

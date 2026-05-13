@@ -74,6 +74,35 @@ RSpec.describe Subscriptions::PlanUpgradeService do
       expect(result.subscription.payment_method_type).to eq("provider")
     end
 
+    context "when subscription has invoice_consolidation_enabled disabled" do
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: old_plan,
+          status: :active,
+          subscription_at: Time.current,
+          started_at: Time.current,
+          external_id: SecureRandom.uuid,
+          invoice_consolidation_enabled: false
+        )
+      end
+
+      it "preserves invoice_consolidation_enabled on the new subscription" do
+        expect(result).to be_success
+        expect(result.subscription.invoice_consolidation_enabled).to be(false)
+      end
+
+      context "when params override invoice_consolidation_enabled to true" do
+        let(:params) { {name: subscription_name, invoice_consolidation_enabled: true} }
+
+        it "applies the override on the new subscription" do
+          expect(result).to be_success
+          expect(result.subscription.invoice_consolidation_enabled).to be(true)
+        end
+      end
+    end
+
     context "with payment method" do
       let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
       let(:params) do
