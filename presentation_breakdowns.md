@@ -304,13 +304,13 @@ expected.
 
 `#template` returns one of the following templates (with `version_number = 4`):
 
-| Condition (in order)                                                  | Template                       | Calls the partial directly? | Reaches the partial via `_subscription_details`? |
-| --------------------------------------------------------------------- | ------------------------------ | --------------------------- | ------------------------------------------------ |
-| `invoice.self_billed?`                                                | `invoices/v4/self_billed`      | Optional (TBD)              | Yes (conditionally, see below)                   |
-| `invoice.one_off?` (non self-billed)                                  | `invoices/v4/one_off`          | Optional (TBD)              | **No** (uses `_one_off`)                         |
-| `charge?` (all fees `pay_in_advance?` AND `charge?`)                  | `invoices/v4/charge`           | Optional (TBD)              | **No** (uses `_charge`)                          |
-| `fixed_charge?` (all fees `pay_in_advance?` AND `fixed_charge?`)      | `invoices/v4/fixed_charge`     | Optional (TBD)              | **No** (uses `_fixed_charge`)                    |
-| default (any other case)                                              | `invoices/v4` (`v4.slim`)      | No                          | Yes (conditionally, see below)                   |
+| Condition (in order)                                                  | Template                       |
+| --------------------------------------------------------------------- | ------------------------------ |
+| `invoice.self_billed?`                                                | `invoices/v4/self_billed`      |
+| `invoice.one_off?` (non self-billed)                                  | `invoices/v4/one_off`          |
+| `charge?` (all fees `pay_in_advance?` AND `charge?`)                  | `invoices/v4/charge`           |
+| `fixed_charge?` (all fees `pay_in_advance?` AND `fixed_charge?`)      | `invoices/v4/fixed_charge`     |
+| default (any other case)                                              | `invoices/v4` (`v4.slim`)      |
 
 > "Optional (TBD)": these templates do not reach `_subscription_details`, so to
 > show breakdowns for them you would need to call
@@ -318,244 +318,90 @@ expected.
 > `_one_off.slim`, `_charge.slim`, `_fixed_charge.slim`) passing the relevant
 > fees. Decide which of these should also display breakdowns.
 
-### How `_subscription_details.slim` (and therefore the partial) is reached
+### Per-template branches
 
-For both `invoices/v4` and `invoices/v4/self_billed`, the body branches on the
-invoice content:
+This section lists every branch (rendering decision) inside each of the v4
+top-level templates and the partials they delegate to. For each branch:
 
-```slim
-- if one_off?           // self_billed.slim only
-  == SlimHelper.render('templates/invoices/v4/_one_off', self)
-- elsif credit?
-  == SlimHelper.render('templates/invoices/v4/_credit', self)
-- elsif progressive_billing?
-  == SlimHelper.render('templates/invoices/v4/_progressive_billing_details', self)
-- elsif subscriptions.count == 1
-  == SlimHelper.render('templates/invoices/v4/_subscription_details', self)   // ← partial reached
-- else
-  == SlimHelper.render('templates/invoices/v4/_subscriptions_summary', self)
-```
+- **Branch (location)** — the slim conditional + approximate line number.
+- **Condition** — the boolean that selects the branch.
+- **Renders / Action** — the partial rendered or the fee/row action taken.
+- **Needs change** — tick the box (`[x]`) once the branch has been wired up
+  to render `_presentation_breakdowns` (or once you've decided no change is
+  needed). Use this column to drive the integration work.
 
-Additionally, at the very bottom of both templates:
-
-```slim
-- if subscriptions.count > 1
-  == SlimHelper.render('templates/invoices/v4/_subscription_details', self)   // ← partial reached
-```
-
-So `_presentation_breakdowns` (via `_subscription_details.slim`) is invoked in:
-
-- `invoices/v4` (default) AND not `credit?` AND not `progressive_billing?` AND
-  `subscriptions.count == 1` → single inline render.
-- `invoices/v4` (default) AND `subscriptions.count > 1` → rendered once at the
-  bottom (the inline branch falls through to `_subscriptions_summary`).
-- `invoices/v4/self_billed` AND not `one_off?` AND not `credit?` AND not
-  `progressive_billing?` AND `subscriptions.count == 1` → single inline render.
-- `invoices/v4/self_billed` AND not `one_off?` AND `subscriptions.count > 1`
-  → rendered once at the bottom.
-
-It is **not** reached via `_subscription_details` for:
-
-- `invoices/v4/one_off`
-- `invoices/v4/charge`
-- `invoices/v4/fixed_charge`
-- any `invoices/v4*` invoice whose main branch is `credit?` or
-  `progressive_billing?` (and `subscriptions.count <= 1`).
-
-For those templates we call the new partial **directly** with the appropriate
-fees collection. The exact integration per template is described below.
-
-### Per-template integration
-
-For each template, this section lists where fees are loaded today and exactly
-where to call `_presentation_breakdowns`. When a template iterates fees
-directly (without going through `subscription_fees(...).includes(...)`), make
-sure to eager-load `:presentation_breakdowns` on the fees relation to avoid an
-N+1 inside the partial.
-
-#### `app/views/templates/invoices/v4/_subscription_details.slim`
-
-- Fees loaded at line 7 via:
-
-  ```slim
-  - base_fees = subscription_fees(subscription.id).includes(:true_up_parent_fee, :true_up_fee, :charge_filter, charge: :billable_metric, fixed_charge: :add_on, :presentation_breakdowns)
-  ```
-
-  `:presentation_breakdowns` is **already eager-loaded** here, so `filtered_fees`
-  is safe to pass straight to the partial.
-
-- Call site: **after** the existing proration notice block at the end of the
-  file (current lines 192–195). Place the call once per subscription, outside
-  the recurring-fees loop:
-
-  ```slim
-  - if fees.first.charge.prorated?
-    .alert.body-3 = I18n.t('invoice.notice_prorated', days_in_month: number_of_days_in_period)
-  - else
-    .alert.body-3 = I18n.t('invoice.notice_full')
-
-  / NEW: presentation breakdowns for the subscription
-  == SlimHelper.render('templates/invoices/v4/_presentation_breakdowns', self, fees: filtered_fees)
-  ```
-
-#### `app/views/templates/invoices/v4/_one_off.slim`
-
-- Fees loaded at line 9 via `fees.ordered_by_period.each do |fee|`. The `fees`
-  relation comes from the invoice context (`invoice.fees`) and is **not**
-  eager-loading `:presentation_breakdowns`.
-
-- Suggested change: introduce a local variable above the existing table so the
-  same relation is reused for both rendering loops, and include
-  `:presentation_breakdowns`:
-
-  ```slim
-  - one_off_fees = fees.ordered_by_period.includes(:presentation_breakdowns, charge: :billable_metric)
-  table.invoice-resume-table width="100%"
-    tr
-      td.body-2 = I18n.t('invoice.item')
-      ...
-    - if one_off?
-      - one_off_fees.each do |fee|
-        tr
-          ...
-  ```
-
-  Then add the partial call **at the end of the file** (after the `total-table`
-  block, around line 49):
-
-  ```slim
-  table.total-table width="100%"
-    ...
-    tr
-      td.body-2
-      td.body-1 = I18n.t('invoice.total')
-      td.body-1 = MoneyHelper.format(total_amount)
-
-  / NEW: presentation breakdowns for one_off fees
-  == SlimHelper.render('templates/invoices/v4/_presentation_breakdowns', self, fees: one_off_fees)
-  ```
-
-  > Note: `one_off` invoices typically use `add_on` / `fee_type: :add_on` fees
-  > which do not have `presentation_breakdowns`. The partial will render
-  > nothing in that case (its internal filter keeps only `fee.charge?` fees
-  > with `presentation_breakdowns.any?`). The call is still safe to add, and
-  > becomes useful when an organization mixes one_off charge fees that do
-  > carry breakdowns.
-
-#### `app/views/templates/invoices/v4/_charge.slim`
-
-- Fees loaded at line 8 via `fees.order(:succeeded_at, :created_at).each do |fee|`.
-  This relation does not eager-load `:presentation_breakdowns`.
-
-- Suggested change: extract a local variable at the top of the file so we can
-  reuse it and add `:presentation_breakdowns` (plus `:charge_filter` which is
-  already used inside the loop):
-
-  ```slim
-  - charge_fees = fees.order(:succeeded_at, :created_at).includes(:charge_filter, :presentation_breakdowns, charge: :billable_metric)
-  table.invoice-resume-table width="100%"
-    tr
-      td.body-2 = I18n.t('invoice.item')
-      ...
-    - charge_fees.each do |fee|
-      - if fee.fixed_charge?
-        - next
-      ...
-  ```
-
-  Then add the partial call **at the end of the file** (after the
-  `total-table` block, around line 110):
-
-  ```slim
-  table.total-table width="100%"
-    ...
-    tr
-      td.body-2
-      td.body-1 = advance_charges? ? I18n.t('invoice.already_paid') : I18n.t('invoice.total')
-      td.body-1 = MoneyHelper.format(total_amount)
-
-  / NEW: presentation breakdowns for pay-in-advance charge fees
-  == SlimHelper.render('templates/invoices/v4/_presentation_breakdowns', self, fees: charge_fees)
-  ```
-
-#### `app/views/templates/invoices/v4/_fixed_charge.slim`
-
-- Fees loaded at lines 1–3:
-
-  ```slim
-  - invoice_subscription = invoice_subscriptions.first
-  - fixed_charge_fees = fees.fixed_charge.order(:succeeded_at, :created_at)
-  - grouped_fees = FeeBoundariesHelper.group_fees_by_billing_period(fixed_charge_fees, invoice_subscription:)
-  ```
-
-  This template renders only `fixed_charge` fees, which currently don't have
-  `presentation_breakdowns`. To stay consistent and future-proof, we still
-  pass a fees collection to the partial; the partial's internal filter
-  (`fee.charge?` AND `presentation_breakdowns.any?`) will simply skip them.
-
-- Suggested change: load a sibling `charge_fees` relation with the eager-load
-  so we can pass it to the partial. Add it next to the existing local
-  declarations:
-
-  ```slim
-  - invoice_subscription = invoice_subscriptions.first
-  - fixed_charge_fees = fees.fixed_charge.order(:succeeded_at, :created_at)
-  - charge_fees_with_breakdowns = fees.charge.includes(:charge_filter, :presentation_breakdowns, charge: :billable_metric)
-  - grouped_fees = FeeBoundariesHelper.group_fees_by_billing_period(fixed_charge_fees, invoice_subscription:)
-  ```
-
-  Then add the partial call **at the end of the file** (after the
-  `total-table` block, around line 62):
-
-  ```slim
-  table.total-table width="100%"
-    ...
-    tr
-      td.body-2
-      td.body-1 = advance_charges? ? I18n.t('invoice.already_paid') : I18n.t('invoice.total')
-      td.body-1 = MoneyHelper.format(total_amount)
-
-  / NEW: presentation breakdowns (if any charge fees with breakdowns exist)
-  == SlimHelper.render('templates/invoices/v4/_presentation_breakdowns', self, fees: charge_fees_with_breakdowns)
-  ```
-
-  > Note: in practice this template is selected when **all** fees are
-  > `pay_in_advance?` AND `fixed_charge?`, so `charge_fees_with_breakdowns`
-  > will usually be empty and the partial will render nothing. Adding the
-  > call keeps the behavior consistent and avoids a special case if the
-  > template's selection condition is later relaxed.
+> Line numbers are approximate (based on the files at the time of writing).
+> Re-check after any change to the templates.
 
 #### `app/views/templates/invoices/v4/self_billed.slim`
 
-- This template inlines the same branching as `v4.slim` and reuses
-  `_one_off`, `_credit`, `_progressive_billing_details`, `_subscription_details`
-  and `_subscriptions_summary`. It does **not** load its own fees directly;
-  each inner partial is responsible for that.
+| Branch (location)                                              | Condition                                                                                        | Renders / Action                                                | Needs change |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | ------------ |
+| inline `if one_off?` (~L443-444)                               | `invoice.one_off?`                                                                               | `templates/invoices/v4/_one_off`                                | [ ]          |
+| inline `elsif credit?` (~L445-446)                             | `invoice.credit?`                                                                                | `templates/invoices/v4/_credit`                                 | [ ]          |
+| inline `elsif progressive_billing?` (~L447-448)                | `invoice.progressive_billing?`                                                                   | `templates/invoices/v4/_progressive_billing_details`            | [ ]          |
+| inline `elsif subscriptions.count == 1` (~L449-450)            | not one_off + not credit + not progressive_billing + exactly 1 sub                               | `templates/invoices/v4/_subscription_details`                   | [ ]          |
+| inline `else` (~L451-452)                                      | not one_off + not credit + not progressive_billing + `subscriptions.count > 1`                   | `templates/invoices/v4/_subscriptions_summary`                  | [ ]          |
+| bottom `if subscriptions.count > 1` (~L468-469)                | `subscriptions.count > 1` (runs in addition to the `_subscriptions_summary` inline branch above) | `templates/invoices/v4/_subscription_details`                   | [ ]          |
 
-- Suggested change: **no direct change** is needed in `self_billed.slim`. The
-  changes above to `_subscription_details.slim`, `_one_off.slim`,
-  `_charge.slim` and `_fixed_charge.slim` automatically cover the self-billed
-  variants because `self_billed.slim` delegates to the same partials.
+#### `app/views/templates/invoices/v4.slim` (default)
 
-##### Branches inside `self_billed.slim`
+| Branch (location)                                | Condition                                                                                        | Renders / Action                                                | Needs change |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | ------------ |
+| inline `if credit?` (~L462-463)                  | `invoice.credit?`                                                                                | `templates/invoices/v4/_credit`                                 | [ ]          |
+| inline `elsif progressive_billing?` (~L464-465)  | `invoice.progressive_billing?`                                                                   | `templates/invoices/v4/_progressive_billing_details`            | [ ]          |
+| inline `elsif subscriptions.count == 1` (~L466-467) | not credit + not progressive_billing + exactly 1 sub                                          | `templates/invoices/v4/_subscription_details`                   | [ ]          |
+| inline `else` (~L468-469)                        | not credit + not progressive_billing + `subscriptions.count > 1`                                 | `templates/invoices/v4/_subscriptions_summary`                  | [ ]          |
+| bottom `if subscriptions.count > 1` (~L485-486)  | `subscriptions.count > 1` (runs in addition to the `_subscriptions_summary` inline branch above) | `templates/invoices/v4/_subscription_details`                   | [ ]          |
 
-Mapping of every inline/bottom branch in `app/views/templates/invoices/v4/self_billed.slim`
-to the rendering condition and the target partial. The **Needs change** column
-is for tracking which branches require an edit to integrate the new
-`_presentation_breakdowns` partial — update the check as the integration
-progresses.
+#### `app/views/templates/invoices/v4/one_off.slim`
 
-| Branch (location)                                              | Condition                                                                 | Rendered partial                                                | Needs change |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------ |
-| inline `if one_off?` (~L443-444)                               | `invoice.one_off?`                                                        | `templates/invoices/v4/_one_off`                                | [ ]          |
-| inline `elsif credit?` (~L445-446)                             | `invoice.credit?`                                                         | `templates/invoices/v4/_credit`                                 | [ ]          |
-| inline `elsif progressive_billing?` (~L447-448)                | `invoice.progressive_billing?`                                            | `templates/invoices/v4/_progressive_billing_details`            | [ ]          |
-| inline `elsif subscriptions.count == 1` (~L449-450)            | not one_off + not credit + not progressive_billing + exactly 1 sub        | `templates/invoices/v4/_subscription_details`                   | [ ]          |
-| inline `else` (~L451-452)                                      | not one_off + not credit + not progressive_billing + `subscriptions.count > 1` | `templates/invoices/v4/_subscriptions_summary`             | [ ]          |
-| bottom `if subscriptions.count > 1` (~L468-469)                | `subscriptions.count > 1` (runs in addition to the `_subscriptions_summary` inline branch above) | `templates/invoices/v4/_subscription_details` | [ ]          |
+| Branch (location)                                | Condition                                       | Renders / Action                                                | Needs change |
+| ------------------------------------------------ | ----------------------------------------------- | --------------------------------------------------------------- | ------------ |
+| body render call (~L407)                         | always (no inner branching)                     | `templates/invoices/v4/_one_off`                                | [ ]          |
 
-> Line numbers are approximate (based on `self_billed.slim` at the time of writing).
-> Re-check after any change to `self_billed.slim`.
+##### Branches inside `_one_off.slim`
+
+| Branch (location)                                | Condition                                       | Renders / Action                                                | Needs change |
+| ------------------------------------------------ | ----------------------------------------------- | --------------------------------------------------------------- | ------------ |
+| `if one_off?` (~L8)                              | `invoice.one_off?`                              | iterate `fees.ordered_by_period`, render an add_on fee row per fee | [ ]          |
+
+#### `app/views/templates/invoices/v4/charge.slim`
+
+| Branch (location)                                | Condition                                       | Renders / Action                                                | Needs change |
+| ------------------------------------------------ | ----------------------------------------------- | --------------------------------------------------------------- | ------------ |
+| body render call (~L460)                         | always (subscription name header)               | `templates/invoices/v4/_subscription_name`                      | [ ]          |
+| body render call (~L461)                         | always (charge body)                            | `templates/invoices/v4/_charge`                                 | [ ]          |
+
+##### Branches inside `_charge.slim`
+
+| Branch (location)                                                                | Condition                                                                                       | Renders / Action                                                | Needs change |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------ |
+| outer `fees.order(:succeeded_at, :created_at).each` (~L8)                        | always (iteration root)                                                                         | iterate every fee on the invoice                                | [ ]          |
+| `if fee.fixed_charge?` → `next` (~L9-10)                                         | `fee.fixed_charge?`                                                                             | skip the fee                                                    | [ ]          |
+| `if fee.charge.percentage? && fee.amount_details.present?` (~L11)                | percentage charge with amount_details                                                           | enter the percentage rendering sub-tree                         | [ ]          |
+| └ `if fee.basic_rate_percentage?` (~L12-19)                                      | basic rate (single `rate` property on the filter/charge)                                        | render a one-row "basic percentage" fee row                     | [ ]          |
+| └ `else` (~L20-38)                                                               | percentage charge with extra `amount_details` (graduated, etc.)                                 | render charge-name row + `templates/invoices/v4/_charge_percentage` | [ ]          |
+| `else` (non-percentage) (~L39-66)                                                | charge that is not `percentage?` (or `amount_details` blank)                                    | enter the standard fee rendering sub-tree                       | [ ]          |
+| └ `if !fee.charge.invoiceable?` (~L41-49)                                        | charge is not invoiceable (e.g. pay_in_advance non-invoiceable)                                 | name + filter + `succeeded_at` date                             | [ ]          |
+| └ `elsif fee.charge.prorated?` (~L50-57)                                         | charge is prorated                                                                              | name + filter + proration breakdown text                        | [ ]          |
+| └ `else` (~L58-66)                                                               | regular charge                                                                                  | name + filter + units + unit price                              | [ ]          |
+| per-fee tail render (~L68)                                                       | always (per fee, after the row(s) above)                                                        | `templates/invoices/v4/_conversion_row`                         | [ ]          |
+
+#### `app/views/templates/invoices/v4/fixed_charge.slim`
+
+| Branch (location)                                | Condition                                       | Renders / Action                                                | Needs change |
+| ------------------------------------------------ | ----------------------------------------------- | --------------------------------------------------------------- | ------------ |
+| body render call (~L459)                         | always (no inner branching)                     | `templates/invoices/v4/_fixed_charge`                           | [ ]          |
+
+##### Branches inside `_fixed_charge.slim`
+
+| Branch (location)                                | Condition                                       | Renders / Action                                                | Needs change |
+| ------------------------------------------------ | ----------------------------------------------- | --------------------------------------------------------------- | ------------ |
+| `grouped_fees.each_with_index` (~L7)             | always (iteration root)                         | iterate each billing-period group                               | [ ]          |
+| `next unless fee_group.fixed_charge_fees.any?` (~L8) | the billing-period group has no fixed_charge fees | skip that group                                             | [ ]          |
+| inner `fee_group.fixed_charge_fees.each` (~L19)  | always (per group)                              | iterate fixed_charge fees in the group                          | [ ]          |
+| per-fee render (~L20)                            | always (per fixed_charge fee)                   | `templates/invoices/v4/_fixed_charge_fee`                       | [ ]          |
 
 ### Scenarios to test
 
