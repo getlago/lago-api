@@ -78,6 +78,15 @@ class Charge < ApplicationRecord
     presentation_group_keys.map { |e| e.fetch("value", nil) }.compact
   end
 
+  def presentation_group_keys_values_displayed_in_invoice
+    return [] if presentation_group_keys.blank?
+
+    presentation_group_keys
+      .select { |e| e.dig("options", "display_in_invoice") == true }
+      .map { |e| e.fetch("value", nil) }
+      .compact
+  end
+
   def equal_properties?(charge)
     charge_model == charge.charge_model && properties == charge.properties
   end
