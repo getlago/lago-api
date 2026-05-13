@@ -9,7 +9,7 @@ module Types
 
       argument :activation_rules, [Types::Subscriptions::ActivationRuleInput], required: false
       argument :ending_at, GraphQL::Types::ISO8601DateTime, required: false
-      argument :invoice_consolidation_enabled, Boolean, required: false
+      argument :consolidate_invoice, Boolean, required: false
       argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
       argument :name, String, required: false
       argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false

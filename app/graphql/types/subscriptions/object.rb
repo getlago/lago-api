@@ -54,7 +54,7 @@ module Types
       field :payment_method, Types::PaymentMethods::Object
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum
       field :progressive_billing_disabled, Boolean
-      field :invoice_consolidation_enabled, Boolean, null: false
+      field :consolidate_invoice, Boolean, null: false
 
       field :activated_at, GraphQL::Types::ISO8601DateTime, null: true
       field :activation_rules, [Types::Subscriptions::ActivationRuleType], null: false

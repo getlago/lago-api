@@ -17,6 +17,6 @@ RSpec.describe Types::Subscriptions::CreateSubscriptionInput do
     expect(subject).to accept_argument(:name).of_type("String")
     expect(subject).to accept_argument(:billing_time).of_type("BillingTimeEnum!")
     expect(subject).to accept_argument(:activation_rules).of_type("[SubscriptionActivationRuleInput!]")
-    expect(subject).to accept_argument(:invoice_consolidation_enabled).of_type("Boolean")
+    expect(subject).to accept_argument(:consolidate_invoice).of_type("Boolean")
   end
 end

@@ -1053,7 +1053,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
           started_at: current_date - 10.days,
           billing_time:,
           created_at:,
-          invoice_consolidation_enabled: false
+          consolidate_invoice: false
         )
       end
 
@@ -1082,7 +1082,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             started_at: current_date - 10.days,
             billing_time:,
             created_at:,
-            invoice_consolidation_enabled: false
+            consolidate_invoice: false
           )
         end
 
@@ -1110,7 +1110,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             started_at: current_date - 10.days,
             billing_time:,
             created_at:,
-            invoice_consolidation_enabled: false
+            consolidate_invoice: false
           )
         end
 
@@ -1173,7 +1173,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             started_at: current_date - 10.days,
             billing_time:,
             created_at:,
-            invoice_consolidation_enabled: false
+            consolidate_invoice: false
           )
         end
 
@@ -1246,7 +1246,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             started_at: current_date - 10.days,
             billing_time:,
             created_at:,
-            invoice_consolidation_enabled: false
+            consolidate_invoice: false
           )
         end
 
@@ -1320,7 +1320,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             billing_time:,
             created_at:,
             payment_method_type: "provider",
-            invoice_consolidation_enabled: false
+            consolidate_invoice: false
           )
         end
 
@@ -1424,7 +1424,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             billing_time:,
             created_at:,
             payment_method_type: "provider",
-            invoice_consolidation_enabled: false
+            consolidate_invoice: false
           )
         end
 

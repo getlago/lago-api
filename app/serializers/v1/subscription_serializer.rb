@@ -29,7 +29,7 @@ module V1
         on_termination_credit_note: model.on_termination_credit_note,
         on_termination_invoice: model.on_termination_invoice,
         progressive_billing_disabled: model.progressive_billing_disabled,
-        invoice_consolidation_enabled: model.invoice_consolidation_enabled
+        consolidate_invoice: model.consolidate_invoice
       }
 
       payload = payload.merge(customer:) if include?(:customer)

@@ -13,6 +13,6 @@ RSpec.describe Types::Subscriptions::UpdateSubscriptionInput do
     expect(subject).to accept_argument(:plan_overrides).of_type("PlanOverridesInput")
     expect(subject).to accept_argument(:subscription_at).of_type("ISO8601DateTime")
     expect(subject).to accept_argument(:activation_rules).of_type("[SubscriptionActivationRuleInput!]")
-    expect(subject).to accept_argument(:invoice_consolidation_enabled).of_type("Boolean")
+    expect(subject).to accept_argument(:consolidate_invoice).of_type("Boolean")
   end
 end

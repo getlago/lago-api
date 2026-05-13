@@ -74,7 +74,7 @@ RSpec.describe Subscriptions::PlanUpgradeService do
       expect(result.subscription.payment_method_type).to eq("provider")
     end
 
-    context "when subscription has invoice_consolidation_enabled disabled" do
+    context "when subscription has consolidate_invoice disabled" do
       let(:subscription) do
         create(
           :subscription,
@@ -84,21 +84,21 @@ RSpec.describe Subscriptions::PlanUpgradeService do
           subscription_at: Time.current,
           started_at: Time.current,
           external_id: SecureRandom.uuid,
-          invoice_consolidation_enabled: false
+          consolidate_invoice: false
         )
       end
 
-      it "preserves invoice_consolidation_enabled on the new subscription" do
+      it "preserves consolidate_invoice on the new subscription" do
         expect(result).to be_success
-        expect(result.subscription.invoice_consolidation_enabled).to be(false)
+        expect(result.subscription.consolidate_invoice).to be(false)
       end
 
-      context "when params override invoice_consolidation_enabled to true" do
-        let(:params) { {name: subscription_name, invoice_consolidation_enabled: true} }
+      context "when params override consolidate_invoice to true" do
+        let(:params) { {name: subscription_name, consolidate_invoice: true} }
 
         it "applies the override on the new subscription" do
           expect(result).to be_success
-          expect(result.subscription.invoice_consolidation_enabled).to be(true)
+          expect(result.subscription.consolidate_invoice).to be(true)
         end
       end
     end
