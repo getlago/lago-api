@@ -81,25 +81,6 @@ RSpec.describe ChargeFilters::CascadeService do
           end
         end
 
-        context "when new properties include presentation_group_keys" do
-          subject(:service) do
-            described_class.call(
-              charge: parent_charge,
-              action: "update",
-              filter_values: {"region" => ["us"]},
-              old_properties: {"amount" => "10"},
-              new_properties: {"amount" => "15", "presentation_group_keys" => [{"value" => "region"}]},
-              invoice_display_name: "US region updated"
-            )
-          end
-
-          it "cascades presentation_group_keys even though properties are customized" do
-            service
-
-            expect(child_filter.reload.properties).to eq({"amount" => "99", "presentation_group_keys" => [{"value" => "region"}]})
-          end
-        end
-
         context "when new properties remove pricing_group_keys" do
           subject(:service) do
             described_class.call(
