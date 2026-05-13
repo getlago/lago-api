@@ -314,18 +314,26 @@ RSpec.describe Lago::RedisConfigBuilder do
       ENV.delete("REDIS_URL")
       ENV.delete("REDIS_PASSWORD")
       ENV.delete("LAGO_REDIS_SIDEKIQ_SENTINELS")
+      ENV.delete("LAGO_REDIS_CACHE_URL")
+      ENV.delete("LAGO_REDIS_CACHE_PASSWORD")
+      ENV.delete("LAGO_REDIS_CACHE_SENTINELS")
     end
 
-    it "merges extra options into the config" do
+    it "merges extra options into the sidekiq config" do
       result = builder.with_options(reconnect_attempts: 4).sidekiq
       expect(result).to include(reconnect_attempts: 4)
+    end
+
+    it "merges extra options into the cache config" do
+      result = builder.with_options(pool: {size: 5}).cache
+      expect(result).to include(pool: {size: 5})
     end
 
     it "returns self for chaining" do
       expect(builder.with_options(foo: 1)).to eq(builder)
     end
 
-    it "merges multiple calls" do
+    it "merges multiple calls into the sidekiq config" do
       result = builder
         .with_options(reconnect_attempts: 4)
         .with_options(custom: "value")
@@ -333,8 +341,21 @@ RSpec.describe Lago::RedisConfigBuilder do
       expect(result).to include(reconnect_attempts: 4, custom: "value")
     end
 
-    it "extra options override base config keys" do
+    it "merges multiple calls into the cache config" do
+      result = builder
+        .with_options(pool: {size: 5})
+        .with_options(custom: "value")
+        .cache
+      expect(result).to include(pool: {size: 5}, custom: "value")
+    end
+
+    it "extra options override base config keys in the sidekiq config" do
       result = builder.with_options(ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_PEER}).sidekiq
+      expect(result).to include(ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_PEER})
+    end
+
+    it "extra options override base config keys in the cache config" do
+      result = builder.with_options(ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_PEER}).cache
       expect(result).to include(ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_PEER})
     end
   end
