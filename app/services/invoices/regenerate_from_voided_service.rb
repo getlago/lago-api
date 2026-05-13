@@ -172,8 +172,6 @@ module Invoices
           fee.amount_cents = amount_cents
           fee.precise_amount_cents = units * unit_cents
         end
-
-        fee.presentation_breakdowns.destroy_all if fee.units_changed?
         fee.save!
       end
     end
@@ -182,7 +180,7 @@ module Invoices
       fees_params.each do |fee_params|
         if fee_params[:id].present?
           voided_fee = voided_invoice.fees.find_by(id: fee_params[:id])
-          dep_fee = duplicate_fee(voided_fee) if voided_fee
+          dup_fee = duplicate_fee(voided_fee, fee_params) if voided_fee
         end
 
         adjusted_fee_params = {
@@ -193,7 +191,7 @@ module Invoices
           subscription_id: fee_params[:subscription_id]
         }
         adjusted_fee_params[:unit_precise_amount] = fee_params[:unit_amount_cents] if fee_params[:unit_amount_cents].present?
-        adjusted_fee_params[:fee_id] = dep_fee.id if dep_fee
+        adjusted_fee_params[:fee_id] = dup_fee.id if dup_fee
 
         AdjustedFees::CreateService.call(
           invoice: regenerated_invoice,
@@ -203,7 +201,7 @@ module Invoices
       end
     end
 
-    def duplicate_fee(voided_fee)
+    def duplicate_fee(voided_fee, fee_params)
       dup_fee = voided_fee.dup
       dup_fee.invoice = regenerated_invoice
       dup_fee.payment_status = :pending
@@ -215,6 +213,8 @@ module Invoices
       dup_fee.original_fee = voided_fee.original_fee || voided_fee
       dup_fee.save!
 
+      return dup_fee if adjusting_units?(voided_fee, fee_params)
+
       voided_fee.presentation_breakdowns.each do |breakdown|
         dup_fee.presentation_breakdowns.create!(
           organization_id: breakdown.organization_id,
@@ -224,6 +224,12 @@ module Invoices
       end
 
       dup_fee
+    end
+
+    def adjusting_units?(voided_fee, fee_params)
+      return true if fee_params[:units].blank?
+
+      BigDecimal(fee_params[:units].to_s) != voided_fee.units
     end
 
     def create_invoice_subscriptions

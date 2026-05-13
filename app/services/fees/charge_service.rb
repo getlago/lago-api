@@ -165,21 +165,16 @@ module Fees
         # TODO: check if this is still needed as we now skip certain zero units fees
         next if current_usage && charge_filter && amount_result.units.zero? && !with_zero_units_filters
 
-        fee = init_fee(amount_result, properties:, charge_filter:)
+        adjusted = applicable_adjusted_fee(amount_result:, charge_filter:)
+        fee = init_fee(amount_result, properties:, charge_filter:, adjusted:)
         next if fee.nil?
 
-        unless adjusted_units_overridden?(amount_result:, fee:, charge_filter:)
+        if adjusted.nil? || amount_result.units == fee.units
           build_breakdowns_for_fee(fee:, breakdowns:)
         end
 
         fee
       end.compact
-    end
-
-    def adjusted_units_overridden?(amount_result:, fee:, charge_filter:)
-      return false unless applicable_adjusted_fee(amount_result:, charge_filter:)
-
-      amount_result.units != fee.units
     end
 
     def applicable_adjusted_fee(amount_result:, charge_filter:)
@@ -215,10 +210,10 @@ module Fees
       charge_fees.filter { |f| should_persist_fee?(f, charge_fees) }
     end
 
-    def init_fee(amount_result, properties:, charge_filter:)
+    def init_fee(amount_result, properties:, charge_filter:, adjusted:)
       # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
       # Base fee creation flow handles case when only name has been adjusted
-      if (adjusted = applicable_adjusted_fee(amount_result:, charge_filter:))
+      if adjusted
         adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
           adjusted_fee: adjusted,
           boundaries:,

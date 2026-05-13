@@ -295,6 +295,25 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           expect(regenerated_fee.presentation_breakdowns).to be_empty
         end
       end
+
+      context "when only invoice_display_name changed" do
+        let(:fees_params) do
+          [
+            {
+              id: original_fee.id,
+              subscription_id: subscription.id,
+              invoice_display_name: "renamed"
+            }
+          ]
+        end
+
+        it "does not preserve stale breakdowns on the regenerated fee" do
+          regenerated_fee = regenerate_result.invoice.fees.first
+
+          expect(regenerated_fee.units).not_to eq(original_fee.units)
+          expect(regenerated_fee.presentation_breakdowns).to be_empty
+        end
+      end
     end
 
     context "with updated units" do
