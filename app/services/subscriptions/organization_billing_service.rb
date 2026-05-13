@@ -532,12 +532,12 @@ module Subscriptions
       end
     end
 
-    # NOTE: Any subscription with `invoice_consolidation_enabled = false` must be billed
+    # NOTE: Any subscription with `consolidate_invoice = false` must be billed
     #       on its own invoice, regardless of the other grouping criteria. Split it out
     #       of its current group into a one-element group.
     def split_consolidation_opted_out(subscription_groups)
       subscription_groups.flat_map do |subscriptions|
-        opted_out, consolidated = subscriptions.partition { |sub| !sub.invoice_consolidation_enabled }
+        opted_out, consolidated = subscriptions.partition { |sub| !sub.consolidate_invoice }
         groups = opted_out.map { |sub| [sub] }
         groups << consolidated if consolidated.any?
         groups

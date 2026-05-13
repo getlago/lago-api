@@ -73,7 +73,7 @@ module Subscriptions
         subscription_at: current_subscription.subscription_at,
         billing_time: current_subscription.billing_time,
         ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
-        invoice_consolidation_enabled: params.key?(:invoice_consolidation_enabled) ? params[:invoice_consolidation_enabled] : current_subscription.invoice_consolidation_enabled
+        consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : current_subscription.consolidate_invoice
       )
 
       if params.key?(:payment_method)

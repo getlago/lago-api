@@ -322,6 +322,7 @@ end
 #  billing_time                  :integer          default("calendar"), not null
 #  cancelation_reason            :enum
 #  canceled_at                   :datetime
+#  consolidate_invoice           :boolean          default(TRUE), not null
 #  ending_at                     :datetime
 #  invoice_consolidation_enabled :boolean          default(TRUE), not null
 #  last_received_event_on        :date

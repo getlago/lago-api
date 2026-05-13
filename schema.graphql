@@ -3366,10 +3366,10 @@ input CreateSubscriptionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  consolidateInvoice: Boolean
   customerId: ID!
   endingAt: ISO8601DateTime
   externalId: String
-  invoiceConsolidationEnabled: Boolean
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
@@ -11361,6 +11361,7 @@ type Subscription {
   cancelationReason: CancelationReasonEnum
   canceledAt: ISO8601DateTime
   charges: [Charge!]
+  consolidateInvoice: Boolean!
   createdAt: ISO8601DateTime!
   currentBillingPeriodEndingAt: ISO8601DateTime
   currentBillingPeriodStartedAt: ISO8601DateTime
@@ -11371,7 +11372,6 @@ type Subscription {
   fees: [Fee!]
   fixedCharges: [FixedCharge!]
   id: ID!
-  invoiceConsolidationEnabled: Boolean!
   lifetimeUsage: SubscriptionLifetimeUsage
   name: String
   nextName: String
@@ -13264,9 +13264,9 @@ input UpdateSubscriptionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  consolidateInvoice: Boolean
   endingAt: ISO8601DateTime
   id: ID!
-  invoiceConsolidationEnabled: Boolean
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput

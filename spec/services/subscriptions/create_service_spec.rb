@@ -192,16 +192,16 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
-    context "when invoice_consolidation_enabled is not passed" do
+    context "when consolidate_invoice is not passed" do
       it "defaults to true on the created subscription" do
         result = create_service.call
 
         expect(result).to be_success
-        expect(result.subscription.invoice_consolidation_enabled).to be(true)
+        expect(result.subscription.consolidate_invoice).to be(true)
       end
     end
 
-    context "when invoice_consolidation_enabled is passed as false" do
+    context "when consolidate_invoice is passed as false" do
       let(:params) do
         {
           external_customer_id:,
@@ -211,15 +211,15 @@ RSpec.describe Subscriptions::CreateService do
           billing_time:,
           subscription_at:,
           subscription_id:,
-          invoice_consolidation_enabled: false
+          consolidate_invoice: false
         }
       end
 
-      it "creates a subscription with invoice_consolidation_enabled set to false" do
+      it "creates a subscription with consolidate_invoice set to false" do
         result = create_service.call
 
         expect(result).to be_success
-        expect(result.subscription.invoice_consolidation_enabled).to be(false)
+        expect(result.subscription.consolidate_invoice).to be(false)
       end
     end
 
@@ -1265,7 +1265,7 @@ RSpec.describe Subscriptions::CreateService do
             end
           end
 
-          context "when current subscription has invoice_consolidation_enabled disabled" do
+          context "when current subscription has consolidate_invoice disabled" do
             let(:subscription) do
               create(
                 :subscription,
@@ -1275,18 +1275,18 @@ RSpec.describe Subscriptions::CreateService do
                 subscription_at: Time.current,
                 started_at: Time.current,
                 external_id:,
-                invoice_consolidation_enabled: false
+                consolidate_invoice: false
               )
             end
 
-            it "preserves invoice_consolidation_enabled on the next subscription" do
+            it "preserves consolidate_invoice on the next subscription" do
               result = create_service.call
 
               expect(result).to be_success
-              expect(result.subscription.next_subscription.invoice_consolidation_enabled).to be(false)
+              expect(result.subscription.next_subscription.consolidate_invoice).to be(false)
             end
 
-            context "when params override invoice_consolidation_enabled to true" do
+            context "when params override consolidate_invoice to true" do
               let(:params) do
                 {
                   external_customer_id:,
@@ -1296,7 +1296,7 @@ RSpec.describe Subscriptions::CreateService do
                   billing_time:,
                   subscription_at:,
                   subscription_id:,
-                  invoice_consolidation_enabled: true
+                  consolidate_invoice: true
                 }
               end
 
@@ -1304,7 +1304,7 @@ RSpec.describe Subscriptions::CreateService do
                 result = create_service.call
 
                 expect(result).to be_success
-                expect(result.subscription.next_subscription.invoice_consolidation_enabled).to be(true)
+                expect(result.subscription.next_subscription.consolidate_invoice).to be(true)
               end
             end
           end
