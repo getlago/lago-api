@@ -54,6 +54,7 @@ RSpec.describe Types::Subscriptions::Object do
 
     expect(subject).to have_field(:payment_method).of_type("PaymentMethod")
     expect(subject).to have_field(:payment_method_type).of_type("PaymentMethodTypeEnum")
+    expect(subject).to have_field(:invoice_consolidation_enabled).of_type("Boolean!")
 
     expect(subject).to have_field(:activated_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:activation_rules).of_type("[SubscriptionActivationRule!]!")

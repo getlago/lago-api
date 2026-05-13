@@ -130,6 +130,7 @@ module Subscriptions
         billing_time: billing_time || :calendar,
         ending_at: params[:ending_at],
         progressive_billing_disabled: params[:progressive_billing_disabled] || false,
+        invoice_consolidation_enabled: params.key?(:invoice_consolidation_enabled) ? params[:invoice_consolidation_enabled] : true,
         billing_entity: resolve_billing_entity
       )
 
@@ -207,7 +208,8 @@ module Subscriptions
         status: :pending,
         billing_time: current_subscription.billing_time,
         ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
-        progressive_billing_disabled: params[:progressive_billing_disabled] || false
+        progressive_billing_disabled: params[:progressive_billing_disabled] || false,
+        invoice_consolidation_enabled: params.key?(:invoice_consolidation_enabled) ? params[:invoice_consolidation_enabled] : current_subscription.invoice_consolidation_enabled
       )
 
       if params.key?(:payment_method)

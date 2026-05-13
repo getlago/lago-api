@@ -1027,5 +1027,433 @@ RSpec.describe Subscriptions::OrganizationBillingService do
         end
       end
     end
+
+    context "when a subscription opts out of invoice consolidation" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :anniversary }
+      let(:current_date) { subscription_at.next_month }
+
+      let(:consolidated_subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: current_date - 10.days,
+          billing_time:,
+          created_at:
+        )
+      end
+      let(:opted_out_subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: current_date - 10.days,
+          billing_time:,
+          created_at:,
+          invoice_consolidation_enabled: false
+        )
+      end
+
+      before do
+        subscription.destroy
+        consolidated_subscription
+        opted_out_subscription
+      end
+
+      it "bills the opted-out subscription on its own and consolidates the others" do
+        billing_service.call
+
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([consolidated_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([opted_out_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+      end
+
+      context "when several subscriptions opt out" do
+        let(:other_opted_out_subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            invoice_consolidation_enabled: false
+          )
+        end
+
+        before { other_opted_out_subscription }
+
+        it "produces a dedicated billing job per opted-out subscription" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([opted_out_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([other_opted_out_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([consolidated_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+      end
+
+      context "when all subscriptions opt out" do
+        let(:consolidated_subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            invoice_consolidation_enabled: false
+          )
+        end
+
+        it "produces a one-subscription billing job per subscription with no empty groups" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([consolidated_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([opted_out_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).not_to have_been_enqueued
+            .with([], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+      end
+
+      context "when combined with currency grouping" do
+        let(:organization) { create(:organization, feature_flags: ["multi_currency"]) }
+        let(:usd_plan) { create(:plan, organization:, interval:, amount_currency: "USD") }
+        let(:eur_plan) { create(:plan, organization:, interval:, amount_currency: "EUR") }
+
+        let(:usd_consolidated) do
+          create(
+            :subscription,
+            customer:,
+            plan: usd_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+        let(:other_usd_consolidated) do
+          create(
+            :subscription,
+            customer:,
+            plan: usd_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+        let(:eur_consolidated) do
+          create(
+            :subscription,
+            customer:,
+            plan: eur_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+        let(:usd_opted_out) do
+          create(
+            :subscription,
+            customer:,
+            plan: usd_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            invoice_consolidation_enabled: false
+          )
+        end
+
+        before do
+          consolidated_subscription.destroy
+          opted_out_subscription.destroy
+          usd_consolidated
+          other_usd_consolidated
+          eur_consolidated
+          usd_opted_out
+        end
+
+        it "keeps currency groups together while splitting the opted-out subscription out" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(contain_exactly(usd_consolidated, other_usd_consolidated), current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([eur_consolidated], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([usd_opted_out], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+      end
+
+      context "when combined with billing entity grouping" do
+        let(:organization) { create(:organization, feature_flags: ["multi_entity_billing"]) }
+        let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+        let(:default_entity_consolidated) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+        let(:other_default_entity_consolidated) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+        let(:other_entity_consolidated) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            billing_entity: other_billing_entity,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:
+          )
+        end
+        let(:other_entity_opted_out) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            billing_entity: other_billing_entity,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            invoice_consolidation_enabled: false
+          )
+        end
+
+        before do
+          consolidated_subscription.destroy
+          opted_out_subscription.destroy
+          default_entity_consolidated
+          other_default_entity_consolidated
+          other_entity_consolidated
+          other_entity_opted_out
+        end
+
+        it "keeps billing entity groups together while splitting the opted-out subscription out" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(contain_exactly(default_entity_consolidated, other_default_entity_consolidated), current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([other_entity_consolidated], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([other_entity_opted_out], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+      end
+
+      context "when combined with payment method grouping" do
+        let(:organization) { create(:organization, feature_flags: ["multiple_payment_methods"]) }
+
+        let(:provider_consolidated) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+        let(:other_provider_consolidated) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+        let(:manual_consolidated) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "manual"
+          )
+        end
+        let(:provider_opted_out) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider",
+            invoice_consolidation_enabled: false
+          )
+        end
+
+        before do
+          consolidated_subscription.destroy
+          opted_out_subscription.destroy
+          provider_consolidated
+          other_provider_consolidated
+          manual_consolidated
+          provider_opted_out
+        end
+
+        it "keeps payment method groups together while splitting the opted-out subscription out" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(contain_exactly(provider_consolidated, other_provider_consolidated), current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([manual_consolidated], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([provider_opted_out], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+      end
+
+      context "when combined with payment method, currency and billing entity grouping" do
+        let(:organization) do
+          create(:organization, feature_flags: %w[multi_currency multi_entity_billing multiple_payment_methods])
+        end
+        let(:other_billing_entity) { create(:billing_entity, organization:) }
+        let(:usd_plan) { create(:plan, organization:, interval:, amount_currency: "USD") }
+        let(:eur_plan) { create(:plan, organization:, interval:, amount_currency: "EUR") }
+
+        let(:default_usd_provider) do
+          create(
+            :subscription,
+            customer:,
+            plan: usd_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+        let(:other_default_usd_provider) do
+          create(
+            :subscription,
+            customer:,
+            plan: usd_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+        let(:default_eur_provider) do
+          create(
+            :subscription,
+            customer:,
+            plan: eur_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+        let(:default_usd_manual) do
+          create(
+            :subscription,
+            customer:,
+            plan: usd_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "manual"
+          )
+        end
+        let(:other_entity_usd_provider) do
+          create(
+            :subscription,
+            customer:,
+            plan: usd_plan,
+            billing_entity: other_billing_entity,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+        let(:default_usd_provider_opted_out) do
+          create(
+            :subscription,
+            customer:,
+            plan: usd_plan,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider",
+            invoice_consolidation_enabled: false
+          )
+        end
+
+        before do
+          consolidated_subscription.destroy
+          opted_out_subscription.destroy
+          default_usd_provider
+          other_default_usd_provider
+          default_eur_provider
+          default_usd_manual
+          other_entity_usd_provider
+          default_usd_provider_opted_out
+        end
+
+        it "splits the opted-out subscription out of its (default-entity, USD, provider) group" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(contain_exactly(default_usd_provider, other_default_usd_provider), current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([default_eur_provider], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([default_usd_manual], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([other_entity_usd_provider], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([default_usd_provider_opted_out], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+      end
+    end
   end
 end

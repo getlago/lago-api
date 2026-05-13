@@ -28,7 +28,8 @@ module V1
         current_billing_period_ending_at: dates_service.charges_to_datetime&.iso8601,
         on_termination_credit_note: model.on_termination_credit_note,
         on_termination_invoice: model.on_termination_invoice,
-        progressive_billing_disabled: model.progressive_billing_disabled
+        progressive_billing_disabled: model.progressive_billing_disabled,
+        invoice_consolidation_enabled: model.invoice_consolidation_enabled
       }
 
       payload = payload.merge(customer:) if include?(:customer)

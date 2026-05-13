@@ -29,6 +29,7 @@ module Subscriptions
         subscription_groups = group_by_payment_method(billing_subscriptions)
         subscription_groups = group_by_currency(subscription_groups)
         subscription_groups = group_by_billing_entity(subscription_groups)
+        subscription_groups = split_consolidation_opted_out(subscription_groups)
 
         subscription_groups.each do |subscriptions|
           BillSubscriptionJob.perform_later(
@@ -528,6 +529,18 @@ module Subscriptions
 
       subscription_groups.flat_map do |subscriptions|
         subscriptions.group_by { |sub| sub.plan.amount_currency }.values
+      end
+    end
+
+    # NOTE: Any subscription with `invoice_consolidation_enabled = false` must be billed
+    #       on its own invoice, regardless of the other grouping criteria. Split it out
+    #       of its current group into a one-element group.
+    def split_consolidation_opted_out(subscription_groups)
+      subscription_groups.flat_map do |subscriptions|
+        opted_out, consolidated = subscriptions.partition { |sub| !sub.invoice_consolidation_enabled }
+        groups = opted_out.map { |sub| [sub] }
+        groups << consolidated if consolidated.any?
+        groups
       end
     end
 
