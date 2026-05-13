@@ -4563,5 +4563,37 @@ RSpec.describe Fees::ChargeService, :premium do
           .to match_array([10.0, 5.0])
       end
     end
+
+    context "when the adjustment only changes the display name" do
+      let(:adjusted_fee) do
+        create(
+          :adjusted_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          properties: {
+            charges_from_datetime: boundaries.charges_from_datetime,
+            charges_to_datetime: boundaries.charges_to_datetime
+          },
+          fee_type: :charge,
+          adjusted_units: false,
+          adjusted_amount: false,
+          invoice_display_name: "renamed",
+          grouped_by: {"cloud" => "aws"}
+        )
+      end
+
+      it "builds presentation_breakdowns from current events on the adjusted fee" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        aws_fee = result.fees.find { |f| f.grouped_by["cloud"] == "aws" }
+        expect(aws_fee.invoice_display_name).to eq("renamed")
+        expect(aws_fee.presentation_breakdowns.map(&:presentation_by))
+          .to match_array([{"region" => "eu"}, {"region" => "us"}])
+        expect(aws_fee.presentation_breakdowns.map { |b| b.units.to_f })
+          .to match_array([10.0, 5.0])
+      end
+    end
   end
 end
