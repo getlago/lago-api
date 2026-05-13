@@ -978,7 +978,6 @@ RSpec.describe Wallets::UpdateService do
 
       context "when billing_entity_code belongs to another organization" do
         let(:other_organization) { create(:organization) }
-        let!(:other_billing_entity) { create(:billing_entity, organization: other_organization, code: "other_org_be") }
 
         let(:params) do
           {
@@ -986,6 +985,8 @@ RSpec.describe Wallets::UpdateService do
             billing_entity_code: "other_org_be"
           }
         end
+
+        before { create(:billing_entity, organization: other_organization, code: "other_org_be") }
 
         it "returns a not found error" do
           expect(result).not_to be_success
@@ -1028,14 +1029,14 @@ RSpec.describe Wallets::UpdateService do
     end
 
     context "when multi_entity_billing is not enabled" do
-      let!(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
-
       let(:params) do
         {
           id: wallet&.id,
           billing_entity_code: "be_code"
         }
       end
+
+      before { create(:billing_entity, organization:, code: "be_code") }
 
       it "does not assign the billing entity even if code is provided" do
         expect(result).to be_success
