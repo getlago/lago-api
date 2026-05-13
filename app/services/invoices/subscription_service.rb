@@ -172,19 +172,8 @@ module Invoices
       subscriptions.first&.billing_entity || customer.billing_entity
     end
 
-    # Subscriptions batched into one invoice must resolve to the same billing
-    # entity. Pre-multi-entity this was guaranteed because all subscriptions
-    # inherited from customer.billing_entity. Now that subscription.billing_entity_id
-    # is mutable, an operator can move one of N subscriptions to a different
-    # entity and leave the rest. Refuse to invoice in that case rather than
-    # produce an invoice whose header and fees disagree. Upstream batching
-    # (OrganizationBillingService) is the right long-term home for the split.
     def mixed_billing_entities?
-      resolved_billing_entity_ids.uniq.size > 1
-    end
-
-    def resolved_billing_entity_ids
-      subscriptions.map { |s| s.billing_entity_id || s.customer.billing_entity_id }
+      subscriptions.map { |s| s.billing_entity_id || s.customer.billing_entity_id }.uniq.many?
     end
 
     def set_invoice_generated_status

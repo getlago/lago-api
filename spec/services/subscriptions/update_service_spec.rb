@@ -1118,10 +1118,7 @@ RSpec.describe Subscriptions::UpdateService do
       let(:new_billing_entity) { create(:billing_entity, organization:) }
 
       context "with multi_entity_billing feature flag enabled" do
-        before do
-          organization.update!(feature_flags: ["multi_entity_billing"])
-          subscription.organization.reload
-        end
+        before { organization.update!(feature_flags: ["multi_entity_billing"]) }
 
         context "with billing_entity_id" do
           let(:params) { {billing_entity_id: new_billing_entity.id} }
