@@ -881,5 +881,166 @@ RSpec.describe Wallets::UpdateService do
         end
       end
     end
+
+    context "when multi_entity_billing is enabled" do
+      let!(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
+
+      before do
+        organization.update!(feature_flags: ["multi_entity_billing"])
+      end
+
+      context "when billing_entity_code is provided" do
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_code: "be_code"
+          }
+        end
+
+        it "assigns the billing entity to the wallet" do
+          expect(result).to be_success
+          expect(result.wallet.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+
+      context "when billing_entity_id is provided" do
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_id: billing_entity.id
+          }
+        end
+
+        it "assigns the billing entity to the wallet" do
+          expect(result).to be_success
+          expect(result.wallet.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+
+      context "when neither billing_entity_code nor billing_entity_id is provided" do
+        let(:params) { {id: wallet&.id, name: "new name"} }
+
+        it "leaves the wallet's billing entity unchanged" do
+          expect(result).to be_success
+          expect(result.wallet.billing_entity_id).to be_nil
+        end
+      end
+
+      context "when the wallet already has a billing entity" do
+        let!(:initial_billing_entity) { create(:billing_entity, organization:, code: "initial_be") }
+        let(:wallet) { create(:wallet, customer:, billing_entity: initial_billing_entity, allowed_fee_types: []) }
+
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_code: "be_code"
+          }
+        end
+
+        it "switches the wallet's billing entity" do
+          expect(result).to be_success
+          expect(result.wallet.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+
+      context "when billing_entity_code does not match any entity" do
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_code: "nonexistent"
+          }
+        end
+
+        it "returns a not found error" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when billing_entity_id belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+        let!(:other_billing_entity) { create(:billing_entity, organization: other_organization) }
+
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_id: other_billing_entity.id
+          }
+        end
+
+        it "returns a not found error" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when billing_entity_code belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+        let!(:other_billing_entity) { create(:billing_entity, organization: other_organization, code: "other_org_be") }
+
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_code: "other_org_be"
+          }
+        end
+
+        it "returns a not found error" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when billing_entity_id does not match any entity" do
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_id: SecureRandom.uuid
+          }
+        end
+
+        it "returns a not found error" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when both billing_entity_id and billing_entity_code are provided" do
+        let!(:other_billing_entity) { create(:billing_entity, organization:, code: "other_be") }
+
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_id: billing_entity.id,
+            billing_entity_code: other_billing_entity.code
+          }
+        end
+
+        it "billing_entity_id takes precedence" do
+          expect(result).to be_success
+          expect(result.wallet.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+    end
+
+    context "when multi_entity_billing is not enabled" do
+      let!(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
+
+      let(:params) do
+        {
+          id: wallet&.id,
+          billing_entity_code: "be_code"
+        }
+      end
+
+      it "does not assign the billing entity even if code is provided" do
+        expect(result).to be_success
+        expect(result.wallet.billing_entity_id).to be_nil
+      end
+    end
   end
 end
