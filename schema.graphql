@@ -12582,7 +12582,7 @@ input UpdateCouponInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  code: String!
+  code: String
   couponType: CouponTypeEnum!
   description: String
   expiration: CouponExpiration!
