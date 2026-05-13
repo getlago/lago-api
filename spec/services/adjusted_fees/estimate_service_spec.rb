@@ -457,11 +457,12 @@ RSpec.describe AdjustedFees::EstimateService do
           {
             fee_id: fee_subscription.id,
             subscription_id: fee_subscription.subscription_id,
-            amount: 10
+            units: 10
           }
         end
 
         it "returns the fee without presentation_breakdowns" do
+          expect(fee_subscription.units).to eq(result.fee.units)
           expect(result.fee.presentation_breakdowns).to be_empty
         end
       end
@@ -495,9 +496,10 @@ RSpec.describe AdjustedFees::EstimateService do
       end
 
       context "when keeping units the same" do
-        let(:params) { {fee_id: charge_fee.id, amount: 5} }
+        let(:params) { {fee_id: charge_fee.id, units: 5} }
 
         it "returns the fee without presentation_breakdowns" do
+          expect(charge_fee.units).to eq(result.fee.units)
           expect(result.fee.presentation_breakdowns).to be_empty
         end
       end
@@ -524,9 +526,10 @@ RSpec.describe AdjustedFees::EstimateService do
       end
 
       context "when keeping units the same" do
-        let(:params) { {fee_id: fixed_charge_fee.id, amount: 8} }
+        let(:params) { {fee_id: fixed_charge_fee.id, units: 8} }
 
         it "returns the fee without presentation_breakdowns" do
+          expect(fixed_charge_fee.units).to eq(result.fee.units)
           expect(result.fee.presentation_breakdowns).to be_empty
         end
       end
