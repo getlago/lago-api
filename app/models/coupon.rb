@@ -101,7 +101,7 @@ end
 #  id                       :uuid             not null, primary key
 #  amount_cents             :bigint
 #  amount_currency          :string
-#  code                     :string
+#  code                     :string           not null
 #  coupon_type              :integer          default("fixed_amount"), not null
 #  deleted_at               :datetime
 #  description              :text
