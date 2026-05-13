@@ -6,6 +6,7 @@ module Types
       graphql_name "UpdateCouponInput"
 
       argument :id, String, required: true
+      argument :code, String, required: false
     end
   end
 end
