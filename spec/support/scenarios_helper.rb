@@ -166,6 +166,12 @@ module ScenariosHelper
     end
   end
 
+  def update_subscription_fixed_charge(subscription, fixed_charge_code, params, **kwargs)
+    api_call(**kwargs) do
+      put_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}/fixed_charges/#{fixed_charge_code}", {fixed_charge: params})
+    end
+  end
+
   ### Subscription Charge Filters
 
   def create_subscription_charge_filter(subscription, charge_code, params, **kwargs)
