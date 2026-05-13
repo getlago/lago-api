@@ -15728,11 +15728,11 @@
               "deprecationReason": null
             },
             {
-              "name": "paymentMethod",
+              "name": "consolidateInvoice",
               "description": null,
               "type": {
-                "kind": "INPUT_OBJECT",
-                "name": "PaymentMethodReferenceInput",
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,
@@ -15740,11 +15740,11 @@
               "deprecationReason": null
             },
             {
-              "name": "consolidateInvoice",
+              "name": "paymentMethod",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
+                "kind": "INPUT_OBJECT",
+                "name": "PaymentMethodReferenceInput",
                 "ofType": null
               },
               "defaultValue": null,
@@ -70383,11 +70383,11 @@
               "deprecationReason": null
             },
             {
-              "name": "endingAt",
+              "name": "consolidateInvoice",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "ISO8601DateTime",
+                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,
@@ -70395,11 +70395,11 @@
               "deprecationReason": null
             },
             {
-              "name": "consolidateInvoice",
+              "name": "endingAt",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "Boolean",
+                "name": "ISO8601DateTime",
                 "ofType": null
               },
               "defaultValue": null,

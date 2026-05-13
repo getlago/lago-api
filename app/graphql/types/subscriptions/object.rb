@@ -51,10 +51,10 @@ module Types
 
       field :usage_thresholds, [Types::UsageThresholds::Object], null: false
 
+      field :consolidate_invoice, Boolean, null: false
       field :payment_method, Types::PaymentMethods::Object
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum
       field :progressive_billing_disabled, Boolean
-      field :consolidate_invoice, Boolean, null: false
 
       field :activated_at, GraphQL::Types::ISO8601DateTime, null: true
       field :activation_rules, [Types::Subscriptions::ActivationRuleType], null: false
