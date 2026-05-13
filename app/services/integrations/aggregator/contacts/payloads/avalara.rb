@@ -11,11 +11,11 @@ module Integrations
                 "company_id" => integration.company_id&.to_i,
                 "external_id" => customer.id,
                 "name" => name,
-                "address_line_1" => customer.shipping_address_line1 || customer.address_line1,
-                "city" => customer.shipping_city || customer.city,
-                "zip" => customer.shipping_zipcode || customer.zipcode,
-                "country" => customer.shipping_country || customer.country,
-                "state" => customer.shipping_state || customer.state,
+                "address_line_1" => customer.shipping_address_line1.presence || customer.address_line1,
+                "city" => customer.shipping_city.presence || customer.city,
+                "zip" => customer.shipping_zipcode.presence || customer.zipcode,
+                "country" => customer.shipping_country.presence || customer.country,
+                "state" => customer.shipping_state.presence || customer.state,
                 "tax_number" => customer.tax_identification_number
               }
             ]
@@ -27,11 +27,11 @@ module Integrations
                 "company_id" => integration.company_id&.to_i,
                 "external_id" => customer.id,
                 "name" => name,
-                "address_line_1" => customer.shipping_address_line1 || customer.address_line1,
-                "city" => customer.shipping_city || customer.city,
-                "zip" => customer.shipping_zipcode || customer.zipcode,
-                "country" => customer.shipping_country || customer.country,
-                "state" => customer.shipping_state || customer.state,
+                "address_line_1" => customer.shipping_address_line1.presence || customer.address_line1,
+                "city" => customer.shipping_city.presence || customer.city,
+                "zip" => customer.shipping_zipcode.presence || customer.zipcode,
+                "country" => customer.shipping_country.presence || customer.country,
+                "state" => customer.shipping_state.presence || customer.state,
                 "tax_number" => customer.tax_identification_number
               }
             ]
