@@ -172,6 +172,7 @@ module Invoices
           fee.amount_cents = amount_cents
           fee.precise_amount_cents = units * unit_cents
         end
+
         fee.save!
       end
     end
