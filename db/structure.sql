@@ -3228,7 +3228,6 @@ CREATE TABLE public.subscriptions (
     incompleted_at timestamp(6) without time zone,
     activated_at timestamp(6) without time zone,
     billing_entity_id uuid,
-    invoice_consolidation_enabled boolean DEFAULT true NOT NULL,
     consolidate_invoice boolean DEFAULT true NOT NULL
 );
 

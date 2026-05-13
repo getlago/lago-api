@@ -19,8 +19,8 @@ module Types
 
       argument :activation_rules, [Types::Subscriptions::ActivationRuleInput], required: false
       argument :billing_time, Types::Subscriptions::BillingTimeEnum, required: true
-      argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
       argument :consolidate_invoice, Boolean, required: false
+      argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
       argument :progressive_billing_disabled, Boolean, required: false
       argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false
     end
