@@ -205,7 +205,7 @@ RSpec.describe Invoices::GeneratePdfService do
       context "with FR country" do
         let(:country) { "FR" }
 
-        it "generates the invoice with attached facturx xml synchronously" do
+        it "generates the invoice with attached cii xml synchronously" do
           result = described_class.call(invoice:, context:)
 
           expect(Utils::PdfAttachmentService).to have_received(:call)
