@@ -161,7 +161,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
       context "with FR country" do
         let(:country) { "FR" }
 
-        it "generates the payment_receipt with attached facturx xml synchronously" do
+        it "generates the payment_receipt with attached cii xml synchronously" do
           result = described_class.call(payment_receipt:, context:)
 
           expect(Utils::PdfAttachmentService).to have_received(:call)
