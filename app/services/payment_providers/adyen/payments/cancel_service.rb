@@ -17,17 +17,29 @@ module PaymentProviders
             payment.provider_payment_id
           )
 
-          if adyen_result.status >= 400
-            # Best-effort cancel: the payment is in a non-cancelable state
-            # (already captured/cancelled, etc.). Log and treat as a successful
-            # no-op so the caller (timeout/expiration flow) does not block on
-            # PSP-side cleanup.
+          if adyen_result.status == 422
+            # Best-effort cancel only for the "modification cannot apply to
+            # current state" case. Adyen returns 422 for validation/state
+            # errors — most commonly "modification not allowed on transaction
+            # status" when the payment is already captured/cancelled or
+            # otherwise outside the cancellable lifecycle window. Log and
+            # treat as a successful no-op so the caller (timeout/expiration
+            # flow) does not block on PSP-side cleanup.
             Rails.logger.info(
               "Adyen payment not cancelable for payment #{payment.id}: " \
               "status=#{adyen_result.status} message=#{adyen_result.response["message"]}"
             )
             result.payment = payment
             return result
+          end
+
+          if adyen_result.status >= 400
+            # Other 4xx/5xx responses (401 auth, 403 forbidden, 404 not found,
+            # 5xx server errors) propagate so the caller can retry or surface
+            # the failure.
+            raise ::Adyen::AdyenError.new(
+              nil, nil, adyen_result.response["message"], adyen_result.response["errorType"]
+            )
           end
 
           # Adyen's sync cancel response is an acknowledgment ("received"), not

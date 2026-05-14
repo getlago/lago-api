@@ -63,7 +63,7 @@ RSpec.describe PaymentProviders::Adyen::Payments::CancelService do
     end
   end
 
-  context "when Adyen returns a 4xx response (non-cancelable)" do
+  context "when Adyen returns a 422 response (non-cancelable state)" do
     let(:error_response) do
       OpenStruct.new(
         status: 422,
@@ -94,6 +94,27 @@ RSpec.describe PaymentProviders::Adyen::Payments::CancelService do
 
     it "does not mutate the payment record" do
       expect { result }.not_to change { payment.reload.attributes }
+    end
+  end
+
+  context "when Adyen returns a non-422 4xx response" do
+    let(:error_response) do
+      OpenStruct.new(
+        status: 401,
+        response: {
+          "errorType" => "security",
+          "message" => "Invalid Merchant Account"
+        }
+      )
+    end
+
+    before do
+      allow(modifications_api).to receive(:cancel_authorised_payment_by_psp_reference)
+        .and_return(error_response)
+    end
+
+    it "propagates the error so the caller can retry or surface the failure" do
+      expect { result }.to raise_error(::Adyen::AdyenError)
     end
   end
 
