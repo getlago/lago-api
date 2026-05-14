@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Cii
     class CrossIndustryInvoice < BaseSerializer
       def serialize
         xml["rsm"].CrossIndustryInvoice(ROOT_NAMESPACES) do

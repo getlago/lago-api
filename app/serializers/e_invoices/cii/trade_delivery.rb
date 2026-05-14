@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Cii
     class TradeDelivery < BaseSerializer
       def initialize(xml:, delivery_date:)
         super(xml:)

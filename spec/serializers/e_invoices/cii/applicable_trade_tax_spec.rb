@@ -2,9 +2,9 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::ApplicableTradeTax do
+RSpec.describe EInvoices::Cii::ApplicableTradeTax do
   subject do
-    xml_document(:factur_x) do |xml|
+    xml_document(:cii) do |xml|
       described_class.serialize(xml:, tax_category:, tax_rate:, basis_amount:, tax_amount:)
     end
   end

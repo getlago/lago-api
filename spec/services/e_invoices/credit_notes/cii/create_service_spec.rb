@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::CreditNotes::FacturX::CreateService, type: :service do
+RSpec.describe EInvoices::CreditNotes::Cii::CreateService, type: :service do
   let(:credit_note) { create(:credit_note) }
   let(:xml_builder_double) { instance_double(Nokogiri::XML::Builder, to_xml: xml_content) }
   let(:xml_content) { "<xml>content</xml>" }
@@ -13,7 +13,7 @@ RSpec.describe EInvoices::CreditNotes::FacturX::CreateService, type: :service do
         allow(Nokogiri::XML::Builder).to receive(:new).with(encoding: "UTF-8")
           .and_yield(xml_builder_double).and_return(xml_builder_double)
 
-        allow(EInvoices::CreditNotes::FacturX::Builder).to receive(:serialize)
+        allow(EInvoices::CreditNotes::Cii::Builder).to receive(:serialize)
           .with(xml: xml_builder_double, credit_note:)
 
         result = described_class.new(credit_note:).call

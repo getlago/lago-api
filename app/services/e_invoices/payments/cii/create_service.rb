@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module Payments::FacturX
+  module Payments::Cii
     class CreateService < ::BaseService
       def initialize(payment:)
         super
@@ -14,7 +14,7 @@ module EInvoices
         return result.forbidden_failure! unless payment.organization.issue_receipts_enabled?
 
         result.xml = Nokogiri::XML::Builder.new(encoding: "UTF-8") do |xml|
-          EInvoices::Payments::FacturX::Builder.serialize(xml:, payment:)
+          EInvoices::Payments::Cii::Builder.serialize(xml:, payment:)
         end.to_xml
 
         result

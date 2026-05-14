@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Cii
     class TradeSettlement < BaseSerializer
       def serialize
         xml.comment "Applicable Header Trade Settlement"

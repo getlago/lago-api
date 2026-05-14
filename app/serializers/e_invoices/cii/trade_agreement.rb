@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Cii
     class TradeAgreement < BaseSerializer
       Options = Data.define(:tax_registration) do
         def initialize(tax_registration: true)

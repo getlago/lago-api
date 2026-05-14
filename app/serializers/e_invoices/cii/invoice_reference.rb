@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Cii
     class InvoiceReference < BaseSerializer
       def initialize(xml:, invoice_reference:)
         super(xml:)

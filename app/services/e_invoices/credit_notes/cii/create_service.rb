@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module CreditNotes::FacturX
+  module CreditNotes::Cii
     class CreateService < ::BaseService
       def initialize(credit_note:)
         super
@@ -13,7 +13,7 @@ module EInvoices
         return result.not_found_failure!(resource: "credit_note") unless credit_note
 
         result.xml = Nokogiri::XML::Builder.new(encoding: "UTF-8") do |xml|
-          EInvoices::CreditNotes::FacturX::Builder.serialize(xml:, credit_note:)
+          EInvoices::CreditNotes::Cii::Builder.serialize(xml:, credit_note:)
         end.to_xml
 
         result

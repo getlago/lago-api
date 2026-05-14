@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Cii
     class LineItem < BaseSerializer
       Data = Data.define(
         :line_id,

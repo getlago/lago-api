@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Cii
     class PaymentTerms < BaseSerializer
       def initialize(xml:, due_date:, description:)
         super(xml:)

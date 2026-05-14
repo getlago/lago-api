@@ -2,9 +2,9 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::CrossIndustryInvoice do
+RSpec.describe EInvoices::Cii::CrossIndustryInvoice do
   subject do
-    xml_document(:factur_x) do |xml|
+    xml_document(:cii) do |xml|
       described_class.serialize(xml:) do
       end
     end
