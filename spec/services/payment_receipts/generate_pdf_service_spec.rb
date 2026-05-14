@@ -154,7 +154,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
       before do
         payment_receipt.billing_entity.update(country:, einvoicing: true)
 
-        allow(EInvoices::Payments::FacturX::CreateService).to receive(:call).and_return(create_xml_result)
+        allow(EInvoices::Payments::Cii::CreateService).to receive(:call).and_return(create_xml_result)
         allow(Utils::PdfAttachmentService).to receive(:call)
       end
 
@@ -165,7 +165,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
           result = described_class.call(payment_receipt:, context:)
 
           expect(Utils::PdfAttachmentService).to have_received(:call)
-          expect(EInvoices::Payments::FacturX::CreateService).to have_received(:call)
+          expect(EInvoices::Payments::Cii::CreateService).to have_received(:call)
           expect(result.payment_receipt.file).to be_present
         end
       end
