@@ -1169,6 +1169,10 @@ RSpec.describe Subscriptions::UpdateService do
           it "does not persist any change" do
             expect { update_service.call }.not_to change { subscription.reload.attributes }
           end
+
+          it "does not enqueue the subscription.updated webhook" do
+            expect { update_service.call }.not_to have_enqueued_job(SendWebhookJob).with("subscription.updated", subscription)
+          end
         end
 
         context "with unknown billing_entity_code" do

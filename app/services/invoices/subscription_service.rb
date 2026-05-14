@@ -175,7 +175,7 @@ module Invoices
     end
 
     def mixed_billing_entities?
-      subscriptions.map { |s| s.billing_entity_id || s.customer.billing_entity_id }.uniq.many?
+      subscriptions.map(&:applicable_billing_entity_id).uniq.many?
     end
 
     def set_invoice_generated_status
