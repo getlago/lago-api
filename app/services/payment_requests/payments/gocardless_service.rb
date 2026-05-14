@@ -102,7 +102,7 @@ module PaymentRequests
         return unless payment_status_succeeded?(payment_status)
         return unless payable.try(:dunning_campaign)
 
-        customer.reset_dunning_campaign!
+        customer.reset_dunning_campaign_for_currency!(payable.currency)
       end
     end
   end
