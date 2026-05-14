@@ -51,7 +51,7 @@ module CreditNotes
 
     def attach_facturx(pdf_file)
       xml_file = Tempfile.new([credit_note.number, ".xml"])
-      xml_file.write(EInvoices::CreditNotes::FacturX::CreateService.call(credit_note:).xml)
+      xml_file.write(EInvoices::CreditNotes::Cii::CreateService.call(credit_note:).xml)
       xml_file.flush
 
       Utils::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)

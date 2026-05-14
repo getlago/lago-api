@@ -54,7 +54,7 @@ module PaymentReceipts
 
     def attach_facturx(pdf_file)
       xml_file = Tempfile.new([payment_receipt.number, ".xml"])
-      xml_file.write(EInvoices::Payments::FacturX::CreateService.call(payment: payment_receipt.payment).xml)
+      xml_file.write(EInvoices::Payments::Cii::CreateService.call(payment: payment_receipt.payment).xml)
       xml_file.flush
 
       Utils::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)
