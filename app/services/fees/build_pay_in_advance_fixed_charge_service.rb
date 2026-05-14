@@ -98,7 +98,7 @@ module Fees
 
       Fee.new(
         organization:,
-        billing_entity_id: subscription.billing_entity_id || subscription.customer.billing_entity_id,
+        billing_entity_id: subscription.applicable_billing_entity_id,
         subscription:,
         fixed_charge:,
         amount_cents:,
@@ -141,7 +141,7 @@ module Fees
     def build_zero_amount_fee(boundaries)
       Fee.new(
         organization:,
-        billing_entity_id: subscription.billing_entity_id || subscription.customer.billing_entity_id,
+        billing_entity_id: subscription.applicable_billing_entity_id,
         subscription:,
         fixed_charge:,
         amount_cents: 0,

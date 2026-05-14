@@ -65,8 +65,8 @@ module Subscriptions
         end
 
         if params.key?(:billing_entity_id) || params.key?(:billing_entity_code)
-          resolved = resolve_billing_entity
-          subscription.billing_entity = resolved if resolved
+          new_billing_entity = resolve_billing_entity
+          subscription.billing_entity = new_billing_entity if new_billing_entity
         end
 
         subscription.plan = handle_plan_override.plan if params.key?(:plan_overrides)
@@ -158,14 +158,11 @@ module Subscriptions
     def resolve_billing_entity
       return nil unless subscription.organization.feature_flag_enabled?(:multi_entity_billing)
 
-      attrs = if params[:billing_entity_id].present?
-        {id: params[:billing_entity_id]}
+      if params[:billing_entity_id].present?
+        subscription.organization.billing_entities.find(params[:billing_entity_id])
       elsif params[:billing_entity_code].present?
-        {code: params[:billing_entity_code]}
+        subscription.organization.billing_entities.find_by!(code: params[:billing_entity_code])
       end
-      return nil unless attrs
-
-      subscription.organization.billing_entities.find_by!(attrs)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "billing_entity").raise_if_error!
     end
