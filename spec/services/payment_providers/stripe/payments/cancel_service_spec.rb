@@ -63,7 +63,11 @@ RSpec.describe PaymentProviders::Stripe::Payments::CancelService do
       stub_request(:post, "https://api.stripe.com/v1/payment_intents/pi_test_123/cancel")
         .to_return(
           status: 400,
-          body: {error: {type: "invalid_request_error", message: "You cannot cancel this PaymentIntent because it has a status of succeeded."}}.to_json
+          body: {error: {
+            type: "invalid_request_error",
+            code: "payment_intent_unexpected_state",
+            message: "You cannot cancel this PaymentIntent because it has a status of succeeded."
+          }}.to_json
         )
     end
 
@@ -81,6 +85,24 @@ RSpec.describe PaymentProviders::Stripe::Payments::CancelService do
 
     it "does not mutate the payment record" do
       expect { result }.not_to change { payment.reload.attributes }
+    end
+  end
+
+  context "when Stripe returns an InvalidRequestError with a different code" do
+    before do
+      stub_request(:post, "https://api.stripe.com/v1/payment_intents/pi_test_123/cancel")
+        .to_return(
+          status: 400,
+          body: {error: {
+            type: "invalid_request_error",
+            code: "parameter_invalid_empty",
+            message: "Missing required param: amount."
+          }}.to_json
+        )
+    end
+
+    it "propagates the error so the caller can retry or surface the failure" do
+      expect { result }.to raise_error(::Stripe::InvalidRequestError)
     end
   end
 

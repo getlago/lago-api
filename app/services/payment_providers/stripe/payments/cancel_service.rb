@@ -25,11 +25,18 @@ module PaymentProviders
           result.payment = payment
           result
         rescue ::Stripe::InvalidRequestError => e
-          # Best-effort cancel: the payment intent has advanced to a non-cancelable
-          # state (succeeded, processing, already canceled, etc.). Log and treat as
-          # a successful no-op — the caller (timeout/expiration flow) should not
-          # block on PSP-side cleanup. The Payment record is left untouched; the
-          # webhook for the prior state transition will land its true state.
+          # Best-effort cancel only for the "intent in a non-cancelable state"
+          # case (succeeded, processing, already canceled, etc.). Log and treat
+          # as a successful no-op — the caller (timeout/expiration flow) should
+          # not block on PSP-side cleanup. The Payment record is left
+          # untouched; the webhook for the prior state transition will land its
+          # true state.
+          #
+          # Other InvalidRequestError codes (bad params, missing resource,
+          # idempotency conflicts, etc.) propagate so the caller can retry or
+          # surface the failure.
+          raise unless e.code == "payment_intent_unexpected_state"
+
           Rails.logger.info("Stripe payment intent not cancelable for payment #{payment.id}: #{e.message}")
           result
         end
