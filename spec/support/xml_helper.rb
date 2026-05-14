@@ -2,7 +2,7 @@
 
 module XMLHelper
   NAMESPACES = {
-    factur_x: EInvoices::FacturX::BaseSerializer::ROOT_NAMESPACES,
+    cii: EInvoices::Cii::BaseSerializer::ROOT_NAMESPACES,
     ubl: EInvoices::Ubl::BaseSerializer::COMMON_NAMESPACES
   }
 
