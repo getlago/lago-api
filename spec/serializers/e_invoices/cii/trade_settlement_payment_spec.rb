@@ -2,9 +2,9 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::TradeSettlementPayment do
+RSpec.describe EInvoices::Cii::TradeSettlementPayment do
   subject do
-    xml_document(:factur_x) do |xml|
+    xml_document(:cii) do |xml|
       described_class.serialize(xml:, resource:, type:, amount:)
     end
   end

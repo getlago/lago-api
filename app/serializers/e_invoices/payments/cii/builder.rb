@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module Payments::FacturX
-    class Builder < EInvoices::FacturX::BaseSerializer
+  module Payments::Cii
+    class Builder < EInvoices::Cii::BaseSerializer
       include Payments::Common
 
       def initialize(xml:, payment:)
@@ -12,24 +12,24 @@ module EInvoices
       end
 
       def serialize
-        FacturX::CrossIndustryInvoice.serialize(xml:) do
-          FacturX::Header.serialize(xml:, resource: payment_receipt, type_code: PAYMENT_RECEIPT, notes:)
+        Cii::CrossIndustryInvoice.serialize(xml:) do
+          Cii::Header.serialize(xml:, resource: payment_receipt, type_code: PAYMENT_RECEIPT, notes:)
 
           xml.comment "Supply Chain Trade Transaction"
           xml["rsm"].SupplyChainTradeTransaction do
-            FacturX::LineItem.serialize(xml:, resource:, data: line_item_data)
-            FacturX::TradeAgreement.serialize(xml:, resource:, options: trade_aggreement_options)
-            FacturX::TradeDelivery.serialize(xml:, delivery_date: payment.created_at)
-            FacturX::TradeSettlement.serialize(xml:, resource:) do
+            Cii::LineItem.serialize(xml:, resource:, data: line_item_data)
+            Cii::TradeAgreement.serialize(xml:, resource:, options: trade_aggreement_options)
+            Cii::TradeDelivery.serialize(xml:, delivery_date: payment.created_at)
+            Cii::TradeSettlement.serialize(xml:, resource:) do
               credits_and_payments do |type, amount|
-                FacturX::TradeSettlementPayment.serialize(xml:, resource:, type:, amount:)
+                Cii::TradeSettlementPayment.serialize(xml:, resource:, type:, amount:)
               end
 
-              FacturX::ApplicableTradeTax.serialize(xml:, tax_category: Z_CATEGORY, tax_rate: 0.0, basis_amount: Money.new(payment.amount_cents), tax_amount: 0.0)
-              FacturX::PaymentTerms.serialize(xml:, due_date: payment.created_at, description: payment_terms_description)
-              FacturX::MonetarySummation.serialize(xml:, resource:, amounts: monetary_summation_amounts)
+              Cii::ApplicableTradeTax.serialize(xml:, tax_category: Z_CATEGORY, tax_rate: 0.0, basis_amount: Money.new(payment.amount_cents), tax_amount: 0.0)
+              Cii::PaymentTerms.serialize(xml:, due_date: payment.created_at, description: payment_terms_description)
+              Cii::MonetarySummation.serialize(xml:, resource:, amounts: monetary_summation_amounts)
 
-              FacturX::InvoiceReference.serialize(xml:, invoice_reference: payment.invoices.pluck(:number).to_sentence)
+              Cii::InvoiceReference.serialize(xml:, invoice_reference: payment.invoices.pluck(:number).to_sentence)
             end
           end
         end
@@ -58,7 +58,7 @@ module EInvoices
       end
 
       def monetary_summation_amounts
-        FacturX::MonetarySummation::Amounts.new(
+        Cii::MonetarySummation::Amounts.new(
           line_total_amount: payment.amount,
           tax_basis_amount: payment.amount,
           tax_amount: 0,
@@ -69,7 +69,7 @@ module EInvoices
       end
 
       def line_item_data
-        FacturX::LineItem::Data.new(
+        Cii::LineItem::Data.new(
           line_id: 1,
           name: "Payment Received",
           description: "Payment received via #{payment_mode} for invoice #{invoice_numbers}",
@@ -82,7 +82,7 @@ module EInvoices
       end
 
       def trade_aggreement_options
-        FacturX::TradeAgreement::Options.new(
+        Cii::TradeAgreement::Options.new(
           tax_registration: true
         )
       end

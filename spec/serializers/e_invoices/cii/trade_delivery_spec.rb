@@ -2,9 +2,9 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::TradeDelivery do
+RSpec.describe EInvoices::Cii::TradeDelivery do
   subject do
-    xml_document(:factur_x) do |xml|
+    xml_document(:cii) do |xml|
       described_class.serialize(xml:, delivery_date:)
     end
   end

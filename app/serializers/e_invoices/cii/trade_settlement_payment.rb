@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Cii
     class TradeSettlementPayment < BaseSerializer
       def initialize(xml:, resource:, type:, amount: nil)
         super(xml:, resource:)

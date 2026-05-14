@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::Payments::FacturX::CreateService, :premium do
+RSpec.describe EInvoices::Payments::Cii::CreateService, :premium do
   let(:organization) { create(:organization, premium_integrations: %w[issue_receipts]) }
   let(:payment) { create(:payment, organization:) }
   let(:xml_builder_double) { instance_double(Nokogiri::XML::Builder, to_xml: xml_content) }
@@ -14,7 +14,7 @@ RSpec.describe EInvoices::Payments::FacturX::CreateService, :premium do
         allow(Nokogiri::XML::Builder).to receive(:new).with(encoding: "UTF-8")
           .and_yield(xml_builder_double).and_return(xml_builder_double)
 
-        allow(EInvoices::Payments::FacturX::Builder).to receive(:serialize)
+        allow(EInvoices::Payments::Cii::Builder).to receive(:serialize)
           .with(xml: xml_builder_double, payment:)
 
         result = described_class.new(payment:).call

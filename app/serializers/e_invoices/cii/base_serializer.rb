@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Cii
     class BaseSerializer < EInvoices::BaseSerializer
       ROOT_NAMESPACES = {
         "xmlns:xs" => "http://www.w3.org/2001/XMLSchema",

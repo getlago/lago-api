@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Cii
     class MonetarySummation < BaseSerializer
       Amounts = Data.define(
         :line_total_amount,

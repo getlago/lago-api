@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Cii
     class ApplicableTradeTax < BaseSerializer
       def initialize(xml:, tax_category:, tax_rate:, basis_amount:, tax_amount:)
         super(xml:)
