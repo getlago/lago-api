@@ -21,14 +21,25 @@ module PaymentProviders
           result.payment = payment
           result
         rescue GoCardlessPro::InvalidStateError => e
-          # Best-effort cancel: the payment is in a non-cancelable state
-          # (already submitted, paid out, cancelled, etc.). Log and treat as a
-          # successful no-op so the caller (timeout/expiration flow) does not
-          # block on PSP-side cleanup. The Payment record is left untouched;
-          # the webhook for the prior state transition will land its true
-          # state.
+          # Best-effort cancel only for the documented "cancellation_failed"
+          # case — the payment is in a state that cannot be cancelled
+          # (already submitted, paid out, cancelled, etc.). Log and treat as
+          # a successful no-op so the caller (timeout/expiration flow) does
+          # not block on PSP-side cleanup. The Payment record is left
+          # untouched; the webhook for the prior state transition will land
+          # its true state.
+          #
+          # Other InvalidStateError codes propagate so the caller can retry
+          # or surface the failure.
+          raise unless e.code == "cancellation_failed"
+
           Rails.logger.info("GoCardless payment not cancelable for payment #{payment.id}: #{e.message}")
           result
+        rescue Faraday::ConnectionFailed => e
+          # GoCardless gem surfaces transport errors as raw Faraday
+          # exceptions. Wrap so the caller can retry through the same path
+          # as other PSPs (matches the create-side error handling pattern).
+          raise Invoices::Payments::ConnectionError, e
         end
 
         private

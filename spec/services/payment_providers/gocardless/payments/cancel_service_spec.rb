@@ -66,12 +66,12 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CancelService do
     end
   end
 
-  context "when GoCardless raises InvalidStateError" do
+  context "when GoCardless raises InvalidStateError with code cancellation_failed" do
     before do
       allow(gocardless_payments_service).to receive(:cancel)
         .and_raise(GoCardlessPro::InvalidStateError.new(
-          "message" => "Payment cancellation failed",
-          "code" => "invalid_state"
+          "message" => "This payment cannot be cancelled, its status is submitted",
+          "code" => "cancellation_failed"
         ))
     end
 
@@ -85,11 +85,25 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CancelService do
       result
 
       expect(Rails.logger).to have_received(:info)
-        .with(a_string_matching(/GoCardless.*not cancelable.*Payment cancellation failed/))
+        .with(a_string_matching(/GoCardless.*not cancelable.*status is submitted/))
     end
 
     it "does not mutate the payment record" do
       expect { result }.not_to change { payment.reload.attributes }
+    end
+  end
+
+  context "when GoCardless raises InvalidStateError with a different code" do
+    before do
+      allow(gocardless_payments_service).to receive(:cancel)
+        .and_raise(GoCardlessPro::InvalidStateError.new(
+          "message" => "Mandate is inactive",
+          "code" => "mandate_is_inactive"
+        ))
+    end
+
+    it "propagates the error so the caller can retry or surface the failure" do
+      expect { result }.to raise_error(GoCardlessPro::InvalidStateError)
     end
   end
 
@@ -104,6 +118,17 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CancelService do
 
     it "propagates the error so the caller can retry" do
       expect { result }.to raise_error(GoCardlessPro::Error)
+    end
+  end
+
+  context "when a Faraday connection failure occurs" do
+    before do
+      allow(gocardless_payments_service).to receive(:cancel)
+        .and_raise(Faraday::ConnectionFailed.new("connection refused"))
+    end
+
+    it "wraps the error as Invoices::Payments::ConnectionError so the caller can retry" do
+      expect { result }.to raise_error(Invoices::Payments::ConnectionError)
     end
   end
 end
