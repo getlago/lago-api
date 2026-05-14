@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe DunningCampaigns::ProcessAttemptService do
-  subject(:result) { described_class.call(customer:, dunning_campaign_threshold:) }
+  subject(:result) { described_class.call(customer:, dunning_campaign_threshold:, billing_entity:) }
 
-  let(:customer) { create :customer, organization:, currency: }
+  let(:customer) { create :customer, organization:, currency:, billing_entity: }
   let(:organization) { create :organization }
   let(:billing_entity) { organization.default_billing_entity }
   let(:currency) { "EUR" }
@@ -151,6 +151,33 @@ RSpec.describe DunningCampaigns::ProcessAttemptService do
           expect(args[:params][:external_customer_id]).to eq(customer.external_id)
           expect(args[:params][:lago_invoice_ids]).to include(eur_invoice.id)
           expect(args[:params][:lago_invoice_ids]).not_to include(usd_invoice.id)
+        end
+      end
+    end
+
+    context "when the customer has overdue invoices across multiple billing entities" do
+      let(:other_billing_entity) { create :billing_entity, organization: }
+
+      let(:matching_invoice) do
+        create :invoice, organization:, customer:, billing_entity:, currency:,
+          payment_overdue: true, total_amount_cents: 99_00
+      end
+      let(:other_entity_invoice) do
+        create :invoice, organization:, customer:, billing_entity: other_billing_entity, currency:,
+          payment_overdue: true, total_amount_cents: 99_00
+      end
+
+      before do
+        matching_invoice
+        other_entity_invoice
+      end
+
+      it "scopes the payment request invoices to the provided billing entity" do
+        result
+
+        expect(PaymentRequests::CreateService).to have_received(:call) do |args|
+          expect(args[:params][:lago_invoice_ids]).to include(matching_invoice.id)
+          expect(args[:params][:lago_invoice_ids]).not_to include(other_entity_invoice.id)
         end
       end
     end
