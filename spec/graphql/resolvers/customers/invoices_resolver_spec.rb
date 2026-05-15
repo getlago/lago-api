@@ -78,6 +78,118 @@ RSpec.describe Resolvers::Customers::InvoicesResolver do
     end
   end
 
+  context "with filter on currency" do
+    let(:query) do
+      <<~GQL
+        query($customerId: ID!, $currency: CurrencyEnum) {
+          customerInvoices(customerId: $customerId, currency: $currency) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    let!(:usd_invoice) { create(:invoice, customer:, organization:, currency: "USD") }
+
+    it "returns only invoices matching the currency" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {customerId: customer.id, currency: "USD"}
+      )
+
+      invoices_response = result["data"]["customerInvoices"]
+
+      expect(invoices_response["collection"].pluck("id")).to contain_exactly(usd_invoice.id)
+    end
+  end
+
+  context "with filter on billing_entity_ids" do
+    let(:query) do
+      <<~GQL
+        query($customerId: ID!, $billingEntityIds: [ID!]) {
+          customerInvoices(customerId: $customerId, billingEntityIds: $billingEntityIds) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    let(:other_billing_entity) { create(:billing_entity, organization:) }
+    let!(:other_be_invoice) { create(:invoice, customer:, organization:, billing_entity: other_billing_entity) }
+
+    it "returns only invoices for the specified billing entities" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {customerId: customer.id, billingEntityIds: [other_billing_entity.id]}
+      )
+
+      invoices_response = result["data"]["customerInvoices"]
+
+      expect(invoices_response["collection"].pluck("id")).to contain_exactly(other_be_invoice.id)
+    end
+  end
+
+  context "with combined currency, billing_entity_ids, and status filters" do
+    let(:query) do
+      <<~GQL
+        query(
+          $customerId: ID!,
+          $currency: CurrencyEnum,
+          $billingEntityIds: [ID!],
+          $status: [InvoiceStatusTypeEnum!]
+        ) {
+          customerInvoices(
+            customerId: $customerId,
+            currency: $currency,
+            billingEntityIds: $billingEntityIds,
+            status: $status
+          ) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    let(:target_billing_entity) { create(:billing_entity, organization:) }
+    let!(:target_invoice) do
+      create(:invoice, customer:, organization:, currency: "USD", billing_entity: target_billing_entity)
+    end
+
+    before do
+      create(:invoice, customer:, organization:, currency: "EUR", billing_entity: target_billing_entity)
+      create(:invoice, customer:, organization:, currency: "USD")
+      create(:invoice, :draft, customer:, organization:, currency: "USD", billing_entity: target_billing_entity)
+    end
+
+    it "returns only invoices matching all filters" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          customerId: customer.id,
+          currency: "USD",
+          billingEntityIds: [target_billing_entity.id],
+          status: ["finalized"]
+        }
+      )
+
+      invoices_response = result["data"]["customerInvoices"]
+
+      expect(invoices_response["collection"].pluck("id")).to contain_exactly(target_invoice.id)
+    end
+  end
+
   context "when not member of the organization" do
     it "returns an error" do
       result = execute_graphql(

@@ -52155,6 +52155,38 @@
               "description": "Query invoices of a customer",
               "args": [
                 {
+                  "name": "billingEntityIds",
+                  "description": null,
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "ID",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "currency",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "CurrencyEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "customerId",
                   "description": null,
                   "type": {
