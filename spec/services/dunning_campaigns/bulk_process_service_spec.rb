@@ -65,7 +65,7 @@ RSpec.describe DunningCampaigns::BulkProcessService do
             .with(customer:, dunning_campaign_threshold:, billing_entity:)
         end
 
-        it "increments the per-tuple attempt counter" do
+        it "increments the per-currency attempt counter" do
           freeze_time do
             expect { result && customer.reload }
               .to change { customer.dunning_currency_attempts[currency] }.from(nil).to(1)
