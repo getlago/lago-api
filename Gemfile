@@ -151,7 +151,7 @@ group :development, :test do
   gem "rubocop-factory_bot", require: false
   gem "rubocop-thread_safety", require: false
 
-  gem "vernier", "~> 1.0", require: false
+  gem "vernier", "~> 1.10", require: false
   gem "super_diff", "~> 0.18.0"
 end
 
