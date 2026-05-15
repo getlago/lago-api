@@ -86,6 +86,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.hour, "schedule:expire_incomplete_subscriptions", at: "*:20") do
+    Clock::ExpireIncompleteSubscriptionsJob
+      .set(sentry: {"slug" => "lago_expire_incomplete_subscriptions", "cron" => "20 */1 * * *"})
+      .perform_later
+  end
+
   every(1.hour, "schedule:retry_generating_subscription_invoices", at: "*:30") do
     Clock::RetryGeneratingSubscriptionInvoicesJob
       .set(sentry: {"slug" => "lago_retry_invoices", "cron" => "30 */1 * * *"})
