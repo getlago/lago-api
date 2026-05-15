@@ -5703,6 +5703,7 @@ type Event {
 
 enum EventCategoryEnum {
   ALERTS
+  BILLABLE_METRICS
   CREDIT_NOTES
   CUSTOMERS
   DUNNING_CAMPAIGNS
@@ -5735,6 +5736,9 @@ type EventCollection {
 enum EventTypeEnum {
   alert_triggered
   all
+  billable_metric_created
+  billable_metric_deleted
+  billable_metric_updated
   credit_note_created
   credit_note_generated
   credit_note_provider_refund_failure

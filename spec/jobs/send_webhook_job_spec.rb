@@ -726,6 +726,22 @@ RSpec.describe SendWebhookJob do
       end
     end
 
+    context "with billable metric webhooks" do
+      let(:object) { create(:billable_metric, organization:) }
+
+      it_behaves_like "a webhook service",
+        "billable_metric.created",
+        Webhooks::BillableMetrics::CreatedService
+
+      it_behaves_like "a webhook service",
+        "billable_metric.updated",
+        Webhooks::BillableMetrics::UpdatedService
+
+      it_behaves_like "a webhook service",
+        "billable_metric.deleted",
+        Webhooks::BillableMetrics::DeletedService
+    end
+
     context "when webhook_type is dunning_campaign.finished" do
       let(:webhook_service) { instance_double(Webhooks::DunningCampaigns::FinishedService) }
       let(:customer) { create(:customer) }

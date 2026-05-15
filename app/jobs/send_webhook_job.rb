@@ -15,6 +15,9 @@ class SendWebhookJob < ApplicationJob
 
   WEBHOOK_SERVICES = {
     "alert.triggered" => Webhooks::UsageMonitoring::AlertTriggeredService,
+    "billable_metric.created" => Webhooks::BillableMetrics::CreatedService,
+    "billable_metric.updated" => Webhooks::BillableMetrics::UpdatedService,
+    "billable_metric.deleted" => Webhooks::BillableMetrics::DeletedService,
     "dunning_campaign.finished" => Webhooks::DunningCampaigns::FinishedService,
     "invoice.created" => Webhooks::Invoices::CreatedService,
     "invoice.one_off_created" => Webhooks::Invoices::OneOffCreatedService,
