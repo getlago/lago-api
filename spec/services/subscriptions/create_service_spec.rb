@@ -963,7 +963,7 @@ RSpec.describe Subscriptions::CreateService do
 
             before do
               allow(Subscriptions::PlanUpgradeService)
-                .to receive(:call!)
+                .to receive(:call)
                 .and_return(result_failure)
             end
 
@@ -1363,7 +1363,7 @@ RSpec.describe Subscriptions::CreateService do
 
             before do
               allow(Subscriptions::PlanDowngradeService)
-                .to receive(:call!)
+                .to receive(:call)
                 .and_return(result_failure)
             end
 
