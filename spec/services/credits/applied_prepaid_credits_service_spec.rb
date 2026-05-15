@@ -671,6 +671,42 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
     end
 
+    context "when wallet and invoice belong to different billing entities" do
+      let(:wallet_billing_entity) { create(:billing_entity, organization: customer.organization, code: "be_a") }
+      let(:invoice_billing_entity) { create(:billing_entity, organization: customer.organization, code: "be_b") }
+
+      let(:wallets) { [cross_entity_wallet] }
+      let(:cross_entity_wallet) do
+        create(:wallet, :with_inbound_transaction,
+          name: "cross entity",
+          customer:,
+          billing_entity: wallet_billing_entity,
+          balance_cents: 1000,
+          credits_balance: 10.0)
+      end
+
+      let(:invoice) do
+        create(:invoice,
+          customer:,
+          billing_entity: invoice_billing_entity,
+          currency: "EUR",
+          total_amount_cents: amount_cents)
+      end
+
+      it "applies credits regardless of the billing entity mismatch" do
+        expect(result).to be_success
+        expect(result.wallet_transactions.count).to eq(1)
+        expect(result.wallet_transactions.first.wallet_id).to eq(cross_entity_wallet.id)
+        expect(result.prepaid_credit_amount_cents).to eq(100)
+        expect(invoice.prepaid_credit_amount_cents).to eq(100)
+      end
+
+      it "decrements the wallet balance even though entities differ" do
+        subject
+        expect(cross_entity_wallet.reload.balance_cents).to eq(900)
+      end
+    end
+
     context "when there is a concurrent lock" do
       before do
         stub_const("Customers::LockService::ACQUIRE_LOCK_TIMEOUT", 1.second)
