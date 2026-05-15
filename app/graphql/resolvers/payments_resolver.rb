@@ -9,6 +9,7 @@ module Resolvers
 
     description "Query payments of an organization"
 
+    argument :currency, String, required: false
     argument :external_customer_id, ID, required: false
     argument :invoice_id, ID, required: false
     argument :limit, Integer, required: false
@@ -17,12 +18,13 @@ module Resolvers
 
     type Types::Payments::Object.collection_type, null: false
 
-    def resolve(page: nil, limit: nil, invoice_id: nil, external_customer_id: nil, search_term: nil)
+    def resolve(currency: nil, page: nil, limit: nil, invoice_id: nil, external_customer_id: nil, search_term: nil)
       result = PaymentsQuery.call(
         organization: current_organization,
         filters: {
           invoice_id:,
-          external_customer_id:
+          external_customer_id:,
+          currency:
         },
         search_term:,
         pagination: {
