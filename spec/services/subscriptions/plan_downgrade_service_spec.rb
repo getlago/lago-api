@@ -206,5 +206,17 @@ RSpec.describe Subscriptions::PlanDowngradeService do
         expect(existing_next_subscription.reload).to be_canceled
       end
     end
+
+    context "when the new subscription fails validation" do
+      before do
+        allow(subscription.next_subscriptions).to receive(:create!)
+          .and_raise(ActiveRecord::RecordInvalid.new(Subscription.new))
+      end
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+      end
+    end
   end
 end
