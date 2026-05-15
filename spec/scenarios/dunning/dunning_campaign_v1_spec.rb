@@ -94,9 +94,9 @@ describe "Dunning Campaign v1", :premium do
 
     # Create overdue invoices directly — multi-currency subscription API not yet shipped
     travel_to(DateTime.new(2025, 1, 1, 10)) do
-      create(:invoice, organization:, customer:, billing_entity:, currency: "EUR",
+      create(:invoice, organization:, customer:, currency: "EUR",
         payment_overdue: true, total_amount_cents: 149_00, ready_for_payment_processing: true)
-      create(:invoice, organization:, customer:, billing_entity:, currency: "USD",
+      create(:invoice, organization:, customer:, currency: "USD",
         payment_overdue: true, total_amount_cents: 120_00, ready_for_payment_processing: true)
     end
 
@@ -121,7 +121,7 @@ describe "Dunning Campaign v1", :premium do
 
     # Push EUR over threshold with another overdue invoice
     travel_to(DateTime.new(2025, 1, 5, 18)) do
-      create(:invoice, organization:, customer:, billing_entity:, currency: "EUR",
+      create(:invoice, organization:, customer:, currency: "EUR",
         payment_overdue: true, total_amount_cents: 10_00, ready_for_payment_processing: true)
     end
 
