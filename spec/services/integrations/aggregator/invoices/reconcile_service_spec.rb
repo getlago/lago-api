@@ -2,10 +2,9 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::Invoices::FindService do
+RSpec.describe Integrations::Aggregator::Invoices::ReconcileService do
   subject(:service_call) { described_class.call(invoice:) }
 
-  let(:service) { described_class.new(invoice:) }
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:integration) { create(:netsuite_integration, organization:) }
@@ -32,15 +31,26 @@ RSpec.describe Integrations::Aggregator::Invoices::FindService do
 
   describe "#call" do
     context "when the invoice is found upstream" do
+      let(:service) { described_class.new(invoice:) }
+
       before do
         allow(lago_client).to receive(:get).with(headers:, body: request_body, content_type: "application/json").and_return("12345")
+      end
+
+      it_behaves_like "throttles!", :netsuite
+
+      it "returns a successful result" do
+        expect(service_call).to be_success
+      end
+
+      it "returns the external_id on the result" do
+        expect(service_call.external_id).to eq("12345")
       end
 
       it "creates an IntegrationResource with the returned external_id" do
         expect { service_call }.to change(IntegrationResource, :count).by(1)
 
-        integration_resource = IntegrationResource.order(created_at: :desc).first
-        expect(integration_resource).to have_attributes(
+        expect(service_call.integration_resource).to have_attributes(
           external_id: "12345",
           syncable_id: invoice.id,
           syncable_type: "Invoice",
@@ -49,31 +59,27 @@ RSpec.describe Integrations::Aggregator::Invoices::FindService do
           organization_id: integration.organization_id
         )
       end
-
-      it "returns a successful result with external_id" do
-        result = service_call
-
-        expect(result).to be_success
-        expect(result.external_id).to eq("12345")
-      end
-
-      it_behaves_like "throttles!", :netsuite
     end
 
     context "when the invoice is not found upstream" do
+      let(:service) { described_class.new(invoice:) }
+
       before do
         allow(lago_client).to receive(:get).with(headers:, body: request_body, content_type: "application/json").and_return(nil)
       end
 
-      it "does not create an IntegrationResource" do
-        expect { service_call }.not_to change(IntegrationResource, :count)
+      it_behaves_like "throttles!", :netsuite
+
+      it "returns a successful result" do
+        expect(service_call).to be_success
       end
 
-      it "returns a successful result without external_id" do
-        result = service_call
+      it "does not return the external_id on the result" do
+        expect(service_call.external_id).to be_nil
+      end
 
-        expect(result).to be_success
-        expect(result.external_id).to be_nil
+      it "does not create an IntegrationResource" do
+        expect { service_call }.not_to change(IntegrationResource, :count)
       end
     end
 
@@ -88,11 +94,12 @@ RSpec.describe Integrations::Aggregator::Invoices::FindService do
         expect(lago_client).not_to have_received(:get)
       end
 
-      it "returns a successful result without external_id" do
-        result = service_call
+      it "returns a successful result" do
+        expect(service_call).to be_success
+      end
 
-        expect(result).to be_success
-        expect(result.external_id).to be_nil
+      it "does not return the external_id on the result" do
+        expect(service_call.external_id).to be_nil
       end
 
       it "does not create a duplicate IntegrationResource" do
@@ -111,11 +118,12 @@ RSpec.describe Integrations::Aggregator::Invoices::FindService do
         expect(lago_client).not_to have_received(:get)
       end
 
-      it "returns a successful result without external_id" do
-        result = service_call
+      it "returns a successful result" do
+        expect(service_call).to be_success
+      end
 
-        expect(result).to be_success
-        expect(result.external_id).to be_nil
+      it "does not return the external_id on the result" do
+        expect(service_call.external_id).to be_nil
       end
     end
 

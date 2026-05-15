@@ -3,7 +3,9 @@
 module Integrations
   module Aggregator
     module Invoices
-      class FindService < BaseService
+      class ReconcileService < BaseService
+        Result = BaseResult[:external_id, :integration_resource]
+
         def action_path
           "v1/#{provider}/invoices/by-tranid"
         end
@@ -19,7 +21,7 @@ module Integrations
 
           return result if external_id.blank?
 
-          IntegrationResource.create!(
+          result.integration_resource = IntegrationResource.find_or_create_by!(
             organization_id: integration.organization_id,
             integration:,
             external_id:,
