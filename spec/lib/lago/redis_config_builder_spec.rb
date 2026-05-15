@@ -229,6 +229,10 @@ RSpec.describe Lago::RedisConfigBuilder do
         )
       end
 
+      it "produces a URL-less config (the sentinel-only case used by production.rb)" do
+        expect(result).not_to have_key(:url)
+      end
+
       context "with custom master name" do
         before { ENV["LAGO_REDIS_CACHE_MASTER_NAME"] = "cache-master" }
 
