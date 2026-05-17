@@ -3621,6 +3621,8 @@ CREATE VIEW public.exports_invoices AS
     i.total_amount_cents,
     (i.total_amount_cents - i.total_paid_amount_cents) AS total_due_amount_cents,
     i.prepaid_credit_amount_cents,
+    i.prepaid_granted_credit_amount_cents,
+    i.prepaid_purchased_credit_amount_cents,
     i.version_number,
     i.created_at,
     i.updated_at,
@@ -12216,6 +12218,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260517101105'),
 ('20260504134804'),
 ('20260430102814'),
 ('20260430102813'),
