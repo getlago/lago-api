@@ -346,6 +346,34 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       end
     end
 
+    context "when invoice is a draft awaiting taxes" do
+      let(:invoice) do
+        create(
+          :invoice,
+          :draft,
+          :with_subscriptions,
+          organization:,
+          customer:,
+          subscriptions: [subscription],
+          currency: "EUR",
+          tax_status: :pending,
+          issuing_date: Time.zone.at(timestamp).to_date
+        )
+      end
+
+      it "returns a forbidden failure with cannot_finalize_with_pending_taxes code" do
+        result = finalize_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("cannot_finalize_with_pending_taxes")
+      end
+
+      it "does not change the invoice status" do
+        expect { finalize_service.call }.not_to change { invoice.reload.status }
+      end
+    end
+
     context "when invoice has invoice_generation_errors" do
       let(:backtrace) do
         [
