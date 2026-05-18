@@ -82,6 +82,10 @@ module Lago
       redis_config.merge(extra_options)
     end
 
+    def self.cache_enabled?
+      ENV["LAGO_REDIS_CACHE_URL"].present? || ENV["LAGO_REDIS_CACHE_SENTINELS"].present?
+    end
+
     private
 
     attr_reader :extra_options
