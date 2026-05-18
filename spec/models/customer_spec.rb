@@ -1052,6 +1052,85 @@ RSpec.describe Customer do
     end
   end
 
+  describe "#effective_shipping_address" do
+    subject(:effective_shipping_address) { customer.effective_shipping_address }
+
+    let(:billing) do
+      {
+        address_line1: "Billing 1",
+        address_line2: "Billing 2",
+        city: "Billing City",
+        zipcode: "11111",
+        state: "Billing State",
+        country: "FR"
+      }
+    end
+
+    context "when shipping fields are all populated" do
+      let(:customer) { build_stubbed(:customer, :with_shipping_address, **billing) }
+
+      it "returns shipping values" do
+        expect(subject).to eq(
+          address_line1: customer.shipping_address_line1,
+          address_line2: customer.shipping_address_line2,
+          city: customer.shipping_city,
+          zipcode: customer.shipping_zipcode,
+          state: customer.shipping_state,
+          country: customer.shipping_country
+        )
+      end
+    end
+
+    context "when shipping fields are all nil" do
+      let(:customer) { build_stubbed(:customer, **billing) }
+
+      it "falls back to billing values for every field" do
+        expect(subject).to eq(billing)
+      end
+    end
+
+    context "when shipping fields are blank strings" do
+      let(:customer) do
+        build_stubbed(
+          :customer,
+          **billing,
+          shipping_address_line1: "",
+          shipping_address_line2: "",
+          shipping_city: "",
+          shipping_zipcode: "",
+          shipping_state: "",
+          shipping_country: ""
+        )
+      end
+
+      it "falls back to billing values for every field" do
+        expect(subject).to eq(billing)
+      end
+    end
+
+    context "when only some shipping fields are present" do
+      let(:customer) do
+        build_stubbed(
+          :customer,
+          **billing,
+          shipping_address_line1: "Shipping 1",
+          shipping_city: "Shipping City"
+        )
+      end
+
+      it "falls back per-field" do
+        expect(subject).to eq(
+          address_line1: "Shipping 1",
+          address_line2: "Billing 2",
+          city: "Shipping City",
+          zipcode: "11111",
+          state: "Billing State",
+          country: "FR"
+        )
+      end
+    end
+  end
+
   describe "#overdue_balance_cents" do
     subject(:overdue_balance_cents) { customer.overdue_balance_cents }
 

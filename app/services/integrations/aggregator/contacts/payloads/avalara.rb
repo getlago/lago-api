@@ -6,38 +6,30 @@ module Integrations
       module Payloads
         class Avalara < BasePayload
           def create_body
-            [
-              {
-                "company_id" => integration.company_id&.to_i,
-                "external_id" => customer.id,
-                "name" => name,
-                "address_line_1" => customer.shipping_address_line1.presence || customer.address_line1,
-                "city" => customer.shipping_city.presence || customer.city,
-                "zip" => customer.shipping_zipcode.presence || customer.zipcode,
-                "country" => customer.shipping_country.presence || customer.country,
-                "state" => customer.shipping_state.presence || customer.state,
-                "tax_number" => customer.tax_identification_number
-              }
-            ]
+            [contact_body]
           end
 
           def update_body
-            [
-              {
-                "company_id" => integration.company_id&.to_i,
-                "external_id" => customer.id,
-                "name" => name,
-                "address_line_1" => customer.shipping_address_line1.presence || customer.address_line1,
-                "city" => customer.shipping_city.presence || customer.city,
-                "zip" => customer.shipping_zipcode.presence || customer.zipcode,
-                "country" => customer.shipping_country.presence || customer.country,
-                "state" => customer.shipping_state.presence || customer.state,
-                "tax_number" => customer.tax_identification_number
-              }
-            ]
+            [contact_body]
           end
 
           private
+
+          def contact_body
+            shipping = customer.effective_shipping_address
+
+            {
+              "company_id" => integration.company_id&.to_i,
+              "external_id" => customer.id,
+              "name" => name,
+              "address_line_1" => shipping[:address_line1],
+              "city" => shipping[:city],
+              "zip" => shipping[:zipcode],
+              "country" => shipping[:country],
+              "state" => shipping[:state],
+              "tax_number" => customer.tax_identification_number
+            }
+          end
 
           def name
             return customer.name if customer.name.present?

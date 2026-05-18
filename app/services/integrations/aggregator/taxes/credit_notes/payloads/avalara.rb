@@ -16,6 +16,8 @@ module Integrations
             end
 
             def body
+              shipping = customer.effective_shipping_address
+
               [
                 {
                   "id" => "cn_#{credit_note.id}",
@@ -25,11 +27,11 @@ module Integrations
                   "contact" => {
                     "external_id" => integration_customer&.external_customer_id,
                     "name" => customer.name,
-                    "address_line_1" => customer.shipping_address_line1.presence || customer.address_line1,
-                    "city" => customer.shipping_city.presence || customer.city,
-                    "zip" => customer.shipping_zipcode.presence || customer.zipcode,
-                    "region" => customer.shipping_state.presence || customer.state,
-                    "country" => customer.shipping_country.presence || customer.country,
+                    "address_line_1" => shipping[:address_line1],
+                    "city" => shipping[:city],
+                    "zip" => shipping[:zipcode],
+                    "region" => shipping[:state],
+                    "country" => shipping[:country],
                     "taxable" => customer.tax_identification_number.present?,
                     "tax_number" => customer.tax_identification_number
                   },
