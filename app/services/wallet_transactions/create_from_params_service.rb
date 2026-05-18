@@ -133,7 +133,7 @@ module WalletTransactions
     def handle_granted_credits(wallet:, credits_amount:, reset_consumed_credits: false, voided_invoice_id: nil)
       return if credits_amount.zero?
 
-      wallet_credit = WalletCredit.new(wallet:, credit_amount: credits_amount, invoiceable: false)
+      wallet_credit = WalletCredit.new(wallet:, credit_amount: credits_amount)
       ActiveRecord::Base.transaction do
         wallet_transaction = WalletTransactions::CreateService.call!(
           wallet:,
