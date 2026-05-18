@@ -61026,6 +61026,22 @@
               "deprecationReason": null
             },
             {
+              "name": "billingEntity",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "BillingEntity",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "billingTime",
               "description": null,
               "args": [],
