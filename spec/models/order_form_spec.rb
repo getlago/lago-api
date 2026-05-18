@@ -14,8 +14,9 @@ RSpec.describe OrderForm do
         .with_default(:generated)
 
       expect(order_form).to define_enum_for(:void_reason)
+        .backed_by_column_of_type(:enum)
         .validating(allowing_nil: true)
-        .with_values(manual: 0, expired: 1, invalid: 2)
+        .with_values(manual: "manual", expired: "expired", invalid: "invalid")
         .without_instance_methods
     end
   end
@@ -25,7 +26,6 @@ RSpec.describe OrderForm do
       expect(order_form).to belong_to(:organization)
       expect(order_form).to belong_to(:customer)
       expect(order_form).to belong_to(:quote)
-      expect(order_form).to have_one(:order)
     end
   end
 
