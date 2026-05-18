@@ -514,6 +514,58 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
     end
   end
 
+  context "with presentation breakdowns" do
+    let(:charge) do
+      create(
+        :standard_charge,
+        :pay_in_advance,
+        plan:,
+        billable_metric:,
+        invoice_display_name: "API Calls",
+        properties: {
+          "amount" => "100",
+          "presentation_group_keys" => [
+            {"value" => "region", "options" => {"display_in_invoice" => true}},
+            {"value" => "env", "options" => {"display_in_invoice" => true}}
+          ]
+        }
+      )
+    end
+
+    let(:charge_fee) do
+      create(
+        :charge_fee,
+        invoice:,
+        charge:,
+        subscription:,
+        pay_in_advance: true,
+        amount_cents: 10000,
+        amount_currency: "USD",
+        units: 100,
+        unit_amount_cents: 100,
+        precise_unit_amount: 1.00,
+        invoice_display_name: "API Calls",
+        grouped_by: {},
+        properties: {
+          "from_datetime" => "2025-09-01 00:00:00",
+          "to_datetime" => "2025-09-30 23:59:59",
+          "charges_from_datetime" => "2025-09-01 00:00:00",
+          "charges_to_datetime" => "2025-09-30 23:59:59"
+        }
+      )
+    end
+
+    before do
+      charge_fee
+      create(:presentation_breakdown, fee: charge_fee, units: 60, presentation_by: {"region" => "us", "env" => "prod"})
+      create(:presentation_breakdown, fee: charge_fee, units: 40, presentation_by: {"region" => "eu", "env" => "prod"})
+    end
+
+    it "renders correctly" do
+      expect(rendered_template).to match_html_snapshot
+    end
+  end
+
   context "with prepaid credits" do
     let(:charge) do
       create(:standard_charge, :pay_in_advance, plan:, billable_metric:)
