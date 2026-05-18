@@ -22,7 +22,8 @@ RSpec.describe ::V1::OrderFormSerializer do
       "lago_signed_by_user_id" => nil,
       "lago_organization_id" => order_form.organization_id,
       "lago_customer_id" => order_form.customer_id,
-      "lago_quote_id" => order_form.quote_id,
+      "lago_quote_id" => order_form.quote_version.quote_id,
+      "lago_quote_version_id" => order_form.quote_version_id,
       "created_at" => order_form.created_at.iso8601,
       "updated_at" => order_form.updated_at.iso8601
     )

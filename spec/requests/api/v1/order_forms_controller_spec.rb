@@ -6,14 +6,15 @@ RSpec.describe Api::V1::OrderFormsController do
   let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
   let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
-  let(:order_form) { create(:order_form, organization:, customer:, quote:) }
+  let(:quote_version) { create(:quote_version, quote:, organization:) }
+  let(:order_form) { create(:order_form, organization:, customer:, quote_version:) }
 
   describe "GET /api/v1/order_forms" do
     subject { get_with_token(organization, "/api/v1/order_forms") }
 
-    let!(:order_form) { create(:order_form, organization:, customer:, quote:) }
+    let!(:order_form) { create(:order_form, organization:, customer:, quote_version:) }
 
-    before { create(:order_form, :signed, organization:, customer:, quote:) }
+    before { create(:order_form, :signed, organization:, customer:) }
 
     include_examples "requires API permission", "order_form", "read"
 

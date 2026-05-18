@@ -15,7 +15,8 @@ module V1
         lago_signed_by_user_id: model.signed_by_user_id,
         lago_organization_id: model.organization_id,
         lago_customer_id: model.customer_id,
-        lago_quote_id: model.quote_id,
+        lago_quote_id: model.quote_version.quote_id,
+        lago_quote_version_id: model.quote_version_id,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601
       }
