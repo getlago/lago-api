@@ -162,11 +162,11 @@
               <td class="body-1">Compute</td>
               <td class="body-2">100</td>
             </tr>
-            <tr class="presentation-group">
+            <tr>
               <td class="body-2">eu, prod</td>
               <td class="body-2">40</td>
             </tr>
-            <tr class="presentation-group section-end">
+            <tr class="section-end">
               <td class="body-2">us, prod</td>
               <td class="body-2">60</td>
             </tr>

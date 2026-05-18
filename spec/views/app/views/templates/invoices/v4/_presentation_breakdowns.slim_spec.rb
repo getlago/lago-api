@@ -10,7 +10,7 @@ require "rails_helper"
 #   - breakdown labels join values with ", "
 #   - nil/blank values render as the literal `<none>` and rows that contain
 #     them are pushed to the end of the list
-RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do
+RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # rubocop:disable RSpec/DescribeClass
   subject(:rendered_template) do
     Slim::Template.new(template.to_s, pretty: true).render(Object.new, fees: fees)
   end
