@@ -129,6 +129,7 @@ pt-BR:
     units: Unidades
     units_prorated_per_period: Unidades proporcionais por segundo por %{period}
     usage_based_fees: Taxas baseadas em uso
+    usage_breakdown_by: Detalhamento de uso por %{keys}
     volume:
       fee_per_unit: Taxa por unidade
       flat_fee_for_all_units: Taxa fixa para todas as unidades
