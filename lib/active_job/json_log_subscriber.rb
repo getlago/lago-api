@@ -9,6 +9,9 @@ module ActiveJob
     class_attribute :backtrace_cleaner, default: ActiveSupport::BacktraceCleaner.new
     # rubocop:enable ThreadSafety/ClassAndModuleAttributes
 
+    ARGUMENTS_MAX_LENGTH = 1000
+    BACKTRACE_MAX_FRAMES = 10
+
     def enqueue(event)
       job = event.payload[:job]
       ex = event.payload[:exception_object] || job.enqueue_error
@@ -93,7 +96,7 @@ module ActiveJob
 
       if ex
         error do
-          {
+          payload = {
             level: "error",
             event: "perform",
             status: "error",
@@ -101,11 +104,11 @@ module ActiveJob
             duration: event.duration.round(2),
             job_id: job.job_id,
             queue: job.queue_name,
-            exception: {
-              class: ex.class.name,
-              message: ex.message
-            }
-          }.to_json
+            arguments: args_info(job),
+            attempt_count: job.executions,
+            exception: exception_payload(ex)
+          }
+          merge_organization_id(payload, job).to_json
         end
       elsif event.payload[:aborted]
         info do
@@ -175,19 +178,18 @@ module ActiveJob
       ex = event.payload[:error]
 
       error do
-        {
+        payload = {
           level: "error",
           event: "retry",
           status: "stopped",
           job: job.class.name,
           job_id: job.job_id,
           queue: job.queue_name,
-          retries: job.executions,
-          exception: {
-            class: ex.class.name,
-            message: ex.message
-          }
-        }.to_json
+          arguments: args_info(job),
+          attempt_count: job.executions,
+          exception: exception_payload(ex)
+        }
+        merge_organization_id(payload, job).to_json
       end
     end
     subscribe_log_level :retry_stopped, :error
@@ -197,17 +199,18 @@ module ActiveJob
       ex = event.payload[:error]
 
       error do
-        {
+        payload = {
           level: "error",
           event: "discard",
           status: "error",
           job: job.class.name,
           job_id: job.job_id,
-          exception: {
-            class: ex.class.name,
-            message: ex.message
-          }
-        }.to_json
+          queue: job.queue_name,
+          arguments: args_info(job),
+          attempt_count: job.executions,
+          exception: exception_payload(ex)
+        }
+        merge_organization_id(payload, job).to_json
       end
     end
     subscribe_log_level :discard, :error
@@ -216,7 +219,12 @@ module ActiveJob
 
     def args_info(job)
       if job.class.log_arguments? && job.arguments.any?
-        job.arguments.map { |arg| format(arg).inspect }.join(", ")
+        formatted = job.arguments.map { |arg| format(arg).inspect }.join(", ")
+        if formatted.length > ARGUMENTS_MAX_LENGTH
+          "#{formatted[0, ARGUMENTS_MAX_LENGTH]}… (truncated)"
+        else
+          formatted
+        end
       else
         {}
       end
@@ -243,17 +251,17 @@ module ActiveJob
 
     def enqueue_error(job, ex)
       error do
-        {
+        payload = {
           level: "error",
           event: "enqueue",
           status: "error",
           job: job.class.name,
+          job_id: job.job_id,
           queue: job.queue_name,
-          exception: {
-            class: ex.class.name,
-            message: ex.message
-          }
-        }.to_json
+          arguments: args_info(job),
+          exception: exception_payload(ex)
+        }
+        merge_organization_id(payload, job).to_json
       end
     end
 
@@ -270,6 +278,43 @@ module ActiveJob
           **extra
         }.to_json
       end
+    end
+
+    def exception_payload(ex)
+      payload = {class: ex.class.name, message: ex.message}
+      backtrace = ex.backtrace
+      if backtrace && !backtrace.empty?
+        payload[:backtrace] = backtrace.first(BACKTRACE_MAX_FRAMES)
+      end
+      payload
+    end
+
+    def merge_organization_id(payload, job)
+      org_id = organization_id_from(job)
+      if org_id
+        payload[:organization_id] = org_id
+      end
+      payload
+    end
+
+    def organization_id_from(job)
+      job.arguments.each do |arg|
+        case arg
+        when Hash
+          value = arg[:organization_id] || arg["organization_id"]
+          return value if value
+        else
+          if defined?(Organization) && arg.is_a?(Organization)
+            return arg.id
+          elsif arg.respond_to?(:organization_id)
+            value = arg.organization_id
+            return value if value
+          end
+        end
+      end
+      nil
+    rescue StandardError
+      nil
     end
   end
 end
