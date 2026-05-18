@@ -1,6 +1,6 @@
-- charge_fees = fees.select { |f| f.charge? && f.presentation_breakdowns.any? }
+- fees_with_presentation_breakdowns = fees.select(&:presentation_breakdowns_displayable_in_invoice?)
 
-- charge_fees.group_by(&:charge_id).each do |_charge_id, charge_group_fees|
+- fees_with_presentation_breakdowns.group_by(&:charge_id).each do |_charge_id, charge_group_fees|
   - displayable_keys = charge_group_fees.first.charge.presentation_group_keys_values_displayed_in_invoice
   - next if displayable_keys.blank?
 
@@ -11,14 +11,14 @@
         td.body-2 = I18n.t("invoice.units")
 
       - charge_group_fees.each do |fee|
+        - rows = fee.presentation_breakdowns.map { |b| [displayable_keys.map { |k| b.presentation_by[k] }, b.units] }
+        - clean_rows, blank_rows = rows.partition { |values, _u| values.all?(&:present?) }
+        - sorted_rows = clean_rows.sort_by { |values, _u| values.map(&:to_s) } + blank_rows.sort_by { |values, _u| values.compact.map(&:to_s) }
         tr.fee
           td.body-1 = FeeDisplayHelper.fee_title(fee)
           td.body-2 = RoundingHelper.round_decimal_part(fee.units)
 
-        - rows = fee.presentation_breakdowns.map { |b| [displayable_keys.map { |k| b.presentation_by[k] || b.presentation_by[k.to_sym] }, b.units] }
-        - clean_rows, blank_rows = rows.partition { |values, _u| values.all?(&:present?) }
-        - sorted_rows = clean_rows.sort_by { |values, _u| values.map(&:to_s) } + blank_rows.sort_by { |values, _u| values.compact.map(&:to_s) }
         - sorted_rows.each_with_index do |(values, units), idx|
           tr class=("section-end" if idx == sorted_rows.size - 1)
-            td.body-2 = values.map { |v| v.present? ? v : "<none>" }.join(", ")
+            td.body-2 = values.compact.join(', ')
             td.body-2 = RoundingHelper.round_decimal_part(units)

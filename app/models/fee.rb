@@ -172,6 +172,15 @@ class Fee < ApplicationRecord
     amount_currency
   end
 
+  def presentation_breakdowns_displayable_in_invoice?
+    return false unless charge?
+
+    displayable_keys = charge.presentation_group_keys_values_displayed_in_invoice
+    return false if displayable_keys.blank?
+
+    presentation_breakdowns.any? { |b| displayable_keys.any? { |k| b.presentation_by[k].present? } }
+  end
+
   def basic_rate_percentage?
     return false unless charge?
     return false unless charge.percentage?
