@@ -88,6 +88,41 @@ RSpec.describe Invoices::Preview::CreditsService do
           expect(credits).to match_array expected_credits_from_customer
         end
       end
+
+      context "when subscription is being upgraded to a pricier plan" do
+        let(:pay_in_advance) { true }
+        let(:upgrade_plan) { create(:plan, organization:, pay_in_advance: true, amount_cents: 20_000) }
+
+        before do
+          terminated_subscription.next_subscriptions.build(
+            organization:,
+            customer:,
+            plan: upgrade_plan,
+            external_id: terminated_subscription.external_id,
+            subscription_at: terminated_subscription.subscription_at,
+            billing_time: terminated_subscription.billing_time,
+            previous_subscription_id: terminated_subscription.id,
+            status: :active,
+            started_at: Time.current,
+            created_at: Time.current
+          )
+        end
+
+        let(:expected_credits_from_subscription) do
+          # 14 days × (10_000 / 28) = 5000 cents (with the upgrade boundary day).
+          [
+            hash_including(
+              amount_cents: 5_000,
+              amount_currency: "EUR"
+            )
+          ]
+        end
+
+        it "credits the upgrade boundary day in addition to the remaining days" do
+          expect(result).to be_success
+          expect(credits).to match_array expected_credits_from_customer + expected_credits_from_subscription
+        end
+      end
     end
 
     context "when terminated_subscription is missing" do
