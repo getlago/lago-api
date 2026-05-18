@@ -373,6 +373,43 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
               )
           end
         end
+
+        context "when a billing_entity is provided" do
+          let(:result) { described_class.call(organization:, customer:, params:, billing_entity:) }
+          let(:customer) { create(:customer, organization:) }
+          let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+          context "when multi_entity_billing flag is enabled" do
+            before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+            context "when the billing entity differs from the customer default" do
+              let(:billing_entity) { other_billing_entity }
+
+              it "forwards it to the built subscription" do
+                expect(result).to be_success
+                expect(subject.first.billing_entity_id).to eq(other_billing_entity.id)
+              end
+            end
+
+            context "when the billing entity matches the customer default" do
+              let(:billing_entity) { customer.billing_entity }
+
+              it "leaves the built subscription's billing_entity_id nil" do
+                expect(result).to be_success
+                expect(subject.first.billing_entity_id).to be_nil
+              end
+            end
+          end
+
+          context "when multi_entity_billing flag is disabled" do
+            let(:billing_entity) { other_billing_entity }
+
+            it "leaves the built subscription's billing_entity_id nil" do
+              expect(result).to be_success
+              expect(subject.first.billing_entity_id).to be_nil
+            end
+          end
+        end
       end
     end
   end

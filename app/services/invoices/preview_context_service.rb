@@ -18,7 +18,8 @@ module Invoices
       subscriptions_service = ::Invoices::Preview::SubscriptionsService.call(
         organization: organization,
         customer: result.customer,
-        params: subscription_params
+        params: subscription_params,
+        billing_entity: billing_entity
       )
 
       if subscriptions_service.success?
