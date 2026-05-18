@@ -7,9 +7,8 @@ require "rails_helper"
 #   - per-charge header renders `fees.first.invoice_name`
 #   - fee title row when `fee.grouped_by` is blank reuses the charge
 #     `invoice_name` (same value as the per-charge header)
-#   - breakdown labels join values with ", "
-#   - nil/blank values render as the literal `<none>` and rows that contain
-#     them are pushed to the end of the list
+#   - breakdown labels join non-nil values with ", " (nil values are omitted)
+#   - rows with nil values are pushed to the end of the list
 RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # rubocop:disable RSpec/DescribeClass
   subject(:rendered_template) do
     Slim::Template.new(template.to_s, pretty: true).render(Object.new, fees: fees)
@@ -48,7 +47,7 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
   #   | eu, engineering | 40  |
   #   | us, engineering | 35  |
   #   | us, sales       | 25  |
-  #   | us, <none>      | 10  |
+  #   | us              | 10  |
   context "when fee.grouped_by is empty and there is no charge filter (Scenario 1)" do
     let(:fee) do
       create(
@@ -79,17 +78,13 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
       expect(rendered_template).to include("110")
     end
 
-    it "renders breakdown labels joined by ', ' in lexicographic order with <none>-bearing rows last" do
-      label_order = rendered_template.scan(%r{eu, engineering|us, engineering|us, sales|us, &lt;none&gt;})
-      expect(label_order).to eq(["eu, engineering", "us, engineering", "us, sales", "us, &lt;none&gt;"])
+    it "renders breakdown labels joined by ', ' in lexicographic order with nil-value rows last" do
+      label_order = rendered_template.scan(%r{<td[^>]*>\s*(eu, engineering|us, engineering|us, sales|us)\s*</td>}).flatten
+      expect(label_order).to eq(["eu, engineering", "us, engineering", "us, sales", "us"])
     end
 
     it "renders each breakdown row's units" do
       expect(rendered_template).to include("40").and include("35").and include("25").and include("10")
-    end
-
-    it "renders nil values as the literal string <none>" do
-      expect(rendered_template).to include("&lt;none&gt;")
     end
   end
 
@@ -98,7 +93,7 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
   #   | compute • eu    | 65 |
   #   | eu, engineering | 40 |
   #   | eu, sales       | 20 |
-  #   | eu, <none>      | 5  |
+  #   | eu              | 5  |
   context "when fee.grouped_by is present (Scenario 2)" do
     let(:fee) do
       create(
@@ -129,18 +124,18 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
     end
 
     it "renders breakdown labels using the full displayable_keys (region kept even though fee is grouped by it)" do
-      label_order = rendered_template.scan(%r{eu, engineering|eu, sales|eu, &lt;none&gt;})
-      expect(label_order).to eq(["eu, engineering", "eu, sales", "eu, &lt;none&gt;"])
+      label_order = rendered_template.scan(%r{<td[^>]*>\s*(eu, engineering|eu, sales|eu)\s*</td>}).flatten
+      expect(label_order).to eq(["eu, engineering", "eu, sales", "eu"])
     end
 
     it "renders each breakdown row's units" do
       expect(rendered_template).to include("40").and include("20").and include("5")
     end
 
-    it "pushes the <none>-bearing row to the end" do
+    it "pushes the nil-value row to the end" do
       eu_engineering_idx = rendered_template.index("eu, engineering")
-      eu_none_idx = rendered_template.index("eu, &lt;none&gt;")
-      expect(eu_engineering_idx).to be < eu_none_idx
+      eu_bare_idx = rendered_template =~ %r{<td[^>]*>\s*eu\s*</td>}
+      expect(eu_engineering_idx).to be < eu_bare_idx
     end
   end
 
@@ -150,7 +145,7 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
   #   | compute • eu    | 50 |
   #   | eu, engineering | 30 |
   #   | eu, sales       | 15 |
-  #   | eu, <none>      | 5  |
+  #   | eu              | 5  |
   context "when fee.charge_filter_id is present and grouped_by is empty (Scenario 3)" do
     let(:charge_filter) do
       create(:charge_filter, charge:, invoice_display_name: "eu")
@@ -185,13 +180,44 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
       expect(rendered_template).to include("50")
     end
 
-    it "renders breakdown labels joined by ', ' in lex order with <none> last" do
-      label_order = rendered_template.scan(%r{eu, engineering|eu, sales|eu, &lt;none&gt;})
-      expect(label_order).to eq(["eu, engineering", "eu, sales", "eu, &lt;none&gt;"])
+    it "renders breakdown labels joined by ', ' in lex order with nil-value rows last" do
+      label_order = rendered_template.scan(%r{<td[^>]*>\s*(eu, engineering|eu, sales|eu)\s*</td>}).flatten
+      expect(label_order).to eq(["eu, engineering", "eu, sales", "eu"])
     end
 
     it "renders each breakdown row's units" do
       expect(rendered_template).to include("30").and include("15").and include("5")
+    end
+  end
+
+  # Scenario 5 — breakdowns only contain keys not in displayable_keys.
+  # The fee and its breakdown rows must be omitted entirely.
+  context "when presentation breakdowns have no keys matching displayable_keys (Scenario 5)" do
+    let(:fee) do
+      create(
+        :charge_fee,
+        invoice:,
+        charge:,
+        subscription:,
+        invoice_display_name: "compute",
+        units: 100,
+        grouped_by: {}
+      )
+    end
+
+    let(:fees) { [fee] }
+
+    before do
+      create(:presentation_breakdown, fee:, units: 60, presentation_by: {"country" => "us"})
+      create(:presentation_breakdown, fee:, units: 40, presentation_by: {"country" => "eu"})
+    end
+
+    it "does not render the fee title row" do
+      expect(rendered_template).not_to match(%r{<td[^>]*>\s*compute\s*</td>})
+    end
+
+    it "does not render any breakdown values" do
+      expect(rendered_template).not_to include("country")
     end
   end
 
@@ -201,7 +227,7 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
   #   | compute • eu • eu | 50 |
   #   | eu, engineering   | 30 |
   #   | eu, sales         | 15 |
-  #   | eu, <none>        | 5  |
+  #   | eu                | 5  |
   context "when fee.charge_filter_id is present and fee.grouped_by is present (Scenario 4)" do
     let(:charge_filter) do
       create(:charge_filter, charge:, invoice_display_name: "eu")
@@ -236,9 +262,9 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
       expect(rendered_template).to include("50")
     end
 
-    it "renders breakdown labels joined by ', ' in lex order with <none> last" do
-      label_order = rendered_template.scan(%r{eu, engineering|eu, sales|eu, &lt;none&gt;})
-      expect(label_order).to eq(["eu, engineering", "eu, sales", "eu, &lt;none&gt;"])
+    it "renders breakdown labels joined by ', ' in lex order with nil-value rows last" do
+      label_order = rendered_template.scan(%r{<td[^>]*>\s*(eu, engineering|eu, sales|eu)\s*</td>}).flatten
+      expect(label_order).to eq(["eu, engineering", "eu, sales", "eu"])
     end
 
     it "renders each breakdown row's units" do

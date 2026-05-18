@@ -172,40 +172,13 @@ class Fee < ApplicationRecord
     amount_currency
   end
 
-  def grouped_or_filtered?
-    grouped_by.present? || charge_filter_id.present?
-  end
+  def presentation_breakdowns_displayable_in_invoice?
+    return false unless charge?
 
-  def ungrouped_or_filtered?
-    grouped_by.blank? || charge_filter_id.present?
-  end
+    displayable_keys = charge.presentation_group_keys_values_displayed_in_invoice
+    return false if displayable_keys.blank?
 
-  def presentation_group_keys_values_displayed_in_invoice
-    return [] unless charge
-
-    @presentation_group_keys_values_displayed_in_invoice ||= charge.presentation_group_keys_values_displayed_in_invoice
-  end
-
-  def presentation_breakdowns_displayed_in_invoice
-    keys = presentation_group_keys_values_displayed_in_invoice
-
-    return [] if keys.blank?
-
-    if defined?(@presentation_breakdowns_displayed_in_invoice)
-      return @presentation_breakdowns_displayed_in_invoice
-    end
-
-    rows = Hash.new(0)
-    presentation_breakdowns.each do |breakdown|
-      presentation_by = breakdown.presentation_by
-      values = keys.filter_map { |key| [key, presentation_by[key]] if presentation_by.key?(key) }
-
-      next if values.empty?
-
-      rows[values] += breakdown.units
-    end
-
-    @presentation_breakdowns_displayed_in_invoice = rows.map { |values, units| PresentationBreakdown.new(fee: self, presentation_by: values.to_h, units:) }
+    presentation_breakdowns.any? { |b| displayable_keys.any? { |k| b.presentation_by[k].present? } }
   end
 
   def basic_rate_percentage?
