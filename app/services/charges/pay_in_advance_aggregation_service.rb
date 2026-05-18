@@ -52,6 +52,9 @@ module Charges
       end
       filters[:grouped_by_values] = grouped_by_values if grouped_by_values.present?
 
+      presentation_group_keys_values = charge.presentation_group_keys_values
+      filters[:presentation_by] = presentation_group_keys_values if presentation_group_keys_values.present?
+
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
         filters[:charge_filter] = charge_filter if charge_filter.persisted?

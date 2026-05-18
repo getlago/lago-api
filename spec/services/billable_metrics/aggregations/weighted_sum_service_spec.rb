@@ -186,6 +186,28 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       expect(result.recurring_updated_at).to eq(from_datetime)
     end
 
+    context "when using presentation_by with no current events and zero initial value" do
+      let(:presentation_by) { ["region"] }
+      let(:events_values) { [] }
+      let(:cached_aggregation) do
+        create(
+          :cached_aggregation,
+          charge:,
+          organization:,
+          external_subscription_id: subscription.external_id,
+          timestamp: from_datetime - 1.day,
+          current_aggregation: 0,
+          presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "100.0"}]
+        )
+      end
+
+      it "falls back to cached presentation breakdowns" do
+        result = aggregator.aggregate
+
+        expect(result.breakdowns).to eq([{"groups" => {"region" => "eu"}, "value" => "100.0"}])
+      end
+    end
+
     context "without cached_aggregation" do
       let(:cached_aggregation) {}
 
@@ -443,6 +465,27 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           expect(aggregation.total_aggregated_units).to eq(1000)
           expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index])
           expect(aggregation.recurring_updated_at).to eq(from_datetime)
+        end
+      end
+
+      context "when using presentation_by" do
+        let(:presentation_by) { ["region"] }
+
+        let(:events_values) do
+          [
+            {timestamp: Time.zone.parse("2023-08-01 00:00:00.000"), value: 2, agent_name: "aragorn", region: "eu"},
+            {timestamp: Time.zone.parse("2023-08-01 01:00:00"), value: 3, agent_name: "frodo", region: "us"}
+          ]
+        end
+
+        it "returns breakdowns per presentation group within each grouped_by group" do
+          result = aggregator.aggregate
+
+          aragorn_eu = result.breakdowns.find { |b| b[:groups]["agent_name"] == "aragorn" && b[:groups]["region"] == "eu" }
+          expect(aragorn_eu).to be_present
+
+          frodo_us = result.breakdowns.find { |b| b[:groups]["agent_name"] == "frodo" && b[:groups]["region"] == "us" }
+          expect(frodo_us).to be_present
         end
       end
 
