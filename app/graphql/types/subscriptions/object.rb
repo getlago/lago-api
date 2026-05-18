@@ -5,7 +5,7 @@ module Types
     class Object < Types::BaseObject
       graphql_name "Subscription"
 
-      field :billing_entity, Types::BillingEntities::Object, null: false
+      field :billing_entity, Types::BillingEntities::Object, null: true
       field :customer, Types::Customers::Object, null: false
       field :external_id, String, null: false
       field :id, ID, null: false

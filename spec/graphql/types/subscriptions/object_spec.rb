@@ -6,7 +6,7 @@ RSpec.describe Types::Subscriptions::Object do
   subject { described_class }
 
   it do
-    expect(subject).to have_field(:billing_entity).of_type("BillingEntity!")
+    expect(subject).to have_field(:billing_entity).of_type("BillingEntity")
     expect(subject).to have_field(:customer).of_type("Customer!")
     expect(subject).to have_field(:external_id).of_type("String!")
     expect(subject).to have_field(:id).of_type("ID!")
