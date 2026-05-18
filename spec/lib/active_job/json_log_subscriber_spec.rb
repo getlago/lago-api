@@ -10,6 +10,13 @@ class TestLogJob < ApplicationJob
   end
 end
 
+class TestLogJobWithArgs < ApplicationJob
+  self.log_arguments = true
+
+  def perform(*)
+  end
+end
+
 RSpec.describe ActiveJob::JsonLogSubscriber do
   subject(:subscriber) { described_class.new }
 
@@ -88,7 +95,9 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "event" => "enqueue",
           "status" => "error",
           "job" => "TestLogJob",
+          "job_id" => "test-job-id",
           "queue" => "default",
+          "arguments" => {},
           "exception" => {"class" => "RuntimeError", "message" => "redis down"}
         })
       end
@@ -109,7 +118,9 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "event" => "enqueue",
           "status" => "error",
           "job" => "TestLogJob",
+          "job_id" => "test-job-id",
           "queue" => "low_priority",
+          "arguments" => {},
           "exception" => {"class" => "ArgumentError", "message" => "invalid args"}
         })
       end
@@ -174,8 +185,8 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
 
     context "when there is a global exception" do
       it "logs an error entry with all expected attributes for each job" do
-        job1 = build_job(queue_name: "billing")
-        job2 = build_job(queue_name: "default")
+        job1 = build_job(job_id: "id-1", queue_name: "billing")
+        job2 = build_job(job_id: "id-2", queue_name: "default")
         exception = RuntimeError.new("connection failed")
         event = build_event("enqueue_all.active_job", {jobs: [job1, job2], exception_object: exception})
 
@@ -194,7 +205,9 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "event" => "enqueue",
           "status" => "error",
           "job" => "TestLogJob",
+          "job_id" => "id-1",
           "queue" => "billing",
+          "arguments" => {},
           "exception" => expected_exception
         })
 
@@ -203,7 +216,9 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "event" => "enqueue",
           "status" => "error",
           "job" => "TestLogJob",
+          "job_id" => "id-2",
           "queue" => "default",
+          "arguments" => {},
           "exception" => expected_exception
         })
       end
@@ -229,7 +244,9 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "event" => "enqueue",
           "status" => "error",
           "job" => "TestLogJob",
+          "job_id" => "id-fail",
           "queue" => "default",
+          "arguments" => {},
           "exception" => {"class" => "ArgumentError", "message" => "queue full"}
         })
 
@@ -284,7 +301,9 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "event" => "enqueue",
           "status" => "error",
           "job" => "TestLogJob",
+          "job_id" => "test-job-id",
           "queue" => "default",
+          "arguments" => {},
           "exception" => {"class" => "RuntimeError", "message" => "global failure"}
         })
       end
@@ -331,7 +350,9 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "event" => "enqueue",
           "status" => "error",
           "job" => "TestLogJob",
+          "job_id" => "test-job-id",
           "queue" => "default",
+          "arguments" => {},
           "exception" => {"class" => "RuntimeError", "message" => "redis down"}
         })
       end
@@ -352,7 +373,9 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "event" => "enqueue",
           "status" => "error",
           "job" => "TestLogJob",
+          "job_id" => "test-job-id",
           "queue" => "low_priority",
+          "arguments" => {},
           "exception" => {"class" => "ArgumentError", "message" => "invalid args"}
         })
       end
@@ -450,7 +473,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
     context "when the job raises an exception" do
       it "logs an error entry with all expected attributes" do
         exception = RuntimeError.new("something broke")
-        job = build_job(job_id: "abc-123")
+        job = build_job(job_id: "abc-123", executions: 2)
         event = build_event("perform.active_job", {job: job, exception_object: exception})
         allow(event).to receive(:duration).and_return(45.678)
 
@@ -466,8 +489,105 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "duration" => 45.68,
           "job_id" => "abc-123",
           "queue" => "default",
+          "arguments" => {},
+          "attempt_count" => 2,
           "exception" => {"class" => "RuntimeError", "message" => "something broke"}
         })
+      end
+
+      context "when the exception has a backtrace" do
+        it "truncates the backtrace to the first 10 frames" do
+          exception = RuntimeError.new("boom")
+          exception.set_backtrace((1..20).map { |i| "frame_#{i}" })
+          job = build_job(job_id: "abc-123")
+          event = build_event("perform.active_job", {job: job, exception_object: exception})
+          allow(event).to receive(:duration).and_return(1.0)
+
+          subscriber.perform(event)
+
+          logs = parsed_log_lines
+          expect(logs.first["exception"]["backtrace"]).to eq((1..10).map { |i| "frame_#{i}" })
+        end
+      end
+
+      context "when the exception has an empty backtrace" do
+        it "omits the backtrace key" do
+          exception = RuntimeError.new("boom")
+          exception.set_backtrace([])
+          job = build_job(job_id: "abc-123")
+          event = build_event("perform.active_job", {job: job, exception_object: exception})
+          allow(event).to receive(:duration).and_return(1.0)
+
+          subscriber.perform(event)
+
+          logs = parsed_log_lines
+          expect(logs.first["exception"]).not_to have_key("backtrace")
+        end
+      end
+
+      context "when the exception has a nil backtrace" do
+        it "omits the backtrace key" do
+          exception = RuntimeError.new("boom")
+          job = build_job(job_id: "abc-123")
+          event = build_event("perform.active_job", {job: job, exception_object: exception})
+          allow(event).to receive(:duration).and_return(1.0)
+
+          subscriber.perform(event)
+
+          logs = parsed_log_lines
+          expect(logs.first["exception"]).not_to have_key("backtrace")
+        end
+      end
+
+      context "when the job arguments contain an organization_id" do
+        it "includes the organization_id in the log entry" do
+          exception = RuntimeError.new("boom")
+          job = TestLogJobWithArgs.new(organization_id: "org-42")
+          job.job_id = "abc-123"
+          job.queue_name = "default"
+          job.executions = 1
+          event = build_event("perform.active_job", {job: job, exception_object: exception})
+          allow(event).to receive(:duration).and_return(1.0)
+
+          subscriber.perform(event)
+
+          logs = parsed_log_lines
+          expect(logs.first["organization_id"]).to eq("org-42")
+        end
+      end
+
+      context "when no argument carries an organization_id" do
+        it "omits the organization_id key" do
+          exception = RuntimeError.new("boom")
+          job = build_job(job_id: "abc-123")
+          event = build_event("perform.active_job", {job: job, exception_object: exception})
+          allow(event).to receive(:duration).and_return(1.0)
+
+          subscriber.perform(event)
+
+          logs = parsed_log_lines
+          expect(logs.first).not_to have_key("organization_id")
+        end
+      end
+
+      context "when arguments string exceeds the maximum length" do
+        it "truncates the arguments string with a suffix" do
+          exception = RuntimeError.new("boom")
+          long_arg = "a" * 2000
+          job = TestLogJobWithArgs.new(long_arg)
+          job.job_id = "abc-123"
+          job.queue_name = "default"
+          job.executions = 1
+          event = build_event("perform.active_job", {job: job, exception_object: exception})
+          allow(event).to receive(:duration).and_return(1.0)
+
+          subscriber.perform(event)
+
+          logs = parsed_log_lines
+          arguments = logs.first["arguments"]
+          expect(arguments.length).to eq(1000 + "… (truncated)".length)
+          expect(arguments).to end_with("… (truncated)")
+        end
       end
     end
 
@@ -557,16 +677,33 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
         "job" => "TestLogJob",
         "job_id" => "abc-123",
         "queue" => "default",
-        "retries" => 5,
+        "arguments" => {},
+        "attempt_count" => 5,
         "exception" => {"class" => "RuntimeError", "message" => "permanent failure"}
       })
+    end
+
+    context "when the job arguments contain an organization_id" do
+      it "includes the organization_id in the log entry" do
+        exception = RuntimeError.new("permanent failure")
+        job = TestLogJobWithArgs.new(organization_id: "org-77")
+        job.job_id = "abc-123"
+        job.queue_name = "default"
+        job.executions = 5
+        event = build_event("retry_stopped.active_job", {job: job, error: exception})
+
+        subscriber.retry_stopped(event)
+
+        logs = parsed_log_lines
+        expect(logs.first["organization_id"]).to eq("org-77")
+      end
     end
   end
 
   describe "#discard" do
     it "logs a discard entry with all expected attributes" do
       exception = RuntimeError.new("unrecoverable error")
-      job = build_job(job_id: "abc-123")
+      job = build_job(job_id: "abc-123", executions: 2)
       event = build_event("discard.active_job", {job: job, error: exception})
 
       subscriber.discard(event)
@@ -579,8 +716,90 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
         "status" => "error",
         "job" => "TestLogJob",
         "job_id" => "abc-123",
+        "queue" => "default",
+        "arguments" => {},
+        "attempt_count" => 2,
         "exception" => {"class" => "RuntimeError", "message" => "unrecoverable error"}
       })
+    end
+
+    context "when the job arguments contain an organization_id" do
+      it "includes the organization_id in the log entry" do
+        exception = RuntimeError.new("unrecoverable")
+        job = TestLogJobWithArgs.new(organization_id: "org-99")
+        job.job_id = "abc-123"
+        job.queue_name = "default"
+        job.executions = 1
+        event = build_event("discard.active_job", {job: job, error: exception})
+
+        subscriber.discard(event)
+
+        logs = parsed_log_lines
+        expect(logs.first["organization_id"]).to eq("org-99")
+      end
+    end
+  end
+
+  describe "organization_id extraction" do
+    let(:exception) { RuntimeError.new("boom") }
+
+    def perform_event(job)
+      event = build_event("perform.active_job", {job: job, exception_object: exception})
+      allow(event).to receive(:duration).and_return(1.0)
+      event
+    end
+
+    context "when an argument is a hash with a symbol :organization_id key" do
+      it "extracts the organization_id" do
+        job = TestLogJobWithArgs.new(organization_id: "org-symbol")
+        job.job_id = "abc"
+        job.queue_name = "default"
+        job.executions = 1
+
+        subscriber.perform(perform_event(job))
+
+        expect(parsed_log_lines.first["organization_id"]).to eq("org-symbol")
+      end
+    end
+
+    context "when an argument is a hash with a string 'organization_id' key" do
+      it "extracts the organization_id" do
+        job = TestLogJobWithArgs.new({"organization_id" => "org-string"})
+        job.job_id = "abc"
+        job.queue_name = "default"
+        job.executions = 1
+
+        subscriber.perform(perform_event(job))
+
+        expect(parsed_log_lines.first["organization_id"]).to eq("org-string")
+      end
+    end
+
+    context "when an argument responds to organization_id" do
+      it "extracts the organization_id" do
+        org_carrier = Struct.new(:organization_id).new("org-from-method")
+        job = TestLogJobWithArgs.new(org_carrier)
+        job.job_id = "abc"
+        job.queue_name = "default"
+        job.executions = 1
+
+        subscriber.perform(perform_event(job))
+
+        expect(parsed_log_lines.first["organization_id"]).to eq("org-from-method")
+      end
+    end
+
+    context "when no argument carries an organization_id" do
+      it "omits the organization_id key" do
+        job = TestLogJobWithArgs.new("plain-string", 42)
+        job.job_id = "abc"
+        job.queue_name = "default"
+        job.executions = 1
+
+        subscriber.perform(perform_event(job))
+
+        expect(parsed_log_lines.first).not_to have_key("organization_id")
+      end
     end
   end
 end
