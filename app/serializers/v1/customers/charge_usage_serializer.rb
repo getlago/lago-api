@@ -79,7 +79,7 @@ module V1
       end
 
       def filters(fees)
-        return [] unless fees.first.charge&.filters&.any?
+        return [] if fees.first.charge&.filters&.length&.zero?
 
         fees.group_by { |f| f.charge_filter&.id }
           .values

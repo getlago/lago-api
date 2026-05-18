@@ -88,7 +88,7 @@ module Fees
     def init_fees
       result.fees = []
 
-      return init_charge_fees(properties: charge.properties) unless charge.filters.any?
+      return init_charge_fees(properties: charge.properties) unless charge.filters.length.positive?
 
       # NOTE: Create a fee for each filters defined on the charge.
       charge.filters.each do |charge_filter|
@@ -137,6 +137,7 @@ module Fees
       fees.each do |fee|
         fee.association(:billable_metric).target = billable_metric
         fee.association(:charge_filter).target = charge_filter if charge_filter&.id
+        fee.association(:charge).target = charge
       end
 
       result.fees.concat(fees.compact)
@@ -175,20 +176,29 @@ module Fees
     end
 
     def build_breakdowns_for_fee(fee:, breakdowns:)
+      grouped_by = fee.grouped_by
+      presentation_breakdowns = []
+
       Array(breakdowns).each do |breakdown|
-        if fee.grouped_by.empty?
+        if grouped_by.empty?
           presentation_by = breakdown[:groups]
         else
-          next unless fee.grouped_by.all? { |k, v| breakdown[:groups][k] == v }
-          presentation_by = breakdown[:groups].reject { |k, _| fee.grouped_by.key?(k) }
+          next unless grouped_by.all? { |k, v| breakdown[:groups][k] == v }
+          presentation_by = breakdown[:groups].reject { |k, _| grouped_by.key?(k) }
         end
 
-        fee.presentation_breakdowns.build(
-          presentation_by:,
-          units: breakdown[:value],
-          organization_id: charge.organization_id
+        presentation_breakdown = PresentationBreakdown.new(
+          "presentation_by" => presentation_by,
+          "units" => breakdown[:value],
+          "organization_id" => charge.organization_id
         )
+        presentation_breakdown.association(:fee).target = fee
+        presentation_breakdown.association(:fee).loaded!
+        presentation_breakdowns << presentation_breakdown
       end
+
+      fee.association(:presentation_breakdowns).target.replace(presentation_breakdowns)
+      fee.association(:presentation_breakdowns).loaded!
     end
 
     def filter_non_persistable_fees_for_caching(charge_fees)
@@ -223,11 +233,11 @@ module Fees
 
       # NOTE: amount_result should be a BigDecimal, we need to round it
       # to the currency decimals and transform it into currency cents
-      if charge.applied_pricing_unit
+      if (applied_pricing_unit = charge.applied_pricing_unit)
         pricing_unit_usage = PricingUnitUsage.build_from_fiat_amounts(
           amount: amount_result.amount,
           unit_amount: amount_result.unit_amount,
-          applied_pricing_unit: charge.applied_pricing_unit
+          applied_pricing_unit:
         )
 
         amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage

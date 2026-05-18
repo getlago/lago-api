@@ -73,7 +73,7 @@ module Invoices
         .plan
         .charges
         .joins(:billable_metric)
-        .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
+        .includes(:taxes, :applied_pricing_unit, billable_metric: :organization, filters: {values: :billable_metric_filter})
       if usage_filters.filter_by_charge_id.present?
         charges = charges.where(id: usage_filters.filter_by_charge_id)
       elsif usage_filters.filter_by_charge_code.present?
@@ -81,7 +81,7 @@ module Invoices
       elsif usage_filters.filter_by_metric_code.present?
         charges = charges.where(billable_metrics: {code: usage_filters.filter_by_metric_code})
       end
-      @charges = charges
+      @charges = charges.strict_loading
     end
 
     # NOTE: Since computing customer usage could take some time as it as to
