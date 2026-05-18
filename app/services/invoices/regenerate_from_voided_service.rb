@@ -266,7 +266,8 @@ module Invoices
         customer: voided_invoice.customer,
         invoice_type: voided_invoice.invoice_type,
         currency: voided_invoice.currency,
-        datetime: voided_invoice.created_at
+        datetime: voided_invoice.created_at,
+        billing_entity: voided_invoice.billing_entity
       ).invoice.tap do |invoice|
         invoice.update!(voided_invoice_id: voided_invoice.id)
       end
@@ -285,7 +286,7 @@ module Invoices
     end
 
     def should_deliver_email?
-      License.premium? && customer.billing_entity.email_settings.include?("invoice.finalized")
+      License.premium? && regenerated_invoice.billing_entity.email_settings.include?("invoice.finalized")
     end
   end
 end
