@@ -61026,12 +61026,12 @@
               "deprecationReason": null
             },
             {
-              "name": "billingEntity",
+              "name": "billingEntityId",
               "description": null,
               "args": [],
               "type": {
-                "kind": "OBJECT",
-                "name": "BillingEntity",
+                "kind": "SCALAR",
+                "name": "ID",
                 "ofType": null
               },
               "isDeprecated": false,
