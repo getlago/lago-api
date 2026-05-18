@@ -39,7 +39,7 @@ class OrderFormsQuery < BaseQuery
   end
 
   def base_scope
-    organization.order_forms.includes(:customer).ransack(search_params)
+    organization.order_forms.includes(:customer, :quote_version).ransack(search_params)
   end
 
   def search_params
@@ -61,12 +61,14 @@ class OrderFormsQuery < BaseQuery
   end
 
   def with_quote_number(scope)
-    scope.joins(:quote).where(quotes: {number: filters.quote_number})
+    scope.joins(quote_version: :quote).where(quotes: {number: filters.quote_number})
   end
 
   def with_owner_id(scope)
     scope.where(
-      quote_id: QuoteOwner.where(user_id: filters.owner_id).select(:quote_id)
+      quote_version_id: QuoteVersion.where(
+        quote_id: QuoteOwner.where(user_id: filters.owner_id).select(:quote_id)
+      ).select(:id)
     )
   end
 

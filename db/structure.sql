@@ -18,6 +18,7 @@ ALTER TABLE IF EXISTS ONLY public.subscription_activation_rules DROP CONSTRAINT 
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_fd399a23d3;
 ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_rails_fbd2b9fccb;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_f98413d404;
+ALTER TABLE IF EXISTS ONLY public.order_forms DROP CONSTRAINT IF EXISTS fk_rails_f94f882198;
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_f66617edcb;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_f53ff93138;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_f510acb495;
@@ -184,7 +185,6 @@ ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62d18ea517;
 ALTER TABLE IF EXISTS ONLY public.order_forms DROP CONSTRAINT IF EXISTS fk_rails_6298debfc7;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_626209b8d2;
-ALTER TABLE IF EXISTS ONLY public.order_forms DROP CONSTRAINT IF EXISTS fk_rails_60bc1d491f;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3f2dd;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_5efea6fe31;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_5e06da3c18;
@@ -385,8 +385,6 @@ DROP INDEX IF EXISTS public.index_unique_quote_versions_on_share_token;
 DROP INDEX IF EXISTS public.index_unique_quote_versions_on_quote_sequential_id;
 DROP INDEX IF EXISTS public.index_unique_quote_versions_on_quote_active_status;
 DROP INDEX IF EXISTS public.index_unique_quote_owners_on_quote_user;
-DROP INDEX IF EXISTS public.index_unique_order_forms_on_organization_sequentialid;
-DROP INDEX IF EXISTS public.index_unique_order_forms_on_organization_number;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
 DROP INDEX IF EXISTS public.index_uniq_wallet_code_per_customer;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_fixed_charges_boundaries;
@@ -493,7 +491,9 @@ DROP INDEX IF EXISTS public.index_password_resets_on_token;
 DROP INDEX IF EXISTS public.index_organizations_on_slug;
 DROP INDEX IF EXISTS public.index_organizations_on_hmac_key;
 DROP INDEX IF EXISTS public.index_organizations_on_api_key;
-DROP INDEX IF EXISTS public.index_order_forms_on_quote_id;
+DROP INDEX IF EXISTS public.index_order_forms_on_quote_version_id;
+DROP INDEX IF EXISTS public.index_order_forms_on_organization_id_and_number;
+DROP INDEX IF EXISTS public.index_order_forms_on_organization_id;
 DROP INDEX IF EXISTS public.index_order_forms_on_customer_id;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id;
@@ -4635,10 +4635,9 @@ CREATE TABLE public.order_forms (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     customer_id uuid NOT NULL,
-    quote_id uuid NOT NULL,
+    quote_version_id uuid NOT NULL,
     signed_by_user_id uuid,
     number character varying NOT NULL,
-    sequential_id integer NOT NULL,
     status public.order_form_status DEFAULT 'generated'::public.order_form_status NOT NULL,
     void_reason public.order_form_void_reason,
     billing_snapshot jsonb NOT NULL,
@@ -8740,10 +8739,24 @@ CREATE INDEX index_order_forms_on_customer_id ON public.order_forms USING btree 
 
 
 --
--- Name: index_order_forms_on_quote_id; Type: INDEX; Schema: public; Owner: -
+-- Name: index_order_forms_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_order_forms_on_quote_id ON public.order_forms USING btree (quote_id);
+CREATE INDEX index_order_forms_on_organization_id ON public.order_forms USING btree (organization_id);
+
+
+--
+-- Name: index_order_forms_on_organization_id_and_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_order_forms_on_organization_id_and_number ON public.order_forms USING btree (organization_id, number);
+
+
+--
+-- Name: index_order_forms_on_quote_version_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_order_forms_on_quote_version_id ON public.order_forms USING btree (quote_version_id);
 
 
 --
@@ -9486,20 +9499,6 @@ CREATE UNIQUE INDEX index_uniq_wallet_code_per_customer ON public.wallets USING 
 --
 
 CREATE UNIQUE INDEX index_unique_applied_to_organization_per_organization ON public.dunning_campaigns USING btree (organization_id) WHERE ((applied_to_organization = true) AND (deleted_at IS NULL));
-
-
---
--- Name: index_unique_order_forms_on_organization_number; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_unique_order_forms_on_organization_number ON public.order_forms USING btree (organization_id, number);
-
-
---
--- Name: index_unique_order_forms_on_organization_sequentialid; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_unique_order_forms_on_organization_sequentialid ON public.order_forms USING btree (organization_id, sequential_id);
 
 
 --
@@ -10932,14 +10931,6 @@ ALTER TABLE ONLY public.fees
 
 
 --
--- Name: order_forms fk_rails_60bc1d491f; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.order_forms
-    ADD CONSTRAINT fk_rails_60bc1d491f FOREIGN KEY (quote_id) REFERENCES public.quotes(id);
-
-
---
 -- Name: credit_notes_taxes fk_rails_626209b8d2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12265,6 +12256,14 @@ ALTER TABLE ONLY public.payment_receipts
 
 ALTER TABLE ONLY public.billing_entities
     ADD CONSTRAINT fk_rails_f66617edcb FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: order_forms fk_rails_f94f882198; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.order_forms
+    ADD CONSTRAINT fk_rails_f94f882198 FOREIGN KEY (quote_version_id) REFERENCES public.quote_versions(id);
 
 
 --

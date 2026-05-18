@@ -9,15 +9,15 @@ class CreateOrderForms < ActiveRecord::Migration[8.0]
       t.references :organization,
         null: false,
         foreign_key: true,
-        index: false, # covered by the composite unique indexes below
         type: :uuid
       t.references :customer,
         null: false,
         foreign_key: true,
         type: :uuid
-      t.references :quote,
+      t.references :quote_version,
         null: false,
         foreign_key: true,
+        index: {unique: true},
         type: :uuid
       t.references :signed_by_user,
         foreign_key: {to_table: :users},
@@ -25,7 +25,6 @@ class CreateOrderForms < ActiveRecord::Migration[8.0]
         type: :uuid
 
       t.string :number, null: false
-      t.integer :sequential_id, null: false
 
       t.enum :status,
         enum_type: :order_form_status,
@@ -44,11 +43,7 @@ class CreateOrderForms < ActiveRecord::Migration[8.0]
       t.timestamps
 
       t.index [:organization_id, :number],
-        unique: true,
-        name: "index_unique_order_forms_on_organization_number"
-      t.index [:organization_id, :sequential_id],
-        unique: true,
-        name: "index_unique_order_forms_on_organization_sequentialid"
+        name: "index_order_forms_on_organization_id_and_number"
     end
   end
 end
