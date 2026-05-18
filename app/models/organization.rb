@@ -279,6 +279,12 @@ class Organization < ApplicationRecord
     self
   end
 
+  # Same intent as #organization: a uniform interface so callers walking an arbitrary
+  # object can ask for the organization_id without special-casing Organization itself.
+  def organization_id
+    id
+  end
+
   def maximum_wallets_per_customer
     max_wallets if events_targeting_wallets_enabled?
   end

@@ -142,29 +142,32 @@ module ActiveJob
 
       info do
         if ex
-          {
+          payload = {
             level: "error",
             event: "retry",
             status: "error",
             job: job.class.name,
             job_id: job.job_id,
+            queue: job.queue_name,
+            arguments: args_info(job),
             execution: job.executions,
             wait: wait.to_i,
-            exception: {
-              class: ex.class.name,
-              message: ex.message
-            }
-          }.to_json
+            exception: exception_payload(ex)
+          }
+          merge_organization_id(payload, job).to_json
         else
-          {
+          payload = {
             level: "info",
             event: "retry",
             status: "success",
             job: job.class.name,
             job_id: job.job_id,
+            queue: job.queue_name,
+            arguments: args_info(job),
             execution: job.executions,
             wait: wait.to_i
-          }.to_json
+          }
+          merge_organization_id(payload, job).to_json
         end
       end
     end
@@ -285,30 +288,19 @@ module ActiveJob
     end
 
     def organization_id_from(job)
-      return nil if job.arguments.nil?
-
-      job.arguments.each do |arg|
-        case arg
-        when Hash
-          if arg.key?(:organization_id)
-            value = arg[:organization_id]
-            return value unless value.nil?
-          elsif arg.key?("organization_id")
-            value = arg["organization_id"]
-            return value unless value.nil?
-          end
-        else
-          if defined?(Organization) && arg.is_a?(Organization)
-            return arg.id
-          elsif arg.respond_to?(:organization_id)
-            value = arg.organization_id
-            return value unless value.nil?
-          end
-        end
-      end
-      nil
+      arg = job.arguments&.find { |a| !organization_id_in(a).nil? }
+      organization_id_in(arg) if arg
     rescue StandardError
       nil
+    end
+
+    def organization_id_in(arg)
+      case arg
+      when Hash
+        arg[:organization_id].presence || arg["organization_id"].presence
+      else
+        arg.organization_id if arg.respond_to?(:organization_id)
+      end
     end
   end
 end
