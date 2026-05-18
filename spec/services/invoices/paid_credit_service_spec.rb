@@ -56,7 +56,7 @@ RSpec.describe Invoices::PaidCreditService do
         .to change(wallet_transaction, :invoice).from(nil).to(Invoice)
     end
 
-    context "billing_entity resolution" do
+    context "with billing entity resolution" do
       it "stamps the customer's billing_entity when wallet has none" do
         invoice = invoice_service.call.invoice
 

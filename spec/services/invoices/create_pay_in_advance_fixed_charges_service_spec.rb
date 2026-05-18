@@ -75,7 +75,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       expect { invoice_service.call }.to change(InvoiceSubscription, :count).by(1)
     end
 
-    context "billing_entity resolution" do
+    context "with billing entity resolution" do
       it "stamps the customer's billing_entity when subscription has none" do
         invoice = invoice_service.call.invoice
 

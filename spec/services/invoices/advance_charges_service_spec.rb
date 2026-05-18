@@ -126,7 +126,7 @@ RSpec.describe Invoices::AdvanceChargesService do
           )
       end
 
-      context "billing_entity resolution" do
+      context "with billing entity resolution" do
         it "stamps the customer's billing_entity when subscription has none" do
           invoice = invoice_service.call.invoice
 

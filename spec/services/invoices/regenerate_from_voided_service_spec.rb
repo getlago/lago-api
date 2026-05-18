@@ -60,7 +60,7 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       expect(regenerated_fee.amount_cents).to eq 10 * 5050
     end
 
-    context "billing_entity resolution" do
+    context "with billing entity resolution" do
       it "carries the voided invoice's billing_entity to the regenerated invoice" do
         other_billing_entity = create(:billing_entity, organization:)
         voided_invoice.update!(billing_entity: other_billing_entity)

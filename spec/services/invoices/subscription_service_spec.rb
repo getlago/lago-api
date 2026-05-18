@@ -121,7 +121,7 @@ RSpec.describe Invoices::SubscriptionService do
       expect(Utils::ActivityLog).to have_produced("invoice.created").after_commit.with(invoice)
     end
 
-    context "billing_entity resolution" do
+    context "with billingentity resolution" do
       it "stamps the customer's billing_entity when subscription has none" do
         invoice = invoice_service.call.invoice
 
