@@ -49,6 +49,14 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
     end
   end
 
+  def build_job_with_args(*args, job_id: "test-job-id", queue_name: "default", executions: 0)
+    TestLogJobWithArgs.new(*args).tap do |job|
+      job.job_id = job_id
+      job.queue_name = queue_name
+      job.executions = executions
+    end
+  end
+
   def build_event(name, payload)
     ActiveSupport::Notifications::Event.new(name, nil, nil, "transaction_id", payload)
   end
@@ -496,7 +504,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
       end
 
       context "when the exception has a backtrace" do
-        it "truncates the backtrace to the first 10 frames" do
+        it "logs an error entry with the backtrace truncated to the first 10 frames" do
           exception = RuntimeError.new("boom")
           exception.set_backtrace((1..20).map { |i| "frame_#{i}" })
           job = build_job(job_id: "abc-123")
@@ -506,12 +514,28 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           subscriber.perform(event)
 
           logs = parsed_log_lines
-          expect(logs.first["exception"]["backtrace"]).to eq((1..10).map { |i| "frame_#{i}" })
+          expect(logs.size).to eq(1)
+          expect(logs.first).to eq({
+            "level" => "error",
+            "event" => "perform",
+            "status" => "error",
+            "job" => "TestLogJob",
+            "duration" => 1.0,
+            "job_id" => "abc-123",
+            "queue" => "default",
+            "arguments" => {},
+            "attempt_count" => 0,
+            "exception" => {
+              "class" => "RuntimeError",
+              "message" => "boom",
+              "backtrace" => (1..10).map { |i| "frame_#{i}" }
+            }
+          })
         end
       end
 
       context "when the exception has an empty backtrace" do
-        it "omits the backtrace key" do
+        it "logs an error entry without the backtrace key" do
           exception = RuntimeError.new("boom")
           exception.set_backtrace([])
           job = build_job(job_id: "abc-123")
@@ -521,12 +545,24 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           subscriber.perform(event)
 
           logs = parsed_log_lines
-          expect(logs.first["exception"]).not_to have_key("backtrace")
+          expect(logs.size).to eq(1)
+          expect(logs.first).to eq({
+            "level" => "error",
+            "event" => "perform",
+            "status" => "error",
+            "job" => "TestLogJob",
+            "duration" => 1.0,
+            "job_id" => "abc-123",
+            "queue" => "default",
+            "arguments" => {},
+            "attempt_count" => 0,
+            "exception" => {"class" => "RuntimeError", "message" => "boom"}
+          })
         end
       end
 
       context "when the exception has a nil backtrace" do
-        it "omits the backtrace key" do
+        it "logs an error entry without the backtrace key" do
           exception = RuntimeError.new("boom")
           job = build_job(job_id: "abc-123")
           event = build_event("perform.active_job", {job: job, exception_object: exception})
@@ -535,29 +571,187 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           subscriber.perform(event)
 
           logs = parsed_log_lines
-          expect(logs.first["exception"]).not_to have_key("backtrace")
+          expect(logs.size).to eq(1)
+          expect(logs.first).to eq({
+            "level" => "error",
+            "event" => "perform",
+            "status" => "error",
+            "job" => "TestLogJob",
+            "duration" => 1.0,
+            "job_id" => "abc-123",
+            "queue" => "default",
+            "arguments" => {},
+            "attempt_count" => 0,
+            "exception" => {"class" => "RuntimeError", "message" => "boom"}
+          })
         end
       end
 
-      context "when the job arguments contain an organization_id" do
-        it "includes the organization_id in the log entry" do
+      context "when an argument is a hash with a symbol :organization_id key" do
+        it "logs an error entry with the extracted organization_id" do
           exception = RuntimeError.new("boom")
-          job = TestLogJobWithArgs.new(organization_id: "org-42")
-          job.job_id = "abc-123"
-          job.queue_name = "default"
-          job.executions = 1
+          job = build_job_with_args({organization_id: "org-symbol"}, job_id: "abc-123", executions: 1)
           event = build_event("perform.active_job", {job: job, exception_object: exception})
           allow(event).to receive(:duration).and_return(1.0)
 
           subscriber.perform(event)
 
           logs = parsed_log_lines
-          expect(logs.first["organization_id"]).to eq("org-42")
+          expect(logs.size).to eq(1)
+          expect(logs.first).to eq({
+            "level" => "error",
+            "event" => "perform",
+            "status" => "error",
+            "job" => "TestLogJobWithArgs",
+            "duration" => 1.0,
+            "job_id" => "abc-123",
+            "queue" => "default",
+            "arguments" => "{organization_id: \"org-symbol\"}",
+            "attempt_count" => 1,
+            "exception" => {"class" => "RuntimeError", "message" => "boom"},
+            "organization_id" => "org-symbol"
+          })
+        end
+      end
+
+      context "when an argument is a hash with a string 'organization_id' key" do
+        it "logs an error entry with the extracted organization_id" do
+          exception = RuntimeError.new("boom")
+          job = build_job_with_args({"organization_id" => "org-string"}, job_id: "abc-123", executions: 1)
+          event = build_event("perform.active_job", {job: job, exception_object: exception})
+          allow(event).to receive(:duration).and_return(1.0)
+
+          subscriber.perform(event)
+
+          logs = parsed_log_lines
+          expect(logs.size).to eq(1)
+          expect(logs.first).to eq({
+            "level" => "error",
+            "event" => "perform",
+            "status" => "error",
+            "job" => "TestLogJobWithArgs",
+            "duration" => 1.0,
+            "job_id" => "abc-123",
+            "queue" => "default",
+            "arguments" => "{\"organization_id\" => \"org-string\"}",
+            "attempt_count" => 1,
+            "exception" => {"class" => "RuntimeError", "message" => "boom"},
+            "organization_id" => "org-string"
+          })
+        end
+      end
+
+      context "when an argument responds to organization_id" do
+        it "logs an error entry with the extracted organization_id" do
+          exception = RuntimeError.new("boom")
+          org_carrier = Struct.new(:organization_id).new("org-from-method")
+          job = build_job_with_args(org_carrier, job_id: "abc-123", executions: 1)
+          event = build_event("perform.active_job", {job: job, exception_object: exception})
+          allow(event).to receive(:duration).and_return(1.0)
+
+          subscriber.perform(event)
+
+          logs = parsed_log_lines
+          expect(logs.size).to eq(1)
+          expect(logs.first).to eq({
+            "level" => "error",
+            "event" => "perform",
+            "status" => "error",
+            "job" => "TestLogJobWithArgs",
+            "duration" => 1.0,
+            "job_id" => "abc-123",
+            "queue" => "default",
+            "arguments" => org_carrier.inspect,
+            "attempt_count" => 1,
+            "exception" => {"class" => "RuntimeError", "message" => "boom"},
+            "organization_id" => "org-from-method"
+          })
+        end
+      end
+
+      context "when an argument hash has organization_id: false" do
+        it "logs an error entry with the false organization_id rather than falling through" do
+          exception = RuntimeError.new("boom")
+          job = build_job_with_args({organization_id: false}, {organization_id: "fallback"}, job_id: "abc-123", executions: 1)
+          event = build_event("perform.active_job", {job: job, exception_object: exception})
+          allow(event).to receive(:duration).and_return(1.0)
+
+          subscriber.perform(event)
+
+          logs = parsed_log_lines
+          expect(logs.size).to eq(1)
+          expect(logs.first).to eq({
+            "level" => "error",
+            "event" => "perform",
+            "status" => "error",
+            "job" => "TestLogJobWithArgs",
+            "duration" => 1.0,
+            "job_id" => "abc-123",
+            "queue" => "default",
+            "arguments" => "{organization_id: false}, {organization_id: \"fallback\"}",
+            "attempt_count" => 1,
+            "exception" => {"class" => "RuntimeError", "message" => "boom"},
+            "organization_id" => false
+          })
+        end
+      end
+
+      context "when an argument hash has organization_id: 0" do
+        it "logs an error entry with the zero organization_id rather than falling through" do
+          exception = RuntimeError.new("boom")
+          job = build_job_with_args({organization_id: 0}, {organization_id: "fallback"}, job_id: "abc-123", executions: 1)
+          event = build_event("perform.active_job", {job: job, exception_object: exception})
+          allow(event).to receive(:duration).and_return(1.0)
+
+          subscriber.perform(event)
+
+          logs = parsed_log_lines
+          expect(logs.size).to eq(1)
+          expect(logs.first).to eq({
+            "level" => "error",
+            "event" => "perform",
+            "status" => "error",
+            "job" => "TestLogJobWithArgs",
+            "duration" => 1.0,
+            "job_id" => "abc-123",
+            "queue" => "default",
+            "arguments" => "{organization_id: 0}, {organization_id: \"fallback\"}",
+            "attempt_count" => 1,
+            "exception" => {"class" => "RuntimeError", "message" => "boom"},
+            "organization_id" => 0
+          })
+        end
+      end
+
+      context "when an argument hash has organization_id: nil" do
+        it "logs an error entry with the next argument's organization_id" do
+          exception = RuntimeError.new("boom")
+          job = build_job_with_args({organization_id: nil}, {organization_id: "fallback"}, job_id: "abc-123", executions: 1)
+          event = build_event("perform.active_job", {job: job, exception_object: exception})
+          allow(event).to receive(:duration).and_return(1.0)
+
+          subscriber.perform(event)
+
+          logs = parsed_log_lines
+          expect(logs.size).to eq(1)
+          expect(logs.first).to eq({
+            "level" => "error",
+            "event" => "perform",
+            "status" => "error",
+            "job" => "TestLogJobWithArgs",
+            "duration" => 1.0,
+            "job_id" => "abc-123",
+            "queue" => "default",
+            "arguments" => "{organization_id: nil}, {organization_id: \"fallback\"}",
+            "attempt_count" => 1,
+            "exception" => {"class" => "RuntimeError", "message" => "boom"},
+            "organization_id" => "fallback"
+          })
         end
       end
 
       context "when no argument carries an organization_id" do
-        it "omits the organization_id key" do
+        it "logs an error entry without the organization_id key" do
           exception = RuntimeError.new("boom")
           job = build_job(job_id: "abc-123")
           event = build_event("perform.active_job", {job: job, exception_object: exception})
@@ -566,27 +760,48 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           subscriber.perform(event)
 
           logs = parsed_log_lines
-          expect(logs.first).not_to have_key("organization_id")
+          expect(logs.size).to eq(1)
+          expect(logs.first).to eq({
+            "level" => "error",
+            "event" => "perform",
+            "status" => "error",
+            "job" => "TestLogJob",
+            "duration" => 1.0,
+            "job_id" => "abc-123",
+            "queue" => "default",
+            "arguments" => {},
+            "attempt_count" => 0,
+            "exception" => {"class" => "RuntimeError", "message" => "boom"}
+          })
         end
       end
 
       context "when arguments string exceeds the maximum length" do
-        it "truncates the arguments string with a suffix" do
+        it "logs an error entry with the arguments string truncated and a suffix" do
           exception = RuntimeError.new("boom")
           long_arg = "a" * 2000
-          job = TestLogJobWithArgs.new(long_arg)
-          job.job_id = "abc-123"
-          job.queue_name = "default"
-          job.executions = 1
+          job = build_job_with_args(long_arg, job_id: "abc-123", executions: 1)
           event = build_event("perform.active_job", {job: job, exception_object: exception})
           allow(event).to receive(:duration).and_return(1.0)
 
           subscriber.perform(event)
 
+          truncated_arguments = "\"#{"a" * 999}" + "… (truncated)"
+
           logs = parsed_log_lines
-          arguments = logs.first["arguments"]
-          expect(arguments.length).to eq(1000 + "… (truncated)".length)
-          expect(arguments).to end_with("… (truncated)")
+          expect(logs.size).to eq(1)
+          expect(logs.first).to eq({
+            "level" => "error",
+            "event" => "perform",
+            "status" => "error",
+            "job" => "TestLogJobWithArgs",
+            "duration" => 1.0,
+            "job_id" => "abc-123",
+            "queue" => "default",
+            "arguments" => truncated_arguments,
+            "attempt_count" => 1,
+            "exception" => {"class" => "RuntimeError", "message" => "boom"}
+          })
         end
       end
     end
@@ -684,18 +899,27 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
     end
 
     context "when the job arguments contain an organization_id" do
-      it "includes the organization_id in the log entry" do
+      it "logs a stopped entry with the extracted organization_id" do
         exception = RuntimeError.new("permanent failure")
-        job = TestLogJobWithArgs.new(organization_id: "org-77")
-        job.job_id = "abc-123"
-        job.queue_name = "default"
-        job.executions = 5
+        job = build_job_with_args({organization_id: "org-77"}, job_id: "abc-123", executions: 5)
         event = build_event("retry_stopped.active_job", {job: job, error: exception})
 
         subscriber.retry_stopped(event)
 
         logs = parsed_log_lines
-        expect(logs.first["organization_id"]).to eq("org-77")
+        expect(logs.size).to eq(1)
+        expect(logs.first).to eq({
+          "level" => "error",
+          "event" => "retry",
+          "status" => "stopped",
+          "job" => "TestLogJobWithArgs",
+          "job_id" => "abc-123",
+          "queue" => "default",
+          "arguments" => "{organization_id: \"org-77\"}",
+          "attempt_count" => 5,
+          "exception" => {"class" => "RuntimeError", "message" => "permanent failure"},
+          "organization_id" => "org-77"
+        })
       end
     end
   end
@@ -724,81 +948,27 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
     end
 
     context "when the job arguments contain an organization_id" do
-      it "includes the organization_id in the log entry" do
+      it "logs a discard entry with the extracted organization_id" do
         exception = RuntimeError.new("unrecoverable")
-        job = TestLogJobWithArgs.new(organization_id: "org-99")
-        job.job_id = "abc-123"
-        job.queue_name = "default"
-        job.executions = 1
+        job = build_job_with_args({organization_id: "org-99"}, job_id: "abc-123", executions: 1)
         event = build_event("discard.active_job", {job: job, error: exception})
 
         subscriber.discard(event)
 
         logs = parsed_log_lines
-        expect(logs.first["organization_id"]).to eq("org-99")
-      end
-    end
-  end
-
-  describe "organization_id extraction" do
-    let(:exception) { RuntimeError.new("boom") }
-
-    def perform_event(job)
-      event = build_event("perform.active_job", {job: job, exception_object: exception})
-      allow(event).to receive(:duration).and_return(1.0)
-      event
-    end
-
-    context "when an argument is a hash with a symbol :organization_id key" do
-      it "extracts the organization_id" do
-        job = TestLogJobWithArgs.new(organization_id: "org-symbol")
-        job.job_id = "abc"
-        job.queue_name = "default"
-        job.executions = 1
-
-        subscriber.perform(perform_event(job))
-
-        expect(parsed_log_lines.first["organization_id"]).to eq("org-symbol")
-      end
-    end
-
-    context "when an argument is a hash with a string 'organization_id' key" do
-      it "extracts the organization_id" do
-        job = TestLogJobWithArgs.new({"organization_id" => "org-string"})
-        job.job_id = "abc"
-        job.queue_name = "default"
-        job.executions = 1
-
-        subscriber.perform(perform_event(job))
-
-        expect(parsed_log_lines.first["organization_id"]).to eq("org-string")
-      end
-    end
-
-    context "when an argument responds to organization_id" do
-      it "extracts the organization_id" do
-        org_carrier = Struct.new(:organization_id).new("org-from-method")
-        job = TestLogJobWithArgs.new(org_carrier)
-        job.job_id = "abc"
-        job.queue_name = "default"
-        job.executions = 1
-
-        subscriber.perform(perform_event(job))
-
-        expect(parsed_log_lines.first["organization_id"]).to eq("org-from-method")
-      end
-    end
-
-    context "when no argument carries an organization_id" do
-      it "omits the organization_id key" do
-        job = TestLogJobWithArgs.new("plain-string", 42)
-        job.job_id = "abc"
-        job.queue_name = "default"
-        job.executions = 1
-
-        subscriber.perform(perform_event(job))
-
-        expect(parsed_log_lines.first).not_to have_key("organization_id")
+        expect(logs.size).to eq(1)
+        expect(logs.first).to eq({
+          "level" => "error",
+          "event" => "discard",
+          "status" => "error",
+          "job" => "TestLogJobWithArgs",
+          "job_id" => "abc-123",
+          "queue" => "default",
+          "arguments" => "{organization_id: \"org-99\"}",
+          "attempt_count" => 1,
+          "exception" => {"class" => "RuntimeError", "message" => "unrecoverable"},
+          "organization_id" => "org-99"
+        })
       end
     end
   end
