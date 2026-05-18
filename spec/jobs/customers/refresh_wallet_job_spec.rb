@@ -85,86 +85,25 @@ RSpec.describe Customers::RefreshWalletJob do
           end
         end
 
-        context "when the error is an out of memory error" do
-          before do
-            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(Integrations::Aggregator::OutOfMemoryError)
-          end
-
-          it "raises the error and retries the job" do
-            assert_performed_jobs(6, only: [described_class]) do
-              expect do
-                described_class.perform_later(customer)
-              end.to raise_error(Integrations::Aggregator::OutOfMemoryError)
+        [
+          Integrations::Aggregator::OutOfMemoryError,
+          Integrations::Aggregator::TaskInProgressError,
+          Integrations::Aggregator::TaskExpiredError,
+          Integrations::Aggregator::OrchestratorFailureError,
+          Integrations::Aggregator::ServerContentionError,
+          Integrations::Aggregator::TimeoutError
+        ].each do |error_class|
+          context "when the error is #{error_class.name.demodulize.underscore.humanize.downcase}" do
+            before do
+              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(error_class)
             end
-          end
-        end
 
-        context "when the error is a task in progress error" do
-          before do
-            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(Integrations::Aggregator::TaskInProgressError)
-          end
-
-          it "raises the error and retries the job" do
-            assert_performed_jobs(6, only: [described_class]) do
-              expect do
-                described_class.perform_later(customer)
-              end.to raise_error(Integrations::Aggregator::TaskInProgressError)
-            end
-          end
-        end
-
-        context "when the error is a task expired error" do
-          before do
-            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(Integrations::Aggregator::TaskExpiredError)
-          end
-
-          it "raises the error and retries the job" do
-            assert_performed_jobs(6, only: [described_class]) do
-              expect do
-                described_class.perform_later(customer)
-              end.to raise_error(Integrations::Aggregator::TaskExpiredError)
-            end
-          end
-        end
-
-        context "when the error is an orchestrator failure error" do
-          before do
-            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(Integrations::Aggregator::OrchestratorFailureError)
-          end
-
-          it "raises the error and retries the job" do
-            assert_performed_jobs(6, only: [described_class]) do
-              expect do
-                described_class.perform_later(customer)
-              end.to raise_error(Integrations::Aggregator::OrchestratorFailureError)
-            end
-          end
-        end
-
-        context "when the error is a server contention error" do
-          before do
-            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(Integrations::Aggregator::ServerContentionError)
-          end
-
-          it "raises the error and retries the job" do
-            assert_performed_jobs(6, only: [described_class]) do
-              expect do
-                described_class.perform_later(customer)
-              end.to raise_error(Integrations::Aggregator::ServerContentionError)
-            end
-          end
-        end
-
-        context "when the error is a timeout error" do
-          before do
-            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(Integrations::Aggregator::TimeoutError)
-          end
-
-          it "raises the error and retries the job" do
-            assert_performed_jobs(6, only: [described_class]) do
-              expect do
-                described_class.perform_later(customer)
-              end.to raise_error(Integrations::Aggregator::TimeoutError)
+            it "raises the error and retries the job" do
+              assert_performed_jobs(6, only: [described_class]) do
+                expect do
+                  described_class.perform_later(customer)
+                end.to raise_error(error_class)
+              end
             end
           end
         end
