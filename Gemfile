@@ -31,7 +31,7 @@ gem "dry-validation"
 
 # Security
 gem "bcrypt"
-gem "googleauth", "~> 1.11.0"
+gem "googleauth", "~> 1.16.2"
 gem "jwt"
 gem "oauth2"
 gem "rack-cors"
