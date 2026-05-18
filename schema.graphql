@@ -4414,6 +4414,11 @@ type Customer {
   name: String
   netPaymentTerm: Int
   netsuiteCustomer: NetsuiteCustomer
+
+  """
+  Overdue balance per currency
+  """
+  overdueBalances: [CustomerOverdueBalance!]!
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   phone: String
@@ -4522,6 +4527,11 @@ input CustomerMetadataInput {
   id: ID
   key: String!
   value: String!
+}
+
+type CustomerOverdueBalance {
+  amountCents: BigInt!
+  currency: CurrencyEnum!
 }
 
 type CustomerPortalCustomer {
@@ -5693,6 +5703,7 @@ type Event {
 
 enum EventCategoryEnum {
   ALERTS
+  BILLABLE_METRICS
   CREDIT_NOTES
   CUSTOMERS
   DUNNING_CAMPAIGNS
@@ -5725,6 +5736,9 @@ type EventCollection {
 enum EventTypeEnum {
   alert_triggered
   all
+  billable_metric_created
+  billable_metric_deleted
+  billable_metric_updated
   credit_note_created
   credit_note_generated
   credit_note_provider_refund_failure
@@ -11335,6 +11349,7 @@ type Subscription {
   activatedAt: ISO8601DateTime
   activationRules: [SubscriptionActivationRule!]!
   activityLogs: [ActivityLog!]
+  billingEntityId: ID
   billingTime: BillingTimeEnum
   cancelationReason: CancelationReasonEnum
   canceledAt: ISO8601DateTime
@@ -13371,6 +13386,7 @@ type Wallet {
   activityLogs: [ActivityLog!]
   appliesTo: WalletAppliesTo
   balanceCents: BigInt!
+  billingEntityId: ID
   code: String
   consumedAmountCents: BigInt!
   consumedCredits: Float!

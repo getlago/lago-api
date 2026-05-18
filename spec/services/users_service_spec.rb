@@ -29,14 +29,15 @@ RSpec.describe UsersService do
 
     it "calls SegmentTrackJob" do
       allow(SegmentTrackJob).to receive(:perform_later)
-      result = user_service.register("email", "password", "organization_name")
+      result = user_service.register("user@email.com", "password", "organization_name")
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: "membership/#{result.membership.id}",
         event: "organization_registered",
         properties: {
           organization_name: result.organization.name,
-          organization_id: result.organization.id
+          organization_id: result.organization.id,
+          email: result.user.email
         }
       )
     end

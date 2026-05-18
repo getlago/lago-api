@@ -30,6 +30,12 @@ RSpec.describe BillableMetrics::CreateService do
         .to change(BillableMetric, :count).by(1)
     end
 
+    it "enqueues a billable_metric.created webhook" do
+      result = described_class.call(create_args)
+
+      expect(SendWebhookJob).to have_been_enqueued.with("billable_metric.created", result.billable_metric)
+    end
+
     context "with code already used by a deleted metric" do
       it "creates a billable metric with the same code" do
         create(:billable_metric, organization:, code: "new_metric", deleted_at: Time.current)

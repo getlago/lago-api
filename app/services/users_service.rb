@@ -127,7 +127,8 @@ class UsersService < BaseService
       event: "organization_registered",
       properties: {
         organization_name: organization.name,
-        organization_id: organization.id
+        organization_id: organization.id,
+        email: membership.user.email
       }
     )
   end

@@ -1005,7 +1005,7 @@ GEM
     useragent (0.16.11)
     valvat (2.0.1)
       rexml (>= 3.3.6, < 4.0.0)
-    vernier (1.9.0)
+    vernier (1.10.1)
     version_gem (1.1.9)
     waterdrop (2.8.16)
       karafka-core (>= 2.4.9, < 3.0.0)
@@ -1161,7 +1161,7 @@ DEPENDENCIES
   tzinfo-data
   uglifier
   valvat
-  vernier (~> 1.0)
+  vernier (~> 1.10)
   webmock
   with_advisory_lock
   yabeda

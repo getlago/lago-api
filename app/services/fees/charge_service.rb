@@ -460,9 +460,10 @@ module Fees
         # when pricing group keys on a charge are "workspace" and "user", and filter_by_group is {"workspace" => ["A"]},
         # we want to remove the grouping keys "workspace", but keep the grouping key "user", so the usage will still be granular within the workspace
         usage_filters.filter_by_group.keys.each { |key| filters[:grouped_by]&.delete(key) }
-        filters[:matching_filters] ||= {}
+        # NOTE: filters[:matching_filters] may come from ChargeFilter#to_h_with_all_values
+        # which returns a frozen hash, so we must not mutate it in place.
         # expected matching_filters format is { "workspace" => ["A", "B"], "user" => ["U1", "U2"] }
-        filters[:matching_filters].merge!(usage_filters.filter_by_group)
+        filters[:matching_filters] = (filters[:matching_filters] || {}).merge(usage_filters.filter_by_group)
       end
 
       filters
