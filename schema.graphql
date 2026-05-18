@@ -11349,6 +11349,7 @@ type Subscription {
   activatedAt: ISO8601DateTime
   activationRules: [SubscriptionActivationRule!]!
   activityLogs: [ActivityLog!]
+  billingEntityId: ID
   billingTime: BillingTimeEnum
   cancelationReason: CancelationReasonEnum
   canceledAt: ISO8601DateTime

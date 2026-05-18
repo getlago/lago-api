@@ -216,4 +216,50 @@ RSpec.describe Resolvers::SubscriptionResolver do
       expect(subscription_response["nextSubscriptionAt"]).to be_present
     end
   end
+
+  context "with billing_entity_id field" do
+    let(:query) do
+      <<~GQL
+        query($id: ID!) {
+          subscription(id: $id) {
+            id
+            billingEntityId
+          }
+        }
+      GQL
+    end
+
+    context "when the subscription is bound to a billing entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:subscription) { create(:subscription, customer:, billing_entity:) }
+
+      it "returns the billing_entity_id" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {id: subscription.id}
+        )
+
+        expect(result["data"]["subscription"]["billingEntityId"]).to eq(billing_entity.id)
+      end
+    end
+
+    context "when the subscription has no billing entity (legacy row)" do
+      let(:subscription) { create(:subscription, customer:, billing_entity: nil) }
+
+      it "returns null without falling back to the customer's entity" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {id: subscription.id}
+        )
+
+        expect(result["data"]["subscription"]["billingEntityId"]).to be_nil
+      end
+    end
+  end
 end
