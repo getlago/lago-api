@@ -363,4 +363,62 @@ RSpec.describe Lago::RedisConfigBuilder do
       expect(result).to include(ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_PEER})
     end
   end
+
+  describe ".cache_enabled?" do
+    subject(:result) { described_class.cache_enabled? }
+
+    context "when neither LAGO_REDIS_CACHE_URL nor LAGO_REDIS_CACHE_SENTINELS is set" do
+      before do
+        ENV.delete("LAGO_REDIS_CACHE_URL")
+        ENV.delete("LAGO_REDIS_CACHE_SENTINELS")
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when only LAGO_REDIS_CACHE_URL is set" do
+      before do
+        ENV["LAGO_REDIS_CACHE_URL"] = "redis://cache:6379"
+        ENV.delete("LAGO_REDIS_CACHE_SENTINELS")
+      end
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when only LAGO_REDIS_CACHE_SENTINELS is set" do
+      before do
+        ENV.delete("LAGO_REDIS_CACHE_URL")
+        ENV["LAGO_REDIS_CACHE_SENTINELS"] = "cache-sentinel:26379"
+      end
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when both LAGO_REDIS_CACHE_URL and LAGO_REDIS_CACHE_SENTINELS are set" do
+      before do
+        ENV["LAGO_REDIS_CACHE_URL"] = "redis://cache:6379"
+        ENV["LAGO_REDIS_CACHE_SENTINELS"] = "cache-sentinel:26379"
+      end
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when LAGO_REDIS_CACHE_URL is set to an empty string" do
+      before do
+        ENV["LAGO_REDIS_CACHE_URL"] = ""
+        ENV.delete("LAGO_REDIS_CACHE_SENTINELS")
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when LAGO_REDIS_CACHE_SENTINELS is set to an empty string" do
+      before do
+        ENV.delete("LAGO_REDIS_CACHE_URL")
+        ENV["LAGO_REDIS_CACHE_SENTINELS"] = ""
+      end
+
+      it { is_expected.to be(false) }
+    end
+  end
 end

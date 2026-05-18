@@ -50,7 +50,7 @@ Rails.application.configure do
   if ENV["LAGO_MEMCACHE_SERVERS"].present?
     config.cache_store = :mem_cache_store, ENV["LAGO_MEMCACHE_SERVERS"].split(",")
 
-  elsif ENV["LAGO_REDIS_CACHE_URL"].present?
+  elsif Lago::RedisConfigBuilder.cache_enabled?
     cache_store_config = Lago::RedisConfigBuilder.new
       .with_options(
         pool: {size: ENV.fetch("LAGO_REDIS_CACHE_POOL_SIZE", 5)},
