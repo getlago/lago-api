@@ -1125,7 +1125,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
         "job_id" => "abc-123",
         "queue" => "default",
         "arguments" => {},
-        "attempt_count" => 5,
+        "retries" => 5,
         "exception" => {"class" => "RuntimeError", "message" => "permanent failure"}
       })
     end
@@ -1148,7 +1148,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "job_id" => "abc-123",
           "queue" => "default",
           "arguments" => "{organization_id: \"org-77\"}",
-          "attempt_count" => 5,
+          "retries" => 5,
           "exception" => {"class" => "RuntimeError", "message" => "permanent failure"},
           "organization_id" => "org-77"
         })
