@@ -6,6 +6,8 @@ module Subscriptions
 
     Result = BaseResult[:fixed_charge]
 
+    UNITS_ONLY_PARAM_KEYS = %i[units apply_units_immediately].freeze
+
     def initialize(subscription:, fixed_charge:, params:)
       @subscription = subscription
       @fixed_charge = fixed_charge
@@ -19,11 +21,10 @@ module Subscriptions
       return result.not_found_failure!(resource: "subscription") unless subscription
       return result.not_found_failure!(resource: "fixed_charge") unless fixed_charge
 
-      ActiveRecord::Base.transaction do
-        target_plan = ensure_plan_override
-        target_fixed_charge = find_or_create_fixed_charge_override(target_plan)
-
-        result.fixed_charge = target_fixed_charge
+      if units_only_change?
+        override_units_only
+      else
+        override_via_plan
       end
 
       result
@@ -36,6 +37,45 @@ module Subscriptions
     private
 
     attr_reader :subscription, :fixed_charge, :params
+
+    def units_only_change?
+      return false unless params.key?(:units)
+      return false if subscription.plan.parent_id
+
+      param_keys = params.keys.map(&:to_sym)
+      (param_keys - UNITS_ONLY_PARAM_KEYS).empty?
+    end
+
+    def override_units_only
+      ActiveRecord::Base.transaction do
+        parent_fixed_charge = find_parent_fixed_charge
+        override = SubscriptionFixedChargeUnitsOverride.find_or_initialize_by(
+          subscription:,
+          fixed_charge: parent_fixed_charge
+        )
+        override.organization = subscription.organization
+        override.billing_entity = subscription.billing_entity
+        override.units = params[:units]
+        override.save!
+
+        FixedCharges::EmitEventsService.call!(
+          fixed_charge: parent_fixed_charge,
+          subscription:,
+          apply_units_immediately: !!params[:apply_units_immediately]
+        )
+
+        result.fixed_charge = parent_fixed_charge
+      end
+    end
+
+    def override_via_plan
+      ActiveRecord::Base.transaction do
+        target_plan = ensure_plan_override
+        target_fixed_charge = find_or_create_fixed_charge_override(target_plan)
+
+        result.fixed_charge = target_fixed_charge
+      end
+    end
 
     def find_or_create_fixed_charge_override(target_plan)
       parent_fixed_charge = find_parent_fixed_charge

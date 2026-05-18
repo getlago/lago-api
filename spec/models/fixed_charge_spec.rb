@@ -17,6 +17,7 @@ RSpec.describe FixedCharge do
   it { is_expected.to have_many(:taxes).through(:applied_taxes) }
   it { is_expected.to have_many(:fees) }
   it { is_expected.to have_many(:events).class_name("FixedChargeEvent").dependent(:destroy) }
+  it { is_expected.to have_many(:subscription_units_overrides).class_name("SubscriptionFixedChargeUnitsOverride") }
 
   it { is_expected.to validate_numericality_of(:units).is_greater_than_or_equal_to(0) }
   it { is_expected.to validate_presence_of(:charge_model) }
@@ -366,6 +367,45 @@ RSpec.describe FixedCharge do
       it "returns nil" do
         expect(fixed_charge.matching_fixed_charge_prev_subscription(subscription)).to be nil
       end
+    end
+  end
+
+  describe "#units_for" do
+    subject(:units_for) { fixed_charge.units_for(subscription) }
+
+    let(:fixed_charge) { create(:fixed_charge, units: 7) }
+    let(:subscription) { create(:subscription, plan: fixed_charge.plan) }
+
+    context "when no override exists" do
+      it { is_expected.to eq(7) }
+    end
+
+    context "when an override exists for the (subscription, fixed_charge) pair" do
+      before do
+        create(:subscription_fixed_charge_units_override, subscription:, fixed_charge:, units: 42)
+      end
+
+      it { is_expected.to eq(42) }
+    end
+
+    context "when the override has been discarded" do
+      before do
+        override = create(:subscription_fixed_charge_units_override, subscription:, fixed_charge:, units: 42)
+        override.discard!
+      end
+
+      it "falls back to the fixed charge units" do
+        expect(units_for).to eq(7)
+      end
+    end
+
+    context "when an override exists for a different subscription" do
+      before do
+        other_subscription = create(:subscription, plan: fixed_charge.plan)
+        create(:subscription_fixed_charge_units_override, subscription: other_subscription, fixed_charge:, units: 42)
+      end
+
+      it { is_expected.to eq(7) }
     end
   end
 end

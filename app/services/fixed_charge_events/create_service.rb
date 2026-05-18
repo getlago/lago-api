@@ -17,7 +17,7 @@ module FixedChargeEvents
         organization:,
         subscription:,
         fixed_charge:,
-        units: fixed_charge.units,
+        units: fixed_charge.units_for(subscription),
         timestamp:
       )
 

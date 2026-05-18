@@ -197,6 +197,100 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
           expect(result.fixed_charge.taxes).to include(tax)
         end
       end
+
+      context "when params only change units" do
+        let(:params) { {units: "10"} }
+
+        it "does not create a plan override" do
+          expect { service.call }.not_to change(Plan, :count)
+        end
+
+        it "does not create a fixed charge override" do
+          expect { service.call }.not_to change(FixedCharge, :count)
+        end
+
+        it "leaves the subscription on the original plan" do
+          service.call
+
+          expect(subscription.reload.plan_id).to eq(plan.id)
+        end
+
+        it "creates a SubscriptionFixedChargeUnitsOverride pointing at the parent fixed charge" do
+          expect { service.call }.to change(SubscriptionFixedChargeUnitsOverride, :count).by(1)
+
+          override = SubscriptionFixedChargeUnitsOverride.last
+          expect(override.subscription).to eq(subscription)
+          expect(override.fixed_charge).to eq(fixed_charge)
+          expect(override.units).to eq(10)
+          expect(override.organization).to eq(organization)
+        end
+
+        it "returns the parent fixed charge in the result" do
+          result = service.call
+
+          expect(result.fixed_charge).to eq(fixed_charge)
+        end
+
+        it "emits events for the parent fixed charge" do
+          allow(FixedCharges::EmitEventsService).to receive(:call!)
+
+          service.call
+
+          expect(FixedCharges::EmitEventsService).to have_received(:call!).with(
+            fixed_charge:,
+            subscription:,
+            apply_units_immediately: false
+          )
+        end
+
+        context "with apply_units_immediately" do
+          let(:params) { {units: "10", apply_units_immediately: true} }
+
+          it "forwards the flag to EmitEventsService" do
+            allow(FixedCharges::EmitEventsService).to receive(:call!)
+
+            service.call
+
+            expect(FixedCharges::EmitEventsService).to have_received(:call!).with(
+              fixed_charge:,
+              subscription:,
+              apply_units_immediately: true
+            )
+          end
+        end
+
+        context "when an override already exists for the pair" do
+          before do
+            create(:subscription_fixed_charge_units_override, subscription:, fixed_charge:, units: 1)
+          end
+
+          it "updates the existing override instead of creating a new one" do
+            expect { service.call }.not_to change(SubscriptionFixedChargeUnitsOverride, :count)
+            expect(SubscriptionFixedChargeUnitsOverride.last.units).to eq(10)
+          end
+        end
+
+        context "when the subscription is already on a plan override" do
+          let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+          let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
+
+          it "does not create a SubscriptionFixedChargeUnitsOverride" do
+            expect { service.call }.not_to change(SubscriptionFixedChargeUnitsOverride, :count)
+          end
+
+          it "does not create a new plan override" do
+            expect { service.call }.not_to change(Plan, :count)
+          end
+
+          it "creates a fixed charge override on the existing plan override" do
+            expect { service.call }.to change(FixedCharge, :count).by(1)
+
+            new_fixed_charge = FixedCharge.where(parent_id: fixed_charge.id).first
+            expect(new_fixed_charge.plan_id).to eq(overridden_plan.id)
+            expect(new_fixed_charge.units).to eq(10)
+          end
+        end
+      end
     end
   end
 end
