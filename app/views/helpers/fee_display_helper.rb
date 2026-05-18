@@ -54,8 +54,8 @@ class FeeDisplayHelper
     end
   end
 
-  def self.sorted_presentation_breakdowns_displayed_in_invoice(fee)
-    rows = fee.presentation_breakdowns_displayed_in_invoice.map { |b| [fee.presentation_group_keys_values_displayed_in_invoice.map { |k| b.presentation_by[k] }, b.units] }
+  def self.sorted_presentation_breakdowns_rows(fee, displayable_keys)
+    rows = fee.presentation_breakdowns.map { |b| [displayable_keys.map { |k| b.presentation_by[k] }, b.units] }
     clean, blank = rows.partition { |values, _| values.all?(&:present?) }
     clean.sort_by { |values, _| values.map(&:to_s) } + blank.sort_by { |values, _| values.compact.map(&:to_s) }
   end

@@ -11,9 +11,7 @@
         td.body-2 = I18n.t("invoice.units")
 
       - charge_group_fees.each do |fee|
-        - rows = fee.presentation_breakdowns.map { |b| [displayable_keys.map { |k| b.presentation_by[k] }, b.units] }
-        - clean_rows, blank_rows = rows.partition { |values, _u| values.all?(&:present?) }
-        - sorted_rows = clean_rows.sort_by { |values, _u| values.map(&:to_s) } + blank_rows.sort_by { |values, _u| values.compact.map(&:to_s) }
+        - sorted_rows = FeeDisplayHelper.sorted_presentation_breakdowns_rows(fee, displayable_keys)
         tr.fee
           td.body-1 = FeeDisplayHelper.fee_title(fee)
           td.body-2 = RoundingHelper.round_decimal_part(fee.units)

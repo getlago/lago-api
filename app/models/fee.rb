@@ -176,9 +176,7 @@ class Fee < ApplicationRecord
     return false unless charge?
 
     displayable_keys = charge.presentation_group_keys_values_displayed_in_invoice
-    return false if displayable_keys.blank?
-
-    presentation_breakdowns.any? { |b| displayable_keys.any? { |k| b.presentation_by[k].present? } }
+    displayable_keys.present? && presentation_breakdowns.any? { |b| displayable_keys.any? { |k| b.presentation_by[k].present? } }
   end
 
   def basic_rate_percentage?
