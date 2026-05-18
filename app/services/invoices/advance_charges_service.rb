@@ -133,7 +133,8 @@ module Invoices
         invoice_type: :advance_charges,
         currency:,
         datetime: billing_at, # this is an int we need to convert it
-        skip_charges: true
+        skip_charges: true,
+        billing_entity: initial_subscriptions.first&.billing_entity || customer.billing_entity
       ) do |invoice|
         Invoices::CreateAdvanceChargesInvoiceSubscriptionService.call!(
           invoice:,

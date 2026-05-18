@@ -56,6 +56,26 @@ RSpec.describe Invoices::PaidCreditService do
         .to change(wallet_transaction, :invoice).from(nil).to(Invoice)
     end
 
+    context "billing_entity resolution" do
+      it "stamps the customer's billing_entity when wallet has none" do
+        invoice = invoice_service.call.invoice
+
+        expect(invoice.billing_entity).to eq(customer.billing_entity)
+      end
+
+      context "when wallet has its own billing_entity" do
+        let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+        before { wallet.update!(billing_entity: other_billing_entity) }
+
+        it "stamps the wallet's billing_entity on the invoice" do
+          invoice = invoice_service.call.invoice
+
+          expect(invoice.billing_entity).to eq(other_billing_entity)
+        end
+      end
+    end
+
     it "enqueues a SendWebhookJob" do
       expect do
         invoice_service.call

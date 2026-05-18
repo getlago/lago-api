@@ -145,7 +145,8 @@ module Invoices
         invoicing_reason:,
         currency:,
         datetime: Time.zone.at(timestamp),
-        skip_charges:
+        skip_charges:,
+        billing_entity: subscriptions.first&.billing_entity || customer.billing_entity
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions:, timestamp:, invoicing_reason:)
@@ -171,7 +172,7 @@ module Invoices
 
     def should_deliver_finalized_email?
       License.premium? &&
-        customer.billing_entity.email_settings.include?("invoice.finalized")
+        invoice.billing_entity.email_settings.include?("invoice.finalized")
     end
 
     def flag_lifetime_usage_for_refresh
