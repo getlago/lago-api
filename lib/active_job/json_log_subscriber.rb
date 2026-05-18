@@ -105,7 +105,7 @@ module ActiveJob
             job_id: job.job_id,
             queue: job.queue_name,
             arguments: args_info(job),
-            attempt_count: job.executions,
+            retries: job.executions,
             exception: exception_payload(ex)
           }
           merge_organization_id(payload, job).to_json
@@ -207,7 +207,7 @@ module ActiveJob
           job_id: job.job_id,
           queue: job.queue_name,
           arguments: args_info(job),
-          attempt_count: job.executions,
+          retries: job.executions,
           exception: exception_payload(ex)
         }
         merge_organization_id(payload, job).to_json

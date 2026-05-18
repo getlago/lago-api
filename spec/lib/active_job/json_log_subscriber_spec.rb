@@ -574,7 +574,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "job_id" => "abc-123",
           "queue" => "default",
           "arguments" => {},
-          "attempt_count" => 2,
+          "retries" => 2,
           "exception" => {"class" => "RuntimeError", "message" => "something broke"}
         })
       end
@@ -600,7 +600,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "job_id" => "abc-123",
             "queue" => "default",
             "arguments" => {},
-            "attempt_count" => 0,
+            "retries" => 0,
             "exception" => {
               "class" => "RuntimeError",
               "message" => "boom",
@@ -631,7 +631,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "job_id" => "abc-123",
             "queue" => "default",
             "arguments" => {},
-            "attempt_count" => 0,
+            "retries" => 0,
             "exception" => {"class" => "RuntimeError", "message" => "boom"}
           })
         end
@@ -657,7 +657,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "job_id" => "abc-123",
             "queue" => "default",
             "arguments" => {},
-            "attempt_count" => 0,
+            "retries" => 0,
             "exception" => {"class" => "RuntimeError", "message" => "boom"}
           })
         end
@@ -683,7 +683,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "job_id" => "abc-123",
             "queue" => "default",
             "arguments" => "{organization_id: \"org-symbol\"}",
-            "attempt_count" => 1,
+            "retries" => 1,
             "exception" => {"class" => "RuntimeError", "message" => "boom"},
             "organization_id" => "org-symbol"
           })
@@ -710,7 +710,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "job_id" => "abc-123",
             "queue" => "default",
             "arguments" => "{\"organization_id\" => \"org-string\"}",
-            "attempt_count" => 1,
+            "retries" => 1,
             "exception" => {"class" => "RuntimeError", "message" => "boom"},
             "organization_id" => "org-string"
           })
@@ -738,7 +738,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "job_id" => "abc-123",
             "queue" => "default",
             "arguments" => org_carrier.inspect,
-            "attempt_count" => 1,
+            "retries" => 1,
             "exception" => {"class" => "RuntimeError", "message" => "boom"},
             "organization_id" => "org-from-method"
           })
@@ -765,7 +765,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "job_id" => "abc-123",
             "queue" => "default",
             "arguments" => "{organization_id: false}, {organization_id: \"fallback\"}",
-            "attempt_count" => 1,
+            "retries" => 1,
             "exception" => {"class" => "RuntimeError", "message" => "boom"},
             "organization_id" => false
           })
@@ -792,7 +792,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "job_id" => "abc-123",
             "queue" => "default",
             "arguments" => "{organization_id: 0}, {organization_id: \"fallback\"}",
-            "attempt_count" => 1,
+            "retries" => 1,
             "exception" => {"class" => "RuntimeError", "message" => "boom"},
             "organization_id" => 0
           })
@@ -819,7 +819,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "job_id" => "abc-123",
             "queue" => "default",
             "arguments" => "{organization_id: nil}, {organization_id: \"fallback\"}",
-            "attempt_count" => 1,
+            "retries" => 1,
             "exception" => {"class" => "RuntimeError", "message" => "boom"},
             "organization_id" => "fallback"
           })
@@ -846,7 +846,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "job_id" => "abc-123",
             "queue" => "default",
             "arguments" => {},
-            "attempt_count" => 0,
+            "retries" => 0,
             "exception" => {"class" => "RuntimeError", "message" => "boom"}
           })
         end
@@ -875,7 +875,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "job_id" => "abc-123",
             "queue" => "default",
             "arguments" => truncated_arguments,
-            "attempt_count" => 1,
+            "retries" => 1,
             "exception" => {"class" => "RuntimeError", "message" => "boom"}
           })
         end
@@ -937,7 +937,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "job_id" => "abc-123",
             "queue" => "default",
             "arguments" => {},
-            "attempt_count" => 0,
+            "retries" => 0,
             "exception" => {
               "class" => "RuntimeError",
               "message" => "boom",
@@ -1189,7 +1189,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
         "job_id" => "abc-123",
         "queue" => "default",
         "arguments" => {},
-        "attempt_count" => 2,
+        "retries" => 2,
         "exception" => {"class" => "RuntimeError", "message" => "unrecoverable error"}
       })
     end
@@ -1212,7 +1212,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "job_id" => "abc-123",
           "queue" => "default",
           "arguments" => "{organization_id: \"org-99\"}",
-          "attempt_count" => 1,
+          "retries" => 1,
           "exception" => {"class" => "RuntimeError", "message" => "unrecoverable"},
           "organization_id" => "org-99"
         })
