@@ -8,6 +8,7 @@ module Types
 
       field :id, ID, null: false
 
+      field :billing_entity_id, ID, null: true
       field :customer, Types::Customers::Object
 
       field :code, String, null: true

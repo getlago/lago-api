@@ -13386,6 +13386,7 @@ type Wallet {
   activityLogs: [ActivityLog!]
   appliesTo: WalletAppliesTo
   balanceCents: BigInt!
+  billingEntityId: ID
   code: String
   consumedAmountCents: BigInt!
   consumedCredits: Float!
