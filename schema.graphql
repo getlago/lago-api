@@ -238,6 +238,11 @@ enum ActivityTypeEnum {
   invoice_payment_status_updated
 
   """
+  invoice.ready_to_finalize
+  """
+  invoice_ready_to_finalize
+
+  """
   invoice.regenerated
   """
   invoice_regenerated
@@ -5767,6 +5772,7 @@ enum EventTypeEnum {
   invoice_payment_failure
   invoice_payment_overdue
   invoice_payment_status_updated
+  invoice_ready_to_finalize
   invoice_resynced
   invoice_voided
   payment_provider_error
