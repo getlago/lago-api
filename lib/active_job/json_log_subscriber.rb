@@ -291,24 +291,31 @@ module ActiveJob
 
     def merge_organization_id(payload, job)
       org_id = organization_id_from(job)
-      if org_id
+      unless org_id.nil?
         payload[:organization_id] = org_id
       end
       payload
     end
 
     def organization_id_from(job)
+      return nil if job.arguments.nil?
+
       job.arguments.each do |arg|
         case arg
         when Hash
-          value = arg[:organization_id] || arg["organization_id"]
-          return value if value
+          if arg.key?(:organization_id)
+            value = arg[:organization_id]
+            return value unless value.nil?
+          elsif arg.key?("organization_id")
+            value = arg["organization_id"]
+            return value unless value.nil?
+          end
         else
           if defined?(Organization) && arg.is_a?(Organization)
             return arg.id
           elsif arg.respond_to?(:organization_id)
             value = arg.organization_id
-            return value if value
+            return value unless value.nil?
           end
         end
       end
