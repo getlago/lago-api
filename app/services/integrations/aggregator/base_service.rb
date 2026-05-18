@@ -8,9 +8,9 @@ module Integrations
       BASE_URL = "https://api.nango.dev/"
       REQUEST_LIMIT_ERROR_CODE = "SSS_REQUEST_LIMIT_EXCEEDED"
       BAD_GATEWAY_ERROR = "502 Bad Gateway"
-      TASK_IN_PROGRESS_PATTERN = /\bTask\b.*\bis in progress\b/.freeze
-      TASK_EXPIRED_PATTERN = /\bTask\b.*\bexpired\b/.freeze
-      ORCHESTRATOR_FAILURE_PATTERN = %r{POST https?://nango-orchestrator-svc\.nango/v1/immediate failed}.freeze
+      TASK_IN_PROGRESS_PATTERN = /\bTask\b.*\bis in progress\b/
+      TASK_EXPIRED_PATTERN = /\bTask\b.*\bexpired\b/
+      ORCHESTRATOR_FAILURE_PATTERN = %r{POST https?://nango-orchestrator-svc\.nango/v1/immediate failed}
 
       def self.retryable_errors
         [
