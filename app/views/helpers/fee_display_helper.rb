@@ -54,6 +54,12 @@ class FeeDisplayHelper
     end
   end
 
+  def self.sorted_presentation_breakdowns_rows(fee, displayable_keys)
+    rows = fee.presentation_breakdowns.map { |b| [displayable_keys.map { |k| b.presentation_by[k] }, b.units] }
+    clean, blank = rows.partition { |values, _| values.all?(&:present?) }
+    clean.sort_by { |values, _| values.map(&:to_s) } + blank.sort_by { |values, _| values.compact.map(&:to_s) }
+  end
+
   def self.format_amount(fee)
     if fee.pricing_unit_usage
       MoneyHelper.format_pricing_unit(
