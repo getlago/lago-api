@@ -4,11 +4,10 @@ module Invoices
   class PreviewService < BaseService
     Result = BaseResult[:subscriptions, :invoice, :fees_taxes]
 
-    def initialize(customer:, subscriptions:, applied_coupons: [], billing_entity_code: nil)
+    def initialize(customer:, subscriptions:, applied_coupons: [])
       @customer = customer
       @subscriptions = subscriptions
       @applied_coupons = applied_coupons
-      @billing_entity_code = billing_entity_code
       @first_subscription = subscriptions.first
       @persisted_subscriptions = subscriptions.any?(&:persisted?)
       @subscription_context = fetch_context
@@ -21,10 +20,6 @@ module Invoices
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "subscription") if subscriptions.empty?
       return result.not_allowed_failure!(code: "premium_integration_missing") if persisted_subscriptions && !organization.preview_enabled?
-
-      resolve_billing_entity
-      return result unless result.success?
-
       return result unless currencies_aligned?
       return result unless billing_times_aligned?
       return result unless billing_entities_aligned?
@@ -58,17 +53,13 @@ module Invoices
     private
 
     attr_accessor :customer, :subscriptions, :invoice, :applied_coupons, :first_subscription, :persisted_subscriptions, :subscription_context
-    attr_reader :billing_entity, :billing_entity_code
     delegate :organization, to: :customer
 
-    def resolve_billing_entity
-      return @billing_entity = customer.billing_entity unless multi_entity_billing_enabled?
-
-      if billing_entity_code.present?
-        @billing_entity = organization.billing_entities.find_by(code: billing_entity_code)
-        result.not_found_failure!(resource: "billing_entity") if @billing_entity.nil?
+    def billing_entity
+      @billing_entity ||= if multi_entity_billing_enabled?
+        first_subscription.billing_entity || customer.billing_entity
       else
-        @billing_entity = first_subscription&.billing_entity || customer.billing_entity
+        customer.billing_entity
       end
     end
 
@@ -79,7 +70,7 @@ module Invoices
       effective_entity_ids = subscriptions.map { |s| s.billing_entity_id || customer.billing_entity_id }.uniq
 
       if effective_entity_ids.size > 1
-        result.single_validation_failure!(error_code: "subscription_billing_entities_does_not_match")
+        result.single_validation_failure!(error_code: "subscription_billing_entities_do_not_match")
         return false
       end
 

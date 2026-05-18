@@ -250,8 +250,7 @@ module Api
         result = Invoices::PreviewService.call(
           customer: result.customer,
           subscriptions: result.subscriptions,
-          applied_coupons: result.applied_coupons,
-          billing_entity_code: params[:billing_entity_code]
+          applied_coupons: result.applied_coupons
         )
         if result.success?
           render(

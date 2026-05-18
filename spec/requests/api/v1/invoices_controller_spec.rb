@@ -1141,6 +1141,30 @@ RSpec.describe Api::V1::InvoicesController do
           expect(response).to have_http_status(:not_found)
         end
       end
+
+      context "when previewing a new subscription for an existing customer with multi_entity_billing enabled" do
+        let(:existing_customer) { create(:customer, organization:, currency: "EUR") }
+        let(:preview_params) do
+          {
+            customer: {external_id: existing_customer.external_id},
+            plan_code: plan.code,
+            billing_time: "anniversary",
+            billing_entity_code: billing_entity.code
+          }
+        end
+
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "creates a preview invoice under the requested billing entity" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice]).to include(
+            billing_entity_code: billing_entity.code,
+            invoice_type: "subscription"
+          )
+        end
+      end
     end
 
     context "when subscriptions are persisted" do
