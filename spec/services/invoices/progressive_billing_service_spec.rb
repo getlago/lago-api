@@ -76,7 +76,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       expect(result2).not_to be_success
     end
 
-    context "billing_entity resolution" do
+    context "with billing entity resolution" do
       it "stamps the customer's billing_entity when subscription has none" do
         invoice = create_service.call.invoice
 
