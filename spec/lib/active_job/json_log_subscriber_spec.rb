@@ -662,7 +662,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
       end
 
       context "when an argument hash has organization_id: false" do
-        it "logs an error entry with the false organization_id rather than falling through" do
+        it "treats false as blank and falls through to the next argument's organization_id" do
           exception = RuntimeError.new("boom")
           job = build_job_with_args({organization_id: false}, {organization_id: "fallback"}, job_id: "abc-123", executions: 1)
           event = build_event("perform.active_job", {job: job, exception_object: exception})
@@ -683,7 +683,7 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
             "arguments" => "{organization_id: false}, {organization_id: \"fallback\"}",
             "retries" => 1,
             "exception" => {"class" => "RuntimeError", "message" => "boom"},
-            "organization_id" => false
+            "organization_id" => "fallback"
           })
         end
       end
@@ -883,10 +883,38 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "status" => "error",
           "job" => "TestLogJob",
           "job_id" => "abc-123",
+          "queue" => "default",
+          "arguments" => {},
           "execution" => 3,
           "wait" => 30,
           "exception" => {"class" => "RuntimeError", "message" => "transient failure"}
         })
+      end
+
+      context "when the job arguments contain an organization_id" do
+        it "logs a retry error entry with the extracted organization_id" do
+          exception = RuntimeError.new("transient failure")
+          job = build_job_with_args({organization_id: "org-retry"}, job_id: "abc-123", executions: 3)
+          event = build_event("enqueue_retry.active_job", {job: job, error: exception, wait: 30.5})
+
+          subscriber.enqueue_retry(event)
+
+          logs = parsed_log_lines
+          expect(logs.size).to eq(1)
+          expect(logs.first).to eq({
+            "level" => "error",
+            "event" => "retry",
+            "status" => "error",
+            "job" => "TestLogJobWithArgs",
+            "job_id" => "abc-123",
+            "queue" => "default",
+            "arguments" => "{organization_id: \"org-retry\"}",
+            "execution" => 3,
+            "wait" => 30,
+            "exception" => {"class" => "RuntimeError", "message" => "transient failure"},
+            "organization_id" => "org-retry"
+          })
+        end
       end
     end
 
@@ -905,6 +933,8 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "status" => "success",
           "job" => "TestLogJob",
           "job_id" => "abc-123",
+          "queue" => "default",
+          "arguments" => {},
           "execution" => 1,
           "wait" => 5
         })
