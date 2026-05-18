@@ -9,9 +9,6 @@ module ActiveJob
     class_attribute :backtrace_cleaner, default: ActiveSupport::BacktraceCleaner.new
     # rubocop:enable ThreadSafety/ClassAndModuleAttributes
 
-    ARGUMENTS_MAX_LENGTH = 1000
-    BACKTRACE_MAX_FRAMES = 10
-
     def enqueue(event)
       job = event.payload[:job]
       ex = event.payload[:exception_object] || job.enqueue_error
@@ -219,12 +216,7 @@ module ActiveJob
 
     def args_info(job)
       if job.class.log_arguments? && job.arguments.any?
-        formatted = job.arguments.map { |arg| format(arg).inspect }.join(", ")
-        if formatted.length > ARGUMENTS_MAX_LENGTH
-          "#{formatted[0, ARGUMENTS_MAX_LENGTH]}… (truncated)"
-        else
-          formatted
-        end
+        job.arguments.map { |arg| format(arg).inspect }.join(", ")
       else
         {}
       end
@@ -281,12 +273,7 @@ module ActiveJob
     end
 
     def exception_payload(ex)
-      payload = {class: ex.class.name, message: ex.message}
-      backtrace = ex.backtrace
-      if backtrace && !backtrace.empty?
-        payload[:backtrace] = backtrace.first(BACKTRACE_MAX_FRAMES)
-      end
-      payload
+      {class: ex.class.name, message: ex.message}
     end
 
     def merge_organization_id(payload, job)
