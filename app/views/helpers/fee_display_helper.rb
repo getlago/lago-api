@@ -7,6 +7,10 @@ class FeeDisplayHelper
     " • #{fee.grouped_by.values.compact.join(" • ")}"
   end
 
+  def self.fee_title(fee)
+    fee.invoice_name + grouped_by_display(fee) + (fee.charge_filter_id? ? " • #{fee.filter_display_name(separator: " • ")}" : "")
+  end
+
   def self.should_display_subscription_fee?(invoice_subscription)
     return false if invoice_subscription.blank?
     return false if invoice_subscription.invoice.progressive_billing?

@@ -145,10 +145,9 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
   end
 
   # Scenario 3 — `fee.charge_filter_id` is present (with `fee.grouped_by` empty).
-  # The `grouped_by`-blank rule wins, so the title row uses the charge
-  # `invoice_name` — the charge filter value is NOT used.
+  # The title row is invoice_name followed by " • " and the filter display name.
   # Expected rendered table:
-  #   | compute         | 50 |
+  #   | compute • eu    | 50 |
   #   | eu, engineering | 30 |
   #   | eu, sales       | 15 |
   #   | eu, <none>      | 5  |
@@ -178,12 +177,8 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
       create(:presentation_breakdown, fee:, units: 5, presentation_by: {"region" => "eu", "department" => nil})
     end
 
-    it "renders the charge invoice_name as the title row (grouped_by-blank rule wins over charge_filter)" do
-      expect(rendered_template.scan(%r{<td[^>]*>\s*compute\s*</td>}).size).to eq(1)
-    end
-
-    it "does not use the charge filter value as the title row" do
-      expect(rendered_template).not_to match(%r{<td[^>]*>\s*eu\s*</td>})
+    it "renders invoice_name and filter display name joined in the title row" do
+      expect(rendered_template).to match(%r{<td[^>]*>\s*compute • eu\s*</td>})
     end
 
     it "renders the fee's total units in the title row" do
@@ -201,13 +196,12 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
   end
 
   # Scenario 4 — `fee.charge_filter_id` is present together with a non-empty
-  # `fee.grouped_by`. Per the spec, the title must use the charge filter value
-  # instead of `fee.invoice_display_name`.
+  # `fee.grouped_by`. The title row is invoice_name + grouped_by values + filter display name.
   # Expected rendered table:
-  #   | eu              | 50 |
-  #   | eu, engineering | 30 |
-  #   | eu, sales       | 15 |
-  #   | eu, <none>      | 5  |
+  #   | compute • eu • eu | 50 |
+  #   | eu, engineering   | 30 |
+  #   | eu, sales         | 15 |
+  #   | eu, <none>        | 5  |
   context "when fee.charge_filter_id is present and fee.grouped_by is present (Scenario 4)" do
     let(:charge_filter) do
       create(:charge_filter, charge:, invoice_display_name: "eu")
@@ -234,12 +228,8 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
       create(:presentation_breakdown, fee:, units: 5, presentation_by: {"region" => "eu", "department" => nil})
     end
 
-    it "renders the charge filter value as the title row" do
-      expect(rendered_template).to match(%r{<td[^>]*>\s*eu\s*</td>})
-    end
-
-    it "does not use fee.invoice_display_name as the title row" do
-      expect(rendered_template).not_to match(%r{<td[^>]*>\s*compute\s*</td>})
+    it "renders invoice_name, grouped_by and filter display name joined in the title row" do
+      expect(rendered_template).to match(%r{<td[^>]*>\s*compute • eu • eu\s*</td>})
     end
 
     it "renders the fee's total units in the title row" do

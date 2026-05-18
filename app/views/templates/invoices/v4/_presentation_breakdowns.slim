@@ -12,12 +12,7 @@
 
       - charge_group_fees.each do |fee|
         tr.fee
-          - if fee.grouped_by.blank?
-            td.body-1 = fee.invoice_name
-          - elsif fee.charge_filter_id?
-            td.body-1 = fee.filter_display_name
-          - else
-            td.body-1 = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
+          td.body-1 = FeeDisplayHelper.fee_title(fee)
           td.body-2 = RoundingHelper.round_decimal_part(fee.units)
 
         - rows = fee.presentation_breakdowns.map { |b| [displayable_keys.map { |k| b.presentation_by[k] || b.presentation_by[k.to_sym] }, b.units] }
