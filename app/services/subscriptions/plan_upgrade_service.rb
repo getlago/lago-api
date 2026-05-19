@@ -15,6 +15,7 @@ module Subscriptions
 
     def call
       if current_subscription.starting_in_the_future?
+        apply_activation_rules if params[:activation_rules]
         update_pending_subscription
 
         result.subscription = current_subscription
@@ -91,6 +92,13 @@ module Subscriptions
       if current_subscription.should_sync_hubspot_subscription?
         Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: current_subscription)
       end
+    end
+
+    def apply_activation_rules
+      Subscriptions::ActivationRules::ApplyService.call!(
+        subscription: current_subscription,
+        activation_rules: params[:activation_rules]
+      )
     end
 
     def override_plan
