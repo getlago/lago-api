@@ -42,6 +42,7 @@ module Invoices
       add_subscription_fees
       add_charge_fees
       add_fixed_charge_fees
+      add_commitment_fees
       compute_tax_and_totals
 
       result.invoice = invoice
@@ -223,6 +224,37 @@ module Invoices
 
           invoice.fees << fee_result.fee if fee_result.success? && fee_result.fee
         end
+      end
+    end
+
+    def add_commitment_fees
+      subscriptions.each do |subscription|
+        next unless subscription.plan.minimum_commitment
+
+        boundaries = boundaries(subscription)
+
+        virtual_invoice_subscription = InvoiceSubscription.new(
+          subscription:,
+          invoice:,
+          organization_id: subscription.organization_id,
+          from_datetime: boundaries.from_datetime,
+          to_datetime: boundaries.to_datetime,
+          charges_from_datetime: boundaries.charges_from_datetime,
+          charges_to_datetime: boundaries.charges_to_datetime,
+          timestamp: billing_time
+        )
+
+        preview_fees = invoice.fees.select { |f| f.subscription_id == subscription.id }
+        preview_fees_amount_cents = preview_fees.sum(&:amount_cents)
+        preview_fees_precise_amount_cents = preview_fees.sum(&:precise_amount_cents)
+
+        fee_result = Fees::Commitments::Minimum::CalculatePreviewFeeService.call(
+          invoice_subscription: virtual_invoice_subscription,
+          preview_fees_amount_cents:,
+          preview_fees_precise_amount_cents:
+        )
+
+        invoice.fees << fee_result.fee if fee_result.success? && fee_result.fee
       end
     end
 
