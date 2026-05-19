@@ -26,6 +26,14 @@ RSpec.describe PaymentProviders::Cashfree::Webhooks::PaymentLinkEventService do
         expect(Invoices::Payments::CashfreeService).to have_received(:new)
         expect(payment_service).to have_received(:update_payment_status)
       end
+
+      it "passes the paid amount converted from major units to cents" do
+        webhook_service.call
+
+        expect(payment_service).to have_received(:update_payment_status).with(
+          hash_including(cashfree_payment: have_attributes(amount_cents: 5500))
+        )
+      end
     end
 
     context "when succeeded payment_request event" do

@@ -83,7 +83,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
             .with(
               organization_id: organization.id,
               status: "succeeded",
-              stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
+              stripe_payment: have_attributes(
                 id: "pi_12345",
                 status: "succeeded",
                 metadata: {
@@ -111,7 +111,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
           .with(
             organization_id: organization.id,
             status: "succeeded",
-            stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
+            stripe_payment: have_attributes(
               id: "pi_12345",
               status: "succeeded",
               metadata: {

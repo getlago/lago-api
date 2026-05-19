@@ -52,6 +52,36 @@ RSpec.describe Invoices::Payments::MoneyhashService do
         )
       end.to have_enqueued_job(SendWebhookJob).with("payment.succeeded", Payment)
     end
+
+    context "when metadata carries amount_cents" do
+      let(:metadata) do
+        intent_processed_json.dig("data", "intent", "custom_fields").merge(amount_cents: 4242)
+      end
+
+      it "records the Payment with that amount, not the invoice total" do
+        result = moneyhash_service.update_payment_status(
+          organization_id: organization.id,
+          provider_payment_id: intent_processed_json.dig("data", "intent_id"),
+          status: "SUCCESSFUL",
+          metadata: metadata
+        ).raise_if_error!
+
+        expect(result.payment.amount_cents).to eq(4242)
+      end
+    end
+
+    context "when metadata does not carry amount_cents" do
+      it "falls back to the invoice's total amount" do
+        result = moneyhash_service.update_payment_status(
+          organization_id: organization.id,
+          provider_payment_id: intent_processed_json.dig("data", "intent_id"),
+          status: "SUCCESSFUL",
+          metadata: intent_processed_json.dig("data", "intent", "custom_fields")
+        ).raise_if_error!
+
+        expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
+      end
+    end
   end
 
   describe "#generate_payment_url" do

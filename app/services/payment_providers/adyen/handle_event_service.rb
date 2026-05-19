@@ -97,7 +97,8 @@ module PaymentProviders
           payment_type:,
           lago_invoice_id: event.dig("additionalData", "metadata.lago_invoice_id"),
           lago_payable_id: event.dig("additionalData", "metadata.lago_payable_id"),
-          lago_payable_type: event.dig("additionalData", "metadata.lago_payable_type")
+          lago_payable_type: event.dig("additionalData", "metadata.lago_payable_type"),
+          amount_cents: event.dig("amount", "value")
         }
 
         payment_service_klass(metadata)

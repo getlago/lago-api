@@ -2,7 +2,7 @@
 
 module PaymentProviders
   class FlutterwaveProvider < BaseProvider
-    FlutterwavePayment = Data.define(:id, :status, :metadata)
+    FlutterwavePayment = Data.define(:id, :status, :amount_cents, :metadata)
 
     SUCCESS_REDIRECT_URL = "https://www.flutterwave.com/ng"
     API_URL = "https://api.flutterwave.com/v3"
