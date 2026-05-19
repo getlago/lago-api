@@ -11,7 +11,7 @@ RSpec.describe Lago::RedisConfigBuilder do
       REDIS_URL REDIS_PASSWORD
       LAGO_REDIS_SIDEKIQ_SENTINELS LAGO_REDIS_SIDEKIQ_MASTER_NAME
       LAGO_REDIS_CACHE_URL LAGO_REDIS_CACHE_PASSWORD
-      LAGO_REDIS_CACHE_SENTINELS LAGO_REDIS_CACHE_MASTER_NAME LAGO_REDIS_CACHE_SENTINEL_PASSWORD
+      LAGO_REDIS_CACHE_SENTINELS LAGO_REDIS_CACHE_MASTER_NAME
     ]
     original_env = ENV.to_h.slice(*env_keys)
     example.run
@@ -249,22 +249,6 @@ RSpec.describe Lago::RedisConfigBuilder do
         end
       end
 
-      context "with sentinel password" do
-        before { ENV["LAGO_REDIS_CACHE_SENTINEL_PASSWORD"] = "cache_sentinel_secret" }
-
-        it "includes sentinel password" do
-          expect(result).to include(sentinel_password: "cache_sentinel_secret")
-        end
-      end
-
-      context "without sentinel password" do
-        before { ENV.delete("LAGO_REDIS_CACHE_SENTINEL_PASSWORD") }
-
-        it "does not include sentinel password" do
-          expect(result).not_to have_key(:sentinel_password)
-        end
-      end
-
       context "with sentinel without port" do
         before { ENV["LAGO_REDIS_CACHE_SENTINELS"] = "cache-sentinel" }
 
@@ -296,7 +280,6 @@ RSpec.describe Lago::RedisConfigBuilder do
         ENV["LAGO_REDIS_CACHE_PASSWORD"] = "cache_secret"
         ENV["LAGO_REDIS_CACHE_SENTINELS"] = "cache-sentinel:26379"
         ENV["LAGO_REDIS_CACHE_MASTER_NAME"] = "cache-master"
-        ENV["LAGO_REDIS_CACHE_SENTINEL_PASSWORD"] = "cache_sentinel_secret"
       end
 
       it "includes all config options" do
@@ -306,7 +289,6 @@ RSpec.describe Lago::RedisConfigBuilder do
           sentinels: [{host: "cache-sentinel", port: 26379}],
           role: :master,
           name: "cache-master",
-          sentinel_password: "cache_sentinel_secret",
           password: "cache_secret"
         )
       end

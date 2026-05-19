@@ -11,12 +11,7 @@ module Lago
   #
   # Base config for `#cache` includes URL (LAGO_REDIS_CACHE_URL), SSL params,
   # password (LAGO_REDIS_CACHE_PASSWORD), and optional Sentinel support
-  # (LAGO_REDIS_CACHE_SENTINELS, LAGO_REDIS_CACHE_MASTER_NAME,
-  # LAGO_REDIS_CACHE_SENTINEL_PASSWORD).
-  #
-  # Note: only `#cache` reads a Sentinel auth password. `#sidekiq` has no
-  # equivalent — LAGO_REDIS_SIDEKIQ_SENTINEL_PASSWORD is not consumed
-  # today.
+  # (LAGO_REDIS_CACHE_SENTINELS, LAGO_REDIS_CACHE_MASTER_NAME).
   #
   # Use `with_options` to merge consumer-specific options before calling
   # either method.
@@ -74,8 +69,7 @@ module Lago
       add_sentinels(
         redis_config,
         sentinels: ENV["LAGO_REDIS_CACHE_SENTINELS"].presence,
-        master_name: ENV.fetch("LAGO_REDIS_CACHE_MASTER_NAME", "master").presence,
-        sentinel_password: ENV["LAGO_REDIS_CACHE_SENTINEL_PASSWORD"].presence
+        master_name: ENV.fetch("LAGO_REDIS_CACHE_MASTER_NAME", "master").presence
       )
       add_password(redis_config, password: ENV["LAGO_REDIS_CACHE_PASSWORD"].presence)
 
@@ -90,16 +84,12 @@ module Lago
 
     attr_reader :extra_options
 
-    def add_sentinels(config, sentinels:, master_name:, sentinel_password: nil)
+    def add_sentinels(config, sentinels:, master_name:)
       return unless sentinels
 
       config[:sentinels] = parse_sentinels(sentinels)
       config[:role] = :master
       config[:name] = master_name.presence || "master"
-
-      if sentinel_password
-        config[:sentinel_password] = sentinel_password
-      end
     end
 
     def add_password(config, password:)
