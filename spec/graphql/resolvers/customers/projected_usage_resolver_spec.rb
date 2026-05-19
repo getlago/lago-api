@@ -35,8 +35,10 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
               groupedBy
               filters { id units amountCents pricingUnitAmountCents invoiceDisplayName values eventsCount }
               presentationBreakdowns { presentationBy units }
+              projectedPresentationBreakdowns { presentationBy units }
             }
             presentationBreakdowns { presentationBy units }
+            projectedPresentationBreakdowns { presentationBy units }
           }
         }
       }
@@ -345,15 +347,21 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
 
         graduated_charge_usage = charges_usage.find { |usage| usage["charge"]["chargeModel"] == "graduated" }
         expect(graduated_charge_usage["presentationBreakdowns"]).to be_empty
+        expect(graduated_charge_usage["projectedPresentationBreakdowns"]).to be_empty
 
         standard_charge_usage = charges_usage.find { |usage| usage["charge"]["chargeModel"] == "standard" }
         expect(standard_charge_usage["presentationBreakdowns"]).to be_empty
+        expect(standard_charge_usage["projectedPresentationBreakdowns"]).to be_empty
 
         grouped_usage = standard_charge_usage["groupedUsage"]
         expect(grouped_usage.first["presentationBreakdowns"]).to eq([
           {"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}
         ])
+        expect(grouped_usage.first["projectedPresentationBreakdowns"]).to match_array([
+          include("presentationBy" => {"cloud" => "aws"})
+        ])
         expect(grouped_usage.second["presentationBreakdowns"]).to be_empty
+        expect(grouped_usage.second["projectedPresentationBreakdowns"]).to be_empty
       end
     end
 
@@ -419,10 +427,16 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
           expect(presentation_charge_usage["presentationBreakdowns"]).to eq([
             {"presentationBy" => {"cloud" => "gcp"}, "units" => "3.0"}
           ])
+          expect(presentation_charge_usage["projectedPresentationBreakdowns"]).to match_array([
+            include("presentationBy" => {"cloud" => "gcp"})
+          ])
 
           expect(sum_charge_usage["groupedUsage"]).to be_empty
           expect(sum_charge_usage["presentationBreakdowns"]).to eq([
             {"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}
+          ])
+          expect(sum_charge_usage["projectedPresentationBreakdowns"]).to match_array([
+            include("presentationBy" => {"cloud" => "aws"})
           ])
         end
       end

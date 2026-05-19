@@ -58,7 +58,8 @@ RSpec.describe ::V1::Customers::ProjectedUsageSerializer do
       "Fees::ProjectionService::Result",
       projected_units: BigDecimal("60.0"),
       projected_amount_cents: 75,
-      projected_pricing_unit_amount_cents: BigDecimal(0)
+      projected_pricing_unit_amount_cents: BigDecimal(0),
+      projected_presentation_breakdowns: []
     )
 
     allow(::Fees::ProjectionService).to receive(:call).and_return(

@@ -6,7 +6,7 @@ module Types
       class ProjectedGroupedUsage < Types::BaseObject
         graphql_name "ProjectedGroupedChargeUsage"
 
-        delegate :projected_units, :projected_amount_cents, to: :projection_result
+        delegate :projected_units, :projected_amount_cents, :projected_presentation_breakdowns, to: :projection_result
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
@@ -20,6 +20,7 @@ module Types
         field :filters, [Types::Customers::Usage::ProjectedChargeFilter], null: true
         field :grouped_by, GraphQL::Types::JSON, null: true
         field :presentation_breakdowns, [Types::Customers::Usage::PresentationBreakdown], null: true
+        field :projected_presentation_breakdowns, [Types::Customers::Usage::PresentationBreakdown], null: true
 
         def id
           SecureRandom.uuid

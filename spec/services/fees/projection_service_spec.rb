@@ -169,6 +169,29 @@ RSpec.describe Fees::ProjectionService do
           calculate_projected_usage: true
         )
       end
+
+      context "with presentation_breakdowns" do
+        let(:from_datetime) { Time.zone.parse("2025-01-01T00:00:00") }
+        let(:to_datetime) { Time.zone.parse("2025-01-10T23:59:59") }
+
+        before do
+          travel_to(from_datetime + 4.days)
+          fee.presentation_breakdowns.build(
+            organization: organization,
+            presentation_by: {"department" => "engineering"},
+            units: 60.0
+          )
+        end
+
+        it "returns projected_presentation_breakdowns with period_ratio applied to units" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.projected_presentation_breakdowns).to match_array([
+            have_attributes(presentation_by: {"department" => "engineering"}, units: 30.0)
+          ])
+        end
+      end
     end
 
     context "with charge filter" do
@@ -248,6 +271,48 @@ RSpec.describe Fees::ProjectionService do
           unit_amount: BigDecimal("10.05"),
           applied_pricing_unit: applied_pricing_unit
         )
+      end
+    end
+
+    context "when billable metric is recurring" do
+      let(:billable_metric) { create(:billable_metric, recurring: true, aggregation_type: "sum_agg", field_name: "amount", organization:) }
+
+      it "returns projected values without applying period_ratio" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.projected_amount_cents).to eq(100)
+        expect(result.projected_presentation_breakdowns).to eq([])
+      end
+
+      context "with presentation_breakdowns" do
+        before do
+          fee.presentation_breakdowns.build(
+            organization: organization,
+            presentation_by: {"department" => "engineering"},
+            units: 60.0
+          )
+        end
+
+        it "returns presentation_breakdowns with units unchanged" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.projected_presentation_breakdowns).to match_array([
+            have_attributes(presentation_by: {"department" => "engineering"}, units: 60.0)
+          ])
+        end
+      end
+    end
+
+    context "when period_ratio is out of range" do
+      before { travel_to(from_datetime - 1.day) }
+
+      it "returns empty projected_presentation_breakdowns" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.projected_presentation_breakdowns).to eq([])
       end
     end
   end
