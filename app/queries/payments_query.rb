@@ -2,7 +2,7 @@
 
 class PaymentsQuery < BaseQuery
   Result = BaseResult[:payments]
-  Filters = BaseFilters[:invoice_id, :external_customer_id]
+  Filters = BaseFilters[:invoice_id, :external_customer_id, :currency]
 
   def call
     return result unless validate_filters.success?
@@ -82,6 +82,7 @@ class PaymentsQuery < BaseQuery
   def apply_filters(scope)
     scope = filter_by_invoice(scope) if filters.invoice_id.present?
     scope = filter_by_customer(scope) if filters.external_customer_id.present?
+    scope = filter_by_currency(scope) if filters.currency.present?
     scope
   end
 
@@ -104,5 +105,9 @@ class PaymentsQuery < BaseQuery
         "OR invoices_payment_requests.invoice_id = :invoice_id",
         invoice_id:
       )
+  end
+
+  def filter_by_currency(scope)
+    scope.where(amount_currency: filters.currency)
   end
 end
