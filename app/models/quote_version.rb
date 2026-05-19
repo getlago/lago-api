@@ -20,6 +20,7 @@ class QuoteVersion < ApplicationRecord
 
   belongs_to :organization
   belongs_to :quote
+  has_one :order_form
 
   enum :status, STATUSES,
     default: :draft,
