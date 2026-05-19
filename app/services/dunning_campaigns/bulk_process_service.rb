@@ -43,7 +43,13 @@ module DunningCampaigns
         increment_per_currency_attempts(thresholds)
 
         thresholds.each do |threshold|
-          DunningCampaigns::ProcessAttemptJob.perform_later(customer:, dunning_campaign_threshold: threshold)
+          overdue_billing_entities_for(threshold.currency).each do |entity|
+            DunningCampaigns::ProcessAttemptJob.perform_later(
+              customer:,
+              dunning_campaign_threshold: threshold,
+              billing_entity: entity
+            )
+          end
         end
 
         if all_dunned_currencies_max_attempts_reached?
@@ -75,6 +81,12 @@ module DunningCampaigns
             .where(currency:)
             .find_by("amount_cents <= ?", amount_cents)
         end
+      end
+
+      def overdue_billing_entities_for(currency)
+        entity_ids = customer.invoices.non_self_billed.payment_overdue
+          .where(currency: currency).distinct.pluck(:billing_entity_id)
+        customer.organization.billing_entities.where(id: entity_ids)
       end
 
       def increment_per_currency_attempts(thresholds)
