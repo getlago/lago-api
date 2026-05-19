@@ -14,7 +14,8 @@ module PaymentProviders
         def call
           adyen_result = client.checkout.modifications_api.cancel_authorised_payment_by_psp_reference(
             {merchantAccount: payment.payment_provider.merchant_account},
-            payment.provider_payment_id
+            payment.provider_payment_id,
+            headers: {"Idempotency-Key" => "payment-#{payment.id}"}
           )
 
           if adyen_result.status == 422
@@ -34,9 +35,6 @@ module PaymentProviders
           end
 
           if adyen_result.status >= 400
-            # Other 4xx/5xx responses (401 auth, 403 forbidden, 404 not found,
-            # 5xx server errors) propagate so the caller can retry or surface
-            # the failure.
             raise ::Adyen::AdyenError.new(
               nil, nil, adyen_result.response["message"], adyen_result.response["errorType"]
             )

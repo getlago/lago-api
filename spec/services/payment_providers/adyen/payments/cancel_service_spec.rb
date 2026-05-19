@@ -3,6 +3,11 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Adyen::Payments::CancelService do
+  # Test-local value object that mirrors the shape the Adyen gem returns for
+  # this endpoint (responds to #status and #response). Replaces an
+  # OpenStruct per project convention.
+  AdyenResponse = Data.define(:status, :response)
+
   subject(:result) { described_class.call(payment:) }
 
   let(:organization) { create(:organization) }
@@ -30,7 +35,7 @@ RSpec.describe PaymentProviders::Adyen::Payments::CancelService do
 
   context "when the cancel is accepted" do
     let(:cancel_response) do
-      OpenStruct.new(
+      AdyenResponse.new(
         status: 200,
         response: {
           "paymentPspReference" => "PSPREF123",
@@ -50,7 +55,14 @@ RSpec.describe PaymentProviders::Adyen::Payments::CancelService do
       result
 
       expect(modifications_api).to have_received(:cancel_authorised_payment_by_psp_reference)
-        .with({merchantAccount: "LagoTest"}, "PSPREF123")
+        .with({merchantAccount: "LagoTest"}, "PSPREF123", anything)
+    end
+
+    it "passes an idempotency key scoped to the payment id" do
+      result
+
+      expect(modifications_api).to have_received(:cancel_authorised_payment_by_psp_reference)
+        .with(anything, anything, headers: {"Idempotency-Key" => "payment-#{payment.id}"})
     end
 
     it "returns a successful result with the payment" do
@@ -65,7 +77,7 @@ RSpec.describe PaymentProviders::Adyen::Payments::CancelService do
 
   context "when Adyen returns a 422 response (non-cancelable state)" do
     let(:error_response) do
-      OpenStruct.new(
+      AdyenResponse.new(
         status: 422,
         response: {
           "errorType" => "validation",
@@ -99,7 +111,7 @@ RSpec.describe PaymentProviders::Adyen::Payments::CancelService do
 
   context "when Adyen returns a non-422 4xx response" do
     let(:error_response) do
-      OpenStruct.new(
+      AdyenResponse.new(
         status: 401,
         response: {
           "errorType" => "security",
