@@ -65,6 +65,7 @@ module PaymentProviders
             status:,
             stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
               id: event.data.object.id,
+              amount: event.data.object.amount,
               status: event.data.object.status,
               metadata:,
               error_code: event.data.object.to_hash.dig(:last_payment_error, :code)

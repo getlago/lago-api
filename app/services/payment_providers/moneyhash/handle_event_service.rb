@@ -61,26 +61,45 @@ module PaymentProviders
 
       def handle_intent_event
         if INTENT_WEBHOOKS_EVENTS.include?(event_code)
+          metadata = (@event_json.dig("data", "intent", "custom_fields") || {}).merge(
+            amount_cents: intent_amount_cents(@event_json.dig("data", "intent", "amount"))
+          )
+
           payment_service_klass(@event_json)
             .new.update_payment_status(
               organization_id: @organization.id,
               provider_payment_id: @event_json.dig("data", "intent_id"),
               status: event_to_payment_status(event_code),
-              metadata: @event_json.dig("data", "intent", "custom_fields")
+              metadata: metadata
             ).raise_if_error!
         end
       end
 
       def handle_transaction_event
         if TRANSACTION_WEBHOOKS_EVENTS.include?(event_code)
+          metadata = (@event_json.dig("intent", "custom_fields") || {}).merge(
+            amount_cents: intent_amount_cents(@event_json.dig("intent", "amount"))
+          )
+
           payment_service_klass(@event_json)
             .new.update_payment_status(
               organization_id: @organization.id,
               provider_payment_id: @event_json.dig("intent", "id"),
               status: event_to_payment_status(event_code),
-              metadata: @event_json.dig("intent", "custom_fields")
+              metadata: metadata
             ).raise_if_error!
         end
+      end
+
+      # MoneyHash reports amounts in major units (e.g. dollars). Convert to cents.
+      # Intent events expose `data.intent.amount` as a scalar (e.g. 5 or "5.00"),
+      # while transaction events expose `intent.amount` as a hash
+      # `{"value" => 7.1, "currency" => "USD"}`. Accept both shapes.
+      def intent_amount_cents(raw)
+        value = raw.is_a?(Hash) ? raw["value"] : raw
+        return nil if value.nil?
+
+        (value.to_d * 100).round
       end
 
       def handle_card_event

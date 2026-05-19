@@ -2,7 +2,7 @@
 
 module PaymentProviders
   class CashfreeProvider < BaseProvider
-    CashfreePayment = Data.define(:id, :status, :metadata)
+    CashfreePayment = Data.define(:id, :status, :amount_cents, :metadata)
 
     SUCCESS_REDIRECT_URL = "https://cashfree.com/"
     API_VERSION = "2023-08-01"

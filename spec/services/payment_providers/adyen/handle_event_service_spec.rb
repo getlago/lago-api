@@ -59,6 +59,14 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
         expect(Invoices::Payments::AdyenService).to have_received(:new)
         expect(payment_service).to have_received(:update_payment_status)
       end
+
+      it "passes the amount value in metadata for the Payment row to use" do
+        event_service.call
+
+        expect(payment_service).to have_received(:update_payment_status).with(
+          hash_including(metadata: hash_including(amount_cents: 71))
+        )
+      end
     end
 
     context "when succeeded authorisation event for processed one-time payment belonging to a Payment Request" do

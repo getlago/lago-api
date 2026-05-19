@@ -21,6 +21,7 @@ module PaymentProviders
             cashfree_payment: PaymentProviders::CashfreeProvider::CashfreePayment.new(
               id: provider_payment_id,
               status: link_status,
+              amount_cents: link_amount_paid_cents,
               metadata: event.dig("data", "link_notes").to_h.symbolize_keys || {}
             )
           ).raise_if_error!
@@ -44,6 +45,14 @@ module PaymentProviders
 
         def payable_type
           @payable_type ||= event.dig("data", "link_notes", "lago_payable_type")
+        end
+
+        # Cashfree reports `link_amount_paid` in major units (e.g. dollars). Convert to cents.
+        def link_amount_paid_cents
+          raw = event.dig("data", "link_amount_paid")
+          return nil if raw.nil?
+
+          (raw.to_d * 100).round
         end
       end
     end

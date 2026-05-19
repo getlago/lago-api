@@ -294,6 +294,40 @@ RSpec.describe Invoices::Payments::StripeService do
         )
       end
 
+      context "when stripe_payment carries an amount" do
+        let(:stripe_payment) do
+          PaymentProviders::StripeProvider::StripePayment.new(
+            id: "ch_123456",
+            amount: 4242,
+            status: "succeeded",
+            metadata: {lago_invoice_id: invoice.id, payment_type: "one-time"},
+            error_code: nil
+          )
+        end
+
+        it "records the Payment with the provider-reported amount, not the invoice due amount" do
+          result = stripe_service.update_payment_status(
+            organization_id: organization.id,
+            status: "succeeded",
+            stripe_payment:
+          )
+
+          expect(result.payment.amount_cents).to eq(4242)
+        end
+      end
+
+      context "when stripe_payment does not carry an amount" do
+        it "falls back to the invoice's total due amount" do
+          result = stripe_service.update_payment_status(
+            organization_id: organization.id,
+            status: "succeeded",
+            stripe_payment:
+          )
+
+          expect(result.payment.amount_cents).to eq(invoice.total_due_amount_cents)
+        end
+      end
+
       context "when invoice is not found" do
         let(:stripe_payment) do
           PaymentProviders::StripeProvider::StripePayment.new(

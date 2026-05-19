@@ -36,6 +36,7 @@ module PaymentProviders
             flutterwave_payment: PaymentProviders::FlutterwaveProvider::FlutterwavePayment.new(
               id: provider_payment_id,
               status: verified_transaction[:status],
+              amount_cents: (verified_transaction[:amount].to_d * 100).round,
               metadata: build_metadata(verified_transaction)
             )
           ).raise_if_error!

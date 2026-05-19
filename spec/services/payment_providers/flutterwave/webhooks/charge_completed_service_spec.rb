@@ -129,6 +129,14 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
           expect(metadata[:flw_ref]).to eq("lago_invoice_12345")
         end
       end
+
+      it "passes amount_cents converted from major units on the payment struct" do
+        charge_completed_service.call
+
+        expect(payment_service).to have_received(:update_payment_status).with(
+          hash_including(flutterwave_payment: have_attributes(amount_cents: 1_000_000))
+        )
+      end
     end
 
     context "when transaction status is not successful" do

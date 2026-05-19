@@ -100,14 +100,18 @@ module Invoices
           result.not_found_failure!(resource: "invoice")
           return
         end
+
         increment_payment_attempts
+
+        amount_cents = metadata[:amount_cents] || metadata["amount_cents"] || invoice.total_amount_cents
+
         Payment.new(
           organization_id: @invoice.organization_id,
           payable: invoice,
           customer:,
           payment_provider_id: moneyhash_payment_provider.id,
           payment_provider_customer_id: customer.moneyhash_customer.id,
-          amount_cents: invoice.total_amount_cents,
+          amount_cents: amount_cents,
           amount_currency: invoice.currency&.upcase,
           provider_payment_id:
         )
