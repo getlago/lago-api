@@ -106,17 +106,17 @@ RSpec.describe CreditNotes::GeneratePdfService do
       before do
         credit_note.billing_entity.update(country:, einvoicing: true)
 
-        allow(EInvoices::CreditNotes::FacturX::CreateService).to receive(:call).and_return(create_xml_result)
+        allow(EInvoices::CreditNotes::Cii::CreateService).to receive(:call).and_return(create_xml_result)
         allow(Utils::PdfAttachmentService).to receive(:call)
       end
 
       context "with FR country" do
         let(:country) { "FR" }
 
-        it "generates the invoice with attached facturx xml synchronously" do
+        it "generates the invoice with attached cii xml synchronously" do
           result = described_class.call(credit_note:, context:)
 
-          expect(EInvoices::CreditNotes::FacturX::CreateService).to have_received(:call)
+          expect(EInvoices::CreditNotes::Cii::CreateService).to have_received(:call)
           expect(Utils::PdfAttachmentService).to have_received(:call)
           expect(result.credit_note.file).to be_present
         end

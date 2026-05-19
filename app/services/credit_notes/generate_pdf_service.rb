@@ -29,7 +29,7 @@ module CreditNotes
     def generate_pdf(credit_note)
       I18n.with_locale(credit_note.customer.preferred_document_locale) do
         pdf_file = build_pdf_file
-        xml_file = attach_facturx(pdf_file) if should_generate_facturx_einvoice_xml?
+        xml_file = attach_cii(pdf_file) if should_generate_cii_einvoice_xml?
         attach_pdf_to_credit_note(pdf_file)
 
         credit_note.save!
@@ -49,9 +49,9 @@ module CreditNotes
       pdf_file
     end
 
-    def attach_facturx(pdf_file)
+    def attach_cii(pdf_file)
       xml_file = Tempfile.new([credit_note.number, ".xml"])
-      xml_file.write(EInvoices::CreditNotes::FacturX::CreateService.call(credit_note:).xml)
+      xml_file.write(EInvoices::CreditNotes::Cii::CreateService.call(credit_note:).xml)
       xml_file.flush
 
       Utils::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)
@@ -71,7 +71,7 @@ module CreditNotes
       xml_file&.unlink
     end
 
-    def should_generate_facturx_einvoice_xml?
+    def should_generate_cii_einvoice_xml?
       credit_note.billing_entity.einvoicing && BillingEntity::EINVOICING_COUNTRIES.include?(credit_note.billing_entity.country.try(:upcase))
     end
 
