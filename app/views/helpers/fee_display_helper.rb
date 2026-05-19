@@ -7,6 +7,10 @@ class FeeDisplayHelper
     " • #{fee.grouped_by.values.compact.join(" • ")}"
   end
 
+  def self.fee_title(fee)
+    fee.invoice_name + grouped_by_display(fee) + (fee.charge_filter_id? ? " • #{fee.filter_display_name(separator: " • ")}" : "")
+  end
+
   def self.should_display_subscription_fee?(invoice_subscription)
     return false if invoice_subscription.blank?
     return false if invoice_subscription.invoice.progressive_billing?
@@ -48,6 +52,12 @@ class FeeDisplayHelper
       money = amount.to_money(fee.currency)
       MoneyHelper.format(money)
     end
+  end
+
+  def self.sorted_presentation_breakdowns_rows(fee, displayable_keys)
+    rows = fee.presentation_breakdowns.map { |b| [displayable_keys.map { |k| b.presentation_by[k] }, b.units] }
+    clean, blank = rows.partition { |values, _| values.all?(&:present?) }
+    clean.sort_by { |values, _| values.map(&:to_s) } + blank.sort_by { |values, _| values.compact.map(&:to_s) }
   end
 
   def self.format_amount(fee)
