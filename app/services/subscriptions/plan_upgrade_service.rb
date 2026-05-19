@@ -2,6 +2,8 @@
 
 module Subscriptions
   class PlanUpgradeService < BaseService
+    include Subscriptions::Concerns::BillingEntityResolutionConcern
+
     Result = BaseResult[:subscription]
 
     def initialize(current_subscription:, plan:, params:)
@@ -63,6 +65,7 @@ module Subscriptions
     attr_reader :current_subscription, :plan, :params, :name
 
     def new_subscription_with_overrides
+      resolved_entity = resolve_billing_entity(customer: current_subscription.customer, params:)
       new_subscription = Subscription.new(
         organization_id: current_subscription.customer.organization_id,
         customer: current_subscription.customer,
@@ -72,7 +75,8 @@ module Subscriptions
         previous_subscription_id: current_subscription.id,
         subscription_at: current_subscription.subscription_at,
         billing_time: current_subscription.billing_time,
-        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
+        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
+        billing_entity_id: resolved_entity&.id || current_subscription.billing_entity_id
       )
 
       if params.key?(:payment_method)
