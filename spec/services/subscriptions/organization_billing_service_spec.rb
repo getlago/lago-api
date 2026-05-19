@@ -489,6 +489,10 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             .with([usd_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([eur_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([usd_subscription], current_date)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([eur_subscription], current_date)
         end
 
         context "without feature flag" do
@@ -721,6 +725,10 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             .with([subscription1], current_date.to_i, invoicing_reason: :subscription_periodic)
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([subscription2], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([subscription1], current_date)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([subscription2], current_date)
         end
 
         context "without feature flag" do
@@ -967,6 +975,10 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             .with([subscription_default_entity], current_date.to_i, invoicing_reason: :subscription_periodic)
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([subscription_other_entity], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([subscription_default_entity], current_date)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([subscription_other_entity], current_date)
         end
 
         context "without feature flag" do
@@ -1070,6 +1082,10 @@ RSpec.describe Subscriptions::OrganizationBillingService do
           .with([consolidated_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
         expect(BillSubscriptionJob).to have_been_enqueued
           .with([opted_out_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+          .with([consolidated_subscription], current_date)
+        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+          .with([opted_out_subscription], current_date)
       end
 
       context "when several subscriptions opt out" do
@@ -1452,6 +1468,17 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             .with([other_entity_usd_provider], current_date.to_i, invoicing_reason: :subscription_periodic)
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([default_usd_provider_opted_out], current_date.to_i, invoicing_reason: :subscription_periodic)
+
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with(contain_exactly(default_usd_provider, other_default_usd_provider), current_date)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([default_eur_provider], current_date)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([default_usd_manual], current_date)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([other_entity_usd_provider], current_date)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([default_usd_provider_opted_out], current_date)
         end
       end
     end

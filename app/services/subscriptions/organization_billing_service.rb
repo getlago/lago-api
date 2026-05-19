@@ -37,9 +37,9 @@ module Subscriptions
             today.to_i,
             invoicing_reason: :subscription_periodic
           )
-        end
 
-        BillNonInvoiceableFeesJob.perform_later(billing_subscriptions, today)
+          BillNonInvoiceableFeesJob.perform_later(subscriptions, today)
+        end
       end
 
       result
