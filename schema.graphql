@@ -238,6 +238,11 @@ enum ActivityTypeEnum {
   invoice_payment_status_updated
 
   """
+  invoice.ready_to_finalize
+  """
+  invoice_ready_to_finalize
+
+  """
   invoice.regenerated
   """
   invoice_regenerated
@@ -2547,7 +2552,7 @@ type Coupon {
   amountCurrency: CurrencyEnum
   appliedCouponsCount: Int!
   billableMetrics: [BillableMetric!]
-  code: String
+  code: String!
   couponType: CouponTypeEnum!
   createdAt: ISO8601DateTime!
 
@@ -2790,7 +2795,7 @@ input CreateCouponInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  code: String
+  code: String!
   couponType: CouponTypeEnum!
   description: String
   expiration: CouponExpiration!
@@ -5771,6 +5776,7 @@ enum EventTypeEnum {
   invoice_payment_failure
   invoice_payment_overdue
   invoice_payment_status_updated
+  invoice_ready_to_finalize
   invoice_resynced
   invoice_voided
   payment_provider_error
@@ -10075,7 +10081,7 @@ type Query {
   """
   Query invoices of a customer
   """
-  customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
+  customerInvoices(billingEntityIds: [ID!], currency: CurrencyEnum, customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
 
   """
   Query the projected usage of the customer on the current billing period
@@ -10476,7 +10482,7 @@ type Query {
   """
   Query payments of an organization
   """
-  payments(externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int, searchTerm: String): PaymentCollection!
+  payments(currency: CurrencyEnum, externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int, searchTerm: String): PaymentCollection!
 
   """
   Query a single plan of an organization
@@ -11349,6 +11355,7 @@ type Subscription {
   activatedAt: ISO8601DateTime
   activationRules: [SubscriptionActivationRule!]!
   activityLogs: [ActivityLog!]
+  billingEntityId: ID
   billingTime: BillingTimeEnum
   cancelationReason: CancelationReasonEnum
   canceledAt: ISO8601DateTime
@@ -13385,6 +13392,7 @@ type Wallet {
   activityLogs: [ActivityLog!]
   appliesTo: WalletAppliesTo
   balanceCents: BigInt!
+  billingEntityId: ID
   code: String
   consumedAmountCents: BigInt!
   consumedCredits: Float!

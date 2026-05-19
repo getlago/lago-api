@@ -292,6 +292,18 @@ RSpec.describe Invoices::SubscriptionService do
         expect(Utils::ActivityLog).to have_produced("invoice.drafted").after_commit.with(invoice)
       end
 
+      it "enqueues a SendWebhookJob for invoice.ready_to_finalize" do
+        expect do
+          invoice_service.call
+        end.to have_enqueued_job_after_commit(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
+      end
+
+      it "produces an activity log for invoice.ready_to_finalize" do
+        invoice = described_class.call(subscriptions:, timestamp: timestamp.to_i, invoicing_reason:).invoice
+
+        expect(Utils::ActivityLog).to have_produced("invoice.ready_to_finalize").after_commit.with(invoice)
+      end
+
       it "does not flag lifetime usage for refresh" do
         invoice_service.call
 
@@ -311,6 +323,39 @@ RSpec.describe Invoices::SubscriptionService do
           result = invoice_service.call
           expect(result).to be_success
           expect(result.invoice).to be_draft
+        end
+      end
+
+      context "when the invoice ends with pending taxes" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+        before { integration_customer }
+
+        it "creates a draft invoice with tax_status pending" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_draft
+          expect(result.invoice).to be_tax_pending
+        end
+
+        it "enqueues a SendWebhookJob for invoice.drafted" do
+          expect do
+            invoice_service.call
+          end.to have_enqueued_job_after_commit(SendWebhookJob).with("invoice.drafted", Invoice)
+        end
+
+        it "does not enqueue a SendWebhookJob for invoice.ready_to_finalize" do
+          expect do
+            invoice_service.call
+          end.not_to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
+        end
+
+        it "does not produce an activity log for invoice.ready_to_finalize" do
+          invoice_service.call
+
+          expect(Utils::ActivityLog).not_to have_produced("invoice.ready_to_finalize")
         end
       end
     end

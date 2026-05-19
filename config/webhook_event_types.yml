@@ -153,6 +153,11 @@ invoice_drafted:
   description: A new draft invoice has been emitted
   category: Invoices
   deprecated: false
+invoice_ready_to_finalize:
+  name: invoice.ready_to_finalize
+  description: A draft invoice is ready to be finalized (taxes are resolved)
+  category: Invoices
+  deprecated: false
 invoice_voided:
   name: invoice.voided
   description: An invoice has been voided

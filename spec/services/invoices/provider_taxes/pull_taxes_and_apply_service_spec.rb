@@ -259,6 +259,12 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
       end
 
+      it "does not enqueue invoice.ready_to_finalize" do
+        expect do
+          pull_taxes_service.call
+        end.not_to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
+      end
+
       it "enqueues GenerateDocumentsJob with email false" do
         expect do
           pull_taxes_service.call
@@ -395,6 +401,17 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
           end.not_to have_enqueued_job(SendWebhookJob).with("invoice.created", Invoice)
         end
 
+        it "enqueues a SendWebhookJob for invoice.ready_to_finalize" do
+          expect do
+            pull_taxes_service.call
+          end.to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
+        end
+
+        it "produces an activity log for invoice.ready_to_finalize" do
+          pull_taxes_service.call
+          expect(Utils::ActivityLog).to have_produced("invoice.ready_to_finalize").with(invoice)
+        end
+
         it "does not create a payment" do
           allow(Invoices::Payments::CreateService).to receive(:call_async)
 
@@ -450,6 +467,12 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(invoice.error_details.tax_error.last.id).not_to eql(old_error_id)
         expect(invoice.error_details.tax_error.count).to be(1)
         expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
+      end
+
+      it "does not enqueue invoice.ready_to_finalize" do
+        expect do
+          pull_taxes_service.call
+        end.not_to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
       end
 
       context "with api limit error" do
@@ -527,6 +550,17 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
             .to eq("action_script_failure")
           expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error_message"])
             .to eq("Error starting integration 'netsuite-customer-create': {\n  \"name\": \"TRPCClientError\",\n  \"message\": \"fetch failed\"\n}")
+        end
+
+        it "enqueues a SendWebhookJob for invoice.ready_to_finalize" do
+          expect do
+            pull_taxes_service.call
+          end.to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
+        end
+
+        it "produces an activity log for invoice.ready_to_finalize" do
+          pull_taxes_service.call
+          expect(Utils::ActivityLog).to have_produced("invoice.ready_to_finalize").with(invoice)
         end
       end
     end

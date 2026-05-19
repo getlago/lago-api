@@ -313,7 +313,6 @@ SELECT
     NULL::uuid AS charge_filter_id,
     NULL::timestamp(6) without time zone AS charge_filter_updated_at,
     NULL::jsonb AS filters,
-    NULL::jsonb AS properties,
     NULL::jsonb AS pricing_group_keys,
     NULL::boolean AS pay_in_advance,
     NULL::boolean AS accepts_target_wallet;
@@ -2110,7 +2109,7 @@ CREATE TABLE public.coupons (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     name character varying NOT NULL,
-    code character varying,
+    code character varying NOT NULL,
     status integer DEFAULT 0 NOT NULL,
     terminated_at timestamp(6) without time zone,
     amount_cents bigint,
@@ -3621,6 +3620,8 @@ CREATE VIEW public.exports_invoices AS
     i.total_amount_cents,
     (i.total_amount_cents - i.total_paid_amount_cents) AS total_due_amount_cents,
     i.prepaid_credit_amount_cents,
+    i.prepaid_granted_credit_amount_cents,
+    i.prepaid_purchased_credit_amount_cents,
     i.version_number,
     i.created_at,
     i.updated_at,
@@ -4313,7 +4314,6 @@ SELECT
     NULL::uuid AS charge_filter_id,
     NULL::timestamp(6) without time zone AS charge_filter_updated_at,
     NULL::jsonb AS filters,
-    NULL::jsonb AS properties,
     NULL::jsonb AS pricing_group_keys,
     NULL::boolean AS pay_in_advance,
     NULL::boolean AS accepts_target_wallet;
@@ -9846,16 +9846,15 @@ CREATE OR REPLACE VIEW public.flat_filters AS
             END)
             ELSE NULL::jsonb
         END AS filters,
-    COALESCE(charge_filters.properties, charges.properties) AS properties,
     (COALESCE(charge_filters.properties, charges.properties) -> 'pricing_group_keys'::text) AS pricing_group_keys,
     charges.pay_in_advance,
     charges.accepts_target_wallet
    FROM ((((public.billable_metrics
      JOIN public.charges ON ((charges.billable_metric_id = billable_metrics.id)))
-     LEFT JOIN public.charge_filters ON ((charge_filters.charge_id = charges.id)))
-     LEFT JOIN public.charge_filter_values ON ((charge_filter_values.charge_filter_id = charge_filters.id)))
-     LEFT JOIN public.billable_metric_filters ON ((billable_metric_filters.id = charge_filter_values.billable_metric_filter_id)))
-  WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL) AND (charge_filters.deleted_at IS NULL) AND (charge_filter_values.deleted_at IS NULL) AND (billable_metric_filters.deleted_at IS NULL))
+     LEFT JOIN public.charge_filters ON (((charge_filters.charge_id = charges.id) AND (charge_filters.deleted_at IS NULL))))
+     LEFT JOIN public.charge_filter_values ON (((charge_filter_values.charge_filter_id = charge_filters.id) AND (charge_filter_values.deleted_at IS NULL))))
+     LEFT JOIN public.billable_metric_filters ON (((billable_metric_filters.id = charge_filter_values.billable_metric_filter_id) AND (billable_metric_filters.deleted_at IS NULL))))
+  WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL))
   GROUP BY billable_metrics.organization_id, billable_metrics.code, charges.plan_id, charges.id, charges.updated_at, charge_filters.id, charge_filters.updated_at;
 
 
@@ -12216,6 +12215,11 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260517101105'),
+('20260513105210'),
+('20260513105209'),
+('20260512155310'),
+('20260512142543'),
 ('20260504134804'),
 ('20260430102814'),
 ('20260430102813'),
