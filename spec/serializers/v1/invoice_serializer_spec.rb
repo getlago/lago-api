@@ -138,7 +138,13 @@ RSpec.describe ::V1::InvoiceSerializer do
   end
 
   context "when includes fees" do
-    let(:fee1) { create(:fee, invoice:, presentation_breakdowns: [build(:presentation_breakdown)]) }
+    let(:charge) do
+      create(:standard_charge, properties: {
+        "amount" => "100",
+        "presentation_group_keys" => [{"value" => "department", "options" => {"display_in_invoice" => true}}]
+      })
+    end
+    let(:fee1) { create(:charge_fee, charge:, invoice:, presentation_breakdowns: [build(:presentation_breakdown)]) }
     let(:fee2) { create(:fee, invoice:) }
 
     let(:includes) { %i[fees] }

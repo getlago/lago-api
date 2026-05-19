@@ -127,8 +127,14 @@ RSpec.describe Resolvers::InvoiceResolver do
       fixed_charges_to_datetime: Time.current.end_of_month + 1.month
     }, presentation_breakdowns: [build(:presentation_breakdown, organization:)])
   end
+  let(:charge_with_display_keys) do
+    create(:standard_charge, properties: {
+      "amount" => "100",
+      "presentation_group_keys" => [{"value" => "department", "options" => {"display_in_invoice" => true}}]
+    })
+  end
   let(:charge_fee) do
-    create(:charge_fee, subscription:, invoice:, amount_cents: 10, properties: {
+    create(:charge_fee, charge: charge_with_display_keys, subscription:, invoice:, amount_cents: 10, properties: {
       from_datetime: Time.current.beginning_of_month,
       to_datetime: Time.current.end_of_month,
       charges_from_datetime: Time.current.beginning_of_month - 1.month,
@@ -185,9 +191,7 @@ RSpec.describe Resolvers::InvoiceResolver do
     expect(subscription_fee["id"]).to eq(fee.id)
     expect(subscription_fee["properties"]["fromDatetime"]).to eq(Time.current.beginning_of_month.to_datetime.iso8601)
     expect(subscription_fee["properties"]["toDatetime"]).to eq(Time.current.end_of_month.to_datetime.iso8601)
-    expect(subscription_fee["presentationBreakdowns"]).to eq([
-      {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
-    ])
+    expect(subscription_fee["presentationBreakdowns"]).to eq([])
 
     charge_fee_result = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "charge" }
     expect(charge_fee_result["id"]).to eq(charge_fee.id)
@@ -201,9 +205,7 @@ RSpec.describe Resolvers::InvoiceResolver do
     expect(fixed_charge_fee_result["id"]).to eq(fixed_charge_fee.id)
     expect(fixed_charge_fee_result["properties"]["fromDatetime"]).to eq((Time.current.beginning_of_month + 1.month).to_datetime.iso8601)
     expect(fixed_charge_fee_result["properties"]["toDatetime"]).to eq((Time.current.end_of_month + 1.month).to_datetime.iso8601)
-    expect(fixed_charge_fee_result["presentationBreakdowns"]).to eq([
-      {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
-    ])
+    expect(fixed_charge_fee_result["presentationBreakdowns"]).to eq([])
   end
 
   it "includes filters for the fee" do
@@ -228,7 +230,10 @@ RSpec.describe Resolvers::InvoiceResolver do
   it "includes pricing unit usage when available" do
     pricing_unit = create(:pricing_unit, organization:)
     billable_metric = create(:billable_metric, organization:)
-    charge = create(:standard_charge, billable_metric:)
+    charge = create(:standard_charge, billable_metric:, properties: {
+      "amount" => "100",
+      "presentation_group_keys" => [{"value" => "department", "options" => {"display_in_invoice" => true}}]
+    })
     applied_pricing_unit = create(:applied_pricing_unit, pricing_unit:, conversion_rate: 2.5)
 
     pricing_unit_usage = build(
@@ -385,9 +390,7 @@ RSpec.describe Resolvers::InvoiceResolver do
         "itemCode" => add_on.code,
         "itemName" => add_on.name
       )
-      expect(add_on_fee["presentationBreakdowns"]).to eq([
-        {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
-      ])
+      expect(add_on_fee["presentationBreakdowns"]).to eq([])
     end
 
     context "with a deleted add_on" do
@@ -417,9 +420,7 @@ RSpec.describe Resolvers::InvoiceResolver do
           "itemCode" => add_on.code,
           "itemName" => add_on.name
         )
-        expect(add_on_fee["presentationBreakdowns"]).to eq([
-          {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
-        ])
+        expect(add_on_fee["presentationBreakdowns"]).to eq([])
       end
     end
   end
@@ -472,9 +473,7 @@ RSpec.describe Resolvers::InvoiceResolver do
       graphql_wallet_transaction = data.dig("fees", 0, "walletTransaction")
       expect(graphql_wallet_transaction["name"]).to eq("Custom Transaction Name")
       expect(graphql_wallet_transaction["walletName"]).to eq("wallet name")
-      expect(data.dig("fees", 0, "presentationBreakdowns")).to eq([
-        {"presentationBy" => {"department" => "engineering"}, "units" => "60.0"}
-      ])
+      expect(data.dig("fees", 0, "presentationBreakdowns")).to eq([])
     end
   end
 end

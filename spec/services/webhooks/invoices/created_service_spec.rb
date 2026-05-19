@@ -10,8 +10,15 @@ RSpec.describe Webhooks::Invoices::CreatedService do
   let(:subscription) { create(:subscription, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
 
+  let(:charge) do
+    create(:standard_charge, properties: {
+      "amount" => "100",
+      "presentation_group_keys" => [{"value" => "department", "options" => {"display_in_invoice" => true}}]
+    })
+  end
+
   before do
-    create_list(:fee, 1, invoice:, presentation_breakdowns: [create(:presentation_breakdown)])
+    create(:charge_fee, charge:, invoice:, presentation_breakdowns: [build(:presentation_breakdown)])
     create_list(:fee, 3, invoice:)
     create_list(:credit, 4, invoice:)
   end
