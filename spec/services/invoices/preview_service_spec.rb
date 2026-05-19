@@ -86,6 +86,95 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         end
       end
 
+      context "with multi-entity billing" do
+        let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+        context "when multi_entity_billing flag is disabled" do
+          let(:subscription) do
+            build(
+              :subscription,
+              customer:,
+              plan:,
+              billing_entity: other_billing_entity,
+              billing_time:,
+              subscription_at: timestamp,
+              started_at: timestamp,
+              created_at: timestamp
+            )
+          end
+
+          it "ignores the subscription's billing entity and uses the customer's entity" do
+            travel_to(timestamp) do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.billing_entity).to eq(billing_entity)
+            end
+          end
+        end
+
+        context "when multi_entity_billing flag is enabled" do
+          before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+          context "when the subscription has its own billing entity" do
+            let(:subscription) do
+              build(
+                :subscription,
+                customer:,
+                plan:,
+                billing_entity: other_billing_entity,
+                billing_time:,
+                subscription_at: timestamp,
+                started_at: timestamp,
+                created_at: timestamp
+              )
+            end
+
+            it "uses the subscription's billing entity" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.billing_entity).to eq(other_billing_entity)
+              end
+            end
+          end
+
+          context "when the subscription has no explicit billing entity" do
+            it "falls back to the customer's billing entity" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.billing_entity).to eq(billing_entity)
+              end
+            end
+          end
+
+          context "when subscriptions have mismatched effective billing entities" do
+            let(:customer) { create(:customer, organization:, billing_entity:) }
+            let(:plan1) { create(:plan, organization:, interval: "monthly") }
+            let(:plan2) { create(:plan, organization:, interval: "monthly") }
+            let(:subscriptions) { [subscription1, subscription2] }
+            let(:subscription1) do
+              create(:subscription, plan: plan1, customer:, billing_entity:, subscription_at: timestamp, billing_time: "calendar")
+            end
+            let(:subscription2) do
+              create(:subscription, plan: plan2, customer:, billing_entity: other_billing_entity, subscription_at: timestamp, billing_time: "calendar")
+            end
+
+            before { organization.update!(premium_integrations: ["preview"]) }
+
+            it "returns a validation error" do
+              result = preview_service.call
+
+              expect(result).not_to be_success
+              expect(result.error.messages[:base]).to include("subscription_billing_entities_do_not_match")
+            end
+          end
+        end
+      end
+
       context "when billing periods do not match" do
         let(:customer) { create(:customer, organization:, billing_entity:) }
         let(:plan1) { create(:plan, organization:, interval: "monthly") }

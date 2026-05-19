@@ -112,6 +112,45 @@ RSpec.describe Invoices::Preview::BuildSubscriptionService do
           expect { subject }.not_to change(Subscription, :count)
         end
       end
+
+      context "when a billing_entity is provided" do
+        subject(:result) { described_class.call(customer:, params:, billing_entity:) }
+
+        let(:plan) { create(:plan, organization: customer.organization) }
+        let(:other_billing_entity) { create(:billing_entity, organization: customer.organization) }
+        let(:params) { {plan_code: plan.code} }
+
+        context "when multi_entity_billing flag is disabled" do
+          let(:billing_entity) { other_billing_entity }
+
+          it "does not assign an explicit billing entity on the subscription" do
+            expect(result).to be_success
+            expect(subscriptions.first.billing_entity_id).to be_nil
+          end
+        end
+
+        context "when multi_entity_billing flag is enabled" do
+          before { customer.organization.enable_feature_flag!(:multi_entity_billing) }
+
+          context "when the billing entity differs from the customer default" do
+            let(:billing_entity) { other_billing_entity }
+
+            it "assigns the billing entity on the subscription" do
+              expect(result).to be_success
+              expect(subscriptions.first.billing_entity_id).to eq(other_billing_entity.id)
+            end
+          end
+
+          context "when the billing entity matches the customer default" do
+            let(:billing_entity) { customer.billing_entity }
+
+            it "leaves the subscription's billing_entity_id nil so it inherits at billing time" do
+              expect(result).to be_success
+              expect(subscriptions.first.billing_entity_id).to be_nil
+            end
+          end
+        end
+      end
     end
   end
 end

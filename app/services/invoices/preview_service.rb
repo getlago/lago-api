@@ -22,6 +22,7 @@ module Invoices
       return result.not_allowed_failure!(code: "premium_integration_missing") if persisted_subscriptions && !organization.preview_enabled?
       return result unless currencies_aligned?
       return result unless billing_times_aligned?
+      return result unless billing_entities_aligned?
 
       @invoice = Invoice.new(
         organization:,
@@ -53,7 +54,32 @@ module Invoices
 
     attr_accessor :customer, :subscriptions, :invoice, :applied_coupons, :first_subscription, :persisted_subscriptions, :subscription_context
     delegate :organization, to: :customer
-    delegate :billing_entity, to: :customer
+
+    def billing_entity
+      @billing_entity ||= if multi_entity_billing_enabled?
+        first_subscription.billing_entity || customer.billing_entity
+      else
+        customer.billing_entity
+      end
+    end
+
+    def billing_entities_aligned?
+      return true unless multi_entity_billing_enabled?
+      return true if subscriptions.size <= 1
+
+      effective_entity_ids = subscriptions.map { |s| s.billing_entity_id || customer.billing_entity_id }.uniq
+
+      if effective_entity_ids.size > 1
+        result.single_validation_failure!(error_code: "subscription_billing_entities_do_not_match")
+        return false
+      end
+
+      true
+    end
+
+    def multi_entity_billing_enabled?
+      organization.feature_flag_enabled?(:multi_entity_billing)
+    end
 
     def fetch_context
       return :terminated if subscriptions.any?(&:terminated?)
