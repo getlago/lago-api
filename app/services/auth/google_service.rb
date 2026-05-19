@@ -110,8 +110,7 @@ module Auth
         result.user = User.create!(email:, password: SecureRandom.hex)
 
         result.organization = Organizations::CreateService
-          .call(name: organization_name, document_numbering: "per_organization")
-          .raise_if_error!
+          .call!(name: organization_name, document_numbering: "per_organization")
           .organization
 
         result.membership = Membership.create!(
