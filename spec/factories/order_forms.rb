@@ -15,7 +15,7 @@ FactoryBot.define do
     trait :signed do
       status { :signed }
       signed_at { Time.current }
-      signed_by_user_id { association(:user).id }
+      signed_by_user { association(:user) }
     end
 
     trait :expired do

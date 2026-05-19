@@ -19,6 +19,7 @@ class OrderForm < ApplicationRecord
   belongs_to :organization
   belongs_to :customer
   belongs_to :quote_version
+  belongs_to :signed_by_user, class_name: "User", optional: true
   has_one :quote, through: :quote_version
 
   enum :status, STATUSES,
