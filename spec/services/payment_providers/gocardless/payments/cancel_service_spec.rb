@@ -75,8 +75,9 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CancelService do
         ))
     end
 
-    it "returns a successful result without raising" do
+    it "returns a successful result with the payment" do
       expect(result).to be_success
+      expect(result.payment).to eq(payment)
     end
 
     it "logs the underlying error message" do

@@ -34,6 +34,7 @@ module PaymentProviders
           raise unless e.code == "cancellation_failed"
 
           Rails.logger.info("GoCardless payment not cancelable for payment #{payment.id}: #{e.message}")
+          result.payment = payment
           result
         rescue Faraday::ConnectionFailed => e
           # GoCardless gem surfaces transport errors as raw Faraday
