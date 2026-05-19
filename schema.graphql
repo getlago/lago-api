@@ -9758,6 +9758,7 @@ type ProjectedChargeFilterUsage {
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
+  projectedPresentationBreakdowns: [PresentationBreakdownUsage!]
   projectedUnits: Float!
   units: Float!
   values: ChargeFilterValues!

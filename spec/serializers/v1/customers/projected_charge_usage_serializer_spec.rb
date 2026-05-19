@@ -320,7 +320,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           "ProjectionResult",
           projected_units: expected_filter_projected_units / 3,
           projected_amount_cents: expected_filter_projected_amount_cents / 3,
-          projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
+          projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3,
+          projected_presentation_breakdowns: []
         )
         allow(::Fees::ProjectionService).to receive(:call).and_return(
           instance_double("ServiceResult", raise_if_error!: individual_projection_result)

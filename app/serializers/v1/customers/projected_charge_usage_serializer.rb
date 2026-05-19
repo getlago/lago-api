@@ -186,7 +186,7 @@ module V1
           **usage_data.except(:amount_currency),
           invoice_display_name: charge_filter&.invoice_display_name,
           values: charge_filter&.to_h,
-          presentation_breakdowns: PresentationBreakdownBuilder.call(grouped_fees, filter: PresentationBreakdownBuilder::ALL)
+          presentation_breakdowns: V1::Customers::PresentationBreakdownBuilder.call(grouped_fees, filter: V1::Customers::PresentationBreakdownBuilder::ALL, filter_breakdown: V1::Customers::PresentationBreakdownBuilder::ALL)
         }
       end
 
