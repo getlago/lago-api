@@ -183,12 +183,12 @@ RSpec.describe Fees::ProjectionService do
           )
         end
 
-        it "returns projected_presentation_breakdowns with period_ratio applied to units" do
+        it "returns projected_presentation_breakdowns as current units plus period_ratio applied to units" do
           result = service.call
 
           expect(result).to be_success
           expect(result.projected_presentation_breakdowns).to match_array([
-            have_attributes(presentation_by: {"department" => "engineering"}, units: 30.0)
+            have_attributes(presentation_by: {"department" => "engineering"}, units: 90.0)
           ])
         end
       end

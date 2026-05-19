@@ -337,14 +337,35 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
         expect(standard_charge_usage["projectedPresentationBreakdowns"]).to be_empty
 
         grouped_usage = standard_charge_usage["groupedUsage"]
-        expect(grouped_usage.first["presentationBreakdowns"]).to eq([
-          {"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}
-        ])
-        expect(grouped_usage.first["projectedPresentationBreakdowns"]).to match_array([
-          include("presentationBy" => {"cloud" => "aws"})
-        ])
+        expect(grouped_usage.first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+        expect(grouped_usage.first["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "5.935483870967742"}])
+
         expect(grouped_usage.second["presentationBreakdowns"]).to be_empty
         expect(grouped_usage.second["projectedPresentationBreakdowns"]).to be_empty
+      end
+    end
+
+    context "without charge filters" do
+      let(:charge_filter_value) { nil }
+
+      it "returns presentation breakdowns in grouped_usage" do
+        travel_to(Time.parse("2025-07-15T10:00:00Z")) do
+          result = execute_graphql(
+            customer_portal_user: customer,
+            query:,
+            variables: {
+              subscriptionId: subscription.id
+            }
+          )
+
+          charges_usage = result["data"]["customerPortalCustomerProjectedUsage"]["chargesUsage"]
+          standard_charge_usage = charges_usage.find { |u| u["billableMetric"]["code"] == sum_metric.code }
+          expect(standard_charge_usage["presentationBreakdowns"]).to be_empty
+
+          grouped_usage = standard_charge_usage["groupedUsage"]
+          expect(grouped_usage.first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+          expect(grouped_usage.first["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "5.935483870967742"}])
+        end
       end
     end
 
@@ -407,17 +428,38 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
           expect(presentation_charge_usage["presentationBreakdowns"]).to eq([
             {"presentationBy" => {"cloud" => "gcp"}, "units" => "3.0"}
           ])
-          expect(presentation_charge_usage["projectedPresentationBreakdowns"]).to match_array([
-            include("presentationBy" => {"cloud" => "gcp"})
+          expect(presentation_charge_usage["projectedPresentationBreakdowns"]).to eq([
+            {"presentationBy" => {"cloud" => "gcp"}, "units" => "4.4516129032258065"}
           ])
 
           expect(sum_charge_usage["groupedUsage"]).to be_empty
-          expect(sum_charge_usage["presentationBreakdowns"]).to eq([
-            {"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}
-          ])
-          expect(sum_charge_usage["projectedPresentationBreakdowns"]).to match_array([
-            include("presentationBy" => {"cloud" => "aws"})
-          ])
+          expect(sum_charge_usage["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+          expect(sum_charge_usage["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "5.935483870967742"}])
+        end
+      end
+
+      context "without charge filters" do
+        let(:charge_filter_value) { nil }
+
+        it "returns presentation breakdowns directly on both charges" do
+          travel_to(Time.parse("2025-07-15T10:00:00Z")) do
+            result = execute_graphql(
+              customer_portal_user: customer,
+              query:,
+              variables: {
+                subscriptionId: subscription.id
+              }
+            )
+
+            charges_usage = result["data"]["customerPortalCustomerProjectedUsage"]["chargesUsage"]
+            presentation_charge_usage = charges_usage.find { |u| u["billableMetric"]["code"] == presentation_metric.code }
+            sum_charge_usage = charges_usage.find { |u| u["billableMetric"]["code"] == sum_metric.code }
+
+            expect(presentation_charge_usage["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "gcp"}, "units" => "3.0"}])
+            expect(presentation_charge_usage["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "gcp"}, "units" => "4.4516129032258065"}])
+            expect(sum_charge_usage["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+            expect(sum_charge_usage["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "5.935483870967742"}])
+          end
         end
       end
     end

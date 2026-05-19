@@ -9745,9 +9745,11 @@ type ProjectedChargeFilterUsage {
   eventsCount: Int!
   id: ID
   invoiceDisplayName: String
+  presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
+  projectedPresentationBreakdowns: [PresentationBreakdownUsage!]
   projectedUnits: Float!
   units: Float!
   values: ChargeFilterValues!

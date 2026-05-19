@@ -6,7 +6,7 @@ module Types
       class ProjectedGroupedUsage < Types::BaseObject
         graphql_name "ProjectedGroupedChargeUsage"
 
-        delegate :projected_units, :projected_amount_cents, :projected_presentation_breakdowns, to: :projection_result
+        delegate :projected_units, :projected_amount_cents, to: :projection_result
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
@@ -59,7 +59,16 @@ module Types
         end
 
         def presentation_breakdowns
-          Types::Fees::PresentationBreakdownBuilder.call(object, filter: Types::Fees::PresentationBreakdownBuilder::GROUPED)
+          @presentation_breakdowns ||= Types::Fees::PresentationBreakdownBuilder.call(
+            object,
+            filter: Types::Fees::PresentationBreakdownBuilder::GROUPED
+          )
+        end
+
+        def projected_presentation_breakdowns
+          return [] if presentation_breakdowns.empty?
+
+          projection_result.projected_presentation_breakdowns
         end
 
         private

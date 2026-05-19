@@ -77,11 +77,11 @@ module Types
         end
 
         def presentation_breakdowns
-          Types::Fees::PresentationBreakdownBuilder.call(object, filter: Types::Fees::PresentationBreakdownBuilder::UNGROUPED)
+          @presentation_breakdowns ||= Types::Fees::PresentationBreakdownBuilder.call(object, filter: Types::Fees::PresentationBreakdownBuilder::UNGROUPED)
         end
 
         def projected_presentation_breakdowns
-          return [] if has_grouping?
+          return [] if presentation_breakdowns.empty?
 
           calculate_projection(:projected_presentation_breakdowns, [])
         end
