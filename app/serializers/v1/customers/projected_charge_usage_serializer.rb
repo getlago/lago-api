@@ -16,8 +16,7 @@ module V1
             billable_metric: billable_metric_data(fee),
             filters: cached_filters(fees),
             grouped_usage: cached_grouped_usage(fees),
-            presentation_breakdowns: V1::Customers::PresentationBreakdownBuilder.call(fees, filter: V1::Customers::PresentationBreakdownBuilder::UNGROUPED, filter_breakdown: V1::Customers::PresentationBreakdownBuilder::ALL),
-            projected_presentation_breakdowns: project_ungrouped_presentation_breakdowns(fees)
+            presentation_breakdowns: V1::Customers::PresentationBreakdownBuilder.call(fees, filter: V1::Customers::PresentationBreakdownBuilder::UNGROUPED, filter_breakdown: V1::Customers::PresentationBreakdownBuilder::ALL)
           }
         end
       end
