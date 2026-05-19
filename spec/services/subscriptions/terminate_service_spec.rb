@@ -131,6 +131,17 @@ RSpec.describe Subscriptions::TerminateService do
         expect(result).to be_success
         expect(next_subscription.reload).to be_canceled
       end
+
+      context "when called with upgrade: true" do
+        subject(:result) { described_class.call(subscription:, on_termination_credit_note:, upgrade: true) }
+
+        it "does not cancel the next subscription" do
+          subject
+
+          expect(result).to be_success
+          expect(next_subscription.reload).to be_pending
+        end
+      end
     end
 
     context "when subscription was paid in advance" do
