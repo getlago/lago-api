@@ -122,6 +122,54 @@ RSpec.describe Fees::Commitments::Minimum::CalculatePreviewFeeService do
           end
         end
       end
+
+      context "when subscription is terminated mid advance period" do
+        let(:advance_year_start) { DateTime.parse("2026-01-01T00:00:00") }
+        let(:terminated_at) { DateTime.parse("2026-07-01T00:00:00") }
+        let(:subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            started_at: advance_year_start,
+            status: :terminated,
+            terminated_at:
+          )
+        end
+        let(:prev_invoice) { create(:invoice, customer:, organization:) }
+        let(:virtual_invoice_subscription) do
+          InvoiceSubscription.new(
+            subscription:,
+            invoice: preview_invoice,
+            organization_id: organization.id,
+            from_datetime: advance_year_start,
+            to_datetime: DateTime.parse("2026-12-31T23:59:59"),
+            timestamp: terminated_at
+          )
+        end
+
+        before do
+          create(
+            :invoice_subscription,
+            subscription:,
+            invoice: prev_invoice,
+            from_datetime: advance_year_start,
+            to_datetime: DateTime.parse("2026-12-31T23:59:59"),
+            timestamp: DateTime.parse("2026-01-01T10:00:00")
+          )
+          create(:fee, fee_type: :subscription, subscription:, invoice: prev_invoice)
+        end
+
+        it "prorates commitment using terminated_at, not the advance IS to_datetime" do
+          fee = result.fee
+          expect(fee).not_to be_nil
+          # days_active = Jan 1 => Jul 1 ≈ 181 days (half the year)
+          # days_total  = Jan 1 => Dec 31 ≈ 365 days
+          # proration ≈ 0.50 => commitment ≈ 50_000 cents
+          # Without terminated_at: days_active = 365, proration = 1.0 => commitment = 1_000_00
+          expect(fee.amount_cents).to be_between(40_000, 60_000)
+        end
+      end
     end
 
     context "when preview fees already meet the commitment" do

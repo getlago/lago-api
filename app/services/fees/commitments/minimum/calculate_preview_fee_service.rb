@@ -111,10 +111,12 @@ module Fees
         end
 
         def dates_service
-          @dates_service ||= ::Commitments::DatesService.new_instance(
-            commitment: minimum_commitment,
-            invoice_subscription: reconciliation_invoice_subscription
-          ).call
+          current_usage = subscription.plan.pay_in_advance? || subscription.terminated?
+          @dates_service ||= ::Subscriptions::DatesService.new_instance(
+            subscription,
+            reconciliation_invoice_subscription.timestamp,
+            current_usage:
+          )
         end
 
         def fees_total_amount_cents
