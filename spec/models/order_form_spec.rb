@@ -26,6 +26,7 @@ RSpec.describe OrderForm do
       expect(order_form).to belong_to(:organization)
       expect(order_form).to belong_to(:customer)
       expect(order_form).to belong_to(:quote_version)
+      expect(order_form).to belong_to(:signed_by_user).class_name("User").optional
       expect(order_form).to have_one(:quote).through(:quote_version)
     end
   end
