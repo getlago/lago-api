@@ -93,7 +93,7 @@ module ActiveJob
 
       if ex
         error do
-          {
+          payload = {
             level: "error",
             event: "perform",
             status: "error",
@@ -101,11 +101,11 @@ module ActiveJob
             duration: event.duration.round(2),
             job_id: job.job_id,
             queue: job.queue_name,
-            exception: {
-              class: ex.class.name,
-              message: ex.message
-            }
-          }.to_json
+            arguments: args_info(job),
+            retries: job.executions,
+            exception: exception_payload(ex)
+          }
+          merge_organization_id(payload, job).to_json
         end
       elsif event.payload[:aborted]
         info do
@@ -142,29 +142,32 @@ module ActiveJob
 
       info do
         if ex
-          {
+          payload = {
             level: "error",
             event: "retry",
             status: "error",
             job: job.class.name,
             job_id: job.job_id,
+            queue: job.queue_name,
+            arguments: args_info(job),
             execution: job.executions,
             wait: wait.to_i,
-            exception: {
-              class: ex.class.name,
-              message: ex.message
-            }
-          }.to_json
+            exception: exception_payload(ex)
+          }
+          merge_organization_id(payload, job).to_json
         else
-          {
+          payload = {
             level: "info",
             event: "retry",
             status: "success",
             job: job.class.name,
             job_id: job.job_id,
+            queue: job.queue_name,
+            arguments: args_info(job),
             execution: job.executions,
             wait: wait.to_i
-          }.to_json
+          }
+          merge_organization_id(payload, job).to_json
         end
       end
     end
@@ -175,19 +178,18 @@ module ActiveJob
       ex = event.payload[:error]
 
       error do
-        {
+        payload = {
           level: "error",
           event: "retry",
           status: "stopped",
           job: job.class.name,
           job_id: job.job_id,
           queue: job.queue_name,
+          arguments: args_info(job),
           retries: job.executions,
-          exception: {
-            class: ex.class.name,
-            message: ex.message
-          }
-        }.to_json
+          exception: exception_payload(ex)
+        }
+        merge_organization_id(payload, job).to_json
       end
     end
     subscribe_log_level :retry_stopped, :error
@@ -197,17 +199,18 @@ module ActiveJob
       ex = event.payload[:error]
 
       error do
-        {
+        payload = {
           level: "error",
           event: "discard",
           status: "error",
           job: job.class.name,
           job_id: job.job_id,
-          exception: {
-            class: ex.class.name,
-            message: ex.message
-          }
-        }.to_json
+          queue: job.queue_name,
+          arguments: args_info(job),
+          retries: job.executions,
+          exception: exception_payload(ex)
+        }
+        merge_organization_id(payload, job).to_json
       end
     end
     subscribe_log_level :discard, :error
@@ -243,17 +246,17 @@ module ActiveJob
 
     def enqueue_error(job, ex)
       error do
-        {
+        payload = {
           level: "error",
           event: "enqueue",
           status: "error",
           job: job.class.name,
+          job_id: job.job_id,
           queue: job.queue_name,
-          exception: {
-            class: ex.class.name,
-            message: ex.message
-          }
-        }.to_json
+          arguments: args_info(job),
+          exception: exception_payload(ex)
+        }
+        merge_organization_id(payload, job).to_json
       end
     end
 
@@ -269,6 +272,34 @@ module ActiveJob
           arguments: args_info(job),
           **extra
         }.to_json
+      end
+    end
+
+    def exception_payload(ex)
+      {class: ex.class.name, message: ex.message}
+    end
+
+    def merge_organization_id(payload, job)
+      org_id = organization_id_from(job)
+      unless org_id.nil?
+        payload[:organization_id] = org_id
+      end
+      payload
+    end
+
+    def organization_id_from(job)
+      arg = job.arguments&.find { |a| !organization_id_in(a).nil? }
+      organization_id_in(arg) if arg
+    rescue StandardError
+      nil
+    end
+
+    def organization_id_in(arg)
+      case arg
+      when Hash
+        arg[:organization_id].presence || arg["organization_id"].presence
+      else
+        arg.organization_id if arg.respond_to?(:organization_id)
       end
     end
   end
