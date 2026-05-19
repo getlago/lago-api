@@ -3,16 +3,14 @@
 module Fees
   module Commitments
     module Minimum
-      class CalculatePreviewFeeService < BaseService
+      class CalculatePreviewFeeService < BuildFeeBaseService
         Result = BaseResult[:fee]
 
         def initialize(invoice_subscription:, preview_fees_amount_cents:, preview_fees_precise_amount_cents:)
-          @invoice_subscription = invoice_subscription
           @preview_fees_amount_cents = preview_fees_amount_cents
           @preview_fees_precise_amount_cents = preview_fees_precise_amount_cents
-          @minimum_commitment = invoice_subscription.subscription.plan.minimum_commitment
 
-          super
+          super(invoice_subscription:)
         end
 
         def call
@@ -23,60 +21,17 @@ module Fees
           return result if true_up_amount_cents.zero?
 
           true_up_precise_amount_cents = [commitment_amount_cents - fees_total_precise_amount_cents, 0].max
-          precise_unit_amount = true_up_amount_cents / currency.subunit_to_unit.to_f
 
-          new_fee = Fee.new(
-            invoice:,
-            organization_id: organization.id,
-            billing_entity_id: invoice.billing_entity_id,
-            subscription:,
-            fee_type: :commitment,
-            invoiceable_type: "Commitment",
-            invoiceable_id: minimum_commitment.id,
+          result.fee = build_fee(
             amount_cents: true_up_amount_cents,
-            precise_amount_cents: true_up_precise_amount_cents,
-            unit_amount_cents: true_up_amount_cents,
-            precise_unit_amount:,
-            amount_currency: subscription.plan.amount_currency,
-            invoice_display_name: minimum_commitment.invoice_name,
-            units: 1,
-            taxes_amount_cents: 0,
-            taxes_precise_amount_cents: 0.to_d,
-            properties: commitment_boundaries
+            precise_amount_cents: true_up_precise_amount_cents
           )
-
-          result.fee = new_fee
           result
         end
 
         private
 
-        attr_reader :invoice_subscription, :minimum_commitment,
-          :preview_fees_amount_cents, :preview_fees_precise_amount_cents
-
-        delegate :invoice, :subscription, to: :invoice_subscription
-        delegate :organization, to: :invoice
-
-        def pay_in_advance_first_period?
-          subscription.plan.pay_in_advance? && !reconciliation_invoice_subscription
-        end
-
-        def reconciliation_invoice_subscription
-          return @reconciliation_invoice_subscription if defined?(@reconciliation_invoice_subscription)
-
-          @reconciliation_invoice_subscription = if subscription.plan.pay_in_advance?
-            invoice_subscription.previous_invoice_subscription
-          else
-            invoice_subscription
-          end
-        end
-
-        def commitment_boundaries
-          {
-            "from_datetime" => reconciliation_invoice_subscription.from_datetime,
-            "to_datetime" => reconciliation_invoice_subscription.to_datetime
-          }
-        end
+        attr_reader :preview_fees_amount_cents, :preview_fees_precise_amount_cents
 
         def commitment_amount_cents
           @commitment_amount_cents ||= (minimum_commitment.amount_cents * proration_coefficient).round
@@ -171,10 +126,6 @@ module Fees
             .where(subscription_id: subscription.id)
             .where("(fees.properties->>'fixed_charges_from_datetime')::timestamptz >= ?", dates_service.previous_beginning_of_period)
             .where("(fees.properties->>'fixed_charges_to_datetime')::timestamptz <= ?", dates_service.end_of_period&.iso8601(3))
-        end
-
-        def currency
-          Money::Currency.new(subscription.plan.amount_currency)
         end
       end
     end
