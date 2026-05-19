@@ -3,10 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::CancelPaymentService do
-  # TODO: remove after PRs adding these classes are merged...
-  class PaymentProviders::Adyen::Payments::CancelService < BaseService; end
-  class PaymentProviders::Gocardless::Payments::CancelService < BaseService; end
-
   subject(:result) { described_class.call(payment:) }
 
   let(:organization) { create(:organization) }
