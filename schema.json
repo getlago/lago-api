@@ -559,6 +559,12 @@
               "deprecationReason": null
             },
             {
+              "name": "invoice_ready_to_finalize",
+              "description": "invoice.ready_to_finalize",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "invoice_failed",
               "description": "invoice.failed",
               "isDeprecated": false,
@@ -27969,6 +27975,12 @@
             },
             {
               "name": "invoice_drafted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_ready_to_finalize",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

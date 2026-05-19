@@ -66,6 +66,7 @@ module Invoices
         if grace_period?
           SendWebhookJob.perform_after_commit("invoice.drafted", invoice)
           Utils::ActivityLog.produce_after_commit(invoice, "invoice.drafted")
+          notify_ready_to_finalize unless invoice.tax_pending?
         end
 
         return result
@@ -76,6 +77,7 @@ module Invoices
       elsif grace_period?
         SendWebhookJob.perform_after_commit("invoice.drafted", invoice)
         Utils::ActivityLog.produce_after_commit(invoice, "invoice.drafted")
+        notify_ready_to_finalize unless invoice.tax_pending?
       else
         unless invoice.closed? # we dont need to send the webhooks if the invoice was closed ( skip 0 invoice setting )
           SendWebhookJob.perform_after_commit("invoice.created", invoice)
@@ -197,6 +199,11 @@ module Invoices
       after_commit do
         DailyUsages::FillFromInvoiceJob.perform_later(invoice:, subscriptions:)
       end
+    end
+
+    def notify_ready_to_finalize
+      SendWebhookJob.perform_after_commit("invoice.ready_to_finalize", invoice)
+      Utils::ActivityLog.produce_after_commit(invoice, "invoice.ready_to_finalize")
     end
   end
 end
