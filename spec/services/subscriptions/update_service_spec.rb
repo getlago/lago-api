@@ -948,6 +948,8 @@ RSpec.describe Subscriptions::UpdateService do
     end
 
     context "with activation_rules" do
+      before { create(:payment_method, customer: subscription.customer, organization: subscription.organization) }
+
       context "when subscription is pending" do
         context "when activation rules exist" do
           let(:subscription) { create(:subscription, :pending, :with_activation_rules, activation_rules_config: [{type: "payment", timeout_hours: 48}], subscription_at: Time.current + 5.days) }
