@@ -190,6 +190,23 @@ RSpec.describe Api::V1::Plans::Charges::FiltersController do
         expect(ChargeFilters::CascadeJob).to have_received(:perform_later)
       end
     end
+
+    context "with presentation_group_keys" do
+      let(:create_params) do
+        {
+          invoice_display_name: "US Region Filter",
+          properties: {amount: "50", presentation_group_keys: [{value: "region"}]},
+          values: {billable_metric_filter.key => ["us"]}
+        }
+      end
+
+      it "ignores presentation_group_keys" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:filter][:properties]).not_to have_key(:presentation_group_keys)
+      end
+    end
   end
 
   describe "PUT /api/v1/plans/:plan_code/charges/:charge_code/filters/:id" do
@@ -242,6 +259,21 @@ RSpec.describe Api::V1::Plans::Charges::FiltersController do
         subject
 
         expect(response).to be_not_found_error("charge_filter")
+      end
+    end
+
+    context "with presentation_group_keys" do
+      let(:update_params) do
+        {
+          properties: {amount: "100", presentation_group_keys: [{value: "region"}]}
+        }
+      end
+
+      it "ignores presentation_group_keys" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:filter][:properties]).not_to have_key(:presentation_group_keys)
       end
     end
   end

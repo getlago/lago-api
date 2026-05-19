@@ -25,7 +25,8 @@ module Mutations
           timestamp: Time.current.to_i,
           voided_invoice_id: args[:voided_invoice_id],
           payment_method_params: args[:payment_method]&.to_h,
-          invoice_custom_section: args[:invoice_custom_section]
+          invoice_custom_section: args[:invoice_custom_section],
+          billing_entity_id: args[:billing_entity_id]
         )
 
         result.success? ? result.invoice : result_error(result)

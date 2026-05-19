@@ -1623,5 +1623,89 @@ RSpec.describe Subscriptions::CreateService do
         expect(result.subscription.activation_rules.count).to eq(0)
       end
     end
+
+    describe "billing entity binding" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+
+      context "when multi_entity_billing flag is OFF" do
+        it "ignores billing_entity_code and persists nil" do
+          params[:billing_entity_code] = billing_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to be_nil
+        end
+
+        it "ignores billing_entity_id and persists nil" do
+          params[:billing_entity_id] = billing_entity.id
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to be_nil
+        end
+      end
+
+      context "when multi_entity_billing flag is ON" do
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "persists nil when no billing entity reference is provided" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to be_nil
+        end
+
+        it "binds the subscription to the entity matched by billing_entity_id" do
+          params[:billing_entity_id] = billing_entity.id
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to eq(billing_entity.id)
+        end
+
+        it "binds the subscription to the entity matched by billing_entity_code" do
+          params[:billing_entity_code] = billing_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to eq(billing_entity.id)
+        end
+
+        it "fails with billing_entity_not_found when billing_entity_id is unknown" do
+          params[:billing_entity_id] = SecureRandom.uuid
+
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("billing_entity_not_found")
+        end
+
+        it "fails with billing_entity_not_found when billing_entity_code is unknown" do
+          params[:billing_entity_code] = "unknown-entity-code"
+
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("billing_entity_not_found")
+        end
+
+        it "prefers billing_entity_id over billing_entity_code when both are provided" do
+          other_entity = create(:billing_entity, organization:)
+          params[:billing_entity_id] = billing_entity.id
+          params[:billing_entity_code] = other_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+    end
   end
 end

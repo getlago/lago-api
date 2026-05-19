@@ -167,6 +167,8 @@ module Api
           .permit(
             :external_customer_id,
             :plan_code,
+            :billing_entity_code,
+            :billing_entity_id,
             :name,
             :external_id,
             :billing_time,

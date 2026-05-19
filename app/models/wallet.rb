@@ -41,6 +41,8 @@ class Wallet < ApplicationRecord
 
   LOWEST_PRIORITY = 50
 
+  REFRESH_RELEVANT_ATTRIBUTES = %w[code priority allowed_fee_types].freeze
+
   validates :rate_amount, numericality: {greater_than: 0}
   validates :currency, inclusion: {in: currency_list}
   validates :invoice_requires_successful_payment, exclusion: [nil]

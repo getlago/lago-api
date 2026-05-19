@@ -36,6 +36,8 @@ module BillableMetrics
       BillableMetrics::DeleteEventsJob.perform_later(metric)
       BillableMetricFilters::DestroyAllJob.perform_later(metric.id)
 
+      SendWebhookJob.perform_after_commit("billable_metric.deleted", metric)
+
       result.billable_metric = metric
       result
     end

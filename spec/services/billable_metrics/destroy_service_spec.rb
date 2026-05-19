@@ -50,6 +50,12 @@ RSpec.describe BillableMetrics::DestroyService do
       end.to have_enqueued_job(BillableMetrics::DeleteEventsJob).with(billable_metric)
     end
 
+    it "enqueues a billable_metric.deleted webhook" do
+      destroy_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("billable_metric.deleted", billable_metric)
+    end
+
     it "marks invoice as ready to be refreshed" do
       invoice = create(:invoice, :draft)
       create(:invoice_subscription, subscription:, invoice:)

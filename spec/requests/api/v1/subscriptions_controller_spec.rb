@@ -316,6 +316,82 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "when binding the subscription to an explicit billing entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          billing_time: "anniversary",
+          billing_entity_code: billing_entity.code
+        }
+      end
+
+      context "when multi_entity_billing flag is enabled" do
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "binds the subscription to the resolved billing entity" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          subscription = Subscription.find_by(external_id: params[:external_id])
+          expect(subscription.billing_entity_id).to eq(billing_entity.id)
+        end
+
+        context "when binding via billing_entity_id instead of code" do
+          let(:params) do
+            {
+              external_customer_id: customer.external_id,
+              plan_code:,
+              external_id: SecureRandom.uuid,
+              billing_time: "anniversary",
+              billing_entity_id: billing_entity.id
+            }
+          end
+
+          it "binds the subscription to the resolved billing entity" do
+            subject
+
+            expect(response).to have_http_status(:ok)
+            subscription = Subscription.find_by(external_id: params[:external_id])
+            expect(subscription.billing_entity_id).to eq(billing_entity.id)
+          end
+        end
+      end
+
+      context "when multi_entity_billing flag is disabled" do
+        it "ignores the param and persists subscription with no explicit billing entity" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          subscription = Subscription.find_by(external_id: params[:external_id])
+          expect(subscription.billing_entity_id).to be_nil
+        end
+      end
+
+      context "without billing_entity_code" do
+        let(:params) do
+          {
+            external_customer_id: customer.external_id,
+            plan_code:,
+            external_id: SecureRandom.uuid,
+            billing_time: "anniversary"
+          }
+        end
+
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "persists subscription with no explicit billing entity" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          subscription = Subscription.find_by(external_id: params[:external_id])
+          expect(subscription.billing_entity_id).to be_nil
+        end
+      end
+    end
+
     context "with invalid plan code" do
       let(:plan_code) { "#{plan.code}-invalid" }
 

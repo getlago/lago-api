@@ -185,10 +185,11 @@ RSpec.describe PaymentRequests::Payments::AdyenService do
         )
       end
 
-      it "resets the customer dunning campaign counters" do
+      it "resets the customer dunning campaign counters for the payment request currency" do
         expect { result && customer.reload }
           .to change(customer, :last_dunning_campaign_attempt).to(0)
           .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+          .and change(customer, :dunning_currency_attempts).to({"USD" => 0})
 
         expect(result).to be_success
       end

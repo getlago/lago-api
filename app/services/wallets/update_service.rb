@@ -24,6 +24,12 @@ module Wallets
       return result unless valid_limitations?
       return result unless valid_payment_method?
 
+      if organization_flag_enabled?(:multi_entity_billing) && (params[:billing_entity_id].present? || params[:billing_entity_code].present?)
+        return result.not_found_failure!(resource: "billing_entity") unless billing_entity
+
+        wallet.billing_entity_id = billing_entity.id
+      end
+
       ActiveRecord::Base.transaction do
         wallet.name = params[:name] if params.key?(:name)
         wallet.code = params[:code] if params[:code]
@@ -58,7 +64,7 @@ module Wallets
 
       InvoiceCustomSections::AttachToResourceService.call(resource: wallet, params:)
       SendWebhookJob.perform_later("wallet.updated", wallet)
-      Customers::RefreshWalletsService.call(customer: wallet.customer)
+      Customers::RefreshWalletsService.call(customer: wallet.customer) if needs_refresh?
 
       result.wallet = wallet
       result
@@ -121,6 +127,7 @@ module Wallets
         next if existing_wallet_billable_metric_ids.include?(bm.id)
 
         WalletTarget.create!(wallet:, billable_metric: bm, organization_id: wallet.organization_id)
+        @wallet_targets_changed = true
       end
 
       sanitize_wallet_billable_metrics(existing_wallet_billable_metric_ids) if existing_wallet_billable_metric_ids.present?
@@ -129,8 +136,18 @@ module Wallets
     def sanitize_wallet_billable_metrics(existing_wallet_billable_metric_ids)
       not_needed_wallet_target_ids = existing_wallet_billable_metric_ids - billable_metrics.pluck(:id)
       not_needed_wallet_target_ids.each do |wallet_billable_metric_id|
-        WalletTarget.find_by(wallet:, billable_metric_id: wallet_billable_metric_id, organization: wallet.organization)&.destroy!
+        target = WalletTarget.find_by(wallet:, billable_metric_id: wallet_billable_metric_id, organization: wallet.organization)
+        next unless target
+
+        target.destroy!
+        @wallet_targets_changed = true
       end
+    end
+
+    def needs_refresh?
+      return true if @wallet_targets_changed
+
+      (wallet.saved_changes.keys & Wallet::REFRESH_RELEVANT_ATTRIBUTES).any?
     end
 
     def billable_metric_identifiers
@@ -165,6 +182,21 @@ module Wallets
       return unless params.key?(:metadata)
 
       Metadata::UpdateItemService.call!(owner: wallet, value: params[:metadata], partial: partial_metadata.present?)
+    end
+
+    def organization_flag_enabled?(flag)
+      wallet.customer.organization.feature_flag_enabled?(flag)
+    end
+
+    def billing_entity
+      return @billing_entity if defined? @billing_entity
+
+      scope = wallet.customer.organization.billing_entities
+      @billing_entity = if params[:billing_entity_id].present?
+        scope.find_by(id: params[:billing_entity_id])
+      elsif params[:billing_entity_code].present?
+        scope.find_by(code: params[:billing_entity_code])
+      end
     end
   end
 end

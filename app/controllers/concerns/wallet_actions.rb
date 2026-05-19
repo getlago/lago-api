@@ -96,6 +96,8 @@ module WalletActions
       :ignore_paid_top_up_limits_on_creation,
       :transaction_name,
       :transaction_priority,
+      :billing_entity_code,
+      :billing_entity_id,
       metadata: {},
       transaction_metadata: [
         :key,
