@@ -15,7 +15,10 @@ module Invoices
 
       def call
         result.invoice = invoice
-        return result unless should_process_payment?
+        unless should_process_payment?
+          invoice.update!(ready_for_payment_processing: true) unless invoice.payment_succeeded? || invoice.voided?
+          return result
+        end
 
         unless invoice.total_amount_cents.positive?
           update_invoice_payment_status(payment_status: :succeeded)
@@ -86,6 +89,7 @@ module Invoices
 
       def call_async
         return result unless provider
+        invoice.update!(ready_for_payment_processing: false)
 
         Invoices::Payments::CreateJob.perform_after_commit(invoice:, payment_provider: provider, payment_method_params:)
 
