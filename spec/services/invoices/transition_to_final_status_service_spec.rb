@@ -15,6 +15,7 @@ RSpec.describe Invoices::TransitionToFinalStatusService do
     create(
       :invoice,
       organization:,
+      billing_entity:,
       currency: "EUR",
       fees_amount_cents:,
       issuing_date: Time.zone.now.beginning_of_month,
