@@ -3,11 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Adyen::Payments::CancelService do
-  # Test-local value object that mirrors the shape the Adyen gem returns for
-  # this endpoint (responds to #status and #response). Replaces an
-  # OpenStruct per project convention.
-  AdyenResponse = Data.define(:status, :response)
-
   subject(:result) { described_class.call(payment:) }
 
   let(:organization) { create(:organization) }
@@ -28,6 +23,8 @@ RSpec.describe PaymentProviders::Adyen::Payments::CancelService do
   let(:modifications_api) { Adyen::ModificationsApi.new(adyen_client, 70) }
 
   before do
+    stub_const("AdyenResponse", Data.define(:status, :response))
+
     allow(::Adyen::Client).to receive(:new).and_return(adyen_client)
     allow(adyen_client).to receive(:checkout).and_return(checkout)
     allow(checkout).to receive(:modifications_api).and_return(modifications_api)
