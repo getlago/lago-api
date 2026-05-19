@@ -2552,7 +2552,7 @@ type Coupon {
   amountCurrency: CurrencyEnum
   appliedCouponsCount: Int!
   billableMetrics: [BillableMetric!]
-  code: String
+  code: String!
   couponType: CouponTypeEnum!
   createdAt: ISO8601DateTime!
 
@@ -2795,7 +2795,7 @@ input CreateCouponInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  code: String
+  code: String!
   couponType: CouponTypeEnum!
   description: String
   expiration: CouponExpiration!

@@ -2109,7 +2109,7 @@ CREATE TABLE public.coupons (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     name character varying NOT NULL,
-    code character varying,
+    code character varying NOT NULL,
     status integer DEFAULT 0 NOT NULL,
     terminated_at timestamp(6) without time zone,
     amount_cents bigint,
@@ -12216,6 +12216,9 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260517101105'),
+('20260513105210'),
+('20260513105209'),
+('20260512155310'),
 ('20260512142543'),
 ('20260504134804'),
 ('20260430102814'),
@@ -13214,4 +13217,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-
