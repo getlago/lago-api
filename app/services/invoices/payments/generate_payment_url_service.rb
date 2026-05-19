@@ -23,6 +23,10 @@ module Invoices
           return result.single_validation_failure!(error_code: "invalid_invoice_status_or_payment_status")
         end
 
+        unless invoice.ready_for_payment_processing?
+          return result.single_validation_failure!(error_code: "payment_processor_is_currently_handling_payment")
+        end
+
         if current_payment_provider.blank?
           return result.single_validation_failure!(error_code: "missing_payment_provider")
         end

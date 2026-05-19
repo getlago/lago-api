@@ -19,6 +19,10 @@ module PaymentRequests
         return result.single_validation_failure!(error_code: "invalid_payment_provider") if gocardless_provider?
         return result.single_validation_failure!(error_code: "invalid_payment_status") if payable.payment_succeeded?
 
+        unless payable.ready_for_payment_processing?
+          return result.single_validation_failure!(error_code: "payment_processor_is_currently_handling_payment")
+        end
+
         if current_payment_provider.blank?
           return result.single_validation_failure!(error_code: "missing_payment_provider")
         end

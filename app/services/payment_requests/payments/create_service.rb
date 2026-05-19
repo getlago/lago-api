@@ -18,7 +18,10 @@ module PaymentRequests
         return result.not_found_failure!(resource: "payment_provider") unless provider
 
         result.payable = payable
-        return result unless should_process_payment?
+        unless should_process_payment?
+          payable.update!(ready_for_payment_processing: true) unless payable.payment_succeeded?
+          return result
+        end
 
         unless payable.total_amount_cents.positive?
           update_payable_payment_status(payment_status: :succeeded)
@@ -88,6 +91,8 @@ module PaymentRequests
 
       def call_async
         return result.not_found_failure!(resource: "payment_provider") unless provider
+
+        payable.update!(ready_for_payment_processing: false)
 
         PaymentRequests::Payments::CreateJob.perform_later(payable:, payment_provider: provider, payment_method_params:)
 
