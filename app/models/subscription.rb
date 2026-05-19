@@ -107,6 +107,10 @@ class Subscription < ApplicationRecord
     super || customer&.billing_entity
   end
 
+  def applicable_billing_entity_id
+    billing_entity_id || customer&.billing_entity_id
+  end
+
   def mark_as_active!(timestamp = Time.current)
     self.started_at ||= timestamp
     self.activated_at ||= timestamp

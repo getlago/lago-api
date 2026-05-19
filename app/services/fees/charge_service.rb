@@ -253,7 +253,7 @@ module Fees
       new_fee = Fee.new(
         invoice:,
         organization_id: organization.id,
-        billing_entity_id: subscription.customer.billing_entity_id,
+        billing_entity_id: subscription.applicable_billing_entity_id,
         subscription:,
         charge:,
         amount_cents:,
