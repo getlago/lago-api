@@ -41,6 +41,11 @@ module Subscriptions
             #       Depending on the termination behaviour, we will optionally refund the portion of the unconsumed
             #       subscription that was already paid.
 
+            if blocked_by_pending_taxes?
+              result.not_allowed_failure!(code: "cannot_terminate_with_pending_taxes")
+              result.raise_if_error!
+            end
+
             CreditNotes::CreateFromTermination.call!(
               subscription:,
               reason: "order_cancellation",
@@ -223,6 +228,10 @@ module Subscriptions
       return if params.empty?
 
       Subscriptions::UpdateService.call!(subscription:, params:)
+    end
+
+    def blocked_by_pending_taxes?
+      subscription.last_subscription_fee&.invoice&.tax_pending?
     end
   end
 end

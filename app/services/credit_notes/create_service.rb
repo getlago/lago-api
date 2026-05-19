@@ -43,7 +43,7 @@ module CreditNotes
           reason:,
           description:,
           credit_status: "available",
-          status: invoice.voided? ? "finalized" : invoice.status # credit notes dont have void state
+          status: credit_note_status
         )
 
         if metadata_value
@@ -161,6 +161,15 @@ module CreditNotes
 
     def non_offset_amounts_present?
       credit_amount_cents.positive? || refund_amount_cents.positive?
+    end
+
+    # NOTE: credit notes only support draft/finalized; voided invoices map to
+    #       finalized, and previews are never persisted so finalized is safe.
+    def credit_note_status
+      return "finalized" if invoice.voided?
+      return "finalized" if context == :preview
+
+      invoice.status
     end
 
     # NOTE: issuing_date must be in customer time zone (accounting date)

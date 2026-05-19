@@ -302,6 +302,10 @@ class Subscription < ApplicationRecord
 
     usage_thresholds.presence || plan.usage_thresholds.presence || plan.applicable_usage_thresholds
   end
+
+  def last_subscription_fee
+    fees.subscription.order(created_at: :desc).first
+  end
 end
 
 # == Schema Information
