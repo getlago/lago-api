@@ -23,6 +23,7 @@ class InvoiceSubscription < ApplicationRecord
     in_advance_charge_periodic: "in_advance_charge_periodic",
     progressive_billing: "progressive_billing"
   }.freeze
+  SUBSCRIPTION_INVOICING_REASONS = %w[subscription_starting subscription_periodic subscription_terminating].freeze
 
   enum :invoicing_reason, INVOICING_REASONS
 
