@@ -72,7 +72,8 @@ module Subscriptions
         previous_subscription_id: current_subscription.id,
         subscription_at: current_subscription.subscription_at,
         billing_time: current_subscription.billing_time,
-        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
+        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
+        consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : current_subscription.consolidate_invoice
       )
 
       if params.key?(:payment_method)
