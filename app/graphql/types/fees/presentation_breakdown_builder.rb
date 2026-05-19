@@ -18,8 +18,8 @@ module Types
 
       def call
         Array(fees).flat_map do |fee|
-          next [] if filter == UNGROUPED && fee.grouped_by.present?
-          next [] if filter == GROUPED && fee.grouped_by.blank?
+          next [] if filter == UNGROUPED && fee.grouped_or_filtered?
+          next [] if filter == GROUPED && fee.ungrouped_or_filtered?
 
           fee.presentation_breakdowns.map do |breakdown|
             {

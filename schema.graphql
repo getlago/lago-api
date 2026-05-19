@@ -1123,6 +1123,7 @@ type ChargeFilterUsage {
   eventsCount: Int!
   id: ID
   invoiceDisplayName: String
+  presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitAmountCents: BigInt
   units: Float!
   values: ChargeFilterValues!
@@ -5872,14 +5873,22 @@ type Fee implements InvoiceItem {
   itemName: String!
   itemType: String!
   offsettableAmountCents: BigInt!
+  payInAdvance: Boolean!
+  preciseAmountCents: Float!
+  preciseCouponsAmountCents: Float!
+  preciseTotalAmountCents: Float!
   preciseUnitAmount: Float!
   presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitUsage: PricingUnitUsage
   properties: FeeProperties
+  subTotalExcludingTaxesAmountCents: BigInt!
+  subTotalExcludingTaxesPreciseAmountCents: Float!
   subscription: Subscription
   succeededAt: ISO8601DateTime
   taxesAmountCents: BigInt!
+  taxesPreciseAmountCents: Float!
   taxesRate: Float
+  totalAmountCents: BigInt!
   trueUpFee: Fee
   trueUpParentFee: Fee
   units: Float!
@@ -9745,6 +9754,7 @@ type ProjectedChargeFilterUsage {
   eventsCount: Int!
   id: ID
   invoiceDisplayName: String
+  presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
