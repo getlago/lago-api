@@ -266,15 +266,27 @@ module Events
         end
       end
 
-      def grouped_count(_columns = grouped_by)
+      def grouped_count(columns = grouped_by)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value], select: [arel_table[:sorted_grouped_by]]), <<-SQL)
-            SELECT
-              sorted_grouped_by as groups,
-              toDecimal32(count(), 0) as value
-            FROM events
-            GROUP BY sorted_grouped_by
-          SQL
+          if columns == grouped_by
+            sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value], select: [arel_table[:sorted_grouped_by]]), <<-SQL)
+              SELECT
+                sorted_grouped_by as groups,
+                toDecimal32(count(), 0) as value
+              FROM events
+              GROUP BY sorted_grouped_by
+            SQL
+          else
+            map_args, col_expressions = sorted_properties_map_args(columns)
+
+            sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value sorted_properties]), <<-SQL)
+              SELECT
+                map(#{map_args.join(", ")}) as groups,
+                toDecimal32(count(), 0) as value
+              FROM events
+              GROUP BY #{col_expressions.join(", ")}
+            SQL
+          end
 
           prepare_grouped_result(connection.select_all(sql))
         end
@@ -350,9 +362,12 @@ module Events
         end
       end
 
-      def grouped_unique_count(_columns = grouped_by)
+      def grouped_unique_count(columns = grouped_by)
+        duplicated_unique_count_store = dup
+        duplicated_unique_count_store.grouped_by = columns
+
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: duplicated_unique_count_store)
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
               sanitize_colon(query.grouped_query),
@@ -420,18 +435,30 @@ module Events
         end
       end
 
-      def grouped_max(_columns = grouped_by)
+      def grouped_max(columns = grouped_by)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_cte_queries(
-            deduplicated_columns: %w[decimal_value],
-            select: [arel_table[:sorted_grouped_by], arel_table[:decimal_value]]
-          ), <<-SQL)
-            SELECT
-              sorted_grouped_by as groups,
-              MAX(events.decimal_value) as value
-            FROM events
-            GROUP BY sorted_grouped_by
-          SQL
+          if columns == grouped_by
+            sql = with_ctes(events_cte_queries(
+              deduplicated_columns: %w[decimal_value],
+              select: [arel_table[:sorted_grouped_by], arel_table[:decimal_value]]
+            ), <<-SQL)
+              SELECT
+                sorted_grouped_by as groups,
+                MAX(events.decimal_value) as value
+              FROM events
+              GROUP BY sorted_grouped_by
+            SQL
+          else
+            map_args, col_expressions = sorted_properties_map_args(columns)
+
+            sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
+              SELECT
+                map(#{map_args.join(", ")}) as groups,
+                MAX(events.decimal_value) as value
+              FROM events
+              GROUP BY #{col_expressions.join(", ")}
+            SQL
+          end
 
           prepare_grouped_result(connection.select_all(sql))
         end
@@ -450,15 +477,38 @@ module Events
         end
       end
 
-      def grouped_last(_columns = grouped_by)
+      def grouped_last(columns = grouped_by)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
-            SELECT
-              DISTINCT ON (sorted_grouped_by) sorted_grouped_by as groups,
-              events.decimal_value as value
-            FROM events
-            ORDER BY sorted_grouped_by, timestamp DESC
-          SQL
+          if columns == grouped_by
+            sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+              SELECT
+                DISTINCT ON (sorted_grouped_by) sorted_grouped_by as groups,
+                events.decimal_value as value
+              FROM events
+              ORDER BY sorted_grouped_by, timestamp DESC
+            SQL
+          else
+            map_args, = sorted_properties_map_args(columns)
+
+            sql = if grouped_by.blank?
+              with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
+                SELECT
+                  map(#{map_args.join(", ")}) as groups,
+                  events.decimal_value as value
+                FROM events
+                ORDER BY timestamp DESC
+                LIMIT 1
+              SQL
+            else
+              with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
+                SELECT
+                  DISTINCT ON (sorted_grouped_by) map(#{map_args.join(", ")}) as groups,
+                  events.decimal_value as value
+                FROM events
+                ORDER BY sorted_grouped_by, timestamp DESC
+              SQL
+            end
+          end
 
           prepare_grouped_result(connection.select_all(sql))
         end
@@ -475,15 +525,27 @@ module Events
         end
       end
 
-      def grouped_sum(_columns = grouped_by)
+      def grouped_sum(columns = grouped_by)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
-            SELECT
-              sorted_grouped_by as groups,
-              sum(events.decimal_value) as value
-            FROM events
-            GROUP BY sorted_grouped_by
-          SQL
+          if columns == grouped_by
+            sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+              SELECT
+                sorted_grouped_by as groups,
+                sum(events.decimal_value) as value
+              FROM events
+              GROUP BY sorted_grouped_by
+            SQL
+          else
+            map_args, col_expressions = sorted_properties_map_args(columns)
+
+            sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
+              SELECT
+                map(#{map_args.join(", ")}) as groups,
+                sum(events.decimal_value) as value
+              FROM events
+              GROUP BY #{col_expressions.join(", ")}
+            SQL
+          end
 
           prepare_grouped_result(connection.select_all(sql))
         end
@@ -629,13 +691,16 @@ module Events
         BigDecimal(result["aggregation"].presence || 0)
       end
 
-      def grouped_weighted_sum(_columns = grouped_by, initial_values: [])
+      def grouped_weighted_sum(columns = grouped_by, initial_values: [])
+        duplicated_weighted_sum_store = dup
+        duplicated_weighted_sum_store.grouped_by = columns
+
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          query = Clickhouse::WeightedSumQuery.new(store: self)
+          query = Clickhouse::WeightedSumQuery.new(store: duplicated_weighted_sum_store)
 
           # NOTE: build the list of initial values for each groups
           #       from the events in the period
-          formatted_initial_values = grouped_count.map do |group|
+          formatted_initial_values = grouped_count(columns).map do |group|
             value = 0
             previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
             value = previous_group[:value] if previous_group
@@ -702,11 +767,18 @@ module Events
         @arel_table ||= ::Clickhouse::EventsEnrichedExpanded.arel_table
       end
 
-      def grouped_arel_columns
-        [
-          [arel_table[:sorted_grouped_by].as("grouped_by")],
-          group_names
-        ]
+      def grouped_arel_columns(columns = nil)
+        return [[arel_table[:sorted_grouped_by].as("grouped_by")], group_names] if columns.blank?
+
+        map_args, = sorted_properties_map_args(columns, table: nil)
+        map_sql = map_args.join(", ")
+
+        grouped_by_node = Arel::Nodes::As.new(
+          Arel::Nodes::SqlLiteral.new("map(#{map_sql})"),
+          Arel::Nodes::SqlLiteral.new("grouped_by")
+        )
+
+        [[grouped_by_node], ["grouped_by"]]
       end
 
       def group_names
@@ -724,6 +796,19 @@ module Events
 
       def grouped_by_count
         1
+      end
+
+      def sorted_properties_map_args(columns, table: "events")
+        prefix = table ? "#{table}." : ""
+
+        map_args = columns.sort.flat_map do |col|
+          [
+            ActiveRecord::Base.sanitize_sql_for_conditions(["?", col.to_s]),
+            ActiveRecord::Base.sanitize_sql_for_conditions(["#{prefix}sorted_properties[?]", col.to_s])
+          ]
+        end
+
+        [map_args, map_args.each_slice(2).map(&:last)]
       end
 
       def operation_type_sql
