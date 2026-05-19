@@ -93,6 +93,7 @@ class Organization < ApplicationRecord
   has_many :gocardless_payment_providers, class_name: "PaymentProviders::GocardlessProvider"
   has_many :cashfree_payment_providers, class_name: "PaymentProviders::CashfreeProvider"
   has_many :adyen_payment_providers, class_name: "PaymentProviders::AdyenProvider"
+  has_many :paystack_payment_providers, class_name: "PaymentProviders::PaystackProvider"
 
   has_many :hubspot_integrations, class_name: "Integrations::HubspotIntegration"
   has_many :netsuite_integrations, class_name: "Integrations::NetsuiteIntegration"
@@ -224,6 +225,8 @@ class Organization < ApplicationRecord
       cashfree_payment_provider
     when "adyen"
       adyen_payment_provider
+    when "paystack"
+      paystack_payment_provider
     end
   end
 
