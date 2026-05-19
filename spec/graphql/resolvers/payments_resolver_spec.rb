@@ -108,7 +108,7 @@ RSpec.describe Resolvers::PaymentsResolver do
   context "when currency is present" do
     let(:query) do
       <<~GQL
-        query($currency: String!) {
+        query($currency: CurrencyEnum!) {
           payments(currency: $currency, limit: 5) {
             collection { id }
             metadata { currentPage, totalCount }

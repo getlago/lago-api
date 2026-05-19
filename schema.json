@@ -56171,8 +56171,8 @@
                   "name": "currency",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
+                    "kind": "ENUM",
+                    "name": "CurrencyEnum",
                     "ofType": null
                   },
                   "defaultValue": null,

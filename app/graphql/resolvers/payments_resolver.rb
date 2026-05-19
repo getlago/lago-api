@@ -9,7 +9,7 @@ module Resolvers
 
     description "Query payments of an organization"
 
-    argument :currency, String, required: false
+    argument :currency, Types::CurrencyEnum, required: false
     argument :external_customer_id, ID, required: false
     argument :invoice_id, ID, required: false
     argument :limit, Integer, required: false

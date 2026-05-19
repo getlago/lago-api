@@ -10482,7 +10482,7 @@ type Query {
   """
   Query payments of an organization
   """
-  payments(currency: String, externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int, searchTerm: String): PaymentCollection!
+  payments(currency: CurrencyEnum, externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int, searchTerm: String): PaymentCollection!
 
   """
   Query a single plan of an organization
