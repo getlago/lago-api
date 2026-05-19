@@ -16,5 +16,7 @@ RSpec.describe Types::Customers::Usage::ProjectedGroupedUsage do
     expect(subject).to have_field(:pricing_unit_projected_amount_cents).of_type("BigInt")
     expect(subject).to have_field(:grouped_by).of_type("JSON")
     expect(subject).to have_field(:filters).of_type("[ProjectedChargeFilterUsage!]")
+    expect(subject).to have_field(:presentation_breakdowns).of_type("[PresentationBreakdownUsage!]")
+    expect(subject).to have_field(:projected_presentation_breakdowns).of_type("[PresentationBreakdownUsage!]")
   end
 end

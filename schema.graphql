@@ -9759,6 +9759,7 @@ type ProjectedChargeUsage {
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
+  projectedPresentationBreakdowns: [PresentationBreakdownUsage!]
   projectedUnits: Float!
   units: Float!
 }
@@ -9773,6 +9774,7 @@ type ProjectedGroupedChargeUsage {
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
+  projectedPresentationBreakdowns: [PresentationBreakdownUsage!]
   projectedUnits: Float!
   units: Float!
 }

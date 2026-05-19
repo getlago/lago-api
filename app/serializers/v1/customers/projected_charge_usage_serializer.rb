@@ -16,7 +16,8 @@ module V1
             billable_metric: billable_metric_data(fee),
             filters: cached_filters(fees),
             grouped_usage: cached_grouped_usage(fees),
-            presentation_breakdowns: PresentationBreakdownBuilder.call(fees, filter: PresentationBreakdownBuilder::UNGROUPED)
+            presentation_breakdowns: PresentationBreakdownBuilder.call(fees, filter: PresentationBreakdownBuilder::UNGROUPED),
+            projected_presentation_breakdowns: project_ungrouped_presentation_breakdowns(fees)
           }
         end
       end
@@ -55,7 +56,8 @@ module V1
 
         {
           projected_units: projection[:units].to_s,
-          projected_amount_cents: projection[:amount_cents].to_i
+          projected_amount_cents: projection[:amount_cents].to_i,
+          projected_presentation_breakdowns: projection[:presentation_breakdowns].map { |breakdown| ::V1::PresentationBreakdownSerializer.new(breakdown).serialize }
         }
       end
 
@@ -101,7 +103,8 @@ module V1
         {
           units: result.projected_units,
           amount_cents: result.projected_amount_cents,
-          pricing_unit_amount_cents: result.projected_pricing_unit_amount_cents.to_i
+          pricing_unit_amount_cents: result.projected_pricing_unit_amount_cents.to_i,
+          presentation_breakdowns: result.projected_presentation_breakdowns
         }
       end
 
@@ -109,7 +112,8 @@ module V1
         {
           units: BigDecimal("0.0"),
           amount_cents: 0,
-          pricing_unit_amount_cents: 0
+          pricing_unit_amount_cents: 0,
+          presentation_breakdowns: []
         }
       end
 
@@ -117,7 +121,8 @@ module V1
         {
           units: totals[:units] + result.projected_units,
           amount_cents: totals[:amount_cents] + result.projected_amount_cents,
-          pricing_unit_amount_cents: totals[:pricing_unit_amount_cents] + result.projected_pricing_unit_amount_cents.to_i
+          pricing_unit_amount_cents: totals[:pricing_unit_amount_cents] + result.projected_pricing_unit_amount_cents.to_i,
+          presentation_breakdowns: totals[:presentation_breakdowns] + result.projected_presentation_breakdowns
         }
       end
 
@@ -229,6 +234,18 @@ module V1
       def memoized_usage_data(fees)
         @usage_data_cache ||= {}
         @usage_data_cache[fees.object_id] ||= calculate_usage_data(fees)
+      end
+
+      def project_ungrouped_presentation_breakdowns(fees)
+        ungrouped_fees = fees.reject { |f| f.grouped_by.present? }
+        return [] if ungrouped_fees.empty?
+
+        # NOTE: Since the memoization is done by object_id, we try as much as possible to reuse the memoized calculated data
+        projection_fees = (ungrouped_fees.length == fees.length) ? fees : ungrouped_fees
+
+        (memoized_projection(projection_fees)[:presentation_breakdowns] || []).map do |breakdown|
+          ::V1::PresentationBreakdownSerializer.new(breakdown).serialize
+        end
       end
     end
   end
