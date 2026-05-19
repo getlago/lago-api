@@ -1511,8 +1511,8 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'wallet_balance_amount',
     'wallet_credits_balance',
     'wallet_ongoing_balance_amount',
-    'wallet_credits_ongoing_balance',
-    'billable_metric_lifetime_usage_units'
+    'billable_metric_lifetime_usage_units',
+    'wallet_credits_ongoing_balance'
 );
 
 
@@ -1978,7 +1978,8 @@ CREATE TABLE public.cached_aggregations (
     grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
     charge_filter_id uuid,
     current_amount numeric,
-    event_transaction_id character varying
+    event_transaction_id character varying,
+    presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 
 
@@ -12220,6 +12221,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260513105209'),
 ('20260512155310'),
 ('20260512142543'),
+('20260508134715'),
 ('20260504134804'),
 ('20260430102814'),
 ('20260430102813'),
@@ -13217,3 +13219,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
