@@ -182,6 +182,14 @@ class Fee < ApplicationRecord
     presentation_breakdowns.select { |b| presentation_group_keys_values_displayed_in_invoice.any? { |k| b.presentation_by[k].present? } }
   end
 
+  def grouped_or_filtered?
+    grouped_by.present? || charge_filter_id.present?
+  end
+
+  def ungrouped_or_filtered?
+    grouped_by.blank? || charge_filter_id.present?
+  end
+
   def basic_rate_percentage?
     return false unless charge?
     return false unless charge.percentage?

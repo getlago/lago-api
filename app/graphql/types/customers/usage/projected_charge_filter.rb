@@ -13,6 +13,7 @@ module Types
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
         field :invoice_display_name, String, null: true
+        field :presentation_breakdowns, [Types::Customers::Usage::PresentationBreakdown], null: true
         field :pricing_unit_amount_cents, GraphQL::Types::BigInt, null: true
         field :pricing_unit_projected_amount_cents, GraphQL::Types::BigInt, null: true
         field :projected_amount_cents, GraphQL::Types::BigInt, null: false
@@ -34,6 +35,10 @@ module Types
 
         def invoice_display_name
           object.charge_filter&.invoice_display_name
+        end
+
+        def presentation_breakdowns
+          Types::Fees::PresentationBreakdownBuilder.call(object, filter: Types::Fees::PresentationBreakdownBuilder::ALL, filter_breakdown: Types::Fees::PresentationBreakdownBuilder::ALL)
         end
 
         private

@@ -21,8 +21,8 @@ module Types
 
       def call
         Array(fees).flat_map do |fee|
-          next [] if filter == UNGROUPED && fee.grouped_by.present?
-          next [] if filter == GROUPED && fee.grouped_by.blank?
+          next [] if filter == UNGROUPED && fee.grouped_or_filtered?
+          next [] if filter == GROUPED && fee.ungrouped_or_filtered?
 
           breakdowns = (filter_breakdown == DISPLAY_IN_INVOICE) ? fee.presentation_breakdowns_displayed_in_invoice : fee.presentation_breakdowns
 
