@@ -30,7 +30,7 @@ module PaymentRequests
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.msg)
       end
 
-      def update_payment_status(provider_payment_id:, status:, metadata: {})
+      def update_payment_status(provider_payment_id:, status:, amount_cents: nil, metadata: {})
         payment = if metadata[:payment_type] == "one-time"
           create_payment(provider_payment_id:, metadata:)
         else

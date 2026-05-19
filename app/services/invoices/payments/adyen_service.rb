@@ -14,9 +14,9 @@ module Invoices
         super
       end
 
-      def update_payment_status(provider_payment_id:, status:, metadata: {})
+      def update_payment_status(provider_payment_id:, status:, amount_cents: nil, metadata: {})
         payment = if metadata[:payment_type] == "one-time"
-          create_payment(provider_payment_id:, metadata:)
+          create_payment(provider_payment_id:, amount_cents:, metadata:)
         else
           Payment.find_by(provider_payment_id:)
         end
@@ -67,7 +67,7 @@ module Invoices
 
       delegate :organization, :customer, to: :invoice
 
-      def create_payment(provider_payment_id:, metadata:)
+      def create_payment(provider_payment_id:, metadata:, amount_cents: nil)
         @invoice = Invoice.find(metadata[:lago_invoice_id])
 
         increment_payment_attempts
@@ -78,7 +78,7 @@ module Invoices
           customer:,
           payment_provider_id: adyen_payment_provider.id,
           payment_provider_customer_id: customer.adyen_customer.id,
-          amount_cents: invoice.total_due_amount_cents,
+          amount_cents: amount_cents || invoice.total_due_amount_cents,
           amount_currency: invoice.currency.upcase,
           provider_payment_id:
         )

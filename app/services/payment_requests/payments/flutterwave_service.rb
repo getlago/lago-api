@@ -21,7 +21,7 @@ module PaymentRequests
         result.service_failure!(code: "action_script_runtime_error", message: e.message)
       end
 
-      def update_payment_status(organization_id:, status:, flutterwave_payment:)
+      def update_payment_status(organization_id:, status:, flutterwave_payment:, amount_cents: nil)
         payment = if flutterwave_payment.metadata[:payment_type] == "one-time"
           create_payment(flutterwave_payment)
         else

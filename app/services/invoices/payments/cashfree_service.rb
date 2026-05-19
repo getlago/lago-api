@@ -13,9 +13,9 @@ module Invoices
         super
       end
 
-      def update_payment_status(organization_id:, status:, cashfree_payment:)
+      def update_payment_status(organization_id:, status:, cashfree_payment:, amount_cents: nil)
         payment = if cashfree_payment.metadata[:payment_type] == "one-time"
-          create_payment(cashfree_payment)
+          create_payment(cashfree_payment, amount_cents:)
         else
           Payment.find_by(provider_payment_id: cashfree_payment.id)
         end
@@ -57,7 +57,7 @@ module Invoices
 
       delegate :organization, :customer, to: :invoice
 
-      def create_payment(cashfree_payment)
+      def create_payment(cashfree_payment, amount_cents: nil)
         @invoice = Invoice.find_by(id: cashfree_payment.metadata[:lago_invoice_id])
 
         increment_payment_attempts
@@ -68,7 +68,7 @@ module Invoices
           customer:,
           payment_provider_id: cashfree_payment_provider.id,
           payment_provider_customer_id: customer.cashfree_customer.id,
-          amount_cents: @invoice.total_due_amount_cents,
+          amount_cents: amount_cents || @invoice.total_due_amount_cents,
           amount_currency: @invoice.currency,
           provider_payment_id: cashfree_payment.id
         )
