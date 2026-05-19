@@ -26,28 +26,16 @@ module Subscriptions
       ActiveRecord::Base.transaction do
         cancel_pending_subscription if pending_subscription?
 
-        # Group subscriptions for billing
-        billable_subscriptions = billable_subscriptions(new_subscription)
+        new_subscription.pending!
 
-        # Terminate current subscription as part of the upgrade process
-        Subscriptions::TerminateService.call(
-          subscription: current_subscription,
-          upgrade: true
-        )
-
-        new_subscription.mark_as_active!
-
-        EmitFixedChargeEventsService.call!(
-          subscriptions: [new_subscription],
-          timestamp: new_subscription.started_at + 1.second
-        )
-
-        after_commit do
-          SendWebhookJob.perform_later("subscription.started", new_subscription)
-          Utils::ActivityLog.produce(new_subscription, "subscription.started")
+        if params[:activation_rules].present?
+          Subscriptions::ActivationRules::ApplyService.call!(
+            subscription: new_subscription,
+            activation_rules: params[:activation_rules]
+          )
         end
 
-        bill_subscriptions(billable_subscriptions) if billable_subscriptions.any?
+        Subscriptions::ActivateService.call!(subscription: new_subscription)
       end
 
       result.subscription = new_subscription
@@ -105,31 +93,6 @@ module Subscriptions
       return false unless current_subscription.next_subscription
 
       current_subscription.next_subscription.pending?
-    end
-
-    def billable_subscriptions(new_subscription)
-      billable_subscriptions = if current_subscription.starting_in_the_future?
-        []
-      elsif current_subscription.pending?
-        []
-      elsif !current_subscription.terminated?
-        [current_subscription]
-      end.to_a
-
-      has_billable_fixed_charges = new_subscription.fixed_charges.pay_in_advance.any?
-      plan_billable = new_subscription.plan.pay_in_advance? && !new_subscription.in_trial_period?
-
-      billable_subscriptions << new_subscription if has_billable_fixed_charges || plan_billable
-
-      billable_subscriptions
-    end
-
-    def bill_subscriptions(billable_subscriptions)
-      after_commit do
-        billing_at = Time.current + 1.second
-        BillSubscriptionJob.perform_later(billable_subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
-        BillNonInvoiceableFeesJob.perform_later(billable_subscriptions, billing_at)
-      end
     end
   end
 end

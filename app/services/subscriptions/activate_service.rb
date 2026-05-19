@@ -67,6 +67,21 @@ module Subscriptions
     end
 
     def activate_with_side_effects
+      if upgrade?
+        activate_for_upgrade
+      else
+        activate_standalone
+      end
+    end
+
+    def upgrade?
+      return false unless subscription.previous_subscription
+      return false if subscription.plan.id == subscription.previous_subscription.plan.id
+
+      subscription.plan.yearly_amount_cents >= subscription.previous_subscription.plan.yearly_amount_cents
+    end
+
+    def activate_standalone
       subscription.mark_as_active!(timestamp)
 
       EmitFixedChargeEventsService.call!(
@@ -77,6 +92,45 @@ module Subscriptions
       after_commit do
         bill_subscription(skip_charges: true)
         notify_started
+      end
+    end
+
+    def activate_for_upgrade
+      Subscriptions::TerminateService.call(
+        subscription: subscription.previous_subscription,
+        upgrade: true
+      )
+
+      subscription.mark_as_active!(timestamp)
+
+      EmitFixedChargeEventsService.call!(
+        subscriptions: [subscription],
+        timestamp: subscription.started_at + 1.second
+      )
+
+      after_commit do
+        SendWebhookJob.perform_later("subscription.started", subscription)
+        Utils::ActivityLog.produce(subscription, "subscription.started")
+      end
+
+      bill_upgrade_subscriptions
+    end
+
+    def billable_subscriptions
+      @billable_subscriptions ||= begin
+        billable = [subscription.previous_subscription]
+        bill_new_in_advance = subscription.fixed_charges.pay_in_advance.any? ||
+          (subscription.plan.pay_in_advance? && !subscription.in_trial_period?)
+        billable << subscription if bill_new_in_advance
+        billable
+      end
+    end
+
+    def bill_upgrade_subscriptions
+      after_commit do
+        billing_at = Time.current + 1.second
+        BillSubscriptionJob.perform_later(billable_subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
+        BillNonInvoiceableFeesJob.perform_later(billable_subscriptions, billing_at)
       end
     end
 
