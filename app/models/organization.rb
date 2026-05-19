@@ -122,6 +122,7 @@ class Organization < ApplicationRecord
     beta_payment_authorization
     netsuite
     okta
+    openid_connect
     avalara
     xero
     progressive_billing
