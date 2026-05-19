@@ -1426,5 +1426,47 @@ RSpec.describe Api::V1::InvoicesController do
         end
       end
     end
+
+    context "when subscription has a minimum commitment and terminated_at is provided" do
+      let(:timestamp) { Time.zone.parse("2026-01-15") }
+      let(:commitment_customer) { create(:customer, organization:, external_id: "commitment_customer") }
+      let(:commitment_plan) do
+        create(:plan, organization:, interval: "yearly", pay_in_advance: false, amount_cents: 100_00)
+      end
+      let(:subscription) do
+        create(
+          :subscription,
+          customer: commitment_customer,
+          plan: commitment_plan,
+          billing_time: "calendar",
+          started_at: Time.zone.parse("2026-01-01"),
+          subscription_at: Time.zone.parse("2026-01-01")
+        )
+      end
+      let(:preview_params) do
+        {
+          customer: {external_id: commitment_customer.external_id},
+          subscriptions: {
+            external_ids: [subscription.external_id],
+            terminated_at: "2026-07-01T00:00:00Z"
+          }
+        }
+      end
+
+      before do
+        create(:commitment, :minimum_commitment, plan: commitment_plan, amount_cents: 1_000_00)
+      end
+
+      it "creates a preview invoice with a commitment true-up fee" do
+        travel_to(timestamp) do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice][:fees]).to include(
+            hash_including(item: hash_including(type: "commitment"))
+          )
+        end
+      end
+    end
   end
 end

@@ -297,6 +297,30 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
           end
         end
 
+        context "with minimum commitment for non-persisted subscription" do
+          let(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: false, amount_cents: 0) }
+          let!(:commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_00) }
+
+          before { organization.update!(premium_integrations: ["preview"]) }
+
+          it "includes a non-persisted commitment fee" do
+            travel_to(timestamp) do
+              result = preview_service.call
+
+              expect(result).to be_success
+
+              commitment_fees = result.invoice.fees.select { |f| f.fee_type == "commitment" }
+              expect(commitment_fees.size).to eq(1)
+
+              commitment_fee = commitment_fees.first
+              expect(commitment_fee).not_to be_persisted
+              expect(commitment_fee.invoiceable_id).to eq(commitment.id)
+              expect(commitment_fee.amount_cents).to be > 0
+              expect(commitment_fee.amount_cents).to be <= 1_000_00
+            end
+          end
+        end
+
         context "with one persisted subscription" do
           let(:customer) { create(:customer, organization:, billing_entity:) }
           let(:subscription) do
@@ -770,6 +794,42 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                   # 25 units falls in second tier: $5 flat + (25 * $0.8) = $25
                   expect(fixed_charge_fee.amount_cents).to eq(2500)
                 end
+              end
+            end
+          end
+
+          context "with minimum commitment" do
+            let(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: false, amount_cents: 0) }
+            let!(:commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_00) }
+
+            it "includes a non-persisted commitment fee when preview fees are below the minimum" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+
+                commitment_fees = result.invoice.fees.select { |f| f.fee_type == "commitment" }
+                expect(commitment_fees.size).to eq(1)
+
+                commitment_fee = commitment_fees.first
+                expect(commitment_fee).not_to be_persisted
+                expect(commitment_fee.invoiceable_type).to eq("Commitment")
+                expect(commitment_fee.invoiceable_id).to eq(commitment.id)
+                expect(commitment_fee.amount_cents).to be > 0
+                expect(commitment_fee.amount_cents).to be <= 1_000_00
+                expect(commitment_fee.subscription).to eq(subscription)
+              end
+            end
+
+            it "includes the commitment fee in invoice totals" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                commitment_fees = result.invoice.fees.select { |f| f.fee_type == "commitment" }
+                commitment_amount = commitment_fees.sum(&:amount_cents)
+
+                expect(result.invoice.fees_amount_cents).to eq(result.invoice.fees.sum(&:amount_cents))
+                expect(commitment_amount).to be_positive
               end
             end
           end
