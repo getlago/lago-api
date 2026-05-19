@@ -83,6 +83,7 @@ module DailyUsages
         next unless previous_filter
 
         apply_diff(previous_filter, current_filter)
+        apply_presentation_breakdowns_diff(previous_filter, current_filter)
       end
     end
 
