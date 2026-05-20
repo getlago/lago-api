@@ -256,4 +256,47 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
       end
     end
   end
+
+  context "when moving to a different billing entity" do
+    let(:subscription) { create(:subscription, organization:, plan:) }
+    let(:new_billing_entity) { create(:billing_entity, organization:) }
+
+    let(:query) do
+      <<~GQL
+        mutation($input: UpdateSubscriptionInput!) {
+          updateSubscription(input: $input) {
+            id
+            billingEntityId
+          }
+        }
+      GQL
+    end
+
+    let(:input) { {id: subscription.id, billingEntityId: new_billing_entity.id} }
+
+    before { organization.update!(feature_flags: ["multi_entity_billing"]) }
+
+    it "rebinds the subscription to the new billing entity" do
+      result = subject
+
+      result_data = result["data"]["updateSubscription"]
+
+      expect(result_data["billingEntityId"]).to eq(new_billing_entity.id)
+      expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+    end
+
+    context "when billing_entity_id does not exist" do
+      let(:input) { {id: subscription.id, billingEntityId: SecureRandom.uuid} }
+
+      it "returns a not_found error" do
+        result = subject
+
+        expect(result["data"]["updateSubscription"]).to be_nil
+        expect(result["errors"].first["extensions"]).to include(
+          "code" => "not_found",
+          "details" => {"billingEntity" => ["not_found"]}
+        )
+      end
+    end
+  end
 end
