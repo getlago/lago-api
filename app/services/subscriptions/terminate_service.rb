@@ -123,11 +123,7 @@ module Subscriptions
     attr_reader :subscription, :async, :upgrade, :on_termination_credit_note, :on_termination_invoice
 
     def cancel_next_subscription
-      # In the upgrade flow, the next_subscription is the upgrade target we're
-      # transitioning to (created and persisted just before this terminate call),
-      # not a stale scheduled change. Canceling it would mark our new
-      # subscription as canceled mid-flow and leave `canceled_at` set on the
-      # row even after it gets re-activated.
+      # NOTE: Upgrade path: next_subscription is the new subscription we just persisted, not a stale scheduled change
       return if upgrade
 
       next_subscription = subscription.next_subscription
