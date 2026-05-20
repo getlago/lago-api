@@ -458,7 +458,11 @@ RSpec.describe Plans::UpdateService do
         it "upgrades subscription plan" do
           plans_service.call
 
-          expect(Subscriptions::PlanUpgradeService).to have_received(:call)
+          expect(Subscriptions::PlanUpgradeService).to have_received(:call).with(
+            current_subscription: subscription,
+            plan: plan,
+            params: {name: pending_subscription.name}
+          )
         end
 
         it "updates the plan" do
@@ -466,6 +470,25 @@ RSpec.describe Plans::UpdateService do
 
           expect(result.plan.name).to eq("Updated plan name")
           expect(result.plan.amount_cents).to eq(200)
+        end
+
+        context "when the pending subscription has activation rules" do
+          before do
+            create(:subscription_activation_rule, subscription: pending_subscription, organization:, timeout_hours: 24)
+          end
+
+          it "forwards the activation_rules to the plan upgrade" do
+            plans_service.call
+
+            expect(Subscriptions::PlanUpgradeService).to have_received(:call).with(
+              current_subscription: subscription,
+              plan: plan,
+              params: {
+                name: pending_subscription.name,
+                activation_rules: [{type: "payment", timeout_hours: 24}]
+              }
+            )
+          end
         end
 
         context "when pending subscription does not have a previous one" do

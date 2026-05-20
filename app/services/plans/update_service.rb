@@ -345,10 +345,18 @@ module Plans
         next unless subscription.previous_subscription
 
         if plan.yearly_amount_cents >= subscription.previous_subscription.plan.yearly_amount_cents
+          upgrade_params = {name: subscription.name}
+
+          if subscription.activation_rules.any?
+            upgrade_params[:activation_rules] = subscription.activation_rules.map do |rule|
+              {type: rule.type, timeout_hours: rule.timeout_hours}
+            end
+          end
+
           Subscriptions::PlanUpgradeService.call(
             current_subscription: subscription.previous_subscription,
             plan: plan,
-            params: {name: subscription.name}
+            params: upgrade_params
           ).raise_if_error!
         end
       end
