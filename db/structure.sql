@@ -3626,14 +3626,13 @@ CREATE VIEW public.exports_invoices AS
     i.created_at,
     i.updated_at,
     i.voided_at,
-    ( SELECT json_agg(json_build_object('lago_id', m_1.id, 'key', m_1.key, 'value', m_1.value, 'created_at', m_1.created_at)) AS json_agg
-           FROM public.invoice_metadata m_1
-          WHERE (m_1.invoice_id = i.id)) AS metadata,
+    ( SELECT json_agg(json_build_object('lago_id', m.id, 'key', m.key, 'value', m.value, 'created_at', m.created_at)) AS json_agg
+           FROM public.invoice_metadata m
+          WHERE (m.invoice_id = i.id)) AS metadata,
     ( SELECT json_agg(json_build_object('lago_id', ed.id, 'error_code', ed.error_code, 'details', ed.details)) AS json_agg
            FROM public.error_details ed
           WHERE (ed.owner_id = i.id)) AS error_details
-   FROM (public.invoices i
-     LEFT JOIN public.invoice_metadata m ON ((i.id = m.invoice_id)))
+   FROM public.invoices i
   WHERE (i.status = ANY (ARRAY[0, 1, 2, 4, 7]));
 
 
@@ -12215,6 +12214,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260520075420'),
 ('20260517101105'),
 ('20260513105210'),
 ('20260513105209'),
