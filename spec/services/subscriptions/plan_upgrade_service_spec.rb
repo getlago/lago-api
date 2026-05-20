@@ -167,7 +167,14 @@ RSpec.describe Subscriptions::PlanUpgradeService do
           expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.started", result.subscription)
         end
 
-        it "does not enqueue immediate-upgrade billing" do
+        it "enqueues BillSubscriptionJob for the incomplete subscription with skip_charges" do
+          new_subscription = result.subscription
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([new_subscription], anything, invoicing_reason: :subscription_starting, skip_charges: true)
+        end
+
+        it "does not enqueue a BillSubscriptionJob with invoicing_reason :upgrading" do
           expect { result }.not_to have_enqueued_job(BillSubscriptionJob)
             .with(anything, anything, hash_including(invoicing_reason: :upgrading))
         end
