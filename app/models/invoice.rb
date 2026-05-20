@@ -124,8 +124,8 @@ class Invoice < ApplicationRecord
     end
   end
 
-  sequenced scope: ->(invoice) { invoice.customer.invoices },
-    lock_key: ->(invoice) { invoice.customer_id }
+  sequenced scope: ->(invoice) { invoice.customer.invoices.where(billing_entity_id: invoice.billing_entity_id) },
+    lock_key: ->(invoice) { "#{invoice.customer_id}-#{invoice.billing_entity_id}" }
 
   scope :visible, -> { where(status: VISIBLE_STATUS.keys) }
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
@@ -739,7 +739,7 @@ end
 #  idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655  (billing_entity_id,billing_entity_sequential_id DESC)
 #  idx_on_organization_id_organization_sequential_id_2387146f54    (organization_id,organization_sequential_id DESC)
 #  index_invoices_by_cursor                                        (organization_id,issuing_date DESC,created_at DESC,id)
-#  index_invoices_on_customer_id_and_sequential_id                 (customer_id,sequential_id) UNIQUE
+#  index_invoices_on_customer_billing_entity_sequential            (customer_id,billing_entity_id,sequential_id) UNIQUE
 #  index_invoices_on_number                                        (number)
 #  index_invoices_on_organization_id_and_customer_id               (customer_id,organization_id)
 #  index_invoices_on_organization_id_number_gin_trgm_ops           (organization_id,number) USING gin
