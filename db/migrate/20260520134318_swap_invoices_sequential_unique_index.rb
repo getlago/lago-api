@@ -8,8 +8,9 @@ class SwapInvoicesSequentialUniqueIndex < ActiveRecord::Migration[8.0]
       unique: true,
       algorithm: :concurrently,
       name: "index_invoices_on_customer_billing_entity_sequential"
-    remove_index :invoices,
-      name: "index_invoices_on_customer_id_and_sequential_id",
-      algorithm: :concurrently
+    remove_index :invoices, [:customer_id, :sequential_id],
+      unique: true,
+      algorithm: :concurrently,
+      name: "index_invoices_on_customer_id_and_sequential_id"
   end
 end
