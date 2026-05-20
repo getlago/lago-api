@@ -222,6 +222,12 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       expect(result.payment_url).to eq("https://checkout.flutterwave.com/v3/hosted/pay/test_link")
     end
 
+    it "exposes the invoice id as provider session id" do
+      result = flutterwave_service.generate_payment_url(payment_intent)
+
+      expect(result.provider_session_id).to eq(invoice.id)
+    end
+
     it "sends correct parameters to Flutterwave API" do
       flutterwave_service.generate_payment_url(payment_intent)
 

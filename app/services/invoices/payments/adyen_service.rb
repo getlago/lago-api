@@ -55,6 +55,7 @@ module Invoices
         return result unless result.success?
 
         result.payment_url = res.response["url"]
+        result.provider_session_id = res.response["id"]
 
         result
       rescue Adyen::AdyenError => e

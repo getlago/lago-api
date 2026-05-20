@@ -52,6 +52,7 @@ module Invoices
 
         moneyhash_result_data = moneyhash_result["data"]
         result.payment_url = "#{moneyhash_result_data["embed_url"]}?lago_request=generate_payment_url"
+        result.provider_session_id = moneyhash_result_data["id"]
         result
       rescue LagoHttpClient::HttpError => e
         deliver_error_webhook(e)

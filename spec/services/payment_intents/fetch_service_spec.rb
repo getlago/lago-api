@@ -17,6 +17,7 @@ RSpec.describe PaymentIntents::FetchService do
       let(:invoice) { create(:invoice) }
       let(:payment_provider_service) { instance_double("PaymentProviderService") }
       let(:payment_url) { "https://example.com/payment" }
+      let(:provider_session_id) { "cs_test_abc" }
 
       before do
         allow(Invoices::Payments::PaymentProviders::Factory)
@@ -27,7 +28,12 @@ RSpec.describe PaymentIntents::FetchService do
         allow(payment_provider_service)
           .to receive(:generate_payment_url)
           .with(instance_of(PaymentIntent))
-          .and_return(BaseService::Result.new.tap { |r| r.payment_url = payment_url })
+          .and_return(
+            BaseService::Result.new.tap do |r|
+              r.payment_url = payment_url
+              r.provider_session_id = provider_session_id
+            end
+          )
       end
 
       context "when active payment intent exists" do
@@ -48,6 +54,10 @@ RSpec.describe PaymentIntents::FetchService do
           expect(result.payment_intent).to eq(payment_intent)
           expect(result.payment_intent.payment_url).to eq(payment_url)
           expect(payment_provider_service).to have_received(:generate_payment_url)
+        end
+
+        it "persists the provider session id" do
+          expect(result.payment_intent.provider_session_id).to eq(provider_session_id)
         end
       end
 

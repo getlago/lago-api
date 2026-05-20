@@ -44,6 +44,9 @@ module Invoices
 
       def generate_payment_url(payment_intent)
         result.payment_url = payment_url
+        # Flutterwave's hosted-link API exposes no separate session id; the
+        # transaction is identified by tx_ref (= invoice.id) on verify.
+        result.provider_session_id = invoice.id
         result
       rescue LagoHttpClient::HttpError => e
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.error_code, error_message: e.error_body)

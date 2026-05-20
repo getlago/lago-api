@@ -70,6 +70,7 @@ module Invoices
         )
 
         result.payment_url = res["url"]
+        result.provider_session_id = res["id"]
 
         result
       rescue ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, Stripe::PermissionError => e

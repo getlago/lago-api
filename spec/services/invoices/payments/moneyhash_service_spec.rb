@@ -74,5 +74,10 @@ RSpec.describe Invoices::Payments::MoneyhashService do
       expect(result).to be_success
       expect(result.payment_url).to eq("#{payment_url_response.dig("data", "embed_url")}?lago_request=generate_payment_url")
     end
+
+    it "exposes the provider session id" do
+      result = moneyhash_service.generate_payment_url(payment_intent)
+      expect(result.provider_session_id).to eq(payment_url_response.dig("data", "id"))
+    end
   end
 end

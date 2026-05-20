@@ -22,18 +22,20 @@ end
 # Table name: payment_intents
 # Database name: primary
 #
-#  id              :uuid             not null, primary key
-#  expires_at      :datetime         not null
-#  payment_url     :string
-#  status          :integer          default("active"), not null
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
-#  invoice_id      :uuid             not null
-#  organization_id :uuid             not null
+#  id                  :uuid             not null, primary key
+#  expires_at          :datetime         not null
+#  payment_url         :string
+#  status              :integer          default("active"), not null
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  invoice_id          :uuid             not null
+#  organization_id     :uuid             not null
+#  provider_session_id :string
 #
 # Indexes
 #
 #  index_payment_intents_on_invoice_id             (invoice_id)
 #  index_payment_intents_on_invoice_id_and_status  (invoice_id,status) UNIQUE WHERE (status = 0)
 #  index_payment_intents_on_organization_id        (organization_id)
+#  index_payment_intents_on_provider_session_id    (provider_session_id)
 #

@@ -44,7 +44,9 @@ module Invoices
 
       def generate_payment_url(payment_intent)
         payment_link_response = create_payment_link(payment_url_params(payment_intent))
-        result.payment_url = JSON.parse(payment_link_response.body)["link_url"]
+        parsed_response = JSON.parse(payment_link_response.body)
+        result.payment_url = parsed_response["link_url"]
+        result.provider_session_id = parsed_response["link_id"]
 
         result
       rescue LagoHttpClient::HttpError => e

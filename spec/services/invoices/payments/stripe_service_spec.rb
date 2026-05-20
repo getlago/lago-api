@@ -33,13 +33,19 @@ RSpec.describe Invoices::Payments::StripeService do
       stripe_customer
 
       allow(::Stripe::Checkout::Session).to receive(:create)
-        .and_return({"url" => "https://example.com"})
+        .and_return({"url" => "https://example.com", "id" => "cs_test_123"})
     end
 
     it "generates payment url" do
       stripe_service.generate_payment_url(payment_intent)
 
       expect(::Stripe::Checkout::Session).to have_received(:create)
+    end
+
+    it "exposes the provider session id" do
+      result = stripe_service.generate_payment_url(payment_intent)
+
+      expect(result.provider_session_id).to eq("cs_test_123")
     end
 
     describe "#payment_url_payload" do

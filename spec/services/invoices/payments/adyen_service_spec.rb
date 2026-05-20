@@ -235,6 +235,12 @@ RSpec.describe Invoices::Payments::AdyenService do
       expect(payment_links_api).to have_received(:payment_links)
     end
 
+    it "exposes the provider session id" do
+      result = adyen_service.generate_payment_url(payment_intent)
+
+      expect(result.provider_session_id).to eq(payment_links_response.response["id"])
+    end
+
     context "with an error on Adyen" do
       before do
         allow(payment_links_api).to receive(:payment_links)

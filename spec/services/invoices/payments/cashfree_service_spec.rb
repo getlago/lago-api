@@ -244,7 +244,7 @@ RSpec.describe Invoices::Payments::CashfreeService do
     subject(:result) { cashfree_service.generate_payment_url(payment_intent) }
 
     let(:payment_links_response) { Net::HTTPResponse.new("1.0", "200", "OK") }
-    let(:payment_links_body) { {link_url: "https://payments-test.cashfree.com/links//U1mgll3c0e9g"}.to_json }
+    let(:payment_links_body) { {link_url: "https://payments-test.cashfree.com/links//U1mgll3c0e9g", link_id: "cf_link_123"}.to_json }
     let(:payment_intent) { create(:payment_intent) }
 
     before do
@@ -262,6 +262,10 @@ RSpec.describe Invoices::Payments::CashfreeService do
     it "generates payment url" do
       expect(result).to be_success
       expect(result.payment_url).to be_present
+    end
+
+    it "exposes the provider session id" do
+      expect(result.provider_session_id).to eq("cf_link_123")
     end
 
     context "when payment url failed to generate" do
