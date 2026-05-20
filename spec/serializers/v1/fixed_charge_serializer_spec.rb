@@ -33,4 +33,35 @@ RSpec.describe ::V1::FixedChargeSerializer do
       expect(result["fixed_charge"]["taxes"].map { |tax| tax["lago_id"] }).to match_array(taxes.map(&:id))
     end
   end
+
+  context "when a subscription option is provided" do
+    let(:serializer) do
+      described_class.new(fixed_charge, root_name: "fixed_charge", subscription: subscription)
+    end
+    let(:fixed_charge) { create(:fixed_charge, units: 10, properties:) }
+    let(:plan) { fixed_charge.plan }
+    let(:customer) { create(:customer, organization: plan.organization) }
+    let(:subscription) { create(:subscription, plan:, customer:) }
+
+    context "when there is no per-subscription units override" do
+      it "serializes the plan-level units" do
+        expect(result["fixed_charge"]["units"]).to eq("10.0")
+      end
+    end
+
+    context "when a per-subscription units override exists" do
+      before do
+        create(:subscription_fixed_charge_units_override,
+          subscription:,
+          fixed_charge:,
+          organization: plan.organization,
+          billing_entity: customer.billing_entity,
+          units: 25)
+      end
+
+      it "serializes the overridden units" do
+        expect(result["fixed_charge"]["units"]).to eq("25.0")
+      end
+    end
+  end
 end

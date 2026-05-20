@@ -66,6 +66,26 @@ RSpec.describe Api::V1::Subscriptions::FixedChargesController do
       end
     end
 
+    context "when a per-subscription units override exists" do
+      let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, units: 10) }
+
+      before do
+        create(:subscription_fixed_charge_units_override,
+          subscription:,
+          fixed_charge:,
+          organization:,
+          billing_entity: customer.billing_entity,
+          units: 42)
+      end
+
+      it "returns the overridden units" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:fixed_charges].first[:units]).to eq("42.0")
+      end
+    end
+
     context "when fixed charges have applied taxes" do
       let(:fixed_charge) { create(:fixed_charge, :with_applied_taxes, plan:, organization:) }
 
@@ -140,6 +160,26 @@ RSpec.describe Api::V1::Subscriptions::FixedChargesController do
         expect(response).to have_http_status(:success)
         expect(json[:fixed_charge][:lago_id]).to eq(overridden_fixed_charge.id)
         expect(json[:fixed_charge][:lago_parent_id]).to eq(fixed_charge.id)
+      end
+    end
+
+    context "when a per-subscription units override exists" do
+      let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, units: 10) }
+
+      before do
+        create(:subscription_fixed_charge_units_override,
+          subscription:,
+          fixed_charge:,
+          organization:,
+          billing_entity: customer.billing_entity,
+          units: 99)
+      end
+
+      it "returns the overridden units" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:fixed_charge][:units]).to eq("99.0")
       end
     end
   end
@@ -230,6 +270,26 @@ RSpec.describe Api::V1::Subscriptions::FixedChargesController do
           expect(json[:fixed_charge][:taxes]).to be_present
           expect(json[:fixed_charge][:taxes].length).to eq(1)
           expect(json[:fixed_charge][:taxes].first[:code]).to eq(tax.code)
+        end
+      end
+
+      context "when only units are updated (units-only override path)" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, units: 10) }
+        let(:update_params) { {units: "25"} }
+
+        it "creates a SubscriptionFixedChargeUnitsOverride instead of a plan override" do
+          expect { subject }
+            .to change(SubscriptionFixedChargeUnitsOverride, :count).by(1)
+            .and not_change(Plan, :count)
+            .and not_change(FixedCharge, :count)
+        end
+
+        it "returns the overridden units in the response body" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:fixed_charge][:lago_id]).to eq(fixed_charge.id)
+          expect(json[:fixed_charge][:units]).to eq("25.0")
         end
       end
     end

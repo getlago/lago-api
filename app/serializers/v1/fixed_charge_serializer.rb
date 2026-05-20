@@ -14,7 +14,7 @@ module V1
         pay_in_advance: model.pay_in_advance,
         prorated: model.prorated,
         properties: model.properties,
-        units: model.units,
+        units: subscription_aware_units,
         lago_parent_id: model.parent_id
       }
 
@@ -24,6 +24,13 @@ module V1
     end
 
     private
+
+    def subscription_aware_units
+      subscription = options[:subscription]
+      return model.units unless subscription
+
+      model.units_for(subscription)
+    end
 
     def taxes
       ::CollectionSerializer.new(

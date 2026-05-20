@@ -88,5 +88,17 @@ describe "Subscription fixed charge units override via subscription endpoint", :
       expect(events.count).to eq(2)
       expect(events.last.units).to eq(15)
     end
+
+    it "exposes the overridden units in the API response and on subsequent reads" do
+      expect(json[:fixed_charge][:units]).to eq("15.0")
+
+      travel_to subscription_date + 6.days do
+        get_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}/fixed_charges")
+        expect(json[:fixed_charges].first[:units]).to eq("15.0")
+
+        get_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}/fixed_charges/#{fixed_charge.code}")
+        expect(json[:fixed_charge][:units]).to eq("15.0")
+      end
+    end
   end
 end
