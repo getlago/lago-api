@@ -231,7 +231,7 @@ module Subscriptions
     end
 
     def blocked_by_pending_taxes?
-      subscription.last_subscription_fee&.invoice&.tax_pending?
+      subscription.last_subscription_fee&.invoice&.tax_pending? || false
     end
   end
 end
