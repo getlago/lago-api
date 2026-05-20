@@ -53,10 +53,7 @@ module Subscriptions
     def gate_subscription
       subscription.mark_as_incomplete!
 
-      EmitFixedChargeEventsService.call!(
-        subscriptions: [subscription],
-        timestamp: subscription.started_at + 1.second
-      )
+      emit_fixed_charge_events
 
       after_commit do
         bill_subscription(skip_charges: true) if subscription.payment_gated?
@@ -84,10 +81,7 @@ module Subscriptions
     def activate_standalone
       subscription.mark_as_active!(timestamp)
 
-      EmitFixedChargeEventsService.call!(
-        subscriptions: [subscription],
-        timestamp: subscription.started_at + 1.second
-      )
+      emit_fixed_charge_events
 
       after_commit do
         bill_subscription(skip_charges: true)
@@ -103,10 +97,7 @@ module Subscriptions
 
       subscription.mark_as_active!(timestamp)
 
-      EmitFixedChargeEventsService.call!(
-        subscriptions: [subscription],
-        timestamp: subscription.started_at + 1.second
-      )
+      emit_fixed_charge_events
 
       after_commit do
         SendWebhookJob.perform_later("subscription.started", subscription)
@@ -146,6 +137,13 @@ module Subscriptions
       if subscription.should_sync_hubspot_subscription?
         Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
       end
+    end
+
+    def emit_fixed_charge_events
+      EmitFixedChargeEventsService.call!(
+        subscriptions: [subscription],
+        timestamp: subscription.started_at + 1.second
+      )
     end
 
     def bill_subscription(skip_charges: false)
