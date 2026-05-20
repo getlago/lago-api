@@ -1165,6 +1165,33 @@ RSpec.describe Api::V1::InvoicesController do
           )
         end
       end
+
+      context "when previewing for an anonymous customer with multi_entity_billing enabled" do
+        let(:preview_params) do
+          {
+            customer: {
+              name: "test 1",
+              currency: "EUR",
+              tax_identification_number: "123456789"
+            },
+            plan_code: plan.code,
+            billing_time: "anniversary",
+            billing_entity_code: billing_entity.code
+          }
+        end
+
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "stamps the invoice with the requested billing entity" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice]).to include(
+            billing_entity_code: billing_entity.code,
+            invoice_type: "subscription"
+          )
+        end
+      end
     end
 
     context "when subscriptions are persisted" do

@@ -175,6 +175,38 @@ RSpec.describe Invoices::PreviewContextService do
           expect(subject).to be_nil
         end
       end
+
+      context "when an explicit billing_entity is passed for a brand-new customer" do
+        let(:billing_entity) { create(:billing_entity, organization:) }
+        let(:params) do
+          {
+            customer: {
+              name: "Mislav M",
+              currency: "EUR"
+            }
+          }
+        end
+
+        context "when multi_entity_billing flag is disabled" do
+          it "builds the customer with the passed billing entity" do
+            expect(subject)
+              .to be_present
+              .and be_new_record
+              .and have_attributes(billing_entity_id: billing_entity.id)
+          end
+        end
+
+        context "when multi_entity_billing flag is enabled" do
+          before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+          it "builds the customer with the organization's default billing entity" do
+            expect(subject)
+              .to be_present
+              .and be_new_record
+              .and have_attributes(billing_entity_id: organization.default_billing_entity.id)
+          end
+        end
+      end
     end
   end
 
