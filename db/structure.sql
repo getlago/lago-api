@@ -479,6 +479,7 @@ DROP INDEX IF EXISTS public.index_payment_methods_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payment_methods_on_payment_provider_customer_id;
 DROP INDEX IF EXISTS public.index_payment_methods_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_methods_on_customer_id;
+DROP INDEX IF EXISTS public.index_payment_intents_on_provider_session_id;
 DROP INDEX IF EXISTS public.index_payment_intents_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_intents_on_invoice_id_and_status;
 DROP INDEX IF EXISTS public.index_payment_intents_on_invoice_id;
@@ -4617,7 +4618,8 @@ CREATE TABLE public.payment_intents (
     status integer DEFAULT 0 NOT NULL,
     expires_at timestamp(6) without time zone NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    provider_session_id character varying
 );
 
 
@@ -8717,6 +8719,13 @@ CREATE INDEX index_payment_intents_on_organization_id ON public.payment_intents 
 
 
 --
+-- Name: index_payment_intents_on_provider_session_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_intents_on_provider_session_id ON public.payment_intents USING btree (provider_session_id);
+
+
+--
 -- Name: index_payment_methods_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12214,6 +12223,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260520154815'),
 ('20260520075420'),
 ('20260517101105'),
 ('20260513105210'),
@@ -13217,3 +13227,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
