@@ -227,6 +227,22 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
 
       expect(result.provider_session_id).to eq(invoice.id)
     end
+  end
+
+  describe "#generate_payment_url additional cases" do
+    let(:payment_intent) { double }
+    let(:http_client) { instance_double(LagoHttpClient::Client) }
+    let(:successful_response) do
+      instance_double("HTTPResponse", body: {
+        status: "success",
+        data: {link: "https://checkout.flutterwave.com/v3/hosted/pay/test_link"}
+      }.to_json)
+    end
+
+    before do
+      allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
+      allow(http_client).to receive(:post_with_response).and_return(successful_response)
+    end
 
     it "sends correct parameters to Flutterwave API" do
       flutterwave_service.generate_payment_url(payment_intent)
@@ -265,6 +281,49 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
         expect(result.error).to be_a(BaseService::ThirdPartyFailure)
         expect(result.error.third_party).to eq("Flutterwave")
       end
+    end
+  end
+
+  describe "#checkout_session_already_completed?" do
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_session_id: invoice.id) }
+    let(:verify_client) { instance_double(LagoHttpClient::Client) }
+    let(:verify_endpoint) { "#{flutterwave_provider.api_url}/transactions/verify_by_reference" }
+    let(:verify_status) { "pending" }
+    let(:verify_response) { instance_double("HTTPResponse", body: {data: {status: verify_status}}.to_json) }
+
+    before do
+      allow(LagoHttpClient::Client).to receive(:new).with(verify_endpoint).and_return(verify_client)
+      allow(verify_client).to receive(:get).and_return(verify_response)
+    end
+
+    it "returns false when the transaction is not successful" do
+      expect(flutterwave_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+
+    context "when the transaction is successful" do
+      let(:verify_status) { "successful" }
+
+      it "returns true" do
+        expect(flutterwave_service.checkout_session_already_completed?(payment_intent)).to be true
+      end
+    end
+
+    it "returns false when provider_session_id is missing" do
+      payment_intent.update!(provider_session_id: nil)
+      expect(flutterwave_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+
+    it "swallows HTTP errors and returns false" do
+      allow(verify_client).to receive(:get).and_raise(LagoHttpClient::HttpError.new(500, "boom", nil))
+      expect(flutterwave_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+  end
+
+  describe "#expire_checkout_session" do
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_session_id: invoice.id) }
+
+    it "is a no-op (Flutterwave has no per-transaction expire API)" do
+      expect { flutterwave_service.expire_checkout_session(payment_intent) }.not_to raise_error
     end
   end
 

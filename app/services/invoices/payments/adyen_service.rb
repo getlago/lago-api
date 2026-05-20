@@ -43,6 +43,26 @@ module Invoices
         result.fail_with_error!(e)
       end
 
+      def checkout_session_already_completed?(payment_intent)
+        return false if payment_intent.provider_session_id.blank?
+
+        res = client.checkout.payment_links_api.get_payment_link(payment_intent.provider_session_id)
+        %w[completed paymentPending].include?(res.response["status"])
+      rescue Adyen::AdyenError
+        false
+      end
+
+      def expire_checkout_session(payment_intent)
+        return if payment_intent.provider_session_id.blank?
+
+        client.checkout.payment_links_api.update_payment_link(
+          {status: "expired"},
+          payment_intent.provider_session_id
+        )
+      rescue Adyen::AdyenError
+        nil
+      end
+
       def generate_payment_url(payment_intent)
         res = client.checkout.payment_links_api.payment_links(
           Lago::Adyen::Params.new(payment_url_params(payment_intent)).to_h,

@@ -80,4 +80,80 @@ RSpec.describe Invoices::Payments::MoneyhashService do
       expect(result.provider_session_id).to eq(payment_url_response.dig("data", "id"))
     end
   end
+
+  describe "#checkout_session_already_completed?" do
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_session_id: "MH123") }
+    let(:base) { ::PaymentProviders::MoneyhashProvider.api_base_url }
+    let(:intent_endpoint) { "#{base}/api/v1.1/payments/intent/MH123/" }
+    let(:intent_client) { instance_double(LagoHttpClient::Client) }
+    let(:status) { "INITIATED" }
+    let(:get_response) { instance_double(Net::HTTPOK, body: {data: {status:}}.to_json) }
+
+    before do
+      moneyhash_provider
+      moneyhash_customer
+
+      allow(LagoHttpClient::Client).to receive(:new).with(intent_endpoint).and_return(intent_client)
+      allow(intent_client).to receive(:get).and_return(get_response)
+    end
+
+    it "returns false for non-paid intents" do
+      expect(moneyhash_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+
+    %w[PROCESSED SUCCESSFUL].each do |s|
+      context "when status is #{s}" do
+        let(:status) { s }
+
+        it "returns true" do
+          expect(moneyhash_service.checkout_session_already_completed?(payment_intent)).to be true
+        end
+      end
+    end
+
+    it "returns false when provider_session_id is missing" do
+      payment_intent.update!(provider_session_id: nil)
+      expect(moneyhash_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+
+    it "swallows HTTP errors and returns false" do
+      allow(intent_client).to receive(:get).and_raise(LagoHttpClient::HttpError.new(500, "boom", nil))
+      expect(moneyhash_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+  end
+
+  describe "#expire_checkout_session" do
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_session_id: "MH123") }
+    let(:base) { ::PaymentProviders::MoneyhashProvider.api_base_url }
+    let(:close_endpoint) { "#{base}/api/v1.1/payments/intent/MH123/close/" }
+    let(:close_client) { instance_double(LagoHttpClient::Client) }
+
+    before do
+      moneyhash_provider
+      moneyhash_customer
+
+      allow(LagoHttpClient::Client).to receive(:new).with(close_endpoint).and_return(close_client)
+      allow(close_client).to receive(:post_with_response).and_return(instance_double(Net::HTTPOK))
+    end
+
+    it "POSTs to the close endpoint" do
+      moneyhash_service.expire_checkout_session(payment_intent)
+      expect(close_client).to have_received(:post_with_response)
+    end
+
+    it "does nothing when provider_session_id is missing" do
+      payment_intent.update!(provider_session_id: nil)
+      allow(LagoHttpClient::Client).to receive(:new).and_return(close_client)
+
+      moneyhash_service.expire_checkout_session(payment_intent)
+
+      expect(close_client).not_to have_received(:post_with_response)
+    end
+
+    it "swallows HTTP errors" do
+      allow(close_client).to receive(:post_with_response)
+        .and_raise(LagoHttpClient::HttpError.new(400, "already processed", nil))
+      expect { moneyhash_service.expire_checkout_session(payment_intent) }.not_to raise_error
+    end
+  end
 end

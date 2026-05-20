@@ -42,6 +42,26 @@ module Invoices
         result.fail_with_error!(e)
       end
 
+      def checkout_session_already_completed?(payment_intent)
+        return false if payment_intent.provider_session_id.blank?
+
+        response = verify_client.get(
+          headers: headers,
+          params: {tx_ref: payment_intent.provider_session_id}
+        )
+        JSON.parse(response.body).dig("data", "status") == "successful"
+      rescue LagoHttpClient::HttpError
+        false
+      end
+
+      # Flutterwave Standard has no per-transaction expire API. The
+      # `session_duration` set at create time is the only timeout knob.
+      # We rely on the local PaymentIntent.expired! + invoice.payment_succeeded?
+      # short-circuit downstream.
+      def expire_checkout_session(_payment_intent)
+        nil
+      end
+
       def generate_payment_url(payment_intent)
         result.payment_url = payment_url
         # Flutterwave's hosted-link API exposes no separate session id; the
@@ -130,6 +150,10 @@ module Invoices
 
       def http_client
         @http_client ||= LagoHttpClient::Client.new("#{flutterwave_payment_provider.api_url}/payments")
+      end
+
+      def verify_client
+        LagoHttpClient::Client.new("#{flutterwave_payment_provider.api_url}/transactions/verify_by_reference")
       end
 
       def create_payment(flutterwave_payment)

@@ -42,6 +42,26 @@ module Invoices
         result.fail_with_error!(e)
       end
 
+      def checkout_session_already_completed?(payment_intent)
+        return false if payment_intent.provider_session_id.blank?
+
+        response = link_client(payment_intent.provider_session_id).get(headers: cashfree_headers)
+        link_status = JSON.parse(response.body)["link_status"]
+        %w[PAID PARTIALLY_PAID].include?(link_status)
+      rescue LagoHttpClient::HttpError
+        false
+      end
+
+      def expire_checkout_session(payment_intent)
+        return if payment_intent.provider_session_id.blank?
+
+        link_client("#{payment_intent.provider_session_id}/cancel")
+          .post_with_response({}, cashfree_headers)
+      rescue LagoHttpClient::HttpError
+        # 409 if the link isn't in ACTIVE status anymore - benign
+        nil
+      end
+
       def generate_payment_url(payment_intent)
         payment_link_response = create_payment_link(payment_url_params(payment_intent))
         parsed_response = JSON.parse(payment_link_response.body)
@@ -85,13 +105,21 @@ module Invoices
       end
 
       def create_payment_link(body)
-        client.post_with_response(body, {
+        client.post_with_response(body, cashfree_headers)
+      end
+
+      def cashfree_headers
+        {
           "accept" => "application/json",
           "content-type" => "application/json",
           "x-client-id" => cashfree_payment_provider.client_id,
           "x-client-secret" => cashfree_payment_provider.client_secret,
           "x-api-version" => ::PaymentProviders::CashfreeProvider::API_VERSION
-        })
+        }
+      end
+
+      def link_client(suffix)
+        LagoHttpClient::Client.new("#{::PaymentProviders::CashfreeProvider::BASE_URL}/#{suffix}")
       end
 
       def success_redirect_url

@@ -133,6 +133,82 @@ RSpec.describe Invoices::Payments::StripeService do
     end
   end
 
+  describe "#checkout_session_already_completed?" do
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_session_id: "cs_test_123") }
+
+    before do
+      stripe_payment_provider
+      stripe_customer
+    end
+
+    it "returns true when Stripe reports the session as complete" do
+      allow(::Stripe::Checkout::Session).to receive(:retrieve)
+        .and_return({"status" => "complete", "payment_status" => "paid"})
+
+      expect(stripe_service.checkout_session_already_completed?(payment_intent)).to be true
+    end
+
+    it "returns true when payment_status is paid" do
+      allow(::Stripe::Checkout::Session).to receive(:retrieve)
+        .and_return({"status" => "open", "payment_status" => "paid"})
+
+      expect(stripe_service.checkout_session_already_completed?(payment_intent)).to be true
+    end
+
+    it "returns false when the session is still open and unpaid" do
+      allow(::Stripe::Checkout::Session).to receive(:retrieve)
+        .and_return({"status" => "open", "payment_status" => "unpaid"})
+
+      expect(stripe_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+
+    it "returns false when provider_session_id is missing" do
+      payment_intent.update!(provider_session_id: nil)
+      expect(stripe_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+
+    it "swallows Stripe errors and returns false" do
+      allow(::Stripe::Checkout::Session).to receive(:retrieve)
+        .and_raise(::Stripe::InvalidRequestError.new("not found", {}))
+
+      expect(stripe_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+  end
+
+  describe "#expire_checkout_session" do
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_session_id: "cs_test_123") }
+
+    before do
+      stripe_payment_provider
+      stripe_customer
+    end
+
+    it "calls Stripe's expire endpoint with the session id" do
+      allow(::Stripe::Checkout::Session).to receive(:expire).and_return(nil)
+
+      stripe_service.expire_checkout_session(payment_intent)
+
+      expect(::Stripe::Checkout::Session).to have_received(:expire)
+        .with("cs_test_123", {}, hash_including(api_key: instance_of(String)))
+    end
+
+    it "does nothing when provider_session_id is missing" do
+      payment_intent.update!(provider_session_id: nil)
+      allow(::Stripe::Checkout::Session).to receive(:expire)
+
+      stripe_service.expire_checkout_session(payment_intent)
+
+      expect(::Stripe::Checkout::Session).not_to have_received(:expire)
+    end
+
+    it "swallows Stripe errors when the session is no longer expirable" do
+      allow(::Stripe::Checkout::Session).to receive(:expire)
+        .and_raise(::Stripe::InvalidRequestError.new("already completed", {}))
+
+      expect { stripe_service.expire_checkout_session(payment_intent) }.not_to raise_error
+    end
+  end
+
   describe "#update_payment_status" do
     let(:payment) do
       create(

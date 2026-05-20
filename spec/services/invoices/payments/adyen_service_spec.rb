@@ -258,4 +258,74 @@ RSpec.describe Invoices::Payments::AdyenService do
       end
     end
   end
+
+  describe "#checkout_session_already_completed?" do
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_session_id: "PL123") }
+    let(:get_response) { OpenStruct.new(response: {"status" => link_status}) }
+    let(:link_status) { "active" }
+
+    before do
+      adyen_payment_provider
+      adyen_customer
+      allow(Adyen::Client).to receive(:new).and_return(adyen_client)
+      allow(adyen_client).to receive(:checkout).and_return(checkout)
+      allow(checkout).to receive(:payment_links_api).and_return(payment_links_api)
+      allow(payment_links_api).to receive(:get_payment_link).and_return(get_response)
+    end
+
+    it "returns false for active links" do
+      expect(adyen_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+
+    %w[completed paymentPending].each do |status|
+      context "when status is #{status}" do
+        let(:link_status) { status }
+
+        it "returns true" do
+          expect(adyen_service.checkout_session_already_completed?(payment_intent)).to be true
+        end
+      end
+    end
+
+    it "returns false when provider_session_id is missing" do
+      payment_intent.update!(provider_session_id: nil)
+      expect(adyen_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+
+    it "swallows Adyen errors and returns false" do
+      allow(payment_links_api).to receive(:get_payment_link).and_raise(Adyen::AdyenError.new(nil, nil, "boom"))
+      expect(adyen_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+  end
+
+  describe "#expire_checkout_session" do
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_session_id: "PL123") }
+
+    before do
+      adyen_payment_provider
+      adyen_customer
+      allow(Adyen::Client).to receive(:new).and_return(adyen_client)
+      allow(adyen_client).to receive(:checkout).and_return(checkout)
+      allow(checkout).to receive(:payment_links_api).and_return(payment_links_api)
+      allow(payment_links_api).to receive(:update_payment_link).and_return(OpenStruct.new(response: {}))
+    end
+
+    it "patches the link to expired" do
+      adyen_service.expire_checkout_session(payment_intent)
+
+      expect(payment_links_api).to have_received(:update_payment_link).with({status: "expired"}, "PL123")
+    end
+
+    it "does nothing when provider_session_id is missing" do
+      payment_intent.update!(provider_session_id: nil)
+      adyen_service.expire_checkout_session(payment_intent)
+
+      expect(payment_links_api).not_to have_received(:update_payment_link)
+    end
+
+    it "swallows Adyen errors" do
+      allow(payment_links_api).to receive(:update_payment_link).and_raise(Adyen::AdyenError.new(nil, nil, "boom"))
+      expect { adyen_service.expire_checkout_session(payment_intent) }.not_to raise_error
+    end
+  end
 end

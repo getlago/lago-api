@@ -39,6 +39,26 @@ module Invoices
         result.fail_with_error!(e)
       end
 
+      def checkout_session_already_completed?(payment_intent)
+        return false if payment_intent.provider_session_id.blank?
+
+        response = intent_client(payment_intent.provider_session_id).get(headers: headers)
+        status = JSON.parse(response.body).dig("data", "status")
+        %w[PROCESSED SUCCESSFUL].include?(status)
+      rescue LagoHttpClient::HttpError
+        false
+      end
+
+      def expire_checkout_session(payment_intent)
+        return if payment_intent.provider_session_id.blank?
+
+        intent_client("#{payment_intent.provider_session_id}/close")
+          .post_with_response({}, headers)
+      rescue LagoHttpClient::HttpError
+        # MoneyHash rejects close on PROCESSED intents - benign
+        nil
+      end
+
       def generate_payment_url(payment_intent)
         return result unless should_process_payment?
 
@@ -123,6 +143,10 @@ module Invoices
 
       def client
         @client || LagoHttpClient::Client.new("#{::PaymentProviders::MoneyhashProvider.api_base_url}/api/v1.1/payments/intent/")
+      end
+
+      def intent_client(suffix)
+        LagoHttpClient::Client.new("#{::PaymentProviders::MoneyhashProvider.api_base_url}/api/v1.1/payments/intent/#{suffix}/")
       end
 
       def headers

@@ -296,4 +296,80 @@ RSpec.describe Invoices::Payments::CashfreeService do
       end
     end
   end
+
+  describe "#checkout_session_already_completed?" do
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_session_id: "cf_link_123") }
+    let(:link_status) { "ACTIVE" }
+    let(:get_response) { instance_double(Net::HTTPResponse, body: {link_status:}.to_json) }
+    let(:get_client) { instance_double(LagoHttpClient::Client) }
+
+    before do
+      cashfree_payment_provider
+      cashfree_customer
+
+      allow(LagoHttpClient::Client).to receive(:new)
+        .with("#{::PaymentProviders::CashfreeProvider::BASE_URL}/cf_link_123")
+        .and_return(get_client)
+      allow(get_client).to receive(:get).and_return(get_response)
+    end
+
+    it "returns false when the link is active" do
+      expect(cashfree_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+
+    %w[PAID PARTIALLY_PAID].each do |status|
+      context "when link_status is #{status}" do
+        let(:link_status) { status }
+
+        it "returns true" do
+          expect(cashfree_service.checkout_session_already_completed?(payment_intent)).to be true
+        end
+      end
+    end
+
+    it "returns false when provider_session_id is missing" do
+      payment_intent.update!(provider_session_id: nil)
+      expect(cashfree_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+
+    it "swallows HTTP errors and returns false" do
+      allow(get_client).to receive(:get).and_raise(LagoHttpClient::HttpError.new(500, "boom", nil))
+      expect(cashfree_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
+  end
+
+  describe "#expire_checkout_session" do
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_session_id: "cf_link_123") }
+    let(:cancel_client) { instance_double(LagoHttpClient::Client) }
+
+    before do
+      cashfree_payment_provider
+      cashfree_customer
+
+      allow(LagoHttpClient::Client).to receive(:new)
+        .with("#{::PaymentProviders::CashfreeProvider::BASE_URL}/cf_link_123/cancel")
+        .and_return(cancel_client)
+      allow(cancel_client).to receive(:post_with_response).and_return(instance_double(Net::HTTPResponse))
+    end
+
+    it "POSTs to the cancel endpoint" do
+      cashfree_service.expire_checkout_session(payment_intent)
+      expect(cancel_client).to have_received(:post_with_response)
+    end
+
+    it "does nothing when provider_session_id is missing" do
+      payment_intent.update!(provider_session_id: nil)
+      allow(LagoHttpClient::Client).to receive(:new).and_return(cancel_client)
+
+      cashfree_service.expire_checkout_session(payment_intent)
+
+      expect(cancel_client).not_to have_received(:post_with_response)
+    end
+
+    it "swallows HTTP errors" do
+      allow(cancel_client).to receive(:post_with_response)
+        .and_raise(LagoHttpClient::HttpError.new(409, "not active", nil))
+      expect { cashfree_service.expire_checkout_session(payment_intent) }.not_to raise_error
+    end
+  end
 end
