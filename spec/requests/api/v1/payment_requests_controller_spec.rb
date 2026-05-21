@@ -90,6 +90,47 @@ RSpec.describe Api::V1::PaymentRequestsController do
         end
       end
     end
+
+    context "when filtering by billing_entity_codes" do
+      let(:billing_entity_eu) { create(:billing_entity, organization:, code: "EU") }
+      let(:billing_entity_us) { create(:billing_entity, organization:, code: "US") }
+      let(:customer_eu) { create(:customer, organization:, billing_entity: billing_entity_eu) }
+      let(:customer_us) { create(:customer, organization:, billing_entity: billing_entity_us) }
+      let(:payment_request_eu) { create(:payment_request, organization:, customer: customer_eu) }
+      let(:payment_request_us) { create(:payment_request, organization:, customer: customer_us) }
+
+      before do
+        payment_request_eu
+        payment_request_us
+      end
+
+      it "returns only payment requests under the requested billing entity" do
+        get_with_token(organization, "/api/v1/payment_requests?billing_entity_codes[]=EU")
+
+        expect(response).to have_http_status(:success)
+        expect(json[:payment_requests].map { |r| r[:lago_id] }).to contain_exactly(payment_request_eu.id)
+      end
+
+      context "when filtering by multiple billing_entity_codes" do
+        it "returns payment requests matching any of the provided codes" do
+          get_with_token(organization, "/api/v1/payment_requests?billing_entity_codes[]=EU&billing_entity_codes[]=US")
+
+          expect(response).to have_http_status(:success)
+          expect(json[:payment_requests].map { |r| r[:lago_id] }).to contain_exactly(
+            payment_request_eu.id,
+            payment_request_us.id
+          )
+        end
+      end
+
+      context "when one of the billing_entity_codes is unknown" do
+        it "returns a not found error" do
+          get_with_token(organization, "/api/v1/payment_requests?billing_entity_codes[]=EU&billing_entity_codes[]=BOGUS")
+
+          expect(response).to be_not_found_error("billing_entity")
+        end
+      end
+    end
   end
 
   describe "GET /api/v1/payment_requests/:id" do

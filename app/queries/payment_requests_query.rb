@@ -2,11 +2,12 @@
 
 class PaymentRequestsQuery < BaseQuery
   Result = BaseResult[:payment_requests]
-  Filters = BaseFilters[:external_customer_id, :payment_status, :currency]
+  Filters = BaseFilters[:external_customer_id, :payment_status, :currency, :billing_entity_ids]
 
   def call
     payment_requests = PaymentRequest.where(organization:)
 
+    payment_requests = with_billing_entity_ids(payment_requests) if filters.billing_entity_ids.present?
     payment_requests = with_external_customer(payment_requests) if filters.external_customer_id
     payment_requests = with_payment_status(payment_requests) if filters.payment_status
     payment_requests = with_currency(payment_requests) if filters.currency
@@ -18,6 +19,10 @@ class PaymentRequestsQuery < BaseQuery
   end
 
   private
+
+  def with_billing_entity_ids(scope)
+    scope.joins(:customer).where(customers: {billing_entity_id: filters.billing_entity_ids})
+  end
 
   def with_external_customer(scope)
     scope.joins(:customer).where(customers: {external_id: filters.external_customer_id})

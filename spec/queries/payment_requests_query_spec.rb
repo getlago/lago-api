@@ -96,6 +96,44 @@ RSpec.describe PaymentRequestsQuery do
     end
   end
 
+  context "when filtering by billing_entity_ids" do
+    let(:billing_entity_eu) { create(:billing_entity, organization:, code: "EU") }
+    let(:billing_entity_us) { create(:billing_entity, organization:, code: "US") }
+
+    let(:customer_eu) { create(:customer, organization:, billing_entity: billing_entity_eu) }
+    let(:customer_us) { create(:customer, organization:, billing_entity: billing_entity_us) }
+
+    let(:payment_request_first) { create(:payment_request, organization:, customer: customer_eu) }
+    let(:payment_request_second) { create(:payment_request, organization:, customer: customer_us) }
+
+    let(:filters) { {billing_entity_ids: [billing_entity_eu.id]} }
+
+    it "returns payment requests whose customer belongs to the billing entity" do
+      expect(result).to be_success
+      expect(returned_ids).to contain_exactly(payment_request_first.id)
+    end
+
+    context "with multiple billing_entity_ids" do
+      let(:filters) { {billing_entity_ids: [billing_entity_eu.id, billing_entity_us.id]} }
+
+      it "returns payment requests matching any of the provided ids" do
+        expect(returned_ids).to contain_exactly(
+          payment_request_first.id,
+          payment_request_second.id
+        )
+      end
+    end
+
+    context "when no payment request matches the billing entity" do
+      let(:filters) { {billing_entity_ids: [create(:billing_entity, organization:).id]} }
+
+      it "returns no payment requests" do
+        expect(result).to be_success
+        expect(returned_ids).to be_empty
+      end
+    end
+  end
+
   context "when filtering by payment_status" do
     context "when pending status" do
       let(:filters) { {payment_status: :pending} }
