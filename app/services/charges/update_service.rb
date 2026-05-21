@@ -54,11 +54,10 @@ module Charges
         )
 
         filters = params.delete(:filters)
-        unless filters.nil?
+        if filters && !cascade
           ChargeFilters::CreateOrUpdateBatchService.call(
             charge:,
-            filters_params: filters.map(&:with_indifferent_access),
-            cascade_options:
+            filters_params: filters.map(&:with_indifferent_access)
           ).raise_if_error!
         end
 

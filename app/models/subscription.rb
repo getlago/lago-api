@@ -107,6 +107,10 @@ class Subscription < ApplicationRecord
     super || customer&.billing_entity
   end
 
+  def applicable_billing_entity_id
+    billing_entity_id || customer&.billing_entity_id
+  end
+
   def mark_as_active!(timestamp = Time.current)
     self.started_at ||= timestamp
     self.activated_at ||= timestamp
@@ -301,6 +305,10 @@ class Subscription < ApplicationRecord
     return [] if progressive_billing_disabled?
 
     usage_thresholds.presence || plan.usage_thresholds.presence || plan.applicable_usage_thresholds
+  end
+
+  def last_subscription_fee
+    fees.subscription.order(created_at: :desc).first
   end
 end
 

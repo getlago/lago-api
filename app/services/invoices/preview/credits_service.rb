@@ -54,6 +54,7 @@ module Invoices
         CreditNotes::CreateFromTermination.call!(
           subscription: terminated_subscription,
           reason: "order_cancellation",
+          upgrade: terminated_subscription.upgraded?,
           context: :preview
         ).credit_note
       end

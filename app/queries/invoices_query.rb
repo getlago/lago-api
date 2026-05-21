@@ -27,7 +27,7 @@ class InvoicesQuery < BaseQuery
   def call
     return result unless validate_filters.success?
 
-    invoices = base_scope.result.includes(:customer).preload(file_attachment: :blob, xml_file_attachment: :blob)
+    invoices = base_scope.includes(:customer).preload(file_attachment: :blob, xml_file_attachment: :blob)
     invoices = with_customers_filter(invoices)
 
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
@@ -67,17 +67,11 @@ class InvoicesQuery < BaseQuery
   end
 
   def base_scope
-    organization.invoices.ransack(search_params)
-  end
+    scope = organization.invoices
+    return scope if search_term.blank?
 
-  def search_params
-    return if search_term.blank?
-
-    {
-      m: "or",
-      id_cont: search_term,
-      number_cont: search_term
-    }
+    by_number = scope.ransack(number_cont: search_term).result
+    search_term.match?(BaseQuery::UUID_REGEX) ? by_number.or(scope.where(id: search_term)) : by_number
   end
 
   def with_customers_filter(scope)

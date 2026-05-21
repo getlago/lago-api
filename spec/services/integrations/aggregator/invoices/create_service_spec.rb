@@ -309,8 +309,20 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
     subject(:service_call_async) { described_class.new(invoice:).call_async }
 
     context "when invoice exists" do
-      it "enqueues invoice create job" do
-        expect { service_call_async }.to enqueue_job(Integrations::Aggregator::Invoices::CreateJob)
+      it "enqueues invoice create job with find_first: false by default" do
+        expect { service_call_async }
+          .to enqueue_job(Integrations::Aggregator::Invoices::CreateJob)
+          .with(invoice:, find_first: false)
+      end
+
+      context "when find_first: true is passed" do
+        subject(:service_call_async) { described_class.new(invoice:, find_first: true).call_async }
+
+        it "forwards find_first: true to the job" do
+          expect { service_call_async }
+            .to enqueue_job(Integrations::Aggregator::Invoices::CreateJob)
+            .with(invoice:, find_first: true)
+        end
       end
     end
 

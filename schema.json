@@ -559,6 +559,12 @@
               "deprecationReason": null
             },
             {
+              "name": "invoice_ready_to_finalize",
+              "description": "invoice.ready_to_finalize",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "invoice_failed",
               "description": "invoice.failed",
               "isDeprecated": false,
@@ -9761,9 +9767,13 @@
               "description": null,
               "args": [],
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -11432,9 +11442,13 @@
               "name": "code",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -19762,6 +19776,30 @@
               "deprecationReason": null
             },
             {
+              "name": "overdueBalances",
+              "description": "Overdue balance per currency",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "CustomerOverdueBalance",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "paymentProvider",
               "description": null,
               "args": [],
@@ -20647,6 +20685,49 @@
             }
           ],
           "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "CustomerOverdueBalance",
+          "description": null,
+          "fields": [
+            {
+              "name": "amountCents",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "BigInt",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "currency",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
           "enumValues": null,
           "possibleTypes": null
         },
@@ -27581,6 +27662,12 @@
               "deprecationReason": null
             },
             {
+              "name": "BILLABLE_METRICS",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "CUSTOMERS",
               "description": null,
               "isDeprecated": false,
@@ -27716,6 +27803,24 @@
           "enumValues": [
             {
               "name": "alert_triggered",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billable_metric_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billable_metric_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billable_metric_deleted",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -27878,6 +27983,12 @@
             },
             {
               "name": "invoice_drafted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_ready_to_finalize",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -52064,6 +52175,38 @@
               "description": "Query invoices of a customer",
               "args": [
                 {
+                  "name": "billingEntityIds",
+                  "description": null,
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "ID",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "currency",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "CurrencyEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "customerId",
                   "description": null,
                   "type": {
@@ -56032,6 +56175,18 @@
               "name": "payments",
               "description": "Query payments of an organization",
               "args": [
+                {
+                  "name": "currency",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "CurrencyEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
                 {
                   "name": "externalCustomerId",
                   "description": null,
@@ -61021,6 +61176,18 @@
                     "ofType": null
                   }
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingEntityId",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -66633,6 +66800,18 @@
           "fields": null,
           "inputFields": [
             {
+              "name": "billingEntityId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "code",
               "description": null,
               "type": {
@@ -71198,6 +71377,18 @@
                   "name": "BigInt",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingEntityId",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null

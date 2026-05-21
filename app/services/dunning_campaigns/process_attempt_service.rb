@@ -16,8 +16,6 @@ module DunningCampaigns
       return result unless organization.auto_dunning_enabled?
       return result unless applicable_dunning_campaign?
       return result unless dunning_campaign_threshold_reached?
-      return result unless days_between_attempts_passed?
-      return result if max_attempts_reached?
 
       ActiveRecord::Base.transaction do
         payment_request_result = PaymentRequests::CreateService.call(
@@ -28,12 +26,6 @@ module DunningCampaigns
           },
           dunning_campaign:
         ).raise_if_error!
-
-        customer.increment(:last_dunning_campaign_attempt)
-        customer.last_dunning_campaign_attempt_at = Time.zone.now
-        customer.save!
-
-        send_campaign_finished_webhook if max_attempts_reached?
 
         result.customer = customer
         result.payment_request = payment_request_result.payment_request
@@ -61,30 +53,12 @@ module DunningCampaigns
       overdue_invoices.sum(:total_amount_cents) >= dunning_campaign_threshold.amount_cents
     end
 
-    def days_between_attempts_passed?
-      return true unless customer.last_dunning_campaign_attempt_at
-
-      (customer.last_dunning_campaign_attempt_at + dunning_campaign.days_between_attempts.days).past?
-    end
-
-    def max_attempts_reached?
-      customer.last_dunning_campaign_attempt >= dunning_campaign.max_attempts
-    end
-
     def overdue_invoices
       customer
         .invoices
         .payment_overdue
         .where(ready_for_payment_processing: true)
         .where(currency: dunning_campaign_threshold.currency)
-    end
-
-    def send_campaign_finished_webhook
-      SendWebhookJob.perform_later(
-        "dunning_campaign.finished",
-        customer,
-        dunning_campaign_code: dunning_campaign.code
-      )
     end
   end
 end

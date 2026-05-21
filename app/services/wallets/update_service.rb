@@ -24,6 +24,12 @@ module Wallets
       return result unless valid_limitations?
       return result unless valid_payment_method?
 
+      if organization_flag_enabled?(:multi_entity_billing) && (params[:billing_entity_id].present? || params[:billing_entity_code].present?)
+        return result.not_found_failure!(resource: "billing_entity") unless billing_entity
+
+        wallet.billing_entity_id = billing_entity.id
+      end
+
       ActiveRecord::Base.transaction do
         wallet.name = params[:name] if params.key?(:name)
         wallet.code = params[:code] if params[:code]
@@ -176,6 +182,21 @@ module Wallets
       return unless params.key?(:metadata)
 
       Metadata::UpdateItemService.call!(owner: wallet, value: params[:metadata], partial: partial_metadata.present?)
+    end
+
+    def organization_flag_enabled?(flag)
+      wallet.customer.organization.feature_flag_enabled?(flag)
+    end
+
+    def billing_entity
+      return @billing_entity if defined? @billing_entity
+
+      scope = wallet.customer.organization.billing_entities
+      @billing_entity = if params[:billing_entity_id].present?
+        scope.find_by(id: params[:billing_entity_id])
+      elsif params[:billing_entity_code].present?
+        scope.find_by(code: params[:billing_entity_code])
+      end
     end
   end
 end

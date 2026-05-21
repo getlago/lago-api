@@ -399,16 +399,28 @@ RSpec.describe InvoicesQuery do
     end
   end
 
-  context "when searching for a part of an invoice id" do
-    let(:search_term) { invoice_fourth.id.scan(/.{10}/).first }
+  context "when searching for a full invoice id (UUID)" do
+    let(:search_term) { invoice_fourth.id }
 
-    it "returns 1 invoices" do
-      expect(returned_ids.count).to eq(1)
-      expect(returned_ids).not_to include(invoice_first.id)
-      expect(returned_ids).not_to include(invoice_second.id)
-      expect(returned_ids).not_to include(invoice_third.id)
-      expect(returned_ids).to include(invoice_fourth.id)
-      expect(returned_ids).not_to include(invoice_fifth.id)
+    it "returns the matching invoice" do
+      expect(returned_ids).to eq([invoice_fourth.id])
+    end
+  end
+
+  context "when searching for a partial UUID-like string" do
+    let(:search_term) { invoice_fourth.id.first(10) }
+
+    it "does not match by invoice id" do
+      expect(returned_ids).to be_empty
+    end
+  end
+
+  context "when searching for a non-UUID string that resembles part of an id" do
+    let(:search_term) { "abcdef12" }
+
+    it "does not raise and returns no id-matched invoices" do
+      expect { result }.not_to raise_error
+      expect(returned_ids).to be_empty
     end
   end
 

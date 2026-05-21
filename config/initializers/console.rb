@@ -104,8 +104,7 @@ Rails.application.console do
 
   def create_organization(org_name:, email:)
     organization = Organizations::CreateService
-      .call(name: org_name, document_numbering: "per_organization")
-      .raise_if_error!
+      .call!(name: org_name, document_numbering: "per_organization")
       .organization
 
     result = Invites::CreateService.call(

@@ -10,7 +10,9 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "invoice") if invoice.nil?
       return result.forbidden_failure! unless invoice.subscription?
+
       return result unless invoice.draft?
+      return result.forbidden_failure!(code: "cannot_finalize_with_pending_taxes") if invoice.tax_pending?
       drafted_issuing_date = invoice.issuing_date
 
       ActiveRecord::Base.transaction do
