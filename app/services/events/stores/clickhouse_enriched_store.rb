@@ -767,10 +767,10 @@ module Events
         @arel_table ||= ::Clickhouse::EventsEnrichedExpanded.arel_table
       end
 
-      def grouped_arel_columns(columns = nil)
-        return [[arel_table[:sorted_grouped_by].as("grouped_by")], group_names] if columns.blank?
+      def grouped_arel_columns
+        return [[arel_table[:sorted_grouped_by].as("grouped_by")], group_names] unless with_presentation_by_in_grouped_by?
 
-        map_args, = sorted_properties_map_args(columns, table: nil)
+        map_args, = sorted_properties_map_args(grouped_by, table: nil)
         map_sql = map_args.join(", ")
 
         grouped_by_node = Arel::Nodes::As.new(

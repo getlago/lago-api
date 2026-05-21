@@ -289,11 +289,8 @@ module Events
           :charges_duration,
           :events_cte_queries,
           :operation_type_sql,
+          :grouped_arel_columns,
           to: :store
-
-        def grouped_arel_columns
-          store.grouped_arel_columns(store.grouped_by)
-        end
 
         def joined_group_names
           _, names = grouped_arel_columns
