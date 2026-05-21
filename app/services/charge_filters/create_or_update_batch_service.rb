@@ -41,7 +41,10 @@ module ChargeFilters
             chargeable: charge,
             properties: filter_param[:properties]&.deep_symbolize_keys&.except(:presentation_group_keys)
           ).properties
-          if filter.save! && touch && !filter.changed?
+
+          filter.save! if filter.changed?
+
+          if touch
             PaperTrail.request.disable_model(filter.class)
             # NOTE: Make sure update_at is touched even if not changed to keep the right order
             filter.touch # rubocop:disable Rails/SkipsModelValidations
@@ -57,7 +60,9 @@ module ChargeFilters
             ) { it.organization_id = charge.organization_id }
 
             filter_value.values = values
-            if filter_value.save! && touch && !filter_value.changed?
+            filter_value.save! if filter_value.changed?
+
+            if touch
               PaperTrail.request.disable_model(filter_value.class)
               # NOTE: Make sure update_at is touched even if not changed to keep the right order
               filter_value.touch # rubocop:disable Rails/SkipsModelValidations
