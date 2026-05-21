@@ -97,4 +97,48 @@ RSpec.describe Resolvers::WalletResolver do
       expect_graphql_error(result:, message: "Resource not found")
     end
   end
+
+  context "with billing_entity_id field" do
+    let(:query) do
+      <<~GQL
+        query($id: ID!) {
+          wallet(id: $id) {
+            id
+            billingEntityId
+          }
+        }
+      GQL
+    end
+
+    context "when the wallet is bound to a billing entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:wallet) { create(:wallet, customer:, billing_entity:) }
+
+      it "returns the billing_entity_id" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          query:,
+          variables: {id: wallet.id}
+        )
+
+        expect(result["data"]["wallet"]["billingEntityId"]).to eq(billing_entity.id)
+      end
+    end
+
+    context "when the wallet has no billing entity (legacy row)" do
+      let(:wallet) { create(:wallet, customer:, billing_entity: nil) }
+
+      it "returns null" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          query:,
+          variables: {id: wallet.id}
+        )
+
+        expect(result["data"]["wallet"]["billingEntityId"]).to be_nil
+      end
+    end
+  end
 end

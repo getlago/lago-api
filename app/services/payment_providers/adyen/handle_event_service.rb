@@ -43,6 +43,20 @@ module PaymentProviders
 
           result = service.preauthorise(organization, event)
           result.raise_if_error!
+        when "CANCELLATION"
+          # Adyen uses originalReference to point at the cancelled payment;
+          # pspReference is the cancel modification's own id.
+          return result if event["success"] != "true"
+
+          provider_payment_id = event["originalReference"]
+          payment = Payment.find_by(provider_payment_id:) if provider_payment_id
+          return result unless payment
+
+          metadata = {lago_payable_type: payment.payable_type}
+          update_result = payment_service_klass(metadata)
+            .new
+            .update_payment_status(provider_payment_id:, status: "Cancelled", metadata:)
+          update_result.raise_if_error!
         when "REFUND"
           service = CreditNotes::Refunds::AdyenService.new
 

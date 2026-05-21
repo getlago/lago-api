@@ -23,6 +23,10 @@ module Invoices
     def call
       return result if active_subscriptions.empty? && recurring
 
+      if mixed_billing_entities?
+        return result.validation_failure!(errors: {billing_entity: ["mixed_billing_entities"]})
+      end
+
       create_generating_invoice unless invoice
       invoice.status = :open if subscription_gated?
       result.invoice = invoice
@@ -36,7 +40,7 @@ module Invoices
         )
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
-        skip_payment_gating_for_zero_amount if subscription_payment_gated? && invoice.total_amount_cents.zero?
+        skip_payment_gating_for_zero_amount if subscription_payment_gated? && invoice.total_amount_cents.zero? && !invoice.tax_pending?
 
         set_invoice_generated_status unless invoice.pending?
         invoice.save!
@@ -66,6 +70,7 @@ module Invoices
         if grace_period?
           SendWebhookJob.perform_after_commit("invoice.drafted", invoice)
           Utils::ActivityLog.produce_after_commit(invoice, "invoice.drafted")
+          notify_ready_to_finalize unless invoice.tax_pending?
         end
 
         return result
@@ -76,6 +81,7 @@ module Invoices
       elsif grace_period?
         SendWebhookJob.perform_after_commit("invoice.drafted", invoice)
         Utils::ActivityLog.produce_after_commit(invoice, "invoice.drafted")
+        notify_ready_to_finalize unless invoice.tax_pending?
       else
         unless invoice.closed? # we dont need to send the webhooks if the invoice was closed ( skip 0 invoice setting )
           SendWebhookJob.perform_after_commit("invoice.created", invoice)
@@ -141,6 +147,7 @@ module Invoices
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
+        billing_entity: invoice_billing_entity,
         invoice_type: :subscription,
         invoicing_reason:,
         currency:,
@@ -161,6 +168,14 @@ module Invoices
       return false if subscription_gated?
 
       @grace_period ||= customer.applicable_invoice_grace_period.positive?
+    end
+
+    def invoice_billing_entity
+      subscriptions.first&.billing_entity || customer.billing_entity
+    end
+
+    def mixed_billing_entities?
+      subscriptions.map(&:applicable_billing_entity_id).uniq.many?
     end
 
     def set_invoice_generated_status
@@ -197,6 +212,11 @@ module Invoices
       after_commit do
         DailyUsages::FillFromInvoiceJob.perform_later(invoice:, subscriptions:)
       end
+    end
+
+    def notify_ready_to_finalize
+      SendWebhookJob.perform_after_commit("invoice.ready_to_finalize", invoice)
+      Utils::ActivityLog.produce_after_commit(invoice, "invoice.ready_to_finalize")
     end
   end
 end

@@ -58,14 +58,20 @@ module Wallets
         attributes[:payment_method_id] = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
+      if organization_flag_enabled?(:multi_entity_billing) && (params[:billing_entity_id].present? || params[:billing_entity_code].present?)
+        return result.not_found_failure!(resource: "billing_entity") unless billing_entity
+
+        attributes[:billing_entity_id] = billing_entity.id
+      end
+
       wallet = Wallet.new(attributes)
 
       ActiveRecord::Base.transaction do
-        if currency.present? && (!multi_currency_enabled? || customer.currency.blank?)
+        if currency.present? && (!organization_flag_enabled?(:multi_currency) || customer.currency.blank?)
           Customers::UpdateCurrencyService.call!(customer: customer, currency:)
         end
 
-        wallet.currency = multi_currency_enabled? ? (currency || wallet.customer.currency) : wallet.customer.currency
+        wallet.currency = organization_flag_enabled?(:multi_currency) ? (currency || wallet.customer.currency) : wallet.customer.currency
         wallet.save!
 
         validate_wallet_initial_amount! wallet
@@ -83,6 +89,8 @@ module Wallets
         end
 
         create_metadata(wallet, params[:metadata]) if !params[:metadata].nil?
+
+        customer.flag_wallets_for_refresh
       end
 
       result.wallet = wallet
@@ -144,8 +152,8 @@ module Wallets
       params[:currency]
     end
 
-    def multi_currency_enabled?
-      customer.organization.feature_flag_enabled?(:multi_currency)
+    def organization_flag_enabled?(flag)
+      customer.organization.feature_flag_enabled?(flag)
     end
 
     def valid?
@@ -195,6 +203,17 @@ module Wallets
       return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
 
       @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id:)
+    end
+
+    def billing_entity
+      return @billing_entity if defined? @billing_entity
+
+      scope = customer.organization.billing_entities
+      @billing_entity = if params[:billing_entity_id].present?
+        scope.find_by(id: params[:billing_entity_id])
+      elsif params[:billing_entity_code].present?
+        scope.find_by(code: params[:billing_entity_code])
+      end
     end
 
     def create_metadata(wallet, metadata_value)

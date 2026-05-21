@@ -18,7 +18,6 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
-      return result.not_allowed_failure!(code: "not_voidable") if invoice.voided?
       return result.forbidden_failure! unless generate_credit_note_allowed?
       unless valid_credit_note_amounts?
         return result.single_validation_failure!(
@@ -27,7 +26,9 @@ module Invoices
         )
       end
 
-      ActiveRecord::Base.transaction do
+      invoice.with_lock do
+        return result.not_allowed_failure!(code: "not_voidable") if invoice.voided?
+
         invoice.void!
         flag_lifetime_usage_for_refresh
 

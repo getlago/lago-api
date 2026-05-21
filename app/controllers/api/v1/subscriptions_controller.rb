@@ -167,6 +167,8 @@ module Api
           .permit(
             :external_customer_id,
             :plan_code,
+            :billing_entity_code,
+            :billing_entity_id,
             :name,
             :external_id,
             :billing_time,
@@ -195,6 +197,8 @@ module Api
           :on_termination_credit_note,
           :on_termination_invoice,
           :progressive_billing_disabled,
+          :billing_entity_id,
+          :billing_entity_code,
           activation_rules: [:type, :timeout_hours],
           invoice_custom_section: [
             :skip_invoice_custom_sections,

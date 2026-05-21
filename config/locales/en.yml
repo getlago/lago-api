@@ -32,11 +32,13 @@ en:
         invalid_free_units_per_total_aggregation: invalid_free_units_per_total_aggregation
         invalid_graduated_ranges: invalid_graduated_ranges
         invalid_organization: invalid_organization
+        invalid_owner: invalid_owner
         invalid_package_size: invalid_package_size
         invalid_per_unit_amount: invalid_per_unit_amount
         invalid_rate: invalid_rate
         invalid_size: invalid_size
         invalid_timezone: invalid_timezone
+        invalid_void_reason: invalid_void_reason
         invalid_volume_ranges: invalid_volume_ranges
         language_code_invalid: not_a_valid_language_code
         less_than_or_equal_to: value_is_out_of_range

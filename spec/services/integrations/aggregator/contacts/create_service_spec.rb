@@ -23,7 +23,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
   let(:customer_link) do
     url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
 
-    URI.join(url, "/customer/", customer.id).to_s
+    URI.join(url, "/#{customer.organization.slug}/customer/", customer.id).to_s
   end
 
   before do

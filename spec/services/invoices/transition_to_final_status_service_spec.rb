@@ -101,6 +101,37 @@ RSpec.describe Invoices::TransitionToFinalStatusService do
     end
   end
 
+  context "when invoice is subscription_gated with tax pending" do
+    let(:fees_amount_cents) { 100 }
+    let(:plan) { create(:plan, organization:, pay_in_advance: true) }
+    let(:subscription) do
+      create(:subscription, :incomplete, :with_activation_rules,
+        activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+        organization:, customer:, plan:)
+    end
+    let(:invoice) do
+      create(
+        :invoice,
+        organization:,
+        currency: "EUR",
+        fees_amount_cents:,
+        total_amount_cents: 0,
+        tax_status: :pending,
+        issuing_date: Time.zone.now.beginning_of_month,
+        customer:,
+        status: :open
+      )
+    end
+
+    before { create(:invoice_subscription, invoice:, subscription:) }
+
+    it "keeps the invoice as open while waiting for tax resolution" do
+      result
+
+      expect(invoice.status).to eq("open")
+    end
+  end
+
   context "when invoice fees_amount_cents is zero" do
     let(:fees_amount_cents) { 0 }
 

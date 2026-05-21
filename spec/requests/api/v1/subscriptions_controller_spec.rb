@@ -316,6 +316,82 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "when binding the subscription to an explicit billing entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          billing_time: "anniversary",
+          billing_entity_code: billing_entity.code
+        }
+      end
+
+      context "when multi_entity_billing flag is enabled" do
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "binds the subscription to the resolved billing entity" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          subscription = Subscription.find_by(external_id: params[:external_id])
+          expect(subscription.billing_entity_id).to eq(billing_entity.id)
+        end
+
+        context "when binding via billing_entity_id instead of code" do
+          let(:params) do
+            {
+              external_customer_id: customer.external_id,
+              plan_code:,
+              external_id: SecureRandom.uuid,
+              billing_time: "anniversary",
+              billing_entity_id: billing_entity.id
+            }
+          end
+
+          it "binds the subscription to the resolved billing entity" do
+            subject
+
+            expect(response).to have_http_status(:ok)
+            subscription = Subscription.find_by(external_id: params[:external_id])
+            expect(subscription.billing_entity_id).to eq(billing_entity.id)
+          end
+        end
+      end
+
+      context "when multi_entity_billing flag is disabled" do
+        it "ignores the param and persists subscription with no explicit billing entity" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          subscription = Subscription.find_by(external_id: params[:external_id])
+          expect(subscription.billing_entity_id).to be_nil
+        end
+      end
+
+      context "without billing_entity_code" do
+        let(:params) do
+          {
+            external_customer_id: customer.external_id,
+            plan_code:,
+            external_id: SecureRandom.uuid,
+            billing_time: "anniversary"
+          }
+        end
+
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "persists subscription with no explicit billing entity" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          subscription = Subscription.find_by(external_id: params[:external_id])
+          expect(subscription.billing_entity_id).to be_nil
+        end
+      end
+    end
+
     context "with invalid plan code" do
       let(:plan_code) { "#{plan.code}-invalid" }
 
@@ -1715,6 +1791,58 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           expect(json[:code]).to eq("subscription_incomplete")
         end
       end
+
+      context "when updating billing_entity" do
+        let(:subscription) { create(:subscription, customer:, plan:) }
+        let(:new_billing_entity) { create(:billing_entity, organization:) }
+
+        context "with multi_entity_billing feature flag enabled" do
+          before { organization.update!(feature_flags: ["multi_entity_billing"]) }
+
+          context "with billing_entity_code" do
+            let(:update_params) { {billing_entity_code: new_billing_entity.code} }
+
+            it "updates the subscription's billing entity" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+            end
+          end
+
+          context "with billing_entity_id" do
+            let(:update_params) { {billing_entity_id: new_billing_entity.id} }
+
+            it "updates the subscription's billing entity" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+            end
+          end
+
+          context "with an unknown billing_entity_code" do
+            let(:update_params) { {billing_entity_code: "does-not-exist"} }
+
+            it "returns a not found error" do
+              subject
+
+              expect(response).to be_not_found_error("billing_entity")
+            end
+          end
+        end
+
+        context "with multi_entity_billing feature flag disabled" do
+          let(:update_params) { {billing_entity_code: new_billing_entity.code} }
+
+          it "silently ignores billing_entity_code and returns success" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(subscription.reload.billing_entity_id).to be_nil
+          end
+        end
+      end
     end
   end
 
@@ -1789,7 +1917,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
-    context "with N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    context "with N+1 query detection", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
       before do
         prev = create(:subscription, customer:, plan: create(:plan, organization:), status: :terminated)
         nxt = create(:subscription, customer:, plan: create(:plan, organization:), status: :pending)

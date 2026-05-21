@@ -17,7 +17,8 @@ module Wallets
           wallet.recurring_transaction_rules.find_each do |recurring_transaction_rule|
             Wallets::RecurringTransactionRules::TerminateService.call(recurring_transaction_rule: recurring_transaction_rule)
           end
-          SendWebhookJob.perform_later("wallet.terminated", wallet)
+          wallet.customer.flag_wallets_for_refresh
+          SendWebhookJob.perform_after_commit("wallet.terminated", wallet)
         end
       end
 

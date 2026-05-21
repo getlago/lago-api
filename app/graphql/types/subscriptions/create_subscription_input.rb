@@ -10,6 +10,7 @@ module Types
       argument :name, String, required: false
       argument :subscription_id, ID, required: false
 
+      argument :billing_entity_id, ID, required: false
       argument :customer_id, ID, required: true
       argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
       argument :plan_id, ID, required: true
