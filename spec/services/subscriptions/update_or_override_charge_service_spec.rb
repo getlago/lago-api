@@ -126,6 +126,44 @@ RSpec.describe Subscriptions::UpdateOrOverrideChargeService do
         end
       end
 
+      context "when the charge passed lives directly on the overridden plan with parent_id: nil" do
+        # Reproduces the state left by `Plans::UpdateService#process_charges`
+        # (the legacy `plan_overrides` PATCH path): a top-level charge sits
+        # directly on the overridden plan with no parent, alongside the
+        # subscription's overridden plan. The service must update this charge
+        # in place rather than layering a second override on top of it,
+        # which would produce two charges with the same `billable_metric_id`
+        # and `code` — both contributing fees over the same events.
+        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+        let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
+        let!(:charge) do
+          create(:standard_charge, plan: overridden_plan, organization:, billable_metric:)
+        end
+
+        it "does not create a second override charge" do
+          expect { service.call }.not_to change(Charge, :count)
+        end
+
+        it "updates the existing top-level charge in place" do
+          result = service.call
+
+          expect(result.charge.id).to eq(charge.id)
+          expect(result.charge.parent_id).to be_nil
+          expect(result.charge.plan_id).to eq(overridden_plan.id)
+          expect(result.charge.invoice_display_name).to eq("Overridden Charge")
+          expect(result.charge.min_amount_cents).to eq(500)
+          expect(result.charge.properties).to eq({"amount" => "150"})
+        end
+
+        it "does not create a duplicate charge for the same billable metric on the overridden plan" do
+          service.call
+
+          charges_for_metric = overridden_plan.charges.where(billable_metric_id: billable_metric.id)
+          expect(charges_for_metric.count).to eq(1)
+          expect(charges_for_metric.first.id).to eq(charge.id)
+        end
+      end
+
       context "with tax_codes" do
         let(:tax) { create(:tax, organization:) }
         let(:params) do

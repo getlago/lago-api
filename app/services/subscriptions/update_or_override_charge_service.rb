@@ -39,6 +39,15 @@ module Subscriptions
     attr_reader :subscription, :charge, :params
 
     def find_or_update_charge_override(target_plan)
+      # If the resolved charge already lives on the overridden plan, update
+      # it in place. Without this short-circuit, a charge created directly
+      # on the overridden plan by `Plans::UpdateService#process_charges`
+      # (the legacy `plan_overrides` PATCH path, where `parent_id` is nil)
+      # would end up with a SECOND override layered on top via
+      # `Charges::OverrideService` — same `billable_metric_id`, same `code` —
+      # and both charges would generate fees over the same events.
+      return update_charge_override(charge) if charge.plan_id == target_plan.id
+
       parent_charge = find_parent_charge
       existing_override = target_plan.charges.find_by(parent_id: parent_charge.id)
 
