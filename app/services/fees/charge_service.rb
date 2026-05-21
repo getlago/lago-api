@@ -2,6 +2,8 @@
 
 module Fees
   class ChargeService < BaseService
+    include BuildFastActiveRecord
+
     # optional params:
     # | usage_filters - UsageFilters
     #  - context (:current_usage, :invoice_preview, :recurring) - to be moved in usage_filters
@@ -109,23 +111,23 @@ module Fees
           return []
         end
 
-        breakdowns_by_group = breakdowns_by_grouped_by(aggregation_result)
-
-        if billable_metric.recurring?
-          persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter, breakdowns_by_group)
-        end
-
         charge_model_result = apply_charge_model(aggregation_result:, properties:)
         unless charge_model_result.success?
           result.fail_with_error!(charge_model_result.error)
           return []
         end
 
+        grouped_breakdowns = group_breakdowns_by_key(aggregation_result.breakdowns, charge_model_result)
+
+        if billable_metric.recurring?
+          persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter, grouped_breakdowns)
+        end
+
         charge_fees = fees_from_charge_model_result(
           charge_model_result,
           properties:,
           charge_filter:,
-          breakdowns_by_group:
+          grouped_breakdowns:
         )
 
         filter_non_persistable_fees_for_caching(charge_fees)
@@ -139,6 +141,7 @@ module Fees
       fees.each do |fee|
         fee.association(:billable_metric).target = billable_metric
         fee.association(:charge_filter).target = charge_filter if charge_filter&.id
+        fee.association(:charge).target = charge
       end
 
       result.fees.concat(fees.compact)
@@ -159,10 +162,10 @@ module Fees
         calculate_projected_usage:
       ).apply
 
-      fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns_by_group: {})
+      fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, grouped_breakdowns: {})
     end
 
-    def fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns_by_group:)
+    def fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, grouped_breakdowns:)
       charge_model_result.grouped_results.map do |amount_result|
         # TODO: check if this is still needed as we now skip certain zero units fees
         next if current_usage && charge_filter && amount_result.units.zero? && !with_zero_units_filters
@@ -170,37 +173,36 @@ module Fees
         fee = init_fee(amount_result, properties:, charge_filter:)
         next if fee.nil?
 
-        build_breakdowns_for_fee(fee:, breakdowns_by_group:)
+        build_breakdowns_for_fee(fee:, grouped_breakdowns:)
 
         fee
       end.compact
     end
 
-    def build_breakdowns_for_fee(fee:, breakdowns_by_group:)
-      breakdowns_by_group.fetch(fee.grouped_by, []).each do |breakdown|
-        fee.presentation_breakdowns.build(
-          presentation_by: breakdown[:groups],
-          units: breakdown[:value],
-          organization_id: charge.organization_id
+    def build_breakdowns_for_fee(fee:, grouped_breakdowns:)
+      grouped_by = fee.grouped_by
+
+      breakdowns = (grouped_breakdowns[grouped_by] || []).map do |breakdown|
+        presentation_breakdown = build_fast_record(
+          PresentationBreakdown,
+          {
+            "presentation_by" => breakdown[:groups].except(*grouped_by.keys),
+            "units" => breakdown[:value],
+            "organization_id" => charge.organization_id
+          },
+          true
         )
+
+        presentation_breakdown.association(:organization).target = organization
+        presentation_breakdown
       end
+
+      fee.presentation_breakdowns = breakdowns
     end
 
-    def breakdowns_by_grouped_by(aggregation_result)
-      all_breakdowns = Array(aggregation_result.breakdowns)
-      return {} if all_breakdowns.empty?
-
-      aggregations = Array(aggregation_result.aggregations).presence || [aggregation_result]
-
-      aggregations.each_with_object({}) do |aggregation, result|
-        grouped_by = aggregation.grouped_by || {}
-        next if result.key?(grouped_by)
-
-        pricing_group_keys = grouped_by.keys
-        result[grouped_by] = all_breakdowns
-          .select { |b| b[:groups].slice(*pricing_group_keys) == grouped_by }
-          .map { |b| b.merge(groups: b[:groups].except(*pricing_group_keys)) }
-      end
+    def group_breakdowns_by_key(breakdowns, charge_model_result)
+      grouped_by_keys = charge_model_result.grouped_results.first&.grouped_by&.keys || []
+      Array(breakdowns).group_by { |b| b[:groups].slice(*grouped_by_keys) }
     end
 
     def filter_non_persistable_fees_for_caching(charge_fees)
@@ -235,11 +237,11 @@ module Fees
 
       # NOTE: amount_result should be a BigDecimal, we need to round it
       # to the currency decimals and transform it into currency cents
-      if charge.applied_pricing_unit
+      if (applied_pricing_unit = charge.applied_pricing_unit)
         pricing_unit_usage = PricingUnitUsage.build_from_fiat_amounts(
           amount: amount_result.amount,
           unit_amount: amount_result.unit_amount,
-          applied_pricing_unit: charge.applied_pricing_unit
+          applied_pricing_unit:
         )
 
         amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage
@@ -345,8 +347,8 @@ module Fees
       fee = result.fees.find { |f| f.charge_filter_id.nil? }
 
       if charge.applied_pricing_unit
-        used_amount_cents = result.fees.map(&:pricing_unit_usage).sum(&:amount_cents)
-        used_precise_amount_cents = result.fees.map(&:pricing_unit_usage).sum(&:precise_amount_cents)
+        used_amount_cents = result.fees.sum { |f| f.pricing_unit_usage.amount_cents }
+        used_precise_amount_cents = result.fees.sum { |f| f.pricing_unit_usage.precise_amount_cents }
       else
         used_amount_cents = result.fees.sum(&:amount_cents)
         used_precise_amount_cents = result.fees.sum(&:precise_amount_cents)
@@ -416,7 +418,7 @@ module Fees
       )
     end
 
-    def persist_recurring_value(aggregation_results, charge_filter, breakdowns_by_group)
+    def persist_recurring_value(aggregation_results, charge_filter, grouped_breakdowns)
       return if current_usage
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
@@ -424,9 +426,11 @@ module Fees
 
       result.cached_aggregations ||= []
 
-      # NOTE: persist current recurring value for next period
       aggregation_results.each do |aggregation_result|
         grouped_by = aggregation_result.grouped_by || {}
+        presentation_breakdowns = grouped_breakdowns.fetch(grouped_by, []).map do |breakdown|
+          breakdown.merge(groups: breakdown[:groups].except(*grouped_by.keys))
+        end
 
         result.cached_aggregations << CachedAggregation.find_or_initialize_by(
           organization_id: billable_metric.organization_id,
@@ -438,7 +442,7 @@ module Fees
         ) do |aggregation|
           aggregation.current_aggregation = aggregation_result.total_aggregated_units || aggregation_result.aggregation
           aggregation.current_amount = aggregation_result.custom_aggregation&.[](:amount)
-          aggregation.presentation_breakdowns = breakdowns_by_group.fetch(grouped_by, [])
+          aggregation.presentation_breakdowns = presentation_breakdowns
           aggregation.save!
         end
       end

@@ -628,6 +628,65 @@ RSpec.describe Invoices::CalculateFeesService do
         end
       end
 
+      context "when charge uses presentation group keys" do
+        let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value") }
+
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan,
+            charge_model: "standard",
+            billable_metric:,
+            properties: {
+              amount: "1",
+              presentation_group_keys: [{value: "region"}, {value: "department"}]
+            }
+          )
+        end
+
+        let(:event) do
+          [
+            create(
+              :event,
+              organization:,
+              subscription:,
+              code: billable_metric.code,
+              timestamp: event_timestamp,
+              properties: {region: "europe", department: "engineering", value: 10, ignored: "value"}
+            ),
+            create(
+              :event,
+              organization:,
+              subscription:,
+              code: billable_metric.code,
+              timestamp: event_timestamp,
+              properties: {region: "usa", department: "sales", value: 5, ignored: "value"}
+            )
+          ]
+        end
+
+        it "creates charge fee presentation breakdowns from event properties" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to eq(invoice.reload)
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
+          expect(invoice.fees.fixed_charge.count).to eq(1)
+
+          charge_fee = invoice.fees.charge.sole.reload
+          expect(charge_fee.amount_cents).to eq(1500)
+          expect(charge_fee.presentation_breakdowns.map(&:presentation_by)).to match_array(
+            [
+              {"region" => "europe", "department" => "engineering"},
+              {"region" => "usa", "department" => "sales"}
+            ]
+          )
+          expect(charge_fee.presentation_breakdowns.map { |breakdown| breakdown.units.to_f }).to match_array([10.0, 5.0])
+          expect(charge_fee.presentation_breakdowns).to all(have_attributes(organization_id: organization.id))
+        end
+      end
+
       context "when plan has minimum commitment" do
         let(:fixed_charge) do
           create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
