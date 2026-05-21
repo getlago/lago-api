@@ -4,7 +4,7 @@ module Api
   module V1
     module Subscriptions
       class ChargesController < BaseController
-        before_action :find_charge, only: %i[show update]
+        before_action :find_charge, only: %i[show update destroy]
 
         def index
           charges = subscription.plan.charges
@@ -47,6 +47,21 @@ module Api
                 result.charge,
                 root_name: "charge",
                 includes: %i[taxes]
+              )
+            )
+          else
+            render_error_response(result)
+          end
+        end
+
+        def destroy
+          result = ::Charges::DestroyService.call(charge:)
+
+          if result.success?
+            render(
+              json: ::V1::ChargeSerializer.new(
+                result.charge,
+                root_name: "charge"
               )
             )
           else

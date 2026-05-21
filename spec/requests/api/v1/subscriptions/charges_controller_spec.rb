@@ -256,4 +256,50 @@ RSpec.describe Api::V1::Subscriptions::ChargesController do
       end
     end
   end
+
+  describe "DELETE /api/v1/subscriptions/:external_id/charges/:code" do
+    subject { delete_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/charges/#{charge.code}") }
+
+    it_behaves_like "requires API permission", "subscription", "write"
+
+    it "discards the charge and returns it" do
+      expect { subject }.to change { charge.reload.discarded? }.from(false).to(true)
+
+      expect(response).to have_http_status(:success)
+      expect(json[:charge][:lago_id]).to eq(charge.id)
+      expect(json[:charge][:code]).to eq(charge.code)
+    end
+
+    context "when subscription does not exist" do
+      let(:external_id_query_param) { "invalid_external_id" }
+
+      it "returns not found error" do
+        subject
+
+        expect(response).to be_not_found_error("subscription")
+      end
+    end
+
+    context "when charge does not exist on the subscription's plan" do
+      subject { delete_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/charges/invalid_code") }
+
+      it "returns not found error" do
+        subject
+
+        expect(response).to be_not_found_error("charge")
+      end
+    end
+
+    context "when the charge is on an overridden plan" do
+      let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+      let(:subscription) { create(:subscription, customer:, plan: overridden_plan, external_id:) }
+      let(:charge) { create(:standard_charge, plan: overridden_plan, organization:, billable_metric:) }
+
+      it "discards the charge on the overridden plan" do
+        expect { subject }.to change { charge.reload.discarded? }.from(false).to(true)
+
+        expect(response).to have_http_status(:success)
+      end
+    end
+  end
 end

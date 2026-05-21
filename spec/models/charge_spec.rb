@@ -12,9 +12,22 @@ RSpec.describe Charge do
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)
+      expect(subject).to belong_to(:parent).class_name("Charge").optional
       expect(subject).to have_many(:filters).dependent(:destroy)
       expect(subject).to have_one(:applied_pricing_unit)
       expect(subject).to have_one(:pricing_unit).through(:applied_pricing_unit)
+    end
+
+    describe "#parent" do
+      let(:parent_charge) { create(:standard_charge) }
+      let(:child_charge) { create(:standard_charge, parent_id: parent_charge.id, plan: create(:plan, parent: parent_charge.plan)) }
+
+      it "resolves the parent even when it has been discarded" do
+        child_charge
+        parent_charge.discard!
+
+        expect(child_charge.reload.parent).to eq(parent_charge)
+      end
     end
   end
 

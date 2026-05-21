@@ -126,6 +126,50 @@ RSpec.describe Subscriptions::UpdateOrOverrideChargeService do
         end
       end
 
+      # Regression for #5549: the legacy `plan_overrides` PATCH path can create
+      # a top-level charge (parent_id nil) on the overridden plan. A subsequent
+      # PUT must not duplicate it.
+      context "when the charge passed is a top-level orphan on the overridden plan" do
+        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+        let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
+        let!(:charge) { create(:standard_charge, plan: overridden_plan, organization:, billable_metric:) }
+
+        it "does not create a new charge" do
+          expect { service.call }.not_to change(Charge, :count)
+        end
+
+        it "updates the orphan in place rather than creating an override of it" do
+          result = service.call
+
+          expect(result.charge.id).to eq(charge.id)
+          expect(result.charge.invoice_display_name).to eq("Overridden Charge")
+          expect(result.charge.min_amount_cents).to eq(500)
+        end
+      end
+
+      context "when the overridden plan already has duplicates with the same code" do
+        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+        let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
+        let!(:charge) { create(:standard_charge, plan: overridden_plan, organization:, billable_metric:, parent: plan_charge, code: plan_charge.code) }
+        let(:plan_charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
+        let!(:duplicate_orphan) do
+          create(:standard_charge, plan: overridden_plan, organization:, billable_metric:, code: charge.code)
+        end
+
+        it "discards duplicates that share the same code" do
+          service.call
+
+          expect(duplicate_orphan.reload).to be_discarded
+        end
+
+        it "updates the target charge" do
+          result = service.call
+
+          expect(result.charge.id).to eq(charge.id)
+          expect(result.charge.invoice_display_name).to eq("Overridden Charge")
+        end
+      end
+
       context "with tax_codes" do
         let(:tax) { create(:tax, organization:) }
         let(:params) do

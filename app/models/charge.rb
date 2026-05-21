@@ -11,7 +11,7 @@ class Charge < ApplicationRecord
   belongs_to :organization
   belongs_to :plan, -> { with_discarded }, touch: true
   belongs_to :billable_metric, -> { with_discarded }
-  belongs_to :parent, class_name: "Charge", optional: true
+  belongs_to :parent, -> { with_discarded }, class_name: "Charge", optional: true
 
   has_one :applied_pricing_unit, as: :pricing_unitable
   has_one :pricing_unit, through: :applied_pricing_unit
