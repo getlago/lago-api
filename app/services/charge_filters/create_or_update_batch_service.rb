@@ -27,9 +27,7 @@ module ChargeFilters
         filters_params.each do |filter_param|
           # NOTE: since a filter could be a refinement of another one, we have to make sure
           #       that we are targeting the right one
-          filter = filters.find do |f|
-            f.to_h.sort == filter_param[:values].sort
-          end
+          filter = filters_by_values_key[filter_param[:values].sort]
 
           filter ||= charge.filters.new(organization_id: charge.organization_id)
 
@@ -47,7 +45,7 @@ module ChargeFilters
 
           # NOTE: Create or update the filter values
           filter_param[:values].each do |key, values|
-            billable_metric_filter = charge.billable_metric.filters.find_by(key:)
+            billable_metric_filter = billable_metric_filters_by_key[key]
 
             filter_value = filter.values.find_or_initialize_by(
               billable_metric_filter_id: billable_metric_filter&.id
@@ -80,6 +78,14 @@ module ChargeFilters
 
     def filters
       @filters ||= charge.filters.includes(values: :billable_metric_filter)
+    end
+
+    def filters_by_values_key
+      @filters_by_values_key ||= filters.index_by { |f| f.to_h.sort }
+    end
+
+    def billable_metric_filters_by_key
+      @billable_metric_filters_by_key ||= charge.billable_metric.filters.index_by(&:key)
     end
 
     def remove_all
