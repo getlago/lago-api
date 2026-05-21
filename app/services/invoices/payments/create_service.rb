@@ -29,6 +29,13 @@ module Invoices
           return result
         end
 
+        reconciliation = PaymentIntents::ReconcileOpenCheckoutUrlsService.call(invoice:)
+        if reconciliation.already_paid_via_checkout
+          # The customer paid via the hosted URL before this auto-charge could
+          # run. Stand down; the URL's webhook will finalize the invoice.
+          return result
+        end
+
         invoice.update!(payment_attempts: invoice.payment_attempts + 1)
 
         payment ||= Payment.create_with(

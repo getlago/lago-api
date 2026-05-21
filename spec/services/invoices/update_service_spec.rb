@@ -318,6 +318,34 @@ RSpec.describe Invoices::UpdateService do
       end
     end
 
+    context "post-success expire of open checkout URLs" do
+      context "when payment_status transitions to succeeded" do
+        let(:invoice) { create(:invoice, payment_status: :pending) }
+
+        it "enqueues ExpireOpenCheckoutUrlsJob" do
+          expect { result }
+            .to have_enqueued_job_after_commit(PaymentIntents::ExpireOpenCheckoutUrlsJob).with(invoice)
+        end
+      end
+
+      context "when payment_status was already succeeded" do
+        let(:invoice) { create(:invoice, payment_status: :succeeded) }
+
+        it "does not enqueue the job" do
+          expect { result }.not_to have_enqueued_job(PaymentIntents::ExpireOpenCheckoutUrlsJob)
+        end
+      end
+
+      context "when payment_status transitions to failed" do
+        let(:invoice) { create(:invoice, payment_status: :pending) }
+        let(:update_args) { {payment_status: "failed"} }
+
+        it "does not enqueue the job" do
+          expect { result }.not_to have_enqueued_job(PaymentIntents::ExpireOpenCheckoutUrlsJob)
+        end
+      end
+    end
+
     context "when invoice payment_status is invalid" do
       let(:update_args) do
         {

@@ -323,9 +323,17 @@ RSpec.describe Invoices::Payments::AdyenService do
       expect(payment_links_api).not_to have_received(:update_payment_link)
     end
 
-    it "swallows Adyen errors" do
+    it "lets Adyen errors bubble up unwrapped (job will surface them)" do
       allow(payment_links_api).to receive(:update_payment_link).and_raise(Adyen::AdyenError.new(nil, nil, "boom"))
-      expect { adyen_service.expire_checkout_session(payment_intent) }.not_to raise_error
+      expect { adyen_service.expire_checkout_session(payment_intent) }
+        .to raise_error(Adyen::AdyenError)
+    end
+
+    it "wraps Faraday connection failures as Invoices::Payments::ConnectionError" do
+      allow(payment_links_api).to receive(:update_payment_link)
+        .and_raise(Faraday::ConnectionFailed.new("timeout"))
+      expect { adyen_service.expire_checkout_session(payment_intent) }
+        .to raise_error(Invoices::Payments::ConnectionError)
     end
   end
 end

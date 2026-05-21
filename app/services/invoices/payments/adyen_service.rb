@@ -59,8 +59,8 @@ module Invoices
           {status: "expired"},
           payment_intent.provider_session_id
         )
-      rescue Adyen::AdyenError
-        nil
+      rescue Faraday::ConnectionFailed => e
+        raise Invoices::Payments::ConnectionError, e
       end
 
       def generate_payment_url(payment_intent)

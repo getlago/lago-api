@@ -366,10 +366,24 @@ RSpec.describe Invoices::Payments::CashfreeService do
       expect(cancel_client).not_to have_received(:post_with_response)
     end
 
-    it "swallows HTTP errors" do
+    it "swallows 4xx HTTP errors (terminal: link not active / not found)" do
       allow(cancel_client).to receive(:post_with_response)
         .and_raise(LagoHttpClient::HttpError.new(409, "not active", nil))
       expect { cashfree_service.expire_checkout_session(payment_intent) }.not_to raise_error
+    end
+
+    it "wraps 5xx HTTP errors as Invoices::Payments::ConnectionError" do
+      allow(cancel_client).to receive(:post_with_response)
+        .and_raise(LagoHttpClient::HttpError.new(503, "service unavailable", nil))
+      expect { cashfree_service.expire_checkout_session(payment_intent) }
+        .to raise_error(Invoices::Payments::ConnectionError)
+    end
+
+    it "wraps 429 HTTP errors as Invoices::Payments::RateLimitError" do
+      allow(cancel_client).to receive(:post_with_response)
+        .and_raise(LagoHttpClient::HttpError.new(429, "slow down", nil))
+      expect { cashfree_service.expire_checkout_session(payment_intent) }
+        .to raise_error(Invoices::Payments::RateLimitError)
     end
   end
 end

@@ -201,11 +201,27 @@ RSpec.describe Invoices::Payments::StripeService do
       expect(::Stripe::Checkout::Session).not_to have_received(:expire)
     end
 
-    it "swallows Stripe errors when the session is no longer expirable" do
+    it "swallows InvalidRequestError when the session is no longer expirable" do
       allow(::Stripe::Checkout::Session).to receive(:expire)
         .and_raise(::Stripe::InvalidRequestError.new("already completed", {}))
 
       expect { stripe_service.expire_checkout_session(payment_intent) }.not_to raise_error
+    end
+
+    it "wraps connection errors as Invoices::Payments::ConnectionError" do
+      allow(::Stripe::Checkout::Session).to receive(:expire)
+        .and_raise(::Stripe::APIConnectionError.new("timeout"))
+
+      expect { stripe_service.expire_checkout_session(payment_intent) }
+        .to raise_error(Invoices::Payments::ConnectionError)
+    end
+
+    it "wraps rate-limit errors as Invoices::Payments::RateLimitError" do
+      allow(::Stripe::Checkout::Session).to receive(:expire)
+        .and_raise(::Stripe::RateLimitError.new("slow down"))
+
+      expect { stripe_service.expire_checkout_session(payment_intent) }
+        .to raise_error(Invoices::Payments::RateLimitError)
     end
   end
 

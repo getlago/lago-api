@@ -435,6 +435,35 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
+    context "when an open checkout URL was already paid on the provider side" do
+      before do
+        allow(PaymentIntents::ReconcileOpenCheckoutUrlsService)
+          .to receive(:call)
+          .with(invoice:)
+          .and_return(PaymentIntents::ReconcileOpenCheckoutUrlsService::Result.new.tap { |r| r.already_paid_via_checkout = true })
+      end
+
+      it "stands down without launching the auto-charge" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+        expect(invoice.reload.payment_attempts).to eq(0)
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
+    context "when no open checkout URL was already paid" do
+      it "proceeds with the auto-charge after reconciliation" do
+        allow(PaymentIntents::ReconcileOpenCheckoutUrlsService).to receive(:call).and_call_original
+
+        create_service.call
+
+        expect(PaymentIntents::ReconcileOpenCheckoutUrlsService).to have_received(:call).with(invoice:)
+        expect(provider_class).to have_received(:new)
+      end
+    end
+
     it_behaves_like "syncs payment" do
       let(:service_call) { create_service.call }
     end

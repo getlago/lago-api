@@ -150,10 +150,24 @@ RSpec.describe Invoices::Payments::MoneyhashService do
       expect(close_client).not_to have_received(:post_with_response)
     end
 
-    it "swallows HTTP errors" do
+    it "swallows 4xx HTTP errors (terminal: intent processed / not found)" do
       allow(close_client).to receive(:post_with_response)
         .and_raise(LagoHttpClient::HttpError.new(400, "already processed", nil))
       expect { moneyhash_service.expire_checkout_session(payment_intent) }.not_to raise_error
+    end
+
+    it "wraps 5xx HTTP errors as Invoices::Payments::ConnectionError" do
+      allow(close_client).to receive(:post_with_response)
+        .and_raise(LagoHttpClient::HttpError.new(503, "service unavailable", nil))
+      expect { moneyhash_service.expire_checkout_session(payment_intent) }
+        .to raise_error(Invoices::Payments::ConnectionError)
+    end
+
+    it "wraps 429 HTTP errors as Invoices::Payments::RateLimitError" do
+      allow(close_client).to receive(:post_with_response)
+        .and_raise(LagoHttpClient::HttpError.new(429, "slow down", nil))
+      expect { moneyhash_service.expire_checkout_session(payment_intent) }
+        .to raise_error(Invoices::Payments::RateLimitError)
     end
   end
 end

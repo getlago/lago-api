@@ -57,9 +57,15 @@ module Invoices
 
         link_client("#{payment_intent.provider_session_id}/cancel")
           .post_with_response({}, cashfree_headers)
-      rescue LagoHttpClient::HttpError
-        # 409 if the link isn't in ACTIVE status anymore - benign
-        nil
+      rescue LagoHttpClient::HttpError => e
+        status = e.error_code.to_i
+        # 429 -> let the job back off as a rate-limit retry.
+        raise Invoices::Payments::RateLimitError, e if status == 429
+        # 4xx (other) -> link no longer in ACTIVE / not found, idempotent success.
+        return if (400..499).cover?(status)
+
+        # 5xx -> transient provider issue, retry.
+        raise Invoices::Payments::ConnectionError, e
       end
 
       def generate_payment_url(payment_intent)

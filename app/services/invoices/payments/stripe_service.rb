@@ -75,9 +75,11 @@ module Invoices
         false
       end
 
-      # Best-effort: make the Checkout Session unusable. Idempotent — Stripe
-      # 400s on sessions that are not `open` (already expired/completed),
-      # which we treat as success.
+      # Best-effort: make the Checkout Session unusable.
+      # Terminal-but-idempotent errors (already paid, already expired,
+      # unknown id) are swallowed. Transient errors are re-raised as Lago
+      # wrappers so the job's retry_on triggers backoff. Mirrors the pattern
+      # in PaymentProviders::Stripe::Payments::CreateService.
       def expire_checkout_session(payment_intent)
         return if payment_intent.provider_session_id.blank?
 
@@ -86,8 +88,12 @@ module Invoices
           {},
           {api_key: stripe_api_key}
         )
-      rescue ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, ::Stripe::PermissionError
+      rescue ::Stripe::InvalidRequestError
         nil
+      rescue ::Stripe::RateLimitError => e
+        raise Invoices::Payments::RateLimitError, e
+      rescue ::Stripe::APIConnectionError => e
+        raise Invoices::Payments::ConnectionError, e
       end
 
       def generate_payment_url(payment_intent)

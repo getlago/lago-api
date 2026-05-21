@@ -78,8 +78,20 @@ module Invoices
           deliver_webhook
           log_activity
         end
+        expire_open_checkout_urls_on_success(old_payment_status)
       end
       update_hubspot_invoice if invoice.should_update_hubspot_invoice?
+    end
+
+    # Kills any hosted-URL still open at the provider once the invoice is
+    # paid, so a customer clicking the URL afterwards cannot double-charge.
+    # Covers URLs generated mid-auto-charge that the pre-charge reconciliation
+    # never saw.
+    def expire_open_checkout_urls_on_success(old_payment_status)
+      return unless invoice.payment_succeeded?
+      return if old_payment_status.to_s == "succeeded"
+
+      PaymentIntents::ExpireOpenCheckoutUrlsJob.perform_after_commit(invoice)
     end
 
     def update_fees_payment_status

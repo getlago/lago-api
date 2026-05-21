@@ -54,9 +54,13 @@ module Invoices
 
         intent_client("#{payment_intent.provider_session_id}/close")
           .post_with_response({}, headers)
-      rescue LagoHttpClient::HttpError
-        # MoneyHash rejects close on PROCESSED intents - benign
-        nil
+      rescue LagoHttpClient::HttpError => e
+        status = e.error_code.to_i
+        raise Invoices::Payments::RateLimitError, e if status == 429
+        # 4xx (other) -> intent already PROCESSED / not found, idempotent success.
+        return if (400..499).cover?(status)
+
+        raise Invoices::Payments::ConnectionError, e
       end
 
       def generate_payment_url(payment_intent)
