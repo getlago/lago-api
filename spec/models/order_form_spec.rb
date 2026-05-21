@@ -35,34 +35,42 @@ RSpec.describe OrderForm do
     it do
       expect(order_form).to validate_presence_of(:billing_snapshot)
     end
+  end
 
-    describe "number presence" do
-      it "is required when the callback cannot derive it" do
-        expect(order_form).not_to be_valid
-        expect(order_form.errors[:number]).to be_present
-      end
+  describe "sequencing" do
+    it "assigns sequential ids per organization" do
+      organization = create(:organization)
+      customer = create(:customer, organization:)
+      first = create(:order_form, organization:, customer:)
+      second = create(:order_form, organization:, customer:)
+      expect([first.sequential_id, second.sequential_id]).to eq([1, 2])
+    end
+
+    it "scopes the sequence per organization" do
+      org_a = create(:organization)
+      org_b = create(:organization)
+      a1 = create(:order_form, organization: org_a, customer: create(:customer, organization: org_a))
+      b1 = create(:order_form, organization: org_b, customer: create(:customer, organization: org_b))
+      expect([a1.sequential_id, b1.sequential_id]).to eq([1, 1])
     end
   end
 
-  describe "#ensure_number" do
-    let(:quote) { create(:quote) }
-    let(:quote_version) { create(:quote_version, quote:, organization: quote.organization) }
-
-    it "derives the number from the parent quote on save" do
-      order_form = build(:order_form, quote_version:, number: nil)
-
-      expect { order_form.save! }
-        .to change(order_form, :number)
-        .from(nil)
-        .to(quote.number.sub("QT", "OF"))
+  describe "ensure_number callback" do
+    it "assigns a formatted number when sequential_id and created_at are present" do
+      order_form = create(:order_form, created_at: Time.zone.local(2020, 1, 2))
+      expect(order_form.number).to eq("OF-2020-#{format("%04d", order_form.sequential_id)}")
     end
 
-    context "when the number is already set" do
-      it "does not overwrite it" do
-        order_form = build(:order_form, quote_version:, number: "OF-CUSTOM")
-
-        expect { order_form.save! }.not_to change(order_form, :number).from("OF-CUSTOM")
+    it "uses the current year when created_at is blank on save" do
+      travel_to(Time.zone.local(2026, 6, 1)) do
+        order_form = create(:order_form, created_at: nil)
+        expect(order_form.number).to eq("OF-2026-#{format("%04d", order_form.sequential_id)}")
       end
+    end
+
+    it "preserves an explicitly assigned number" do
+      order_form = create(:order_form, number: "OF-CUSTOM-0001")
+      expect(order_form.number).to eq("OF-CUSTOM-0001")
     end
   end
 end
