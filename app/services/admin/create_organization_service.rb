@@ -12,13 +12,13 @@ module Admin
       @premium_integrations = premium_integrations || []
       @feature_flags = feature_flags || []
       @reason = reason
-      super
+      super()
     end
 
     def call
       batch_id = SecureRandom.uuid
 
-      organization = Organizations::CreateService
+      organization = ::Organizations::CreateService
         .call(name:, document_numbering: "per_organization")
         .raise_if_error!
         .organization
@@ -29,7 +29,7 @@ module Admin
         organization.enable_feature_flag!(flag)
       end
 
-      Invites::CreateService.call(
+      ::Invites::CreateService.call(
         current_organization: organization,
         email: owner_email,
         roles: %w[admin],
