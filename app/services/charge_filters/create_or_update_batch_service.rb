@@ -25,9 +25,14 @@ module ChargeFilters
 
       ActiveRecord::Base.transaction do
         filters_params.each do |filter_param|
+          # NOTE: callers pass either string-keyed (plan flow, via with_indifferent_access) or
+          #       symbol-keyed (subscription override flow, via deep_symbolize_keys) values
+          #       hashes. Normalize so the in-memory indexes below match regardless.
+          values_params = filter_param[:values].transform_keys(&:to_s)
+
           # NOTE: since a filter could be a refinement of another one, we have to make sure
           #       that we are targeting the right one
-          filter = filters_by_values_key[filter_param[:values].sort]
+          filter = filters_by_values_key[values_params.sort]
 
           filter ||= charge.filters.new(organization_id: charge.organization_id)
 
@@ -44,7 +49,7 @@ module ChargeFilters
           end
 
           # NOTE: Create or update the filter values
-          filter_param[:values].each do |key, values|
+          values_params.each do |key, values|
             billable_metric_filter = billable_metric_filters_by_key[key]
 
             filter_value = filter.values.find_or_initialize_by(
