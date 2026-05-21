@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class OrderForm < ApplicationRecord
+  include Sequenced
+
   STATUSES = {
     generated: "generated",
     signed: "signed",
@@ -14,7 +16,7 @@ class OrderForm < ApplicationRecord
     invalid: "invalid"
   }.freeze
 
-  before_validation :ensure_number
+  before_save :ensure_number
 
   belongs_to :organization
   belongs_to :customer
@@ -30,7 +32,11 @@ class OrderForm < ApplicationRecord
     validate: {allow_nil: true}
 
   validates :billing_snapshot, presence: true
-  validates :number, presence: true
+
+  sequenced(
+    scope: ->(order_form) { order_form.organization.order_forms },
+    lock_key: ->(order_form) { order_form.organization_id }
+  )
 
   def self.ransackable_attributes(_ = nil)
     %w[number]
@@ -40,9 +46,11 @@ class OrderForm < ApplicationRecord
 
   def ensure_number
     return if number.present?
-    return if quote_version.blank?
+    return if sequential_id.blank?
 
-    self.number = quote_version.quote.number.sub(/\AQT-/, "OF-")
+    time = created_at || Time.current
+    formatted_sequential_id = format("%04d", sequential_id)
+    self.number = "OF-#{time.strftime("%Y")}-#{formatted_sequential_id}"
   end
 end
 
@@ -53,10 +61,9 @@ end
 #
 #  id                :uuid             not null, primary key
 #  billing_snapshot  :jsonb            not null
-#  content           :text
 #  expires_at        :datetime
-#  legal_text        :text
 #  number            :string           not null
+#  sequential_id     :integer          not null
 #  signed_at         :datetime
 #  status            :enum             default("generated"), not null
 #  void_reason       :enum
@@ -70,10 +77,10 @@ end
 #
 # Indexes
 #
-#  index_order_forms_on_customer_id                 (customer_id)
-#  index_order_forms_on_organization_id             (organization_id)
-#  index_order_forms_on_organization_id_and_number  (organization_id,number)
-#  index_order_forms_on_quote_version_id            (quote_version_id) UNIQUE
+#  index_order_forms_on_customer_id                          (customer_id)
+#  index_order_forms_on_quote_version_id                     (quote_version_id) UNIQUE
+#  index_unique_order_forms_on_organization_number           (organization_id,number) UNIQUE
+#  index_unique_order_forms_on_organization_sequential_id    (organization_id,sequential_id) UNIQUE
 #
 # Foreign Keys
 #
