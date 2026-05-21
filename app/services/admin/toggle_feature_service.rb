@@ -13,7 +13,7 @@ module Admin
       @reason = reason
       @notify_org_admin = notify_org_admin
       @batch_id = batch_id
-      super
+      super()
     end
 
     def call

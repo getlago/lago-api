@@ -4,7 +4,7 @@ module Admin
   class SlackNotificationService < ::BaseService
     def initialize(audit_log:)
       @audit_log = audit_log
-      super
+      super()
     end
 
     def call
