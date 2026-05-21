@@ -318,7 +318,7 @@ RSpec.describe Invoices::UpdateService do
       end
     end
 
-    context "post-success expire of open checkout URLs" do
+    context "when invoice payment_status transitions" do
       context "when payment_status transitions to succeeded" do
         let(:invoice) { create(:invoice, payment_status: :pending) }
 
