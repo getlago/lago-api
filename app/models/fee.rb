@@ -179,7 +179,21 @@ class Fee < ApplicationRecord
   end
 
   def presentation_breakdowns_displayed_in_invoice
-    presentation_breakdowns.select { |b| presentation_group_keys_values_displayed_in_invoice.any? { |k| b.presentation_by.key?(k) } }
+    keys = presentation_group_keys_values_displayed_in_invoice
+
+    return [] if keys.blank?
+
+    rows = Hash.new(0)
+    presentation_breakdowns.each do |breakdown|
+      presentation_by = breakdown.presentation_by
+      values = keys.filter_map { |key| [key, presentation_by[key]] if presentation_by.key?(key) }
+
+      next if values.empty?
+
+      rows[values] += breakdown.units
+    end
+
+    rows.map { |values, units| PresentationBreakdown.new(fee: self, presentation_by: values.to_h, units:) }
   end
 
   def grouped_or_filtered?
