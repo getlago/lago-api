@@ -50,12 +50,13 @@ RSpec.describe Admin::CreateOrganizationService do
       expect(result.organization.reload.feature_flags).to include("multiple_payment_methods")
     end
 
-    it "creates an invite for the owner email" do
+    it "creates an invite for the owner email and returns the invite url" do
       result = service.call
       organization = result.organization
 
       invite = Invite.find_by(organization: organization, email: owner_email)
       expect(invite).to be_present
+      expect(result.invite_url).to include("/invitation/#{invite.token}")
     end
 
     it "creates audit logs for premium integrations and feature flags" do

@@ -2,7 +2,7 @@
 
 module Admin
   class CreateOrganizationService < ::BaseService
-    Result = BaseResult[:organization]
+    Result = BaseResult[:organization, :invite_url]
 
     def initialize(actor:, name:, owner_email:, timezone: nil, premium_integrations: [], feature_flags: [], reason:)
       @actor = actor
@@ -29,16 +29,17 @@ module Admin
         organization.enable_feature_flag!(flag)
       end
 
-      ::Invites::CreateService.call(
+      invite_result = ::Invites::CreateService.call(
         current_organization: organization,
         email: owner_email,
         roles: %w[admin],
         skip_admin_check: true
-      )
+      ).raise_if_error!
 
       create_audit_logs!(organization, batch_id)
 
       result.organization = organization
+      result.invite_url = invite_result.invite_url
 
       CsAdminAuditLog.where(batch_id:).find_each do |log|
         Admin::SlackNotificationJob.perform_later(log.id)
