@@ -33,13 +33,13 @@ module Subscriptions
 
       cached_fees.map do |fee_attributes|
         pricing_unit_usage = if fee_attributes["pricing_unit_usage"].present?
-          build_record(PricingUnitUsage, fee_attributes["pricing_unit_usage"].slice(*pricing_unit_usage_columns), fee_attributes["pricing_unit_usage"]["id"].blank?)
+          build_fast_record(PricingUnitUsage, fee_attributes["pricing_unit_usage"].slice(*pricing_unit_usage_columns), fee_attributes["pricing_unit_usage"]["id"].blank?)
         end
 
-        fee = build_record(Fee, fee_attributes.slice(*fee_columns), fee_attributes["id"].blank?)
+        fee = build_fast_record(Fee, fee_attributes.slice(*fee_columns), fee_attributes["id"].blank?)
 
         presentation_breakdowns = (fee_attributes["presentation_breakdowns"] || EMPTY_ARRAY).map do |breakdown_attributes|
-          presentation_breakdown = build_record(PresentationBreakdown, breakdown_attributes.slice(*presentation_breakdown_columns), breakdown_attributes["id"].blank?)
+          presentation_breakdown = build_fast_record(PresentationBreakdown, breakdown_attributes.slice(*presentation_breakdown_columns), breakdown_attributes["id"].blank?)
           presentation_breakdown.association(:organization).target = subscription.organization
           presentation_breakdown.association(:fee).target = fee
           presentation_breakdown

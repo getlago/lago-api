@@ -183,7 +183,7 @@ module Fees
       grouped_by = fee.grouped_by
 
       breakdowns = (grouped_breakdowns[grouped_by] || []).map do |breakdown|
-        presentation_breakdown = build_record(
+        presentation_breakdown = build_fast_record(
           PresentationBreakdown,
           {
             "presentation_by" => breakdown[:groups].except(*grouped_by.keys),
