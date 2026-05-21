@@ -75,7 +75,7 @@ module Invoices
           {api_key: stripe_api_key}
         )
         session["status"] == "complete" || session["payment_status"] == "paid"
-      rescue StandardError
+      rescue
         false
       end
 

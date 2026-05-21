@@ -51,7 +51,7 @@ module Invoices
           params: {tx_ref: payment_intent.provider_session_id}
         )
         JSON.parse(response.body).dig("data", "status") == "successful"
-      rescue StandardError
+      rescue
         false
       end
 

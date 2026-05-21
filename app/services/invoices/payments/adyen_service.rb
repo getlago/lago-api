@@ -49,7 +49,7 @@ module Invoices
 
         res = client.checkout.payment_links_api.get_payment_link(payment_intent.provider_session_id)
         %w[completed paymentPending].include?(res.response["status"])
-      rescue StandardError
+      rescue
         false
       end
 
@@ -62,6 +62,9 @@ module Invoices
         )
       rescue Faraday::ConnectionFailed => e
         raise Invoices::Payments::ConnectionError, e
+      rescue Adyen::AdyenError => e
+        raise Invoices::Payments::RateLimitError, e if e.code.to_i == 429
+        raise
       end
 
       def generate_payment_url(payment_intent)

@@ -49,7 +49,7 @@ module Invoices
         response = link_client(payment_intent.provider_session_id).get(headers: cashfree_headers)
         link_status = JSON.parse(response.body)["link_status"]
         %w[PAID PARTIALLY_PAID].include?(link_status)
-      rescue StandardError
+      rescue
         false
       end
 

@@ -340,5 +340,12 @@ RSpec.describe Invoices::Payments::AdyenService do
       expect { adyen_service.expire_checkout_session(payment_intent) }
         .to raise_error(Invoices::Payments::ConnectionError)
     end
+
+    it "wraps Adyen 429 errors as Invoices::Payments::RateLimitError" do
+      allow(payment_links_api).to receive(:update_payment_link)
+        .and_raise(Adyen::AdyenError.new(nil, nil, "rate limited", 429))
+      expect { adyen_service.expire_checkout_session(payment_intent) }
+        .to raise_error(Invoices::Payments::RateLimitError)
+    end
   end
 end

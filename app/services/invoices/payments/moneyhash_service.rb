@@ -46,7 +46,7 @@ module Invoices
         response = intent_client(payment_intent.provider_session_id).get(headers: headers)
         status = JSON.parse(response.body).dig("data", "status")
         %w[PROCESSED SUCCESSFUL].include?(status)
-      rescue StandardError
+      rescue
         false
       end
 
