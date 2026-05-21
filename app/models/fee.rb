@@ -179,7 +179,7 @@ class Fee < ApplicationRecord
   end
 
   def presentation_breakdowns_displayed_in_invoice
-    presentation_breakdowns.select { |b| presentation_group_keys_values_displayed_in_invoice.any? { |k| b.presentation_by[k].present? } }
+    presentation_breakdowns.select { |b| presentation_group_keys_values_displayed_in_invoice.any? { |k| b.presentation_by.key?(k) } }
   end
 
   def basic_rate_percentage?
