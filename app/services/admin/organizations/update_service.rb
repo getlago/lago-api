@@ -9,7 +9,7 @@ module Admin
         @organization = organization
         @params = params
 
-        super
+        super()
       end
 
       def call

@@ -24,6 +24,7 @@ RSpec.describe Admin::CreateOrganizationService do
   end
 
   before do
+    create(:role, :admin)
     allow(Admin::SlackNotificationJob).to receive(:perform_later)
   end
 
