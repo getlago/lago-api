@@ -47,6 +47,9 @@ module Subscriptions
     end
 
     def override_units_only
+      apply_units_immediately = !!params[:apply_units_immediately]
+      timestamp = Time.current.to_i
+
       ActiveRecord::Base.transaction do
         parent_fixed_charge = find_parent_fixed_charge
         override = SubscriptionFixedChargeUnitsOverride.find_or_initialize_by(
@@ -61,8 +64,15 @@ module Subscriptions
         FixedCharges::EmitEventsService.call!(
           fixed_charge: parent_fixed_charge,
           subscription:,
-          apply_units_immediately: !!params[:apply_units_immediately]
+          apply_units_immediately:,
+          timestamp:
         )
+
+        if apply_units_immediately && parent_fixed_charge.pay_in_advance?
+          after_commit do
+            Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
+          end
+        end
 
         result.fixed_charge = parent_fixed_charge
       end
