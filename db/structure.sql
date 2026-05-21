@@ -385,6 +385,8 @@ DROP INDEX IF EXISTS public.index_unique_quote_versions_on_share_token;
 DROP INDEX IF EXISTS public.index_unique_quote_versions_on_quote_sequential_id;
 DROP INDEX IF EXISTS public.index_unique_quote_versions_on_quote_active_status;
 DROP INDEX IF EXISTS public.index_unique_quote_owners_on_quote_user;
+DROP INDEX IF EXISTS public.index_unique_order_forms_on_organization_sequential_id;
+DROP INDEX IF EXISTS public.index_unique_order_forms_on_organization_number;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
 DROP INDEX IF EXISTS public.index_uniq_wallet_code_per_customer;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_fixed_charges_boundaries;
@@ -492,8 +494,6 @@ DROP INDEX IF EXISTS public.index_organizations_on_slug;
 DROP INDEX IF EXISTS public.index_organizations_on_hmac_key;
 DROP INDEX IF EXISTS public.index_organizations_on_api_key;
 DROP INDEX IF EXISTS public.index_order_forms_on_quote_version_id;
-DROP INDEX IF EXISTS public.index_order_forms_on_organization_id_and_number;
-DROP INDEX IF EXISTS public.index_order_forms_on_organization_id;
 DROP INDEX IF EXISTS public.index_order_forms_on_customer_id;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id;
@@ -4638,16 +4638,16 @@ CREATE TABLE public.order_forms (
     quote_version_id uuid NOT NULL,
     signed_by_user_id uuid,
     number character varying NOT NULL,
+    sequential_id integer NOT NULL,
     status public.order_form_status DEFAULT 'generated'::public.order_form_status NOT NULL,
     void_reason public.order_form_void_reason,
     billing_snapshot jsonb NOT NULL,
-    content text,
-    legal_text text,
     expires_at timestamp(6) without time zone,
     signed_at timestamp(6) without time zone,
     voided_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT order_forms_constraint_sequential_id_positive CHECK ((sequential_id > 0))
 );
 
 
@@ -8739,20 +8739,6 @@ CREATE INDEX index_order_forms_on_customer_id ON public.order_forms USING btree 
 
 
 --
--- Name: index_order_forms_on_organization_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_order_forms_on_organization_id ON public.order_forms USING btree (organization_id);
-
-
---
--- Name: index_order_forms_on_organization_id_and_number; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_order_forms_on_organization_id_and_number ON public.order_forms USING btree (organization_id, number);
-
-
---
 -- Name: index_order_forms_on_quote_version_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9499,6 +9485,20 @@ CREATE UNIQUE INDEX index_uniq_wallet_code_per_customer ON public.wallets USING 
 --
 
 CREATE UNIQUE INDEX index_unique_applied_to_organization_per_organization ON public.dunning_campaigns USING btree (organization_id) WHERE ((applied_to_organization = true) AND (deleted_at IS NULL));
+
+
+--
+-- Name: index_unique_order_forms_on_organization_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_order_forms_on_organization_number ON public.order_forms USING btree (organization_id, number);
+
+
+--
+-- Name: index_unique_order_forms_on_organization_sequential_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_order_forms_on_organization_sequential_id ON public.order_forms USING btree (organization_id, sequential_id);
 
 
 --
