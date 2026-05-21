@@ -4359,7 +4359,7 @@ type Customer {
   """
   Credit notes credits balance available per customer
   """
-  creditNotesBalanceAmountCents: BigInt!
+  creditNotesBalanceAmountCents(billingEntityId: ID, currency: CurrencyEnum): BigInt!
 
   """
   Credit notes credits balance available per customer per currency
@@ -4369,7 +4369,7 @@ type Customer {
   """
   Number of available credits from credit notes per customer
   """
-  creditNotesCreditsAvailableCount: Int!
+  creditNotesCreditsAvailableCount(billingEntityId: ID, currency: CurrencyEnum): Int!
   currency: CurrencyEnum
   customerType: CustomerTypeEnum
   deletedAt: ISO8601DateTime

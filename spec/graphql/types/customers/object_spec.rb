@@ -90,4 +90,92 @@ RSpec.describe Types::Customers::Object do
 
     expect(subject).to have_field(:error_details).of_type("[ErrorDetail!]")
   end
+
+  describe "credit notes scalar resolvers with filter arguments" do
+    let(:required_permission) { "customers:view" }
+    let(:membership) { create(:membership) }
+    let(:organization) { membership.organization }
+    let(:customer) { create(:customer, organization:, currency: "EUR") }
+    let(:billing_entity_a) { create(:billing_entity, organization:) }
+    let(:billing_entity_b) { create(:billing_entity, organization:) }
+
+    let(:query) do
+      <<~GQL
+        query($customerId: ID!, $currency: CurrencyEnum, $billingEntityId: ID) {
+          customer(id: $customerId) {
+            creditNotesBalanceAmountCents(currency: $currency, billingEntityId: $billingEntityId)
+            creditNotesCreditsAvailableCount(currency: $currency, billingEntityId: $billingEntityId)
+          }
+        }
+      GQL
+    end
+
+    before do
+      invoice_eur_a = create(:invoice, customer:, organization:, billing_entity: billing_entity_a)
+      invoice_usd_a = create(:invoice, customer:, organization:, billing_entity: billing_entity_a)
+      invoice_eur_b = create(:invoice, customer:, organization:, billing_entity: billing_entity_b)
+
+      create(:credit_note, customer:, organization:, invoice: invoice_eur_a,
+        total_amount_currency: "EUR", balance_amount_cents: 100, credit_amount_cents: 100)
+      create(:credit_note, customer:, organization:, invoice: invoice_usd_a,
+        total_amount_currency: "USD", balance_amount_cents: 200, credit_amount_cents: 200)
+      create(:credit_note, customer:, organization:, invoice: invoice_eur_b,
+        total_amount_currency: "EUR", balance_amount_cents: 400, credit_amount_cents: 400)
+    end
+
+    def execute_with(variables)
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: variables.merge(customerId: customer.id)
+      )
+      result["data"]["customer"]
+    end
+
+    context "without filter arguments" do
+      it "returns the legacy aggregate across all currencies and billing entities" do
+        data = execute_with({})
+        expect(data["creditNotesBalanceAmountCents"]).to eq("700")
+        expect(data["creditNotesCreditsAvailableCount"]).to eq(3)
+      end
+    end
+
+    context "with currency filter" do
+      it "returns only the EUR subtotal when filtered to EUR" do
+        data = execute_with(currency: "EUR")
+        expect(data["creditNotesBalanceAmountCents"]).to eq("500")
+        expect(data["creditNotesCreditsAvailableCount"]).to eq(2)
+      end
+
+      it "returns only the USD subtotal when filtered to USD (cross-currency regression)" do
+        data = execute_with(currency: "USD")
+        expect(data["creditNotesBalanceAmountCents"]).to eq("200")
+        expect(data["creditNotesCreditsAvailableCount"]).to eq(1)
+      end
+    end
+
+    context "with billing entity filter" do
+      it "returns only credit notes linked to invoices of that billing entity" do
+        data = execute_with(billingEntityId: billing_entity_a.id)
+        expect(data["creditNotesBalanceAmountCents"]).to eq("300")
+        expect(data["creditNotesCreditsAvailableCount"]).to eq(2)
+      end
+    end
+
+    context "with both filters combined" do
+      it "returns the intersection" do
+        data = execute_with(currency: "EUR", billingEntityId: billing_entity_a.id)
+        expect(data["creditNotesBalanceAmountCents"]).to eq("100")
+        expect(data["creditNotesCreditsAvailableCount"]).to eq(1)
+      end
+
+      it "returns zero when no credit note matches both filters" do
+        data = execute_with(currency: "USD", billingEntityId: billing_entity_b.id)
+        expect(data["creditNotesBalanceAmountCents"]).to eq("0")
+        expect(data["creditNotesCreditsAvailableCount"]).to eq(0)
+      end
+    end
+  end
 end

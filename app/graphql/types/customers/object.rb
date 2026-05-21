@@ -81,7 +81,10 @@ module Types
       field :credit_notes_balance_amount_cents,
         GraphQL::Types::BigInt,
         null: false,
-        description: "Credit notes credits balance available per customer"
+        description: "Credit notes credits balance available per customer" do
+        argument :billing_entity_id, ID, required: false
+        argument :currency, Types::CurrencyEnum, required: false
+      end
       field :credit_notes_balances,
         [Types::Customers::CreditNotesBalance],
         null: false,
@@ -89,7 +92,10 @@ module Types
       field :credit_notes_credits_available_count,
         Integer,
         null: false,
-        description: "Number of available credits from credit notes per customer"
+        description: "Number of available credits from credit notes per customer" do
+        argument :billing_entity_id, ID, required: false
+        argument :currency, Types::CurrencyEnum, required: false
+      end
       field :has_active_wallet, Boolean, null: false, description: "Define if a customer has an active wallet"
       field :has_credit_notes, Boolean, null: false, description: "Define if a customer has any credit note"
       field :has_overdue_invoices, Boolean, null: false, description: "Define if a customer has overdue invoices"
@@ -157,12 +163,15 @@ module Types
         end
       end
 
-      def credit_notes_credits_available_count
-        object.credit_notes.finalized.where("credit_notes.credit_amount_cents > 0").count
+      def credit_notes_credits_available_count(currency: nil, billing_entity_id: nil)
+        filtered_credit_notes(currency:, billing_entity_id:)
+          .where("credit_notes.credit_amount_cents > 0")
+          .count
       end
 
-      def credit_notes_balance_amount_cents
-        object.credit_notes.finalized.sum("credit_notes.balance_amount_cents")
+      def credit_notes_balance_amount_cents(currency: nil, billing_entity_id: nil)
+        filtered_credit_notes(currency:, billing_entity_id:)
+          .sum("credit_notes.balance_amount_cents")
       end
 
       def credit_notes_balances
@@ -185,6 +194,15 @@ module Types
 
       def has_overwritten_invoice_custom_sections_selection
         !object.skip_invoice_custom_sections && object.manual_selected_invoice_custom_sections.any?
+      end
+
+      private
+
+      def filtered_credit_notes(currency:, billing_entity_id:)
+        scope = object.credit_notes.finalized
+        scope = scope.where(total_amount_currency: currency) if currency
+        scope = scope.joins(:invoice).where(invoices: {billing_entity_id:}) if billing_entity_id
+        scope
       end
     end
   end
