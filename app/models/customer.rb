@@ -292,6 +292,17 @@ class Customer < ApplicationRecord
     }
   end
 
+  def effective_shipping_address
+    {
+      address_line1: shipping_address_line1.presence || address_line1,
+      address_line2: shipping_address_line2.presence || address_line2,
+      city: shipping_city.presence || city,
+      zipcode: shipping_zipcode.presence || zipcode,
+      state: shipping_state.presence || state,
+      country: shipping_country.presence || country
+    }
+  end
+
   def same_billing_and_shipping_address?
     return true if shipping_address.values.all?(&:blank?)
 
