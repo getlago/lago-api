@@ -242,6 +242,46 @@ RSpec.describe Subscription do
           expect(incomplete_sub).not_to be_valid
         end
       end
+
+      context "when a pending subscription transitions to active" do
+        let(:external_id) { SecureRandom.uuid }
+        let(:pending_subscription) do
+          create(
+            :subscription,
+            plan:,
+            status: :pending,
+            external_id:,
+            customer: create(:customer, organization:)
+          )
+        end
+
+        before { pending_subscription }
+
+        context "when another active subscription with the same external_id exists" do
+          before do
+            create(
+              :subscription,
+              plan:,
+              status: :active,
+              external_id:,
+              customer: create(:customer, organization:)
+            )
+          end
+
+          it "rejects the activation" do
+            pending_subscription.assign_attributes(status: :active)
+            expect(pending_subscription).not_to be_valid
+            expect(pending_subscription.errors[:external_id]).to include("value_already_exist")
+          end
+        end
+
+        context "when no other active subscription with the same external_id exists" do
+          it "allows the activation" do
+            pending_subscription.assign_attributes(status: :active)
+            expect(pending_subscription).to be_valid
+          end
+        end
+      end
     end
 
     describe "started_at validation" do
@@ -1055,6 +1095,47 @@ RSpec.describe Subscription do
       it "returns empty collection" do
         expect(subscription.applicable_usage_thresholds).to be_empty
       end
+    end
+  end
+
+  describe "unique index on active subscriptions" do
+    # We skip model validations in this test in order to check that database unique index is applied
+
+    let(:organization) { create(:organization) }
+    let(:external_id) { SecureRandom.uuid }
+
+    context "when two new active subscriptions share the same (organization_id, external_id)" do
+      before do
+        create(:subscription, customer: create(:customer, organization:), external_id:)
+      end
+
+      it "raises a database uniqueness error" do
+        duplicate_sub = build(:subscription, customer: create(:customer, organization:), external_id:)
+
+        expect { duplicate_sub.save(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+      end
+    end
+
+    context "when two old pending subscriptions created before the index cutoff are activated after deploy" do
+      let(:sub_a) do
+        build(:subscription, :pending, customer: create(:customer, organization:), external_id:, created_at: 2.years.ago)
+      end
+      let(:sub_b) do
+        build(:subscription, :pending, customer: create(:customer, organization:), external_id:, created_at: 2.years.ago)
+      end
+
+      # rubocop:disable Rails/SkipsModelValidations
+      it "raises a database uniqueness error on the second activation" do
+        sub_a.save(validate: false)
+        sub_b.save(validate: false)
+
+        sub_a.update_columns(status: described_class.statuses[:active], activated_at: Time.current)
+
+        expect {
+          sub_b.update_columns(status: described_class.statuses[:active], activated_at: Time.current)
+        }.to raise_error(ActiveRecord::RecordNotUnique)
+      end
+      # rubocop:enable Rails/SkipsModelValidations
     end
   end
 end

@@ -1373,6 +1373,22 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
+    context "when another customer in the same organization has an active subscription with the same external_id" do
+      let(:other_customer) { create(:customer, organization:) }
+
+      before do
+        create(:subscription, customer: other_customer, plan:, organization:, external_id:)
+      end
+
+      it "returns an external_id already exist error" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:external_id]).to eq(["value_already_exist"])
+      end
+    end
+
     context "with activation_rules" do
       let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
 

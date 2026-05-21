@@ -60,6 +60,12 @@ module Subscriptions
           @current_subscription = editable_subscriptions
             .find_by("id = ? OR external_id = ?", params[:subscription_id], external_id)
 
+          if current_subscription.nil? &&
+              customer.organization.subscriptions.active.exists?(external_id:)
+            result.validation_failure!(errors: {external_id: ["value_already_exist"]})
+            result.raise_if_error!
+          end
+
           subscription = handle_subscription
 
           if params[:usage_thresholds].present?
