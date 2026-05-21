@@ -93,6 +93,28 @@ RSpec.describe Subscription do
     end
   end
 
+  describe "#applicable_billing_entity_id" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+
+    context "when subscription has a billing_entity_id" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:subscription) { create(:subscription, customer:, billing_entity:) }
+
+      it "returns the subscription's own billing_entity_id" do
+        expect(subscription.applicable_billing_entity_id).to eq(billing_entity.id)
+      end
+    end
+
+    context "when subscription has no billing_entity_id" do
+      let(:subscription) { create(:subscription, customer:, billing_entity: nil) }
+
+      it "falls back to the customer's billing_entity_id" do
+        expect(subscription.applicable_billing_entity_id).to eq(customer.billing_entity_id)
+      end
+    end
+  end
+
   describe "Scopes" do
     describe ".starting_in_the_future" do
       let(:organization) { create(:organization) }

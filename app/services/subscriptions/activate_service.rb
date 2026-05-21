@@ -51,7 +51,7 @@ module Subscriptions
     end
 
     def gate_subscription
-      subscription.mark_as_incomplete!
+      subscription.mark_as_incomplete!(timestamp)
 
       EmitFixedChargeEventsService.call!(
         subscriptions: [subscription],

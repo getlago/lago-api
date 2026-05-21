@@ -23,6 +23,10 @@ module Invoices
     def call
       return result if active_subscriptions.empty? && recurring
 
+      if mixed_billing_entities?
+        return result.validation_failure!(errors: {billing_entity: ["mixed_billing_entities"]})
+      end
+
       create_generating_invoice unless invoice
       invoice.status = :open if subscription_gated?
       result.invoice = invoice
@@ -143,6 +147,7 @@ module Invoices
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
+        billing_entity: invoice_billing_entity,
         invoice_type: :subscription,
         invoicing_reason:,
         currency:,
@@ -163,6 +168,14 @@ module Invoices
       return false if subscription_gated?
 
       @grace_period ||= customer.applicable_invoice_grace_period.positive?
+    end
+
+    def invoice_billing_entity
+      subscriptions.first&.billing_entity || customer.billing_entity
+    end
+
+    def mixed_billing_entities?
+      subscriptions.map(&:applicable_billing_entity_id).uniq.many?
     end
 
     def set_invoice_generated_status
