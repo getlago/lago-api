@@ -145,7 +145,7 @@ RSpec.describe Types::Fees::PresentationBreakdownBuilder do
         grouped_by: {},
         presentation_breakdowns: [
           build(:presentation_breakdown, presentation_by: {"cloud" => "aws", "region" => "us"}, units: 1),
-          build(:presentation_breakdown, presentation_by: {"region" => "eu"}, units: 2)
+          build(:presentation_breakdown, presentation_by: {"cloud" => nil, "region" => "eu"}, units: 2)
         ]
       )
     end
@@ -157,7 +157,7 @@ RSpec.describe Types::Fees::PresentationBreakdownBuilder do
 
       it "includes only breakdowns that have a display_in_invoice key present" do
         expect(result).to eq([
-          {presentation_by: {"cloud" => "aws", "region" => "us"}, units: "1.0"}
+          {presentation_by: {"cloud" => "aws"}, units: "1.0"}, {presentation_by: {"cloud" => nil}, units: "2.0"}
         ])
       end
     end
@@ -168,7 +168,7 @@ RSpec.describe Types::Fees::PresentationBreakdownBuilder do
       it "includes all breakdowns regardless of display_in_invoice keys" do
         expect(result).to eq([
           {presentation_by: {"cloud" => "aws", "region" => "us"}, units: "1.0"},
-          {presentation_by: {"region" => "eu"}, units: "2.0"}
+          {presentation_by: {"cloud" => nil, "region" => "eu"}, units: "2.0"}
         ])
       end
     end
