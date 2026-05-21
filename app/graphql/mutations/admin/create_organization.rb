@@ -15,7 +15,7 @@ module Mutations
       argument :feature_flags, [String], required: false
       argument :reason, String, required: true
 
-      type Types::Admin::OrganizationType
+      type Types::Admin::CreateOrganizationPayload
 
       def resolve(**args)
         result = ::Admin::CreateOrganizationService.new(
@@ -28,7 +28,7 @@ module Mutations
           reason: args[:reason]
         ).call
 
-        result.success? ? result.organization : result_error(result)
+        result.success? ? result : result_error(result)
       end
     end
   end
