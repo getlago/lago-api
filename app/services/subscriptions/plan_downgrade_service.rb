@@ -79,7 +79,7 @@ module Subscriptions
 
     def apply_activation_rules(subscription)
       Subscriptions::ActivationRules::ApplyService.call!(
-        subscription: subscription,
+        subscription:,
         activation_rules: params[:activation_rules]
       )
     end
