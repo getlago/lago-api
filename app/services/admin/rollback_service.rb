@@ -8,7 +8,7 @@ module Admin
       @actor = actor
       @audit_log = audit_log
       @reason = reason
-      super
+      super()
     end
 
     def call
