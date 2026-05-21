@@ -173,6 +173,13 @@ RSpec.describe Invoices::Payments::StripeService do
 
       expect(stripe_service.checkout_session_already_completed?(payment_intent)).to be false
     end
+
+    it "swallows transient Stripe errors so auto-charge isn't blocked" do
+      allow(::Stripe::Checkout::Session).to receive(:retrieve)
+        .and_raise(::Stripe::APIConnectionError.new("timeout"))
+
+      expect(stripe_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
   end
 
   describe "#expire_checkout_session" do

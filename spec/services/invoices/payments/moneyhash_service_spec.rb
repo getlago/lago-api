@@ -120,6 +120,11 @@ RSpec.describe Invoices::Payments::MoneyhashService do
       allow(intent_client).to receive(:get).and_raise(LagoHttpClient::HttpError.new(500, "boom", nil))
       expect(moneyhash_service.checkout_session_already_completed?(payment_intent)).to be false
     end
+
+    it "swallows network timeouts so auto-charge isn't blocked" do
+      allow(intent_client).to receive(:get).and_raise(Net::ReadTimeout)
+      expect(moneyhash_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
   end
 
   describe "#expire_checkout_session" do

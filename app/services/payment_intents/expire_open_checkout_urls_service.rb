@@ -12,6 +12,8 @@ module PaymentIntents
   # need to act on. Provider returns "not expirable" on already-paid URLs;
   # the per-provider rescue swallows it.
   class ExpireOpenCheckoutUrlsService < BaseService
+    Result = BaseResult
+
     def initialize(invoice:)
       @invoice = invoice
       super

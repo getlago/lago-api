@@ -296,6 +296,11 @@ RSpec.describe Invoices::Payments::AdyenService do
       allow(payment_links_api).to receive(:get_payment_link).and_raise(Adyen::AdyenError.new(nil, nil, "boom"))
       expect(adyen_service.checkout_session_already_completed?(payment_intent)).to be false
     end
+
+    it "swallows connection failures so auto-charge isn't blocked" do
+      allow(payment_links_api).to receive(:get_payment_link).and_raise(Faraday::ConnectionFailed.new("timeout"))
+      expect(adyen_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
   end
 
   describe "#expire_checkout_session" do

@@ -63,6 +63,10 @@ module Invoices
       # Returns true if the Checkout Session was already paid on Stripe's side.
       # Used by the entry-sweep to bail out of an auto-charge that would
       # otherwise race a customer paying via the hosted URL.
+      #
+      # Best-effort: any error (terminal or transient) returns false so we
+      # never block the auto-charge on a flaky provider. The trailing-edge
+      # ExpireOpenCheckoutUrlsJob handles cleanup after the invoice settles.
       def checkout_session_already_completed?(payment_intent)
         return false if payment_intent.provider_session_id.blank?
 
@@ -71,7 +75,7 @@ module Invoices
           {api_key: stripe_api_key}
         )
         session["status"] == "complete" || session["payment_status"] == "paid"
-      rescue ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, ::Stripe::PermissionError
+      rescue StandardError
         false
       end
 

@@ -39,13 +39,14 @@ module Invoices
         result.fail_with_error!(e)
       end
 
+      # Best-effort: any error returns false so we never block auto-charge.
       def checkout_session_already_completed?(payment_intent)
         return false if payment_intent.provider_session_id.blank?
 
         response = intent_client(payment_intent.provider_session_id).get(headers: headers)
         status = JSON.parse(response.body).dig("data", "status")
         %w[PROCESSED SUCCESSFUL].include?(status)
-      rescue LagoHttpClient::HttpError
+      rescue StandardError
         false
       end
 

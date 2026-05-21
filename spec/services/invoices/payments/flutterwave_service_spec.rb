@@ -317,6 +317,11 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       allow(verify_client).to receive(:get).and_raise(LagoHttpClient::HttpError.new(500, "boom", nil))
       expect(flutterwave_service.checkout_session_already_completed?(payment_intent)).to be false
     end
+
+    it "swallows network timeouts so auto-charge isn't blocked" do
+      allow(verify_client).to receive(:get).and_raise(Net::ReadTimeout)
+      expect(flutterwave_service.checkout_session_already_completed?(payment_intent)).to be false
+    end
   end
 
   describe "#expire_checkout_session" do

@@ -43,12 +43,13 @@ module Invoices
         result.fail_with_error!(e)
       end
 
+      # Best-effort: any error returns false so we never block auto-charge.
       def checkout_session_already_completed?(payment_intent)
         return false if payment_intent.provider_session_id.blank?
 
         res = client.checkout.payment_links_api.get_payment_link(payment_intent.provider_session_id)
         %w[completed paymentPending].include?(res.response["status"])
-      rescue Adyen::AdyenError
+      rescue StandardError
         false
       end
 
