@@ -63,7 +63,6 @@ end
 #  billing_snapshot  :jsonb            not null
 #  expires_at        :datetime
 #  number            :string           not null
-#  sequential_id     :integer          not null
 #  signed_at         :datetime
 #  status            :enum             default("generated"), not null
 #  void_reason       :enum
@@ -73,14 +72,15 @@ end
 #  customer_id       :uuid             not null
 #  organization_id   :uuid             not null
 #  quote_version_id  :uuid             not null
+#  sequential_id     :integer          not null
 #  signed_by_user_id :uuid
 #
 # Indexes
 #
-#  index_order_forms_on_customer_id                          (customer_id)
-#  index_order_forms_on_quote_version_id                     (quote_version_id) UNIQUE
-#  index_unique_order_forms_on_organization_number           (organization_id,number) UNIQUE
-#  index_unique_order_forms_on_organization_sequential_id    (organization_id,sequential_id) UNIQUE
+#  index_order_forms_on_customer_id                        (customer_id)
+#  index_order_forms_on_quote_version_id                   (quote_version_id) UNIQUE
+#  index_unique_order_forms_on_organization_number         (organization_id,number) UNIQUE
+#  index_unique_order_forms_on_organization_sequential_id  (organization_id,sequential_id) UNIQUE
 #
 # Foreign Keys
 #
