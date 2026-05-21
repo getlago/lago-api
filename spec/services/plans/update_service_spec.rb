@@ -247,6 +247,37 @@ RSpec.describe Plans::UpdateService do
           end.not_to have_enqueued_job(Plans::UpdateAmountJob)
         end
       end
+
+      context "when an in-transaction failure follows a charge update" do
+        let(:existing_charge) { create(:standard_charge, plan:, billable_metric:) }
+        let(:update_args) do
+          {
+            charges: [
+              {
+                id: existing_charge.id,
+                billable_metric_id: billable_metric.id,
+                charge_model: "standard",
+                properties: {amount: "0"}
+              },
+              {
+                billable_metric_id: billable_metric.id,
+                charge_model: "standard"
+              }
+            ]
+          }
+        end
+
+        before do
+          existing_charge
+          allow(Charges::CreateService).to receive(:call!).and_raise(
+            ActiveRecord::RecordInvalid.new(Charge.new.tap { |c| c.errors.add(:base, "boom") })
+          )
+        end
+
+        it "does not enqueue Charges::UpdateChildrenJob" do
+          expect { plans_service.call }.not_to have_enqueued_job(Charges::UpdateChildrenJob)
+        end
+      end
     end
 
     context "when thresholds are present" do
