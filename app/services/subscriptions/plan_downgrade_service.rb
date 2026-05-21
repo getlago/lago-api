@@ -16,6 +16,7 @@ module Subscriptions
 
     def call
       if current_subscription.starting_in_the_future?
+        apply_activation_rules(current_subscription) if params[:activation_rules]
         update_pending_subscription
 
         result.subscription = current_subscription
@@ -39,6 +40,8 @@ module Subscriptions
           ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
           progressive_billing_disabled: params[:progressive_billing_disabled] || false
         )
+
+        apply_activation_rules(new_sub) if params[:activation_rules].present?
 
         if params.key?(:payment_method)
           new_sub.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
@@ -72,6 +75,13 @@ module Subscriptions
       if current_subscription.should_sync_hubspot_subscription?
         Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: current_subscription)
       end
+    end
+
+    def apply_activation_rules(subscription)
+      Subscriptions::ActivationRules::ApplyService.call!(
+        subscription: subscription,
+        activation_rules: params[:activation_rules]
+      )
     end
 
     def override_plan
