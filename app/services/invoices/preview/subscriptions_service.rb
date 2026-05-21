@@ -48,7 +48,7 @@ module Invoices
           BuildSubscriptionService.call(
             customer:,
             params:,
-            billing_entity: @billing_entity
+            billing_entity:
           )
         when :projection
           FindSubscriptionsService.call(
@@ -59,7 +59,7 @@ module Invoices
 
       private
 
-      attr_reader :params, :organization, :customer
+      attr_reader :params, :organization, :customer, :billing_entity
 
       def context
         return @context if defined?(@context)
