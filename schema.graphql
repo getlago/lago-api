@@ -6315,6 +6315,7 @@ type GraphqlSubscription {
 
 type GrossRevenue {
   amountCents: BigInt
+  billingEntityId: ID
   currency: CurrencyEnum
   invoicesCount: BigInt!
   month: ISO8601DateTime!
@@ -9073,6 +9074,7 @@ input OrganizationBillingConfigurationInput {
 
 type OverdueBalance {
   amountCents: BigInt!
+  billingEntityId: ID
   currency: CurrencyEnum!
   lagoInvoiceIds: [String!]!
   month: ISO8601DateTime!

@@ -8,7 +8,8 @@ module V1
           month: model["month"],
           amount_cents: model["amount_cents"],
           currency: model["currency"],
-          invoices_count: model["invoices_count"]
+          invoices_count: model["invoices_count"],
+          billing_entity_id: model["billing_entity_id"]
         }
       end
     end
