@@ -22,6 +22,15 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:properties) {
+    {
+      "amount" => "100",
+      "presentation_group_keys" => [
+        {"value" => "region", "options" => {"display_in_invoice" => true}},
+        {"value" => "department", "options" => {"display_in_invoice" => true}}
+      ]
+    }
+  }
 
   let(:charge) do
     create(
@@ -29,13 +38,7 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
       plan:,
       billable_metric:,
       invoice_display_name: "compute",
-      properties: {
-        "amount" => "100",
-        "presentation_group_keys" => [
-          {"value" => "region", "options" => {"display_in_invoice" => true}},
-          {"value" => "department", "options" => {"display_in_invoice" => true}}
-        ]
-      }
+      properties:
     )
   end
 
@@ -85,6 +88,27 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
 
     it "renders each breakdown row's units" do
       expect(rendered_template).to include("40").and include("35").and include("25").and include("10")
+    end
+
+    context "when a presentation key is not displayed in the invoice" do
+      let(:properties) do
+        {
+          "amount" => "100",
+          "presentation_group_keys" => [
+            {"value" => "region", "options" => {"display_in_invoice" => false}},
+            {"value" => "department", "options" => {"display_in_invoice" => true}}
+          ]
+        }
+      end
+
+      it "renders breakdown labels joined by ', ' in lexicographic order with nil-value rows last" do
+        label_order = rendered_template.scan(%r{<td[^>]*>\s*(engineering|sales)?\s*</td>\s*<td[^>]*>\s*(?:40|35|25|10)\s*</td>}).map(&:first)
+        expect(label_order).to eq(["engineering", "engineering", "sales", nil])
+      end
+
+      it "renders each breakdown row's units" do
+        expect(rendered_template).to include("40").and include("35").and include("25").and include("10")
+      end
     end
   end
 
@@ -137,6 +161,27 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
       eu_bare_idx = rendered_template =~ %r{<td[^>]*>\s*eu\s*</td>}
       expect(eu_engineering_idx).to be < eu_bare_idx
     end
+
+    context "when a presentation key is not displayed in the invoice" do
+      let(:properties) do
+        {
+          "amount" => "100",
+          "presentation_group_keys" => [
+            {"value" => "region", "options" => {"display_in_invoice" => false}},
+            {"value" => "department", "options" => {"display_in_invoice" => true}}
+          ]
+        }
+      end
+
+      it "renders breakdown labels joined by ', ' in lexicographic order with nil-value rows last" do
+        label_order = rendered_template.scan(%r{<td[^>]*>\s*(engineering|sales)?\s*</td>\s*<td[^>]*>\s*(?:40|20|5)\s*</td>}).map(&:first)
+        expect(label_order).to eq(["engineering", "sales", nil])
+      end
+
+      it "renders each breakdown row's units" do
+        expect(rendered_template).to include("40").and include("20").and include("5")
+      end
+    end
   end
 
   # Scenario 3 — `fee.charge_filter_id` is present (with `fee.grouped_by` empty).
@@ -187,6 +232,27 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
 
     it "renders each breakdown row's units" do
       expect(rendered_template).to include("30").and include("15").and include("5")
+    end
+
+    context "when a presentation key is not displayed in the invoice" do
+      let(:properties) do
+        {
+          "amount" => "100",
+          "presentation_group_keys" => [
+            {"value" => "region", "options" => {"display_in_invoice" => false}},
+            {"value" => "department", "options" => {"display_in_invoice" => true}}
+          ]
+        }
+      end
+
+      it "renders breakdown labels joined by ', ' in lexicographic order with nil-value rows last" do
+        label_order = rendered_template.scan(%r{<td[^>]*>\s*(engineering|sales)?\s*</td>\s*<td[^>]*>\s*(?:30|15|5)\s*</td>}).map(&:first)
+        expect(label_order).to eq(["engineering", "sales", nil])
+      end
+
+      it "renders each breakdown row's units" do
+        expect(rendered_template).to include("30").and include("15").and include("5")
+      end
     end
   end
 
@@ -269,6 +335,27 @@ RSpec.describe "templates/invoices/v4/_presentation_breakdowns.slim" do # ruboco
 
     it "renders each breakdown row's units" do
       expect(rendered_template).to include("30").and include("15").and include("5")
+    end
+
+    context "when a presentation key is not displayed in the invoice" do
+      let(:properties) do
+        {
+          "amount" => "100",
+          "presentation_group_keys" => [
+            {"value" => "region", "options" => {"display_in_invoice" => false}},
+            {"value" => "department", "options" => {"display_in_invoice" => true}}
+          ]
+        }
+      end
+
+      it "renders breakdown labels joined by ', ' in lexicographic order with nil-value rows last" do
+        label_order = rendered_template.scan(%r{<td[^>]*>\s*(engineering|sales)?\s*</td>\s*<td[^>]*>\s*(?:30|15|5)\s*</td>}).map(&:first)
+        expect(label_order).to eq(["engineering", "sales", nil])
+      end
+
+      it "renders each breakdown row's units" do
+        expect(rendered_template).to include("30").and include("15").and include("5")
+      end
     end
   end
 end
