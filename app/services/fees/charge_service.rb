@@ -211,7 +211,7 @@ module Fees
     end
 
     def init_fee(amount_result, properties:, charge_filter:, adjusted:)
-      # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
+      # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted (see applicable_adjusted_fee method).
       # Base fee creation flow handles case when only name has been adjusted
       if adjusted
         adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
