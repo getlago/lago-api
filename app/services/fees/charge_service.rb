@@ -165,13 +165,26 @@ module Fees
         # TODO: check if this is still needed as we now skip certain zero units fees
         next if current_usage && charge_filter && amount_result.units.zero? && !with_zero_units_filters
 
-        fee = init_fee(amount_result, properties:, charge_filter:)
+        adjusted = applicable_adjusted_fee(amount_result:, charge_filter:)
+        fee = init_fee(amount_result, properties:, charge_filter:, adjusted:)
         next if fee.nil?
 
-        build_breakdowns_for_fee(fee:, breakdowns:)
+        if adjusted.nil? || amount_result.units == fee.units
+          build_breakdowns_for_fee(fee:, breakdowns:)
+        end
 
         fee
       end.compact
+    end
+
+    def applicable_adjusted_fee(amount_result:, charge_filter:)
+      return nil if current_usage
+      return nil unless invoice&.draft?
+
+      adjusted = adjusted_fee(charge_filter:, grouped_by: amount_result.grouped_by)
+      return nil if adjusted.nil? || adjusted.adjusted_display_name?
+
+      adjusted
     end
 
     def build_breakdowns_for_fee(fee:, breakdowns:)
@@ -197,22 +210,21 @@ module Fees
       charge_fees.filter { |f| should_persist_fee?(f, charge_fees) }
     end
 
-    def init_fee(amount_result, properties:, charge_filter:)
-      # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
+    def init_fee(amount_result, properties:, charge_filter:, adjusted:)
+      # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted (see applicable_adjusted_fee method).
       # Base fee creation flow handles case when only name has been adjusted
-      if !current_usage && invoice&.draft? && (adjusted = adjusted_fee(
-        charge_filter:,
-        grouped_by: amount_result.grouped_by
-      )) && !adjusted.adjusted_display_name?
+      if adjusted
         adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
           adjusted_fee: adjusted,
           boundaries:,
           properties:
         )
-        return result.fail_with_error!(adjustement_result.error) unless adjustement_result.success?
+        unless adjustement_result.success?
+          result.fail_with_error!(adjustement_result.error)
+          return nil
+        end
 
-        result.fees << adjustement_result.fee
-        return
+        return adjustement_result.fee
       end
 
       # Prevent trying to create a fee with negative units or amount.
