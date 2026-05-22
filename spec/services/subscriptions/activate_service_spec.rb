@@ -421,11 +421,21 @@ RSpec.describe Subscriptions::ActivateService do
       end
     end
 
-    it "does not enqueue Hubspot::UpdateJob for the new subscription" do
+    it "enqueues Hubspot::CreateJob for the new subscription" do
       result
 
-      expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
-        .not_to have_been_enqueued.with(subscription: subscription)
+      expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob)
+        .to have_been_enqueued.with(subscription: subscription)
+    end
+
+    context "when subscription should not sync with hubspot" do
+      let(:customer) { create(:customer, organization:) }
+
+      it "does not enqueue Hubspot::CreateJob" do
+        result
+
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).not_to have_been_enqueued
+      end
     end
 
     it "sends a subscription.started webhook for the new subscription" do

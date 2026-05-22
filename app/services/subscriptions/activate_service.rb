@@ -99,10 +99,7 @@ module Subscriptions
 
       emit_fixed_charge_events
 
-      after_commit do
-        SendWebhookJob.perform_later("subscription.started", subscription)
-        Utils::ActivityLog.produce(subscription, "subscription.started")
-      end
+      after_commit { notify_started }
 
       bill_upgrade_subscriptions
     end
@@ -129,12 +126,15 @@ module Subscriptions
       SendWebhookJob.perform_later("subscription.started", subscription)
       Utils::ActivityLog.produce(subscription, "subscription.started")
 
-      # Skip Hubspot UpdateJob when activating during subscription creation —
-      # CreateService fires Hubspot::CreateJob after this, which captures the
-      # active state and avoids a redundant Update that would race with Create.
-      return if during_creation
+      return unless subscription.should_sync_hubspot_subscription?
 
-      if subscription.should_sync_hubspot_subscription?
+      if upgrade?
+        # The new upgrade subscription has no Hubspot record yet.
+        Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription:)
+      elsif !during_creation
+        # Skip when activating during subscription creation — CreateService
+        # fires Hubspot::CreateJob after this, which captures the active state
+        # and avoids a redundant Update that would race with Create.
         Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
       end
     end
