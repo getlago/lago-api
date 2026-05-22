@@ -23,74 +23,81 @@ module ChargeFilters
       # We only care about order when you have less than 100 filters.
       touch = filters_params.size < 100
 
-      ActiveRecord::Base.transaction do
-        # NOTE: the `with_discarded` scope on the belongs_to associations below defeats
-        #       Rails' automatic inverse_of, so every save would otherwise re-SELECT the
-        #       parent records during validation. Load each parent once and pre-assign
-        #       it on every built/looked-up child.
-        organization = charge.organization
+      # NOTE: PaperTrail's per-save Version Create plus version_limit COUNT is the
+      #       dominant DB cost for large filter batches (two queries per record save).
+      #       Skip per-filter audit rows for this operation — the parent Plan/Charge
+      #       still gets its own audit entry from their respective services.
+      PaperTrail.request.disable_model(ChargeFilter)
+      PaperTrail.request.disable_model(ChargeFilterValue)
 
-        filters_params.each do |filter_param|
-          # NOTE: callers pass either string-keyed (plan flow, via with_indifferent_access) or
-          #       symbol-keyed (subscription override flow, via deep_symbolize_keys) values
-          #       hashes. Normalize so the in-memory indexes below match regardless.
-          values_params = filter_param[:values].transform_keys(&:to_s)
+      begin
+        ActiveRecord::Base.transaction do
+          # NOTE: the `with_discarded` scope on the belongs_to associations below defeats
+          #       Rails' automatic inverse_of, so every save would otherwise re-SELECT the
+          #       parent records during validation. Load each parent once and pre-assign
+          #       it on every built/looked-up child.
+          organization = charge.organization
 
-          # NOTE: since a filter could be a refinement of another one, we have to make sure
-          #       that we are targeting the right one
-          filter = filters_by_values_key[values_params.sort]
+          filters_params.each do |filter_param|
+            # NOTE: callers pass either string-keyed (plan flow, via with_indifferent_access) or
+            #       symbol-keyed (subscription override flow, via deep_symbolize_keys) values
+            #       hashes. Normalize so the in-memory indexes below match regardless.
+            values_params = filter_param[:values].transform_keys(&:to_s)
 
-          filter ||= charge.filters.new(organization_id: charge.organization_id)
-          filter.charge = charge
-          filter.organization = organization
+            # NOTE: since a filter could be a refinement of another one, we have to make sure
+            #       that we are targeting the right one
+            filter = filters_by_values_key[values_params.sort]
+            matched_existing_filter = !filter.nil?
 
-          filter.invoice_display_name = filter_param[:invoice_display_name]
-          filter.properties = ChargeModels::FilterPropertiesService.call(
-            chargeable: charge,
-            properties: filter_param[:properties]&.deep_symbolize_keys&.except(:presentation_group_keys)
-          ).properties
+            filter ||= charge.filters.new(organization_id: charge.organization_id)
+            filter.charge = charge
+            filter.organization = organization
 
-          filter.save! if filter.changed?
+            filter.invoice_display_name = filter_param[:invoice_display_name]
+            filter.properties = ChargeModels::FilterPropertiesService.call(
+              chargeable: charge,
+              properties: filter_param[:properties]&.deep_symbolize_keys&.except(:presentation_group_keys)
+            ).properties
 
-          if touch
-            PaperTrail.request.disable_model(filter.class)
-            # NOTE: Make sure update_at is touched even if not changed to keep the right order
-            filter.touch # rubocop:disable Rails/SkipsModelValidations
-            PaperTrail.request.enable_model(filter.class)
-          end
+            filter.save! if filter.changed?
 
-          # NOTE: Create or update the filter values
-          values_params.each do |key, values|
-            billable_metric_filter = billable_metric_filters_by_key[key]
+            # NOTE: Make sure updated_at is touched even if not changed to keep the right order.
+            filter.touch if touch # rubocop:disable Rails/SkipsModelValidations
 
-            # NOTE: look up against the preloaded values collection in memory so we don't
-            #       re-query charge_filter_values; pre-assign the parents below so the
-            #       belongs_to validations and validate_values callback use cached
-            #       associations instead of issuing a SELECT.
-            filter_value = filter.values.to_a.find { |v| v.billable_metric_filter_id == billable_metric_filter&.id }
-            filter_value ||= filter.values.build(organization_id: charge.organization_id)
-            filter_value.charge_filter = filter
-            filter_value.billable_metric_filter = billable_metric_filter
-            filter_value.organization = organization
+            # NOTE: Create or update the filter values
+            values_params.each do |key, values|
+              billable_metric_filter = billable_metric_filters_by_key[key]
 
-            filter_value.values = values
-            filter_value.save! if filter_value.changed?
+              # NOTE: only look up an existing filter_value if the parent filter came from
+              #       the preloaded set. For freshly-created filters, the values collection
+              #       is provably empty — querying it on a now-persisted record issues a
+              #       wasted SELECT per filter.
+              filter_value = if matched_existing_filter
+                filter.values.to_a.find { |v| v.billable_metric_filter_id == billable_metric_filter&.id }
+              end
+              filter_value ||= filter.values.build(organization_id: charge.organization_id)
+              filter_value.charge_filter = filter
+              filter_value.billable_metric_filter = billable_metric_filter
+              filter_value.organization = organization
 
-            if touch
-              PaperTrail.request.disable_model(filter_value.class)
-              # NOTE: Make sure update_at is touched even if not changed to keep the right order
-              filter_value.touch # rubocop:disable Rails/SkipsModelValidations
-              PaperTrail.request.enable_model(filter_value.class)
+              filter_value.values = values
+              filter_value.save! if filter_value.changed?
+
+              # NOTE: Make sure updated_at is touched even if not changed to keep the right order.
+              filter_value.touch if touch # rubocop:disable Rails/SkipsModelValidations
             end
+
+            result.filters << filter
           end
 
-          result.filters << filter
+          # NOTE: remove old filters that were not created or updated
+          charge.filters.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
+            remove_filter(it)
+          end
         end
-
-        # NOTE: remove old filters that were not created or updated
-        charge.filters.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
-          remove_filter(it)
-        end
+      ensure
+        PaperTrail.request.enable_model(ChargeFilter)
+        PaperTrail.request.enable_model(ChargeFilterValue)
       end
 
       result
