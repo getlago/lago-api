@@ -55,9 +55,12 @@ module ChargeFilters
           values_params.each do |key, values|
             billable_metric_filter = billable_metric_filters_by_key[key]
 
-            filter_value = filter.values.find_or_initialize_by(
-              billable_metric_filter_id: billable_metric_filter&.id
-            ) { it.organization_id = charge.organization_id }
+            # NOTE: look up against the preloaded values collection in memory so we don't
+            #       re-query charge_filter_values; pre-assign billable_metric_filter so the
+            #       validate_values callback uses the cached association instead of a SELECT.
+            filter_value = filter.values.to_a.find { |v| v.billable_metric_filter_id == billable_metric_filter&.id }
+            filter_value ||= filter.values.build(organization_id: charge.organization_id)
+            filter_value.billable_metric_filter = billable_metric_filter
 
             filter_value.values = values
             filter_value.save! if filter_value.changed?
