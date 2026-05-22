@@ -26,6 +26,11 @@ RSpec.describe Resolvers::OrderFormsResolver do
               id
               number
               status
+              quote {
+                id
+                number
+                currentVersion { id }
+              }
             }
             metadata { currentPage, totalCount }
           }
@@ -33,7 +38,7 @@ RSpec.describe Resolvers::OrderFormsResolver do
       GQL
     end
 
-    it "returns a list of order forms" do
+    it "returns a list of order forms with their quotes" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -45,6 +50,12 @@ RSpec.describe Resolvers::OrderFormsResolver do
 
       expect(response["collection"].count).to eq(2)
       expect(response["metadata"]["totalCount"]).to eq(2)
+
+      collection = response["collection"]
+      expect(collection.map { |row| row["quote"]["id"] }).to match_array(
+        OrderForm.where(id: collection.map { |row| row["id"] }).map { |of| of.quote.id }
+      )
+      expect(collection).to all(satisfy { |row| row.dig("quote", "currentVersion", "id").present? })
     end
   end
 

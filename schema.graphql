@@ -9077,6 +9077,7 @@ type OrderForm {
   expiresAt: ISO8601DateTime
   id: ID!
   number: String!
+  quote: Quote!
   signedAt: ISO8601DateTime
   signedByUserId: ID
   status: OrderFormStatusEnum!

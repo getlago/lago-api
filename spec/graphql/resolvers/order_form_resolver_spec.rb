@@ -14,6 +14,11 @@ RSpec.describe Resolvers::OrderFormResolver do
           status
           createdAt
           updatedAt
+          quote {
+            id
+            number
+            currentVersion { id }
+          }
         }
       }
     GQL
@@ -44,6 +49,9 @@ RSpec.describe Resolvers::OrderFormResolver do
     expect(data["id"]).to eq(order_form.id)
     expect(data["number"]).to eq(order_form.number)
     expect(data["status"]).to eq("generated")
+    expect(data["quote"]["id"]).to eq(order_form.quote.id)
+    expect(data["quote"]["number"]).to eq(order_form.quote.number)
+    expect(data["quote"]["currentVersion"]["id"]).to eq(order_form.quote_version.id)
   end
 
   context "when order form is not found" do

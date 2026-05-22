@@ -43608,6 +43608,22 @@
               "deprecationReason": null
             },
             {
+              "name": "quote",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Quote",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "signedAt",
               "description": null,
               "args": [],
