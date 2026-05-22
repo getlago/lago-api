@@ -217,5 +217,47 @@ RSpec.describe Invoices::VoidService do
         end
       end
     end
+
+    describe "guard against concurrent calls" do
+      let(:invoice) { create(:invoice, status: :finalized) }
+
+      context "with two threads racing on the same invoice", transaction: false do
+        # Separate in-memory instances of the same database record
+        let!(:invoice_instances) do
+          Array.new(2) do
+            inv = Invoice.find(invoice.id)
+
+            allow(inv).to receive(:void!).and_wrap_original do |original, *args|
+              sleep(0.05)
+              original.call(*args)
+            end
+
+            inv
+          end
+        end
+
+        it "voids the invoice exactly once and rejects other attempts" do
+          allow(LifetimeUsages::FlagRefreshFromInvoiceService).to receive(:call).and_call_original
+
+          results = Concurrent::Array.new
+
+          threads = invoice_instances.map do |inv|
+            Thread.new do
+              results << described_class.new(invoice: inv).call
+            end
+          end
+
+          threads.each(&:join)
+
+          successes = results.count(&:success?)
+          rejections = results.count { |r| !r.success? && r.error.code == "not_voidable" }
+
+          expect(successes).to eq(1)
+          expect(rejections).to eq(1)
+          expect(invoice.reload).to be_voided
+          expect(LifetimeUsages::FlagRefreshFromInvoiceService).to have_received(:call).once
+        end
+      end
+    end
   end
 end

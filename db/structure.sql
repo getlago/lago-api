@@ -313,7 +313,6 @@ SELECT
     NULL::uuid AS charge_filter_id,
     NULL::timestamp(6) without time zone AS charge_filter_updated_at,
     NULL::jsonb AS filters,
-    NULL::jsonb AS properties,
     NULL::jsonb AS pricing_group_keys,
     NULL::boolean AS pay_in_advance,
     NULL::boolean AS accepts_target_wallet;
@@ -2110,7 +2109,7 @@ CREATE TABLE public.coupons (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     name character varying NOT NULL,
-    code character varying,
+    code character varying NOT NULL,
     status integer DEFAULT 0 NOT NULL,
     terminated_at timestamp(6) without time zone,
     amount_cents bigint,
@@ -2302,6 +2301,7 @@ CREATE TABLE public.customers (
     subscription_invoice_issuing_date_anchor public.subscription_invoice_issuing_date_anchors,
     subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments,
     awaiting_wallet_refresh boolean DEFAULT false NOT NULL,
+    dunning_currency_attempts jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -3620,18 +3620,19 @@ CREATE VIEW public.exports_invoices AS
     i.total_amount_cents,
     (i.total_amount_cents - i.total_paid_amount_cents) AS total_due_amount_cents,
     i.prepaid_credit_amount_cents,
+    i.prepaid_granted_credit_amount_cents,
+    i.prepaid_purchased_credit_amount_cents,
     i.version_number,
     i.created_at,
     i.updated_at,
     i.voided_at,
-    ( SELECT json_agg(json_build_object('lago_id', m_1.id, 'key', m_1.key, 'value', m_1.value, 'created_at', m_1.created_at)) AS json_agg
-           FROM public.invoice_metadata m_1
-          WHERE (m_1.invoice_id = i.id)) AS metadata,
+    ( SELECT json_agg(json_build_object('lago_id', m.id, 'key', m.key, 'value', m.value, 'created_at', m.created_at)) AS json_agg
+           FROM public.invoice_metadata m
+          WHERE (m.invoice_id = i.id)) AS metadata,
     ( SELECT json_agg(json_build_object('lago_id', ed.id, 'error_code', ed.error_code, 'details', ed.details)) AS json_agg
            FROM public.error_details ed
           WHERE (ed.owner_id = i.id)) AS error_details
-   FROM (public.invoices i
-     LEFT JOIN public.invoice_metadata m ON ((i.id = m.invoice_id)))
+   FROM public.invoices i
   WHERE (i.status = ANY (ARRAY[0, 1, 2, 4, 7]));
 
 
@@ -4312,7 +4313,6 @@ SELECT
     NULL::uuid AS charge_filter_id,
     NULL::timestamp(6) without time zone AS charge_filter_updated_at,
     NULL::jsonb AS filters,
-    NULL::jsonb AS properties,
     NULL::jsonb AS pricing_group_keys,
     NULL::boolean AS pay_in_advance,
     NULL::boolean AS accepts_target_wallet;
@@ -9845,16 +9845,15 @@ CREATE OR REPLACE VIEW public.flat_filters AS
             END)
             ELSE NULL::jsonb
         END AS filters,
-    COALESCE(charge_filters.properties, charges.properties) AS properties,
     (COALESCE(charge_filters.properties, charges.properties) -> 'pricing_group_keys'::text) AS pricing_group_keys,
     charges.pay_in_advance,
     charges.accepts_target_wallet
    FROM ((((public.billable_metrics
      JOIN public.charges ON ((charges.billable_metric_id = billable_metrics.id)))
-     LEFT JOIN public.charge_filters ON ((charge_filters.charge_id = charges.id)))
-     LEFT JOIN public.charge_filter_values ON ((charge_filter_values.charge_filter_id = charge_filters.id)))
-     LEFT JOIN public.billable_metric_filters ON ((billable_metric_filters.id = charge_filter_values.billable_metric_filter_id)))
-  WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL) AND (charge_filters.deleted_at IS NULL) AND (charge_filter_values.deleted_at IS NULL) AND (billable_metric_filters.deleted_at IS NULL))
+     LEFT JOIN public.charge_filters ON (((charge_filters.charge_id = charges.id) AND (charge_filters.deleted_at IS NULL))))
+     LEFT JOIN public.charge_filter_values ON (((charge_filter_values.charge_filter_id = charge_filters.id) AND (charge_filter_values.deleted_at IS NULL))))
+     LEFT JOIN public.billable_metric_filters ON (((billable_metric_filters.id = charge_filter_values.billable_metric_filter_id) AND (billable_metric_filters.deleted_at IS NULL))))
+  WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL))
   GROUP BY billable_metrics.organization_id, billable_metrics.code, charges.plan_id, charges.id, charges.updated_at, charge_filters.id, charge_filters.updated_at;
 
 
@@ -12215,12 +12214,19 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260520075420'),
+('20260517101105'),
+('20260513105210'),
+('20260513105209'),
+('20260512155310'),
+('20260512142543'),
 ('20260504134804'),
 ('20260430102814'),
 ('20260430102813'),
 ('20260429133747'),
 ('20260429123434'),
 ('20260424170418'),
+('20260424131927'),
 ('20260421123920'),
 ('20260421103557'),
 ('20260421021503'),
@@ -12236,6 +12242,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260407091845'),
 ('20260403184752'),
 ('20260403184747'),
+('20260401143315'),
 ('20260331122448'),
 ('20260331103301'),
 ('20260327140626'),

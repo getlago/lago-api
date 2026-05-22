@@ -317,6 +317,46 @@ RSpec.describe SubscriptionsQuery do
     end
   end
 
+  context "with billing_entity_ids filter" do
+    let(:us_entity) { create(:billing_entity, organization:, code: "us") }
+    let(:eu_entity) { create(:billing_entity, organization:, code: "eu") }
+    let(:subscription) { create(:subscription, customer:, plan:, billing_entity: us_entity) }
+    let(:us_subscription) { subscription }
+    let(:eu_subscription) { create(:subscription, customer:, plan:, billing_entity: eu_entity) }
+
+    before do
+      us_subscription
+      eu_subscription
+    end
+
+    context "when filtering by a single billing_entity_id" do
+      let(:filters) { {billing_entity_ids: [eu_entity.id]} }
+
+      it "returns only subscriptions stamped under that entity" do
+        expect(result).to be_success
+        expect(result.subscriptions).to eq([eu_subscription])
+      end
+    end
+
+    context "when filtering by multiple billing_entity_ids" do
+      let(:filters) { {billing_entity_ids: [eu_entity.id, us_entity.id]} }
+
+      it "returns subscriptions stamped under any of the given entities" do
+        expect(result).to be_success
+        expect(result.subscriptions).to match_array([eu_subscription, us_subscription])
+      end
+    end
+
+    context "when billing_entity_ids is blank" do
+      let(:filters) { {billing_entity_ids: []} }
+
+      it "returns all subscriptions" do
+        expect(result).to be_success
+        expect(result.subscriptions).to match_array([eu_subscription, us_subscription])
+      end
+    end
+  end
+
   context "with currency filter" do
     let(:eur_plan) { create(:plan, organization:, amount_currency: "EUR") }
     let(:usd_plan) { create(:plan, organization:, amount_currency: "USD") }

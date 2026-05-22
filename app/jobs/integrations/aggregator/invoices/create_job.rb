@@ -41,9 +41,21 @@ module Integrations
           )
         end
 
-        def perform(invoice:)
-          result = Integrations::Aggregator::Invoices::CreateService.call(invoice:)
-          result.raise_if_error!
+        def perform(invoice:, find_first: false)
+          # Note: Look upstream before posting in two cases:
+          # - "find_first: true": caller (typically the manual SyncInvoice mutation) suspects
+          #   the invoice is not in sync because a prior POST may have landed on NetSuite without
+          #   us recording the IntegrationResource. Always reconcile before retrying.
+          # - "executions > 1": any retry — a previous attempt may have contacted NetSuite
+          #   and the safest assumption is that the record might already exist there.
+          #   Skips a duplicate POST that would either fail NetSuite's tranid uniqueness
+          #   or duplicate the invoice on Netsuite
+          if find_first || executions > 1
+            reconcile_result = Integrations::Aggregator::Invoices::ReconcileService.call!(invoice:)
+            return if reconcile_result.external_id.present?
+          end
+
+          Integrations::Aggregator::Invoices::CreateService.call!(invoice:)
         end
 
         private

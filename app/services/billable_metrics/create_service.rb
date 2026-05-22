@@ -44,6 +44,8 @@ module BillableMetrics
         result.billable_metric = metric
         track_billable_metric_created(metric)
       end
+
+      SendWebhookJob.perform_after_commit("billable_metric.created", result.billable_metric) if result.billable_metric
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

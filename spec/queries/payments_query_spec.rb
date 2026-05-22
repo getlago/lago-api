@@ -188,6 +188,26 @@ RSpec.describe PaymentsQuery do
     end
   end
 
+  context "when filtering by currency" do
+    let(:filters) { {currency: "USD"} }
+    let(:usd_invoice) { create(:invoice, organization:, currency: "USD") }
+    let!(:usd_payment) { create(:payment, payable: usd_invoice, amount_currency: "USD") }
+
+    it "returns only payments matching the currency" do
+      expect(result).to be_success
+      expect(returned_ids).to contain_exactly(usd_payment.id)
+    end
+  end
+
+  context "when filtering by a currency that matches no payments" do
+    let(:filters) { {currency: "GBP"} }
+
+    it "returns an empty result set" do
+      expect(result).to be_success
+      expect(returned_ids).to be_empty
+    end
+  end
+
   context "when filtering with an invalid invoice_id" do
     let(:filters) { {invoice_id: "invalid-uuid"} }
 

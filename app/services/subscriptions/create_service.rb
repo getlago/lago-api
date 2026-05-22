@@ -160,7 +160,11 @@ module Subscriptions
     def handle_today_subscription(new_subscription)
       new_subscription.pending!
       apply_activation_rules(new_subscription)
-      ActivateService.call!(subscription: new_subscription, during_creation: true)
+      ActivateService.call!(
+        subscription: new_subscription,
+        timestamp: new_subscription.subscription_at,
+        during_creation: true
+      )
     end
 
     def handle_past_subscription(new_subscription)
@@ -187,53 +191,7 @@ module Subscriptions
     end
 
     def downgrade_subscription
-      if current_subscription.starting_in_the_future?
-        update_pending_subscription
-
-        return current_subscription
-      end
-
-      cancel_pending_subscription if pending_subscription?
-
-      # NOTE: When downgrading a subscription, we keep the current one active
-      #       until the next billing day. The new subscription will become active at this date
-      new_sub = current_subscription.next_subscriptions.create!(
-        organization_id: customer.organization_id,
-        customer:,
-        plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
-        name:,
-        external_id: current_subscription.external_id,
-        subscription_at: current_subscription.subscription_at,
-        status: :pending,
-        billing_time: current_subscription.billing_time,
-        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
-        progressive_billing_disabled: params[:progressive_billing_disabled] || false
-      )
-
-      if params.key?(:payment_method)
-        new_sub.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
-        new_sub.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
-        new_sub.save!
-      end
-
-      InvoiceCustomSections::AttachToResourceService.call(resource: new_sub, params:)
-
-      after_commit do
-        SendWebhookJob.perform_later("subscription.updated", current_subscription)
-        Utils::ActivityLog.produce(current_subscription, "subscription.updated")
-      end
-
-      current_subscription
-    end
-
-    def pending_subscription?
-      return false unless current_subscription&.next_subscription
-
-      current_subscription.next_subscription.pending?
-    end
-
-    def cancel_pending_subscription
-      current_subscription.next_subscription.mark_as_canceled!
+      PlanDowngradeService.call!(customer:, current_subscription:, plan:, params:).subscription
     end
 
     def subscription_type
@@ -247,16 +205,6 @@ module Subscriptions
       return false unless old_plan
 
       old_plan.amount_currency != new_plan.amount_currency
-    end
-
-    def update_pending_subscription
-      current_subscription.plan = plan
-      current_subscription.name = name if name.present?
-      current_subscription.save!
-
-      if current_subscription.should_sync_hubspot_subscription?
-        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: current_subscription)
-      end
     end
 
     def apply_activation_rules(subscription)

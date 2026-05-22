@@ -10,7 +10,7 @@ RSpec.describe Types::Coupons::Object do
     expect(subject).to have_field(:organization).of_type("Organization")
     expect(subject).to have_field(:amount_cents).of_type("BigInt")
     expect(subject).to have_field(:amount_currency).of_type("CurrencyEnum")
-    expect(subject).to have_field(:code).of_type("String")
+    expect(subject).to have_field(:code).of_type("String!")
     expect(subject).to have_field(:coupon_type).of_type("CouponTypeEnum!")
     expect(subject).to have_field(:description).of_type("String")
     expect(subject).to have_field(:frequency).of_type("CouponFrequency!")

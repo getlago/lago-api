@@ -729,6 +729,24 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
+    context "when subscription_at is earlier today" do
+      let(:now) { Time.zone.local(2026, 5, 20, 14, 30) }
+      let(:subscription_at) { now.beginning_of_day }
+
+      around { |example| travel_to(now) { example.run } }
+
+      it "sets started_at to subscription_at so events in the gap are included in usage" do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        subscription = result.subscription
+        expect(subscription).to be_active
+        expect(subscription.started_at).to eq(subscription_at)
+        expect(subscription.subscription_at).to eq(subscription_at)
+      end
+    end
+
     context "when billing_time is invalid" do
       let(:billing_time) { :foo }
 
@@ -1353,6 +1371,28 @@ RSpec.describe Subscriptions::CreateService do
               expect(result.error.messages[:subscription]).to eq(["subscription_incomplete"])
             end
           end
+
+          context "when subscription downgrade fails" do
+            let(:result_failure) do
+              BaseService::Result.new.validation_failure!(
+                errors: {billing_time: ["value_is_invalid"]}
+              )
+            end
+
+            before do
+              allow(Subscriptions::PlanDowngradeService)
+                .to receive(:call)
+                .and_return(result_failure)
+            end
+
+            it "returns an error" do
+              result = create_service.call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages).to eq({billing_time: ["value_is_invalid"]})
+            end
+          end
         end
       end
     end
@@ -1430,6 +1470,22 @@ RSpec.describe Subscriptions::CreateService do
 
           it "enqueues BillSubscriptionJob" do
             expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+          end
+
+          context "when subscription_at is earlier today" do
+            let(:now) { Time.zone.local(2026, 5, 20, 14, 30) }
+            let(:subscription_at) { now.beginning_of_day.iso8601 }
+
+            around { |example| travel_to(now) { example.run } }
+
+            it "sets started_at to subscription_at on the gated incomplete subscription" do
+              result = create_service.call
+
+              expect(result).to be_success
+              subscription = result.subscription
+              expect(subscription).to be_incomplete
+              expect(subscription.started_at).to eq(now.beginning_of_day)
+            end
           end
         end
 
