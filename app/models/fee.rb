@@ -183,6 +183,10 @@ class Fee < ApplicationRecord
 
     return [] if keys.blank?
 
+    if defined?(@presentation_breakdowns_displayed_in_invoice)
+      return @presentation_breakdowns_displayed_in_invoice
+    end
+
     rows = Hash.new(0)
     presentation_breakdowns.each do |breakdown|
       presentation_by = breakdown.presentation_by
@@ -193,7 +197,7 @@ class Fee < ApplicationRecord
       rows[values] += breakdown.units
     end
 
-    rows.map { |values, units| PresentationBreakdown.new(fee: self, presentation_by: values.to_h, units:) }
+    @presentation_breakdowns_displayed_in_invoice = rows.map { |values, units| PresentationBreakdown.new(fee: self, presentation_by: values.to_h, units:) }
   end
 
   def basic_rate_percentage?
