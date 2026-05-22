@@ -86,11 +86,7 @@ module PaymentProviders
           end
 
           # NOTE: Retrieve list of existing payment_methods
-          payment_method = ::Stripe::Customer.list_payment_methods(
-            provider_customer.provider_customer_id,
-            {},
-            {api_key: payment_provider.secret_key}
-          ).first
+          payment_method = customer_payment_methods.first
 
           if invoice.organization.feature_flag_enabled?(:multiple_payment_methods)
             # TODO: Double check
@@ -115,7 +111,22 @@ module PaymentProviders
 
           if (payment_method_id = stripe_customer.invoice_settings.default_payment_method || stripe_customer.default_source)
             provider_customer.update!(payment_method_id:)
+            return
           end
+
+          # NOTE: Only use the shared payment token if no other payment method exist (no default, nothing in the list)
+          shared_payment_token = stripe_customer.invoice_settings.try(:default_shared_payment_token)
+          if shared_payment_token && customer_payment_methods.none?
+            @shared_payment_token = shared_payment_token
+          end
+        end
+
+        def customer_payment_methods
+          @customer_payment_methods ||= ::Stripe::Customer.list_payment_methods(
+            provider_customer.provider_customer_id,
+            {},
+            {api_key: payment_provider.secret_key}
+          )
         end
 
         def create_payment_intent
@@ -159,6 +170,10 @@ module PaymentProviders
 
           if provider_customer.provider_payment_methods == ["customer_balance"]
             payload.merge!(customer_balance_fields)
+          elsif @shared_payment_token
+            payload[:payment_method_data] = {shared_payment_granted_token: @shared_payment_token}
+            payload.delete(:return_url)
+            payload.delete(:off_session)
           else
             payload[:payment_method] = stripe_payment_method
           end
