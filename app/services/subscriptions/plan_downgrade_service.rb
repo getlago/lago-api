@@ -37,7 +37,8 @@ module Subscriptions
           status: :pending,
           billing_time: current_subscription.billing_time,
           ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
-          progressive_billing_disabled: params[:progressive_billing_disabled] || false
+          progressive_billing_disabled: params[:progressive_billing_disabled] || false,
+          consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : current_subscription.consolidate_invoice
         )
 
         if params.key?(:payment_method)
