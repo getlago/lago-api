@@ -13256,6 +13256,7 @@ Update Subscription input arguments
 """
 input UpdateSubscriptionInput {
   activationRules: [SubscriptionActivationRuleInput!]
+  billingEntityId: ID
 
   """
   A unique identifier for the client performing the mutation.

@@ -70367,6 +70367,18 @@
               "deprecationReason": null
             },
             {
+              "name": "billingEntityId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "endingAt",
               "description": null,
               "type": {
