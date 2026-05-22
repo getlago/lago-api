@@ -24,6 +24,12 @@ module ChargeFilters
       touch = filters_params.size < 100
 
       ActiveRecord::Base.transaction do
+        # NOTE: the `with_discarded` scope on the belongs_to associations below defeats
+        #       Rails' automatic inverse_of, so every save would otherwise re-SELECT the
+        #       parent records during validation. Load each parent once and pre-assign
+        #       it on every built/looked-up child.
+        organization = charge.organization
+
         filters_params.each do |filter_param|
           # NOTE: callers pass either string-keyed (plan flow, via with_indifferent_access) or
           #       symbol-keyed (subscription override flow, via deep_symbolize_keys) values
@@ -35,6 +41,8 @@ module ChargeFilters
           filter = filters_by_values_key[values_params.sort]
 
           filter ||= charge.filters.new(organization_id: charge.organization_id)
+          filter.charge = charge
+          filter.organization = organization
 
           filter.invoice_display_name = filter_param[:invoice_display_name]
           filter.properties = ChargeModels::FilterPropertiesService.call(
@@ -56,11 +64,14 @@ module ChargeFilters
             billable_metric_filter = billable_metric_filters_by_key[key]
 
             # NOTE: look up against the preloaded values collection in memory so we don't
-            #       re-query charge_filter_values; pre-assign billable_metric_filter so the
-            #       validate_values callback uses the cached association instead of a SELECT.
+            #       re-query charge_filter_values; pre-assign the parents below so the
+            #       belongs_to validations and validate_values callback use cached
+            #       associations instead of issuing a SELECT.
             filter_value = filter.values.to_a.find { |v| v.billable_metric_filter_id == billable_metric_filter&.id }
             filter_value ||= filter.values.build(organization_id: charge.organization_id)
+            filter_value.charge_filter = filter
             filter_value.billable_metric_filter = billable_metric_filter
+            filter_value.organization = organization
 
             filter_value.values = values
             filter_value.save! if filter_value.changed?
