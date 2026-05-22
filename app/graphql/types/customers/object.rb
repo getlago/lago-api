@@ -166,8 +166,7 @@ module Types
       end
 
       def credit_notes_balances
-        object.credit_notes.finalized
-          .joins(:invoice)
+        object.credit_notes.finalized.joins(:invoice)
           .group("credit_notes.total_amount_currency", "invoices.billing_entity_id")
           .pluck(
             "credit_notes.total_amount_currency",
