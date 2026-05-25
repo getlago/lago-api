@@ -9,6 +9,7 @@ module Types
 
       argument :activation_rules, [Types::Subscriptions::ActivationRuleInput], required: false
       argument :billing_entity_id, ID, required: false
+      argument :consolidate_invoice, Boolean, required: false
       argument :ending_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
       argument :name, String, required: false
