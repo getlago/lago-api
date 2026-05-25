@@ -59,6 +59,33 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
     end
   end
 
+  context "when only one of multiple filter_params has empty values" do
+    let(:filters_params) do
+      [
+        {
+          values: {card_location_filter.key => ["domestic"]},
+          invoice_display_name: "Valid filter",
+          properties: {amount: "10"}
+        },
+        {
+          values: {},
+          invoice_display_name: "Invalid filter",
+          properties: {amount: "20"}
+        }
+      ]
+    end
+
+    it "returns a validation failure" do
+      expect(service).not_to be_success
+      expect(service.error).to be_a(BaseService::ValidationFailure)
+      expect(service.error.messages[:values]).to eq(["value_is_mandatory"])
+    end
+
+    it "does not create any filters" do
+      expect { service }.not_to change(ChargeFilter, :count)
+    end
+  end
+
   context "when filter params is empty" do
     it "does not create any filters" do
       expect { service }.not_to change(ChargeFilter, :count)
@@ -167,6 +194,16 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       end
     end
 
+    it "returns a successful result with filters ordered as in input params" do
+      result = service
+
+      expect(result).to be_success
+      expect(result.filters.count).to eq(2)
+      expect(result.filters.map(&:invoice_display_name)).to eq(
+        ["Visa domestic card payment", "Visa debit domestic card payment"]
+      )
+    end
+
     context "when filter properties contain presentation_group_keys" do
       let(:filters_params) do
         [
@@ -257,6 +294,12 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
         expect(new_filter.values.count).to eq(2)
         expect(new_filter.values.pluck(:values).flatten).to match_array(%w[international mastercard])
       end
+
+      it "soft-deletes the values of the removed filter" do
+        service
+
+        expect(filter_values.map { it.reload.discarded? }).to all(be true)
+      end
     end
 
     context "when adding a value into filter values" do
@@ -283,6 +326,66 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
         expect(new_filter.values.count).to eq(2)
         expect(new_filter.values.pluck(:values).flatten).to match_array(%w[domestic visa mastercard])
       end
+    end
+  end
+
+  context "with a mix of kept, new and removed filters" do
+    let(:filter_to_keep) { create(:charge_filter, charge:, invoice_display_name: "Old name") }
+    let(:filter_to_keep_value) do
+      create(
+        :charge_filter_value,
+        charge_filter: filter_to_keep,
+        billable_metric_filter: card_location_filter,
+        values: ["domestic"]
+      )
+    end
+
+    let(:filter_to_remove) { create(:charge_filter, charge:, invoice_display_name: "To remove") }
+    let(:filter_to_remove_value) do
+      create(
+        :charge_filter_value,
+        charge_filter: filter_to_remove,
+        billable_metric_filter: card_location_filter,
+        values: ["international"]
+      )
+    end
+
+    let(:filters_params) do
+      [
+        {
+          values: {card_location_filter.key => ["domestic"]},
+          invoice_display_name: "Updated name",
+          properties: {amount: "10"}
+        },
+        {
+          values: {scheme_filter.key => ["visa"]},
+          invoice_display_name: "Brand new filter",
+          properties: {amount: "20"}
+        }
+      ]
+    end
+
+    before do
+      filter_to_keep_value
+      filter_to_remove_value
+    end
+
+    it "updates matching filters, creates new ones and discards the rest" do
+      result = service
+
+      expect(result).to be_success
+      expect(result.filters.count).to eq(2)
+
+      expect(filter_to_keep.reload).not_to be_discarded
+      expect(filter_to_keep.invoice_display_name).to eq("Updated name")
+      expect(filter_to_keep.properties).to eq("amount" => "10")
+
+      expect(filter_to_remove.reload).to be_discarded
+      expect(filter_to_remove_value.reload).to be_discarded
+
+      new_filter = result.filters.find { it.invoice_display_name == "Brand new filter" }
+      expect(new_filter).not_to be_nil
+      expect(new_filter.values.pluck(:values).flatten).to eq(["visa"])
     end
   end
 end
