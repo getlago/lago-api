@@ -45,7 +45,7 @@ module Invoices
 
         response = intent_client(payment_intent.provider_session_id).get(headers: headers)
         status = JSON.parse(response.body).dig("data", "status")
-        ::PaymentProviders::MoneyhashProvider::CHECKOUT_COMPLETED_STATUSES.include?(status)
+        ::PaymentProviders::MoneyhashProvider::SUCCESS_STATUSES.include?(status)
       rescue
         false
       end

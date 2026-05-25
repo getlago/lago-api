@@ -50,7 +50,7 @@ module Invoices
           headers: headers,
           params: {tx_ref: payment_intent.provider_session_id}
         )
-        ::PaymentProviders::FlutterwaveProvider::CHECKOUT_COMPLETED_STATUSES
+        ::PaymentProviders::FlutterwaveProvider::SUCCESS_STATUSES
           .include?(JSON.parse(response.body).dig("data", "status"))
       rescue
         false

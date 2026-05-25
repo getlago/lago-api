@@ -9,12 +9,6 @@ module PaymentProviders
     SUCCESS_STATUSES = %w[SUCCESSFUL PROCESSED].freeze
     FAILED_STATUSES = %w[FAILED].freeze
 
-    # Intent states where the URL has been used and Moneyhash is settling.
-    # Aliases SUCCESS_STATUSES — the intent endpoint surfaces the same enum
-    # Lago already normalizes through. Used by Invoices::Payments::MoneyhashService
-    # to keep auto-charges from racing a hosted-link payment.
-    CHECKOUT_COMPLETED_STATUSES = SUCCESS_STATUSES
-
     # MoneyHash payment status -> Lago payable_payment_status mapping
     PAYABLE_PAYMENT_STATUS_MAP = {
       "PENDING" => "pending",
