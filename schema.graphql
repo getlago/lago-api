@@ -4363,7 +4363,7 @@ type Customer {
   creditNotesBalanceAmountCents: BigInt!
 
   """
-  Credit notes credits balance available per customer per currency
+  Credit notes balances broken down by (currency, billing entity)
   """
   creditNotesBalances: [CustomerCreditNotesBalance!]!
 
@@ -4511,6 +4511,8 @@ type CustomerCollection {
 
 type CustomerCreditNotesBalance {
   amountCents: BigInt!
+  billingEntityId: ID!
+  creditsAvailableCount: Int!
   currency: CurrencyEnum!
 }
 
