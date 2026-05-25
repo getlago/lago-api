@@ -5,6 +5,10 @@ module Invoices
     class MoneyhashService < BaseService
       include Customers::PaymentProviderFinder
 
+      # Moneyhash intent states that mean an auto-charge MUST NOT run:
+      # the URL has been used and the provider is settling it.
+      COMPLETED_INTENT_STATUSES = %w[PROCESSED SUCCESSFUL].freeze
+
       def initialize(invoice = nil)
         @invoice = invoice
 
@@ -45,7 +49,7 @@ module Invoices
 
         response = intent_client(payment_intent.provider_session_id).get(headers: headers)
         status = JSON.parse(response.body).dig("data", "status")
-        %w[PROCESSED SUCCESSFUL].include?(status)
+        COMPLETED_INTENT_STATUSES.include?(status)
       rescue
         false
       end
