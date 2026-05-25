@@ -8,6 +8,17 @@ module Integrations
       BASE_URL = "https://api.nango.dev/"
       REQUEST_LIMIT_ERROR_CODE = "SSS_REQUEST_LIMIT_EXCEEDED"
       BAD_GATEWAY_ERROR = "502 Bad Gateway"
+      TASK_IN_PROGRESS_PATTERN = /\bTask\b.*\bis in progress\b/
+      TASK_EXPIRED_PATTERN = /\bTask\b.*\bexpired\b/
+      ORCHESTRATOR_FAILURE_PATTERN = %r{POST https?://nango-orchestrator-svc\.nango/v1/immediate failed}
+
+      def self.retryable_errors
+        [
+          BadGatewayError, RequestLimitError, OutOfMemoryError,
+          TaskInProgressError, TaskExpiredError, OrchestratorFailureError,
+          ServerContentionError, TimeoutError
+        ]
+      end
 
       def initialize(integration:, options: {})
         @integration = integration
@@ -177,6 +188,18 @@ module Integrations
       def bad_gateway_error?(http_error)
         http_error.error_code.to_s == "502" ||
           http_error.error_body.include?(BAD_GATEWAY_ERROR)
+      end
+
+      def task_in_progress_error?(http_error)
+        code(http_error) == "action_script_failure" && TASK_IN_PROGRESS_PATTERN.match?(message(http_error))
+      end
+
+      def task_expired_error?(http_error)
+        code(http_error) == "action_script_failure" && TASK_EXPIRED_PATTERN.match?(message(http_error))
+      end
+
+      def orchestrator_failure_error?(http_error)
+        code(http_error) == "action_script_failure" && ORCHESTRATOR_FAILURE_PATTERN.match?(message(http_error))
       end
 
       def parse_response(response)
