@@ -47,17 +47,16 @@ RSpec.describe "recipes:api_keys:expire_all" do # rubocop:disable RSpec/Describe
     let!(:key_two) { create(:api_key, organization:) }
     let!(:already_expired_key) { create(:api_key, :expired, organization:) }
 
-    before do
-      allow(ApiKeys::CacheService).to receive(:expire_cache)
-      allow(Utils::SecurityLog).to receive(:produce)
-    end
+    before { allow(ApiKeys::DestroyService).to receive(:call).and_call_original }
 
     context "when user confirms" do
       before { stub_stdin(organization.id, "y", "y") }
 
-      it "expires all active keys" do
+      it "expires all active keys via DestroyService with force: true" do
         task.invoke
 
+        expect(ApiKeys::DestroyService).to have_received(:call).with(key_one, force: true)
+        expect(ApiKeys::DestroyService).to have_received(:call).with(key_two, force: true)
         expect(key_one.reload).to be_expired
         expect(key_two.reload).to be_expired
       end
@@ -68,27 +67,20 @@ RSpec.describe "recipes:api_keys:expire_all" do # rubocop:disable RSpec/Describe
         expect(ApiKey.unscoped.find(already_expired_key.id).updated_at)
           .to eq(original_updated_at)
       end
+    end
 
-      it "invalidates the cache for each expired key" do
-        task.invoke
-        expect(ApiKeys::CacheService).to have_received(:expire_cache).with(key_one.value)
-        expect(ApiKeys::CacheService).to have_received(:expire_cache).with(key_two.value)
+    context "when DestroyService fails for a key" do
+      let(:failure_result) do
+        ApiKeys::DestroyService::Result.new.tap { |r| r.single_validation_failure!(error_code: "boom") }
       end
 
-      it "emits a security log per expired key" do
-        task.invoke
-        expect(Utils::SecurityLog).to have_received(:produce).with(
-          organization:,
-          log_type: "api_key",
-          log_event: "api_key.deleted",
-          resources: {name: key_one.name, value_ending: key_one.value.last(4)}
-        )
-        expect(Utils::SecurityLog).to have_received(:produce).with(
-          organization:,
-          log_type: "api_key",
-          log_event: "api_key.deleted",
-          resources: {name: key_two.name, value_ending: key_two.value.last(4)}
-        )
+      before do
+        allow(ApiKeys::DestroyService).to receive(:call).and_return(failure_result)
+        stub_stdin(organization.id, "y", "y")
+      end
+
+      it "aborts" do
+        expect { task.invoke }.to raise_error(SystemExit)
       end
     end
 

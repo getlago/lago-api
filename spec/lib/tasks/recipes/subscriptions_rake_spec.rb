@@ -50,7 +50,8 @@ RSpec.describe "recipes:subscriptions:terminate_all" do # rubocop:disable RSpec/
 
     before do
       allow(Subscriptions::TerminateService).to receive(:call) do |subscription:, **|
-        subscription.update!(status: :terminated, terminated_at: Time.current)
+        new_status = subscription.pending? ? :canceled : :terminated
+        subscription.update!(status: new_status, terminated_at: Time.current)
         BaseResult.new
       end
     end
@@ -64,8 +65,10 @@ RSpec.describe "recipes:subscriptions:terminate_all" do # rubocop:disable RSpec/
           .with(subscription: active_sub, async: false)
       end
 
-      it "cancels pending subscriptions" do
+      it "cancels pending subscriptions via the terminate service" do
         task.invoke
+        expect(Subscriptions::TerminateService).to have_received(:call)
+          .with(subscription: pending_sub, async: false)
         expect(pending_sub.reload).to be_canceled
       end
 

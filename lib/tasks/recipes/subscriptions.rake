@@ -22,7 +22,7 @@ namespace :recipes do
       puts "This will:"
       puts "  - Terminate active subscriptions synchronously (final invoices/credit-notes per each sub's settings)"
       puts "  - Cancel pending subscriptions"
-      puts "  - Emit `subscription.terminated` webhooks for each active sub"
+      puts "  - Emit `subscription.terminated` webhooks for each subscription"
       TaskPrompt.confirm!("Continue? (y/n): ")
 
       total = active_count + pending_count
@@ -44,7 +44,10 @@ namespace :recipes do
         processed += 1
         prefix = "[#{processed}/#{total}]"
 
-        subscription.mark_as_canceled!
+        result = Subscriptions::TerminateService.call(subscription:, async: false)
+        if result.failure?
+          abort "#{prefix} Failed to cancel subscription #{subscription.id}: #{result.error}"
+        end
 
         puts "#{prefix} Canceled #{subscription.id} (was pending)"
       end

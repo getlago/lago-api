@@ -4,21 +4,22 @@ module ApiKeys
   class DestroyService < BaseService
     Result = BaseResult[:api_key]
 
-    def initialize(api_key)
+    def initialize(api_key, force: false)
       @api_key = api_key
+      @force = force
       super
     end
 
     def call
       return result.not_found_failure!(resource: "api_key") unless api_key
 
-      unless api_key.organization.api_keys.non_expiring.without(api_key).exists?
+      unless force || api_key.organization.api_keys.non_expiring.without(api_key).exists?
         return result.single_validation_failure!(error_code: "last_non_expiring_api_key")
       end
 
       api_key.touch(:expires_at) # rubocop:disable Rails/SkipsModelValidations
 
-      ApiKeyMailer.with(api_key:).destroyed.deliver_later
+      ApiKeyMailer.with(api_key:).destroyed.deliver_later unless force
       ApiKeys::CacheService.expire_cache(api_key.value)
 
       register_security_log
@@ -29,7 +30,7 @@ module ApiKeys
 
     private
 
-    attr_reader :api_key
+    attr_reader :api_key, :force
 
     def register_security_log
       Utils::SecurityLog.produce(

@@ -30,14 +30,10 @@ namespace :recipes do
       active_keys.each_with_index do |key, index|
         prefix = "[#{index + 1}/#{active_keys.size}]"
 
-        key.touch(:expires_at) # rubocop:disable Rails/SkipsModelValidations
-        ApiKeys::CacheService.expire_cache(key.value)
-        Utils::SecurityLog.produce(
-          organization:,
-          log_type: "api_key",
-          log_event: "api_key.deleted",
-          resources: {name: key.name, value_ending: key.value.last(4)}
-        )
+        result = ApiKeys::DestroyService.call(key, force: true)
+        if result.failure?
+          abort "#{prefix} Failed to expire #{key.name}: #{result.error}"
+        end
 
         puts "#{prefix} Expired #{key.name} (••••#{key.value.last(4)})"
       end
