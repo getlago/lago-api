@@ -3228,7 +3228,8 @@ CREATE TABLE public.subscriptions (
     cancelation_reason public.subscription_cancelation_reasons,
     incompleted_at timestamp(6) without time zone,
     activated_at timestamp(6) without time zone,
-    billing_entity_id uuid
+    billing_entity_id uuid,
+    consolidate_invoice boolean DEFAULT true NOT NULL
 );
 
 
@@ -12217,6 +12218,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260517101105'),
+('20260513181544'),
 ('20260513105210'),
 ('20260513105209'),
 ('20260512155310'),

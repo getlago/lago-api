@@ -175,6 +175,7 @@ module Api
             :subscription_at,
             :ending_at,
             :progressive_billing_disabled,
+            :consolidate_invoice,
             invoice_custom_section: [
               :skip_invoice_custom_sections,
               {invoice_custom_section_codes: []}
@@ -197,6 +198,9 @@ module Api
           :on_termination_credit_note,
           :on_termination_invoice,
           :progressive_billing_disabled,
+          :billing_entity_id,
+          :billing_entity_code,
+          :consolidate_invoice,
           activation_rules: [:type, :timeout_hours],
           invoice_custom_section: [
             :skip_invoice_custom_sections,

@@ -688,6 +688,44 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "with consolidate_invoice" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          consolidate_invoice: false
+        }
+      end
+
+      it "creates a subscription opted out of invoice consolidation" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:consolidate_invoice]).to be(false)
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.consolidate_invoice).to be(false)
+      end
+    end
+
+    context "when consolidate_invoice is omitted" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid
+        }
+      end
+
+      it "defaults consolidate_invoice to true" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:consolidate_invoice]).to be(true)
+      end
+    end
+
     context "with applied_invoice_custom_sections in response" do
       it "includes applied_invoice_custom_sections in the serialized response" do
         subject
@@ -1666,6 +1704,21 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
         subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
         expect(subscription.progressive_billing_disabled).to be(true)
+      end
+    end
+
+    context "when updating consolidate_invoice" do
+      let(:update_params) { {consolidate_invoice: false} }
+      let(:subscription) { create(:subscription, customer:, plan:) }
+
+      it "updates consolidate_invoice" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:consolidate_invoice]).to be(false)
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.consolidate_invoice).to be(false)
       end
     end
 
