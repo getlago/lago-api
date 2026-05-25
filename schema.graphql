@@ -238,6 +238,11 @@ enum ActivityTypeEnum {
   invoice_payment_status_updated
 
   """
+  invoice.ready_to_finalize
+  """
+  invoice_ready_to_finalize
+
+  """
   invoice.regenerated
   """
   invoice_regenerated
@@ -2547,7 +2552,7 @@ type Coupon {
   amountCurrency: CurrencyEnum
   appliedCouponsCount: Int!
   billableMetrics: [BillableMetric!]
-  code: String
+  code: String!
   couponType: CouponTypeEnum!
   createdAt: ISO8601DateTime!
 
@@ -2790,7 +2795,7 @@ input CreateCouponInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  code: String
+  code: String!
   couponType: CouponTypeEnum!
   description: String
   expiration: CouponExpiration!
@@ -3361,6 +3366,7 @@ input CreateSubscriptionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  consolidateInvoice: Boolean
   customerId: ID!
   endingAt: ISO8601DateTime
   externalId: String
@@ -4357,7 +4363,7 @@ type Customer {
   creditNotesBalanceAmountCents: BigInt!
 
   """
-  Credit notes credits balance available per customer per currency
+  Credit notes balances broken down by (currency, billing entity)
   """
   creditNotesBalances: [CustomerCreditNotesBalance!]!
 
@@ -4414,6 +4420,11 @@ type Customer {
   name: String
   netPaymentTerm: Int
   netsuiteCustomer: NetsuiteCustomer
+
+  """
+  Overdue balance per currency
+  """
+  overdueBalances: [CustomerOverdueBalance!]!
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   phone: String
@@ -4500,6 +4511,8 @@ type CustomerCollection {
 
 type CustomerCreditNotesBalance {
   amountCents: BigInt!
+  billingEntityId: ID!
+  creditsAvailableCount: Int!
   currency: CurrencyEnum!
 }
 
@@ -4522,6 +4535,11 @@ input CustomerMetadataInput {
   id: ID
   key: String!
   value: String!
+}
+
+type CustomerOverdueBalance {
+  amountCents: BigInt!
+  currency: CurrencyEnum!
 }
 
 type CustomerPortalCustomer {
@@ -5693,6 +5711,7 @@ type Event {
 
 enum EventCategoryEnum {
   ALERTS
+  BILLABLE_METRICS
   CREDIT_NOTES
   CUSTOMERS
   DUNNING_CAMPAIGNS
@@ -5725,6 +5744,9 @@ type EventCollection {
 enum EventTypeEnum {
   alert_triggered
   all
+  billable_metric_created
+  billable_metric_deleted
+  billable_metric_updated
   credit_note_created
   credit_note_generated
   credit_note_provider_refund_failure
@@ -5757,6 +5779,7 @@ enum EventTypeEnum {
   invoice_payment_failure
   invoice_payment_overdue
   invoice_payment_status_updated
+  invoice_ready_to_finalize
   invoice_resynced
   invoice_voided
   payment_provider_error
@@ -6295,6 +6318,7 @@ type GraphqlSubscription {
 
 type GrossRevenue {
   amountCents: BigInt
+  billingEntityId: ID
   currency: CurrencyEnum
   invoicesCount: BigInt!
   month: ISO8601DateTime!
@@ -9053,6 +9077,7 @@ input OrganizationBillingConfigurationInput {
 
 type OverdueBalance {
   amountCents: BigInt!
+  billingEntityId: ID
   currency: CurrencyEnum!
   lagoInvoiceIds: [String!]!
   month: ISO8601DateTime!
@@ -10061,7 +10086,7 @@ type Query {
   """
   Query invoices of a customer
   """
-  customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
+  customerInvoices(billingEntityIds: [ID!], currency: CurrencyEnum, customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
 
   """
   Query the projected usage of the customer on the current billing period
@@ -10462,7 +10487,7 @@ type Query {
   """
   Query payments of an organization
   """
-  payments(externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int, searchTerm: String): PaymentCollection!
+  payments(currency: CurrencyEnum, externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int, searchTerm: String): PaymentCollection!
 
   """
   Query a single plan of an organization
@@ -10593,7 +10618,7 @@ type Query {
   """
   Query subscriptions of an organization
   """
-  subscriptions(currency: String, externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  subscriptions(billingEntityIds: [ID!], currency: String, externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query all Superset dashboards with embedded configuration and guest tokens
@@ -11335,10 +11360,12 @@ type Subscription {
   activatedAt: ISO8601DateTime
   activationRules: [SubscriptionActivationRule!]!
   activityLogs: [ActivityLog!]
+  billingEntityId: ID
   billingTime: BillingTimeEnum
   cancelationReason: CancelationReasonEnum
   canceledAt: ISO8601DateTime
   charges: [Charge!]
+  consolidateInvoice: Boolean!
   createdAt: ISO8601DateTime!
   currentBillingPeriodEndingAt: ISO8601DateTime
   currentBillingPeriodStartedAt: ISO8601DateTime
@@ -12717,6 +12744,7 @@ Update Wallet Input
 """
 input UpdateCustomerWalletInput {
   appliesTo: AppliesToInput
+  billingEntityId: ID
 
   """
   A unique identifier for the client performing the mutation.
@@ -13234,11 +13262,13 @@ Update Subscription input arguments
 """
 input UpdateSubscriptionInput {
   activationRules: [SubscriptionActivationRuleInput!]
+  billingEntityId: ID
 
   """
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  consolidateInvoice: Boolean
   endingAt: ISO8601DateTime
   id: ID!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
@@ -13371,6 +13401,7 @@ type Wallet {
   activityLogs: [ActivityLog!]
   appliesTo: WalletAppliesTo
   balanceCents: BigInt!
+  billingEntityId: ID
   code: String
   consumedAmountCents: BigInt!
   consumedCredits: Float!

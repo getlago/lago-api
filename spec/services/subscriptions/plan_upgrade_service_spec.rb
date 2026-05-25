@@ -74,6 +74,35 @@ RSpec.describe Subscriptions::PlanUpgradeService do
       expect(result.subscription.payment_method_type).to eq("provider")
     end
 
+    context "when subscription has consolidate_invoice disabled" do
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: old_plan,
+          status: :active,
+          subscription_at: Time.current,
+          started_at: Time.current,
+          external_id: SecureRandom.uuid,
+          consolidate_invoice: false
+        )
+      end
+
+      it "preserves consolidate_invoice on the new subscription" do
+        expect(result).to be_success
+        expect(result.subscription.consolidate_invoice).to be(false)
+      end
+
+      context "when params override consolidate_invoice to true" do
+        let(:params) { {name: subscription_name, consolidate_invoice: true} }
+
+        it "applies the override on the new subscription" do
+          expect(result).to be_success
+          expect(result.subscription.consolidate_invoice).to be(true)
+        end
+      end
+    end
+
     context "with payment method" do
       let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
       let(:params) do
@@ -292,6 +321,118 @@ RSpec.describe Subscriptions::PlanUpgradeService do
       it "canceled the next subscription" do
         expect(result).to be_success
         expect(next_subscription.reload).to be_canceled
+      end
+    end
+
+    describe "billing entity binding" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:other_entity) { create(:billing_entity, organization:) }
+
+      context "when multi_entity_billing flag is OFF" do
+        it "carries over the current subscription's billing_entity_id even without params" do
+          subscription.update!(billing_entity:)
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to eq(billing_entity.id)
+        end
+
+        it "ignores billing_entity_code in params but still carries over" do
+          subscription.update!(billing_entity:)
+          params[:billing_entity_code] = other_entity.code
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to eq(billing_entity.id)
+        end
+
+        it "persists nil when current subscription has no billing entity binding" do
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to be_nil
+        end
+      end
+
+      context "when multi_entity_billing flag is ON" do
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "carries over the current subscription's billing_entity_id when no param is provided" do
+          subscription.update!(billing_entity:)
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to eq(billing_entity.id)
+        end
+
+        it "persists nil when no param and current subscription is unbound" do
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to be_nil
+        end
+
+        it "binds to billing_entity_code from params over the current binding" do
+          subscription.update!(billing_entity:)
+          params[:billing_entity_code] = other_entity.code
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to eq(other_entity.id)
+        end
+
+        it "binds to billing_entity_id from params over the current binding" do
+          subscription.update!(billing_entity:)
+          params[:billing_entity_id] = other_entity.id
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to eq(other_entity.id)
+        end
+
+        it "fails with billing_entity_not_found when billing_entity_id is unknown" do
+          params[:billing_entity_id] = SecureRandom.uuid
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("billing_entity_not_found")
+        end
+
+        it "fails with billing_entity_not_found when billing_entity_code is unknown" do
+          params[:billing_entity_code] = "unknown-entity-code"
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("billing_entity_not_found")
+        end
+
+        it "prefers billing_entity_id over billing_entity_code when both are provided" do
+          params[:billing_entity_id] = billing_entity.id
+          params[:billing_entity_code] = other_entity.code
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+
+      context "when bill_subscriptions runs after the upgrade" do
+        let(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true) }
+
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "carries the current subscription's entity into termination and new-period billing context" do
+          subscription.update!(billing_entity:)
+
+          new_subscription = result.subscription
+
+          expect(subscription.reload.billing_entity_id).to eq(billing_entity.id)
+          expect(new_subscription.billing_entity_id).to eq(billing_entity.id)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription, new_subscription], kind_of(Integer), invoicing_reason: :upgrading)
+        end
+
+        it "routes the new-period billing to the override entity when params specify one" do
+          subscription.update!(billing_entity:)
+          params[:billing_entity_code] = other_entity.code
+
+          new_subscription = result.subscription
+
+          expect(subscription.reload.billing_entity_id).to eq(billing_entity.id)
+          expect(new_subscription.billing_entity_id).to eq(other_entity.id)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription, new_subscription], kind_of(Integer), invoicing_reason: :upgrading)
+        end
       end
     end
   end

@@ -7,7 +7,7 @@ module Types
 
       argument :amount_cents, GraphQL::Types::BigInt, required: false
       argument :amount_currency, Types::CurrencyEnum, required: false
-      argument :code, String, required: false
+      argument :code, String, required: true
       argument :coupon_type, Types::Coupons::CouponTypeEnum, required: true
       argument :description, String, required: false
       argument :frequency, Types::Coupons::FrequencyEnum, required: true

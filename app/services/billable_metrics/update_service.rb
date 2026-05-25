@@ -55,6 +55,8 @@ module BillableMetrics
 
       billable_metric.save!
 
+      SendWebhookJob.perform_after_commit("billable_metric.updated", billable_metric)
+
       result.billable_metric = billable_metric
       result
     rescue ActiveRecord::RecordInvalid => e

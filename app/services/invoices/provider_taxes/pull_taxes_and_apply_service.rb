@@ -28,6 +28,7 @@ module Invoices
           invoice.status = "failed" unless invoice.draft?
           invoice.save!
 
+          notify_ready_to_finalize
           return result
         end
 
@@ -70,6 +71,8 @@ module Invoices
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
           Invoices::Payments::CreateService.call_async(invoice:)
           Utils::SegmentTrack.invoice_created(invoice)
+        elsif invoice.draft?
+          notify_ready_to_finalize
         end
 
         result
@@ -86,6 +89,12 @@ module Invoices
       private
 
       attr_accessor :invoice
+
+      def notify_ready_to_finalize
+        return unless invoice.draft?
+        SendWebhookJob.perform_later("invoice.ready_to_finalize", invoice)
+        Utils::ActivityLog.produce(invoice, "invoice.ready_to_finalize")
+      end
 
       def skip_payment_gating_for_zero_amount
         gated = invoice.subscriptions.find(&:payment_gated?)

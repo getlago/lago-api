@@ -688,6 +688,44 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "with consolidate_invoice" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          consolidate_invoice: false
+        }
+      end
+
+      it "creates a subscription opted out of invoice consolidation" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:consolidate_invoice]).to be(false)
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.consolidate_invoice).to be(false)
+      end
+    end
+
+    context "when consolidate_invoice is omitted" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid
+        }
+      end
+
+      it "defaults consolidate_invoice to true" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:consolidate_invoice]).to be(true)
+      end
+    end
+
     context "with applied_invoice_custom_sections in response" do
       it "includes applied_invoice_custom_sections in the serialized response" do
         subject
@@ -1669,6 +1707,21 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "when updating consolidate_invoice" do
+      let(:update_params) { {consolidate_invoice: false} }
+      let(:subscription) { create(:subscription, customer:, plan:) }
+
+      it "updates consolidate_invoice" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:consolidate_invoice]).to be(false)
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.consolidate_invoice).to be(false)
+      end
+    end
+
     context "with multuple subscriptions" do
       let(:active_plan) { create(:plan, organization:, amount_cents: 5000, description: "desc") }
       let(:active_subscription) do
@@ -1789,6 +1842,58 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
           expect(response).to have_http_status(:method_not_allowed)
           expect(json[:code]).to eq("subscription_incomplete")
+        end
+      end
+
+      context "when updating billing_entity" do
+        let(:subscription) { create(:subscription, customer:, plan:) }
+        let(:new_billing_entity) { create(:billing_entity, organization:) }
+
+        context "with multi_entity_billing feature flag enabled" do
+          before { organization.update!(feature_flags: ["multi_entity_billing"]) }
+
+          context "with billing_entity_code" do
+            let(:update_params) { {billing_entity_code: new_billing_entity.code} }
+
+            it "updates the subscription's billing entity" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+            end
+          end
+
+          context "with billing_entity_id" do
+            let(:update_params) { {billing_entity_id: new_billing_entity.id} }
+
+            it "updates the subscription's billing entity" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+            end
+          end
+
+          context "with an unknown billing_entity_code" do
+            let(:update_params) { {billing_entity_code: "does-not-exist"} }
+
+            it "returns a not found error" do
+              subject
+
+              expect(response).to be_not_found_error("billing_entity")
+            end
+          end
+        end
+
+        context "with multi_entity_billing feature flag disabled" do
+          let(:update_params) { {billing_entity_code: new_billing_entity.code} }
+
+          it "silently ignores billing_entity_code and returns success" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(subscription.reload.billing_entity_id).to be_nil
+          end
         end
       end
     end

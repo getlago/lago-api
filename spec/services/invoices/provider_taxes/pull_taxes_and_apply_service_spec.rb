@@ -259,6 +259,12 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
       end
 
+      it "does not enqueue invoice.ready_to_finalize" do
+        expect do
+          pull_taxes_service.call
+        end.not_to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
+      end
+
       it "enqueues GenerateDocumentsJob with email false" do
         expect do
           pull_taxes_service.call
@@ -395,6 +401,17 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
           end.not_to have_enqueued_job(SendWebhookJob).with("invoice.created", Invoice)
         end
 
+        it "enqueues a SendWebhookJob for invoice.ready_to_finalize" do
+          expect do
+            pull_taxes_service.call
+          end.to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
+        end
+
+        it "produces an activity log for invoice.ready_to_finalize" do
+          pull_taxes_service.call
+          expect(Utils::ActivityLog).to have_produced("invoice.ready_to_finalize").with(invoice)
+        end
+
         it "does not create a payment" do
           allow(Invoices::Payments::CreateService).to receive(:call_async)
 
@@ -452,31 +469,25 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
       end
 
+      it "does not enqueue invoice.ready_to_finalize" do
+        expect do
+          pull_taxes_service.call
+        end.not_to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
+      end
+
       context "with api limit error" do
         let(:body) do
           p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/api_limit_response.json")
           File.read(p)
         end
 
-        it "puts invoice in failed status" do
-          result = pull_taxes_service.call
-
-          expect(result).to be_success
-          expect(invoice.reload.status).to eq("failed")
+        it "raises ServerContentionError so the job can retry" do
+          expect { pull_taxes_service.call }.to raise_error(Integrations::Aggregator::ServerContentionError)
         end
 
-        it "resolves old tax error and creates new one" do
-          old_error_id = invoice.reload.error_details.last.id
-
-          pull_taxes_service.call
-
-          expect(invoice.error_details.tax_error.last.id).not_to eql(old_error_id)
-          expect(invoice.error_details.tax_error.count).to be(1)
-          expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
-          expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error"])
-            .to eq("validationError")
-          expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error_message"])
-            .to eq("You've exceeded your API limit of 10 per second")
+        it "does not change the invoice status" do
+          expect { pull_taxes_service.call }.to raise_error(Integrations::Aggregator::ServerContentionError)
+          expect(invoice.reload.status).not_to eq("failed")
         end
       end
 
@@ -527,6 +538,17 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
             .to eq("action_script_failure")
           expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error_message"])
             .to eq("Error starting integration 'netsuite-customer-create': {\n  \"name\": \"TRPCClientError\",\n  \"message\": \"fetch failed\"\n}")
+        end
+
+        it "enqueues a SendWebhookJob for invoice.ready_to_finalize" do
+          expect do
+            pull_taxes_service.call
+          end.to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
+        end
+
+        it "produces an activity log for invoice.ready_to_finalize" do
+          pull_taxes_service.call
+          expect(Utils::ActivityLog).to have_produced("invoice.ready_to_finalize").with(invoice)
         end
       end
     end

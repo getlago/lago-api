@@ -50,6 +50,7 @@ module Clickhouse
       customer_updated: "customer.updated",
       customer_deleted: "customer.deleted",
       invoice_drafted: "invoice.drafted",
+      invoice_ready_to_finalize: "invoice.ready_to_finalize",
       invoice_failed: "invoice.failed",
       invoice_created: "invoice.created",
       invoice_one_off_created: "invoice.one_off_created",

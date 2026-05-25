@@ -207,6 +207,29 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
+      context "when updating consolidate_invoice" do
+        let(:params) { {consolidate_invoice: false} }
+
+        it "updates consolidate_invoice to false" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.consolidate_invoice).to be(false)
+        end
+
+        context "when re-enabling consolidation" do
+          let(:subscription) { create(:subscription, consolidate_invoice: false) }
+          let(:params) { {consolidate_invoice: true} }
+
+          it "updates consolidate_invoice to true" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.consolidate_invoice).to be(true)
+          end
+        end
+      end
+
       context "when updating payment method" do
         let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
         let(:params) { {payment_method: payment_method_params} }
@@ -1106,6 +1129,113 @@ RSpec.describe Subscriptions::UpdateService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:activation_rules]).to include("subscription_not_pending")
+        end
+      end
+    end
+
+    context "when updating billing_entity" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:subscription) { create(:subscription, customer:, plan:, organization:) }
+      let(:new_billing_entity) { create(:billing_entity, organization:) }
+
+      context "with multi_entity_billing feature flag enabled" do
+        before { organization.update!(feature_flags: ["multi_entity_billing"]) }
+
+        context "with billing_entity_id" do
+          let(:params) { {billing_entity_id: new_billing_entity.id} }
+
+          it "assigns the new billing entity to the subscription" do
+            update_service.call
+
+            expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+          end
+
+          it "sends subscription.updated webhook" do
+            expect { update_service.call }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.updated", subscription)
+          end
+        end
+
+        context "with billing_entity_code" do
+          let(:params) { {billing_entity_code: new_billing_entity.code} }
+
+          it "assigns the new billing entity to the subscription" do
+            update_service.call
+
+            expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+          end
+        end
+
+        context "with both billing_entity_id and billing_entity_code" do
+          let(:other_entity) { create(:billing_entity, organization:) }
+          let(:params) { {billing_entity_id: new_billing_entity.id, billing_entity_code: other_entity.code} }
+
+          it "prefers billing_entity_id over billing_entity_code" do
+            update_service.call
+
+            expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+          end
+        end
+
+        context "with unknown billing_entity_id" do
+          let(:params) { {billing_entity_id: SecureRandom.uuid} }
+
+          it "returns not_found_failure for billing_entity" do
+            result = update_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.resource).to eq("billing_entity")
+          end
+
+          it "does not persist any change" do
+            expect { update_service.call }.not_to change { subscription.reload.attributes }
+          end
+
+          it "does not enqueue the subscription.updated webhook" do
+            expect { update_service.call }.not_to have_enqueued_job(SendWebhookJob).with("subscription.updated", subscription)
+          end
+        end
+
+        context "with unknown billing_entity_code" do
+          let(:params) { {billing_entity_code: "nonexistent"} }
+
+          it "returns not_found_failure for billing_entity" do
+            result = update_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.resource).to eq("billing_entity")
+          end
+        end
+
+        context "with a billing entity from another organization" do
+          let(:other_org) { create(:organization) }
+          let(:foreign_entity) { create(:billing_entity, organization: other_org) }
+          let(:params) { {billing_entity_id: foreign_entity.id} }
+
+          it "returns not_found_failure (scoping enforced)" do
+            result = update_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.resource).to eq("billing_entity")
+          end
+        end
+      end
+
+      context "with multi_entity_billing feature flag disabled" do
+        let(:params) { {billing_entity_id: new_billing_entity.id} }
+
+        it "silently ignores billing_entity_id" do
+          update_service.call
+
+          expect(subscription.reload.billing_entity_id).to be_nil
+        end
+
+        it "returns success" do
+          expect(update_service.call).to be_success
         end
       end
     end

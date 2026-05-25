@@ -220,25 +220,25 @@ RSpec.describe Charges::UpdateService do
         let(:cascade_options) do
           {
             cascade: true,
-            parent_filters: [],
             equal_properties: true,
             equal_applied_pricing_unit_rate: true
           }
         end
 
-        it "updates charge properties and filters" do
+        it "updates charge properties" do
           subject
 
           expect(charge.reload).to have_attributes(properties: {"amount" => "400"})
+        end
 
-          expect(charge.filters.first).to have_attributes(
-            invoice_display_name: "Card filter",
-            properties: {"amount" => "90"}
-          )
-          expect(charge.filters.first.values.first).to have_attributes(
-            billable_metric_filter_id: billable_metric_filter.id,
-            values: ["card"]
-          )
+        it "does not cascade filters via this service" do
+          # Filters in cascade mode are dispatched per-filter via
+          # ChargeFilters::CascadeJob — they must not be processed here.
+          allow(ChargeFilters::CreateOrUpdateBatchService).to receive(:call)
+
+          subject
+
+          expect(ChargeFilters::CreateOrUpdateBatchService).not_to have_received(:call)
         end
 
         it "updates applied pricing unit's conversion rate" do
@@ -284,7 +284,6 @@ RSpec.describe Charges::UpdateService do
           let(:cascade_options) do
             {
               cascade: true,
-              parent_filters: [],
               equal_properties: false
             }
           end
@@ -413,15 +412,15 @@ RSpec.describe Charges::UpdateService do
           allow(Charges::UpdateChildrenJob).to receive(:perform_later)
         end
 
-        it "triggers cascade update via Charges::UpdateChildrenJob" do
+        it "triggers charge-level cascade via Charges::UpdateChildrenJob (without filters)" do
           subject
 
-          expect(Charges::UpdateChildrenJob).to have_received(:perform_later).with(
-            params: hash_including("charge_model", "properties", "filters"),
-            old_parent_attrs: hash_including("id" => charge.id),
-            old_parent_filters_attrs: array_including,
-            old_parent_applied_pricing_unit_attrs: anything
-          )
+          expect(Charges::UpdateChildrenJob).to have_received(:perform_later) do |args|
+            expect(args[:params]).to include("charge_model", "properties")
+            expect(args[:params]).not_to have_key("filters")
+            expect(args[:old_parent_attrs]).to include("id" => charge.id)
+            expect(args).not_to have_key(:old_parent_filters_attrs)
+          end
         end
 
         context "when charge has no children" do
