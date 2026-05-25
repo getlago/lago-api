@@ -21,7 +21,7 @@ module ChargeFilters
       return result.single_validation_failure!(field: :values, error_code: "value_is_mandatory") if empty_filter_values?
 
       # We only care about order when you have less than 100 filters.
-      touch = filters_params.size < 100
+      @touch = filters_params.size < 100
 
       # NOTE: PaperTrail's per-save Version Create plus version_limit COUNT is the
       #       dominant DB cost for large filter batches (two queries per record save).
@@ -32,20 +32,12 @@ module ChargeFilters
 
       begin
         ActiveRecord::Base.transaction do
-          # NOTE: the `with_discarded` scope on the belongs_to associations below defeats
-          #       Rails' automatic inverse_of, so every save would otherwise re-SELECT the
-          #       parent records during validation. Load each parent once and pre-assign
-          #       it on every built/looked-up child.
-          organization = charge.organization
-
-          new_filter_rows = []
-          new_filter_value_rows = []
-          new_filter_ids_in_order = []
+          @organization = charge.organization
+          @new_filter_rows = []
+          @new_filter_value_rows = []
+          @new_filter_ids = []
 
           filters_params.each do |filter_param|
-            # NOTE: callers pass either string-keyed (plan flow, via with_indifferent_access) or
-            #       symbol-keyed (subscription override flow, via deep_symbolize_keys) values
-            #       hashes. Normalize so the in-memory indexes below match regardless.
             values_params = filter_param[:values].transform_keys(&:to_s)
 
             # NOTE: since a filter could be a refinement of another one, we have to make sure
@@ -58,18 +50,13 @@ module ChargeFilters
             ).properties
 
             if existing_filter
-              update_existing_filter(
-                existing_filter, organization, filter_param, values_params, properties, touch
-              )
+              update_existing_filter(existing_filter, filter_param, values_params, properties)
             else
-              accumulate_new_filter(
-                organization, filter_param, values_params, properties,
-                new_filter_rows, new_filter_value_rows, new_filter_ids_in_order
-              )
+              accumulate_new_filter(filter_param, values_params, properties)
             end
           end
 
-          bulk_insert_new_filters(new_filter_rows, new_filter_value_rows, new_filter_ids_in_order)
+          bulk_insert_new_filters
 
           # NOTE: remove old filters that were not created or updated
           charge.filters.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
@@ -88,9 +75,9 @@ module ChargeFilters
 
     attr_reader :charge, :filters_params
 
-    def update_existing_filter(filter, organization, filter_param, values_params, properties, touch)
+    def update_existing_filter(filter, filter_param, values_params, properties)
       filter.charge = charge
-      filter.organization = organization
+      filter.organization = @organization
 
       filter.invoice_display_name = filter_param[:invoice_display_name]
       filter.properties = properties
@@ -98,7 +85,7 @@ module ChargeFilters
       filter.save! if filter.changed?
 
       # NOTE: Make sure updated_at is touched even if not changed to keep the right order.
-      filter.touch if touch # rubocop:disable Rails/SkipsModelValidations
+      filter.touch if @touch # rubocop:disable Rails/SkipsModelValidations
 
       values_params.each do |key, values|
         billable_metric_filter = billable_metric_filters_by_key[key]
@@ -108,28 +95,23 @@ module ChargeFilters
         filter_value ||= filter.values.build(organization_id: charge.organization_id)
         filter_value.charge_filter = filter
         filter_value.billable_metric_filter = billable_metric_filter
-        filter_value.organization = organization
+        filter_value.organization = @organization
 
         filter_value.values = values
         filter_value.save! if filter_value.changed?
 
-        filter_value.touch if touch # rubocop:disable Rails/SkipsModelValidations
+        filter_value.touch if @touch # rubocop:disable Rails/SkipsModelValidations
       end
 
       result.filters << filter
     end
 
-    def accumulate_new_filter(organization, filter_param, values_params, properties,
-      new_filter_rows, new_filter_value_rows, new_filter_ids_in_order)
+    def accumulate_new_filter(filter_param, values_params, properties)
       # NOTE: pre-generate the UUID so we can wire ChargeFilterValue rows to their parent
       #       without a round-trip after the ChargeFilter insert_all.
       filter_id = SecureRandom.uuid
 
-      # NOTE: build an in-memory AR instance only to run validations — we drop it after
-      #       capturing the row hash. Use a standalone ChargeFilter.new (not
-      #       `charge.filters.new`) so the unsaved instance is not appended to the
-      #       parent's in-memory collection, which can interfere with later charge.save!
-      #       in callers like Charges::CreateService.
+      # NOTE: build an in-memory AR instance only to run validations
       filter_instance = ChargeFilter.new(
         id: filter_id,
         charge_id: charge.id,
@@ -138,17 +120,17 @@ module ChargeFilters
         properties: properties
       )
       filter_instance.charge = charge
-      filter_instance.organization = organization
+      filter_instance.organization = @organization
       filter_instance.validate!
 
-      new_filter_rows << {
+      @new_filter_rows << {
         id: filter_id,
         charge_id: charge.id,
         organization_id: charge.organization_id,
         invoice_display_name: filter_param[:invoice_display_name],
         properties: properties
       }
-      new_filter_ids_in_order << filter_id
+      @new_filter_ids << filter_id
 
       values_params.each do |key, values|
         billable_metric_filter = billable_metric_filters_by_key[key]
@@ -159,10 +141,10 @@ module ChargeFilters
         )
         value_instance.charge_filter = filter_instance
         value_instance.billable_metric_filter = billable_metric_filter
-        value_instance.organization = organization
+        value_instance.organization = @organization
         value_instance.validate!
 
-        new_filter_value_rows << {
+        @new_filter_value_rows << {
           charge_filter_id: filter_id,
           billable_metric_filter_id: billable_metric_filter&.id,
           organization_id: charge.organization_id,
@@ -171,36 +153,36 @@ module ChargeFilters
       end
     end
 
-    def bulk_insert_new_filters(new_filter_rows, new_filter_value_rows, new_filter_ids_in_order)
-      return if new_filter_rows.empty?
+    def bulk_insert_new_filters
+      return if @new_filter_rows.empty?
 
-      # NOTE: insert_all skips AR callbacks (and therefore updated_at handling), so set
+      # NOTE: insert_all skips refreshing updated_at, so set
       #       monotonically-increasing timestamps to preserve the request order under the
       #       model's `order(updated_at: :asc)` default scope.
       now = Time.current
-      new_filter_rows.each_with_index do |row, idx|
-        ts = now + (idx / 1_000_000.0)
-        row[:created_at] = ts
-        row[:updated_at] = ts
+      @new_filter_rows.each_with_index do |row, idx|
+        timestamp = now + (idx / 1_000_000.0)
+        row[:created_at] = timestamp
+        row[:updated_at] = timestamp
       end
-      ChargeFilter.insert_all!(new_filter_rows) # rubocop:disable Rails/SkipsModelValidations
+      ChargeFilter.insert_all!(@new_filter_rows) # rubocop:disable Rails/SkipsModelValidations
 
-      if new_filter_value_rows.any?
-        new_filter_value_rows.each_with_index do |row, idx|
-          ts = now + (idx / 1_000_000.0)
-          row[:created_at] = ts
-          row[:updated_at] = ts
+      if @new_filter_value_rows.any?
+        @new_filter_value_rows.each_with_index do |row, idx|
+          timestamp = now + (idx / 1_000_000.0)
+          row[:created_at] = timestamp
+          row[:updated_at] = timestamp
         end
-        ChargeFilterValue.insert_all!(new_filter_value_rows) # rubocop:disable Rails/SkipsModelValidations
+        ChargeFilterValue.insert_all!(@new_filter_value_rows) # rubocop:disable Rails/SkipsModelValidations
       end
 
       # NOTE: re-fetch the inserted filters with their values so callers iterating over
       #       result.filters see fully-hydrated records.
       inserted = charge.filters
-        .where(id: new_filter_ids_in_order)
+        .where(id: @new_filter_ids)
         .includes(values: :billable_metric_filter)
         .index_by(&:id)
-      new_filter_ids_in_order.each { |id| result.filters << inserted[id] }
+      @new_filter_ids.each { |id| result.filters << inserted[id] }
     end
 
     def filters
