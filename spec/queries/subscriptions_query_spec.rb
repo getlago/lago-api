@@ -355,6 +355,39 @@ RSpec.describe SubscriptionsQuery do
         expect(result.subscriptions).to match_array([eu_subscription, us_subscription])
       end
     end
+
+    context "when a subscription has NULL billing_entity_id inherits from customer" do
+      let(:us_customer) { create(:customer, organization:, billing_entity: us_entity) }
+      let(:eu_customer) { create(:customer, organization:, billing_entity: eu_entity) }
+
+      let!(:inherits_eu) { create(:subscription, customer: eu_customer, plan:, billing_entity: nil) }
+      let!(:inherits_us) { create(:subscription, customer: us_customer, plan:, billing_entity: nil) }
+      let!(:explicit_us_inherit_eu) do
+        create(:subscription, customer: eu_customer, plan:, billing_entity: us_entity)
+      end
+      let!(:explicit_eu_inherit_eu) do
+        create(:subscription, customer: eu_customer, plan:, billing_entity: eu_entity)
+      end
+
+      context "when filtering for the EU entity" do
+        let(:filters) { {billing_entity_ids: [eu_entity.id]} }
+
+        it "returns explicit and inherited matches, excludes mismatched explicit and inherited" do
+          expect(result).to be_success
+          expect(result.subscriptions).to match_array([
+            eu_subscription,
+            inherits_eu,
+            explicit_eu_inherit_eu
+          ])
+          expect(returned_ids).not_to include(inherits_us.id)
+          expect(returned_ids).not_to include(explicit_us_inherit_eu.id)
+        end
+
+        it "does not duplicate subscriptions whose explicit and inherited values both match" do
+          expect(returned_ids.count(explicit_eu_inherit_eu.id)).to eq(1)
+        end
+      end
+    end
   end
 
   context "with currency filter" do
