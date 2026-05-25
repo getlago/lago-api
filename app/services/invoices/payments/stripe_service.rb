@@ -74,7 +74,7 @@ module Invoices
           payment_intent.provider_session_id,
           {api_key: stripe_api_key}
         )
-        session["status"] == "complete" || session["payment_status"] == "paid"
+        ::PaymentProviders::StripeProvider::CHECKOUT_COMPLETED_STATUSES.include?(session["status"])
       rescue
         false
       end

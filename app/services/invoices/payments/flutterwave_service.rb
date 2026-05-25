@@ -7,10 +7,6 @@ module Invoices
 
       PROVIDER_NAME = "Flutterwave"
 
-      # Flutterwave transaction state that means an auto-charge MUST NOT
-      # run: the URL was used and the provider settled the funds.
-      COMPLETED_TRANSACTION_STATUS = "successful"
-
       def initialize(invoice = nil)
         @invoice = invoice
 
@@ -54,7 +50,8 @@ module Invoices
           headers: headers,
           params: {tx_ref: payment_intent.provider_session_id}
         )
-        JSON.parse(response.body).dig("data", "status") == COMPLETED_TRANSACTION_STATUS
+        ::PaymentProviders::FlutterwaveProvider::CHECKOUT_COMPLETED_STATUSES
+          .include?(JSON.parse(response.body).dig("data", "status"))
       rescue
         false
       end

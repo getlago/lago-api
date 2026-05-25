@@ -7,11 +7,6 @@ module Invoices
 
       PROVIDER_NAME = "Cashfree"
 
-      # Cashfree link states that mean an auto-charge MUST NOT run:
-      # the URL has captured funds (in part or in full) and the provider
-      # is settling them.
-      COMPLETED_LINK_STATUSES = %w[PAID PARTIALLY_PAID].freeze
-
       def initialize(invoice = nil)
         @invoice = invoice
 
@@ -53,7 +48,7 @@ module Invoices
 
         response = link_client(payment_intent.provider_session_id).get(headers: cashfree_headers)
         link_status = JSON.parse(response.body)["link_status"]
-        COMPLETED_LINK_STATUSES.include?(link_status)
+        ::PaymentProviders::CashfreeProvider::CHECKOUT_COMPLETED_STATUSES.include?(link_status)
       rescue
         false
       end

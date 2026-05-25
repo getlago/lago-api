@@ -10,6 +10,13 @@ module PaymentProviders
     PROCESSING_STATUSES = %w[pending].freeze
     SUCCESS_STATUSES = %w[successful].freeze
     FAILED_STATUSES = %w[failed cancelled].freeze
+
+    # Transaction states where the hosted-link has settled funds.
+    # Aliases SUCCESS_STATUSES — Flutterwave's link verification API
+    # exposes the same enum as the transaction level. Used by
+    # Invoices::Payments::FlutterwaveService to keep auto-charges from
+    # racing a hosted-link payment.
+    CHECKOUT_COMPLETED_STATUSES = SUCCESS_STATUSES
     validates :secret_key, presence: true
     validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}
 

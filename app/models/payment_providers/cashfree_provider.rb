@@ -12,6 +12,11 @@ module PaymentProviders
     SUCCESS_STATUSES = %w[PAID].freeze
     FAILED_STATUSES = %w[EXPIRED CANCELLED].freeze
 
+    # Payment-link states where the URL has captured funds (in part or in
+    # full) and Cashfree is settling. Used by Invoices::Payments::CashfreeService
+    # to keep auto-charges from racing a hosted-link payment.
+    CHECKOUT_COMPLETED_STATUSES = (SUCCESS_STATUSES + PROCESSING_STATUSES).freeze
+
     validates :client_id, presence: true
     validates :client_secret, presence: true
     validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}

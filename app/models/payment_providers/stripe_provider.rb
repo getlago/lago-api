@@ -5,6 +5,11 @@ module PaymentProviders
     AMOUNT_TOO_SMALL_ERROR_CODE = "amount_too_small"
     NEED_3DS_ERROR_CODE = "authentication_required"
 
+    # Checkout Session states that mean the customer paid via the hosted
+    # URL. Used by Invoices::Payments::StripeService to keep auto-charges
+    # from racing a Checkout Session payment.
+    CHECKOUT_COMPLETED_STATUSES = %w[complete].freeze
+
     StripePayment = Data.define(:id, :status, :metadata, :error_code)
 
     SUCCESS_REDIRECT_URL = "https://stripe.com/"

@@ -8,10 +8,6 @@ module Invoices
 
       PROVIDER_NAME = "Adyen"
 
-      # Adyen payment-link states that mean an auto-charge MUST NOT run:
-      # the URL is past the open stage and the provider is settling it.
-      COMPLETED_PAYMENT_LINK_STATUSES = %w[completed paymentPending].freeze
-
       def initialize(invoice = nil)
         @invoice = invoice
 
@@ -52,7 +48,7 @@ module Invoices
         return false if payment_intent.provider_session_id.blank?
 
         res = client.checkout.payment_links_api.get_payment_link(payment_intent.provider_session_id)
-        COMPLETED_PAYMENT_LINK_STATUSES.include?(res.response["status"])
+        ::PaymentProviders::AdyenProvider::CHECKOUT_COMPLETED_STATUSES.include?(res.response["status"])
       rescue
         false
       end

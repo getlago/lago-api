@@ -11,6 +11,13 @@ module PaymentProviders
     SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
     FAILED_STATUSES = %w[Cancelled CaptureFailed Error Expired Refused].freeze
 
+    # Payment-link states where the customer either completed payment or
+    # is mid-payment in an async flow. Distinct from the payment-level
+    # SUCCESS_STATUSES above — Adyen's payment-link API exposes its own
+    # enum. Used by Invoices::Payments::AdyenService to keep auto-charges
+    # from racing a hosted-link payment.
+    CHECKOUT_COMPLETED_STATUSES = %w[completed paymentPending].freeze
+
     validates :api_key, :merchant_account, presence: true
     validates :success_redirect_url, adyen_url: true, allow_nil: true, length: {maximum: 1024}
 

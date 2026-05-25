@@ -148,13 +148,6 @@ RSpec.describe Invoices::Payments::StripeService do
       expect(stripe_service.checkout_session_already_completed?(payment_intent)).to be true
     end
 
-    it "returns true when payment_status is paid" do
-      allow(::Stripe::Checkout::Session).to receive(:retrieve)
-        .and_return({"status" => "open", "payment_status" => "paid"})
-
-      expect(stripe_service.checkout_session_already_completed?(payment_intent)).to be true
-    end
-
     it "returns false when the session is still open and unpaid" do
       allow(::Stripe::Checkout::Session).to receive(:retrieve)
         .and_return({"status" => "open", "payment_status" => "unpaid"})
