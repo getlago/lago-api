@@ -42,12 +42,10 @@ module Fees
         end
 
         def days_active
-          first_invoice_subscription = subscription.invoice_subscriptions
-            .where("from_datetime >= ?", dates_service.previous_beginning_of_period)
-            .order(Arel.sql("COALESCE(to_datetime, timestamp) ASC"))
-            .first
-
-          from_datetime = first_invoice_subscription&.from_datetime || reconciliation_invoice_subscription.from_datetime
+          first_invoice_subscription_datetime = subscription.invoice_subscriptions
+            .starting_from(dates_service.previous_beginning_of_period)
+            .pick(:from_datetime)
+          from_datetime = first_invoice_subscription_datetime || reconciliation_invoice_subscription.from_datetime
           end_datetime = subscription.terminated? ? subscription.terminated_at : reconciliation_invoice_subscription.to_datetime
 
           ::Utils::Datetime.date_diff_with_timezone(

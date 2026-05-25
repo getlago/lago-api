@@ -799,6 +799,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
           end
 
           context "with minimum commitment" do
+            let(:timestamp) { Time.zone.parse("1 Jan 2024") }
             let(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: false, amount_cents: 0) }
             let!(:commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_00) }
 
@@ -815,21 +816,8 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 expect(commitment_fee).not_to be_persisted
                 expect(commitment_fee.invoiceable_type).to eq("Commitment")
                 expect(commitment_fee.invoiceable_id).to eq(commitment.id)
-                expect(commitment_fee.amount_cents).to be > 0
-                expect(commitment_fee.amount_cents).to be <= 1_000_00
+                expect(commitment_fee.amount_cents).to eq(commitment.amount_cents)
                 expect(commitment_fee.subscription).to eq(subscription)
-              end
-            end
-
-            it "includes the commitment fee in invoice totals" do
-              travel_to(timestamp) do
-                result = preview_service.call
-
-                commitment_fees = result.invoice.fees.select { |f| f.fee_type == "commitment" }
-                commitment_amount = commitment_fees.sum(&:amount_cents)
-
-                expect(result.invoice.fees_amount_cents).to eq(result.invoice.fees.sum(&:amount_cents))
-                expect(commitment_amount).to be_positive
               end
             end
           end

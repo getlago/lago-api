@@ -244,9 +244,15 @@ module Invoices
           timestamp: billing_time
         )
 
-        preview_fees = invoice.fees.select { |f| f.subscription_id == subscription.id }
-        preview_fees_amount_cents = preview_fees.sum(&:amount_cents)
-        preview_fees_precise_amount_cents = preview_fees.sum(&:precise_amount_cents)
+        preview_fee_totals = invoice.fees
+          .each_with_object({amount_cents: 0, precise_amount_cents: 0}) do |fee, totals|
+            next unless fee.subscription_id == subscription.id
+
+            totals[:amount_cents] += fee.amount_cents
+            totals[:precise_amount_cents] += fee.precise_amount_cents
+          end
+        preview_fees_amount_cents = preview_fee_totals[:amount_cents]
+        preview_fees_precise_amount_cents = preview_fee_totals[:precise_amount_cents]
 
         fee_result = Fees::Commitments::Minimum::CalculatePreviewFeeService.call(
           invoice_subscription: virtual_invoice_subscription,
