@@ -6,8 +6,9 @@ module Invoices
       include Customers::PaymentProviderFinder
 
       # Moneyhash intent states that mean an auto-charge MUST NOT run:
-      # the URL has been used and the provider is settling it.
-      COMPLETED_INTENT_STATUSES = %w[PROCESSED SUCCESSFUL].freeze
+      # the URL has been used and the provider is settling it. Aliases
+      # the canonical provider-model list so the two cannot drift.
+      COMPLETED_INTENT_STATUSES = ::PaymentProviders::MoneyhashProvider::SUCCESS_STATUSES
 
       def initialize(invoice = nil)
         @invoice = invoice
