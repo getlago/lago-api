@@ -16,7 +16,7 @@ module V1
         }
 
         payload.merge!(charges_usage) if include?(:charges_usage)
-        payload
+        {customer_usage: payload}
       end
 
       private

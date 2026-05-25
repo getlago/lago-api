@@ -954,7 +954,7 @@ RSpec.describe Api::V1::Customers::UsageController do
 
       expect(json[:usage_periods].count).to eq(1)
 
-      usage = json[:usage_periods].first
+      usage = json[:usage_periods].first[:customer_usage]
       expect(usage[:from_datetime]).to eq(invoice_subscription.charges_from_datetime.iso8601)
       expect(usage[:to_datetime]).to eq(invoice_subscription.charges_to_datetime.iso8601)
       expect(usage[:issuing_date]).to eq(invoice.issuing_date.iso8601)

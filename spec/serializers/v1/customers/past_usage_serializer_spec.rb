@@ -35,7 +35,7 @@ RSpec.describe ::V1::Customers::PastUsageSerializer do
   it "serializes the past usage" do
     result = JSON.parse(serializer.to_json)
 
-    expect(result["usage_period"]).to include(
+    expect(result["usage_period"]["customer_usage"]).to include(
       "from_datetime" => "2023-08-17T00:00:00Z",
       "to_datetime" => "2023-09-16T23:59:59Z",
       "issuing_date" => invoice.issuing_date.iso8601,
@@ -46,8 +46,8 @@ RSpec.describe ::V1::Customers::PastUsageSerializer do
       "lago_invoice_id" => invoice.id
     )
 
-    expect(result["usage_period"]["charges_usage"].count).to eq(2)
-    expect(result["usage_period"]["charges_usage"].first["presentation_breakdowns"]).to eq([{"presentation_by" => {"department" => "engineering"}, "units" => "60.0"}])
-    expect(result["usage_period"]["charges_usage"].second["presentation_breakdowns"]).to eq([])
+    expect(result["usage_period"]["customer_usage"]["charges_usage"].count).to eq(2)
+    expect(result["usage_period"]["customer_usage"]["charges_usage"].first["presentation_breakdowns"]).to eq([{"presentation_by" => {"department" => "engineering"}, "units" => "60.0"}])
+    expect(result["usage_period"]["customer_usage"]["charges_usage"].second["presentation_breakdowns"]).to eq([])
   end
 end
