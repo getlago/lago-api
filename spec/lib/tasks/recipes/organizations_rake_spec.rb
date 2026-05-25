@@ -6,7 +6,7 @@ require "rake"
 
 RSpec.describe "recipes:organizations:terminate" do # rubocop:disable RSpec/DescribeClass
   let(:task) { Rake::Task["recipes:organizations:terminate"] }
-  let(:organization) { create(:organization, api_keys: []) }
+  let(:organization) { create(:organization, api_keys: [], webhook_url: nil) }
 
   before do
     Rake.application.rake_require("tasks/recipes/organizations")
