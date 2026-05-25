@@ -7,7 +7,7 @@ module ApiKeys
     def initialize(api_key, force: false)
       @api_key = api_key
       @force = force
-      super
+      super(api_key)
     end
 
     def call
