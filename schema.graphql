@@ -10614,7 +10614,7 @@ type Query {
   """
   Query subscriptions of an organization
   """
-  subscriptions(currency: String, externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  subscriptions(billingEntityIds: [ID!], currency: String, externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query all Superset dashboards with embedded configuration and guest tokens
