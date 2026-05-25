@@ -138,7 +138,7 @@ Rails.application.console do
     puts ""
 
     payments.each do |payment|
-      puts "Lago Payment #{payment.id}: #{payment.amount_cents} #{payment.amount_currency} status=#{payment.status} payable_status=#{payment.payable_payment_status || '-'} pi=#{payment.provider_payment_id || '-'}"
+      puts "Lago Payment #{payment.id}: #{payment.amount_cents} #{payment.amount_currency} status=#{payment.status} payable_status=#{payment.payable_payment_status || "-"} pi=#{payment.provider_payment_id || "-"}"
 
       next unless payment.payment_provider.is_a?(PaymentProviders::StripeProvider) && payment.provider_payment_id.present?
 
