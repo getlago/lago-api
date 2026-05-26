@@ -18597,6 +18597,22 @@
               "deprecationReason": null
             },
             {
+              "name": "eventsStore",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "EventsStoreEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "featureFlags",
               "description": null,
               "args": [],
@@ -28238,6 +28254,29 @@
             {
               "name": "all",
               "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "EventsStoreEnum",
+          "description": "Organization events store values",
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "clickhouse",
+              "description": "Clickhouse events store",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "postgres",
+              "description": "Postgres events store",
               "isDeprecated": false,
               "deprecationReason": null
             }

@@ -4293,6 +4293,7 @@ type CurrentOrganization {
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean!
+  eventsStore: EventsStoreEnum!
   featureFlags: [FeatureFlagEnum!]!
   finalizeZeroAmountInvoice: Boolean!
   gocardlessPaymentProviders: [GocardlessProvider!]
@@ -5808,6 +5809,21 @@ enum EventTypeEnum {
   wallet_transaction_payment_failure
   wallet_transaction_updated
   wallet_updated
+}
+
+"""
+Organization events store values
+"""
+enum EventsStoreEnum {
+  """
+  Clickhouse events store
+  """
+  clickhouse
+
+  """
+  Postgres events store
+  """
+  postgres
 }
 
 """
