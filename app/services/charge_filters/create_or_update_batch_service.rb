@@ -61,7 +61,7 @@ module ChargeFilters
 
     private
 
-    attr_reader :charge, :filters_params, :organization, :touch
+    attr_reader :charge, :filters_params, :organization
 
     def update_existing_filter(filter, filter_param, values_params, properties)
       filter.charge = charge
@@ -72,7 +72,7 @@ module ChargeFilters
 
       filter.save! if filter.changed?
 
-      if touch
+      if @touch
         PaperTrail.request.disable_model(filter.class)
         # NOTE: Make sure updated_at is touched even if not changed to keep the right order.
         filter.touch # rubocop:disable Rails/SkipsModelValidations
@@ -92,7 +92,7 @@ module ChargeFilters
         filter_value.values = values
         filter_value.save! if filter_value.changed?
 
-        if touch
+        if @touch
           # NOTE: Make sure update_at is touched even if not changed to keep the right order
           PaperTrail.request.disable_model(filter_value.class)
           filter_value.touch # rubocop:disable Rails/SkipsModelValidations
