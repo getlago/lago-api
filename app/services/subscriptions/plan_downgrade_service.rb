@@ -45,7 +45,7 @@ module Subscriptions
         )
 
         if params[:billing_entity_id].present? || params[:billing_entity_code].present?
-          override_entity = resolve_billing_entity(customer:, params:)
+          override_entity = resolve_billing_entity(organization: current_subscription.organization, params:)
           new_sub.update!(billing_entity: override_entity) if override_entity
         end
 
@@ -77,7 +77,7 @@ module Subscriptions
       current_subscription.plan = plan
       current_subscription.name = name if name.present?
       if params[:billing_entity_id].present? || params[:billing_entity_code].present?
-        override_entity = resolve_billing_entity(customer:, params:)
+        override_entity = resolve_billing_entity(organization: current_subscription.organization, params:)
         current_subscription.billing_entity = override_entity if override_entity
       end
       current_subscription.save!
