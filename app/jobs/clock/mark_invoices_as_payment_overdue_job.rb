@@ -12,7 +12,7 @@ module Clock
         .where(payment_dispute_lost_at: nil)
         .where(payment_due_date: ...Time.current)
         .in_batches(of: 1000, cursor: [:payment_due_date, :id]) do |batch|
-          invoices.each do |invoice|
+          batch.each do |invoice|
             Invoices::Payments::MarkOverdueJob.perform_later(invoice:)
           end
         end

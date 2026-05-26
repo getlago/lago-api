@@ -54,11 +54,9 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService
       it "enqueues ProcessSubscriptionActivityJob instances on the dedicated queue" do
         create_list(:subscription_activity, 2, organization:, enqueued: false)
 
-        service.call
-
-        expect(ActiveJob).to have_received(:perform_all_later).once do |jobs|
-          expect(jobs.map(&:queue_name)).to all(eq("dedicated_alerts"))
-        end
+        expect { service.call }
+          .to have_enqueued_job(UsageMonitoring::ProcessSubscriptionActivityJob)
+          .on_queue("dedicated_alerts").exactly(2).times
       end
     end
 
@@ -68,11 +66,9 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService
       it "enqueues ProcessSubscriptionActivityJob instances on the default queue" do
         create_list(:subscription_activity, 2, organization:, enqueued: false)
 
-        service.call
-
-        expect(ActiveJob).to have_received(:perform_all_later).once do |jobs|
-          expect(jobs.map(&:queue_name)).to all(eq("default"))
-        end
+        expect { service.call }
+          .to have_enqueued_job(UsageMonitoring::ProcessSubscriptionActivityJob)
+          .on_queue("default").exactly(2).times
       end
     end
   end
