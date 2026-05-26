@@ -28,8 +28,6 @@ module ChargeFilters
       #       dominant DB cost for large filter batches (two queries per record save).
       #       Skip per-filter audit rows for this operation — the parent Plan/Charge
       #       still gets its own audit entry from their respective services.
-      PaperTrail.request.disable_model(ChargeFilter)
-      PaperTrail.request.disable_model(ChargeFilterValue)
 
       begin
         ActiveRecord::Base.transaction do
@@ -84,8 +82,11 @@ module ChargeFilters
 
       filter.save! if filter.changed?
 
+      PaperTrail.request.disable_model(filter.class)
       # NOTE: Make sure updated_at is touched even if not changed to keep the right order.
       filter.touch if touch # rubocop:disable Rails/SkipsModelValidations
+      PaperTrail.request.enable_model(filter.class)
+      
 
       values_params.each do |key, values|
         billable_metric_filter = billable_metric_filters_by_key[key]
@@ -100,7 +101,10 @@ module ChargeFilters
         filter_value.values = values
         filter_value.save! if filter_value.changed?
 
-        filter_value.touch if @touch # rubocop:disable Rails/SkipsModelValidations
+        PaperTrail.request.disable_model(filter_value.class)
+        filter_value.touch if touch # rubocop:disable Rails/SkipsModelValidations
+        PaperTrail.request.enable_model(filter_value.class)
+
       end
 
       result.filters << filter
