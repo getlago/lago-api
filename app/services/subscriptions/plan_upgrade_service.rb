@@ -16,16 +16,17 @@ module Subscriptions
     end
 
     def call
-      if current_subscription.starting_in_the_future?
-        update_pending_subscription
-
-        result.subscription = current_subscription
-        return result
-      end
-
-      new_subscription = new_subscription_with_overrides
-
       ActiveRecord::Base.transaction do
+        if current_subscription.starting_in_the_future?
+          apply_activation_rules if params[:activation_rules]
+          update_pending_subscription
+
+          result.subscription = current_subscription
+          return result
+        end
+
+        new_subscription = new_subscription_with_overrides
+
         cancel_pending_subscription if pending_subscription?
 
         # Group subscriptions for billing
@@ -44,6 +45,8 @@ module Subscriptions
           timestamp: new_subscription.started_at + 1.second
         )
 
+        result.subscription = new_subscription
+
         after_commit do
           SendWebhookJob.perform_later("subscription.started", new_subscription)
           Utils::ActivityLog.produce(new_subscription, "subscription.started")
@@ -52,7 +55,6 @@ module Subscriptions
         bill_subscriptions(billable_subscriptions) if billable_subscriptions.any?
       end
 
-      result.subscription = new_subscription
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -94,8 +96,15 @@ module Subscriptions
       current_subscription.save!
 
       if current_subscription.should_sync_hubspot_subscription?
-        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: current_subscription)
+        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription: current_subscription)
       end
+    end
+
+    def apply_activation_rules
+      Subscriptions::ActivationRules::ApplyService.call!(
+        subscription: current_subscription,
+        activation_rules: params[:activation_rules]
+      )
     end
 
     def override_plan
