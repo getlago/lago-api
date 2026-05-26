@@ -457,6 +457,19 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, transaction: f
         expect(result.pay_in_advance_aggregation).to eq(0)
       end
 
+      context "with presentation group keys" do
+        let(:presentation_by) { ["cloud", "region"] }
+        let(:properties) { {"unique_id" => "002", "cloud" => "aws", "region" => "eu"} }
+
+        it "assigns pay_in_advance_breakdowns based on the pay_in_advance event" do
+          result = count_service.aggregate
+
+          expect(result.pay_in_advance_breakdowns).to eq([
+            {groups: {"cloud" => "aws", "region" => "eu"}, value: 1}
+          ])
+        end
+      end
+
       context "when charge filter is used" do
         let(:properties) { {unique_id: "111", region: "europe"} }
 

@@ -556,6 +556,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
             result.max_aggregation = 9
             result.max_aggregation_with_proration = nil
             result.breakdowns = [{groups: {"cloud" => "aws", "region" => "us-east-1"}, value: 9}]
+            result.pay_in_advance_breakdowns = [{groups: {"cloud" => "aws", "region" => "us-east-1"}, value: 9}]
           end
         end
 
@@ -574,6 +575,221 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           expect(fee.presentation_breakdowns.map(&:presentation_by)).to eq([{"region" => "us-east-1"}])
           expect(fee.presentation_breakdowns.map { |b| b.units.to_i }).to eq([9])
           expect(fee.presentation_breakdowns).to all(have_attributes(organization_id: organization.id))
+        end
+      end
+
+      context "with sum aggregation and presentation_group_keys" do
+        let(:event) { current_event }
+        let(:current_event) { first_event }
+        let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "units") }
+        let(:charge) do
+          create(
+            :standard_charge,
+            :pay_in_advance,
+            billable_metric:,
+            plan:,
+            properties: {
+              amount: "1",
+              presentation_group_keys: [{"value" => "department"}, {"value" => "units"}]
+            }
+          )
+        end
+        let(:first_event) do
+          Events::CommonFactory.new_instance(
+            source: create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              code: billable_metric.code,
+              timestamp: subscription.started_at + 1.hour,
+              properties: {"units" => "3", "department" => "engineering"}
+            )
+          )
+        end
+        let(:second_event) do
+          Events::CommonFactory.new_instance(
+            source: create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              code: billable_metric.code,
+              timestamp: subscription.started_at + 1.hour + 1.second,
+              properties: {"units" => "10", "department" => "engineering"}
+            )
+          )
+        end
+        let(:third_event) do
+          Events::CommonFactory.new_instance(
+            source: create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              code: billable_metric.code,
+              timestamp: subscription.started_at + 1.hour + 2.seconds,
+              properties: {"units" => "7", "department" => "engineering"}
+            )
+          )
+        end
+        let(:aggregation_result) { aggregation_results.fetch(event.transaction_id) }
+        let(:charge_result) do
+          BaseService::Result.new.tap do |result|
+            result.amount = aggregation_result.pay_in_advance_breakdowns.sum { |breakdown| breakdown[:value] }
+            result.precise_amount = result.amount.to_d
+            result.unit_amount = 1
+            result.count = aggregation_result.count
+            result.units = result.amount
+          end
+        end
+        let(:first_aggregation_result) do
+          BaseService::Result.new.tap do |result|
+            result.aggregation = 3
+            result.count = 1
+            result.options = {}
+            result.current_aggregation = 3
+            result.max_aggregation = 3
+            result.breakdowns = [{groups: {"department" => "engineering", "units" => "3"}, value: 3}]
+            result.pay_in_advance_breakdowns = [{groups: {"department" => "engineering", "units" => "3"}, value: 3}]
+          end
+        end
+        let(:second_aggregation_result) do
+          BaseService::Result.new.tap do |result|
+            result.aggregation = 13
+            result.count = 2
+            result.options = {}
+            result.current_aggregation = 13
+            result.max_aggregation = 13
+            result.breakdowns = [
+              {groups: {"department" => "engineering", "units" => "3"}, value: 3},
+              {groups: {"department" => "engineering", "units" => "10"}, value: 10}
+            ]
+            result.pay_in_advance_breakdowns = [{groups: {"department" => "engineering", "units" => "10"}, value: 10}]
+          end
+        end
+        let(:third_aggregation_result) do
+          BaseService::Result.new.tap do |result|
+            result.aggregation = 20
+            result.count = 3
+            result.options = {}
+            result.current_aggregation = 20
+            result.max_aggregation = 20
+            result.breakdowns = [
+              {groups: {"department" => "engineering", "units" => "3"}, value: 3},
+              {groups: {"department" => "engineering", "units" => "10"}, value: 10},
+              {groups: {"department" => "engineering", "units" => "7"}, value: 7}
+            ]
+            result.pay_in_advance_breakdowns = [{groups: {"department" => "engineering", "units" => "7"}, value: 7}]
+          end
+        end
+        let(:aggregation_results) do
+          {
+            first_event.transaction_id => first_aggregation_result,
+            second_event.transaction_id => second_aggregation_result,
+            third_event.transaction_id => third_aggregation_result
+          }
+        end
+
+        it "builds presentation breakdowns from the first event" do
+          result = fee_service.call
+
+          fee = result.fees.first
+          expect(fee.presentation_breakdowns.map(&:presentation_by)).to eq([
+            {"department" => "engineering", "units" => "3"}
+          ])
+          expect(fee.presentation_breakdowns.map(&:units)).to eq([3])
+
+          cached_aggregation = CachedAggregation.order(:created_at).last
+          expect(cached_aggregation.presentation_breakdowns.map { |b| b["groups"] }).to eq([
+            {"department" => "engineering", "units" => "3"}
+          ])
+          expect(cached_aggregation.presentation_breakdowns.map { |b| BigDecimal(b["value"]) }).to eq([3])
+        end
+
+        context "when the first event was already processed" do
+          let(:current_event) { second_event }
+
+          before do
+            CachedAggregation.create!(
+              organization_id: organization.id,
+              event_transaction_id: first_event.transaction_id,
+              timestamp: first_event.timestamp,
+              external_subscription_id: first_event.external_subscription_id,
+              charge_id: charge.id,
+              current_aggregation: 3,
+              max_aggregation: 3,
+              grouped_by: {},
+              presentation_breakdowns: [
+                {groups: {"department" => "engineering", "units" => "3"}, value: 3}
+              ]
+            )
+          end
+
+          it "builds presentation breakdowns from the second event" do
+            result = fee_service.call
+
+            fee = result.fees.first
+            expect(fee.presentation_breakdowns.map(&:presentation_by)).to eq([
+              {"department" => "engineering", "units" => "10"}
+            ])
+            expect(fee.presentation_breakdowns.map(&:units)).to eq([10])
+
+            cached_aggregation = CachedAggregation.order(:created_at).last
+            expect(cached_aggregation.presentation_breakdowns.map { |b| {groups: b["groups"], value: BigDecimal(b["value"])} }).to match_array([
+              {groups: {"department" => "engineering", "units" => "3"}, value: 3},
+              {groups: {"department" => "engineering", "units" => "10"}, value: 10}
+            ])
+          end
+        end
+
+        context "when the first two events were already processed" do
+          let(:current_event) { third_event }
+
+          before do
+            CachedAggregation.create!(
+              organization_id: organization.id,
+              event_transaction_id: first_event.transaction_id,
+              timestamp: first_event.timestamp,
+              external_subscription_id: first_event.external_subscription_id,
+              charge_id: charge.id,
+              current_aggregation: 3,
+              max_aggregation: 3,
+              grouped_by: {},
+              presentation_breakdowns: [
+                {groups: {"department" => "engineering", "units" => "3"}, value: 3}
+              ]
+            )
+            CachedAggregation.create!(
+              organization_id: organization.id,
+              event_transaction_id: second_event.transaction_id,
+              timestamp: second_event.timestamp,
+              external_subscription_id: second_event.external_subscription_id,
+              charge_id: charge.id,
+              current_aggregation: 13,
+              max_aggregation: 13,
+              grouped_by: {},
+              presentation_breakdowns: [
+                {groups: {"department" => "engineering", "units" => "3"}, value: 3},
+                {groups: {"department" => "engineering", "units" => "10"}, value: 10}
+              ]
+            )
+          end
+
+          it "builds presentation breakdowns from the third event" do
+            result = fee_service.call
+
+            fee = result.fees.first
+            expect(fee.presentation_breakdowns.map(&:presentation_by)).to eq([
+              {"department" => "engineering", "units" => "7"}
+            ])
+            expect(fee.presentation_breakdowns.map(&:units)).to eq([7])
+
+            cached_aggregation = CachedAggregation.order(:created_at).last
+            expect(cached_aggregation.max_aggregation).to eq(20.to_d)
+            expect(cached_aggregation.presentation_breakdowns.map { |b| {groups: b["groups"], value: BigDecimal(b["value"])} }).to match_array([
+              {groups: {"department" => "engineering", "units" => "3"}, value: 3},
+              {groups: {"department" => "engineering", "units" => "10"}, value: 10},
+              {groups: {"department" => "engineering", "units" => "7"}, value: 7}
+            ])
+          end
         end
       end
     end

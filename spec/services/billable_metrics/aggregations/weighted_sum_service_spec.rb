@@ -204,7 +204,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       it "falls back to cached presentation breakdowns" do
         result = aggregator.aggregate
 
-        expect(result.breakdowns).to eq([{"groups" => {"region" => "eu"}, "value" => "100.0"}])
+        expect(result.breakdowns).to eq([{groups: {"region" => "eu"}, value: 100.to_d}])
       end
     end
 
@@ -426,6 +426,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
       let(:events_values) { [] }
+      let(:aragorn_presentation_breakdowns) { [] }
+      let(:frodo_presentation_breakdowns) { [] }
 
       let(:cached_aggregations) do
         [
@@ -436,7 +438,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime - 1.day,
             current_aggregation: 1000,
-            grouped_by: {"agent_name" => "aragorn"}
+            grouped_by: {"agent_name" => "aragorn"},
+            presentation_breakdowns: aragorn_presentation_breakdowns
           ),
 
           create(
@@ -446,7 +449,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime - 1.day,
             current_aggregation: 1000,
-            grouped_by: {"agent_name" => "frodo"}
+            grouped_by: {"agent_name" => "frodo"},
+            presentation_breakdowns: frodo_presentation_breakdowns
           )
         ]
       end
@@ -481,11 +485,50 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         it "returns breakdowns per presentation group within each grouped_by group" do
           result = aggregator.aggregate
 
-          aragorn_eu = result.breakdowns.find { |b| b[:groups]["agent_name"] == "aragorn" && b[:groups]["region"] == "eu" }
-          expect(aragorn_eu).to be_present
+          expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
+            [
+              {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "2.0"},
+              {groups: {"agent_name" => "frodo", "region" => "us"}, value: "2.99597"}
+            ]
+          )
+        end
 
-          frodo_us = result.breakdowns.find { |b| b[:groups]["agent_name"] == "frodo" && b[:groups]["region"] == "us" }
-          expect(frodo_us).to be_present
+        context "when frodo has cached presentation breakdowns" do
+          let(:frodo_presentation_breakdowns) do
+            [
+              {"groups" => {"agent_name" => "frodo", "region" => "us"}, "value" => "100.0"}
+            ]
+          end
+
+          it "uses frodo cached presentation breakdowns as initial values" do
+            result = aggregator.aggregate
+
+            expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
+              [
+                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "2.0"},
+                {groups: {"agent_name" => "frodo", "region" => "us"}, value: "102.99597"}
+              ]
+            )
+          end
+        end
+
+        context "when aragorn has cached presentation breakdowns" do
+          let(:aragorn_presentation_breakdowns) do
+            [
+              {"groups" => {"agent_name" => "aragorn", "region" => "eu"}, "value" => "100.0"}
+            ]
+          end
+
+          it "uses aragorn cached presentation breakdowns as initial values" do
+            result = aggregator.aggregate
+
+            expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
+              [
+                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "102.0"},
+                {groups: {"agent_name" => "frodo", "region" => "us"}, value: "2.99597"}
+              ]
+            )
+          end
         end
       end
 
@@ -535,7 +578,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
               subscription: previous_subscription,
               customer:,
               timestamp: Time.zone.parse("2023-03-01 22:22:22"),
-              properties: {value: 10, agent_name: "aragorn"}
+              properties: {value: 10, agent_name: "aragorn", region: "eu"}
             )
 
             create(
@@ -545,7 +588,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
               subscription: previous_subscription,
               customer:,
               timestamp: Time.zone.parse("2023-03-01 22:22:22"),
-              properties: {value: 10, agent_name: "frodo"}
+              properties: {value: 10, agent_name: "frodo", region: "us"}
             )
           end
 
@@ -563,27 +606,42 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
               expect(aggregation.recurring_updated_at).to eq(from_datetime)
             end
           end
+
+          context "when using presentation_by" do
+            let(:presentation_by) { ["region"] }
+
+            it "returns previous events as presentation breakdowns" do
+              result = aggregator.aggregate
+
+              expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
+                [
+                  {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "10.0"},
+                  {groups: {"agent_name" => "frodo", "region" => "us"}, value: "10.0"}
+                ]
+              )
+            end
+          end
         end
       end
 
       context "with events" do
         let(:events_values) do
           [
-            {timestamp: DateTime.parse("2023-08-01 00:00:00.000"), value: 2, agent_name: "aragorn"},
-            {timestamp: DateTime.parse("2023-08-01 01:00:00"), value: 3, agent_name: "aragorn"},
-            {timestamp: DateTime.parse("2023-08-01 01:30:00"), value: 1, agent_name: "aragorn"},
-            {timestamp: DateTime.parse("2023-08-01 02:00:00"), value: -4, agent_name: "aragorn"},
-            {timestamp: DateTime.parse("2023-08-01 04:00:00"), value: -2, agent_name: "aragorn"},
-            {timestamp: DateTime.parse("2023-08-01 05:00:00"), value: 10, agent_name: "aragorn"},
-            {timestamp: DateTime.parse("2023-08-01 05:30:00"), value: -10, agent_name: "aragorn"},
+            {timestamp: DateTime.parse("2023-08-01 00:00:00.000"), value: 2, agent_name: "aragorn", region: "eu"},
+            {timestamp: DateTime.parse("2023-08-01 01:00:00"), value: 3, agent_name: "aragorn", region: "eu"},
+            {timestamp: DateTime.parse("2023-08-01 01:30:00"), value: 1, agent_name: "aragorn", region: "eu"},
+            {timestamp: DateTime.parse("2023-08-01 02:00:00"), value: -4, agent_name: "aragorn", region: "eu"},
+            {timestamp: DateTime.parse("2023-08-01 04:00:00"), value: -2, agent_name: "aragorn", region: "eu"},
+            {timestamp: DateTime.parse("2023-08-01 05:00:00"), value: 10, agent_name: "aragorn", region: "eu"},
+            {timestamp: DateTime.parse("2023-08-01 05:30:00"), value: -10, agent_name: "aragorn", region: "eu"},
 
-            {timestamp: DateTime.parse("2023-08-01 00:00:00.000"), value: 2, agent_name: "frodo"},
-            {timestamp: DateTime.parse("2023-08-01 01:00:00"), value: 3, agent_name: "frodo"},
-            {timestamp: DateTime.parse("2023-08-01 01:30:00"), value: 1, agent_name: "frodo"},
-            {timestamp: DateTime.parse("2023-08-01 02:00:00"), value: -4, agent_name: "frodo"},
-            {timestamp: DateTime.parse("2023-08-01 04:00:00"), value: -2, agent_name: "frodo"},
-            {timestamp: DateTime.parse("2023-08-01 05:00:00"), value: 10, agent_name: "frodo"},
-            {timestamp: DateTime.parse("2023-08-01 05:30:00"), value: -10, agent_name: "frodo"}
+            {timestamp: DateTime.parse("2023-08-01 00:00:00.000"), value: 2, agent_name: "frodo", region: "us"},
+            {timestamp: DateTime.parse("2023-08-01 01:00:00"), value: 3, agent_name: "frodo", region: "us"},
+            {timestamp: DateTime.parse("2023-08-01 01:30:00"), value: 1, agent_name: "frodo", region: "us"},
+            {timestamp: DateTime.parse("2023-08-01 02:00:00"), value: -4, agent_name: "frodo", region: "us"},
+            {timestamp: DateTime.parse("2023-08-01 04:00:00"), value: -2, agent_name: "frodo", region: "us"},
+            {timestamp: DateTime.parse("2023-08-01 05:00:00"), value: 10, agent_name: "frodo", region: "us"},
+            {timestamp: DateTime.parse("2023-08-01 05:30:00"), value: -10, agent_name: "frodo", region: "us"}
           ]
         end
 
@@ -599,6 +657,47 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
             expect(aggregation.total_aggregated_units).to eq(1000)
             expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index])
             expect(aggregation.recurring_updated_at).to eq("2023-08-01 05:30:00")
+          end
+        end
+
+        context "when using presentation_by" do
+          let(:presentation_by) { ["region"] }
+          let(:aragorn_presentation_breakdowns) do
+            [
+              {"groups" => {"agent_name" => "aragorn", "region" => "eu"}, "value" => "100.0"}
+            ]
+          end
+          let(:frodo_presentation_breakdowns) do
+            [
+              {"groups" => {"agent_name" => "frodo", "region" => "us"}, "value" => "200.0"}
+            ]
+          end
+
+          it "uses cached presentation breakdowns as initial values" do
+            result = aggregator.aggregate
+
+            expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
+              [
+                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "100.02218"},
+                {groups: {"agent_name" => "frodo", "region" => "us"}, value: "200.02218"}
+              ]
+            )
+          end
+
+          context "when cached presentation breakdowns are empty" do
+            let(:aragorn_presentation_breakdowns) { [] }
+            let(:frodo_presentation_breakdowns) { [] }
+
+            it "returns current events as presentation breakdowns" do
+              result = aggregator.aggregate
+
+              expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
+                [
+                  {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "0.02218"},
+                  {groups: {"agent_name" => "frodo", "region" => "us"}, value: "0.02218"}
+                ]
+              )
+            end
           end
         end
       end
