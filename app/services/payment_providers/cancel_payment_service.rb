@@ -14,7 +14,7 @@ module PaymentProviders
 
       return result if payment.payment_provider.blank?
       return result if payment.provider_payment_id.blank?
-      return result if payment.payable_payment_status == "succeeded"
+      return result if payment.succeeded?
 
       case payment.payment_provider.type
       when "PaymentProviders::StripeProvider"
