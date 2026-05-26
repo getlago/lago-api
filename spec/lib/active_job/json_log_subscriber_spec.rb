@@ -989,7 +989,6 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
         })
       end
     end
-
   end
 
   describe "#discard" do
@@ -1039,6 +1038,5 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
         })
       end
     end
-
   end
 end

@@ -141,8 +141,8 @@ module ActiveJob
       wait = event.payload[:wait]
 
       info do
-        if ex
-          payload = {
+        payload = if ex
+          {
             level: "error",
             event: "retry",
             status: "error",
@@ -154,9 +154,8 @@ module ActiveJob
             wait: wait.to_i,
             exception: exception_payload(ex)
           }
-          merge_organization_id(payload, job).to_json
         else
-          payload = {
+          {
             level: "info",
             event: "retry",
             status: "success",
@@ -167,8 +166,8 @@ module ActiveJob
             execution: job.executions,
             wait: wait.to_i
           }
-          merge_organization_id(payload, job).to_json
         end
+        merge_organization_id(payload, job).to_json
       end
     end
     subscribe_log_level :enqueue_retry, :info
@@ -290,7 +289,7 @@ module ActiveJob
     def organization_id_from(job)
       arg = job.arguments&.find { |a| !organization_id_in(a).nil? }
       organization_id_in(arg) if arg
-    rescue StandardError
+    rescue
       nil
     end
 
