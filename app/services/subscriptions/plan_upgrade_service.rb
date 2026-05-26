@@ -2,6 +2,8 @@
 
 module Subscriptions
   class PlanUpgradeService < BaseService
+    include Subscriptions::Concerns::BillingEntityResolutionConcern
+
     Result = BaseResult[:subscription]
 
     def initialize(current_subscription:, plan:, params:)
@@ -14,16 +16,17 @@ module Subscriptions
     end
 
     def call
-      if current_subscription.starting_in_the_future?
-        update_pending_subscription
-
-        result.subscription = current_subscription
-        return result
-      end
-
-      new_subscription = new_subscription_with_overrides
-
       ActiveRecord::Base.transaction do
+        if current_subscription.starting_in_the_future?
+          apply_activation_rules if params[:activation_rules]
+          update_pending_subscription
+
+          result.subscription = current_subscription
+          return result
+        end
+
+        new_subscription = new_subscription_with_overrides
+
         cancel_pending_subscription if pending_subscription?
 
         new_subscription.pending!
@@ -38,7 +41,6 @@ module Subscriptions
         Subscriptions::ActivateService.call!(subscription: new_subscription)
       end
 
-      result.subscription = new_subscription
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -51,6 +53,7 @@ module Subscriptions
     attr_reader :current_subscription, :plan, :params, :name
 
     def new_subscription_with_overrides
+      resolved_entity = resolve_billing_entity(customer: current_subscription.customer, params:)
       new_subscription = Subscription.new(
         organization_id: current_subscription.customer.organization_id,
         customer: current_subscription.customer,
@@ -60,7 +63,9 @@ module Subscriptions
         previous_subscription_id: current_subscription.id,
         subscription_at: current_subscription.subscription_at,
         billing_time: current_subscription.billing_time,
-        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
+        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
+        consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : current_subscription.consolidate_invoice,
+        billing_entity_id: resolved_entity&.id || current_subscription.billing_entity_id
       )
 
       if params.key?(:payment_method)
@@ -77,8 +82,15 @@ module Subscriptions
       current_subscription.save!
 
       if current_subscription.should_sync_hubspot_subscription?
-        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: current_subscription)
+        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription: current_subscription)
       end
+    end
+
+    def apply_activation_rules
+      Subscriptions::ActivationRules::ApplyService.call!(
+        subscription: current_subscription,
+        activation_rules: params[:activation_rules]
+      )
     end
 
     def override_plan
