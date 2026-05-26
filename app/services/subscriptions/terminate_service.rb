@@ -128,6 +128,9 @@ module Subscriptions
     attr_reader :subscription, :async, :upgrade, :on_termination_credit_note, :on_termination_invoice
 
     def cancel_next_subscription
+      # NOTE: Upgrade path: next_subscription is the new subscription we just persisted, not a stale scheduled change
+      return if upgrade
+
       next_subscription = subscription.next_subscription
       return if next_subscription.nil?
 
