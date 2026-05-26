@@ -179,7 +179,7 @@ RSpec.describe Fees::ProjectionService do
           fee.presentation_breakdowns.build(
             organization: organization,
             presentation_by: {"department" => "engineering"},
-            units: 60.0
+            units: 60.33642
           )
         end
 
@@ -188,7 +188,7 @@ RSpec.describe Fees::ProjectionService do
 
           expect(result).to be_success
           expect(result.projected_presentation_breakdowns).to match_array([
-            have_attributes(presentation_by: {"department" => "engineering"}, units: 90.0)
+            have_attributes(presentation_by: {"department" => "engineering"}, units: 120.67)
           ])
         end
       end

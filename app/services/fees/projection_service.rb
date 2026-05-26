@@ -168,7 +168,7 @@ module Fees
     def project_presentation_breakdowns
       fees.flat_map(&:presentation_breakdowns).map do |bd|
         dup_breakdown = bd.dup
-        dup_breakdown.units = BigDecimal(bd.units) + (BigDecimal(bd.units) * period_ratio)
+        dup_breakdown.units = (BigDecimal(bd.units) / period_ratio).round(currency.exponent)
         dup_breakdown
       end
     end
