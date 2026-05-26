@@ -17,15 +17,15 @@ module Subscriptions
     end
 
     def call
-      if current_subscription.starting_in_the_future?
-        apply_activation_rules(current_subscription) if params[:activation_rules]
-        update_pending_subscription
-
-        result.subscription = current_subscription
-        return result
-      end
-
       ActiveRecord::Base.transaction do
+        if current_subscription.starting_in_the_future?
+          apply_activation_rules(current_subscription) if params[:activation_rules]
+          update_pending_subscription
+
+          result.subscription = current_subscription
+          return result
+        end
+
         cancel_pending_subscription if pending_subscription?
 
         # NOTE: When downgrading a subscription, we keep the current one active
