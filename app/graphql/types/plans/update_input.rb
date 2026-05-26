@@ -22,7 +22,7 @@ module Types
       argument :tax_codes, [String], required: false
       argument :trial_period, Float, required: false
 
-      argument :charges, [Types::Charges::Input]
+      argument :charges, [Types::Charges::Input], required: false
       argument :fixed_charges, [Types::FixedCharges::Input], required: false
       argument :minimum_commitment, Types::Commitments::Input, required: false
 
