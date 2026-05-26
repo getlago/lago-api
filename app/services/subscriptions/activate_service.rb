@@ -42,11 +42,15 @@ module Subscriptions
     def activate_from_incomplete
       return if subscription.activation_rules.rejected.exists?
 
-      subscription.mark_as_active!(timestamp)
+      if upgrade?
+        activate_for_upgrade
+      else
+        subscription.mark_as_active!(timestamp)
 
-      after_commit do
-        bill_subscription if subscription.activation_rules.payment.none?
-        notify_started
+        after_commit do
+          bill_subscription if subscription.activation_rules.payment.none?
+          notify_started
+        end
       end
     end
 
@@ -90,6 +94,8 @@ module Subscriptions
     end
 
     def activate_for_upgrade
+      from_incomplete = subscription.incomplete?
+
       Subscriptions::TerminateService.call(
         subscription: subscription.previous_subscription,
         upgrade: true
@@ -97,28 +103,29 @@ module Subscriptions
 
       subscription.mark_as_active!(timestamp)
 
-      emit_fixed_charge_events
+      billable_subscriptions = [subscription.previous_subscription]
+      unless from_incomplete
+        # When from_incomplete, the new subscription was already billed and its fixed-charge
+        # events emitted during gate_subscription — only the previous needs billing.
+        emit_fixed_charge_events
+        billable_subscriptions << subscription if bill_in_advance?
+      end
 
       after_commit { notify_started }
 
-      bill_upgrade_subscriptions
+      bill_upgrade_subscriptions(billable_subscriptions)
     end
 
-    def billable_subscriptions
-      @billable_subscriptions ||= begin
-        billable = [subscription.previous_subscription]
-        bill_new_in_advance = subscription.fixed_charges.pay_in_advance.any? ||
-          (subscription.plan.pay_in_advance? && !subscription.in_trial_period?)
-        billable << subscription if bill_new_in_advance
-        billable
-      end
+    def bill_in_advance?
+      subscription.fixed_charges.pay_in_advance.any? ||
+        (subscription.plan.pay_in_advance? && !subscription.in_trial_period?)
     end
 
-    def bill_upgrade_subscriptions
+    def bill_upgrade_subscriptions(subscriptions)
       after_commit do
         billing_at = Time.current + 1.second
-        BillSubscriptionJob.perform_later(billable_subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
-        BillNonInvoiceableFeesJob.perform_later(billable_subscriptions, billing_at)
+        BillSubscriptionJob.perform_later(subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
+        BillNonInvoiceableFeesJob.perform_later(subscriptions, billing_at)
       end
     end
 

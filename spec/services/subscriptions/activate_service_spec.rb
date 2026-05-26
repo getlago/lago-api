@@ -322,6 +322,77 @@ RSpec.describe Subscriptions::ActivateService do
           .to have_been_enqueued.with(subscription:)
       end
     end
+
+    context "when subscription comes from an upgrade" do
+      let(:customer) { create(:customer, :with_hubspot_integration, organization:) }
+      let(:previous_plan) { create(:plan, organization:, amount_cents: 50) }
+      let(:plan) { create(:plan, organization:, amount_cents: 100, pay_in_advance: true) }
+      let(:previous_subscription) do
+        create(:subscription, organization:, customer:, plan: previous_plan,
+          status: :active, started_at: 1.day.ago, subscription_at: 1.day.ago)
+      end
+      let(:subscription) do
+        create(:subscription, :incomplete, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "satisfied"}],
+          organization:, customer:, plan:, previous_subscription:,
+          subscription_at: Time.current)
+      end
+
+      it "terminates the previous subscription" do
+        result
+
+        expect(previous_subscription.reload).to be_terminated
+      end
+
+      it "marks the new subscription as active" do
+        freeze_time do
+          expect(result.subscription).to be_active
+          expect(result.subscription.activated_at).to eq(Time.current)
+        end
+      end
+
+      it "sends a subscription.started webhook for the new subscription" do
+        result
+
+        expect(SendWebhookJob).to have_been_enqueued.with("subscription.started", subscription)
+      end
+
+      it "produces a subscription.started activity log" do
+        result
+
+        expect(Utils::ActivityLog).to have_produced("subscription.started").with(subscription)
+      end
+
+      it "enqueues BillSubscriptionJob for the previous subscription only with :upgrading" do
+        result
+
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([previous_subscription], anything, invoicing_reason: :upgrading)
+      end
+
+      it "enqueues BillNonInvoiceableFeesJob for the previous subscription only" do
+        result
+
+        expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([previous_subscription], anything)
+      end
+
+      it "enqueues Hubspot::CreateJob for the new subscription" do
+        result
+
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob)
+          .to have_been_enqueued.with(subscription: subscription)
+      end
+
+      context "when subscription should not sync with hubspot" do
+        let(:customer) { create(:customer, organization:) }
+
+        it "does not enqueue Hubspot::CreateJob" do
+          result
+
+          expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).not_to have_been_enqueued
+        end
+      end
+    end
   end
 
   context "when subscription is incomplete with no payment rules (future non-payment rule resolved)" do

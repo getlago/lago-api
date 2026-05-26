@@ -328,4 +328,107 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(invoice.reload).to be_finalized
     end
   end
+
+  describe "plan upgrade with payment successful" do
+    let(:previous_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: false, amount_cents: 500)
+    end
+    let(:upgrade_external_id) { "upgrade-sub-#{SecureRandom.hex(4)}" }
+
+    it "gates the upgrade, then terminates previous and activates new on payment success" do
+      # Stage 1: Create initial active subscription on cheaper pay-in-arrears plan (no rules)
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: upgrade_external_id,
+        plan_code: previous_plan.code,
+        billing_time: "calendar"
+      })
+      perform_all_enqueued_jobs
+
+      previous_subscription = customer.subscriptions.sole
+      expect(previous_subscription).to be_active
+      expect(previous_subscription.plan).to eq(previous_plan)
+
+      # Stage 2: Upgrade to pricier pay-in-advance plan with payment activation rule
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: upgrade_external_id,
+        plan_code: plan.code,
+        billing_time: "calendar",
+        activation_rules: [{type: "payment", timeout_hours: 48}]
+      })
+      perform_all_enqueued_jobs
+
+      new_subscription = customer.subscriptions.where.not(id: previous_subscription.id).sole
+      expect(previous_subscription.reload).to be_active
+      expect(new_subscription).to be_incomplete
+      expect(new_subscription.previous_subscription).to eq(previous_subscription)
+      expect(new_subscription.activation_rules.sole).to be_pending
+
+      invoice = new_subscription.invoices.sole
+      expect(invoice).to be_open
+      expect(invoice.fees.subscription.count).to eq(1)
+
+      # Stage 3: Stripe webhook — payment succeeded → upgrade completes
+      expect { simulate_stripe_webhook(status: "succeeded") }
+        .to have_performed_job(BillSubscriptionJob)
+        .with([previous_subscription], anything, invoicing_reason: :upgrading)
+
+      previous_subscription.reload
+      new_subscription.reload
+      expect(previous_subscription).to be_terminated
+      expect(new_subscription).to be_active
+      expect(new_subscription.activated_at).to be_present
+      expect(new_subscription.activation_rules.sole).to be_satisfied
+      expect(invoice.reload).to be_finalized
+    end
+  end
+
+  describe "plan upgrade with payment failure" do
+    let(:previous_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: false, amount_cents: 500)
+    end
+    let(:upgrade_external_id) { "upgrade-sub-#{SecureRandom.hex(4)}" }
+
+    it "cancels the new subscription and leaves the previous untouched" do
+      # Stage 1: initial active subscription on cheaper plan
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: upgrade_external_id,
+        plan_code: previous_plan.code,
+        billing_time: "calendar"
+      })
+      perform_all_enqueued_jobs
+
+      previous_subscription = customer.subscriptions.sole
+      expect(previous_subscription).to be_active
+
+      # Stage 2: gated upgrade
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: upgrade_external_id,
+        plan_code: plan.code,
+        billing_time: "calendar",
+        activation_rules: [{type: "payment", timeout_hours: 48}]
+      })
+      perform_all_enqueued_jobs
+
+      new_subscription = customer.subscriptions.where.not(id: previous_subscription.id).sole
+      expect(new_subscription).to be_incomplete
+
+      invoice = new_subscription.invoices.sole
+      expect(invoice).to be_open
+
+      # Stage 3: Stripe webhook — payment failed
+      simulate_stripe_webhook(status: "failed")
+
+      previous_subscription.reload
+      new_subscription.reload
+      expect(new_subscription).to be_canceled
+      expect(new_subscription.cancelation_reason).to eq("payment_failed")
+      expect(new_subscription.activation_rules.sole).to be_failed
+      expect(previous_subscription).to be_active
+      expect(invoice.reload).to be_closed
+    end
+  end
 end
