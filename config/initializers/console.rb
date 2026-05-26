@@ -130,6 +130,35 @@ Rails.application.console do
     inv.file&.destroy
   end
 
+  def check_stripe_payment(invoice_id)
+    invoice = Invoice.with_discarded.find(invoice_id)
+    payments = invoice.payments.includes(:payment_provider).order(:created_at)
+
+    puts "Invoice #{invoice.id}  total=#{invoice.total_amount_cents} due=#{invoice.total_due_amount_cents} #{invoice.currency}"
+    puts ""
+
+    payments.each do |payment|
+      puts "Lago Payment #{payment.id}: #{payment.amount_cents} #{payment.amount_currency} status=#{payment.status} payable_status=#{payment.payable_payment_status || "-"} pi=#{payment.provider_payment_id || "-"}"
+
+      next unless payment.payment_provider.is_a?(PaymentProviders::StripeProvider) && payment.provider_payment_id.present?
+
+      pi = ::Stripe::PaymentIntent.retrieve(
+        payment.provider_payment_id,
+        {api_key: payment.payment_provider.secret_key}
+      )
+      puts "Stripe PI #{pi.id}: #{pi.amount} #{pi.currency} status=#{pi.status}"
+      if pi.last_payment_error
+        puts "  last_payment_error: #{pi.last_payment_error.code} #{pi.last_payment_error.message}"
+      end
+      puts ""
+    rescue ::Stripe::StripeError => e
+      puts "  ! Stripe fetch failed: #{e.class} #{e.message}"
+      puts ""
+    end
+
+    invoice
+  end
+
   def find_dead_jobs_by_job_name_and_error(job_name, error_class)
     ds = Sidekiq::DeadSet.new
 

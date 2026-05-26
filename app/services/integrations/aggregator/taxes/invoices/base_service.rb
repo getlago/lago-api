@@ -25,8 +25,11 @@ module Integrations
               result.invoice_id = invoice_id
             else
               code, message = retrieve_error_details(body["failedInvoices"].first["validation_errors"])
-              deliver_tax_error_webhook(customer:, code:, message:)
 
+              raise Integrations::Aggregator::OutOfMemoryError if message.include?(OUT_OF_MEMORY_ERROR)
+              raise Integrations::Aggregator::ServerContentionError, message if server_contention_error?(message)
+
+              deliver_tax_error_webhook(customer:, code:, message:)
               result.service_failure!(code:, message:)
             end
           end

@@ -2,6 +2,7 @@
 
 require "active_support/core_ext/integer/time"
 require "opentelemetry/sdk"
+require "lago/redis_config_builder"
 
 Rails.application.configure do
   config.middleware.use(ActionDispatch::Cookies)
@@ -52,23 +53,17 @@ Rails.application.configure do
   if ENV["LAGO_MEMCACHE_SERVERS"].present?
     config.cache_store = :mem_cache_store, ENV["LAGO_MEMCACHE_SERVERS"].split(",")
 
-  elsif ENV["LAGO_REDIS_CACHE_URL"].present?
-    cache_store_config = {
-      url: ENV["LAGO_REDIS_CACHE_URL"],
-      ssl_params: {
-        verify_mode: OpenSSL::SSL::VERIFY_NONE
-      },
-      pool: {size: ENV.fetch("LAGO_REDIS_CACHE_POOL_SIZE", 5)},
-      error_handler: lambda { |method:, returning:, exception:|
-        Rails.logger.warn(exception.message)
+  elsif Lago::RedisConfigBuilder.cache_enabled?
+    cache_store_config = Lago::RedisConfigBuilder.new
+      .with_options(
+        pool: {size: ENV.fetch("LAGO_REDIS_CACHE_POOL_SIZE", 5)},
+        error_handler: lambda { |method:, returning:, exception:|
+          Rails.logger.warn(exception.message)
 
-        Sentry.capture_exception(exception, level: :warning)
-      }
-    }
-
-    if ENV["LAGO_REDIS_CACHE_PASSWORD"].present? && !ENV["LAGO_REDIS_CACHE_PASSWORD"].empty?
-      cache_store_config = cache_store_config.merge({password: ENV["LAGO_REDIS_CACHE_PASSWORD"]})
-    end
+          Sentry.capture_exception(exception, level: :warning)
+        }
+      )
+      .cache
 
     config.cache_store = :redis_cache_store, cache_store_config
   end
