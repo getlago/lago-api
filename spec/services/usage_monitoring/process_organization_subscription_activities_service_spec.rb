@@ -11,10 +11,12 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService
       create_list(:subscription_activity, 3, organization:, enqueued: false)
       create_list(:subscription_activity, 2, organization:, enqueued: true)
 
-      expect { service.call }
+      result = nil
+      expect { result = service.call }
         .to have_enqueued_job(UsageMonitoring::ProcessSubscriptionActivityJob).exactly(3).times
 
-      expect(service.call).to be_success
+      expect(result).to be_success
+      expect(result.nb_jobs_enqueued).to eq(3)
       expect(organization.subscription_activities.where(enqueued: true).count).to eq(5)
       expect(organization.subscription_activities.where(enqueued: false).count).to eq(0)
     end
