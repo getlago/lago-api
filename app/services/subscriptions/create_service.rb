@@ -133,7 +133,7 @@ module Subscriptions
         ending_at: params[:ending_at],
         progressive_billing_disabled: params[:progressive_billing_disabled] || false,
         consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : true,
-        billing_entity: resolve_billing_entity(customer:, params:)
+        billing_entity: resolve_billing_entity(organization: customer.organization, params:)
       )
 
       if params.key?(:payment_method)

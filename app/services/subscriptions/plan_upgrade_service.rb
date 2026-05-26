@@ -50,7 +50,7 @@ module Subscriptions
     attr_reader :current_subscription, :plan, :params, :name
 
     def new_subscription_with_overrides
-      resolved_entity = resolve_billing_entity(customer: current_subscription.customer, params:)
+      resolved_entity = resolve_billing_entity(organization: current_subscription.organization, params:)
       new_subscription = Subscription.new(
         organization_id: current_subscription.customer.organization_id,
         customer: current_subscription.customer,
