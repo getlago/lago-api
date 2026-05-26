@@ -24,48 +24,36 @@ module ChargeFilters
       # We only care about order when you have less than 100 filters.
       @touch = filters_params.size < 100
 
-      # NOTE: PaperTrail's per-save Version Create plus version_limit COUNT is the
-      #       dominant DB cost for large filter batches (two queries per record save).
-      #       Skip per-filter audit rows for this operation — the parent Plan/Charge
-      #       still gets its own audit entry from their respective services.
-      PaperTrail.request.disable_model(ChargeFilter)
-      PaperTrail.request.disable_model(ChargeFilterValue)
+      ActiveRecord::Base.transaction do
+        @new_filter_rows = []
+        @new_filter_value_rows = []
+        @new_filter_ids = []
 
-      begin
-        ActiveRecord::Base.transaction do
-          @new_filter_rows = []
-          @new_filter_value_rows = []
-          @new_filter_ids = []
+        filters_params.each do |filter_param|
+          values_params = filter_param[:values].transform_keys(&:to_s)
 
-          filters_params.each do |filter_param|
-            values_params = filter_param[:values].transform_keys(&:to_s)
+          # NOTE: since a filter could be a refinement of another one, we have to make sure
+          #       that we are targeting the right one
+          existing_filter = filters_by_values_key[values_params.sort]
 
-            # NOTE: since a filter could be a refinement of another one, we have to make sure
-            #       that we are targeting the right one
-            existing_filter = filters_by_values_key[values_params.sort]
+          properties = ChargeModels::FilterPropertiesService.call(
+            chargeable: charge,
+            properties: filter_param[:properties]&.deep_symbolize_keys&.except(:presentation_group_keys)
+          ).properties
 
-            properties = ChargeModels::FilterPropertiesService.call(
-              chargeable: charge,
-              properties: filter_param[:properties]&.deep_symbolize_keys&.except(:presentation_group_keys)
-            ).properties
-
-            if existing_filter
-              update_existing_filter(existing_filter, filter_param, values_params, properties)
-            else
-              accumulate_new_filter(filter_param, values_params, properties)
-            end
-          end
-
-          bulk_insert_new_filters
-
-          # NOTE: remove old filters that were not created or updated
-          charge.filters.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
-            remove_filter(it)
+          if existing_filter
+            update_existing_filter(existing_filter, filter_param, values_params, properties)
+          else
+            accumulate_new_filter(filter_param, values_params, properties)
           end
         end
-      ensure
-        PaperTrail.request.enable_model(ChargeFilter)
-        PaperTrail.request.enable_model(ChargeFilterValue)
+
+        bulk_insert_new_filters
+
+        # NOTE: remove old filters that were not created or updated
+        charge.filters.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
+          remove_filter(it)
+        end
       end
 
       result
@@ -84,8 +72,10 @@ module ChargeFilters
 
       filter.save! if filter.changed?
 
+      PaperTrail.request.disable_model(filter.class)
       # NOTE: Make sure updated_at is touched even if not changed to keep the right order.
       filter.touch if touch # rubocop:disable Rails/SkipsModelValidations
+      PaperTrail.request.enable_model(filter.class)
 
       values_params.each do |key, values|
         billable_metric_filter = billable_metric_filters_by_key[key]
@@ -100,7 +90,9 @@ module ChargeFilters
         filter_value.values = values
         filter_value.save! if filter_value.changed?
 
-        filter_value.touch if @touch # rubocop:disable Rails/SkipsModelValidations
+        PaperTrail.request.disable_model(filter_value.class)
+        filter_value.touch if touch # rubocop:disable Rails/SkipsModelValidations
+        PaperTrail.request.enable_model(filter_value.class)
       end
 
       result.filters << filter
