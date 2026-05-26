@@ -43,6 +43,8 @@ module Subscriptions
           timestamp: new_subscription.started_at + 1.second
         )
 
+        result.subscription = new_subscription
+
         after_commit do
           SendWebhookJob.perform_later("subscription.started", new_subscription)
           Utils::ActivityLog.produce(new_subscription, "subscription.started")
@@ -51,7 +53,6 @@ module Subscriptions
         bill_subscriptions(billable_subscriptions) if billable_subscriptions.any?
       end
 
-      result.subscription = new_subscription
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
