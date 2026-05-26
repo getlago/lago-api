@@ -58,10 +58,7 @@ module Fees
 
     def init_fee(properties:, charge_filter: nil)
       aggregation_result = aggregate(properties:, charge_filter:)
-
-      presentation_breakdowns = remove_formated_grouped_by_keys(aggregation_result.breakdowns)
-
-      cache_aggregation_result(aggregation_result:, charge_filter:, presentation_breakdowns:)
+      cache_aggregation_result(aggregation_result:, charge_filter:)
 
       charge_model_result = apply_charge_model(aggregation_result:, properties:)
 
@@ -110,7 +107,8 @@ module Fees
         amount_details: charge_model_result.amount_details || {},
         pricing_unit_usage:
       )
-      build_breakdowns_for_fee(fee:, presentation_breakdowns:)
+
+      build_breakdowns_for_fee(fee:, presentation_breakdowns: remove_formated_grouped_by_keys(aggregation_result.pay_in_advance_breakdowns))
 
       fee
     end
@@ -186,7 +184,7 @@ module Fees
       end
     end
 
-    def cache_aggregation_result(aggregation_result:, charge_filter:, presentation_breakdowns:)
+    def cache_aggregation_result(aggregation_result:, charge_filter:)
       return unless aggregation_result.current_aggregation.present? ||
         aggregation_result.max_aggregation.present? ||
         aggregation_result.max_aggregation_with_proration.present?
@@ -203,7 +201,7 @@ module Fees
         max_aggregation: aggregation_result.max_aggregation,
         max_aggregation_with_proration: aggregation_result.max_aggregation_with_proration,
         grouped_by: format_grouped_by,
-        presentation_breakdowns: presentation_breakdowns
+        presentation_breakdowns: remove_formated_grouped_by_keys(aggregation_result.breakdowns)
       )
     end
 
