@@ -93,8 +93,8 @@ module ChargeFilters
         filter_value.save! if filter_value.changed?
 
         if @touch
-          # NOTE: Make sure update_at is touched even if not changed to keep the right order
           PaperTrail.request.disable_model(filter_value.class)
+          # NOTE: Make sure update_at is touched even if not changed to keep the right order
           filter_value.touch # rubocop:disable Rails/SkipsModelValidations
           PaperTrail.request.enable_model(filter_value.class)
         end
