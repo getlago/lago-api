@@ -104,9 +104,10 @@ module Subscriptions
       subscription.mark_as_active!(timestamp)
 
       billable_subscriptions = [subscription.previous_subscription]
+
+      # When from_incomplete, the new subscription was already billed and its fixed-charge
+      # events emitted during gate_subscription — only the previous needs billing.
       unless from_incomplete
-        # When from_incomplete, the new subscription was already billed and its fixed-charge
-        # events emitted during gate_subscription — only the previous needs billing.
         emit_fixed_charge_events
         billable_subscriptions << subscription if bill_in_advance?
       end
