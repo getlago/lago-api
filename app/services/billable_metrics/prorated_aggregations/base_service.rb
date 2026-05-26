@@ -106,21 +106,6 @@ module BillableMetrics
       private
 
       attr_reader :base_aggregator
-
-      def previous_charge_fee(grouped_by_values: nil)
-        subscription_ids = customer.subscriptions
-          .where(external_id: subscription.external_id)
-          .pluck(:id)
-
-        Fee.joins(:charge)
-          .where(charge: {billable_metric_id: billable_metric.id})
-          .where(charge: {prorated: true})
-          .where(subscription_id: subscription_ids, fee_type: :charge, charge_filter_id: charge_filter&.id)
-          .where("CAST(fees.properties->>'charges_to_datetime' AS timestamp) < ?", boundaries[:to_datetime])
-          .where(grouped_by: grouped_by_values.presence || {})
-          .order(created_at: :desc)
-          .first
-      end
     end
   end
 end
