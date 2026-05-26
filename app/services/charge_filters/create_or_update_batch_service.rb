@@ -5,6 +5,7 @@ module ChargeFilters
     def initialize(charge:, filters_params:)
       @charge = charge
       @filters_params = filters_params
+      @organization = charge.organization
 
       super
     end
@@ -32,7 +33,6 @@ module ChargeFilters
 
       begin
         ActiveRecord::Base.transaction do
-          @organization = charge.organization
           @new_filter_rows = []
           @new_filter_value_rows = []
           @new_filter_ids = []
@@ -73,11 +73,11 @@ module ChargeFilters
 
     private
 
-    attr_reader :charge, :filters_params
+    attr_reader :charge, :filters_params, :organization, :touch
 
     def update_existing_filter(filter, filter_param, values_params, properties)
       filter.charge = charge
-      filter.organization = @organization
+      filter.organization = organization
 
       filter.invoice_display_name = filter_param[:invoice_display_name]
       filter.properties = properties
@@ -85,17 +85,17 @@ module ChargeFilters
       filter.save! if filter.changed?
 
       # NOTE: Make sure updated_at is touched even if not changed to keep the right order.
-      filter.touch if @touch # rubocop:disable Rails/SkipsModelValidations
+      filter.touch if touch # rubocop:disable Rails/SkipsModelValidations
 
       values_params.each do |key, values|
         billable_metric_filter = billable_metric_filters_by_key[key]
 
         # NOTE: existing filter was preloaded with values, so this in-memory find avoids a SELECT.
         filter_value = filter.values.to_a.find { |v| v.billable_metric_filter_id == billable_metric_filter&.id }
-        filter_value ||= filter.values.build(organization_id: charge.organization_id)
+        filter_value ||= filter.values.build
         filter_value.charge_filter = filter
         filter_value.billable_metric_filter = billable_metric_filter
-        filter_value.organization = @organization
+        filter_value.organization = organization
 
         filter_value.values = values
         filter_value.save! if filter_value.changed?
@@ -114,19 +114,17 @@ module ChargeFilters
       # NOTE: build an in-memory AR instance only to run validations
       filter_instance = ChargeFilter.new(
         id: filter_id,
-        charge_id: charge.id,
-        organization_id: charge.organization_id,
+        charge:,
+        organization:,
         invoice_display_name: filter_param[:invoice_display_name],
         properties: properties
       )
-      filter_instance.charge = charge
-      filter_instance.organization = @organization
       filter_instance.validate!
 
       @new_filter_rows << {
         id: filter_id,
         charge_id: charge.id,
-        organization_id: charge.organization_id,
+        organization_id: organization.id,
         invoice_display_name: filter_param[:invoice_display_name],
         properties: properties
       }
@@ -136,18 +134,17 @@ module ChargeFilters
         billable_metric_filter = billable_metric_filters_by_key[key]
 
         value_instance = ChargeFilterValue.new(
-          organization_id: charge.organization_id,
+          charge_filter: filter_instance,
+          billable_metric_filter:,
+          organization:,
           values: values
         )
-        value_instance.charge_filter = filter_instance
-        value_instance.billable_metric_filter = billable_metric_filter
-        value_instance.organization = @organization
         value_instance.validate!
 
         @new_filter_value_rows << {
           charge_filter_id: filter_id,
           billable_metric_filter_id: billable_metric_filter&.id,
-          organization_id: charge.organization_id,
+          organization_id: organization.id,
           values: values
         }
       end
