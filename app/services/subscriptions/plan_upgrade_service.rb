@@ -14,17 +14,17 @@ module Subscriptions
     end
 
     def call
-      if current_subscription.starting_in_the_future?
-        apply_activation_rules if params[:activation_rules]
-        update_pending_subscription
-
-        result.subscription = current_subscription
-        return result
-      end
-
-      new_subscription = new_subscription_with_overrides
-
       ActiveRecord::Base.transaction do
+        if current_subscription.starting_in_the_future?
+          apply_activation_rules if params[:activation_rules]
+          update_pending_subscription
+
+          result.subscription = current_subscription
+          return result
+        end
+
+        new_subscription = new_subscription_with_overrides
+
         cancel_pending_subscription if pending_subscription?
 
         # Group subscriptions for billing
