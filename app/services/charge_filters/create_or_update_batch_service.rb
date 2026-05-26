@@ -72,10 +72,12 @@ module ChargeFilters
 
       filter.save! if filter.changed?
 
-      PaperTrail.request.disable_model(filter.class)
-      # NOTE: Make sure updated_at is touched even if not changed to keep the right order.
-      filter.touch if touch # rubocop:disable Rails/SkipsModelValidations
-      PaperTrail.request.enable_model(filter.class)
+      if touch
+        PaperTrail.request.disable_model(filter.class)
+        # NOTE: Make sure updated_at is touched even if not changed to keep the right order.
+        filter.touch # rubocop:disable Rails/SkipsModelValidations
+        PaperTrail.request.enable_model(filter.class)
+      end
 
       values_params.each do |key, values|
         billable_metric_filter = billable_metric_filters_by_key[key]
@@ -90,9 +92,12 @@ module ChargeFilters
         filter_value.values = values
         filter_value.save! if filter_value.changed?
 
-        PaperTrail.request.disable_model(filter_value.class)
-        filter_value.touch if touch # rubocop:disable Rails/SkipsModelValidations
-        PaperTrail.request.enable_model(filter_value.class)
+        if touch
+          # NOTE: Make sure update_at is touched even if not changed to keep the right order
+          PaperTrail.request.disable_model(filter_value.class)
+          filter_value.touch # rubocop:disable Rails/SkipsModelValidations
+          PaperTrail.request.enable_model(filter_value.class)
+        end
       end
 
       result.filters << filter
