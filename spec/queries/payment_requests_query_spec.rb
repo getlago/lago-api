@@ -100,15 +100,22 @@ RSpec.describe PaymentRequestsQuery do
     let(:billing_entity_eu) { create(:billing_entity, organization:, code: "EU") }
     let(:billing_entity_us) { create(:billing_entity, organization:, code: "US") }
 
-    let(:customer_eu) { create(:customer, organization:, billing_entity: billing_entity_eu) }
-    let(:customer_us) { create(:customer, organization:, billing_entity: billing_entity_us) }
+    let(:customer_first) { create(:customer, organization:) }
+    let(:customer_second) { create(:customer, organization:) }
 
-    let(:payment_request_first) { create(:payment_request, organization:, customer: customer_eu) }
-    let(:payment_request_second) { create(:payment_request, organization:, customer: customer_us) }
+    let(:invoice_eu) { create(:invoice, organization:, customer: customer_first, billing_entity: billing_entity_eu) }
+    let(:invoice_us) { create(:invoice, organization:, customer: customer_second, billing_entity: billing_entity_us) }
+
+    let(:payment_request_first) do
+      create(:payment_request, organization:, customer: customer_first, invoices: [invoice_eu])
+    end
+    let(:payment_request_second) do
+      create(:payment_request, organization:, customer: customer_second, invoices: [invoice_us])
+    end
 
     let(:filters) { {billing_entity_ids: [billing_entity_eu.id]} }
 
-    it "returns payment requests whose customer belongs to the billing entity" do
+    it "returns payment requests whose invoices belong to the billing entity" do
       expect(result).to be_success
       expect(returned_ids).to contain_exactly(payment_request_first.id)
     end
@@ -121,6 +128,24 @@ RSpec.describe PaymentRequestsQuery do
           payment_request_first.id,
           payment_request_second.id
         )
+      end
+    end
+
+    context "when a payment request has multiple invoices in the same billing entity" do
+      let(:second_invoice_eu) do
+        create(:invoice, organization:, customer: customer_first, billing_entity: billing_entity_eu)
+      end
+      let(:payment_request_first) do
+        create(
+          :payment_request,
+          organization:,
+          customer: customer_first,
+          invoices: [invoice_eu, second_invoice_eu]
+        )
+      end
+
+      it "does not return duplicates" do
+        expect(returned_ids.count(payment_request_first.id)).to eq(1)
       end
     end
 

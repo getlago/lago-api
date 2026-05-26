@@ -21,7 +21,11 @@ class PaymentRequestsQuery < BaseQuery
   private
 
   def with_billing_entity_ids(scope)
-    scope.joins(:customer).where(customers: {billing_entity_id: filters.billing_entity_ids})
+    scope.where(
+      id: PaymentRequest.joins(:invoices)
+        .where(invoices: {billing_entity_id: filters.billing_entity_ids})
+        .select(:id)
+    )
   end
 
   def with_external_customer(scope)

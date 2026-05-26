@@ -94,10 +94,16 @@ RSpec.describe Api::V1::PaymentRequestsController do
     context "when filtering by billing_entity_codes" do
       let(:billing_entity_eu) { create(:billing_entity, organization:, code: "EU") }
       let(:billing_entity_us) { create(:billing_entity, organization:, code: "US") }
-      let(:customer_eu) { create(:customer, organization:, billing_entity: billing_entity_eu) }
-      let(:customer_us) { create(:customer, organization:, billing_entity: billing_entity_us) }
-      let(:payment_request_eu) { create(:payment_request, organization:, customer: customer_eu) }
-      let(:payment_request_us) { create(:payment_request, organization:, customer: customer_us) }
+      let(:customer_eu) { create(:customer, organization:) }
+      let(:customer_us) { create(:customer, organization:) }
+      let(:invoice_eu) { create(:invoice, organization:, customer: customer_eu, billing_entity: billing_entity_eu) }
+      let(:invoice_us) { create(:invoice, organization:, customer: customer_us, billing_entity: billing_entity_us) }
+      let(:payment_request_eu) do
+        create(:payment_request, organization:, customer: customer_eu, invoices: [invoice_eu])
+      end
+      let(:payment_request_us) do
+        create(:payment_request, organization:, customer: customer_us, invoices: [invoice_us])
+      end
 
       before do
         payment_request_eu
