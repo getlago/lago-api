@@ -18,7 +18,7 @@ module Subscriptions
     def call
       ActiveRecord::Base.transaction do
         if current_subscription.starting_in_the_future?
-          apply_activation_rules if params[:activation_rules]
+          apply_activation_rules(current_subscription) if params[:activation_rules]
           update_pending_subscription
 
           result.subscription = current_subscription
@@ -31,14 +31,11 @@ module Subscriptions
 
         new_subscription.pending!
 
-        if params[:activation_rules].present?
-          Subscriptions::ActivationRules::ApplyService.call!(
-            subscription: new_subscription,
-            activation_rules: params[:activation_rules]
-          )
-        end
+        apply_activation_rules(new_subscription) if params[:activation_rules].present?
 
         Subscriptions::ActivateService.call!(subscription: new_subscription)
+
+        result.subscription = new_subscription
       end
 
       result
@@ -86,9 +83,9 @@ module Subscriptions
       end
     end
 
-    def apply_activation_rules
+    def apply_activation_rules(subscription)
       Subscriptions::ActivationRules::ApplyService.call!(
-        subscription: current_subscription,
+        subscription:,
         activation_rules: params[:activation_rules]
       )
     end
