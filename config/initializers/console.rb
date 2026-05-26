@@ -131,7 +131,7 @@ Rails.application.console do
   end
 
   def check_stripe_payment(invoice_id)
-    invoice = Invoice.with_discarded.find(invoice_id)
+    invoice = Invoice.unscoped.find(invoice_id)
     payments = invoice.payments.includes(:payment_provider).order(:created_at)
 
     puts "Invoice #{invoice.id}  total=#{invoice.total_amount_cents} due=#{invoice.total_due_amount_cents} #{invoice.currency}"
