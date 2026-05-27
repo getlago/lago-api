@@ -431,4 +431,154 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(invoice.reload).to be_closed
     end
   end
+
+  describe "plan downgrade with payment successful", transaction: false do
+    let(:previous_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: false, amount_cents: 2000)
+    end
+    let(:downgrade_external_id) { "downgrade-sub-#{SecureRandom.hex(4)}" }
+
+    # This scenario spans a real billing period, so terminating the previous subscription on
+    # activation produces a non-zero invoice and thus a second payment intent.
+    # The shared stub returns a fixed payment_intent_id, which would collide
+    # with the gated invoice's payment on the second call — return a unique id per call, as Stripe
+    # does.
+    before do
+      allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
+        .to receive(:create_payment_intent) do
+          Stripe::PaymentIntent.construct_from(
+            id: "pi_#{SecureRandom.hex(12)}",
+            status: "processing",
+            amount: 1000,
+            currency: "eur"
+          )
+        end
+    end
+
+    it "gates the downgrade at the billing boundary, then terminates previous and activates new on payment success" do
+      # Stage 1: active subscription on the pricier plan (no rules)
+      travel_to(DateTime.new(2024, 1, 10)) do
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: downgrade_external_id,
+          plan_code: previous_plan.code,
+          billing_time: "calendar"
+        })
+        perform_all_enqueued_jobs
+      end
+
+      previous_subscription = customer.subscriptions.sole
+      expect(previous_subscription).to be_active
+      expect(previous_subscription.plan).to eq(previous_plan)
+
+      # Stage 2: downgrade to the cheaper pay-in-advance plan with a payment activation rule.
+      # The downgrade is created pending and only activated at the next billing day.
+      travel_to(DateTime.new(2024, 1, 20)) do
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: downgrade_external_id,
+          plan_code: plan.code,
+          billing_time: "calendar",
+          activation_rules: [{type: "payment", timeout_hours: 48}]
+        })
+        perform_all_enqueued_jobs
+      end
+
+      new_subscription = customer.subscriptions.where.not(id: previous_subscription.id).sole
+      expect(new_subscription).to be_pending
+      expect(new_subscription.previous_subscription).to eq(previous_subscription)
+      expect(previous_subscription.reload).to be_active
+
+      # Stage 3: next billing day — the rotation gates the pending downgrade rather than activating it.
+      travel_to(DateTime.new(2024, 2, 1)) do
+        perform_billing
+      end
+
+      new_subscription.reload
+      expect(new_subscription).to be_incomplete
+      expect(new_subscription.activation_rules.sole).to be_pending
+      expect(previous_subscription.reload).to be_active
+
+      invoice = new_subscription.invoices.sole
+      expect(invoice).to be_open
+      expect(invoice.fees.subscription.count).to eq(1)
+
+      # Stage 4: Stripe webhook — payment succeeded → previous terminates, downgrade activates
+      travel_to(DateTime.new(2024, 2, 1)) do
+        expect { simulate_stripe_webhook(status: "succeeded") }
+          .to have_performed_job(BillSubscriptionJob)
+          .with([previous_subscription], anything, invoicing_reason: :upgrading)
+      end
+
+      previous_subscription.reload
+      new_subscription.reload
+      expect(previous_subscription).to be_terminated
+      expect(new_subscription).to be_active
+      expect(new_subscription.activated_at).to be_present
+      expect(new_subscription.activation_rules.sole).to be_satisfied
+      expect(invoice.reload).to be_finalized
+    end
+  end
+
+  describe "plan downgrade with payment failure", transaction: false do
+    let(:previous_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: false, amount_cents: 2000)
+    end
+    let(:downgrade_external_id) { "downgrade-sub-#{SecureRandom.hex(4)}" }
+
+    it "cancels the new subscription and leaves the previous untouched" do
+      # Stage 1: active subscription on the pricier plan
+      travel_to(DateTime.new(2024, 1, 10)) do
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: downgrade_external_id,
+          plan_code: previous_plan.code,
+          billing_time: "calendar"
+        })
+        perform_all_enqueued_jobs
+      end
+
+      previous_subscription = customer.subscriptions.sole
+      expect(previous_subscription).to be_active
+
+      # Stage 2: gated downgrade (pending until next billing day)
+      travel_to(DateTime.new(2024, 1, 20)) do
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: downgrade_external_id,
+          plan_code: plan.code,
+          billing_time: "calendar",
+          activation_rules: [{type: "payment", timeout_hours: 48}]
+        })
+        perform_all_enqueued_jobs
+      end
+
+      new_subscription = customer.subscriptions.where.not(id: previous_subscription.id).sole
+      expect(new_subscription).to be_pending
+
+      # Stage 3: next billing day — rotation gates the downgrade
+      travel_to(DateTime.new(2024, 2, 1)) do
+        perform_billing
+      end
+
+      new_subscription.reload
+      expect(new_subscription).to be_incomplete
+
+      invoice = new_subscription.invoices.sole
+      expect(invoice).to be_open
+
+      # Stage 4: Stripe webhook — payment failed
+      travel_to(DateTime.new(2024, 2, 1)) do
+        simulate_stripe_webhook(status: "failed")
+      end
+
+      previous_subscription.reload
+      new_subscription.reload
+      expect(new_subscription).to be_canceled
+      expect(new_subscription.cancelation_reason).to eq("payment_failed")
+      expect(new_subscription.activation_rules.sole).to be_failed
+      expect(previous_subscription).to be_active
+      expect(invoice.reload).to be_closed
+    end
+  end
 end
