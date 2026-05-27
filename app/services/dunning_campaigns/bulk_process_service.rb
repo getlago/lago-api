@@ -84,8 +84,14 @@ module DunningCampaigns
       end
 
       def overdue_billing_entities_for(currency)
-        entity_ids = customer.invoices.non_self_billed.payment_overdue
-          .where(currency: currency).distinct.pluck(:billing_entity_id)
+        entity_ids = customer
+          .invoices
+          .non_self_billed
+          .payment_overdue
+          .where(currency: currency)
+          .where(ready_for_payment_processing: true)
+          .distinct
+          .pluck(:billing_entity_id)
         customer.organization.billing_entities.where(id: entity_ids)
       end
 

@@ -44,6 +44,7 @@ module DunningCampaigns
       return false if customer.exclude_from_dunning_campaign?
 
       custom_campaign = customer.applied_dunning_campaign
+      # Dunning campaign is resolved at the customer level (from their own billing entity), not from the invoice's BE.
       default_campaign = customer.billing_entity.applied_dunning_campaign
 
       custom_campaign == dunning_campaign || (!custom_campaign && default_campaign == dunning_campaign)
@@ -54,8 +55,9 @@ module DunningCampaigns
     end
 
     def overdue_invoices_in_currency
-      customer
+      @overdue_invoices_in_currency ||= customer
         .invoices
+        .non_self_billed
         .payment_overdue
         .where(ready_for_payment_processing: true)
         .where(currency: dunning_campaign_threshold.currency)
