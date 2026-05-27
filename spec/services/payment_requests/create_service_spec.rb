@@ -92,6 +92,20 @@ RSpec.describe PaymentRequests::CreateService, :premium do
       end
     end
 
+    context "when invoices have different billing entities" do
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+      before { second_invoice.update!(billing_entity: other_billing_entity) }
+
+      it "returns not allowed failure" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("invoices_have_different_billing_entities")
+      end
+    end
+
     context "when invoices are not ready for payment processing" do
       before { first_invoice.update!(ready_for_payment_processing: false) }
 

@@ -671,16 +671,20 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
     end
 
+    # QA scenario #1: USD wallet under entity US consumed by USD invoice under
+    # entity EU. Decision 5.5: credits are filtered by currency only — there is
+    # no entity gate — so the cross-entity wallet still applies its credits.
     context "when wallet and invoice belong to different billing entities" do
-      let(:wallet_billing_entity) { create(:billing_entity, organization: customer.organization, code: "be_a") }
-      let(:invoice_billing_entity) { create(:billing_entity, organization: customer.organization, code: "be_b") }
+      let(:us_entity) { create(:billing_entity, organization: customer.organization, code: "us") }
+      let(:eu_entity) { create(:billing_entity, organization: customer.organization, code: "eu") }
 
-      let(:wallets) { [cross_entity_wallet] }
-      let(:cross_entity_wallet) do
+      let(:wallets) { [usd_wallet_under_us] }
+      let(:usd_wallet_under_us) do
         create(:wallet, :with_inbound_transaction,
-          name: "cross entity",
+          name: "usd wallet under US",
           customer:,
-          billing_entity: wallet_billing_entity,
+          billing_entity: us_entity,
+          currency: "USD",
           balance_cents: 1000,
           credits_balance: 10.0)
       end
@@ -688,22 +692,61 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       let(:invoice) do
         create(:invoice,
           customer:,
-          billing_entity: invoice_billing_entity,
-          currency: "EUR",
+          billing_entity: eu_entity,
+          currency: "USD",
           total_amount_cents: amount_cents)
       end
 
       it "applies credits regardless of the billing entity mismatch" do
         expect(result).to be_success
         expect(result.wallet_transactions.count).to eq(1)
-        expect(result.wallet_transactions.first.wallet_id).to eq(cross_entity_wallet.id)
+        expect(result.wallet_transactions.first.wallet_id).to eq(usd_wallet_under_us.id)
         expect(result.prepaid_credit_amount_cents).to eq(100)
         expect(invoice.prepaid_credit_amount_cents).to eq(100)
       end
 
       it "decrements the wallet balance even though entities differ" do
         subject
-        expect(cross_entity_wallet.reload.balance_cents).to eq(900)
+        expect(usd_wallet_under_us.reload.balance_cents).to eq(900)
+      end
+    end
+
+    # QA scenario #2: EUR wallet under entity US, USD invoice under entity US.
+    # Same entity, different currency. The currency check filters the wallet
+    # out before the entity comparison would even matter, confirming that
+    # currency is the only gate and entity is not consulted.
+    context "when wallet currency differs from invoice currency (same entity)" do
+      let(:us_entity) { create(:billing_entity, organization: customer.organization, code: "us") }
+
+      let(:wallets) { [eur_wallet_under_us] }
+      let(:eur_wallet_under_us) do
+        create(:wallet, :with_inbound_transaction,
+          name: "eur wallet under US",
+          customer:,
+          billing_entity: us_entity,
+          currency: "EUR",
+          balance_cents: 1000,
+          credits_balance: 10.0)
+      end
+
+      let(:invoice) do
+        create(:invoice,
+          customer:,
+          billing_entity: us_entity,
+          currency: "USD",
+          total_amount_cents: amount_cents)
+      end
+
+      it "skips the wallet and applies no credits" do
+        expect(result).to be_success
+        expect(result.wallet_transactions).to be_empty
+        expect(result.prepaid_credit_amount_cents).to eq(0)
+        expect(invoice.prepaid_credit_amount_cents).to eq(0)
+      end
+
+      it "leaves the wallet balance untouched" do
+        subject
+        expect(eur_wallet_under_us.reload.balance_cents).to eq(1000)
       end
     end
 

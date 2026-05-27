@@ -115,5 +115,38 @@ RSpec.describe Plans::UpdateAmountService do
         end
       end
     end
+
+    context "when pending-promotion preserves billing entity from previous subscription" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:original_plan) { create(:plan, organization:, amount_cents: expected_amount_cents) }
+      let(:customer) { create(:customer, organization:) }
+      let(:original_active_sub) do
+        create(
+          :subscription,
+          plan: original_plan,
+          customer:,
+          status: :active,
+          billing_entity:,
+          subscription_at: Time.current,
+          started_at: Time.current
+        )
+      end
+      let(:pending_subscription) do
+        create(:subscription, plan:, status: :pending, previous_subscription_id: original_active_sub.id, customer:)
+      end
+
+      before do
+        original_active_sub
+        pending_subscription
+      end
+
+      it "carries the previous subscription's billing_entity onto the new active subscription" do
+        update_service.call
+
+        new_active_sub = Subscription.where(previous_subscription_id: original_active_sub.id, status: :active).first
+        expect(new_active_sub).to be_present
+        expect(new_active_sub.billing_entity_id).to eq(billing_entity.id)
+      end
+    end
   end
 end

@@ -39,5 +39,6 @@ RSpec.describe ::V1::OrganizationSerializer do
     expect(result["organization"]["net_payment_term"]).to eq(org.net_payment_term)
     expect(result["organization"]["finalize_zero_amount_invoice"]).to eq(org.finalize_zero_amount_invoice)
     expect(result["organization"]["taxes"].count).to eq(1)
+    expect(result["organization"]["events_store"]).to eq(org.events_store)
   end
 end

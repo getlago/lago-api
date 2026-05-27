@@ -111,20 +111,50 @@ RSpec.describe Analytics::OverdueBalance do
     context "with no arguments" do
       let(:args) { {} }
 
-      it "returns the overdue balances" do
+      it "returns the overdue balances with billing_entity_id" do
         expect(overdue_balances).to match_array([
           hash_including({
             "month" => Time.current.beginning_of_month - 2.months,
             "currency" => "EUR",
+            "billing_entity_id" => billing_entity2.id,
             "amount_cents" => 400,
             "lago_invoice_ids" => "[[\"#{invoice4.id}\"]]"
           }), hash_including({
             "month" => Time.current.beginning_of_month - 1.month,
             "currency" => "EUR",
+            "billing_entity_id" => billing_entity1.id,
             "amount_cents" => 100,
             "lago_invoice_ids" => "[[\"#{invoice1.id}\"]]"
           })
         ])
+      end
+
+      context "when overdue invoices share the same (month, currency) across billing entities" do
+        let(:cross_entity_invoice) do
+          create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
+            total_amount_cents: 500, billing_entity: billing_entity2, issuing_date: 1.month.ago)
+        end
+
+        before { cross_entity_invoice }
+
+        it "emits one row per billing entity for the same (month, currency) bucket" do
+          one_month_ago_rows = overdue_balances.select do |row|
+            row["month"] == Time.current.beginning_of_month - 1.month && row["currency"] == "EUR"
+          end
+
+          expect(one_month_ago_rows).to match_array([
+            hash_including({
+              "billing_entity_id" => billing_entity1.id,
+              "amount_cents" => 100,
+              "lago_invoice_ids" => "[[\"#{invoice1.id}\"]]"
+            }),
+            hash_including({
+              "billing_entity_id" => billing_entity2.id,
+              "amount_cents" => 500,
+              "lago_invoice_ids" => "[[\"#{cross_entity_invoice.id}\"]]"
+            })
+          ])
+        end
       end
     end
 
@@ -136,6 +166,7 @@ RSpec.describe Analytics::OverdueBalance do
           hash_including({
             "month" => Time.current.beginning_of_month - 1.month,
             "currency" => "EUR",
+            "billing_entity_id" => billing_entity1.id,
             "amount_cents" => 100,
             "lago_invoice_ids" => "[[\"#{invoice1.id}\"]]"
           })
@@ -151,6 +182,7 @@ RSpec.describe Analytics::OverdueBalance do
           hash_including({
             "month" => Time.current.beginning_of_month - 2.months,
             "currency" => "EUR",
+            "billing_entity_id" => billing_entity2.id,
             "amount_cents" => 400,
             "lago_invoice_ids" => "[[\"#{invoice4.id}\"]]"
           })
