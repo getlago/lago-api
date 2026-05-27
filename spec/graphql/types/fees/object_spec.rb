@@ -79,9 +79,16 @@ RSpec.describe Types::Fees::Object do
     end
 
     context "when fee has a presentation_breakdown" do
+      let(:charge) do
+        create(:standard_charge, properties: {
+          "amount" => "100",
+          "presentation_group_keys" => [{"value" => "department", "options" => {"display_in_invoice" => true}}]
+        })
+      end
       let(:fee) do
         create(
           :charge_fee,
+          charge:,
           presentation_breakdowns: [build(:presentation_breakdown)]
         )
       end
@@ -97,9 +104,19 @@ RSpec.describe Types::Fees::Object do
     end
 
     context "when fee has a composite presentation_breakdown" do
+      let(:charge) do
+        create(:standard_charge, properties: {
+          "amount" => "100",
+          "presentation_group_keys" => [
+            {"value" => "department", "options" => {"display_in_invoice" => true}},
+            {"value" => "region", "options" => {"display_in_invoice" => true}}
+          ]
+        })
+      end
       let(:fee) do
         create(
           :charge_fee,
+          charge:,
           presentation_breakdowns: [
             build(
               :presentation_breakdown,
