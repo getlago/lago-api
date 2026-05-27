@@ -237,6 +237,34 @@ RSpec.describe Resolvers::OrderFormsResolver do
     end
   end
 
+  context "when searching by search_term" do
+    let(:query) do
+      <<~GQL
+        query($searchTerm: String) {
+          orderForms(searchTerm: $searchTerm, limit: 5) {
+            collection { id number }
+            metadata { totalCount }
+          }
+        }
+      GQL
+    end
+
+    it "returns only order forms whose number matches the search term" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {searchTerm: order_form.number}
+      )
+
+      response = result["data"]["orderForms"]
+
+      expect(response["collection"].count).to eq(1)
+      expect(response["collection"].first["id"]).to eq(order_form.id)
+    end
+  end
+
   context "when filtering by expires_at range" do
     let!(:order_form) { create(:order_form, organization:, customer:, expires_at: 5.days.from_now) }
 
@@ -266,6 +294,35 @@ RSpec.describe Resolvers::OrderFormsResolver do
 
       expect(response["collection"].count).to eq(1)
       expect(response["collection"].first["id"]).to eq(order_form.id)
+    end
+  end
+
+  context "with N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    let(:query) do
+      <<~GQL
+        query {
+          orderForms(limit: 10) {
+            collection {
+              id
+              customer { id }
+              quote { id }
+            }
+            metadata { totalCount }
+          }
+        }
+      GQL
+    end
+
+    it "does not trigger N+1 queries" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result.dig("data", "orderForms", "collection").length).to eq(2)
     end
   end
 end
