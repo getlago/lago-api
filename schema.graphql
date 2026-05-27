@@ -7047,6 +7047,20 @@ enum MappingTypeEnum {
   tax
 }
 
+"""
+Mark Order Form as signed input arguments
+"""
+input MarkOrderFormAsSignedInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  executeAt: ISO8601DateTime
+  executionMode: OrderFormExecutionModeEnum
+  id: ID!
+  signedDocument: String
+}
+
 type Membership {
   createdAt: ISO8601DateTime!
   id: ID!
@@ -8168,6 +8182,16 @@ type Mutation {
   ): Invoice
 
   """
+  Mark an order form as signed
+  """
+  markOrderFormAsSigned(
+    """
+    Parameters for MarkOrderFormAsSigned
+    """
+    input: MarkOrderFormAsSignedInput!
+  ): OrderFormWithSignedDocument
+
+  """
   Accepts a membership invite with Okta Oauth
   """
   oktaAcceptInvite(
@@ -9101,6 +9125,11 @@ type OrderFormCollection {
   metadata: CollectionMetadata!
 }
 
+enum OrderFormExecutionModeEnum {
+  execute_in_lago
+  order_only
+}
+
 enum OrderFormStatusEnum {
   expired
   generated
@@ -9112,6 +9141,22 @@ enum OrderFormVoidReasonEnum {
   expired
   invalid
   manual
+}
+
+type OrderFormWithSignedDocument {
+  billingSnapshot: JSON!
+  createdAt: ISO8601DateTime!
+  customer: Customer!
+  expiresAt: ISO8601DateTime
+  id: ID!
+  number: String!
+  quote: Quote!
+  signedAt: ISO8601DateTime
+  signedDocumentUrl: String
+  status: OrderFormStatusEnum!
+  updatedAt: ISO8601DateTime!
+  voidReason: OrderFormVoidReasonEnum
+  voidedAt: ISO8601DateTime
 }
 
 enum OrderTypeEnum {
@@ -9400,6 +9445,7 @@ enum PermissionEnum {
   invoices_update
   invoices_view
   invoices_void
+  order_forms_sign
   order_forms_view
   organization_emails_update
   organization_emails_view
@@ -9514,6 +9560,7 @@ type Permissions {
   invoicesUpdate: Boolean!
   invoicesView: Boolean!
   invoicesVoid: Boolean!
+  orderFormsSign: Boolean!
   orderFormsView: Boolean!
   organizationEmailsUpdate: Boolean!
   organizationEmailsView: Boolean!
@@ -10514,7 +10561,7 @@ type Query {
     Uniq ID of the order form
     """
     id: ID!
-  ): OrderForm
+  ): OrderFormWithSignedDocument
 
   """
   Query order forms
