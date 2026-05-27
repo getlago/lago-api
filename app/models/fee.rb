@@ -3,6 +3,7 @@
 class Fee < ApplicationRecord
   include Currencies
   include Discard::Model
+  include PreloaderCache
 
   self.discard_column = :deleted_at
   self.ignored_columns += %w[duplicated_in_advance]
@@ -216,13 +217,18 @@ class Fee < ApplicationRecord
   end
 
   def creditable_amount_cents
-    remaining_amount = amount_cents - credit_note_items.sum(:amount_cents)
+    remaining_amount = amount_cents - credited_amount_cents
 
     if credit?
       return [remaining_amount, creditable_from_wallet_amount_cents].min
     end
 
     remaining_amount
+  end
+
+  def credited_amount_cents
+    preloader_cache[:credited_amount_cents] ||
+      credit_note_items.sum(:amount_cents)
   end
 
   def creditable_from_wallet_amount_cents

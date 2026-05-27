@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Invoice < ApplicationRecord
+  include PreloaderCache
+
   self.ignored_columns += [:negative_amount_cents] # TODO: remove when negative_amount_cents is removed from the database
 
   include AASM
@@ -154,34 +156,12 @@ class Invoice < ApplicationRecord
   validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :payment_dispute_lost_at, absence: true, unless: :payment_dispute_losable?
 
-  attr_writer :precalculated_offset_amount_cents
-
   def self.ransackable_attributes(_ = nil)
     %w[id number]
   end
 
   def self.ransackable_associations(_ = nil)
     %w[customer]
-  end
-
-  # Batch-loads offset_amount_cents for a collection of invoices in a single query,
-  # caching the result on each instance to avoid N+1 queries during serialization.
-  def self.preload_offset_amounts(invoices)
-    return unless invoices
-
-    invoice_ids = invoices.map(&:id).compact
-
-    offset_amounts = CreditNote
-      .where(invoice_id: invoice_ids)
-      .finalized
-      .group(:invoice_id)
-      .sum(:offset_amount_cents)
-
-    invoices.each do |invoice|
-      invoice.precalculated_offset_amount_cents = (offset_amounts[invoice.id] || 0)
-    end
-
-    invoices
   end
 
   def payment_invoices
@@ -317,9 +297,8 @@ class Invoice < ApplicationRecord
   end
 
   def offset_amount_cents
-    return @precalculated_offset_amount_cents if instance_variable_defined?(:@precalculated_offset_amount_cents)
-
-    credit_notes.finalized.sum(:offset_amount_cents)
+    preloader_cache[:offset_amount_cents] ||
+      credit_notes.finalized.sum(:offset_amount_cents)
   end
 
   def total_due_amount_cents
@@ -379,8 +358,7 @@ class Invoice < ApplicationRecord
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
     return 0 if !payment_succeeded? && total_paid_amount_cents == total_amount_cents
 
-    already_refunded_cents = credit_notes.sum("refund_amount_cents")
-    remaining_paid_cents = total_paid_amount_cents - already_refunded_cents
+    remaining_paid_cents = total_paid_amount_cents - refunded_amount_cents
 
     # when invoice is for pre paid credits we can issue a credit note only as refund
     # so creditable_amount_cents is always 0 but on that case we should allow to issue a credit note
@@ -391,6 +369,11 @@ class Invoice < ApplicationRecord
 
     refundable_cents = [remaining_paid_cents, creditable_amount_cents].min
     refundable_cents.negative? ? 0 : refundable_cents
+  end
+
+  def refunded_amount_cents
+    preloader_cache[:refunded_amount_cents] ||
+      credit_notes.sum("refund_amount_cents")
   end
 
   # Credit invoices have a single credit-type fee linked to the wallet transaction

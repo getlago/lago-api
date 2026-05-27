@@ -101,7 +101,8 @@ module DataExports
       end
 
       def collection
-        Invoice.preload_offset_amounts(Invoice.find(data_export_part.object_ids))
+        #InvoicesPreloader.new(result.invoices, only: :offset_amount_cents).call
+        InvoicesPreloader.new(Invoice.find(data_export_part.object_ids)).call
       end
 
       def organization

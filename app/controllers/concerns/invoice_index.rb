@@ -59,7 +59,8 @@ module InvoiceIndex
     )
 
     if result.success?
-      invoices = Invoice.preload_offset_amounts(
+      #InvoicesPreloader.new(result.invoices, only: :offset_amount_cents).call
+      invoices = InvoicesPreloader.new(
         result.invoices.includes(
           :metadata,
           :applied_taxes,
@@ -76,7 +77,7 @@ module InvoiceIndex
             {integration_customers: :integration}
           ]
         )
-      )
+      ).call
 
       render(
         json: ::CollectionSerializer.new(
