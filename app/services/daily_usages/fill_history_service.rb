@@ -17,7 +17,10 @@ module DailyUsages
       previous_daily_usage = nil
 
       (from..to).each do |date|
-        next if !sandbox && subscription.daily_usages.where(usage_date: date).exists?
+        if !sandbox && (existing_daily_usage = subscription.daily_usages.find_by(usage_date: date))
+          previous_daily_usage = existing_daily_usage
+          next
+        end
 
         datetime = date.in_time_zone(subscription.customer.applicable_timezone).beginning_of_day.utc
         datetime = date.beginning_of_day.utc if datetime < date # Handle last day for timezone with positive offset
@@ -40,9 +43,9 @@ module DailyUsages
             previous_daily_usage = nil
           end
 
-          if usage.total_amount_cents.positive?
-            usage.fees = usage.fees.select { |f| f.units.positive? }
+          usage.fees = usage.fees.select(&:non_zero?)
 
+          if usage.fees.any?
             daily_usage = DailyUsage.new(
               organization:,
               customer: subscription.customer,

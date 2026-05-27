@@ -28,12 +28,16 @@ module Invoices
           invoice.status = "failed" unless invoice.draft?
           invoice.save!
 
+          notify_ready_to_finalize
           return result
         end
 
         provider_taxes = taxes_result.fees
 
         ActiveRecord::Base.transaction do
+          invoice.reload
+          return result if invoice.finalized? || invoice.voided? || invoice.closed?
+
           unless invoice.draft?
             invoice.issuing_date = issuing_date
             invoice.payment_due_date = payment_due_date
@@ -46,6 +50,9 @@ module Invoices
 
           invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
           invoice.tax_status = "succeeded"
+
+          skip_payment_gating_for_zero_amount if invoice.subscription_payment_gated? && invoice.total_amount_cents.zero?
+
           Invoices::TransitionToFinalStatusService.call(invoice:) unless invoice.draft?
 
           invoice.save!
@@ -64,6 +71,8 @@ module Invoices
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
           Invoices::Payments::CreateService.call_async(invoice:)
           Utils::SegmentTrack.invoice_created(invoice)
+        elsif invoice.draft?
+          notify_ready_to_finalize
         end
 
         result
@@ -80,6 +89,23 @@ module Invoices
       private
 
       attr_accessor :invoice
+
+      def notify_ready_to_finalize
+        return unless invoice.draft?
+        SendWebhookJob.perform_later("invoice.ready_to_finalize", invoice)
+        Utils::ActivityLog.produce(invoice, "invoice.ready_to_finalize")
+      end
+
+      def skip_payment_gating_for_zero_amount
+        gated = invoice.subscriptions.find(&:payment_gated?)
+        return unless gated
+
+        Subscriptions::ActivationRules::Payment::EvaluateService.call!(
+          rule: gated.activation_rules.payment.sole,
+          status: :satisfied
+        )
+        Subscriptions::ActivationRules::ResolveSubscriptionStatusService.call!(subscription: gated)
+      end
 
       def should_deliver_email?
         License.premium? &&

@@ -67,13 +67,14 @@ module DunningCampaigns
       customers_to_reset
         .includes(:invoices)
         .where(invoices: {payment_overdue: true}).find_each do |customer|
+          balances = customer.overdue_balances
           threshold_matches = dunning_campaign.thresholds.any? do |threshold|
-            threshold.currency == customer.currency &&
-              customer.overdue_balance_cents >= threshold.amount_cents
+            (balances[threshold.currency] || 0) >= threshold.amount_cents
           end
 
           unless threshold_matches
             customer.update!(
+              dunning_currency_attempts: {},
               last_dunning_campaign_attempt: 0,
               last_dunning_campaign_attempt_at: nil
             )

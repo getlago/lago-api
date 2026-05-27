@@ -598,6 +598,43 @@ RSpec.describe Fee do
     end
   end
 
+  describe "#non_zero?" do
+    subject { fee.non_zero? }
+
+    let(:fee) { build(:fee, units:, amount_cents:, events_count:) }
+    let(:units) { 0 }
+    let(:amount_cents) { 0 }
+    let(:events_count) { 0 }
+
+    context "when units, amount_cents and events_count are all zero" do
+      it { is_expected.to be false }
+    end
+
+    context "when only units are positive" do
+      let(:units) { 5 }
+
+      it { is_expected.to be true }
+    end
+
+    context "when only amount_cents are positive" do
+      let(:amount_cents) { 100 }
+
+      it { is_expected.to be true }
+    end
+
+    context "when only events_count is positive" do
+      let(:events_count) { 3 }
+
+      it { is_expected.to be true }
+    end
+
+    context "when events_count is nil" do
+      let(:events_count) { nil }
+
+      it { is_expected.to be false }
+    end
+  end
+
   describe "#has_charge_filter?" do
     subject(:fee) { create(:add_on_fee) }
 

@@ -50,6 +50,20 @@ RSpec.describe ChargeFilters::UpdateService do
       end
     end
 
+    context "with presentation_group_keys in properties" do
+      let(:params) do
+        {
+          properties: {amount: "200", presentation_group_keys: [{value: "region"}]}
+        }
+      end
+
+      it "ignores presentation_group_keys" do
+        expect(service).to be_success
+        expect(charge_filter.reload.properties).to eq({"amount" => "200"})
+        expect(charge_filter.reload.properties).not_to have_key("presentation_group_keys")
+      end
+    end
+
     context "with graduated charge model" do
       let(:charge) { create(:graduated_charge) }
       let(:charge_filter) { create(:charge_filter, charge:, properties: {"graduated_ranges" => [{"from_value" => 0, "to_value" => nil, "per_unit_amount" => "0", "flat_amount" => "100"}]}) }

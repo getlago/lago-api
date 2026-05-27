@@ -3,6 +3,21 @@ alert_triggered:
   description: One or more thresholds defined in the alert were crossed
   category: Alerts
   deprecated: false
+billable_metric_created:
+  name: billable_metric.created
+  description: A new billable metric has been created
+  category: Billable Metrics
+  deprecated: false
+billable_metric_updated:
+  name: billable_metric.updated
+  description: A billable metric has been updated
+  category: Billable Metrics
+  deprecated: false
+billable_metric_deleted:
+  name: billable_metric.deleted
+  description: A billable metric has been deleted
+  category: Billable Metrics
+  deprecated: false
 customer_created:
   name: customer.created
   description: A new customer has been created
@@ -136,6 +151,11 @@ invoice_generated:
 invoice_drafted:
   name: invoice.drafted
   description: A new draft invoice has been emitted
+  category: Invoices
+  deprecated: false
+invoice_ready_to_finalize:
+  name: invoice.ready_to_finalize
+  description: A draft invoice is ready to be finalized (taxes are resolved)
   category: Invoices
   deprecated: false
 invoice_voided:

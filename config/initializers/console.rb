@@ -104,8 +104,7 @@ Rails.application.console do
 
   def create_organization(org_name:, email:)
     organization = Organizations::CreateService
-      .call(name: org_name, document_numbering: "per_organization")
-      .raise_if_error!
+      .call!(name: org_name, document_numbering: "per_organization")
       .organization
 
     result = Invites::CreateService.call(
@@ -129,6 +128,91 @@ Rails.application.console do
     end
 
     inv.file&.destroy
+  end
+
+  def check_stripe_payment(invoice_id)
+    invoice = Invoice.unscoped.find(invoice_id)
+    payments = invoice.payments.includes(:payment_provider).order(:created_at)
+
+    puts "Invoice #{invoice.id}  total=#{invoice.total_amount_cents} due=#{invoice.total_due_amount_cents} #{invoice.currency}"
+    puts ""
+
+    payments.each do |payment|
+      puts "Lago Payment #{payment.id}: #{payment.amount_cents} #{payment.amount_currency} status=#{payment.status} payable_status=#{payment.payable_payment_status || "-"} pi=#{payment.provider_payment_id || "-"}"
+
+      next unless payment.payment_provider.is_a?(PaymentProviders::StripeProvider) && payment.provider_payment_id.present?
+
+      pi = ::Stripe::PaymentIntent.retrieve(
+        payment.provider_payment_id,
+        {api_key: payment.payment_provider.secret_key}
+      )
+      puts "Stripe PI #{pi.id}: #{pi.amount} #{pi.currency} status=#{pi.status}"
+      if pi.last_payment_error
+        puts "  last_payment_error: #{pi.last_payment_error.code} #{pi.last_payment_error.message}"
+      end
+      puts ""
+    rescue ::Stripe::StripeError => e
+      puts "  ! Stripe fetch failed: #{e.class} #{e.message}"
+      puts ""
+    end
+
+    invoice
+  end
+
+  def find_dead_jobs_by_job_name_and_error(job_name, error_class)
+    ds = Sidekiq::DeadSet.new
+
+    ds.select do |job|
+      job.item["wrapped"].include?(job_name) && job.item["error_class"] == error_class
+    end
+  end
+
+  def clear_dead_termination_jobs
+    jobs = find_dead_jobs_by_job_name_and_error("BillSubscriptionJob", "RecordNotUnique")
+    # Count the number of filtered jobs
+    puts "Total BillSubscription jobs with error_class 'RecordNotUnique': #{jobs.count}"
+
+    to_be_deleted = 0
+    not_terminated = 0
+    no_invoice = 0
+
+    # Iterate over the jobs
+    jobs.each do |job|
+      job_args = job.item["args"].first["arguments"]
+
+      # Extract subscription ID from job arguments
+      subscription_id = job_args[0][0]["_aj_globalid"].split("Subscription/").last
+      invoicing_reason = job_args[2]["invoicing_reason"]["value"]
+      invoicing_reason = :subscription_terminating if invoicing_reason == "upgrading"
+
+      # Find the last invoice related to this subscription
+      invoice = InvoiceSubscription.where(invoicing_reason:, subscription_id:).order(:created_at).last&.invoice
+
+      # Check if the invoice has been generated and get its status
+      if invoice
+        if (invoice.status == "closed" && invoice.fees_amount_cents.zero?) || invoice.status == "finalized"
+          subscription = Subscription.find(subscription_id)
+          if subscription.terminated?
+            # Remove the dead job if everything seems correct
+            job.delete
+            to_be_deleted += 1
+          else
+            not_terminated += 1
+          end
+        else
+          # puts "Subscription #{subscription_id} is not terminated. Keeping job in dead set."
+          not_terminated += 1
+        end
+      else
+        # puts "No invoice found for Subscription #{subscription_id}. Keeping job in dead set."
+        no_invoice += 1
+      end
+    end
+
+    puts "Summary:"
+    puts "Jobs to be deleted: " + to_be_deleted.to_s
+    puts "Subscriptions not terminated: " + not_terminated.to_s
+    puts "Subscriptions with no invoice: " + no_invoice.to_s
   end
 end
 # rubocop:enable Rails/Output

@@ -6,6 +6,7 @@ RSpec.describe Types::Wallets::Object do
   subject { described_class }
 
   it do
+    expect(subject).to have_field(:billing_entity_id).of_type("ID")
     expect(subject).to have_field(:customer).of_type("Customer")
 
     expect(subject).to have_field(:code).of_type("String")

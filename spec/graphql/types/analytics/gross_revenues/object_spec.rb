@@ -8,6 +8,7 @@ RSpec.describe Types::Analytics::GrossRevenues::Object do
   it do
     expect(subject).to have_field(:month).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:amount_cents).of_type("BigInt")
+    expect(subject).to have_field(:billing_entity_id).of_type("ID")
     expect(subject).to have_field(:currency).of_type("CurrencyEnum")
   end
 end

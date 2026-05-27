@@ -412,6 +412,10 @@ class Invoice < ApplicationRecord
     open? && subscriptions.any?(&:gated?)
   end
 
+  def subscription_payment_gated?
+    open? && subscriptions.any?(&:payment_gated?)
+  end
+
   def voidable?
     if payment_dispute_lost_at? || total_paid_amount_cents > 0 || credit_notes.where.not(credit_status: :voided).any?
       return false

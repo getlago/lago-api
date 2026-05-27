@@ -264,23 +264,13 @@ module Invoices
 
     def create_applied_prepaid_credits
       return unless customer.persisted?
-      return unless wallet
       return unless invoice.total_amount_cents&.positive?
-      return unless wallet.balance.positive?
 
-      amount_cents = if wallet.balance_cents <= invoice.total_amount_cents
-        wallet.balance_cents
-      else
-        invoice.total_amount_cents
-      end
+      wallets_transactions = Credits::AllocatePrepaidCreditsByWalletsService.call!(invoice:).wallet_transactions
+      amount_cents = wallets_transactions.sum { |_k, v| v }
+
       invoice.prepaid_credit_amount_cents += amount_cents
       invoice.total_amount_cents -= amount_cents
-    end
-
-    def wallet
-      return @wallet if defined? @wallet
-
-      @wallet = customer.wallets.active.first
     end
 
     def apply_taxes
@@ -310,7 +300,7 @@ module Invoices
       else
         apply_zero_tax
       end
-    rescue BaseService::ThrottlingError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError
+    rescue BaseService::ThrottlingError, *Integrations::Aggregator::BaseService.retryable_errors
       apply_zero_tax
     end
 

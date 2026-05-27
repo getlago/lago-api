@@ -28,6 +28,8 @@ module Subscriptions
 
         subscription_groups = group_by_payment_method(billing_subscriptions)
         subscription_groups = group_by_currency(subscription_groups)
+        subscription_groups = group_by_billing_entity(subscription_groups)
+        subscription_groups = split_consolidation_opted_out(subscription_groups)
 
         subscription_groups.each do |subscriptions|
           BillSubscriptionJob.perform_later(
@@ -35,9 +37,9 @@ module Subscriptions
             today.to_i,
             invoicing_reason: :subscription_periodic
           )
-        end
 
-        BillNonInvoiceableFeesJob.perform_later(billing_subscriptions, today)
+          BillNonInvoiceableFeesJob.perform_later(subscriptions, today)
+        end
       end
 
       result
@@ -527,6 +529,26 @@ module Subscriptions
 
       subscription_groups.flat_map do |subscriptions|
         subscriptions.group_by { |sub| sub.plan.amount_currency }.values
+      end
+    end
+
+    # NOTE: Any subscription with `consolidate_invoice = false` must be billed
+    #       on its own invoice, regardless of the other grouping criteria. Split it out
+    #       of its current group into a one-element group.
+    def split_consolidation_opted_out(subscription_groups)
+      subscription_groups.flat_map do |subscriptions|
+        opted_out, consolidated = subscriptions.partition { |sub| !sub.consolidate_invoice }
+        groups = opted_out.map { |sub| [sub] }
+        groups << consolidated if consolidated.any?
+        groups
+      end
+    end
+
+    def group_by_billing_entity(subscription_groups)
+      return subscription_groups unless organization.feature_flag_enabled?(:multi_entity_billing)
+
+      subscription_groups.flat_map do |subscriptions|
+        subscriptions.group_by { |sub| sub.billing_entity_id || sub.customer.billing_entity_id }.values
       end
     end
 

@@ -40,6 +40,7 @@ RSpec.describe Types::Fees::Object do
     expect(subject).to have_field(:adjusted_fee_type).of_type("AdjustedFeeTypeEnum")
 
     expect(subject).to have_field(:charge_filter).of_type("ChargeFilter")
+    expect(subject).to have_field(:presentation_breakdowns).of_type("[PresentationBreakdownUsage!]")
     expect(subject).to have_field(:pricing_unit_usage).of_type("PricingUnitUsage")
     expect(subject).to have_field(:properties).of_type("FeeProperties")
   end
@@ -62,6 +63,59 @@ RSpec.describe Types::Fees::Object do
 
       it "returns nil" do
         expect(subject).to be_nil
+      end
+    end
+  end
+
+  describe "#presentation_breakdowns" do
+    subject { run_graphql_field("Fee.presentationBreakdowns", fee) }
+
+    context "when fee has no presentation_breakdowns" do
+      let(:fee) { create(:charge_fee) }
+
+      it "returns an empty array" do
+        expect(subject).to eq([])
+      end
+    end
+
+    context "when fee has a presentation_breakdown" do
+      let(:fee) do
+        create(
+          :charge_fee,
+          presentation_breakdowns: [build(:presentation_breakdown)]
+        )
+      end
+
+      it "returns the presentation_breakdowns" do
+        expect(subject).to eq([
+          {
+            presentation_by: {"department" => "engineering"},
+            units: "60.0"
+          }
+        ])
+      end
+    end
+
+    context "when fee has a composite presentation_breakdown" do
+      let(:fee) do
+        create(
+          :charge_fee,
+          presentation_breakdowns: [
+            build(
+              :presentation_breakdown,
+              :with_composite_presentation_by
+            )
+          ]
+        )
+      end
+
+      it "returns the presentation_breakdowns" do
+        expect(subject).to eq([
+          {
+            presentation_by: {"department" => "engineering", "region" => "eu"},
+            units: "60.0"
+          }
+        ])
       end
     end
   end

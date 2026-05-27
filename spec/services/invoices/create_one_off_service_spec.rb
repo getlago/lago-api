@@ -407,6 +407,82 @@ RSpec.describe Invoices::CreateOneOffService do
       end
     end
 
+    context "when multi_entity_billing feature flag is enabled" do
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+      before do
+        organization.enable_feature_flag!(:multi_entity_billing)
+        create(:tax, :applied_to_billing_entity, billing_entity: other_billing_entity, organization:, rate: 20)
+      end
+
+      context "when billing_entity_id is provided" do
+        let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, billing_entity_id: other_billing_entity.id} }
+
+        it "stamps the invoice with the resolved billing entity" do
+          result = described_class.call(**args)
+
+          expect(result).to be_success
+          expect(result.invoice.billing_entity).to eq(other_billing_entity)
+        end
+      end
+
+      context "when billing_entity_code is provided" do
+        let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, billing_entity_code: other_billing_entity.code} }
+
+        it "stamps the invoice with the resolved billing entity" do
+          result = described_class.call(**args)
+
+          expect(result).to be_success
+          expect(result.invoice.billing_entity).to eq(other_billing_entity)
+        end
+      end
+
+      context "when neither billing_entity_id nor billing_entity_code is provided" do
+        it "falls back to the customer's billing entity" do
+          result = described_class.call(**args)
+
+          expect(result).to be_success
+          expect(result.invoice.billing_entity).to eq(customer.billing_entity)
+        end
+      end
+
+      context "when billing_entity_id is unknown" do
+        let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, billing_entity_id: SecureRandom.uuid} }
+
+        it "returns a not found error" do
+          result = described_class.call(**args)
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq("billing_entity_not_found")
+        end
+      end
+
+      context "when billing_entity_code is unknown" do
+        let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, billing_entity_code: "unknown_code"} }
+
+        it "returns a not found error" do
+          result = described_class.call(**args)
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq("billing_entity_not_found")
+        end
+      end
+    end
+
+    context "when multi_entity_billing feature flag is disabled" do
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+      let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, billing_entity_id: other_billing_entity.id} }
+
+      it "ignores the billing_entity param and falls back to the customer's billing entity" do
+        result = described_class.call(**args)
+
+        expect(result).to be_success
+        expect(result.invoice.billing_entity).to eq(customer.billing_entity)
+      end
+    end
+
     context "when add_on_code is invalid" do
       let(:fees) do
         [

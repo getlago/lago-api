@@ -81,7 +81,7 @@ module CreditNotes
     end
 
     def last_subscription_fee
-      @last_subscription_fee ||= subscription.fees.subscription.order(created_at: :desc).first
+      @last_subscription_fee ||= subscription.last_subscription_fee
     end
 
     def calculate_base_unused_amount
