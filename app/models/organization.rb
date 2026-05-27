@@ -109,6 +109,11 @@ class Organization < ApplicationRecord
 
   has_one_attached :logo
 
+  EVENTS_STORES = {
+    clickhouse: "clickhouse",
+    postgres: "postgres"
+  }.freeze
+
   DOCUMENT_NUMBERINGS = [
     :per_customer,
     :per_organization
@@ -261,6 +266,10 @@ class Organization < ApplicationRecord
 
   def postgres_events_store?
     !clickhouse_events_store?
+  end
+
+  def events_store
+    clickhouse_events_store? ? EVENTS_STORES[:clickhouse] : EVENTS_STORES[:postgres]
   end
 
   # This is added to have a common interface for all organization-related models to access the organization.

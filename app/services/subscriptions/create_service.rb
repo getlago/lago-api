@@ -2,6 +2,8 @@
 
 module Subscriptions
   class CreateService < BaseService
+    include Subscriptions::Concerns::BillingEntityResolutionConcern
+
     Result = BaseResult[:subscription, :payment_method]
 
     def initialize(customer:, plan:, params:)
@@ -130,7 +132,8 @@ module Subscriptions
         billing_time: billing_time || :calendar,
         ending_at: params[:ending_at],
         progressive_billing_disabled: params[:progressive_billing_disabled] || false,
-        billing_entity: resolve_billing_entity
+        consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : true,
+        billing_entity: resolve_billing_entity(organization: customer.organization, params:)
       )
 
       if params.key?(:payment_method)
@@ -233,22 +236,6 @@ module Subscriptions
       return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
 
       @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id: customer.organization_id)
-    end
-
-    # nil here means "inherit from customer.billing_entity at billing time"
-    def resolve_billing_entity
-      return unless customer.organization.feature_flag_enabled?(:multi_entity_billing)
-
-      attrs = if params[:billing_entity_id].present?
-        {id: params[:billing_entity_id]}
-      elsif params[:billing_entity_code].present?
-        {code: params[:billing_entity_code]}
-      end
-      return unless attrs
-
-      customer.organization.billing_entities.find_by!(attrs)
-    rescue ActiveRecord::RecordNotFound
-      result.not_found_failure!(resource: "billing_entity").raise_if_error!
     end
   end
 end

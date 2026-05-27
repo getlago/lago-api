@@ -207,6 +207,29 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
+      context "when updating consolidate_invoice" do
+        let(:params) { {consolidate_invoice: false} }
+
+        it "updates consolidate_invoice to false" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.consolidate_invoice).to be(false)
+        end
+
+        context "when re-enabling consolidation" do
+          let(:subscription) { create(:subscription, consolidate_invoice: false) }
+          let(:params) { {consolidate_invoice: true} }
+
+          it "updates consolidate_invoice to true" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.consolidate_invoice).to be(true)
+          end
+        end
+      end
+
       context "when updating payment method" do
         let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
         let(:params) { {payment_method: payment_method_params} }
@@ -948,6 +971,8 @@ RSpec.describe Subscriptions::UpdateService do
     end
 
     context "with activation_rules" do
+      before { create(:payment_method, customer: subscription.customer, organization: subscription.organization) }
+
       context "when subscription is pending" do
         context "when activation rules exist" do
           let(:subscription) { create(:subscription, :pending, :with_activation_rules, activation_rules_config: [{type: "payment", timeout_hours: 48}], subscription_at: Time.current + 5.days) }

@@ -2,6 +2,8 @@
 
 module Subscriptions
   class PlanDowngradeService < BaseService
+    include Subscriptions::Concerns::BillingEntityResolutionConcern
+
     Result = BaseResult[:subscription]
 
     def initialize(customer:, current_subscription:, plan:, params:)
@@ -37,8 +39,15 @@ module Subscriptions
           status: :pending,
           billing_time: current_subscription.billing_time,
           ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
-          progressive_billing_disabled: params[:progressive_billing_disabled] || false
+          progressive_billing_disabled: params[:progressive_billing_disabled] || false,
+          consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : current_subscription.consolidate_invoice,
+          billing_entity_id: current_subscription.billing_entity_id
         )
+
+        if params[:billing_entity_id].present? || params[:billing_entity_code].present?
+          override_entity = resolve_billing_entity(organization: current_subscription.organization, params:)
+          new_sub.update!(billing_entity: override_entity) if override_entity
+        end
 
         if params.key?(:payment_method)
           new_sub.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
@@ -67,6 +76,10 @@ module Subscriptions
     def update_pending_subscription
       current_subscription.plan = plan
       current_subscription.name = name if name.present?
+      if params[:billing_entity_id].present? || params[:billing_entity_code].present?
+        override_entity = resolve_billing_entity(organization: current_subscription.organization, params:)
+        current_subscription.billing_entity = override_entity if override_entity
+      end
       current_subscription.save!
 
       if current_subscription.should_sync_hubspot_subscription?

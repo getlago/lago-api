@@ -688,6 +688,44 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "with consolidate_invoice" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          consolidate_invoice: false
+        }
+      end
+
+      it "creates a subscription opted out of invoice consolidation" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:consolidate_invoice]).to be(false)
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.consolidate_invoice).to be(false)
+      end
+    end
+
+    context "when consolidate_invoice is omitted" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid
+        }
+      end
+
+      it "defaults consolidate_invoice to true" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:consolidate_invoice]).to be(true)
+      end
+    end
+
     context "with applied_invoice_custom_sections in response" do
       it "includes applied_invoice_custom_sections in the serialized response" do
         subject
@@ -828,7 +866,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           subject
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq({payment_method: %w[invalid_for_payment_activation_rules]})
+          expect(json[:error_details]).to eq({customer: %w[manual_payment_method_invalid_for_payment_activation_rules]})
         end
       end
 
@@ -839,7 +877,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           subject
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq({payment_method: %w[no_linked_payment_provider]})
+          expect(json[:error_details]).to eq({customer: %w[no_linked_payment_provider]})
         end
       end
     end
@@ -1669,6 +1707,21 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "when updating consolidate_invoice" do
+      let(:update_params) { {consolidate_invoice: false} }
+      let(:subscription) { create(:subscription, customer:, plan:) }
+
+      it "updates consolidate_invoice" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:consolidate_invoice]).to be(false)
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.consolidate_invoice).to be(false)
+      end
+    end
+
     context "with multuple subscriptions" do
       let(:active_plan) { create(:plan, organization:, amount_cents: 5000, description: "desc") }
       let(:active_subscription) do
@@ -1725,6 +1778,8 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
     context "with activation_rules" do
       let(:subscription) { create(:subscription, :pending, customer:, plan:, subscription_at: Time.current + 3.days) }
       let(:update_params) { {activation_rules: [{type: "payment", timeout_hours: 24}]} }
+
+      before { create(:payment_method, customer:, organization:) }
 
       context "when feature flag is enabled" do
         before { organization.enable_feature_flag!(:payment_gated_subscriptions) }

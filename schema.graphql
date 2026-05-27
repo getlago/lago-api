@@ -3366,6 +3366,7 @@ input CreateSubscriptionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  consolidateInvoice: Boolean
   customerId: ID!
   endingAt: ISO8601DateTime
   externalId: String
@@ -4292,6 +4293,7 @@ type CurrentOrganization {
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean!
+  eventsStore: EventsStoreEnum!
   featureFlags: [FeatureFlagEnum!]!
   finalizeZeroAmountInvoice: Boolean!
   gocardlessPaymentProviders: [GocardlessProvider!]
@@ -4362,7 +4364,7 @@ type Customer {
   creditNotesBalanceAmountCents: BigInt!
 
   """
-  Credit notes credits balance available per customer per currency
+  Credit notes balances broken down by (currency, billing entity)
   """
   creditNotesBalances: [CustomerCreditNotesBalance!]!
 
@@ -4510,6 +4512,8 @@ type CustomerCollection {
 
 type CustomerCreditNotesBalance {
   amountCents: BigInt!
+  billingEntityId: ID!
+  creditsAvailableCount: Int!
   currency: CurrencyEnum!
 }
 
@@ -5808,6 +5812,21 @@ enum EventTypeEnum {
 }
 
 """
+Organization events store values
+"""
+enum EventsStoreEnum {
+  """
+  Clickhouse events store
+  """
+  clickhouse
+
+  """
+  Postgres events store
+  """
+  postgres
+}
+
+"""
 Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
@@ -6315,6 +6334,7 @@ type GraphqlSubscription {
 
 type GrossRevenue {
   amountCents: BigInt
+  billingEntityId: ID
   currency: CurrencyEnum
   invoicesCount: BigInt!
   month: ISO8601DateTime!
@@ -9073,6 +9093,7 @@ input OrganizationBillingConfigurationInput {
 
 type OverdueBalance {
   amountCents: BigInt!
+  billingEntityId: ID
   currency: CurrencyEnum!
   lagoInvoiceIds: [String!]!
   month: ISO8601DateTime!
@@ -10617,7 +10638,7 @@ type Query {
   """
   Query subscriptions of an organization
   """
-  subscriptions(currency: String, externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  subscriptions(billingEntityIds: [ID!], currency: String, externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query all Superset dashboards with embedded configuration and guest tokens
@@ -11364,6 +11385,7 @@ type Subscription {
   cancelationReason: CancelationReasonEnum
   canceledAt: ISO8601DateTime
   charges: [Charge!]
+  consolidateInvoice: Boolean!
   createdAt: ISO8601DateTime!
   currentBillingPeriodEndingAt: ISO8601DateTime
   currentBillingPeriodStartedAt: ISO8601DateTime
@@ -13051,7 +13073,7 @@ input UpdatePlanInput {
   billChargesMonthly: Boolean
   billFixedChargesMonthly: Boolean
   cascadeUpdates: Boolean
-  charges: [ChargeInput!]!
+  charges: [ChargeInput!]
 
   """
   A unique identifier for the client performing the mutation.
@@ -13260,11 +13282,13 @@ Update Subscription input arguments
 """
 input UpdateSubscriptionInput {
   activationRules: [SubscriptionActivationRuleInput!]
+  billingEntityId: ID
 
   """
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  consolidateInvoice: Boolean
   endingAt: ISO8601DateTime
   id: ID!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
