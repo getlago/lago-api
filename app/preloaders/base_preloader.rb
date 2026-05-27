@@ -22,9 +22,9 @@ class BasePreloader
     @record_ids ||= records.map(&:id).compact
   end
 
-  def cache(records, value, preloaded, default: 0)
+  def cache(records, scope, values, default: 0)
     records.each do |record|
-      record.preloader_cache[value] = preloaded[record.id] || default
+      record.preloader_cache[scope] = values[record.id] || default
     end
   end
 end
