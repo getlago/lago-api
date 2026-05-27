@@ -125,10 +125,6 @@ module Subscriptions
 
       previous_subscription.mark_as_terminated!(timestamp)
 
-      if previous_subscription.should_sync_hubspot_subscription?
-        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: previous_subscription)
-      end
-
       subscription.mark_as_active!(timestamp)
 
       billable_subscriptions = [previous_subscription]
@@ -143,6 +139,11 @@ module Subscriptions
       after_commit do
         SendWebhookJob.perform_later("subscription.terminated", previous_subscription)
         Utils::ActivityLog.produce(previous_subscription, "subscription.terminated")
+
+        if previous_subscription.should_sync_hubspot_subscription?
+          Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: previous_subscription)
+        end
+
         notify_started
       end
 
