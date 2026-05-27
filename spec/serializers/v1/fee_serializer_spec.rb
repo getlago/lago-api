@@ -5,14 +5,29 @@ require "rails_helper"
 RSpec.describe ::V1::FeeSerializer do
   subject(:serializer) { described_class.new(fee, root_name: "fee", includes: inclusion) }
 
+  let(:charge) do
+    create(:standard_charge, properties: {
+      "amount" => "100",
+      "presentation_group_keys" => [
+        {"value" => "department", "options" => {"display_in_invoice" => true}},
+        {"value" => "region", "options" => {"display_in_invoice" => false}}
+      ]
+    })
+  end
   let(:fee) do
     create(
-      :fee,
+      :charge_fee,
+      charge:,
       properties: {
         from_datetime: Time.current,
-        to_datetime: Time.current
+        to_datetime: Time.current,
+        charges_from_datetime: Time.current,
+        charges_to_datetime: Time.current
       },
-      presentation_breakdowns: [build(:presentation_breakdown)]
+      presentation_breakdowns: [
+        build(:presentation_breakdown),
+        build(:presentation_breakdown, presentation_by: {"region" => "us"})
+      ]
     )
   end
 
@@ -35,7 +50,7 @@ RSpec.describe ::V1::FeeSerializer do
       "amount_currency" => fee.amount_currency,
       "taxes_amount_cents" => fee.taxes_amount_cents,
       "taxes_rate" => fee.taxes_rate,
-      "total_aggregated_units" => fee.total_aggregated_units,
+      "total_aggregated_units" => fee.total_aggregated_units.to_s,
       "total_amount_cents" => fee.total_amount_cents,
       "total_amount_currency" => fee.amount_currency,
       "precise_amount" => fee.precise_amount_cents.fdiv(100.to_d).to_s,

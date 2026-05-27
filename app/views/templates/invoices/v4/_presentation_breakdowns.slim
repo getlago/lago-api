@@ -1,8 +1,7 @@
-- fees_with_presentation_breakdowns = fees.select(&:presentation_breakdowns_displayable_in_invoice?)
+- fees_with_presentation_breakdowns = fees.select { |fee| fee.charge? && fee.presentation_breakdowns_displayed_in_invoice.any? }
 
 - fees_with_presentation_breakdowns.group_by(&:charge_id).each do |_charge_id, charge_group_fees|
-  - displayable_keys = charge_group_fees.first.charge.presentation_group_keys_values_displayed_in_invoice
-  - next if displayable_keys.blank?
+  - displayable_keys = charge_group_fees.first.presentation_group_keys_values_displayed_in_invoice
 
   .breakdown-details.overflow-auto.mb-24.presentation-breakdowns
     table.breakdown-details-table width="100%"
@@ -11,7 +10,7 @@
         td.body-2 = I18n.t("invoice.units")
 
       - charge_group_fees.each do |fee|
-        - sorted_rows = FeeDisplayHelper.sorted_presentation_breakdowns_rows(fee, displayable_keys)
+        - sorted_rows = FeeDisplayHelper.sorted_presentation_breakdowns_displayed_in_invoice(fee)
         tr.fee
           td.body-1 = FeeDisplayHelper.fee_title(fee)
           td.body-2 = RoundingHelper.round_decimal_part(fee.units)
