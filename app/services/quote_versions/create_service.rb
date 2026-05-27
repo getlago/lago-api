@@ -21,7 +21,13 @@ module QuoteVersions
 
       quote_version = quote.versions.create!(
         organization: quote.organization,
-        **params.slice(:billing_items, :content)
+        **params.slice(
+          :billing_items,
+          :content,
+          :currency,
+          :start_date,
+          :end_date
+        )
       )
 
       result.quote_version = quote_version

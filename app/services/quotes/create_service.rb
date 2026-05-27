@@ -64,7 +64,13 @@ module Quotes
     def initialize_version!(quote:)
       QuoteVersions::CreateService.call!(
         quote: quote,
-        params: params.slice(:billing_items, :content)
+        params: params.slice(
+          :billing_items,
+          :content,
+          :currency,
+          :start_date,
+          :end_date
+        )
       )
     end
 
