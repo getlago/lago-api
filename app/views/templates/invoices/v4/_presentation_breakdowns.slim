@@ -16,6 +16,6 @@
           td.body-2 = RoundingHelper.round_decimal_part(fee.units)
 
         - sorted_rows.each_with_index do |(values, units), idx|
-          tr class=("section-end" if idx == sorted_rows.size - 1)
+          tr.presentation-group class=("section-end" if idx == sorted_rows.size - 1)
             td.body-2 = values.compact.join(', ')
             td.body-2 = RoundingHelper.round_decimal_part(units)
