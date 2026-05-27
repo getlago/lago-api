@@ -152,8 +152,7 @@ module Invoices
         invoicing_reason:,
         currency:,
         datetime: Time.zone.at(timestamp),
-        skip_charges:,
-        billing_entity: subscriptions.first&.billing_entity || customer.billing_entity
+        skip_charges:
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions:, timestamp:, invoicing_reason:)
