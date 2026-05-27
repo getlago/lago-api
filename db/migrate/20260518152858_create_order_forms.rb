@@ -22,7 +22,6 @@ class CreateOrderForms < ActiveRecord::Migration[8.0]
         type: :uuid
       t.references :signed_by_user,
         foreign_key: {to_table: :users},
-        index: false,
         type: :uuid
 
       t.string :number, null: false
@@ -33,8 +32,6 @@ class CreateOrderForms < ActiveRecord::Migration[8.0]
         null: false,
         default: "generated"
       t.enum :void_reason, enum_type: :order_form_void_reason
-
-      t.jsonb :billing_snapshot, null: false
 
       t.datetime :expires_at
       t.datetime :signed_at
@@ -50,6 +47,9 @@ class CreateOrderForms < ActiveRecord::Migration[8.0]
       t.index [:organization_id, :number],
         unique: true,
         name: "index_unique_order_forms_on_organization_number"
+      t.index :status
+      t.index :created_at
+      t.index :expires_at
     end
   end
 end

@@ -9,7 +9,6 @@ FactoryBot.define do
         organization:,
         quote: association(:quote, organization:, customer:))
     end
-    billing_snapshot { {items: []} }
     status { :generated }
 
     trait :signed do

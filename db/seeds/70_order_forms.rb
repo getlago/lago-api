@@ -31,7 +31,6 @@ def create_order_form(quote_version:, status: :generated, signed_by: nil, expire
     organization: quote_version.organization,
     customer: quote_version.quote.customer,
     quote_version: quote_version,
-    billing_snapshot: {items: [{name: "Seeded item", amount_cents: 10_000, currency: "EUR"}]},
     status: status,
     expires_at: expires_at
   }

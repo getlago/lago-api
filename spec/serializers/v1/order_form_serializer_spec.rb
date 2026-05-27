@@ -15,7 +15,6 @@ RSpec.describe ::V1::OrderFormSerializer do
       "number" => order_form.number,
       "status" => "generated",
       "void_reason" => nil,
-      "billing_snapshot" => order_form.billing_snapshot,
       "expires_at" => nil,
       "signed_at" => nil,
       "voided_at" => nil,

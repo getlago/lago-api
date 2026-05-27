@@ -152,6 +152,19 @@ RSpec.describe OrderFormsQuery do
     end
   end
 
+  context "when a date filter is accepted by the contract but unparseable by the query" do
+    # The filters contract coerces with the lenient :time type, but the query
+    # re-parses the raw string with the stricter DateTime.iso8601. A space-separated
+    # datetime passes the contract yet raises in the query.
+    let(:filters) { {created_at_from: "2026-01-01 10:00:00"} }
+
+    it "returns a validation failure instead of raising" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages[:created_at_from]).to include("invalid_date")
+    end
+  end
+
   context "when order forms belong to another organization" do
     let(:other_organization) { create(:organization) }
     let(:other_customer) { create(:customer, organization: other_organization) }

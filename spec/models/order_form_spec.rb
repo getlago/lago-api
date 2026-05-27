@@ -32,8 +32,18 @@ RSpec.describe OrderForm do
   end
 
   describe "validations" do
-    it do
-      expect(order_form).to validate_presence_of(:billing_snapshot)
+    describe "void_reason validation" do
+      it "requires void_reason when voided" do
+        order_form = build(:order_form, status: :voided, void_reason: nil)
+        order_form.valid?
+        expect(order_form.errors.added?(:void_reason, :blank)).to be(true)
+      end
+
+      it "allows a blank void_reason when not voided" do
+        order_form = build(:order_form, status: :generated, void_reason: nil)
+        order_form.valid?
+        expect(order_form.errors.added?(:void_reason, :blank)).to be(false)
+      end
     end
   end
 

@@ -30,6 +30,8 @@ class OrderFormsQuery < BaseQuery
 
     result.order_forms = order_forms
     result
+  rescue BaseService::FailedResult
+    result
   end
 
   private
@@ -39,7 +41,7 @@ class OrderFormsQuery < BaseQuery
   end
 
   def base_scope
-    organization.order_forms.includes(:customer, :quote_version).ransack(search_params)
+    organization.order_forms.includes(:quote_version).ransack(search_params)
   end
 
   def search_params

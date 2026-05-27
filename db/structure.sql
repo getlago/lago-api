@@ -493,8 +493,12 @@ DROP INDEX IF EXISTS public.index_password_resets_on_token;
 DROP INDEX IF EXISTS public.index_organizations_on_slug;
 DROP INDEX IF EXISTS public.index_organizations_on_hmac_key;
 DROP INDEX IF EXISTS public.index_organizations_on_api_key;
+DROP INDEX IF EXISTS public.index_order_forms_on_status;
+DROP INDEX IF EXISTS public.index_order_forms_on_signed_by_user_id;
 DROP INDEX IF EXISTS public.index_order_forms_on_quote_version_id;
+DROP INDEX IF EXISTS public.index_order_forms_on_expires_at;
 DROP INDEX IF EXISTS public.index_order_forms_on_customer_id;
+DROP INDEX IF EXISTS public.index_order_forms_on_created_at;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id;
 DROP INDEX IF EXISTS public.index_memberships_on_organization_id;
@@ -4641,7 +4645,6 @@ CREATE TABLE public.order_forms (
     sequential_id integer NOT NULL,
     status public.order_form_status DEFAULT 'generated'::public.order_form_status NOT NULL,
     void_reason public.order_form_void_reason,
-    billing_snapshot jsonb NOT NULL,
     expires_at timestamp(6) without time zone,
     signed_at timestamp(6) without time zone,
     voided_at timestamp(6) without time zone,
@@ -8732,6 +8735,13 @@ CREATE UNIQUE INDEX index_memberships_on_user_id_and_organization_id ON public.m
 
 
 --
+-- Name: index_order_forms_on_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_order_forms_on_created_at ON public.order_forms USING btree (created_at);
+
+
+--
 -- Name: index_order_forms_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8739,10 +8749,31 @@ CREATE INDEX index_order_forms_on_customer_id ON public.order_forms USING btree 
 
 
 --
+-- Name: index_order_forms_on_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_order_forms_on_expires_at ON public.order_forms USING btree (expires_at);
+
+
+--
 -- Name: index_order_forms_on_quote_version_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX index_order_forms_on_quote_version_id ON public.order_forms USING btree (quote_version_id);
+
+
+--
+-- Name: index_order_forms_on_signed_by_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_order_forms_on_signed_by_user_id ON public.order_forms USING btree (signed_by_user_id);
+
+
+--
+-- Name: index_order_forms_on_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_order_forms_on_status ON public.order_forms USING btree (status);
 
 
 --

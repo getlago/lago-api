@@ -31,7 +31,7 @@ class OrderForm < ApplicationRecord
     instance_methods: false,
     validate: {allow_nil: true}
 
-  validates :billing_snapshot, presence: true
+  validates :void_reason, presence: true, if: :voided?
 
   sequenced(
     scope: ->(order_form) { order_form.organization.order_forms },
@@ -60,7 +60,6 @@ end
 # Database name: primary
 #
 #  id                :uuid             not null, primary key
-#  billing_snapshot  :jsonb            not null
 #  expires_at        :datetime
 #  number            :string           not null
 #  signed_at         :datetime
@@ -77,8 +76,12 @@ end
 #
 # Indexes
 #
+#  index_order_forms_on_created_at                         (created_at)
 #  index_order_forms_on_customer_id                        (customer_id)
+#  index_order_forms_on_expires_at                         (expires_at)
 #  index_order_forms_on_quote_version_id                   (quote_version_id) UNIQUE
+#  index_order_forms_on_signed_by_user_id                  (signed_by_user_id)
+#  index_order_forms_on_status                             (status)
 #  index_unique_order_forms_on_organization_number         (organization_id,number) UNIQUE
 #  index_unique_order_forms_on_organization_sequential_id  (organization_id,sequential_id) UNIQUE
 #

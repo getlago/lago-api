@@ -8,7 +8,6 @@ module V1
         number: model.number,
         status: model.status,
         void_reason: model.void_reason,
-        billing_snapshot: model.billing_snapshot,
         expires_at: model.expires_at&.iso8601,
         signed_at: model.signed_at&.iso8601,
         voided_at: model.voided_at&.iso8601,
