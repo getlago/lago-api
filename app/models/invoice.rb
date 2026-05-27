@@ -297,8 +297,7 @@ class Invoice < ApplicationRecord
   end
 
   def offset_amount_cents
-    preloader_cache[:offset_amount_cents] ||
-      credit_notes.finalized.sum(:offset_amount_cents)
+    preloader_cache[:offset_amount_cents] || credit_notes.finalized.sum(:offset_amount_cents)
   end
 
   def total_due_amount_cents

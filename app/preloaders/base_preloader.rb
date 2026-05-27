@@ -3,7 +3,7 @@
 class BasePreloader
   def initialize(scope, *preloads)
     @scope = scope
-    @preloads = preloads.any? ? preloads : self.class::PRELOAD
+    @preloads = preloads.any? ? preloads : self.class::PRELOADS
   end
 
   def call

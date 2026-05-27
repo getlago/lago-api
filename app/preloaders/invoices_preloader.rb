@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class InvoicesPreloader < BasePreloader
-  PRELOAD = %i[
+  PRELOADS = %i[
     offset_amount_cents
     refunded_amount_cents
     credited_amount_cents

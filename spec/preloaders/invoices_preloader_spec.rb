@@ -3,7 +3,7 @@
 require "rails_helper"
 
 describe InvoicesPreloader do
-  subject(:preloader) { described_class.new([invoice]) }
+  subject(:preloader) { described_class.new([invoice], *preloads) }
 
   let(:invoice) { create(:invoice) }
 
@@ -22,21 +22,40 @@ describe InvoicesPreloader do
   end
 
   describe "#call" do
-    it "preloads and caches amounts" do
-      preloader.call
+    context "when no :preloads are passed" do
+      let(:preloads) { [] }
 
-      expect(invoice.preloader_cache).to eq(
-        offset_amount_cents: 15_00,
-        refunded_amount_cents: 35_00
-      )
+      it "preloads and caches all amounts" do
+        preloader.call
 
-      expect(invoice.fees.first.preloader_cache).to eq(
-        credited_amount_cents: 5_00
-      )
+        expect(invoice.preloader_cache).to eq(
+          offset_amount_cents: 15_00,
+          refunded_amount_cents: 35_00
+        )
 
-      expect(invoice.fees.first.preloader_cache).to eq(
-        credited_amount_cents: 5_00
-      )
+        expect(invoice.fees.first.preloader_cache).to eq(
+          credited_amount_cents: 5_00
+        )
+
+        expect(invoice.fees.last.preloader_cache).to eq(
+          credited_amount_cents: 25_00
+        )
+      end
+    end
+
+    context "when specific :preloads are passed" do
+      let(:preloads) { [:offset_amount_cents] }
+
+      it "preloads and caches only the passed :preloads" do
+        preloader.call
+
+        expect(invoice.preloader_cache).to eq(
+          offset_amount_cents: 15_00
+        )
+
+        expect(invoice.fees.first.preloader_cache).to eq({})
+        expect(invoice.fees.last.preloader_cache).to eq({})
+      end
     end
   end
 end
