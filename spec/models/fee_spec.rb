@@ -723,6 +723,39 @@ RSpec.describe Fee do
     end
   end
 
+  describe "#credited_amount_cents" do
+    subject(:fee) { create(:fee) }
+
+    context "when there are no credit note items" do
+      it "returns 0" do
+        expect(fee.credited_amount_cents).to eq(0)
+      end
+    end
+
+    context "when there are credit note items" do
+      let(:credit_note) { create(:credit_note) }
+
+      before do
+        create(:credit_note_item, credit_note:, fee:, amount_cents: 100)
+        create(:credit_note_item, credit_note:, fee:, amount_cents: 200)
+      end
+
+      it "sums all the credit note items amount_cents" do
+        expect(fee.credited_amount_cents).to eq(300)
+      end
+    end
+
+    context "when the value is cached by a preloader" do
+      before do
+        fee.preloader_cache[:credited_amount_cents] = 100
+      end
+
+      it "returns the cached value" do
+        expect(fee.credited_amount_cents).to eq(100)
+      end
+    end
+  end
+
   describe "#creditable_from_wallet_amount_cents" do
     subject { fee.creditable_from_wallet_amount_cents }
 

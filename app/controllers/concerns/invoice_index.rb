@@ -59,7 +59,6 @@ module InvoiceIndex
     )
 
     if result.success?
-      #InvoicesPreloader.new(result.invoices, only: :offset_amount_cents).call
       invoices = InvoicesPreloader.new(
         result.invoices.includes(
           :metadata,
@@ -76,7 +75,8 @@ module InvoiceIndex
             :moneyhash_customer,
             {integration_customers: :integration}
           ]
-        )
+        ),
+        :offset_amount_cents
       ).call
 
       render(

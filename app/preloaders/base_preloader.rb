@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
 class BasePreloader
-  def initialize(scope, *values)
+  def initialize(scope, *preloads)
     @scope = scope
-    @values = values.empty? ? self.class::PRELOAD : values
+    @preloads = preloads.any? ? preloads : self.class::PRELOAD
   end
 
   def call
-    values.each do |value|
+    preloads.each do |value|
       send("preload_#{value}")
     end
 
@@ -16,15 +16,15 @@ class BasePreloader
 
   private
 
-  attr_reader :scope, :values
+  attr_reader :scope, :preloads
 
   def scope_ids
     @scope_ids ||= scope.map(&:id).compact
   end
 
-  def cache(records, value, preloaded)
+  def cache(records, value, preloaded, default: 0)
     records.each do |record|
-      record.preloader_cache[value] = preloaded[record.id] || 0
+      record.preloader_cache[value] = preloaded[record.id] || default
     end
   end
 end

@@ -3,8 +3,8 @@
 class InvoicesPreloader < BasePreloader
   PRELOAD = %i[
     offset_amount_cents
-    credited_amount_cents
     refunded_amount_cents
+    credited_amount_cents
   ]
 
   private
@@ -19,7 +19,16 @@ class InvoicesPreloader < BasePreloader
     cache(scope, :offset_amount_cents, offset_amounts)
   end
 
-  def preload_credited_amount_cents 
+  def preload_refunded_amount_cents
+    refund_amounts = CreditNote
+      .where(invoice_id: scope_ids)
+      .group(:invoice_id)
+      .sum(:refund_amount_cents)
+
+    cache(scope, :refunded_amount_cents, refund_amounts)
+  end
+
+  def preload_credited_amount_cents
     fees = scope.map(&:fees).flatten
 
     credited_amounts = CreditNoteItem
@@ -28,14 +37,5 @@ class InvoicesPreloader < BasePreloader
       .sum(:amount_cents)
 
     cache(fees, :credited_amount_cents, credited_amounts)
-  end
-
-  def preload_refunded_amount_cents
-    refund_amounts = CreditNote
-      .where(invoice_id: scope_ids)
-      .group(:invoice_id)
-      .sum(:refund_amount_cents)
-
-    cache(scope, :refunded_amount_cents, refund_amounts)
   end
 end

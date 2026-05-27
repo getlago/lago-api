@@ -84,15 +84,15 @@ module Resolvers
 
       return result_error(result) unless result.success?
 
-      invoices = result.invoices.preload(
-        :fees,
-        :regenerated_invoice,
-        :error_details,
-        :billing_entity,
-        {customer: :billing_entity}
-      )
-
-      ::InvoicesPreloader.new(invoices).call
+      ::InvoicesPreloader.new(
+        result.invoices.preload(
+          :fees,
+          :regenerated_invoice,
+          :error_details,
+          :billing_entity,
+          {customer: :billing_entity}
+        )
+      ).call
     end
   end
 end

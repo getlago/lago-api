@@ -227,8 +227,7 @@ class Fee < ApplicationRecord
   end
 
   def credited_amount_cents
-    preloader_cache[:credited_amount_cents] ||
-      credit_note_items.sum(:amount_cents)
+    preloader_cache[:credited_amount_cents] || credit_note_items.sum(:amount_cents)
   end
 
   def creditable_from_wallet_amount_cents

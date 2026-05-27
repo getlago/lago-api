@@ -372,8 +372,7 @@ class Invoice < ApplicationRecord
   end
 
   def refunded_amount_cents
-    preloader_cache[:refunded_amount_cents] ||
-      credit_notes.sum("refund_amount_cents")
+    preloader_cache[:refunded_amount_cents] || credit_notes.sum(:refund_amount_cents)
   end
 
   # Credit invoices have a single credit-type fee linked to the wallet transaction
