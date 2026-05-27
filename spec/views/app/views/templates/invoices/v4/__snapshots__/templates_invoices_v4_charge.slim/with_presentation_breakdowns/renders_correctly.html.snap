@@ -156,11 +156,11 @@
             <td class="body-1">API Calls</td>
             <td class="body-2">100</td>
           </tr>
-          <tr>
+          <tr class="presentation-group">
             <td class="body-2">eu, prod</td>
             <td class="body-2">40</td>
           </tr>
-          <tr class="section-end">
+          <tr class="presentation-group section-end">
             <td class="body-2">us, prod</td>
             <td class="body-2">60</td>
           </tr>
