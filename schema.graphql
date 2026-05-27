@@ -13069,7 +13069,7 @@ input UpdatePlanInput {
   billChargesMonthly: Boolean
   billFixedChargesMonthly: Boolean
   cascadeUpdates: Boolean
-  charges: [ChargeInput!]!
+  charges: [ChargeInput!]
 
   """
   A unique identifier for the client performing the mutation.

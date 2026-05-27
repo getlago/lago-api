@@ -17,14 +17,15 @@ module Subscriptions
     end
 
     def call
-      if current_subscription.starting_in_the_future?
-        update_pending_subscription
-
-        result.subscription = current_subscription
-        return result
-      end
-
       ActiveRecord::Base.transaction do
+        if current_subscription.starting_in_the_future?
+          apply_activation_rules(current_subscription) if params[:activation_rules]
+          update_pending_subscription
+
+          result.subscription = current_subscription
+          return result
+        end
+
         cancel_pending_subscription if pending_subscription?
 
         # NOTE: When downgrading a subscription, we keep the current one active
@@ -43,6 +44,8 @@ module Subscriptions
           consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : current_subscription.consolidate_invoice,
           billing_entity_id: current_subscription.billing_entity_id
         )
+
+        apply_activation_rules(new_sub) if params[:activation_rules].present?
 
         if params[:billing_entity_id].present? || params[:billing_entity_code].present?
           override_entity = resolve_billing_entity(organization: current_subscription.organization, params:)
@@ -85,6 +88,13 @@ module Subscriptions
       if current_subscription.should_sync_hubspot_subscription?
         Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: current_subscription)
       end
+    end
+
+    def apply_activation_rules(subscription)
+      Subscriptions::ActivationRules::ApplyService.call!(
+        subscription:,
+        activation_rules: params[:activation_rules]
+      )
     end
 
     def override_plan
