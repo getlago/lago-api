@@ -55,6 +55,7 @@ RSpec.describe Subscription do
       expect(subject).to have_many(:usage_thresholds)
       expect(subject).to have_many(:fixed_charges).through(:plan)
       expect(subject).to have_many(:fixed_charge_events)
+      expect(subject).to have_many(:fixed_charge_units_overrides).class_name("Subscription::FixedChargeUnitsOverride")
       expect(subject).to have_many(:add_ons).through(:fixed_charges)
       expect(subject).to have_one(:lifetime_usage).autosave(true)
       expect(subject).to have_one(:subscription_activity).class_name("UsageMonitoring::SubscriptionActivity")
