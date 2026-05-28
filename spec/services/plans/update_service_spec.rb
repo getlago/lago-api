@@ -247,6 +247,37 @@ RSpec.describe Plans::UpdateService do
           end.not_to have_enqueued_job(Plans::UpdateAmountJob)
         end
       end
+
+      context "when an in-transaction failure follows a charge update" do
+        let(:existing_charge) { create(:standard_charge, plan:, billable_metric:) }
+        let(:update_args) do
+          {
+            charges: [
+              {
+                id: existing_charge.id,
+                billable_metric_id: billable_metric.id,
+                charge_model: "standard",
+                properties: {amount: "0"}
+              },
+              {
+                billable_metric_id: billable_metric.id,
+                charge_model: "standard"
+              }
+            ]
+          }
+        end
+
+        before do
+          existing_charge
+          allow(Charges::CreateService).to receive(:call!).and_raise(
+            ActiveRecord::RecordInvalid.new(Charge.new.tap { |c| c.errors.add(:base, "boom") })
+          )
+        end
+
+        it "does not enqueue Charges::UpdateChildrenJob" do
+          expect { plans_service.call }.not_to have_enqueued_job(Charges::UpdateChildrenJob)
+        end
+      end
     end
 
     context "when thresholds are present" do
@@ -458,7 +489,11 @@ RSpec.describe Plans::UpdateService do
         it "upgrades subscription plan" do
           plans_service.call
 
-          expect(Subscriptions::PlanUpgradeService).to have_received(:call)
+          expect(Subscriptions::PlanUpgradeService).to have_received(:call).with(
+            current_subscription: subscription,
+            plan: plan,
+            params: {name: pending_subscription.name}
+          )
         end
 
         it "updates the plan" do
@@ -466,6 +501,25 @@ RSpec.describe Plans::UpdateService do
 
           expect(result.plan.name).to eq("Updated plan name")
           expect(result.plan.amount_cents).to eq(200)
+        end
+
+        context "when the pending subscription has activation rules" do
+          before do
+            create(:subscription_activation_rule, subscription: pending_subscription, organization:, timeout_hours: 24)
+          end
+
+          it "forwards the activation_rules to the plan upgrade" do
+            plans_service.call
+
+            expect(Subscriptions::PlanUpgradeService).to have_received(:call).with(
+              current_subscription: subscription,
+              plan: plan,
+              params: {
+                name: pending_subscription.name,
+                activation_rules: [{type: "payment", timeout_hours: 24}]
+              }
+            )
+          end
         end
 
         context "when pending subscription does not have a previous one" do
@@ -495,6 +549,49 @@ RSpec.describe Plans::UpdateService do
             expect(result.error.messages).to eq({billing_time: ["value_is_invalid"]})
           end
         end
+      end
+    end
+
+    context "when pending-promotion preserves billing entity from previous subscription" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:original_plan) { create(:plan, organization:, amount_cents: 150) }
+      let(:new_customer) { create(:customer, organization:) }
+      let(:original_active_sub) do
+        create(
+          :subscription,
+          plan: original_plan,
+          customer: new_customer,
+          status: :active,
+          billing_entity:,
+          subscription_at: Time.current,
+          started_at: Time.current
+        )
+      end
+      let(:pending_subscription) do
+        create(:subscription, plan:, status: :pending, previous_subscription_id: original_active_sub.id, customer: new_customer)
+      end
+      let(:update_args) do
+        {
+          name: plan_name,
+          code: "new_plan",
+          interval: "monthly",
+          pay_in_advance: false,
+          amount_cents: 200,
+          amount_currency: "EUR"
+        }
+      end
+
+      before do
+        original_active_sub
+        pending_subscription
+      end
+
+      it "carries the previous subscription's billing_entity onto the new active subscription" do
+        plans_service.call
+
+        new_active_sub = Subscription.where(previous_subscription_id: original_active_sub.id, status: :active).first
+        expect(new_active_sub).to be_present
+        expect(new_active_sub.billing_entity_id).to eq(billing_entity.id)
       end
     end
 

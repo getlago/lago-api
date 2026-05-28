@@ -555,6 +555,20 @@ RSpec.describe Organization do
     end
   end
 
+  describe "#events_store" do
+    it "returns the events store" do
+      expect(organization.events_store).to eq("postgres")
+    end
+
+    context "when clickhouse_events_store is true" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it "returns clickhouse" do
+        expect(organization.events_store).to eq("clickhouse")
+      end
+    end
+  end
+
   describe "#organization" do
     it "returns the organization" do
       expect(organization.organization).to eq(organization)

@@ -3227,7 +3227,8 @@ CREATE TABLE public.subscriptions (
     cancelation_reason public.subscription_cancelation_reasons,
     incompleted_at timestamp(6) without time zone,
     activated_at timestamp(6) without time zone,
-    billing_entity_id uuid
+    billing_entity_id uuid,
+    consolidate_invoice boolean DEFAULT true NOT NULL
 );
 
 
@@ -3626,14 +3627,13 @@ CREATE VIEW public.exports_invoices AS
     i.created_at,
     i.updated_at,
     i.voided_at,
-    ( SELECT json_agg(json_build_object('lago_id', m_1.id, 'key', m_1.key, 'value', m_1.value, 'created_at', m_1.created_at)) AS json_agg
-           FROM public.invoice_metadata m_1
-          WHERE (m_1.invoice_id = i.id)) AS metadata,
+    ( SELECT json_agg(json_build_object('lago_id', m.id, 'key', m.key, 'value', m.value, 'created_at', m.created_at)) AS json_agg
+           FROM public.invoice_metadata m
+          WHERE (m.invoice_id = i.id)) AS metadata,
     ( SELECT json_agg(json_build_object('lago_id', ed.id, 'error_code', ed.error_code, 'details', ed.details)) AS json_agg
            FROM public.error_details ed
           WHERE (ed.owner_id = i.id)) AS error_details
-   FROM (public.invoices i
-     LEFT JOIN public.invoice_metadata m ON ((i.id = m.invoice_id)))
+   FROM public.invoices i
   WHERE (i.status = ANY (ARRAY[0, 1, 2, 4, 7]));
 
 
@@ -4818,6 +4818,9 @@ CREATE TABLE public.quote_versions (
     share_token character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    currency character varying,
+    start_date date,
+    end_date date,
     CONSTRAINT quote_versions_constraint_approved_at_matches_status CHECK (((status = 'approved'::public.quote_status) = (approved_at IS NOT NULL))),
     CONSTRAINT quote_versions_constraint_sequential_id_positive CHECK ((sequential_id > 0)),
     CONSTRAINT quote_versions_constraint_void_fields_match_status CHECK (((status = 'voided'::public.quote_status) = ((void_reason IS NOT NULL) AND (voided_at IS NOT NULL))))
@@ -12215,7 +12218,10 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260525102114'),
+('20260520075420'),
 ('20260517101105'),
+('20260513181544'),
 ('20260513105210'),
 ('20260513105209'),
 ('20260512155310'),
@@ -13217,3 +13223,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+

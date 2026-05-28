@@ -131,6 +131,17 @@ RSpec.describe Subscriptions::TerminateService do
         expect(result).to be_success
         expect(next_subscription.reload).to be_canceled
       end
+
+      context "when called with upgrade: true" do
+        subject(:result) { described_class.call(subscription:, on_termination_credit_note:, upgrade: true) }
+
+        it "does not cancel the next subscription" do
+          subject
+
+          expect(result).to be_success
+          expect(next_subscription.reload).to be_pending
+        end
+      end
     end
 
     context "when subscription was paid in advance" do
@@ -293,6 +304,27 @@ RSpec.describe Subscriptions::TerminateService do
         let(:invoice_subscription) { nil }
 
         it "does not create a credit note for the remaining days" do
+          expect { subject }.not_to change(CreditNote, :count)
+        end
+      end
+
+      context "when last subscription fee invoice has pending taxes" do
+        let(:on_termination_credit_note) { "credit" }
+
+        before { invoice.update!(status: :pending, tax_status: :pending) }
+
+        it "returns a cannot_terminate_with_pending_taxes failure" do
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("cannot_terminate_with_pending_taxes")
+        end
+
+        it "does not mark the subscription as terminated" do
+          subject
+          expect(subscription.reload).not_to be_terminated
+        end
+
+        it "does not create a credit note" do
           expect { subject }.not_to change(CreditNote, :count)
         end
       end

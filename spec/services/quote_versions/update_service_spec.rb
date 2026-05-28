@@ -11,9 +11,14 @@ RSpec.describe QuoteVersions::UpdateService do
   let(:update_params) {
     {
       billing_items: {},
-      content: "Test content"
+      content: "Test content",
+      currency: "USD",
+      start_date:,
+      end_date:
     }
   }
+  let(:start_date) { Date.new(2025, 2, 11) }
+  let(:end_date) { Date.new(2025, 3, 12) }
 
   describe ".call" do
     let(:result) { update_service.call }
@@ -28,6 +33,9 @@ RSpec.describe QuoteVersions::UpdateService do
         expect(result.quote_version.draft?).to eq(true)
         expect(result.quote_version.billing_items).to eq({})
         expect(result.quote_version.content).to eq("Test content")
+        expect(result.quote_version.currency).to eq("USD")
+        expect(result.quote_version.start_date).to eq(start_date)
+        expect(result.quote_version.end_date).to eq(end_date)
       end
     end
 
