@@ -220,11 +220,17 @@ describe "Payment Gated Subscription Activation Scenarios" do
   end
 
   describe "timeout: subscription cancels on activation rule expiry" do
-    # TODO: remove after the dispatcher PR adding PaymentProviders::CancelPaymentJob is merged
     before do
-      stub_const("PaymentProviders::CancelPaymentJob", Class.new(ApplicationJob) do
-        def self.perform_after_commit(*); end
-      end)
+      # Best-effort PSP cancel calls Stripe; mock the SDK to return a canceled intent.
+      allow(::Stripe::PaymentIntent).to receive(:cancel).and_return(
+        ::Stripe::PaymentIntent.construct_from(
+          id: payment_intent_id,
+          object: "payment_intent",
+          status: "canceled",
+          amount: 1000,
+          currency: "eur"
+        )
+      )
     end
 
     it "expires the gated subscription with cancelation_reason: timeout" do

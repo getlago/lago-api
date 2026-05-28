@@ -3,9 +3,6 @@
 require "rails_helper"
 
 RSpec.describe Subscriptions::ActivationRules::ExpireService do
-  # TODO: remove after the dispatcher PR adding PaymentProviders::CancelPaymentJob is merged
-  class PaymentProviders::CancelPaymentJob < ApplicationJob; end
-
   subject(:result) { described_class.call(subscription:) }
 
   let(:organization) { create(:organization) }
