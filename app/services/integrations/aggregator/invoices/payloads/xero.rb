@@ -29,6 +29,12 @@ module Integrations
               discount["item_code"] = discount.delete("external_id")
             end
           end
+
+          private
+
+          def fees
+            @fees ||= invoice.fees.order(created_at: :asc)
+          end
         end
       end
     end
