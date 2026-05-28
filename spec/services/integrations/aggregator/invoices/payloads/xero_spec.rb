@@ -163,5 +163,136 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
         expect(fee_item).not_to have_key("amount_cents")
       end
     end
+
+    context "when a charge fee has grouped_by pricing group key values" do
+      let(:organization) { create(:organization) }
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:integration) { create(:xero_integration, organization:) }
+      let(:customer) { create(:customer, organization:, billing_entity:) }
+      let(:integration_customer) { create(:xero_customer, customer:, integration:) }
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
+      let(:subscription) { create(:subscription, organization:, plan:) }
+
+      let(:invoice) do
+        invoice = create(
+          :invoice,
+          customer:,
+          organization:,
+          billing_entity:,
+          coupons_amount_cents: 0,
+          prepaid_credit_amount_cents: 0,
+          progressive_billing_credit_amount_cents: 0,
+          credit_notes_amount_cents: 0,
+          taxes_amount_cents: 0,
+          issuing_date: DateTime.new(2024, 7, 8)
+        )
+        create(:invoice_subscription, invoice:, subscription:)
+        invoice
+      end
+
+      let(:grouped_fee) do
+        create(
+          :charge_fee,
+          invoice:,
+          charge:,
+          billable_metric:,
+          units: 10,
+          amount_cents: 1000,
+          precise_unit_amount: 100.0,
+          taxes_amount_cents: 0,
+          invoice_display_name: "Storage usage",
+          grouped_by: {"deployment_name" => "green"}
+        )
+      end
+
+      let(:billable_metric_mapping) do
+        create(
+          :xero_mapping,
+          integration:,
+          mappable_type: "BillableMetric",
+          mappable_id: billable_metric.id,
+          billing_entity:,
+          settings: {external_id: "metric_ext_id", external_account_code: "100", external_name: "metric"}
+        )
+      end
+
+      before do
+        billable_metric_mapping
+        grouped_fee
+      end
+
+      it "appends the grouped_by values to the line item description" do
+        fee_item = payload.first["fees"].first
+
+        expect(fee_item["description"]).to eq("Storage usage • green")
+      end
+    end
+
+    context "when a charge fee has no grouped_by values" do
+      let(:organization) { create(:organization) }
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:integration) { create(:xero_integration, organization:) }
+      let(:customer) { create(:customer, organization:, billing_entity:) }
+      let(:integration_customer) { create(:xero_customer, customer:, integration:) }
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
+      let(:subscription) { create(:subscription, organization:, plan:) }
+
+      let(:invoice) do
+        invoice = create(
+          :invoice,
+          customer:,
+          organization:,
+          billing_entity:,
+          coupons_amount_cents: 0,
+          prepaid_credit_amount_cents: 0,
+          progressive_billing_credit_amount_cents: 0,
+          credit_notes_amount_cents: 0,
+          taxes_amount_cents: 0,
+          issuing_date: DateTime.new(2024, 7, 8)
+        )
+        create(:invoice_subscription, invoice:, subscription:)
+        invoice
+      end
+
+      let(:plain_fee) do
+        create(
+          :charge_fee,
+          invoice:,
+          charge:,
+          billable_metric:,
+          units: 10,
+          amount_cents: 1000,
+          precise_unit_amount: 100.0,
+          taxes_amount_cents: 0,
+          invoice_display_name: "Storage usage"
+        )
+      end
+
+      let(:billable_metric_mapping) do
+        create(
+          :xero_mapping,
+          integration:,
+          mappable_type: "BillableMetric",
+          mappable_id: billable_metric.id,
+          billing_entity:,
+          settings: {external_id: "metric_ext_id", external_account_code: "100", external_name: "metric"}
+        )
+      end
+
+      before do
+        billable_metric_mapping
+        plain_fee
+      end
+
+      it "leaves the line item description unchanged" do
+        fee_item = payload.first["fees"].first
+
+        expect(fee_item["description"]).to eq("Storage usage")
+      end
+    end
   end
 end
