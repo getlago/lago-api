@@ -127,13 +127,6 @@ RSpec.describe Subscriptions::UpdateOrOverrideChargeService do
       end
 
       context "when the charge passed lives directly on the overridden plan with parent_id: nil" do
-        # Reproduces the state left by `Plans::UpdateService#process_charges`
-        # (the legacy `plan_overrides` PATCH path): a top-level charge sits
-        # directly on the overridden plan with no parent, alongside the
-        # subscription's overridden plan. The service must update this charge
-        # in place rather than layering a second override on top of it,
-        # which would produce two charges with the same `billable_metric_id`
-        # and `code` — both contributing fees over the same events.
         let(:overridden_plan) { create(:plan, organization:, parent: plan) }
         let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
         let!(:charge) do
