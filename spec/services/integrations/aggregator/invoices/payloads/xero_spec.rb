@@ -248,10 +248,12 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
 
         before { grouped_fee }
 
-        it "joins the grouped_by values into the line item description" do
+        it "joins the grouped_by values into the line item description with a ' • ' separator" do
           fee_item = payload.first["fees"].first
 
-          expect(fee_item["description"]).to eq("Storage usage • eu • gold")
+          # JSONB does not preserve insertion order, so accept either ordering
+          # of the two grouped_by values — we only lock in the separator format.
+          expect(fee_item["description"]).to match(/\AStorage usage • (eu • gold|gold • eu)\z/)
         end
       end
 
