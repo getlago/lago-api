@@ -12,6 +12,7 @@ module Integrations
           def item(fee)
             base_item = super
             base_item["item_code"] = base_item.delete("external_id")
+            base_item["description"] = "#{base_item["description"]}#{FeeDisplayHelper.grouped_by_display(fee)}"
 
             if fee.precise_unit_amount.round(2) != fee.precise_unit_amount
               base_item["units"] = 1
