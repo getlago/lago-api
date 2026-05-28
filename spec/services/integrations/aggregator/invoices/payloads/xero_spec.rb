@@ -164,7 +164,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
       end
     end
 
-    context "when a charge fee has grouped_by pricing group key values" do
+    context "with a single billable metric charge" do
       let(:organization) { create(:organization) }
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:integration) { create(:xero_integration, organization:) }
@@ -192,21 +192,6 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
         invoice
       end
 
-      let(:grouped_fee) do
-        create(
-          :charge_fee,
-          invoice:,
-          charge:,
-          billable_metric:,
-          units: 10,
-          amount_cents: 1000,
-          precise_unit_amount: 100.0,
-          taxes_amount_cents: 0,
-          invoice_display_name: "Storage usage",
-          grouped_by: {"deployment_name" => "green"}
-        )
-      end
-
       let(:billable_metric_mapping) do
         create(
           :xero_mapping,
@@ -218,162 +203,172 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
         )
       end
 
-      before do
-        billable_metric_mapping
-        grouped_fee
+      before { billable_metric_mapping }
+
+      context "when a charge fee has a single grouped_by pricing group key value" do
+        let(:grouped_fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            charge:,
+            billable_metric:,
+            units: 10,
+            amount_cents: 1000,
+            precise_unit_amount: 100.0,
+            taxes_amount_cents: 0,
+            invoice_display_name: "Storage usage",
+            grouped_by: {"deployment_name" => "green"}
+          )
+        end
+
+        before { grouped_fee }
+
+        it "appends the grouped_by value to the line item description" do
+          fee_item = payload.first["fees"].first
+
+          expect(fee_item["description"]).to eq("Storage usage • green")
+        end
       end
 
-      it "appends the grouped_by values to the line item description" do
-        fee_item = payload.first["fees"].first
+      context "when a charge fee has multiple grouped_by pricing group key values" do
+        let(:grouped_fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            charge:,
+            billable_metric:,
+            units: 10,
+            amount_cents: 1000,
+            precise_unit_amount: 100.0,
+            taxes_amount_cents: 0,
+            invoice_display_name: "Storage usage",
+            grouped_by: {"region" => "eu", "tier" => "gold"}
+          )
+        end
 
-        expect(fee_item["description"]).to eq("Storage usage • green")
-      end
-    end
+        before { grouped_fee }
 
-    context "when a charge fee has no grouped_by values" do
-      let(:organization) { create(:organization) }
-      let(:billing_entity) { create(:billing_entity, organization:) }
-      let(:integration) { create(:xero_integration, organization:) }
-      let(:customer) { create(:customer, organization:, billing_entity:) }
-      let(:integration_customer) { create(:xero_customer, customer:, integration:) }
-      let(:billable_metric) { create(:billable_metric, organization:) }
-      let(:plan) { create(:plan, organization:) }
-      let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
-      let(:subscription) { create(:subscription, organization:, plan:) }
+        it "joins the grouped_by values into the line item description" do
+          fee_item = payload.first["fees"].first
 
-      let(:invoice) do
-        invoice = create(
-          :invoice,
-          customer:,
-          organization:,
-          billing_entity:,
-          coupons_amount_cents: 0,
-          prepaid_credit_amount_cents: 0,
-          progressive_billing_credit_amount_cents: 0,
-          credit_notes_amount_cents: 0,
-          taxes_amount_cents: 0,
-          issuing_date: DateTime.new(2024, 7, 8)
-        )
-        create(:invoice_subscription, invoice:, subscription:)
-        invoice
+          expect(fee_item["description"]).to eq("Storage usage • eu • gold")
+        end
       end
 
-      let(:plain_fee) do
-        create(
-          :charge_fee,
-          invoice:,
-          charge:,
-          billable_metric:,
-          units: 10,
-          amount_cents: 1000,
-          precise_unit_amount: 100.0,
-          taxes_amount_cents: 0,
-          invoice_display_name: "Storage usage"
-        )
+      context "when a charge fee has no grouped_by values" do
+        let(:plain_fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            charge:,
+            billable_metric:,
+            units: 10,
+            amount_cents: 1000,
+            precise_unit_amount: 100.0,
+            taxes_amount_cents: 0,
+            invoice_display_name: "Storage usage"
+          )
+        end
+
+        before { plain_fee }
+
+        it "leaves the line item description unchanged" do
+          fee_item = payload.first["fees"].first
+
+          expect(fee_item["description"]).to eq("Storage usage")
+        end
       end
 
-      let(:billable_metric_mapping) do
-        create(
-          :xero_mapping,
-          integration:,
-          mappable_type: "BillableMetric",
-          mappable_id: billable_metric.id,
-          billing_entity:,
-          settings: {external_id: "metric_ext_id", external_account_code: "100", external_name: "metric"}
-        )
+      context "when the invoice has a mix of $0 and positive amount fees" do
+        let(:positive_fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            charge:,
+            billable_metric:,
+            units: 2,
+            amount_cents: 200,
+            precise_unit_amount: 100.0,
+            taxes_amount_cents: 0,
+            invoice_display_name: "Paid usage",
+            created_at: 2.minutes.ago
+          )
+        end
+
+        let(:zero_amount_fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            charge:,
+            billable_metric:,
+            units: 5,
+            amount_cents: 0,
+            precise_unit_amount: 0.0,
+            taxes_amount_cents: 0,
+            invoice_display_name: "Free usage",
+            created_at: 1.minute.ago
+          )
+        end
+
+        before do
+          positive_fee
+          zero_amount_fee
+        end
+
+        it "includes the $0 fee line item alongside the positive fee, preserving creation order" do
+          fees = payload.first["fees"]
+
+          expect(fees.size).to eq(2)
+          expect(fees.map { |f| f["description"] }).to eq(["Paid usage", "Free usage"])
+
+          zero_item = fees.last
+          expect(zero_item["units"]).to eq(5)
+          expect(zero_item["precise_unit_amount"]).to eq(0.0)
+        end
       end
 
-      before do
-        billable_metric_mapping
-        plain_fee
-      end
+      context "when every fee on the invoice has a $0 amount" do
+        let(:zero_fee_a) do
+          create(
+            :charge_fee,
+            invoice:,
+            charge:,
+            billable_metric:,
+            units: 1,
+            amount_cents: 0,
+            precise_unit_amount: 0.0,
+            taxes_amount_cents: 0,
+            invoice_display_name: "Free usage A",
+            created_at: 2.minutes.ago
+          )
+        end
 
-      it "leaves the line item description unchanged" do
-        fee_item = payload.first["fees"].first
+        let(:zero_fee_b) do
+          create(
+            :charge_fee,
+            invoice:,
+            charge:,
+            billable_metric:,
+            units: 2,
+            amount_cents: 0,
+            precise_unit_amount: 0.0,
+            taxes_amount_cents: 0,
+            invoice_display_name: "Free usage B",
+            created_at: 1.minute.ago
+          )
+        end
 
-        expect(fee_item["description"]).to eq("Storage usage")
-      end
-    end
+        before do
+          zero_fee_a
+          zero_fee_b
+        end
 
-    context "when the invoice has a mix of $0 and positive amount fees" do
-      let(:organization) { create(:organization) }
-      let(:billing_entity) { create(:billing_entity, organization:) }
-      let(:integration) { create(:xero_integration, organization:) }
-      let(:customer) { create(:customer, organization:, billing_entity:) }
-      let(:integration_customer) { create(:xero_customer, customer:, integration:) }
-      let(:billable_metric) { create(:billable_metric, organization:) }
-      let(:plan) { create(:plan, organization:) }
-      let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
-      let(:subscription) { create(:subscription, organization:, plan:) }
+        it "still includes every $0 fee in the payload" do
+          fees = payload.first["fees"]
 
-      let(:invoice) do
-        invoice = create(
-          :invoice,
-          customer:,
-          organization:,
-          billing_entity:,
-          coupons_amount_cents: 0,
-          prepaid_credit_amount_cents: 0,
-          progressive_billing_credit_amount_cents: 0,
-          credit_notes_amount_cents: 0,
-          taxes_amount_cents: 0,
-          issuing_date: DateTime.new(2024, 7, 8)
-        )
-        create(:invoice_subscription, invoice:, subscription:)
-        invoice
-      end
-
-      let(:positive_fee) do
-        create(
-          :charge_fee,
-          invoice:,
-          charge:,
-          billable_metric:,
-          units: 2,
-          amount_cents: 200,
-          precise_unit_amount: 100.0,
-          taxes_amount_cents: 0,
-          invoice_display_name: "Paid usage",
-          created_at: 2.minutes.ago
-        )
-      end
-
-      let(:zero_amount_fee) do
-        create(
-          :charge_fee,
-          invoice:,
-          charge:,
-          billable_metric:,
-          units: 5,
-          amount_cents: 0,
-          precise_unit_amount: 0.0,
-          taxes_amount_cents: 0,
-          invoice_display_name: "Free usage",
-          created_at: 1.minute.ago
-        )
-      end
-
-      let(:billable_metric_mapping) do
-        create(
-          :xero_mapping,
-          integration:,
-          mappable_type: "BillableMetric",
-          mappable_id: billable_metric.id,
-          billing_entity:,
-          settings: {external_id: "metric_ext_id", external_account_code: "100", external_name: "metric"}
-        )
-      end
-
-      before do
-        billable_metric_mapping
-        positive_fee
-        zero_amount_fee
-      end
-
-      it "includes the $0 fee line item alongside the positive fee" do
-        descriptions = payload.first["fees"].map { |f| f["description"] }
-
-        expect(descriptions).to include("Paid usage", "Free usage")
+          expect(fees.size).to eq(2)
+          expect(fees.map { |f| f["description"] }).to eq(["Free usage A", "Free usage B"])
+        end
       end
     end
   end

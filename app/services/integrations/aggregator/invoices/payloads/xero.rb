@@ -32,6 +32,8 @@ module Integrations
 
           private
 
+          # Xero accepts zero-amount line items, so we bypass the
+          # NetSuite-specific filter in BasePayload (see #2359).
           def fees
             @fees ||= invoice.fees.order(created_at: :asc)
           end
