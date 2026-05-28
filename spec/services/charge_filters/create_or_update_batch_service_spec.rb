@@ -270,6 +270,62 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
     end
 
+    context "when the existing filter matches the request exactly" do
+      let(:filter) do
+        create(:charge_filter,
+          charge:,
+          invoice_display_name: "Same display name",
+          properties: {"amount" => "10"},
+          updated_at: 1.day.ago)
+      end
+
+      let(:filter_values) do
+        [
+          create(:charge_filter_value,
+            charge_filter: filter,
+            billable_metric_filter: card_location_filter,
+            values: ["domestic"],
+            updated_at: 1.day.ago),
+          create(:charge_filter_value,
+            charge_filter: filter,
+            billable_metric_filter: scheme_filter,
+            values: ["visa"],
+            updated_at: 1.day.ago)
+        ]
+      end
+
+      let(:filters_params) do
+        [
+          {
+            values: {
+              card_location_filter.key => ["domestic"],
+              scheme_filter.key => ["visa"]
+            },
+            invoice_display_name: "Same display name",
+            properties: {amount: "10"}
+          }
+        ]
+      end
+
+      it "touches the unchanged filter to preserve input order under updated_at ASC" do
+        previous_updated_at = filter.reload.updated_at
+
+        service
+
+        expect(filter.reload.updated_at).to be > previous_updated_at
+      end
+
+      it "touches each unchanged filter_value to preserve input order under updated_at ASC" do
+        previous_updated_ats = filter_values.map { it.reload.updated_at }
+
+        service
+
+        filter_values.zip(previous_updated_ats).each do |fv, previous_updated_at|
+          expect(fv.reload.updated_at).to be > previous_updated_at
+        end
+      end
+    end
+
     context "when changing filter values" do
       let(:filters_params) do
         [
