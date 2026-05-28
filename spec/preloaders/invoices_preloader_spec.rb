@@ -3,7 +3,7 @@
 require "rails_helper"
 
 describe InvoicesPreloader do
-  subject(:preloader) { described_class.new([invoice], *preloads) }
+  subject(:preloader) { described_class.new([invoice], *scopes) }
 
   let(:invoice) { create(:invoice) }
 
@@ -22,10 +22,10 @@ describe InvoicesPreloader do
   end
 
   describe "#call" do
-    context "when no :preloads are passed" do
-      let(:preloads) { [] }
+    context "when no :scopes are passed" do
+      let(:scopes) { [] }
 
-      it "preloads and caches all amounts" do
+      it "scopes and caches all amounts" do
         preloader.call
 
         expect(invoice.preloader_cache).to eq(
@@ -43,10 +43,10 @@ describe InvoicesPreloader do
       end
     end
 
-    context "when specific :preloads are passed" do
-      let(:preloads) { [:offset_amount_cents] }
+    context "when specific :scopes are passed" do
+      let(:scopes) { [:offset_amount_cents] }
 
-      it "preloads and caches only the passed :preloads" do
+      it "scopes and caches only the passed :scopes" do
         preloader.call
 
         expect(invoice.preloader_cache).to eq(

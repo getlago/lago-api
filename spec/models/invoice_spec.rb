@@ -2088,7 +2088,7 @@ RSpec.describe Invoice do
 
     context "when there are no credit notes" do
       it "returns 0" do
-        expect(invoice.offset_amount_cents).to eq(0)
+        expect(invoice.refunded_amount_cents).to eq(0)
       end
     end
 
