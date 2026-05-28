@@ -15,11 +15,13 @@ module Invoices
 
       invoice.fees.each do |fee|
         dup_fee = fee.dup
-        result = Fees::ApplyTaxesService.call!(fee:)
+        dup_fee.invoice = preview_invoice
+        preview_invoice.fees << dup_fee
+
+        result = Fees::ApplyTaxesService.call!(fee: dup_fee)
         result.raise_if_error!
 
         dup_fee.id = fee.id
-        preview_invoice.fees << dup_fee
       end
 
       # NOTE: Provider taxes doesn't apply in this service.
