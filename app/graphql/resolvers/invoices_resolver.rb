@@ -90,6 +90,7 @@ module Resolvers
           :regenerated_invoice,
           :error_details,
           :billing_entity,
+          :sorted_customer_payments,
           {customer: :billing_entity}
         )
       )

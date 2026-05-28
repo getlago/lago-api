@@ -42,6 +42,7 @@ class Invoice < ApplicationRecord
   has_many :payment_requests, through: :applied_payment_requests
   has_many :payments, as: :payable
   has_many :payment_receipts, through: :payments
+  has_many :sorted_customer_payments, -> { where.not(customer_id: nil).order(updated_at: :desc) }, class_name: "Payment", as: :payable
 
   has_many :applied_usage_thresholds
   has_many :usage_thresholds, through: :applied_usage_thresholds

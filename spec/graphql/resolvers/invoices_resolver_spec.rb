@@ -729,6 +729,47 @@ RSpec.describe Resolvers::InvoicesResolver do
     end
   end
 
+  context "with payments" do
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(limit: 5, customerExternalId: "#{invoice_first.customer.external_id}") {
+            collection {
+              id
+              payments {
+                id
+                __typename
+              }
+            }
+          }
+        }
+      GQL
+    end
+
+    let(:payment_first) { create(:payment, payable: invoice_first, payable_payment_status: :succeeded) }
+    let(:payment_second) { create(:payment, payable: invoice_first, payable_payment_status: :succeeded) }
+
+    before do
+      payment_first
+      payment_second
+    end
+
+    it "returns payments with customer sorted by updated_at desc" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      invoice = result["data"]["invoices"]["collection"].first
+
+      expect(invoice["payments"].count).to eq(2)
+      expect(invoice["payments"][0]["id"]).to eq(payment_second.id)
+      expect(invoice["payments"][1]["id"]).to eq(payment_first.id)
+    end
+  end
+
   context "with N+1 query detection on associations", bullet: {unused_eager_loading: false} do
     let(:query) do
       <<~GQL
