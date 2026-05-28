@@ -98,12 +98,14 @@ module PaymentProviders
           payment_method&.id
         end
 
-        def update_payment_method_id
-          stripe_customer = ::Stripe::Customer.retrieve(
+        def stripe_customer
+          @stripe_customer ||= ::Stripe::Customer.retrieve(
             provider_customer.provider_customer_id,
             {api_key: payment_provider.secret_key}
           )
+        end
 
+        def update_payment_method_id
           # TODO: stripe customer should be updated/deleted
           # TODO: deliver error webhook
           # TODO(payment): update payment status
@@ -111,13 +113,6 @@ module PaymentProviders
 
           if (payment_method_id = stripe_customer.invoice_settings.default_payment_method || stripe_customer.default_source)
             provider_customer.update!(payment_method_id:)
-            return
-          end
-
-          # NOTE: Only use the shared payment token if no other payment method exist (no default, nothing in the list)
-          shared_payment_token = stripe_customer.invoice_settings.try(:default_shared_payment_token)
-          if shared_payment_token && customer_payment_methods.none?
-            @shared_payment_token = shared_payment_token
           end
         end
 
@@ -154,6 +149,16 @@ module PaymentProviders
           )
         end
 
+        def shared_payment_token
+          # NOTE: Only use the shared payment token if no other payment method exist (no default, nothing in the list)
+          return nil if stripe_customer.deleted?
+          return nil if stripe_customer.invoice_settings.default_payment_method
+          return nil if stripe_customer.default_source
+          return nil if customer_payment_methods.any?
+
+          stripe_customer.invoice_settings[:default_shared_payment_token]
+        end
+
         def payment_intent_payload
           payload = {
             amount: payment.amount_cents,
@@ -170,8 +175,8 @@ module PaymentProviders
 
           if provider_customer.provider_payment_methods == ["customer_balance"]
             payload.merge!(customer_balance_fields)
-          elsif @shared_payment_token
-            payload[:payment_method_data] = {shared_payment_granted_token: @shared_payment_token}
+          elsif shared_payment_token
+            payload[:payment_method_data] = {shared_payment_granted_token: shared_payment_token}
             payload.delete(:return_url)
             payload.delete(:off_session)
           else
