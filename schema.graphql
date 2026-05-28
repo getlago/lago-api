@@ -3269,9 +3269,12 @@ input CreateQuoteInput {
   """
   clientMutationId: String
   content: String
+  currency: String
   customerId: ID!
+  endDate: ISO8601Date
   orderType: OrderTypeEnum!
   owners: [ID!]
+  startDate: ISO8601Date
   subscriptionId: ID
 }
 
@@ -10828,10 +10831,13 @@ type QuoteVersion {
   billingItems: JSON
   content: String
   createdAt: ISO8601DateTime!
+  currency: String
+  endDate: ISO8601Date
   id: ID!
   organization: Organization!
   quote: Quote!
   shareToken: String
+  startDate: ISO8601Date
   status: StatusEnum!
   updatedAt: ISO8601DateTime!
   version: Int!
@@ -13148,7 +13154,10 @@ input UpdateQuoteVersionInput {
   """
   clientMutationId: String
   content: String
+  currency: String
+  endDate: ISO8601Date
   id: ID!
+  startDate: ISO8601Date
 }
 
 input UpdateRecurringTransactionRuleInput {

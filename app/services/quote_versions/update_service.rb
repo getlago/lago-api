@@ -19,7 +19,15 @@ module QuoteVersions
       return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
       return result.not_allowed_failure!(code: "inappropriate_state") unless editable?
 
-      quote_version.update!(params.slice(:billing_items, :content))
+      quote_version.update!(
+        params.slice(
+          :billing_items,
+          :content,
+          :currency,
+          :start_date,
+          :end_date
+        )
+      )
       result.quote_version = quote_version
 
       # TODO: SendWebhookJob.perform_after_commit("quote_version.updated", quote_version)
