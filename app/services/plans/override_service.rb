@@ -35,7 +35,7 @@ module Plans
         charges_params_by_id = (params[:charges] || []).index_by { |p| p[:id] }
         fixed_charges_params_by_id = (params[:fixed_charges] || []).index_by { |p| p[:id] }
 
-        plan.charges.find_each do |charge|
+        plan.charges.includes(filters: :values).find_each do |charge|
           charge_params = (charges_params_by_id[charge.id] || {}).merge(plan_id: new_plan.id)
           Charges::OverrideService.call(charge:, params: charge_params)
         end
