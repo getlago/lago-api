@@ -1173,5 +1173,21 @@ RSpec.describe CreditNotes::CreateFromTermination do
         expect { create_service.call }.not_to change(CreditNoteItem, :count)
       end
     end
+
+    context "when invoice is tax_pending and context is :preview" do
+      # NOTE: Real termination is blocked upstream by Subscriptions::TerminateService.
+      #       Preview is exempt so the dashboard can still render the credit note;
+      #       CreditNotes::CreateService#credit_note_status forces :finalized in that case.
+      let(:context) { :preview }
+
+      before { invoice.update!(status: :pending, tax_status: :pending) }
+
+      it "builds a credit note without error" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.credit_note).to be_a(CreditNote).and be_new_record
+      end
+    end
   end
 end

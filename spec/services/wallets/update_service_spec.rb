@@ -53,6 +53,126 @@ RSpec.describe Wallets::UpdateService do
       expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
     end
 
+    describe "Customers::RefreshWalletsService gating" do
+      before { allow(Customers::RefreshWalletsService).to receive(:call) }
+
+      shared_examples "calls refresh" do
+        it "calls Customers::RefreshWalletsService" do
+          expect(result).to be_success
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
+        end
+      end
+
+      shared_examples "does not call refresh" do
+        it "does not call Customers::RefreshWalletsService" do
+          expect(result).to be_success
+          expect(Customers::RefreshWalletsService).not_to have_received(:call)
+        end
+      end
+
+      context "when code changes" do
+        let(:params) { {id: wallet.id, code: "new_code"} }
+
+        include_examples "calls refresh"
+      end
+
+      context "when priority changes" do
+        let(:params) { {id: wallet.id, priority: wallet.priority - 1} }
+
+        include_examples "calls refresh"
+      end
+
+      context "when allowed_fee_types change" do
+        let(:params) { {id: wallet.id, applies_to: {fee_types: %w[charge]}} }
+
+        include_examples "calls refresh"
+      end
+
+      context "when a wallet_target is added" do
+        let(:billable_metric) { create(:billable_metric, organization:) }
+        let(:params) { {id: wallet.id, applies_to: {billable_metric_ids: [billable_metric.id]}} }
+
+        before { CurrentContext.source = "graphql" }
+
+        include_examples "calls refresh"
+      end
+
+      context "when a wallet_target is removed" do
+        let(:billable_metric) { create(:billable_metric, organization:) }
+        let(:params) { {id: wallet.id, applies_to: {billable_metric_ids: []}} }
+
+        before do
+          CurrentContext.source = "graphql"
+          create(:wallet_target, wallet:, billable_metric:)
+        end
+
+        include_examples "calls refresh"
+      end
+
+      context "when only name changes" do
+        let(:params) { {id: wallet.id, name: "new name"} }
+
+        include_examples "does not call refresh"
+      end
+
+      context "when only expiration_at changes" do
+        let(:params) { {id: wallet.id, expiration_at: (Time.current + 1.year).iso8601} }
+
+        include_examples "does not call refresh"
+      end
+
+      context "when only paid_top_up_* change" do
+        let(:params) do
+          {
+            id: wallet.id,
+            paid_top_up_min_amount_cents: 1_00,
+            paid_top_up_max_amount_cents: 1_000_00
+          }
+        end
+
+        include_examples "does not call refresh"
+      end
+
+      context "when only payment_method changes" do
+        let(:payment_method) { create(:payment_method, organization:, customer:) }
+        let(:params) do
+          {
+            id: wallet.id,
+            payment_method: {payment_method_id: payment_method.id, payment_method_type: "provider"}
+          }
+        end
+
+        before { payment_method }
+
+        include_examples "does not call refresh"
+      end
+
+      context "when only recurring_transaction_rules change", :premium do
+        let(:params) do
+          {
+            id: wallet.id,
+            recurring_transaction_rules: [
+              {trigger: "interval", interval: "weekly", paid_credits: "105", granted_credits: "105"}
+            ]
+          }
+        end
+
+        include_examples "does not call refresh"
+      end
+
+      context "when only metadata changes" do
+        let(:params) { {id: wallet.id, metadata: {"foo" => "bar"}} }
+
+        include_examples "does not call refresh"
+      end
+
+      context "when client resends a refresh-relevant attribute with the same value (no-op)" do
+        let(:params) { {id: wallet.id, code: wallet.code, name: "new name"} }
+
+        include_examples "does not call refresh"
+      end
+    end
+
     context "when wallet is not found" do
       let(:wallet) { nil }
 
@@ -759,6 +879,168 @@ RSpec.describe Wallets::UpdateService do
             expect(result.wallet.reload.metadata).to be_nil
           end
         end
+      end
+    end
+
+    context "when multi_entity_billing is enabled" do
+      let!(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
+
+      before do
+        organization.update!(feature_flags: ["multi_entity_billing"])
+      end
+
+      context "when billing_entity_code is provided" do
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_code: "be_code"
+          }
+        end
+
+        it "assigns the billing entity to the wallet" do
+          expect(result).to be_success
+          expect(result.wallet.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+
+      context "when billing_entity_id is provided" do
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_id: billing_entity.id
+          }
+        end
+
+        it "assigns the billing entity to the wallet" do
+          expect(result).to be_success
+          expect(result.wallet.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+
+      context "when neither billing_entity_code nor billing_entity_id is provided" do
+        let(:params) { {id: wallet&.id, name: "new name"} }
+
+        it "leaves the wallet's billing entity unchanged" do
+          expect(result).to be_success
+          expect(result.wallet.billing_entity_id).to be_nil
+        end
+      end
+
+      context "when the wallet already has a billing entity" do
+        let!(:initial_billing_entity) { create(:billing_entity, organization:, code: "initial_be") }
+        let(:wallet) { create(:wallet, customer:, billing_entity: initial_billing_entity, allowed_fee_types: []) }
+
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_code: "be_code"
+          }
+        end
+
+        it "switches the wallet's billing entity" do
+          expect(result).to be_success
+          expect(result.wallet.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+
+      context "when billing_entity_code does not match any entity" do
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_code: "nonexistent"
+          }
+        end
+
+        it "returns a not found error" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when billing_entity_id belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+        let!(:other_billing_entity) { create(:billing_entity, organization: other_organization) }
+
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_id: other_billing_entity.id
+          }
+        end
+
+        it "returns a not found error" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when billing_entity_code belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_code: "other_org_be"
+          }
+        end
+
+        before { create(:billing_entity, organization: other_organization, code: "other_org_be") }
+
+        it "returns a not found error" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when billing_entity_id does not match any entity" do
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_id: SecureRandom.uuid
+          }
+        end
+
+        it "returns a not found error" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when both billing_entity_id and billing_entity_code are provided" do
+        let!(:other_billing_entity) { create(:billing_entity, organization:, code: "other_be") }
+
+        let(:params) do
+          {
+            id: wallet&.id,
+            billing_entity_id: billing_entity.id,
+            billing_entity_code: other_billing_entity.code
+          }
+        end
+
+        it "billing_entity_id takes precedence" do
+          expect(result).to be_success
+          expect(result.wallet.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+    end
+
+    context "when multi_entity_billing is not enabled" do
+      let(:params) do
+        {
+          id: wallet&.id,
+          billing_entity_code: "be_code"
+        }
+      end
+
+      before { create(:billing_entity, organization:, code: "be_code") }
+
+      it "does not assign the billing entity even if code is provided" do
+        expect(result).to be_success
+        expect(result.wallet.billing_entity_id).to be_nil
       end
     end
   end

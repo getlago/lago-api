@@ -130,6 +130,7 @@ en:
     units: Units
     units_prorated_per_period: Units prorated per second per %{period}
     usage_based_fees: Usage based fees
+    usage_breakdown_by: Usage breakdown by %{keys}
     volume:
       fee_per_unit: Fee per unit
       flat_fee_for_all_units: Flat fee for all units

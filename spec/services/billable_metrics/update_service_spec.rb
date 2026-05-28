@@ -46,6 +46,12 @@ RSpec.describe BillableMetrics::UpdateService do
       expect(Utils::ActivityLog).to have_produced("billable_metric.updated").after_commit.with(billable_metric)
     end
 
+    it "enqueues a billable_metric.updated webhook" do
+      described_class.call(billable_metric:, params:)
+
+      expect(SendWebhookJob).to have_been_enqueued.with("billable_metric.updated", billable_metric)
+    end
+
     context "with filters arguments" do
       let(:filters) do
         [

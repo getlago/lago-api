@@ -20,6 +20,7 @@ module Types
         field :filters, [Types::Customers::Usage::ProjectedChargeFilter], null: true
         field :grouped_by, GraphQL::Types::JSON, null: true
         field :presentation_breakdowns, [Types::Customers::Usage::PresentationBreakdown], null: true
+        field :projected_presentation_breakdowns, [Types::Customers::Usage::PresentationBreakdown], null: true
 
         def id
           SecureRandom.uuid
@@ -58,7 +59,17 @@ module Types
         end
 
         def presentation_breakdowns
-          Types::Fees::PresentationBreakdownBuilder.call(object, filter: Types::Fees::PresentationBreakdownBuilder::GROUPED)
+          @presentation_breakdowns ||= Types::Fees::PresentationBreakdownBuilder.call(
+            object,
+            filter: Types::Fees::PresentationBreakdownBuilder::GROUPED,
+            filter_breakdown: Types::Fees::PresentationBreakdownBuilder::ALL
+          )
+        end
+
+        def projected_presentation_breakdowns
+          return [] if presentation_breakdowns.empty?
+
+          projection_result.projected_presentation_breakdowns
         end
 
         private

@@ -97,7 +97,7 @@ module Customers
     end
 
     def applicable_fees(fees, fee_map, wallet)
-      fees.select { |fee| fee_map[fee.item_key] == wallet.id }
+      fees.select { |fee| fee_map[fee.item_key] == wallet.id && fee.amount_currency == wallet.balance_currency }
     end
   end
 end

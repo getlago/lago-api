@@ -29,7 +29,7 @@ module Types
         end
 
         def presentation_breakdowns
-          Types::Fees::PresentationBreakdownBuilder.call(object, filter: Types::Fees::PresentationBreakdownBuilder::ALL)
+          Types::Fees::PresentationBreakdownBuilder.call(object, filter: Types::Fees::PresentationBreakdownBuilder::ALL, filter_breakdown: V1::Customers::PresentationBreakdownBuilder::ALL)
         end
       end
     end

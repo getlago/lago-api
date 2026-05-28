@@ -97,7 +97,11 @@ module Types
       end
 
       def applied_taxes
-        object.applied_taxes.order(tax_rate: :desc)
+        if object.applied_taxes.any? { |applied_tax| !applied_tax.persisted? }
+          object.applied_taxes.sort_by { |applied_tax| -applied_tax.tax_rate.to_f }
+        else
+          object.applied_taxes.order(tax_rate: :desc)
+        end
       end
 
       def payments

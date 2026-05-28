@@ -96,17 +96,31 @@ RSpec.describe Analytics::GrossRevenue do
     context "when no filters passed" do
       let(:args) { {} }
 
-      it "returns all gross revenues" do
+      it "returns gross revenues split per (month, currency, billing_entity_id)" do
         expect(gross_revenues).to match_array([hash_including({
           "month" => Time.current.beginning_of_month - 2.months,
           "currency" => "EUR",
-          "invoices_count" => 2,
-          "amount_cents" => 7000.0
+          "billing_entity_id" => billing_entity1.id,
+          "invoices_count" => 1,
+          "amount_cents" => 3000.0
+        }), hash_including({
+          "month" => Time.current.beginning_of_month - 2.months,
+          "currency" => "EUR",
+          "billing_entity_id" => billing_entity2.id,
+          "invoices_count" => 1,
+          "amount_cents" => 4000.0
         }), hash_including({
           "month" => Time.current.beginning_of_month - 1.month,
           "currency" => "EUR",
-          "invoices_count" => 2,
-          "amount_cents" => 3000.0
+          "billing_entity_id" => billing_entity1.id,
+          "invoices_count" => 1,
+          "amount_cents" => 1000.0
+        }), hash_including({
+          "month" => Time.current.beginning_of_month - 1.month,
+          "currency" => "EUR",
+          "billing_entity_id" => billing_entity2.id,
+          "invoices_count" => 1,
+          "amount_cents" => 2000.0
         })])
       end
 
@@ -120,27 +134,57 @@ RSpec.describe Analytics::GrossRevenue do
           ]
         }
 
-        it "returns gross revenues grouped by currencies" do
+        it "returns gross revenues grouped by currencies and billing entities" do
           expect(gross_revenues).to match_array([hash_including({
             "month" => Time.current.beginning_of_month - 1.month,
             "currency" => "USD",
+            "billing_entity_id" => billing_entity1.id,
             "invoices_count" => 1,
             "amount_cents" => 1000.0
           }), hash_including({
             "month" => Time.current.beginning_of_month - 1.month,
             "currency" => "EUR",
+            "billing_entity_id" => billing_entity2.id,
             "invoices_count" => 1,
             "amount_cents" => 2000.0
           }), hash_including({
             "month" => Time.current.beginning_of_month - 2.months,
             "currency" => "USD",
+            "billing_entity_id" => billing_entity1.id,
             "invoices_count" => 1,
             "amount_cents" => 3000.0
           }), hash_including({
             "month" => Time.current.beginning_of_month - 2.months,
             "currency" => "EUR",
+            "billing_entity_id" => billing_entity2.id,
             "invoices_count" => 1,
             "amount_cents" => 4000.0
+          })])
+        end
+      end
+
+      context "when a customer has invoices across multiple billing entities in the same month and currency" do
+        let(:customer) { create(:customer, organization:) }
+        let(:invoices) {
+          [
+            create(:invoice, organization:, customer:, total_amount_cents: 1000, issuing_date: 1.month.ago, billing_entity: billing_entity1),
+            create(:invoice, organization:, customer:, total_amount_cents: 2000, issuing_date: 1.month.ago, billing_entity: billing_entity2)
+          ]
+        }
+
+        it "emits one row per billing entity for the same (month, currency) bucket" do
+          expect(gross_revenues).to match_array([hash_including({
+            "month" => Time.current.beginning_of_month - 1.month,
+            "currency" => "EUR",
+            "billing_entity_id" => billing_entity1.id,
+            "invoices_count" => 1,
+            "amount_cents" => 1000.0
+          }), hash_including({
+            "month" => Time.current.beginning_of_month - 1.month,
+            "currency" => "EUR",
+            "billing_entity_id" => billing_entity2.id,
+            "invoices_count" => 1,
+            "amount_cents" => 2000.0
           })])
         end
       end
@@ -153,14 +197,37 @@ RSpec.describe Analytics::GrossRevenue do
         expect(gross_revenues).to match_array([hash_including({
           "month" => Time.current.beginning_of_month - 1.month,
           "currency" => "EUR",
+          "billing_entity_id" => billing_entity1.id,
           "invoices_count" => 1,
           "amount_cents" => 1000.0
         }), hash_including({
           "month" => Time.current.beginning_of_month - 2.months,
           "currency" => "EUR",
+          "billing_entity_id" => billing_entity1.id,
           "invoices_count" => 1,
           "amount_cents" => 3000.0
         })])
+      end
+
+      context "with pay_in_advance fees on other billing entities" do
+        let(:customer1) { create(:customer, organization:, billing_entity: billing_entity1) }
+        let(:customer2) { create(:customer, organization:, billing_entity: billing_entity2) }
+        let(:subscription1) { create(:subscription, customer: customer1) }
+        let(:subscription2) { create(:subscription, customer: customer2) }
+
+        before do
+          create(:fee, organization:, billing_entity: billing_entity1, subscription: subscription1,
+            invoice: nil, pay_in_advance: true, amount_cents: 500, amount_currency: "EUR",
+            created_at: 1.month.ago)
+          create(:fee, organization:, billing_entity: billing_entity2, subscription: subscription2,
+            invoice: nil, pay_in_advance: true, amount_cents: 9999, amount_currency: "EUR",
+            created_at: 1.month.ago)
+        end
+
+        it "excludes pay_in_advance fees from other billing entities" do
+          billing_entity_ids = gross_revenues.map { |r| r["billing_entity_id"] }.uniq
+          expect(billing_entity_ids).to eq([billing_entity1.id])
+        end
       end
     end
   end

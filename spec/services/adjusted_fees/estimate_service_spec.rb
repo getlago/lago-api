@@ -120,6 +120,43 @@ RSpec.describe AdjustedFees::EstimateService do
         )
       end
     end
+
+    context "with presentation_breakdowns" do
+      before do
+        create(:presentation_breakdown, fee: fee_subscription, presentation_by: {"department" => "eng"}, units: 6)
+        create(:presentation_breakdown, fee: fee_subscription, presentation_by: {"department" => "sales"}, units: 4)
+        fee_subscription.reload
+      end
+
+      context "when adjusting units" do
+        let(:params) do
+          {
+            fee_id: fee_subscription.id,
+            subscription_id: fee_subscription.subscription_id,
+            units: 5
+          }
+        end
+
+        it "returns the fee without presentation_breakdowns" do
+          expect(result.fee.presentation_breakdowns).to be_empty
+        end
+      end
+
+      context "when keeping units the same" do
+        let(:params) do
+          {
+            fee_id: fee_subscription.id,
+            subscription_id: fee_subscription.subscription_id,
+            units: 10
+          }
+        end
+
+        it "returns the fee without presentation_breakdowns" do
+          expect(fee_subscription.units).to eq(result.fee.units)
+          expect(result.fee.presentation_breakdowns).to be_empty
+        end
+      end
+    end
   end
 
   context "when adjusting fixed charge fees" do
@@ -268,6 +305,30 @@ RSpec.describe AdjustedFees::EstimateService do
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.message).to eq("fixed_charge_not_found")
+      end
+    end
+
+    context "with presentation_breakdowns" do
+      before do
+        create(:presentation_breakdown, fee: fixed_charge_fee, presentation_by: {"region" => "eu"}, units: 5)
+        create(:presentation_breakdown, fee: fixed_charge_fee, presentation_by: {"region" => "us"}, units: 3)
+      end
+
+      context "when adjusting units" do
+        let(:params) { {fee_id: fixed_charge_fee.id, units: 12} }
+
+        it "returns a fee without presentation_breakdowns" do
+          expect(result.fee.presentation_breakdowns).to be_empty
+        end
+      end
+
+      context "when keeping units the same" do
+        let(:params) { {fee_id: fixed_charge_fee.id, units: 8} }
+
+        it "returns the fee without presentation_breakdowns" do
+          expect(fixed_charge_fee.units).to eq(result.fee.units)
+          expect(result.fee.presentation_breakdowns).to be_empty
+        end
       end
     end
   end
@@ -426,6 +487,42 @@ RSpec.describe AdjustedFees::EstimateService do
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.message).to eq("charge_not_found")
+      end
+    end
+
+    context "with presentation_breakdowns" do
+      let(:charge) do
+        create(
+          :standard_charge,
+          billable_metric:,
+          plan:,
+          properties: {amount: "10", presentation_group_keys: [{value: "department"}]}
+        )
+      end
+      let(:charge_fee) do
+        create(:charge_fee, invoice:, subscription:, charge:, precise_unit_amount: 10.00, units: 5)
+      end
+
+      before do
+        create(:presentation_breakdown, fee: charge_fee, presentation_by: {"department" => "eng"}, units: 3)
+        create(:presentation_breakdown, fee: charge_fee, presentation_by: {"department" => "sales"}, units: 2)
+      end
+
+      context "when adjusting units" do
+        let(:params) { {fee_id: charge_fee.id, units: 8} }
+
+        it "returns a fee without presentation_breakdowns" do
+          expect(result.fee.presentation_breakdowns).to be_empty
+        end
+      end
+
+      context "when keeping units the same" do
+        let(:params) { {fee_id: charge_fee.id, units: 5} }
+
+        it "returns the fee without presentation_breakdowns" do
+          expect(charge_fee.units).to eq(result.fee.units)
+          expect(result.fee.presentation_breakdowns).to be_empty
+        end
       end
     end
   end

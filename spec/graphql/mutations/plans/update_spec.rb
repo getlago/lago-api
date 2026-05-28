@@ -487,6 +487,43 @@ RSpec.describe Mutations::Plans::Update do
     end
   end
 
+  context "when charges are not provided" do
+    let(:existing_charge) do
+      create(:standard_charge, plan:, billable_metric: billable_metrics[0], properties: {amount: "42.00"})
+    end
+
+    before do
+      existing_charge
+    end
+
+    it "updates the plan without changing charges" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: plan.id,
+            name: "Updated plan",
+            code: "updated_plan",
+            interval: "monthly",
+            payInAdvance: true,
+            amountCents: 200,
+            amountCurrency: "EUR"
+          }
+        }
+      )
+
+      result_data = result["data"]["updatePlan"]
+
+      expect(result_data["name"]).to eq("Updated plan")
+      expect(result_data["charges"].count).to eq(1)
+      expect(result_data["charges"].first["id"]).to eq(existing_charge.id)
+      expect(result_data["charges"].first["properties"]["amount"]).to eq("42.00")
+    end
+  end
+
   context "when fixed charges are not provided" do
     let(:fixed_charge) { create(:fixed_charge, plan:, charge_model: "standard", properties: {amount: "100.00"}) }
 

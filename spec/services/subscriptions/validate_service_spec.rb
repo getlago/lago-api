@@ -291,6 +291,8 @@ RSpec.describe Subscriptions::ValidateService do
       context "when activation_rules contains valid payment rule" do
         let(:activation_rules) { [{type: "payment", timeout_hours: 48}] }
 
+        before { create(:payment_method, customer:, organization:) }
+
         it { is_expected.to be_valid }
       end
 

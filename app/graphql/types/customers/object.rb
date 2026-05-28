@@ -85,7 +85,7 @@ module Types
       field :credit_notes_balances,
         [Types::Customers::CreditNotesBalance],
         null: false,
-        description: "Credit notes credits balance available per customer per currency"
+        description: "Credit notes balances broken down by (currency, billing entity)"
       field :credit_notes_credits_available_count,
         Integer,
         null: false,
@@ -93,6 +93,8 @@ module Types
       field :has_active_wallet, Boolean, null: false, description: "Define if a customer has an active wallet"
       field :has_credit_notes, Boolean, null: false, description: "Define if a customer has any credit note"
       field :has_overdue_invoices, Boolean, null: false, description: "Define if a customer has overdue invoices"
+      field :overdue_balances, [Types::Customers::OverdueBalance], null: false,
+        description: "Overdue balance per currency"
 
       field :can_edit_attributes, Boolean, null: false, method: :editable? do
         description "Check if customer attributes are editable"
@@ -130,6 +132,12 @@ module Types
         object.invoices.payment_overdue.any?
       end
 
+      def overdue_balances
+        object.overdue_balances.map do |currency, amount_cents|
+          {currency:, amount_cents:}
+        end
+      end
+
       def active_subscriptions_count
         object.active_subscriptions.count
       end
@@ -158,12 +166,16 @@ module Types
       end
 
       def credit_notes_balances
-        object.credit_notes
-          .finalized
-          .where("credit_notes.balance_amount_cents > 0")
-          .group("credit_notes.total_amount_currency")
-          .sum("credit_notes.balance_amount_cents")
-          .map { |currency, amount_cents| {currency:, amount_cents:} }
+        object.credit_notes.finalized.joins(:invoice)
+          .group("credit_notes.total_amount_currency", "invoices.billing_entity_id")
+          .pluck(
+            "credit_notes.total_amount_currency",
+            "invoices.billing_entity_id",
+            Arel.sql("SUM(credit_notes.balance_amount_cents)"),
+            Arel.sql("COUNT(*) FILTER (WHERE credit_notes.credit_amount_cents > 0)")
+          ).map { |currency, billing_entity_id, amount_cents, credits_available_count|
+            {currency:, billing_entity_id:, amount_cents:, credits_available_count:}
+          }
       end
 
       def billing_configuration

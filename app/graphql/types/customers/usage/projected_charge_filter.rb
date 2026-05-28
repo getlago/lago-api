@@ -17,6 +17,7 @@ module Types
         field :pricing_unit_amount_cents, GraphQL::Types::BigInt, null: true
         field :pricing_unit_projected_amount_cents, GraphQL::Types::BigInt, null: true
         field :projected_amount_cents, GraphQL::Types::BigInt, null: false
+        field :projected_presentation_breakdowns, [Types::Customers::Usage::PresentationBreakdown], null: true
         field :projected_units, GraphQL::Types::Float, null: false
         field :units, GraphQL::Types::Float, null: false
         field :values, Types::ChargeFilters::Values, null: false
@@ -38,7 +39,13 @@ module Types
         end
 
         def presentation_breakdowns
-          Types::Fees::PresentationBreakdownBuilder.call(object, filter: Types::Fees::PresentationBreakdownBuilder::ALL)
+          @presentation_breakdowns ||= Types::Fees::PresentationBreakdownBuilder.call(object, filter: Types::Fees::PresentationBreakdownBuilder::ALL, filter_breakdown: V1::Customers::PresentationBreakdownBuilder::ALL)
+        end
+
+        def projected_presentation_breakdowns
+          return [] if presentation_breakdowns.empty?
+
+          projection_result.projected_presentation_breakdowns
         end
 
         private

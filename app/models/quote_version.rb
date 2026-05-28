@@ -66,7 +66,10 @@ end
 #  approved_at     :datetime
 #  billing_items   :jsonb
 #  content         :text
+#  currency        :string
+#  end_date        :date
 #  share_token     :string
+#  start_date      :date
 #  status          :enum             default("draft"), not null
 #  void_reason     :enum
 #  voided_at       :datetime

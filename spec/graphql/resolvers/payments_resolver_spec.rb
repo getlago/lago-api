@@ -104,4 +104,33 @@ RSpec.describe Resolvers::PaymentsResolver do
         .to contain_exactly(invoice1.id, invoice2.id)
     end
   end
+
+  context "when currency is present" do
+    let(:query) do
+      <<~GQL
+        query($currency: CurrencyEnum!) {
+          payments(currency: $currency, limit: 5) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    let(:usd_invoice) { create(:invoice, customer:, organization:, currency: "USD") }
+    let!(:usd_payment) { create(:payment, payable: usd_invoice, amount_currency: "USD") }
+
+    it "returns only payments matching the currency" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {currency: "USD"}
+      )
+
+      ids = result["data"]["payments"]["collection"].map { |p| p["id"] }
+      expect(ids).to contain_exactly(usd_payment.id)
+    end
+  end
 end

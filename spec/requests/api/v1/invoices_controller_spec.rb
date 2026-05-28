@@ -117,6 +117,86 @@ RSpec.describe Api::V1::InvoicesController do
         expect(response).to have_http_status(:success)
       end
     end
+
+    context "when multi_entity_billing feature flag is enabled" do
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+      before do
+        organization.enable_feature_flag!(:multi_entity_billing)
+        create(:tax, :applied_to_billing_entity, billing_entity: other_billing_entity, organization:, rate: 20)
+      end
+
+      context "with a known billing_entity_code" do
+        let(:create_params) do
+          {
+            external_customer_id: customer_external_id,
+            currency: "EUR",
+            billing_entity_code: other_billing_entity.code,
+            fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}]
+          }
+        end
+
+        it "stamps the invoice with the resolved billing entity" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice][:billing_entity_code]).to eq(other_billing_entity.code)
+        end
+      end
+
+      context "with an unknown billing_entity_code" do
+        let(:create_params) do
+          {
+            external_customer_id: customer_external_id,
+            currency: "EUR",
+            billing_entity_code: "unknown_code",
+            fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}]
+          }
+        end
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to be_not_found_error("billing_entity")
+        end
+      end
+
+      context "without billing_entity_code" do
+        let(:create_params) do
+          {
+            external_customer_id: customer_external_id,
+            currency: "EUR",
+            fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}]
+          }
+        end
+
+        it "stamps the invoice with the customer's billing entity" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice][:billing_entity_code]).to eq(customer.billing_entity.code)
+        end
+      end
+    end
+
+    context "when multi_entity_billing feature flag is disabled" do
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+      let(:create_params) do
+        {
+          external_customer_id: customer_external_id,
+          currency: "EUR",
+          billing_entity_code: other_billing_entity.code,
+          fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}]
+        }
+      end
+
+      it "ignores billing_entity_code and falls back to the customer's billing entity" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:billing_entity_code]).to eq(customer.billing_entity.code)
+      end
+    end
   end
 
   describe "PUT /api/v1/invoices/:id" do

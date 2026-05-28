@@ -300,8 +300,8 @@ module ScenariosHelper
     valvat = instance_double(Valvat)
     allow(Valvat).to receive(:new).with(vat_number).and_return(valvat)
     allow(valvat).to receive(:exists?).with(detail: true, raise_error: true).and_return({
-      countryCode: vat_number[0..1].upcase,
-      vatNumber: vat_number.upcase
+      country_code: vat_number[0..1].upcase,
+      vat_number: vat_number.upcase
     })
   end
 

@@ -66,6 +66,7 @@ module Types
     field :invite, resolver: Resolvers::InviteResolver
     field :invites, resolver: Resolvers::InvitesResolver
     field :invoice, resolver: Resolvers::InvoiceResolver
+    field :invoice_build_regeneration_preview, resolver: Resolvers::InvoiceBuildRegenerationPreviewResolver
     field :invoice_collections, resolver: Resolvers::Analytics::InvoiceCollectionsResolver
     field :invoice_credit_notes, resolver: Resolvers::InvoiceCreditNotesResolver
     field :invoice_custom_section, resolver: Resolvers::InvoiceCustomSectionResolver
@@ -87,6 +88,8 @@ module Types
     field :plans, resolver: Resolvers::PlansResolver
     field :pricing_unit, resolver: Resolvers::PricingUnitResolver
     field :pricing_units, resolver: Resolvers::PricingUnitsResolver
+    field :quote, resolver: Resolvers::QuoteResolver
+    field :quotes, resolver: Resolvers::QuotesResolver
     field :role, resolver: Resolvers::RoleResolver
     field :roles, resolver: Resolvers::RolesResolver
     field :security_log, resolver: Resolvers::SecurityLogResolver
