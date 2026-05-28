@@ -151,6 +151,7 @@ module PaymentProviders
 
         def shared_payment_token
           # NOTE: Only use the shared payment token if no other payment method exist (no default, nothing in the list)
+          return nil unless invoice.organization.feature_flag_enabled?(:stripe_shared_payment_token)
           return nil if stripe_customer.deleted?
           return nil if stripe_customer.invoice_settings.default_payment_method
           return nil if stripe_customer.default_source

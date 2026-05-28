@@ -174,6 +174,8 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       let(:shared_payment_token) { "spt_test_123" }
 
       before do
+        organization.enable_feature_flag!("stripe_shared_payment_token")
+
         allow(Stripe::Customer).to receive(:retrieve)
           .and_return(Stripe::StripeObject.construct_from(
             {
@@ -213,6 +215,23 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
 
           expect(result).to be_success
           expect(Stripe::Customer).to have_received(:list_payment_methods).once
+        end
+
+        context "when the stripe_shared_payment_token feature flag is disabled" do
+          before { organization.disable_feature_flag!("stripe_shared_payment_token") }
+
+          it "ignores the shared payment token even when no other payment method is attached" do
+            WebMock.stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+              .with(body: ->(request) {
+                params = Rack::Utils.parse_nested_query(request)
+                expect(params).not_to have_key("payment_method_data")
+              })
+              .to_return(body: stripe_payment_intent_data.to_json)
+
+            result = create_service.call
+
+            expect(result).to be_success
+          end
         end
       end
 
