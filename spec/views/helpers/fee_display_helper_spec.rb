@@ -5,6 +5,46 @@ require "rails_helper"
 RSpec.describe FeeDisplayHelper do
   subject(:helper) { described_class }
 
+  describe ".fee_title" do
+    subject { helper.fee_title(fee) }
+
+    let(:charge) { create(:standard_charge, invoice_display_name: "Compute") }
+
+    context "when grouped_by is empty and there is no charge filter" do
+      let(:fee) { create(:fee, charge:, fee_type: "charge", grouped_by: {}, invoice_display_name: nil, total_aggregated_units: 0) }
+
+      it "returns invoice_name" do
+        expect(subject).to eq("Compute")
+      end
+    end
+
+    context "when grouped_by is present and there is no charge filter" do
+      let(:fee) { create(:fee, charge:, fee_type: "charge", grouped_by: {"region" => "eu"}, invoice_display_name: nil, total_aggregated_units: 0) }
+
+      it "returns invoice_name appended with the grouped_by values" do
+        expect(subject).to eq("Compute • eu")
+      end
+    end
+
+    context "when charge filter is present and grouped_by is empty" do
+      let(:charge_filter) { create(:charge_filter, charge:, invoice_display_name: "EU Premium") }
+      let(:fee) { create(:fee, charge:, fee_type: "charge", grouped_by: {}, charge_filter:, invoice_display_name: nil, total_aggregated_units: 0) }
+
+      it "returns invoice_name appended with the filter display name" do
+        expect(subject).to eq("Compute • EU Premium")
+      end
+    end
+
+    context "when charge filter is present and grouped_by is present" do
+      let(:charge_filter) { create(:charge_filter, charge:, invoice_display_name: "EU Premium") }
+      let(:fee) { create(:fee, charge:, fee_type: "charge", grouped_by: {"region" => "eu"}, charge_filter:, invoice_display_name: nil, total_aggregated_units: 0) }
+
+      it "returns invoice_name appended with grouped_by values and filter display name" do
+        expect(subject).to eq("Compute • eu • EU Premium")
+      end
+    end
+  end
+
   describe ".grouped_by_display" do
     let(:charge) { create(:standard_charge, properties:) }
     let(:fee) { create(:fee, charge:, fee_type: "charge", grouped_by:, total_aggregated_units: 10) }

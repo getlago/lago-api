@@ -61,7 +61,8 @@ module Types
         def presentation_breakdowns
           @presentation_breakdowns ||= Types::Fees::PresentationBreakdownBuilder.call(
             object,
-            filter: Types::Fees::PresentationBreakdownBuilder::GROUPED
+            filter: Types::Fees::PresentationBreakdownBuilder::GROUPED,
+            filter_breakdown: Types::Fees::PresentationBreakdownBuilder::ALL
           )
         end
 

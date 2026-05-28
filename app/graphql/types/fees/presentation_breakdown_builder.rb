@@ -7,13 +7,16 @@ module Types
       UNGROUPED = :ungrouped
       GROUPED = :grouped
 
-      def self.call(fees, filter:)
-        new(fees, filter:).call
+      DISPLAY_IN_INVOICE = :display_in_invoice
+
+      def self.call(fees, filter:, filter_breakdown:)
+        new(fees, filter:, filter_breakdown:).call
       end
 
-      def initialize(fees, filter:)
+      def initialize(fees, filter:, filter_breakdown:)
         @fees = fees
         @filter = filter
+        @filter_breakdown = filter_breakdown
       end
 
       def call
@@ -21,7 +24,9 @@ module Types
           next [] if filter == UNGROUPED && fee.grouped_by.present?
           next [] if filter == GROUPED && fee.grouped_by.blank?
 
-          fee.presentation_breakdowns.map do |breakdown|
+          breakdowns = (filter_breakdown == DISPLAY_IN_INVOICE) ? fee.presentation_breakdowns_displayed_in_invoice : fee.presentation_breakdowns
+
+          breakdowns.map do |breakdown|
             {
               presentation_by: breakdown.presentation_by,
               units: breakdown.units.to_s
@@ -32,7 +37,7 @@ module Types
 
       private
 
-      attr_reader :fees, :filter
+      attr_reader :fees, :filter, :filter_breakdown
     end
   end
 end

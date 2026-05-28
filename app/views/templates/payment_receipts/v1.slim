@@ -111,7 +111,7 @@ html
           - elsif payment.payable.progressive_billing?
             == SlimHelper.render('templates/invoices/v4/_progressive_billing_details', payment.payable)
           - elsif payment.payable.subscriptions.count == 1
-            == SlimHelper.render('templates/invoices/v4/_subscription_details', payment.payable)
+            == SlimHelper.render('templates/invoices/v4/_subscription_details', payment.payable, disable_presentation_breakdowns: true)
           - else
             == SlimHelper.render('templates/invoices/v4/_subscriptions_summary', payment.payable)
 
@@ -130,7 +130,7 @@ html
         == SlimHelper.render('templates/invoices/v4/_powered_by_logo', payment.payable)
 
         - if payment.payable.subscriptions.count > 1
-          == SlimHelper.render('templates/invoices/v4/_subscription_details', payment.payable)
+          == SlimHelper.render('templates/invoices/v4/_subscription_details', payment.payable, disable_presentation_breakdowns: true)
 
       - else
         == SlimHelper.render('templates/payment_receipts/v1/_payment_request', self)
