@@ -398,11 +398,19 @@ class Invoice < ApplicationRecord
   end
 
   def voidable?
-    if payment_dispute_lost_at? || total_paid_amount_cents > 0 || credit_notes.where.not(credit_status: :voided).any?
+    if payment_dispute_lost_at? || total_paid_amount_cents > 0 || has_non_voided_credit_notes?
       return false
     end
 
     finalized? && (payment_pending? || payment_failed?)
+  end
+
+  def has_non_voided_credit_notes?
+    if preloader_cache.has_key?(:has_non_voided_credit_notes)
+      preloader_cache[:has_non_voided_credit_notes]
+    else
+      credit_notes.where.not(credit_status: :voided).any?
+    end
   end
 
   # Checks if all charges from subscription plans have corresponding fees

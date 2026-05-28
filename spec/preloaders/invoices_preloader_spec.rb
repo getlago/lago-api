@@ -9,7 +9,7 @@ describe InvoicesPreloader do
 
   before do
     create(:credit_note, invoice:, offset_amount_cents: 5_00, refund_amount_cents: 5_00)
-    create(:credit_note, invoice:, offset_amount_cents: 10_00, refund_amount_cents: 10_00)
+    create(:credit_note, invoice:, offset_amount_cents: 10_00, refund_amount_cents: 10_00, credit_status: :voided)
     create(:credit_note, invoice:, offset_amount_cents: 20_00, refund_amount_cents: 20_00, status: :draft)
 
     credit_note = create(:credit_note, invoice:)
@@ -30,7 +30,8 @@ describe InvoicesPreloader do
 
         expect(invoice.preloader_cache).to eq(
           offset_amount_cents: 15_00,
-          refunded_amount_cents: 35_00
+          refunded_amount_cents: 35_00,
+          has_non_voided_credit_notes: true
         )
 
         expect(invoice.fees.first.preloader_cache).to eq(

@@ -5,6 +5,7 @@ class InvoicesPreloader < BasePreloader
     offset_amount_cents
     refunded_amount_cents
     credited_amount_cents
+    has_non_voided_credit_notes
   ]
 
   private
@@ -37,5 +38,17 @@ class InvoicesPreloader < BasePreloader
       .sum(:amount_cents)
 
     cache(fees, :credited_amount_cents, credited_amounts)
+  end
+
+  def preload_has_non_voided_credit_notes
+    non_voided = CreditNote
+      .where(invoice_id: record_ids)
+      .where.not(credit_status: :voided)
+      .group(:invoice_id)
+      .count
+
+    records.each do |record|
+      record.preloader_cache[:has_non_voided_credit_notes] = non_voided.has_key?(record.id)
+    end
   end
 end
