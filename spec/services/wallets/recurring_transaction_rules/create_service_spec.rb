@@ -139,17 +139,58 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           }
         end
 
-        it "creates rule with expected attributes ignoring wallet limits" do
+        it "creates rule with expected attributes ignoring wallet limits and grants_target_top_up defaulting to false" do
           expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
 
           expect(wallet.recurring_transaction_rules.first).to have_attributes(
             granted_credits: 0.0,
+            grants_target_top_up: false,
             method: "target",
             paid_credits: 5.0,
             target_ongoing_balance: nil,
             threshold_credits: 1.0,
             trigger: "threshold"
           )
+        end
+
+        context "when grants_target_top_up is true" do
+          let(:rule_params) do
+            {
+              trigger: "threshold",
+              method: "target",
+              threshold_credits: "1.0",
+              grants_target_top_up: "true"
+            }
+          end
+
+          it "creates rule with grants_target_top_up true" do
+            expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+            expect(wallet.recurring_transaction_rules.first).to have_attributes(
+              method: "target",
+              grants_target_top_up: true
+            )
+          end
+        end
+
+        context "when grants_target_top_up is false" do
+          let(:rule_params) do
+            {
+              trigger: "threshold",
+              method: "target",
+              threshold_credits: "1.0",
+              grants_target_top_up: "false"
+            }
+          end
+
+          it "creates rule with grants_target_top_up false" do
+            expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+            expect(wallet.recurring_transaction_rules.first).to have_attributes(
+              method: "target",
+              grants_target_top_up: false
+            )
+          end
         end
       end
 

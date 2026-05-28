@@ -252,6 +252,69 @@ RSpec.shared_examples "a wallet create endpoint" do
       expect(recurring_rules.first[:payment_method][:payment_method_id]).to eq(payment_method.id)
     end
 
+    context "when grants_target_top_up is true on a target rule" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          paid_credits: "10",
+          granted_credits: "10",
+          expiration_at:,
+          recurring_transaction_rules: [
+            {
+              trigger: "interval",
+              interval: "monthly",
+              method: "target",
+              target_ongoing_balance: "200",
+              grants_target_top_up: true
+            }
+          ]
+        }
+      end
+
+      it "creates the rule with grants_target_top_up true" do
+        subject
+
+        recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+        expect(response).to have_http_status(:success)
+        expect(recurring_rules).to be_present
+        expect(recurring_rules.first[:method]).to eq("target")
+        expect(recurring_rules.first[:grants_target_top_up]).to eq(true)
+      end
+    end
+
+    context "when grants_target_top_up is true on a fixed rule" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          paid_credits: "10",
+          granted_credits: "10",
+          expiration_at:,
+          recurring_transaction_rules: [
+            {
+              trigger: "interval",
+              interval: "monthly",
+              method: "fixed",
+              grants_target_top_up: true
+            }
+          ]
+        }
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:recurring_transaction_rules]).to include("invalid_recurring_rule")
+      end
+    end
+
     context "when invoice_requires_successful_payment is set at the wallet level but the rule level" do
       let(:create_params) do
         {
@@ -885,6 +948,35 @@ RSpec.shared_examples "a wallet update endpoint" do
       expect(recurring_rules.first[:payment_method][:payment_method_id]).to eq(payment_method.id)
 
       expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+    end
+
+    context "when grants_target_top_up is updated to true on a target rule" do
+      let(:update_params) do
+        {
+          name: "wallet1",
+          recurring_transaction_rules: [
+            {
+              lago_id: recurring_transaction_rule.id,
+              method: "target",
+              trigger: "interval",
+              interval: "weekly",
+              target_ongoing_balance: "300",
+              grants_target_top_up: true
+            }
+          ]
+        }
+      end
+
+      it "updates the rule with grants_target_top_up true" do
+        subject
+
+        recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+        expect(response).to have_http_status(:success)
+        expect(recurring_rules).to be_present
+        expect(recurring_rules.first[:lago_id]).to eq(recurring_transaction_rule.id)
+        expect(recurring_rules.first[:grants_target_top_up]).to eq(true)
+      end
     end
 
     context "when transaction expiration_at is set" do

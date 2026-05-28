@@ -14,6 +14,7 @@ module Wallets
         return false unless valid_credits?
         return false unless valid_metadata?
         return false unless valid_expiration_at?
+        return false unless valid_grants_target_top_up?
 
         true
       end
@@ -67,6 +68,12 @@ module Wallets
         return true if Validators::ExpirationDateValidator.valid?(params[:expiration_at])
 
         false
+      end
+
+      def valid_grants_target_top_up?
+        return true if params[:grants_target_top_up].nil?
+
+        method == "target"
       end
     end
   end

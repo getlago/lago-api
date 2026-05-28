@@ -23,6 +23,46 @@ RSpec.describe RecurringTransactionRule do
 
   describe "validations" do
     it { is_expected.to validate_length_of(:transaction_name).is_at_least(1).is_at_most(255).allow_nil }
+
+    describe "grants_target_top_up validation" do
+      context "when method is target" do
+        it "rejects nil" do
+          rule = build(:recurring_transaction_rule, method: :target)
+          rule.grants_target_top_up = nil
+          expect(rule).not_to be_valid
+          expect(rule.errors[:grants_target_top_up]).to be_present
+        end
+
+        it "accepts true" do
+          rule = build(:recurring_transaction_rule, method: :target, grants_target_top_up: true)
+          expect(rule).to be_valid
+        end
+
+        it "accepts false" do
+          rule = build(:recurring_transaction_rule, method: :target, grants_target_top_up: false)
+          expect(rule).to be_valid
+        end
+      end
+
+      context "when method is not target" do
+        it "rejects true" do
+          rule = build(:recurring_transaction_rule, method: :fixed, grants_target_top_up: true)
+          expect(rule).not_to be_valid
+          expect(rule.errors[:grants_target_top_up]).to be_present
+        end
+
+        it "rejects false" do
+          rule = build(:recurring_transaction_rule, method: :fixed, grants_target_top_up: false)
+          expect(rule).not_to be_valid
+          expect(rule.errors[:grants_target_top_up]).to be_present
+        end
+
+        it "accepts nil" do
+          rule = build(:recurring_transaction_rule, method: :fixed)
+          expect(rule).to be_valid
+        end
+      end
+    end
   end
 
   describe "scopes" do
@@ -138,6 +178,30 @@ RSpec.describe RecurringTransactionRule do
       it "returns zero" do
         expect(subject).to eq 0.0
       end
+
+      context "when grants_target_top_up is true" do
+        let(:rule) do
+          create(
+            :recurring_transaction_rule,
+            wallet:,
+            method: :target,
+            grants_target_top_up: true,
+            target_ongoing_balance: 101.0
+          )
+        end
+        let(:wallet) do
+          create(:wallet, rate_amount: 0.5, paid_top_up_min_amount_cents: 25_00, credits_ongoing_balance: 100.0)
+        end
+
+        it "returns the raw gap, bypassing the paid_top_up_min limit" do
+          expect(subject).to eq 1.0
+        end
+
+        it "makes the rule grant the gap-fill instead of paying for it" do
+          expect(rule.compute_paid_credits(ongoing_balance: 100.0)).to eq 0.0
+          expect(rule.compute_granted_credits).to eq 1.0
+        end
+      end
     end
   end
 
@@ -181,6 +245,23 @@ RSpec.describe RecurringTransactionRule do
 
         it "returns the gag with applied limits from wallet" do
           expect(subject).to eq 50.0 # min amount 25 x 2 because of wallet's rate 0.5
+        end
+      end
+
+      context "when grants_target_top_up is true" do
+        let(:rule) do
+          create(
+            :recurring_transaction_rule,
+            wallet:,
+            method: :target,
+            grants_target_top_up: true,
+            target_ongoing_balance:
+          )
+        end
+        let(:target_ongoing_balance) { 101.0 }
+
+        it "returns zero" do
+          expect(subject).to eq 0.0
         end
       end
     end

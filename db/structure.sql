@@ -4872,7 +4872,8 @@ CREATE TABLE public.recurring_transaction_rules (
     transaction_name character varying(255),
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
-    skip_invoice_custom_sections boolean DEFAULT false NOT NULL
+    skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
+    grants_target_top_up boolean
 );
 
 
@@ -12218,6 +12219,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260528175021'),
+('20260526182506'),
 ('20260525102114'),
 ('20260520075420'),
 ('20260517101105'),

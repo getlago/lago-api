@@ -145,6 +145,31 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
             )
           end
         end
+
+        context "when grants_target_top_up is true" do
+          let(:recurring_transaction_rule) do
+            create(
+              :recurring_transaction_rule,
+              trigger: :interval,
+              wallet:,
+              interval:,
+              created_at: created_at + 1.second,
+              method: "target",
+              target_ongoing_balance: "200",
+              grants_target_top_up: true
+            )
+          end
+
+          it "enqueues the raw gap as granted credits, bypassing the paid_top_up_min limit" do
+            travel_to(current_date) do
+              create_interval_transactions_service.call
+              expect_to_have_scheduled_wallet_transaction(
+                paid_credits: "0.0",
+                granted_credits: "150.0"
+              )
+            end
+          end
+        end
       end
     end
 
