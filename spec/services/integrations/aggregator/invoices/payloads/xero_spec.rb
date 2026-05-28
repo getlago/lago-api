@@ -163,5 +163,87 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
         expect(fee_item).not_to have_key("amount_cents")
       end
     end
+
+    context "when the invoice has a mix of $0 and positive amount fees" do
+      let(:organization) { create(:organization) }
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:integration) { create(:xero_integration, organization:) }
+      let(:customer) { create(:customer, organization:, billing_entity:) }
+      let(:integration_customer) { create(:xero_customer, customer:, integration:) }
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
+      let(:subscription) { create(:subscription, organization:, plan:) }
+
+      let(:invoice) do
+        invoice = create(
+          :invoice,
+          customer:,
+          organization:,
+          billing_entity:,
+          coupons_amount_cents: 0,
+          prepaid_credit_amount_cents: 0,
+          progressive_billing_credit_amount_cents: 0,
+          credit_notes_amount_cents: 0,
+          taxes_amount_cents: 0,
+          issuing_date: DateTime.new(2024, 7, 8)
+        )
+        create(:invoice_subscription, invoice:, subscription:)
+        invoice
+      end
+
+      let(:positive_fee) do
+        create(
+          :charge_fee,
+          invoice:,
+          charge:,
+          billable_metric:,
+          units: 2,
+          amount_cents: 200,
+          precise_unit_amount: 100.0,
+          taxes_amount_cents: 0,
+          invoice_display_name: "Paid usage",
+          created_at: 2.minutes.ago
+        )
+      end
+
+      let(:zero_amount_fee) do
+        create(
+          :charge_fee,
+          invoice:,
+          charge:,
+          billable_metric:,
+          units: 5,
+          amount_cents: 0,
+          precise_unit_amount: 0.0,
+          taxes_amount_cents: 0,
+          invoice_display_name: "Free usage",
+          created_at: 1.minute.ago
+        )
+      end
+
+      let(:billable_metric_mapping) do
+        create(
+          :xero_mapping,
+          integration:,
+          mappable_type: "BillableMetric",
+          mappable_id: billable_metric.id,
+          billing_entity:,
+          settings: {external_id: "metric_ext_id", external_account_code: "100", external_name: "metric"}
+        )
+      end
+
+      before do
+        billable_metric_mapping
+        positive_fee
+        zero_amount_fee
+      end
+
+      it "includes the $0 fee line item alongside the positive fee" do
+        descriptions = payload.first["fees"].map { |f| f["description"] }
+
+        expect(descriptions).to include("Paid usage", "Free usage")
+      end
+    end
   end
 end
