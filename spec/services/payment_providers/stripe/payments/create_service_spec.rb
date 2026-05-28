@@ -208,6 +208,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
               expect(params).not_to have_key("payment_method")
               expect(params).not_to have_key("return_url")
               expect(params).not_to have_key("off_session")
+              expect(params["error_on_requires_action"]).to eq("true")
             })
             .to_return(body: stripe_payment_intent_data.to_json)
 
