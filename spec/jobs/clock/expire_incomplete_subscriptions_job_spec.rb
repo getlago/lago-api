@@ -3,8 +3,6 @@
 require "rails_helper"
 
 describe Clock::ExpireIncompleteSubscriptionsJob, job: true do
-  subject { described_class }
-
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, pay_in_advance: true) }

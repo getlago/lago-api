@@ -24,7 +24,7 @@ module Subscriptions
           invoice.closed!
 
           ResolveSubscriptionStatusService.call!(subscription:)
-          subscription.update!(cancelation_reason: :timeout) if subscription.canceled?
+          subscription.update!(cancelation_reason: :timeout)
 
           enqueue_psp_cancel(invoice)
         end
@@ -38,9 +38,13 @@ module Subscriptions
       attr_reader :subscription
 
       def enqueue_psp_cancel(invoice)
+        # A partial unique index on payments guarantees at most one
+        # provider payment in (pending, processing) per invoice, and the
+        # payment-gated lifecycle ensures the first failure already
+        # cancels the subscription before any retry could create a second
+        # one — so this find returns the single live payment when present.
         payment = invoice.payments
           .where(payable_payment_status: %w[pending processing])
-          .order(created_at: :desc)
           .first
         return unless payment
 
