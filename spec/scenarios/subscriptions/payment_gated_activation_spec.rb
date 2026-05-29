@@ -200,6 +200,8 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
           simulate_stripe_webhook(status: "failed")
 
+          invoice = customer.subscriptions.sole.invoices.sole
+
           expect(invoice.reload).to be_closed
           expect(credit_note.reload).to be_voided
           expect(credit_note.balance_amount_cents).to eq(10)
@@ -217,6 +219,8 @@ describe "Payment Gated Subscription Activation Scenarios" do
           perform_all_enqueued_jobs
 
           simulate_stripe_webhook(status: "failed")
+
+          invoice = customer.subscriptions.sole.invoices.sole
 
           expect(invoice.reload).to be_closed
           expect(wallet.reload).to be_terminated
