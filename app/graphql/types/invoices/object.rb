@@ -81,7 +81,7 @@ module Types
       field :integration_salesforce_syncable, GraphQL::Types::Boolean, null: false
       field :integration_syncable, GraphQL::Types::Boolean, null: false
       field :payable_type, GraphQL::Types::String, null: false
-      field :payments, [Types::Payments::Object], null: true, method: :sorted_customer_payments
+      field :payments, [Types::Payments::Object], null: true, method: :customer_payments
       field :regenerated_invoice_id, String, null: true
       field :tax_provider_id, String, null: true
       field :tax_provider_voidable, GraphQL::Types::Boolean, null: false
