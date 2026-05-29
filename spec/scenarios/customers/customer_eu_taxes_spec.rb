@@ -81,13 +81,13 @@ describe "Add customer-specific taxes" do
       create_or_update_customer({external_id: "user_it_123", tax_identification_number: "IT12345678901"})
       expect(Customer.find_by(external_id: "user_it_123").taxes.reload.sole.code).to eq "lago_eu_reverse_charge"
       expect(webhooks_sent.find { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
-        "countryCode" => "IT",
-        "vatNumber" => "IT12345678901"
+        "country_code" => "IT",
+        "vat_number" => "IT12345678901"
       })
 
       mock_vies_check!("FR12345678901")
       create_or_update_customer({external_id: "user_fr_123", tax_identification_number: "FR12345678901"})
-      expect(Customer.find_by(external_id: "user_fr_123").taxes.sole.code).to eq "lago_eu_reverse_charge"
+      expect(Customer.find_by(external_id: "user_fr_123").taxes.sole.code).to eq "lago_eu_fr_standard"
 
       customer = Customer.find_by(external_id: "user_it_123")
       # If I had a custom tax for this Customer

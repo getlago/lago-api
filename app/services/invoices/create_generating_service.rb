@@ -2,7 +2,7 @@
 
 module Invoices
   class CreateGeneratingService < BaseService
-    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil, invoicing_reason: nil, subscription_gated: false) # rubocop:disable Metrics/ParameterLists
+    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil, invoicing_reason: nil, subscription_gated: false, billing_entity: nil) # rubocop:disable Metrics/ParameterLists
       @customer = customer
       @invoice_type = invoice_type
       @currency = currency
@@ -12,6 +12,7 @@ module Invoices
       @invoice_id = invoice_id
       @recurring = invoicing_reason&.to_sym == :subscription_periodic
       @subscription_gated = subscription_gated
+      @billing_entity = billing_entity
 
       super
     end
@@ -23,7 +24,7 @@ module Invoices
         invoice = Invoice.create!(
           id: invoice_id || SecureRandom.uuid,
           organization:,
-          billing_entity: customer.billing_entity,
+          billing_entity: billing_entity || customer.billing_entity,
           customer:,
           invoice_type:,
           currency:,
@@ -46,7 +47,7 @@ module Invoices
 
     private
 
-    attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges, :invoice_id, :recurring, :subscription_gated
+    attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges, :invoice_id, :recurring, :subscription_gated, :billing_entity
 
     delegate :organization, to: :customer
 

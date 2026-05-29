@@ -3,9 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Types::Fees::PresentationBreakdownBuilder do
-  subject(:result) { described_class.call(fees, filter:) }
+  subject(:result) { described_class.call(fees, filter:, filter_breakdown:) }
 
   let(:filter) { described_class::UNGROUPED }
+  let(:filter_breakdown) { described_class::ALL }
   let(:fees) { [fee_one, fee_two] }
 
   let(:fee_one) do
@@ -46,7 +47,7 @@ RSpec.describe Types::Fees::PresentationBreakdownBuilder do
     end
   end
 
-  describe "filtering" do
+  describe "filter" do
     let(:ungrouped_fee) do
       build(
         :charge_fee,
@@ -120,6 +121,54 @@ RSpec.describe Types::Fees::PresentationBreakdownBuilder do
           {presentation_by: {"region" => "eu"}, units: "2.0"},
           {presentation_by: {"region" => "us"}, units: "3.0"},
           {presentation_by: {"region" => "eu"}, units: "4.0"}
+        ])
+      end
+    end
+  end
+
+  describe "filter_breakdown" do
+    let(:filter) { described_class::ALL }
+
+    let(:charge) do
+      build(:standard_charge, properties: {
+        "presentation_group_keys" => [
+          {"value" => "cloud", "options" => {"display_in_invoice" => true}},
+          {"value" => "region", "options" => {"display_in_invoice" => false}}
+        ]
+      })
+    end
+
+    let(:fee) do
+      build(
+        :charge_fee,
+        charge:,
+        grouped_by: {},
+        presentation_breakdowns: [
+          build(:presentation_breakdown, presentation_by: {"cloud" => "aws", "region" => "us"}, units: 1),
+          build(:presentation_breakdown, presentation_by: {"cloud" => nil, "region" => "eu"}, units: 2)
+        ]
+      )
+    end
+
+    let(:fees) { [fee] }
+
+    context "when filter_breakdown is DISPLAY_IN_INVOICE" do
+      let(:filter_breakdown) { described_class::DISPLAY_IN_INVOICE }
+
+      it "includes only breakdowns that have a display_in_invoice key present" do
+        expect(result).to eq([
+          {presentation_by: {"cloud" => "aws"}, units: "1.0"}, {presentation_by: {"cloud" => nil}, units: "2.0"}
+        ])
+      end
+    end
+
+    context "when filter_breakdown is nil" do
+      let(:filter_breakdown) { nil }
+
+      it "includes all breakdowns regardless of display_in_invoice keys" do
+        expect(result).to eq([
+          {presentation_by: {"cloud" => "aws", "region" => "us"}, units: "1.0"},
+          {presentation_by: {"cloud" => nil, "region" => "eu"}, units: "2.0"}
         ])
       end
     end

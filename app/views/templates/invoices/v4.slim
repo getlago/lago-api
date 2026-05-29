@@ -368,6 +368,25 @@ html
       .breakdown-details-table tr:first-child td {
         border-top: 1px solid var(--border-color);
       }
+      .presentation-breakdowns .breakdown-details-table tr td {
+        border-bottom: none;
+        border-top: none;
+        color: #66758f;
+        padding-bottom: 8px;
+        padding-top: 0;
+      }
+      .presentation-breakdowns .breakdown-details-table tr.fee td {
+        color: #19212e;
+        padding-bottom: 6px;
+        padding-top: 8px;
+      }
+      .presentation-breakdowns .breakdown-details-table tr.section-end td {
+        border-bottom: 1px solid #d9dee7;
+        padding-bottom: 8px;
+      }
+      .presentation-breakdowns .breakdown-details-table tr.presentation-group td:first-child {
+        padding-left: 8px;
+      }
 
       .powered-by {
         width: 100%;
@@ -464,7 +483,7 @@ html
         - elsif progressive_billing?
           == SlimHelper.render('templates/invoices/v4/_progressive_billing_details', self)
         - elsif subscriptions.count == 1
-          == SlimHelper.render('templates/invoices/v4/_subscription_details', self)
+          == SlimHelper.render('templates/invoices/v4/_subscription_details', self, disable_presentation_breakdowns: false)
         - else
           == SlimHelper.render('templates/invoices/v4/_subscriptions_summary', self)
 
@@ -482,5 +501,5 @@ html
 
       == SlimHelper.render('templates/invoices/v4/_powered_by_logo', self)
 
-      - if subscriptions.count > 1
-        == SlimHelper.render('templates/invoices/v4/_subscription_details', self)
+      - if subscriptions.length > 1
+        == SlimHelper.render('templates/invoices/v4/_subscription_details', self, disable_presentation_breakdowns: false)

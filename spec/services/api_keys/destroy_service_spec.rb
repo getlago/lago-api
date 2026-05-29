@@ -6,7 +6,9 @@ RSpec.describe ApiKeys::DestroyService do
   include_context "with mocked security logger"
 
   describe "#call" do
-    subject(:service_result) { described_class.call(api_key) }
+    subject(:service_result) { described_class.call(api_key, **kwargs) }
+
+    let(:kwargs) { {} }
 
     context "when API key is missing" do
       let(:api_key) { nil }
@@ -68,6 +70,41 @@ RSpec.describe ApiKeys::DestroyService do
 
         it_behaves_like "does not produce a security log" do
           before { service_result }
+        end
+
+        context "with force: true" do
+          let(:kwargs) { {force: true} }
+
+          before { freeze_time }
+
+          it "expires the key" do
+            expect { subject }.to change(api_key, :expires_at).to(Time.current)
+          end
+
+          it "does not send an API key destroyed email" do
+            expect { service_result }.not_to have_enqueued_mail(ApiKeyMailer, :destroyed)
+          end
+
+          it_behaves_like "produces a security log", "api_key.deleted" do
+            before { service_result }
+          end
+        end
+      end
+
+      context "with force: true and another non-expiring key present" do
+        let(:kwargs) { {force: true} }
+
+        before do
+          create(:api_key, organization: api_key.organization)
+          freeze_time
+        end
+
+        it "expires the key" do
+          expect { subject }.to change(api_key, :expires_at).to(Time.current)
+        end
+
+        it "does not send an API key destroyed email" do
+          expect { service_result }.not_to have_enqueued_mail(ApiKeyMailer, :destroyed)
         end
       end
     end

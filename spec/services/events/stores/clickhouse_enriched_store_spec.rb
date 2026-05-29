@@ -41,12 +41,82 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
   end
 
   context "without deduplication" do
-    it_behaves_like "an event store", with_event_duplication: false, excluding_features:
-      [:grouped_sum_breakdown, :grouped_count_breakdown, :grouped_last_breakdown, :grouped_max_breakdown, :grouped_unique_count_breakdown, :grouped_weighted_sum_breakdown]
+    it_behaves_like "an event store", with_event_duplication: false
   end
 
   context "with deduplication" do
-    it_behaves_like "an event store", with_event_duplication: true, excluding_features:
-      [:grouped_sum_breakdown, :grouped_count_breakdown, :grouped_last_breakdown, :grouped_max_breakdown, :grouped_unique_count_breakdown, :grouped_weighted_sum_breakdown]
+    it_behaves_like "an event store", with_event_duplication: true
+  end
+
+  describe "#grouped_arel_columns" do
+    subject(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        subscription:,
+        boundaries:,
+        filters: {
+          grouped_by:,
+          presentation_by:
+        }
+      )
+    end
+
+    let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:) }
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+
+    context "when presentation_by is not included in grouped_by" do
+      let(:grouped_by) { ["cloud"] }
+      let(:presentation_by) { ["agent_name"] }
+
+      it "returns the precomputed sorted grouped by column" do
+        columns, names = event_store.grouped_arel_columns
+
+        expect(columns.count).to eq(1)
+        expect(columns.first.left.name).to eq("sorted_grouped_by")
+        expect(columns.first.right).to eq("grouped_by")
+        expect(names).to eq(["grouped_by"])
+      end
+    end
+
+    context "when presentation_by is included in grouped_by" do
+      let(:grouped_by) { ["cloud", "agent_name"] }
+      let(:presentation_by) { ["cloud"] }
+
+      it "returns a mapped grouped_by from the grouped properties" do
+        columns, names = event_store.grouped_arel_columns
+
+        expect(columns.count).to eq(1)
+        expect(columns.first.left.to_s).to eq("map('agent_name', sorted_properties['agent_name'], 'cloud', sorted_properties['cloud'])")
+        expect(columns.first.right.to_s).to eq("grouped_by")
+        expect(names).to eq(["grouped_by"])
+      end
+    end
+
+    context "when the store is duplicated with another grouped_by" do
+      let(:grouped_by) { ["cloud"] }
+      let(:presentation_by) { ["agent_name"] }
+
+      it "builds the mapped grouped_by from the duplicated grouped_by" do
+        duplicated_store = event_store.dup
+        duplicated_store.grouped_by = ["agent_name", "cloud"]
+
+        columns, names = duplicated_store.grouped_arel_columns
+
+        expect(event_store.grouped_by).to eq(["cloud"])
+        expect(columns.count).to eq(1)
+        expect(columns.first.left.to_s).to eq("map('agent_name', sorted_properties['agent_name'], 'cloud', sorted_properties['cloud'])")
+        expect(columns.first.right.to_s).to eq("grouped_by")
+        expect(names).to eq(["grouped_by"])
+      end
+    end
   end
 end

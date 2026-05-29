@@ -85,14 +85,25 @@ RSpec.describe Customers::RefreshWalletJob do
           end
         end
 
-        context "when the error is an out of memory error" do
-          let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: ["function_runtime_out_of_memory"]}) }
+        [
+          Integrations::Aggregator::OutOfMemoryError,
+          Integrations::Aggregator::TaskInProgressError,
+          Integrations::Aggregator::TaskExpiredError,
+          Integrations::Aggregator::OrchestratorFailureError,
+          Integrations::Aggregator::ServerContentionError,
+          Integrations::Aggregator::TimeoutError
+        ].each do |error_class|
+          context "when the error is #{error_class.name.demodulize.underscore.humanize.downcase}" do
+            before do
+              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(error_class)
+            end
 
-          it "raises the error and retries the job" do
-            assert_performed_jobs(6, only: [described_class]) do
-              expect do
-                described_class.perform_later(customer)
-              end.to raise_error(Integrations::Aggregator::OutOfMemoryError)
+            it "raises the error and retries the job" do
+              assert_performed_jobs(6, only: [described_class]) do
+                expect do
+                  described_class.perform_later(customer)
+                end.to raise_error(error_class)
+              end
             end
           end
         end

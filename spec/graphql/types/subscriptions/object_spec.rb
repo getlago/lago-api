@@ -6,6 +6,7 @@ RSpec.describe Types::Subscriptions::Object do
   subject { described_class }
 
   it do
+    expect(subject).to have_field(:billing_entity_id).of_type("ID")
     expect(subject).to have_field(:customer).of_type("Customer!")
     expect(subject).to have_field(:external_id).of_type("String!")
     expect(subject).to have_field(:id).of_type("ID!")
@@ -53,6 +54,7 @@ RSpec.describe Types::Subscriptions::Object do
 
     expect(subject).to have_field(:payment_method).of_type("PaymentMethod")
     expect(subject).to have_field(:payment_method_type).of_type("PaymentMethodTypeEnum")
+    expect(subject).to have_field(:consolidate_invoice).of_type("Boolean!")
 
     expect(subject).to have_field(:activated_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:activation_rules).of_type("[SubscriptionActivationRule!]!")

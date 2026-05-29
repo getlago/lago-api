@@ -46,7 +46,22 @@ module Events
     end
 
     def as_json
-      super.tap { |j| j["timestamp"] = timestamp.to_f }
+      super.tap do |j|
+        j["timestamp"] = timestamp.to_f
+        j["timestamp_with_precision"] = timestamp.iso8601(9)
+      end
+    end
+
+    def self.timestamp_from_source(source)
+      timestamp = Time.zone.parse(source["timestamp_with_precision"])
+
+      if timestamp.present?
+        return timestamp
+      end
+
+      Time.zone.at(source["timestamp"].to_f)
+    rescue TypeError, ArgumentError
+      Time.zone.at(source["timestamp"].to_f)
     end
   end
 end

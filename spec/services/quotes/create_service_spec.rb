@@ -22,9 +22,14 @@ RSpec.describe Quotes::CreateService do
       billing_items: {},
       content: "Test content",
       order_type: :subscription_creation,
-      owners: [owner.id]
+      owners: [owner.id],
+      currency: "USD",
+      start_date:,
+      end_date:
     }
   end
+  let(:start_date) { Date.new(2025, 2, 11) }
+  let(:end_date) { Date.new(2025, 3, 12) }
 
   describe ".call" do
     let(:result) { create_service.call }
@@ -44,6 +49,10 @@ RSpec.describe Quotes::CreateService do
           expect(result.quote.current_version.version).to eq(1)
           expect(result.quote.current_version.draft?).to eq(true)
           expect(result.quote.current_version.content).to eq("Test content")
+          expect(result.quote.current_version.billing_items).to eq({})
+          expect(result.quote.current_version.currency).to eq("USD")
+          expect(result.quote.current_version.start_date).to eq(start_date)
+          expect(result.quote.current_version.end_date).to eq(end_date)
         end
       end
     end

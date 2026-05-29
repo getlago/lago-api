@@ -77,6 +77,7 @@ RSpec.describe Types::Customers::Object do
     expect(subject).to have_field(:has_active_wallet).of_type("Boolean!")
     expect(subject).to have_field(:has_credit_notes).of_type("Boolean!")
     expect(subject).to have_field(:has_overdue_invoices).of_type("Boolean!")
+    expect(subject).to have_field(:overdue_balances).of_type("[CustomerOverdueBalance!]!")
 
     expect(subject).to have_field(:can_edit_attributes).of_type("Boolean!")
     expect(subject).to have_field(:finalize_zero_amount_invoice).of_type("FinalizeZeroAmountInvoiceEnum")
@@ -88,5 +89,138 @@ RSpec.describe Types::Customers::Object do
     expect(subject).to have_field(:configurable_invoice_custom_sections).of_type("[InvoiceCustomSection!]")
 
     expect(subject).to have_field(:error_details).of_type("[ErrorDetail!]")
+  end
+
+  describe "credit_notes_balances grouping" do
+    let(:required_permission) { "customers:view" }
+    let(:membership) { create(:membership) }
+    let(:organization) { membership.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:billing_entity_a) { create(:billing_entity, organization:) }
+    let(:billing_entity_b) { create(:billing_entity, organization:) }
+
+    let(:query) do
+      <<~GQL
+        query($customerId: ID!) {
+          customer(id: $customerId) {
+            creditNotesBalances {
+              currency
+              billingEntityId
+              amountCents
+              creditsAvailableCount
+            }
+          }
+        }
+      GQL
+    end
+
+    def execute
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {customerId: customer.id}
+      ).dig("data", "customer", "creditNotesBalances")
+    end
+
+    context "with a single (currency, billing entity) bucket" do
+      before do
+        invoice = create(:invoice, customer:, organization:, billing_entity: billing_entity_a)
+        create(:credit_note, customer:, organization:, invoice:,
+          total_amount_currency: "EUR", balance_amount_cents: 100, credit_amount_cents: 100)
+        create(:credit_note, customer:, organization:, invoice:,
+          total_amount_currency: "EUR", balance_amount_cents: 50, credit_amount_cents: 50)
+      end
+
+      it "returns one row aggregating both credit notes" do
+        expect(execute).to match_array([
+          {
+            "currency" => "EUR",
+            "billingEntityId" => billing_entity_a.id,
+            "amountCents" => "150",
+            "creditsAvailableCount" => 2
+          }
+        ])
+      end
+    end
+
+    context "with multiple currencies under one billing entity" do
+      before do
+        invoice_eur = create(:invoice, customer:, organization:, billing_entity: billing_entity_a)
+        invoice_usd = create(:invoice, customer:, organization:, billing_entity: billing_entity_a)
+        create(:credit_note, customer:, organization:, invoice: invoice_eur,
+          total_amount_currency: "EUR", balance_amount_cents: 100, credit_amount_cents: 100)
+        create(:credit_note, customer:, organization:, invoice: invoice_usd,
+          total_amount_currency: "USD", balance_amount_cents: 200, credit_amount_cents: 200)
+      end
+
+      it "returns one row per currency for the same billing entity" do
+        expect(execute).to match_array([
+          {"currency" => "EUR", "billingEntityId" => billing_entity_a.id, "amountCents" => "100", "creditsAvailableCount" => 1},
+          {"currency" => "USD", "billingEntityId" => billing_entity_a.id, "amountCents" => "200", "creditsAvailableCount" => 1}
+        ])
+      end
+    end
+
+    context "with multiple billing entities under one currency" do
+      before do
+        invoice_a = create(:invoice, customer:, organization:, billing_entity: billing_entity_a)
+        invoice_b = create(:invoice, customer:, organization:, billing_entity: billing_entity_b)
+        create(:credit_note, customer:, organization:, invoice: invoice_a,
+          total_amount_currency: "EUR", balance_amount_cents: 100, credit_amount_cents: 100)
+        create(:credit_note, customer:, organization:, invoice: invoice_b,
+          total_amount_currency: "EUR", balance_amount_cents: 400, credit_amount_cents: 400)
+      end
+
+      it "returns one row per billing entity for the same currency" do
+        expect(execute).to match_array([
+          {"currency" => "EUR", "billingEntityId" => billing_entity_a.id, "amountCents" => "100", "creditsAvailableCount" => 1},
+          {"currency" => "EUR", "billingEntityId" => billing_entity_b.id, "amountCents" => "400", "creditsAvailableCount" => 1}
+        ])
+      end
+    end
+
+    context "with multiple currencies and billing entities combined" do
+      before do
+        invoice_eur_a = create(:invoice, customer:, organization:, billing_entity: billing_entity_a)
+        invoice_usd_a = create(:invoice, customer:, organization:, billing_entity: billing_entity_a)
+        invoice_eur_b = create(:invoice, customer:, organization:, billing_entity: billing_entity_b)
+        create(:credit_note, customer:, organization:, invoice: invoice_eur_a,
+          total_amount_currency: "EUR", balance_amount_cents: 100, credit_amount_cents: 100)
+        create(:credit_note, customer:, organization:, invoice: invoice_usd_a,
+          total_amount_currency: "USD", balance_amount_cents: 200, credit_amount_cents: 200)
+        create(:credit_note, customer:, organization:, invoice: invoice_eur_b,
+          total_amount_currency: "EUR", balance_amount_cents: 400, credit_amount_cents: 400)
+      end
+
+      it "returns one row per (currency, billing entity) pair" do
+        expect(execute).to match_array([
+          {"currency" => "EUR", "billingEntityId" => billing_entity_a.id, "amountCents" => "100", "creditsAvailableCount" => 1},
+          {"currency" => "USD", "billingEntityId" => billing_entity_a.id, "amountCents" => "200", "creditsAvailableCount" => 1},
+          {"currency" => "EUR", "billingEntityId" => billing_entity_b.id, "amountCents" => "400", "creditsAvailableCount" => 1}
+        ])
+      end
+    end
+
+    context "with a fully-consumed credit (zero balance, positive credit amount)" do
+      before do
+        invoice = create(:invoice, customer:, organization:, billing_entity: billing_entity_a)
+        create(:credit_note, customer:, organization:, invoice:,
+          total_amount_currency: "EUR", balance_amount_cents: 0, credit_amount_cents: 500)
+      end
+
+      it "still returns the bucket so the FE can render the 'credited' subtitle" do
+        expect(execute).to match_array([
+          {"currency" => "EUR", "billingEntityId" => billing_entity_a.id, "amountCents" => "0", "creditsAvailableCount" => 1}
+        ])
+      end
+    end
+
+    context "when the customer has no finalized credit notes" do
+      it "returns an empty array" do
+        expect(execute).to eq([])
+      end
+    end
   end
 end

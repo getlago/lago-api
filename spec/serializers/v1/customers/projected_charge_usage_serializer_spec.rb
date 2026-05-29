@@ -64,6 +64,14 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
       presentation_breakdowns:)]
   end
 
+  let(:expected_projected_presentation_breakdowns) do
+    [
+      build(:presentation_breakdown, presentation_by: {"card_type" => "visa"}, units: 3.5),
+      build(:presentation_breakdown, presentation_by: {"card_type" => "mastercard"}, units: 0.5),
+      build(:presentation_breakdown, presentation_by: {"country" => "br"}, units: 1.5)
+    ]
+  end
+
   around { |example| travel_to(fixed_date) { example.run } }
 
   it "serializes the projected fee" do
@@ -71,7 +79,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
       "ProjectionResult",
       projected_units: expected_projected_units,
       projected_amount_cents: expected_projected_amount_cents,
-      projected_pricing_unit_amount_cents: expected_pricing_unit_projected_amount_cents
+      projected_pricing_unit_amount_cents: expected_pricing_unit_projected_amount_cents,
+      projected_presentation_breakdowns: expected_projected_presentation_breakdowns
     )
 
     allow(::Fees::ProjectionService).to receive(:call).and_return(
@@ -99,10 +108,16 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
       },
       "filters" => [],
       "presentation_breakdowns" => [],
+      "projected_presentation_breakdowns" => [],
       "grouped_usage" => [
         {
           "amount_cents" => 100,
           "projected_amount_cents" => expected_projected_amount_cents,
+          "projected_presentation_breakdowns" => [
+            {"presentation_by" => {"card_type" => "visa"}, "units" => "3.5"},
+            {"presentation_by" => {"card_type" => "mastercard"}, "units" => "0.5"},
+            {"presentation_by" => {"country" => "br"}, "units" => "1.5"}
+          ],
           "pricing_unit_details" => nil,
           "events_count" => 12,
           "units" => "10.0",
@@ -129,7 +144,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         "ProjectionResult",
         projected_units: expected_projected_units,
         projected_amount_cents: expected_projected_amount_cents,
-        projected_pricing_unit_amount_cents: expected_pricing_unit_projected_amount_cents
+        projected_pricing_unit_amount_cents: expected_pricing_unit_projected_amount_cents,
+        projected_presentation_breakdowns: expected_projected_presentation_breakdowns
       )
 
       allow(::Fees::ProjectionService).to receive(:call).and_return(
@@ -137,12 +153,21 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
       )
 
       expect(result["charges"].first["presentation_breakdowns"]).to eq([])
+      expect(result["charges"].first["projected_presentation_breakdowns"]).to eq([])
 
       expect(result["charges"].first["grouped_usage"].first["presentation_breakdowns"]).to match_array(
         [
           {"presentation_by" => {"card_type" => "visa"}, "units" => "7.0"},
           {"presentation_by" => {"card_type" => "mastercard"}, "units" => "1.0"},
           {"presentation_by" => {"country" => "br"}, "units" => "3.0"}
+        ]
+      )
+
+      expect(result["charges"].first["grouped_usage"].first["projected_presentation_breakdowns"]).to match_array(
+        [
+          {"presentation_by" => {"card_type" => "visa"}, "units" => "3.5"},
+          {"presentation_by" => {"card_type" => "mastercard"}, "units" => "0.5"},
+          {"presentation_by" => {"country" => "br"}, "units" => "1.5"}
         ]
       )
     end
@@ -158,7 +183,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         "ProjectionResult",
         projected_units: expected_projected_units,
         projected_amount_cents: expected_projected_amount_cents,
-        projected_pricing_unit_amount_cents: expected_pricing_unit_projected_amount_cents
+        projected_pricing_unit_amount_cents: expected_pricing_unit_projected_amount_cents,
+        projected_presentation_breakdowns: expected_projected_presentation_breakdowns
       )
 
       allow(::Fees::ProjectionService).to receive(:call).and_return(
@@ -191,10 +217,16 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         },
         "filters" => [],
         "presentation_breakdowns" => [],
+        "projected_presentation_breakdowns" => [],
         "grouped_usage" => [
           {
             "amount_cents" => 100,
             "projected_amount_cents" => expected_projected_amount_cents,
+            "projected_presentation_breakdowns" => [
+              {"presentation_by" => {"card_type" => "visa"}, "units" => "3.5"},
+              {"presentation_by" => {"card_type" => "mastercard"}, "units" => "0.5"},
+              {"presentation_by" => {"country" => "br"}, "units" => "1.5"}
+            ],
             "pricing_unit_details" => {
               "amount_cents" => 200,
               "projected_amount_cents" => expected_pricing_unit_projected_amount_cents,
@@ -250,7 +282,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         "ProjectionResult",
         projected_units: expected_filter_projected_units / 3,
         projected_amount_cents: expected_filter_projected_amount_cents / 3,
-        projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
+        projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3,
+        projected_presentation_breakdowns: []
       )
 
       allow(::Fees::ProjectionService).to receive(:call).and_return(
@@ -288,7 +321,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           "ProjectionResult",
           projected_units: expected_filter_projected_units / 3,
           projected_amount_cents: expected_filter_projected_amount_cents / 3,
-          projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
+          projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3,
+          projected_presentation_breakdowns: presentation_breakdowns
         )
         allow(::Fees::ProjectionService).to receive(:call).and_return(
           instance_double("ServiceResult", raise_if_error!: individual_projection_result)
@@ -298,6 +332,11 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
       it "serializes presentation_breakdowns in the filter" do
         filter_data = result["charges"].first["filters"].first
         expect(filter_data["presentation_breakdowns"]).to eq([
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"},
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"},
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"}
+        ])
+        expect(filter_data["projected_presentation_breakdowns"]).to eq([
           {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"},
           {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"},
           {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"}
@@ -315,7 +354,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
           "ProjectionResult",
           projected_units: expected_filter_projected_units / 3,
           projected_amount_cents: expected_filter_projected_amount_cents / 3,
-          projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
+          projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3,
+          projected_presentation_breakdowns: []
         )
 
         allow(::Fees::ProjectionService).to receive(:call).and_return(
@@ -392,14 +432,16 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         "ProjectionResult",
         projected_units: BigDecimal(10),
         projected_amount_cents: 100,
-        projected_pricing_unit_amount_cents: 150
+        projected_pricing_unit_amount_cents: 150,
+        projected_presentation_breakdowns: []
       )
 
       projection_result_2 = instance_double(
         "ProjectionResult",
         projected_units: BigDecimal(14),
         projected_amount_cents: 140,
-        projected_pricing_unit_amount_cents: 210
+        projected_pricing_unit_amount_cents: 210,
+        projected_presentation_breakdowns: []
       )
 
       allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[0]]).and_return(projection_result_1)
@@ -475,21 +517,24 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         "ProjectionResult",
         projected_units: BigDecimal(6),
         projected_amount_cents: 60,
-        projected_pricing_unit_amount_cents: 90
+        projected_pricing_unit_amount_cents: 90,
+        projected_presentation_breakdowns: []
       )
 
       projection_result_2 = instance_double(
         "ProjectionResult",
         projected_units: BigDecimal(8),
         projected_amount_cents: 80,
-        projected_pricing_unit_amount_cents: 120
+        projected_pricing_unit_amount_cents: 120,
+        projected_presentation_breakdowns: []
       )
 
       projection_result_3 = instance_double(
         "ProjectionResult",
         projected_units: BigDecimal(10),
         projected_amount_cents: 100,
-        projected_pricing_unit_amount_cents: 150
+        projected_pricing_unit_amount_cents: 150,
+        projected_presentation_breakdowns: []
       )
 
       allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[0]]).and_return(projection_result_1)
@@ -563,14 +608,16 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         "ProjectionResult",
         projected_units: BigDecimal(4),
         projected_amount_cents: 40,
-        projected_pricing_unit_amount_cents: 60
+        projected_pricing_unit_amount_cents: 60,
+        projected_presentation_breakdowns: []
       )
 
       projection_result_2 = instance_double(
         "ProjectionResult",
         projected_units: BigDecimal(6),
         projected_amount_cents: 60,
-        projected_pricing_unit_amount_cents: 90
+        projected_pricing_unit_amount_cents: 90,
+        projected_presentation_breakdowns: []
       )
 
       allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[0]]).and_return(projection_result_1)
@@ -641,14 +688,16 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         "ProjectionResult",
         projected_units: BigDecimal(20),
         projected_amount_cents: 200,
-        projected_pricing_unit_amount_cents: 300
+        projected_pricing_unit_amount_cents: 300,
+        projected_presentation_breakdowns: []
       )
 
       projection_result_2 = instance_double(
         "ProjectionResult",
         projected_units: BigDecimal(40),
         projected_amount_cents: 400,
-        projected_pricing_unit_amount_cents: 600
+        projected_pricing_unit_amount_cents: 600,
+        projected_presentation_breakdowns: []
       )
 
       allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[0]]).and_return(projection_result_1)
@@ -697,7 +746,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         "ProjectionResult",
         projected_units: BigDecimal(10),
         projected_amount_cents: 100,
-        projected_pricing_unit_amount_cents: 150
+        projected_pricing_unit_amount_cents: 150,
+        projected_presentation_breakdowns: []
       )
 
       allow(::Fees::ProjectionService).to receive(:call!).with(fees: usage).and_return(projection_result)
@@ -726,7 +776,8 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         "ProjectionResult",
         projected_units: BigDecimal(10),
         projected_amount_cents: 100,
-        projected_pricing_unit_amount_cents: 200
+        projected_pricing_unit_amount_cents: 200,
+        projected_presentation_breakdowns: []
       )
 
       allow(::Fees::ProjectionService).to receive(:call).and_return(

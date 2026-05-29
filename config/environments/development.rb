@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "active_support/core_ext/integer/time"
+require "lago/redis_config_builder"
 
 Rails.application.configure do
   config.after_initialize do
@@ -25,10 +26,9 @@ Rails.application.configure do
   config.consider_all_requests_local = true
   config.server_timing = true
 
-  cache_store_config = {url: ENV["LAGO_REDIS_CACHE_URL"], db: ENV.fetch("LAGO_REDIS_CACHE_DB", 0)}
-  if ENV["LAGO_REDIS_CACHE_PASSWORD"].present?
-    cache_store_config = cache_store_config.merge({password: ENV["LAGO_REDIS_CACHE_PASSWORD"]})
-  end
+  cache_store_config = Lago::RedisConfigBuilder.new
+    .with_options(db: ENV.fetch("LAGO_REDIS_CACHE_DB", 0))
+    .cache
   config.cache_store = :redis_cache_store, cache_store_config
 
   config.action_controller.perform_caching = false
