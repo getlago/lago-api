@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::RecreditJob do
+describe CreditNotes::RecreditJob do
   subject(:perform_job) { described_class.perform_now(credit) }
 
   let(:organization) { create(:organization) }
@@ -25,7 +25,9 @@ RSpec.describe CreditNotes::RecreditJob do
   end
 
   context "when the credit note is voided" do
-    before { credit_note.update!(credit_status: :voided) }
+    let(:credit_note) do
+      create(:credit_note, organization:, customer:, invoice: source_invoice, credit_status: :voided)
+    end
 
     it "does not call CreditNotes::RecreditService" do
       perform_job
@@ -35,7 +37,7 @@ RSpec.describe CreditNotes::RecreditJob do
   end
 
   context "when the credit note is nil" do
-    before { credit.update_columns(credit_note_id: nil) }
+    let(:credit) { create(:credit_note_credit, organization:, invoice:, credit_note: nil) }
 
     it "does not call CreditNotes::RecreditService" do
       perform_job

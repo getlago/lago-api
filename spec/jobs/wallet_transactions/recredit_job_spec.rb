@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe WalletTransactions::RecreditJob do
+describe WalletTransactions::RecreditJob do
   subject(:perform_job) { described_class.perform_now(wallet_transaction) }
 
   let(:organization) { create(:organization) }
@@ -24,7 +24,7 @@ RSpec.describe WalletTransactions::RecreditJob do
   end
 
   context "when the wallet is terminated" do
-    before { wallet.update!(status: :terminated) }
+    let(:wallet) { create(:wallet, :terminated, customer:, organization:) }
 
     it "does not call WalletTransactions::RecreditService" do
       perform_job
