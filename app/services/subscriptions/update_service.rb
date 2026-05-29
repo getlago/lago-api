@@ -69,7 +69,7 @@ module Subscriptions
 
         if params.key?(:billing_entity_id) || params.key?(:billing_entity_code)
           new_billing_entity = resolve_billing_entity(organization: subscription.organization, params:)
-          subscription.billing_entity = new_billing_entity if new_billing_entity
+          subscription.billing_entity = new_billing_entity
         end
 
         subscription.plan = handle_plan_override.plan if params.key?(:plan_overrides)

@@ -24,10 +24,15 @@ module Wallets
       return result unless valid_limitations?
       return result unless valid_payment_method?
 
-      if organization_flag_enabled?(:multi_entity_billing) && (params[:billing_entity_id].present? || params[:billing_entity_code].present?)
-        return result.not_found_failure!(resource: "billing_entity") unless billing_entity
+      if organization_flag_enabled?(:multi_entity_billing) &&
+          (params.key?(:billing_entity_id) || params.key?(:billing_entity_code))
+        if params[:billing_entity_id].present? || params[:billing_entity_code].present?
+          return result.not_found_failure!(resource: "billing_entity") unless billing_entity
 
-        wallet.billing_entity_id = billing_entity.id
+          wallet.billing_entity_id = billing_entity.id
+        else
+          wallet.billing_entity_id = nil
+        end
       end
 
       ActiveRecord::Base.transaction do

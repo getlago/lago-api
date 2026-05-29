@@ -1026,6 +1026,79 @@ RSpec.describe Wallets::UpdateService do
           expect(result.wallet.billing_entity_id).to eq(billing_entity.id)
         end
       end
+
+      context "when the wallet already has a billing_entity attached" do
+        let(:current_entity) { create(:billing_entity, organization:, code: "current_be") }
+        let(:other_entity) { create(:billing_entity, organization:, code: "other_be") }
+        let(:wallet) { create(:wallet, customer:, billing_entity: current_entity, allowed_fee_types: []) }
+
+        context "with billing_entity_id: nil" do
+          let(:params) { {id: wallet&.id, billing_entity_id: nil} }
+
+          it "clears the billing_entity_id" do
+            expect(result).to be_success
+            expect(result.wallet.billing_entity_id).to be_nil
+          end
+        end
+
+        context "with billing_entity_id pointing at a different entity" do
+          let(:params) { {id: wallet&.id, billing_entity_id: other_entity.id} }
+
+          it "switches to the new entity" do
+            expect(result).to be_success
+            expect(result.wallet.billing_entity_id).to eq(other_entity.id)
+          end
+        end
+
+        context "with an unknown billing_entity_id" do
+          let(:params) { {id: wallet&.id, billing_entity_id: SecureRandom.uuid} }
+
+          it "returns not_found_failure and leaves billing_entity_id unchanged" do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.resource).to eq("billing_entity")
+            expect(wallet.reload.billing_entity_id).to eq(current_entity.id)
+          end
+        end
+
+        context "with billing_entity_code: nil" do
+          let(:params) { {id: wallet&.id, billing_entity_code: nil} }
+
+          it "clears the billing_entity_id" do
+            expect(result).to be_success
+            expect(result.wallet.billing_entity_id).to be_nil
+          end
+        end
+
+        context "with billing_entity_code pointing at a different entity" do
+          let(:params) { {id: wallet&.id, billing_entity_code: other_entity.code} }
+
+          it "switches to the new entity" do
+            expect(result).to be_success
+            expect(result.wallet.billing_entity_id).to eq(other_entity.id)
+          end
+        end
+
+        context "without any billing_entity key in the payload" do
+          let(:params) { {id: wallet&.id, name: "renamed"} }
+
+          it "leaves billing_entity_id unchanged" do
+            expect(result).to be_success
+            expect(result.wallet.billing_entity_id).to eq(current_entity.id)
+          end
+        end
+
+        context "with an unknown billing_entity_code" do
+          let(:params) { {id: wallet&.id, billing_entity_code: "nonexistent"} }
+
+          it "returns not_found_failure and leaves billing_entity_id unchanged" do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.resource).to eq("billing_entity")
+            expect(wallet.reload.billing_entity_id).to eq(current_entity.id)
+          end
+        end
+      end
     end
 
     context "when multi_entity_billing is not enabled" do
