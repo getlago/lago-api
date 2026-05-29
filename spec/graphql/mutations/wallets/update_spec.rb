@@ -38,6 +38,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
             thresholdCredits
             paidCredits
             grantedCredits
+            grantsTargetTopUp
             targetOngoingBalance
             invoiceRequiresSuccessfulPayment
             ignorePaidTopUpLimits
@@ -94,6 +95,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
               targetOngoingBalance: "300",
               invoiceRequiresSuccessfulPayment: true,
               ignorePaidTopUpLimits: true,
+              grantsTargetTopUp: false,
               expirationAt: expiration_at.iso8601,
               transactionMetadata: [
                 {key: "example_key", value: "example_value"},
@@ -139,7 +141,8 @@ RSpec.describe Mutations::Wallets::Update, :premium do
       "grantedCredits" => "22.2",
       "targetOngoingBalance" => "300.0",
       "invoiceRequiresSuccessfulPayment" => true,
-      "ignorePaidTopUpLimits" => true
+      "ignorePaidTopUpLimits" => true,
+      "grantsTargetTopUp" => false
     )
     expect(result_data["appliesTo"]["feeTypes"]).to eq(["subscription"])
     expect(result_data["appliesTo"]["billableMetrics"].first["id"]).to eq(billable_metric.id)
