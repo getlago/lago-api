@@ -210,5 +210,44 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
 
       expect(SendWebhookJob).to have_been_enqueued.with("subscription.canceled", subscription)
     end
+
+    context "when an applied-coupon credit was consumed" do
+      let(:applied_coupon) { create(:applied_coupon, customer:, organization:, status: :terminated) }
+      let(:credit) { create(:credit, invoice:, organization:, applied_coupon:) }
+
+      before { credit }
+
+      it "enqueues an AppliedCoupons::RecreditJob" do
+        result
+
+        expect(AppliedCoupons::RecreditJob).to have_been_enqueued.with(credit)
+      end
+    end
+
+    context "when a credit-note credit was consumed" do
+      let(:credit_note) { create(:credit_note, customer:, organization:, invoice:, credit_status: :available) }
+      let(:credit) { create(:credit_note_credit, invoice:, organization:, credit_note:) }
+
+      before { credit }
+
+      it "enqueues a CreditNotes::RecreditJob" do
+        result
+
+        expect(CreditNotes::RecreditJob).to have_been_enqueued.with(credit)
+      end
+    end
+
+    context "when an outbound wallet transaction was consumed" do
+      let(:wallet) { create(:wallet, customer:, organization:) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:, organization:, invoice:, transaction_type: :outbound) }
+
+      before { wallet_transaction }
+
+      it "enqueues a WalletTransactions::RecreditJob" do
+        result
+
+        expect(WalletTransactions::RecreditJob).to have_been_enqueued.with(wallet_transaction)
+      end
+    end
   end
 end

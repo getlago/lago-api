@@ -54,6 +54,24 @@ module Subscriptions
           invoice.closed!
           ActivationRules::ResolveSubscriptionStatusService.call!(subscription:)
           subscription.update!(cancelation_reason: :payment_failed)
+
+          after_commit do
+            enqueue_recredit_jobs
+          end
+        end
+
+        def enqueue_recredit_jobs
+          invoice.credits.coupon_kind.find_each do |credit|
+            AppliedCoupons::RecreditJob.perform_later(credit)
+          end
+
+          invoice.credits.credit_note_kind.find_each do |credit|
+            CreditNotes::RecreditJob.perform_later(credit)
+          end
+
+          invoice.wallet_transactions.outbound.find_each do |wallet_transaction|
+            WalletTransactions::RecreditJob.perform_later(wallet_transaction)
+          end
         end
 
         def payment_rule
