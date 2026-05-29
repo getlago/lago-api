@@ -4,8 +4,6 @@
 @organization = Organization.find_by!(name: "Hooli")
 @customer = Customer.find_by!(external_id: "cust_john-doe")
 
-@organization.enable_feature_flag!(:order_forms)
-
 def create_quote(organization:, customer:, **params)
   quote = ::Quote.new(
     organization: organization,
@@ -38,7 +36,7 @@ def create_order_form(quote_version:, status: :generated, signed_by: nil, expire
   case status
   when :signed
     attrs[:signed_at] = 1.day.ago
-    attrs[:signed_by_user] = signed_by
+    attrs[:marked_as_signed_by_user] = signed_by
   when :expired
     attrs[:expires_at] = 2.days.ago
     attrs[:voided_at] = 1.day.ago

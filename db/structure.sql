@@ -44,6 +44,7 @@ ALTER TABLE IF EXISTS ONLY public.user_devices DROP CONSTRAINT IF EXISTS fk_rail
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_e4a58fbcac;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_e3cf54daac;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
+ALTER TABLE IF EXISTS ONLY public.order_forms DROP CONSTRAINT IF EXISTS fk_rails_dff929ff7d;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_dfac602b2c;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
 ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_de7694c307;
@@ -287,7 +288,6 @@ ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAIN
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_103e187859;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_0f807322b1;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_0f762162b0;
-ALTER TABLE IF EXISTS ONLY public.order_forms DROP CONSTRAINT IF EXISTS fk_rails_0f6233ccbc;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_0e464363cb;
 ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS fk_rails_0da056ac92;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_0d349e632f;
@@ -493,12 +493,12 @@ DROP INDEX IF EXISTS public.index_password_resets_on_token;
 DROP INDEX IF EXISTS public.index_organizations_on_slug;
 DROP INDEX IF EXISTS public.index_organizations_on_hmac_key;
 DROP INDEX IF EXISTS public.index_organizations_on_api_key;
-DROP INDEX IF EXISTS public.index_order_forms_on_status;
-DROP INDEX IF EXISTS public.index_order_forms_on_signed_by_user_id;
 DROP INDEX IF EXISTS public.index_order_forms_on_quote_version_id;
-DROP INDEX IF EXISTS public.index_order_forms_on_expires_at;
+DROP INDEX IF EXISTS public.index_order_forms_on_organization_id_and_status;
+DROP INDEX IF EXISTS public.index_order_forms_on_organization_id_and_expires_at;
+DROP INDEX IF EXISTS public.index_order_forms_on_organization_id_and_created_at;
+DROP INDEX IF EXISTS public.index_order_forms_on_marked_as_signed_by_user_id;
 DROP INDEX IF EXISTS public.index_order_forms_on_customer_id;
-DROP INDEX IF EXISTS public.index_order_forms_on_created_at;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id;
 DROP INDEX IF EXISTS public.index_memberships_on_organization_id;
@@ -4640,7 +4640,7 @@ CREATE TABLE public.order_forms (
     organization_id uuid NOT NULL,
     customer_id uuid NOT NULL,
     quote_version_id uuid NOT NULL,
-    signed_by_user_id uuid,
+    marked_as_signed_by_user_id uuid,
     number character varying NOT NULL,
     sequential_id integer NOT NULL,
     status public.order_form_status DEFAULT 'generated'::public.order_form_status NOT NULL,
@@ -8735,13 +8735,6 @@ CREATE UNIQUE INDEX index_memberships_on_user_id_and_organization_id ON public.m
 
 
 --
--- Name: index_order_forms_on_created_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_order_forms_on_created_at ON public.order_forms USING btree (created_at);
-
-
---
 -- Name: index_order_forms_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8749,10 +8742,31 @@ CREATE INDEX index_order_forms_on_customer_id ON public.order_forms USING btree 
 
 
 --
--- Name: index_order_forms_on_expires_at; Type: INDEX; Schema: public; Owner: -
+-- Name: index_order_forms_on_marked_as_signed_by_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_order_forms_on_expires_at ON public.order_forms USING btree (expires_at);
+CREATE INDEX index_order_forms_on_marked_as_signed_by_user_id ON public.order_forms USING btree (marked_as_signed_by_user_id);
+
+
+--
+-- Name: index_order_forms_on_organization_id_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_order_forms_on_organization_id_and_created_at ON public.order_forms USING btree (organization_id, created_at);
+
+
+--
+-- Name: index_order_forms_on_organization_id_and_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_order_forms_on_organization_id_and_expires_at ON public.order_forms USING btree (organization_id, expires_at);
+
+
+--
+-- Name: index_order_forms_on_organization_id_and_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_order_forms_on_organization_id_and_status ON public.order_forms USING btree (organization_id, status);
 
 
 --
@@ -8760,20 +8774,6 @@ CREATE INDEX index_order_forms_on_expires_at ON public.order_forms USING btree (
 --
 
 CREATE UNIQUE INDEX index_order_forms_on_quote_version_id ON public.order_forms USING btree (quote_version_id);
-
-
---
--- Name: index_order_forms_on_signed_by_user_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_order_forms_on_signed_by_user_id ON public.order_forms USING btree (signed_by_user_id);
-
-
---
--- Name: index_order_forms_on_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_order_forms_on_status ON public.order_forms USING btree (status);
 
 
 --
@@ -10135,14 +10135,6 @@ ALTER TABLE ONLY public.ai_conversations
 
 ALTER TABLE ONLY public.integration_customers
     ADD CONSTRAINT fk_rails_0e464363cb FOREIGN KEY (customer_id) REFERENCES public.customers(id);
-
-
---
--- Name: order_forms fk_rails_0f6233ccbc; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.order_forms
-    ADD CONSTRAINT fk_rails_0f6233ccbc FOREIGN KEY (signed_by_user_id) REFERENCES public.users(id);
 
 
 --
@@ -12087,6 +12079,14 @@ ALTER TABLE ONLY public.credit_note_items
 
 ALTER TABLE ONLY public.customer_metadata
     ADD CONSTRAINT fk_rails_dfac602b2c FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: order_forms fk_rails_dff929ff7d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.order_forms
+    ADD CONSTRAINT fk_rails_dff929ff7d FOREIGN KEY (marked_as_signed_by_user_id) REFERENCES public.users(id);
 
 
 --

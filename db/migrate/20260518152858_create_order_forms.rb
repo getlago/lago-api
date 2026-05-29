@@ -20,7 +20,7 @@ class CreateOrderForms < ActiveRecord::Migration[8.0]
         foreign_key: true,
         index: {unique: true},
         type: :uuid
-      t.references :signed_by_user,
+      t.references :marked_as_signed_by_user,
         foreign_key: {to_table: :users},
         type: :uuid
 
@@ -47,9 +47,9 @@ class CreateOrderForms < ActiveRecord::Migration[8.0]
       t.index [:organization_id, :number],
         unique: true,
         name: "index_unique_order_forms_on_organization_number"
-      t.index :status
-      t.index :created_at
-      t.index :expires_at
+      t.index [:organization_id, :status]
+      t.index [:organization_id, :created_at]
+      t.index [:organization_id, :expires_at]
     end
   end
 end
