@@ -12,8 +12,7 @@ module Events
           organization_id: source["organization_id"],
           transaction_id: source["transaction_id"],
           external_subscription_id: source["external_subscription_id"],
-          # Keep in mind that we need the milliseconds precision!
-          timestamp: Time.zone.at(source["timestamp"].to_f),
+          timestamp: Events::Common.timestamp_from_source(source),
           code: source["code"],
           properties: source["properties"]
         )

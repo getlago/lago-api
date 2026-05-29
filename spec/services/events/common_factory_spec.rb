@@ -22,10 +22,22 @@ RSpec.describe Events::CommonFactory do
         expect(new_instance.organization_id).to eq(source["organization_id"])
         expect(new_instance.transaction_id).to eq(source["transaction_id"])
         expect(new_instance.external_subscription_id).to eq(source["external_subscription_id"])
-        # Keep in mind that we need the milliseconds precision!
-        expect(new_instance.timestamp).to eq(Time.zone.at(source["timestamp"].to_f))
+        expect(new_instance.timestamp).to eq(Events::Common.timestamp_from_source(source))
         expect(new_instance.code).to eq(source["code"])
         expect(new_instance.properties).to eq(source["properties"])
+      end
+
+      context "when the serialized timestamp loses precision as a float" do
+        let(:timestamp) { Time.zone.parse("2026-05-22 10:04:50.227587000 +0000") }
+        let(:source) { build(:common_event, timestamp:).as_json }
+
+        it "preserves the precise timestamp" do
+          new_instance = described_class.new_instance(source:)
+
+          expect(Time.zone.at(source["timestamp"].to_f).usec).to eq(227586)
+          expect(new_instance.timestamp).to eq(timestamp)
+          expect(new_instance.timestamp.usec).to eq(227587)
+        end
       end
     end
 
