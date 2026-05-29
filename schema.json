@@ -15187,6 +15187,18 @@
               "deprecationReason": null
             },
             {
+              "name": "grantsTargetTopUp",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "ignorePaidTopUpLimits",
               "description": null,
               "type": {
@@ -60650,6 +60662,18 @@
               "deprecationReason": null
             },
             {
+              "name": "grantsTargetTopUp",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "ignorePaidTopUpLimits",
               "description": null,
               "args": [],
@@ -71544,6 +71568,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "grantsTargetTopUp",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,

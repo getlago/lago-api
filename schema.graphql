@@ -3309,6 +3309,7 @@ input CreateQuoteInput {
 input CreateRecurringTransactionRuleInput {
   expirationAt: ISO8601DateTime
   grantedCredits: String
+  grantsTargetTopUp: Boolean
   ignorePaidTopUpLimits: Boolean
   interval: RecurringTransactionIntervalEnum
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
@@ -11075,6 +11076,7 @@ type RecurringTransactionRule {
   createdAt: ISO8601DateTime!
   expirationAt: ISO8601DateTime
   grantedCredits: String!
+  grantsTargetTopUp: Boolean
   ignorePaidTopUpLimits: Boolean!
   interval: RecurringTransactionIntervalEnum
   invoiceRequiresSuccessfulPayment: Boolean!
@@ -13377,6 +13379,7 @@ input UpdateQuoteVersionInput {
 input UpdateRecurringTransactionRuleInput {
   expirationAt: ISO8601DateTime
   grantedCredits: String
+  grantsTargetTopUp: Boolean
   ignorePaidTopUpLimits: Boolean
   interval: RecurringTransactionIntervalEnum
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
