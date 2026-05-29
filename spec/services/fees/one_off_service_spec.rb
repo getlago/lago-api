@@ -224,6 +224,30 @@ RSpec.describe Fees::OneOffService do
       end
     end
 
+    context "when one boundary raises a bare ArgumentError while parsing" do
+      let(:fees) do
+        [
+          {
+            add_on_code: add_on_first.code,
+            unit_amount_cents: 1200,
+            units: 2,
+            description: "desc-123",
+            from_datetime: "1" * 129,
+            to_datetime: "2022-01-31T23:59:59Z",
+            tax_codes: [tax2.code]
+          }
+        ]
+      end
+
+      it "returns validation failure" do
+        result = one_off_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:boundaries]).to include("values_are_invalid")
+      end
+    end
+
     context "when one boundary is missing" do
       let(:fees) do
         [

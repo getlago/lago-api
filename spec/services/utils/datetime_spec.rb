@@ -5,6 +5,56 @@ require "rails_helper"
 RSpec.describe Utils::Datetime do
   subject(:datetime) { described_class }
 
+  describe ".parse_iso8601" do
+    context "when the value is an ISO8601 string" do
+      let(:value) { "2022-12-13T12:00:00Z" }
+
+      it "returns the parsed datetime" do
+        expect(datetime.parse_iso8601(value)).to eq(DateTime.iso8601(value))
+      end
+    end
+
+    context "when the value is already date-like" do
+      let(:value) { Time.current }
+
+      it "returns the value" do
+        expect(datetime.parse_iso8601(value)).to eq(value)
+      end
+    end
+
+    context "when the value raises a bare ArgumentError" do
+      let(:value) { "1" * 129 }
+
+      it "returns nil" do
+        expect(datetime.parse_iso8601(value)).to be_nil
+      end
+    end
+
+    context "when the value is not a string or date-like object" do
+      it "returns nil" do
+        expect(datetime.parse_iso8601(123)).to be_nil
+      end
+    end
+  end
+
+  describe ".parse_iso8601_date" do
+    context "when the value is an ISO8601 date string" do
+      let(:value) { "2022-12-13" }
+
+      it "returns the parsed date" do
+        expect(datetime.parse_iso8601_date(value)).to eq(Date.iso8601(value))
+      end
+    end
+
+    context "when the value raises a bare ArgumentError" do
+      let(:value) { "1" * 129 }
+
+      it "returns nil" do
+        expect(datetime.parse_iso8601_date(value)).to be_nil
+      end
+    end
+  end
+
   describe ".valid_format?" do
     context "when the parameter is a string" do
       context "when the date is not in ISO8601 format" do
@@ -22,6 +72,12 @@ RSpec.describe Utils::Datetime do
       context "when the date includes microseconds" do
         it "returns true" do
           expect(datetime).to be_valid_format("2024-05-30T09:45:44.394316274Z")
+        end
+      end
+
+      context "when the date raises a bare ArgumentError" do
+        it "returns false" do
+          expect(datetime).not_to be_valid_format("1" * 129)
         end
       end
     end

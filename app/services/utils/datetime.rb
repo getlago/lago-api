@@ -2,6 +2,24 @@
 
 module Utils
   class Datetime
+    def self.parse_iso8601(datetime)
+      return datetime if datetime.respond_to?(:strftime)
+      return unless datetime.is_a?(String)
+
+      DateTime.iso8601(datetime)
+    rescue ArgumentError
+      nil
+    end
+
+    def self.parse_iso8601_date(date)
+      return date if date.respond_to?(:strftime)
+      return unless date.is_a?(String)
+
+      Date.iso8601(date)
+    rescue ArgumentError
+      nil
+    end
+
     def self.valid_format?(datetime, format: :iso8601)
       return true if datetime.respond_to?(:strftime)
       return false unless datetime.is_a?(String)
@@ -10,7 +28,7 @@ module Utils
       when :any
         Time.zone.parse(datetime).present?
       else
-        Time.zone.iso8601(datetime).present?
+        parse_iso8601(datetime).present?
       end
     rescue ArgumentError
       false

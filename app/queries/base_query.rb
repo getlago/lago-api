@@ -51,13 +51,9 @@ class BaseQuery < BaseService
 
   def parse_datetime_filter(field_name)
     value = filters[field_name]
-    return value if [Time, ActiveSupport::TimeWithZone, Date, DateTime].include?(value.class)
+    parsed_value = Utils::Datetime.parse_iso8601(value)
+    return parsed_value if parsed_value
 
-    DateTime.iso8601(value)
-  # Date::Error inherits from ArgumentError so it is caught here too.
-  # A bare ArgumentError is raised e.g. for strings longer than 128 chars
-  # ("string length exceeds the limit 128").
-  rescue ArgumentError
     result.single_validation_failure!(field: field_name.to_sym, error_code: "invalid_date")
       .raise_if_error!
   end

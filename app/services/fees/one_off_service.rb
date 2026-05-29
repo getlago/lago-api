@@ -97,27 +97,24 @@ module Fees
     def valid_boundaries?(fee)
       return true if fee[:from_datetime].nil? && fee[:to_datetime].nil?
 
-      fee[:from_datetime] &&
-        fee[:to_datetime] &&
-        Utils::Datetime.valid_format?(fee[:from_datetime]) &&
-        Utils::Datetime.valid_format?(fee[:to_datetime]) &&
-        from_datetime(fee) <= to_datetime(fee)
+      return false unless fee[:from_datetime] && fee[:to_datetime]
+
+      from = from_datetime(fee)
+      to = to_datetime(fee)
+
+      from && to && from <= to
     end
 
     def from_datetime(fee)
-      if fee[:from_datetime].is_a?(String)
-        DateTime.iso8601(fee[:from_datetime])
-      else
-        fee[:from_datetime] || Time.current
-      end
+      return Time.current if fee[:from_datetime].nil?
+
+      Utils::Datetime.parse_iso8601(fee[:from_datetime])
     end
 
     def to_datetime(fee)
-      if fee[:to_datetime].is_a?(String)
-        DateTime.iso8601(fee[:to_datetime])
-      else
-        fee[:to_datetime] || Time.current
-      end
+      return Time.current if fee[:to_datetime].nil?
+
+      Utils::Datetime.parse_iso8601(fee[:to_datetime])
     end
   end
 end
