@@ -107,6 +107,20 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         .with("fee.created", Fee)
     end
 
+    context "when a sum aggregation event value is not numeric" do
+      let(:billable_metric) { create(:sum_billable_metric, organization:) }
+      let(:event_properties) { {billable_metric.field_name => "test_001"} }
+
+      it "skips fee creation without calling the aggregation service" do
+        result = fee_service.call
+
+        expect(result).to be_success
+        expect(result.fees).to eq([])
+        expect(Charges::PayInAdvanceAggregationService).not_to have_received(:call)
+        expect(SendWebhookJob).not_to have_been_enqueued.with("fee.created", Fee)
+      end
+    end
+
     context "when aggregation fails" do
       let(:aggregation_result) do
         BaseService::Result.new.service_failure!(code: "failure", message: "Failure")

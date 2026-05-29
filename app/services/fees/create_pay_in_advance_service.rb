@@ -16,6 +16,8 @@ module Fees
     end
 
     def call
+      return skipped_result unless valid_pay_in_advance_event?
+
       fees = []
 
       ActiveRecord::Base.transaction(**isolation_mode) do
@@ -51,6 +53,22 @@ module Fees
 
     delegate :billable_metric, to: :charge
     delegate :subscription, to: :event
+
+    def skipped_result
+      result.fees = []
+      result
+    end
+
+    def valid_pay_in_advance_event?
+      return true unless billable_metric.sum_agg?
+
+      value = (event.properties || {})[billable_metric.field_name]
+      return false if value.blank?
+
+      BigDecimal(value.to_s).finite?
+    rescue ArgumentError
+      false
+    end
 
     def filter
       @filter ||= ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter

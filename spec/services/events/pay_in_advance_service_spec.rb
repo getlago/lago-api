@@ -41,6 +41,14 @@ RSpec.describe Events::PayInAdvanceService do
       expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob)
     end
 
+    context "when value for sum_agg is not numeric" do
+      let(:event_properties) { {billable_metric.field_name => "test_001"} }
+
+      it "does not enqueue a job to perform the pay_in_advance aggregation" do
+        expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+      end
+    end
+
     context "when charge is invoiceable" do
       before { charge.update!(invoiceable: true) }
 
@@ -69,6 +77,15 @@ RSpec.describe Events::PayInAdvanceService do
 
       it "enqueues a job to create the pay_in_advance charge invoice" do
         expect { in_advance_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+      end
+
+      context "when value for sum_agg is not numeric" do
+        let(:event_properties) { {billable_metric.field_name => "test_001"} }
+
+        it "does not enqueue a job to create the pay_in_advance charge invoice" do
+          expect { in_advance_service.call }
+            .not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+        end
       end
 
       context "when charge is not invoiceable" do

@@ -60,7 +60,18 @@ module Events
       # NOTE: `custom_agg` and `count_agg` are the only 2 aggregations
       #       that don't require a field set in property.
       #       For other aggregation, if the field isn't set we shouldn't create a fee/invoice.
-      billable_metric.count_agg? || billable_metric.custom_agg? || properties[billable_metric.field_name].present?
+      return true if billable_metric.count_agg? || billable_metric.custom_agg?
+      value = (properties || {})[billable_metric.field_name]
+      return false if value.blank?
+      return true unless billable_metric.sum_agg?
+
+      valid_decimal?(value)
+    end
+
+    def valid_decimal?(value)
+      BigDecimal(value.to_s).finite?
+    rescue ArgumentError
+      false
     end
 
     def kafka_producer_enabled?
