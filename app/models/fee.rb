@@ -172,6 +172,14 @@ class Fee < ApplicationRecord
     amount_currency
   end
 
+  def grouped_or_filtered?
+    grouped_by.present? || charge_filter_id.present?
+  end
+
+  def ungrouped_or_filtered?
+    grouped_by.blank? || charge_filter_id.present?
+  end
+
   def presentation_group_keys_values_displayed_in_invoice
     return [] unless charge
 

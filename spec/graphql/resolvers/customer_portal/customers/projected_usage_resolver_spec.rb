@@ -18,7 +18,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
           chargesUsage {
             billableMetric { name code aggregationType }
             charge { chargeModel }
-            filters { id units amountCents pricingUnitAmountCents invoiceDisplayName values eventsCount }
+            filters { id units amountCents pricingUnitAmountCents invoiceDisplayName values eventsCount presentationBreakdowns { presentationBy units } projectedPresentationBreakdowns { presentationBy units } }
             units
             projectedUnits
             amountCents
@@ -153,7 +153,6 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
         }
       )
 
-      # debugger
       usage_response = result["data"]["customerPortalCustomerProjectedUsage"]
 
       expect(usage_response["fromDatetime"]).to eq(Time.current.beginning_of_month.iso8601)
@@ -293,11 +292,13 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
         expect(aws_filter_data["units"]).to eq(3)
         expect(aws_filter_data["amountCents"]).to eq("600")
         expect(aws_filter_data["pricingUnitAmountCents"]).to eq("3000")
+        expect(aws_filter_data["projectedPresentationBreakdowns"]).to be_empty
 
         google_filter_data = filters_usage.find { |f| f["id"] == google_filter.id }
         expect(google_filter_data["units"]).to eq(1)
         expect(google_filter_data["amountCents"]).to eq("400")
         expect(google_filter_data["pricingUnitAmountCents"]).to eq("2000")
+        expect(google_filter_data["projectedPresentationBreakdowns"]).to be_empty
       end
     end
   end
@@ -337,11 +338,16 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
         expect(standard_charge_usage["projectedPresentationBreakdowns"]).to be_empty
 
         grouped_usage = standard_charge_usage["groupedUsage"]
-        expect(grouped_usage.first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
-        expect(grouped_usage.first["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "8.27"}])
-
+        expect(grouped_usage.first["presentationBreakdowns"]).to be_empty
+        expect(grouped_usage.first["projectedPresentationBreakdowns"]).to be_empty
         expect(grouped_usage.second["presentationBreakdowns"]).to be_empty
         expect(grouped_usage.second["projectedPresentationBreakdowns"]).to be_empty
+        expect(standard_charge_usage["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+        expect(standard_charge_usage["filters"].second["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "8.27"}])
+        expect(standard_charge_usage["filters"].map { |filter| filter["projectedPresentationBreakdowns"] }).to match_array([
+          [],
+          [{"presentationBy" => {"cloud" => "aws"}, "units" => "8.27"}]
+        ])
       end
     end
 
@@ -433,8 +439,14 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
           ])
 
           expect(sum_charge_usage["groupedUsage"]).to be_empty
-          expect(sum_charge_usage["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
-          expect(sum_charge_usage["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "8.27"}])
+          expect(sum_charge_usage["presentationBreakdowns"]).to be_empty
+          expect(sum_charge_usage["projectedPresentationBreakdowns"]).to be_empty
+          expect(sum_charge_usage["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+          expect(sum_charge_usage["filters"].second["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "8.27"}])
+          expect(sum_charge_usage["filters"].map { |filter| filter["projectedPresentationBreakdowns"] }).to match_array([
+            [],
+            [{"presentationBy" => {"cloud" => "aws"}, "units" => "8.27"}]
+          ])
         end
       end
 

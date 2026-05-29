@@ -49,13 +49,6 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
   end
   let(:pricing_unit_usage) { nil }
   let(:presentation_breakdowns) { [] }
-  let(:expected_projected_presentation_breakdowns) do
-    [
-      build(:presentation_breakdown, presentation_by: {"card_type" => "visa"}, units: 3.5),
-      build(:presentation_breakdown, presentation_by: {"card_type" => "mastercard"}, units: 0.5),
-      build(:presentation_breakdown, presentation_by: {"country" => "br"}, units: 1.5)
-    ]
-  end
 
   let(:usage) do
     [build(:charge_fee,
@@ -69,6 +62,14 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
       charge_filter: nil,
       pricing_unit_usage:,
       presentation_breakdowns:)]
+  end
+
+  let(:expected_projected_presentation_breakdowns) do
+    [
+      build(:presentation_breakdown, presentation_by: {"card_type" => "visa"}, units: 3.5),
+      build(:presentation_breakdown, presentation_by: {"card_type" => "mastercard"}, units: 0.5),
+      build(:presentation_breakdown, presentation_by: {"country" => "br"}, units: 1.5)
+    ]
   end
 
   around { |example| travel_to(fixed_date) { example.run } }
@@ -308,6 +309,39 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
         "invoice_display_name" => charge_filter.invoice_display_name,
         "values" => {}
       )
+    end
+
+    context "when contains presentation breakdowns" do
+      let(:presentation_breakdowns) do
+        [build(:presentation_breakdown, presentation_by: {"cloud" => "aws"}, units: 4)]
+      end
+
+      before do
+        individual_projection_result = instance_double(
+          "ProjectionResult",
+          projected_units: expected_filter_projected_units / 3,
+          projected_amount_cents: expected_filter_projected_amount_cents / 3,
+          projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3,
+          projected_presentation_breakdowns: presentation_breakdowns
+        )
+        allow(::Fees::ProjectionService).to receive(:call).and_return(
+          instance_double("ServiceResult", raise_if_error!: individual_projection_result)
+        )
+      end
+
+      it "serializes presentation_breakdowns in the filter" do
+        filter_data = result["charges"].first["filters"].first
+        expect(filter_data["presentation_breakdowns"]).to eq([
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"},
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"},
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"}
+        ])
+        expect(filter_data["projected_presentation_breakdowns"]).to eq([
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"},
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"},
+          {"presentation_by" => {"cloud" => "aws"}, "units" => "4.0"}
+        ])
+      end
     end
 
     context "when charge configured to use pricing units" do

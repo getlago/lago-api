@@ -122,7 +122,7 @@ module V1
           units: totals[:units] + result.projected_units,
           amount_cents: totals[:amount_cents] + result.projected_amount_cents,
           pricing_unit_amount_cents: totals[:pricing_unit_amount_cents] + result.projected_pricing_unit_amount_cents.to_i,
-          presentation_breakdowns: totals[:presentation_breakdowns] + result.projected_presentation_breakdowns
+          presentation_breakdowns: totals[:presentation_breakdowns].concat(result.projected_presentation_breakdowns)
         }
       end
 
@@ -185,7 +185,12 @@ module V1
         {
           **usage_data.except(:amount_currency),
           invoice_display_name: charge_filter&.invoice_display_name,
-          values: charge_filter&.to_h
+          values: charge_filter&.to_h,
+          presentation_breakdowns: V1::Customers::PresentationBreakdownBuilder.call(
+            grouped_fees,
+            filter: V1::Customers::PresentationBreakdownBuilder::ALL,
+            filter_breakdown: V1::Customers::PresentationBreakdownBuilder::ALL
+          )
         }
       end
 
