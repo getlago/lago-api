@@ -1032,7 +1032,7 @@ RSpec.describe Wallets::UpdateService do
         let(:other_entity) { create(:billing_entity, organization:, code: "other_be") }
         let(:wallet) { create(:wallet, customer:, billing_entity: current_entity, allowed_fee_types: []) }
 
-        context "with billing_entity_id: nil" do
+        context "when billing_entity_id is nil" do
           let(:params) { {id: wallet&.id, billing_entity_id: nil} }
 
           it "clears the billing_entity_id" do
@@ -1041,7 +1041,7 @@ RSpec.describe Wallets::UpdateService do
           end
         end
 
-        context "with billing_entity_id pointing at a different entity" do
+        context "when billing_entity_id points at a different entity" do
           let(:params) { {id: wallet&.id, billing_entity_id: other_entity.id} }
 
           it "switches to the new entity" do
@@ -1050,7 +1050,7 @@ RSpec.describe Wallets::UpdateService do
           end
         end
 
-        context "with an unknown billing_entity_id" do
+        context "when billing_entity_id is unknown" do
           let(:params) { {id: wallet&.id, billing_entity_id: SecureRandom.uuid} }
 
           it "returns not_found_failure and leaves billing_entity_id unchanged" do
@@ -1061,7 +1061,7 @@ RSpec.describe Wallets::UpdateService do
           end
         end
 
-        context "with billing_entity_code: nil" do
+        context "when billing_entity_code is nil" do
           let(:params) { {id: wallet&.id, billing_entity_code: nil} }
 
           it "clears the billing_entity_id" do
@@ -1070,7 +1070,7 @@ RSpec.describe Wallets::UpdateService do
           end
         end
 
-        context "with billing_entity_code pointing at a different entity" do
+        context "when billing_entity_code points at a different entity" do
           let(:params) { {id: wallet&.id, billing_entity_code: other_entity.code} }
 
           it "switches to the new entity" do
@@ -1079,7 +1079,7 @@ RSpec.describe Wallets::UpdateService do
           end
         end
 
-        context "without any billing_entity key in the payload" do
+        context "when no billing_entity key is sent" do
           let(:params) { {id: wallet&.id, name: "renamed"} }
 
           it "leaves billing_entity_id unchanged" do
@@ -1088,7 +1088,7 @@ RSpec.describe Wallets::UpdateService do
           end
         end
 
-        context "with an unknown billing_entity_code" do
+        context "when billing_entity_code is unknown" do
           let(:params) { {id: wallet&.id, billing_entity_code: "nonexistent"} }
 
           it "returns not_found_failure and leaves billing_entity_id unchanged" do

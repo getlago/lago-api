@@ -25,9 +25,11 @@ module Wallets
       return result unless valid_payment_method?
 
       if organization_flag_enabled?(:multi_entity_billing) && billing_entity_param_sent?
-        return result.not_found_failure!(resource: "billing_entity") if billing_entity_value_provided? && billing_entity.nil?
+        if billing_entity_value_provided? && billing_entity.nil?
+          return result.not_found_failure!(resource: "billing_entity")
+        end
 
-        wallet.billing_entity_id = billing_entity&.id
+        wallet.billing_entity = billing_entity
       end
 
       ActiveRecord::Base.transaction do
