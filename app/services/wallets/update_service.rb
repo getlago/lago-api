@@ -24,15 +24,10 @@ module Wallets
       return result unless valid_limitations?
       return result unless valid_payment_method?
 
-      if organization_flag_enabled?(:multi_entity_billing) &&
-          (params.key?(:billing_entity_id) || params.key?(:billing_entity_code))
-        if params[:billing_entity_id].present? || params[:billing_entity_code].present?
-          return result.not_found_failure!(resource: "billing_entity") unless billing_entity
+      if organization_flag_enabled?(:multi_entity_billing) && billing_entity_param_sent?
+        return result.not_found_failure!(resource: "billing_entity") if billing_entity_value_provided? && billing_entity.nil?
 
-          wallet.billing_entity_id = billing_entity.id
-        else
-          wallet.billing_entity_id = nil
-        end
+        wallet.billing_entity_id = billing_entity&.id
       end
 
       ActiveRecord::Base.transaction do
@@ -191,6 +186,14 @@ module Wallets
 
     def organization_flag_enabled?(flag)
       wallet.customer.organization.feature_flag_enabled?(flag)
+    end
+
+    def billing_entity_param_sent?
+      params.key?(:billing_entity_id) || params.key?(:billing_entity_code)
+    end
+
+    def billing_entity_value_provided?
+      params[:billing_entity_id].present? || params[:billing_entity_code].present?
     end
 
     def billing_entity
