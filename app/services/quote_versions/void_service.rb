@@ -28,7 +28,7 @@ module QuoteVersions
         approved_at: nil
       )
 
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.voided", quote_version)
+      SendWebhookJob.perform_after_commit("quote_version.voided", quote_version)
 
       result.quote_version = quote_version
       result

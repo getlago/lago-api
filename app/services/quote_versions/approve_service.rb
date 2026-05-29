@@ -23,8 +23,8 @@ module QuoteVersions
         approved_at: Time.current
       )
 
+      SendWebhookJob.perform_after_commit("quote_version.approved", quote_version)
       # TODO: OrderForms::CreateService.call
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.approved", quote_version)
 
       result.quote_version = quote_version
       result

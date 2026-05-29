@@ -32,7 +32,7 @@ module QuoteVersions
         create_next_version(quote_version:)
       end
 
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.cloned", cloned)
+      SendWebhookJob.perform_after_commit("quote_version.created", cloned)
 
       result.quote_version = cloned
       result

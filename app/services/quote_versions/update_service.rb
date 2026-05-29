@@ -28,10 +28,10 @@ module QuoteVersions
           :end_date
         )
       )
+
+      SendWebhookJob.perform_after_commit("quote_version.updated", quote_version)
+
       result.quote_version = quote_version
-
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.updated", quote_version)
-
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

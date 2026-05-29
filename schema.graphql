@@ -5727,6 +5727,7 @@ enum EventCategoryEnum {
   PAYMENTS
   PAYMENT_RECEIPTS
   PLANS
+  QUOTES
   SUBSCRIPTIONS_AND_FEES
   WALLETS_AND_CREDITS
 }
@@ -5798,6 +5799,10 @@ enum EventTypeEnum {
   plan_created
   plan_deleted
   plan_updated
+  quote_version_approved
+  quote_version_created
+  quote_version_updated
+  quote_version_voided
   subscription_canceled
   subscription_incomplete
   subscription_started

@@ -248,6 +248,26 @@ plan_deleted:
   description: A plan has been deleted
   category: Plans
   deprecated: false
+quote_version_created:
+  name: quote_version.created
+  description: A new quote version has been created
+  category: Quotes
+  deprecated: false
+quote_version_updated:
+  name: quote_version.updated
+  description: A quote version has been updated
+  category: Quotes
+  deprecated: false
+quote_version_approved:
+  name: quote_version.approved
+  description: A quote version has been approved
+  category: Quotes
+  deprecated: false
+quote_version_voided:
+  name: quote_version.voided
+  description: A quote version has been voided
+  category: Quotes
+  deprecated: false
 subscription_canceled:
   name: subscription.canceled
   description: A subscription has been canceled
