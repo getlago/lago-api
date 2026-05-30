@@ -16,6 +16,20 @@ RSpec.shared_examples "a subscription index endpoint" do
     expect(response).to have_http_status(:success)
     expect(json[:subscriptions].count).to eq(1)
     expect(json[:subscriptions].first[:lago_id]).to eq(subscription.id)
+    expect(json[:subscriptions].first[:amount_cents]).to eq(plan.amount_cents)
+  end
+
+  context "with a custom plan amount" do
+    let(:parent_plan) { create(:plan, organization:, amount_cents: 500, description: "desc") }
+    let(:plan) { create(:plan, organization:, amount_cents: 1_234, parent: parent_plan, description: "desc") }
+
+    it "returns the subscription amount" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:subscriptions].count).to eq(1)
+      expect(json[:subscriptions].first[:amount_cents]).to eq(1_234)
+    end
   end
 
   context "with next and previous subscriptions" do
