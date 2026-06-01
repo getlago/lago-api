@@ -54,6 +54,20 @@ RSpec.describe OrderForms::CreateService do
       end
     end
 
+    context "when an order form already exists for the quote version", :premium do
+      before { create(:order_form, quote_version:, organization:, customer: quote.customer) }
+
+      it "does not create another order form" do
+        expect { result }.not_to change(OrderForm, :count)
+      end
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(quote_version_id: ["value_already_exist"])
+      end
+    end
+
     context "when the quote version does not exist", :premium do
       let(:quote_version) { nil }
 

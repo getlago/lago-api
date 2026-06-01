@@ -27,6 +27,8 @@ module OrderForms
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique
+      result.single_validation_failure!(field: :quote_version_id, error_code: "value_already_exist")
     end
 
     private
