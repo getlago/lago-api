@@ -60,6 +60,8 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
       expect(result.refund.id).to be_present
 
       expect(result.refund.credit_note).to eq(credit_note)
+      expect(result.refund.refundable).to eq(credit_note)
+      expect(result.refund.reason).to eq("credit_note")
       expect(result.refund.payment).to eq(payment)
       expect(result.refund.payment_provider).to eq(adyen_payment_provider)
       expect(result.refund.payment_provider_customer).to eq(adyen_customer)
