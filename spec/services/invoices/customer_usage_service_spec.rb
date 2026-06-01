@@ -225,10 +225,21 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             result = usage_service.call
 
             expect(result).to be_success
-            expect(result.usage.fees.map(&:charge_id)).to match_array([charge.id, empty_charge.id])
+            expect(result.usage.fees.map(&:amount_cents)).to match_array([0, 2532])
             expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call) do |invoice:, fees:|
-              expect(fees.map(&:charge_id)).to match_array([charge.id])
+              expect(fees.map(&:amount_cents)).to match_array([2532])
             end
+          end
+        end
+
+        it "leaves the excluded zero fee with default zero taxes" do
+          travel_to(current_date) do
+            result = usage_service.call
+
+            zero_fee = result.usage.fees.find { |fee| fee.amount_cents.zero? }
+            expect(zero_fee.taxes_amount_cents).to eq(0)
+            expect(zero_fee.taxes_rate).to eq(0)
+            expect(zero_fee.applied_taxes).to be_empty
           end
         end
       end
