@@ -419,6 +419,7 @@ DROP INDEX IF EXISTS public.index_rtr_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_roles_on_organization_id;
 DROP INDEX IF EXISTS public.index_roles_by_unique_admin;
 DROP INDEX IF EXISTS public.index_roles_by_code_per_organization;
+DROP INDEX IF EXISTS public.index_refunds_on_refundable;
 DROP INDEX IF EXISTS public.index_refunds_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_refunds_on_payment_provider_customer_id;
 DROP INDEX IF EXISTS public.index_refunds_on_payment_id;
@@ -4969,7 +4970,7 @@ CREATE TABLE public.recurring_transaction_rules_invoice_custom_sections (
 CREATE TABLE public.refunds (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     payment_id uuid NOT NULL,
-    credit_note_id uuid NOT NULL,
+    credit_note_id uuid,
     payment_provider_id uuid,
     payment_provider_customer_id uuid NOT NULL,
     amount_cents bigint DEFAULT 0 NOT NULL,
@@ -4978,7 +4979,11 @@ CREATE TABLE public.refunds (
     provider_refund_id character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    refundable_type character varying,
+    refundable_id uuid,
+    reason character varying,
+    CONSTRAINT refunds_credit_note_or_refundable_present CHECK (((credit_note_id IS NOT NULL) OR ((refundable_type IS NOT NULL) AND (refundable_id IS NOT NULL))))
 );
 
 
@@ -9386,6 +9391,13 @@ CREATE INDEX index_refunds_on_payment_provider_id ON public.refunds USING btree 
 
 
 --
+-- Name: index_refunds_on_refundable; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_refunds_on_refundable ON public.refunds USING btree (refundable_type, refundable_id);
+
+
+--
 -- Name: index_roles_by_code_per_organization; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12470,7 +12482,10 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260601120429'),
+('20260601120428'),
 ('20260526142247'),
+('20260526131452'),
 ('20260525102114'),
 ('20260520075420'),
 ('20260518152858'),
