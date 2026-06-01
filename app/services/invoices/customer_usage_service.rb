@@ -211,13 +211,18 @@ module Invoices
     def compute_amounts_with_provider_taxes
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
 
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
+      # NOTE: Zero fees are excluded from the tax provider request to stay under its
+      #       line-item limit (Anrok/Avalara reject payloads above 1200 items). They owe
+      #       no tax, so they keep their default zero taxes and stay in the usage response.
+      taxable_fees = invoice.fees.select(&:non_zero?)
+
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: taxable_fees)
 
       return result.validation_failure!(errors: {tax_error: [taxes_result.error.message]}) unless taxes_result.success?
 
       result.fees_taxes = taxes_result.fees
 
-      invoice.fees.each do |fee|
+      taxable_fees.each do |fee|
         fee_taxes = result.fees_taxes.find do |item|
           item.item_key == fee.item_key
         end
