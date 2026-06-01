@@ -211,9 +211,10 @@ module Invoices
     def compute_amounts_with_provider_taxes
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
 
-      # NOTE: Zero fees are excluded from the tax provider request to stay under its
-      #       line-item limit (Anrok/Avalara reject payloads above 1200 items). They owe
-      #       no tax, so they keep their default zero taxes and stay in the usage response.
+      # NOTE: Only fees with a positive amount can incur tax, so non-taxable fees are
+      #       excluded from the provider request. This also keeps the payload under the
+      #       provider line-item limit (Anrok/Avalara reject payloads above 1200 items).
+      #       Excluded fees owe no tax and keep their default zero taxes in the usage response.
       taxable_fees = invoice.fees.select(&:taxable?)
 
       taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: taxable_fees)
