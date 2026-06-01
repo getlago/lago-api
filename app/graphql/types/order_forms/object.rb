@@ -12,8 +12,8 @@ module Types
 
       field :billing_snapshot, GraphQL::Types::JSON, null: false
       field :expires_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :marked_as_signed_by_user_id, ID, null: true
       field :signed_at, GraphQL::Types::ISO8601DateTime, null: true
-      field :signed_by_user_id, ID, null: true
       field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :customer, Types::Customers::Object, null: false
