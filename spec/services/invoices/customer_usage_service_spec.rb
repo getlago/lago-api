@@ -136,6 +136,31 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end
     end
 
+    context "when some charges produce only zero fees" do
+      let(:apply_taxes) { false }
+      let(:empty_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:empty_charge) { create(:standard_charge, plan:, billable_metric: empty_metric, properties: {amount: "5"}) }
+      let(:zero_value_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value") }
+      let(:zero_value_charge) { create(:standard_charge, plan:, billable_metric: zero_value_metric, properties: {amount: "10"}) }
+
+      before do
+        empty_charge
+        zero_value_charge
+        create(:event, organization:, subscription:, customer:, code: zero_value_metric.code, timestamp:, properties: {value: 0})
+      end
+
+      it "drops fully-empty fees but keeps fees that recorded events" do
+        result = usage_service.call
+
+        expect(result).to be_success
+        expect(result.usage.fees.map(&:charge_id)).to match_array([charge.id, zero_value_charge.id])
+
+        zero_value_fee = result.usage.fees.find { |f| f.charge_id == zero_value_charge.id }
+        expect(zero_value_fee).to have_attributes(units: 0, amount_cents: 0)
+        expect(zero_value_fee.events_count).to be_positive
+      end
+    end
+
     context "when there is tax provider integration" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
@@ -192,6 +217,43 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             )
             expect(result.usage.fees.size).to eq(1)
             expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+          end
+        end
+      end
+
+      context "when a charge produces a zero fee" do
+        let(:current_date) { DateTime.parse("2025-06-15") }
+        let(:timestamp) { current_date }
+        let(:empty_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+        let(:empty_charge) { create(:standard_charge, plan:, billable_metric: empty_metric, properties: {amount: "5"}) }
+
+        before do
+          empty_charge
+          allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
+
+          stub_request(:post, endpoint).to_return do |request|
+            response = JSON.parse(File.read(
+              Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
+            ))
+
+            key = JSON.parse(request.body).first["fees"].last["item_key"]
+            response["succeededInvoices"].first["fees"].last["item_key"] = key
+            response["succeededInvoices"].first["fees"].last["item_id"] = charge.billable_metric.id
+            response["succeededInvoices"].first["fees"].last["amount_cents"] = 2532
+
+            {body: response.to_json}
+          end
+        end
+
+        it "excludes the zero fee from the tax provider payload" do
+          travel_to(current_date) do
+            result = usage_service.call
+
+            expect(result).to be_success
+            expect(result.usage.fees.map(&:charge_id)).to match_array([charge.id])
+            expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call) do |invoice:, fees:|
+              expect(fees.map(&:charge_id)).to match_array([charge.id])
+            end
           end
         end
       end

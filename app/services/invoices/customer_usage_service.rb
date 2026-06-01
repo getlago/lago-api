@@ -119,6 +119,7 @@ module Invoices
       fees = []
       filters = event_filters(subscription, boundaries).charges
       charges.find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
+      fees.select!(&:non_zero?)
       return fees if usage_filters.has_charge_filter?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }

@@ -43,8 +43,6 @@ module DailyUsages
             previous_daily_usage = nil
           end
 
-          usage.fees = usage.fees.select(&:non_zero?)
-
           if usage.fees.any?
             daily_usage = DailyUsage.new(
               organization:,

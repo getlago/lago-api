@@ -216,8 +216,8 @@ RSpec.describe Resolvers::Customers::UsageResolver do
 
       charges_usage = result["data"]["customerUsage"]["chargesUsage"]
       expect(charges_usage.first["presentationBreakdowns"]).to be_empty
-      expect(charges_usage.second["filters"].first["presentationBreakdowns"]).to be_empty
-      expect(charges_usage.second["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+      expect(charges_usage.second["filters"].size).to eq(1)
+      expect(charges_usage.second["filters"].first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
     end
 
     context "without charge filters" do
@@ -269,9 +269,9 @@ RSpec.describe Resolvers::Customers::UsageResolver do
         expect(charges_usage.second["presentationBreakdowns"]).to be_empty
 
         grouped_usage = charges_usage.second["groupedUsage"]
+        expect(grouped_usage.size).to eq(1)
         expect(grouped_usage.first["presentationBreakdowns"]).to be_empty
-        expect(grouped_usage.second["presentationBreakdowns"]).to be_empty
-        expect(charges_usage.second["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+        expect(charges_usage.second["filters"].first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
       end
 
       context "without charge filters" do
@@ -349,7 +349,7 @@ RSpec.describe Resolvers::Customers::UsageResolver do
 
         expect(sum_charge_usage["groupedUsage"]).to be_empty
         expect(sum_charge_usage["presentationBreakdowns"]).to be_empty
-        expect(sum_charge_usage["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+        expect(sum_charge_usage["filters"].first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
       end
 
       context "without charge filters" do

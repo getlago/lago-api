@@ -307,8 +307,8 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver do
         charges_usage = result["data"]["customerPortalCustomerUsage"]["chargesUsage"]
         sum_charge_usage = charges_usage.find { |usage| usage["billableMetric"]["code"] == sum_metric.code }
         expect(sum_charge_usage["presentationBreakdowns"]).to be_empty
-        expect(sum_charge_usage["filters"].first["presentationBreakdowns"]).to be_empty
-        expect(sum_charge_usage["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+        expect(sum_charge_usage["filters"].size).to eq(1)
+        expect(sum_charge_usage["filters"].first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
         metric_charge_usage = charges_usage.find { |usage| usage["billableMetric"]["code"] == metric.code }
         expect(metric_charge_usage["presentationBreakdowns"]).to be_empty
       end
@@ -366,9 +366,9 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver do
           expect(sum_charge["presentationBreakdowns"]).to be_empty
 
           grouped_usage = sum_charge["groupedUsage"]
+          expect(grouped_usage.size).to eq(1)
           expect(grouped_usage.first["presentationBreakdowns"]).to be_empty
-          expect(grouped_usage.second["presentationBreakdowns"]).to be_empty
-          expect(sum_charge["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+          expect(sum_charge["filters"].first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
 
           metric_charge = charges_usage.find { |usage| usage["billableMetric"]["code"] == metric.code }
           expect(metric_charge["presentationBreakdowns"]).to be_empty
@@ -451,7 +451,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver do
 
           expect(sum_charge_usage["groupedUsage"]).to be_empty
           expect(sum_charge_usage["presentationBreakdowns"]).to be_empty
-          expect(sum_charge_usage["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+          expect(sum_charge_usage["filters"].first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
         end
       end
 

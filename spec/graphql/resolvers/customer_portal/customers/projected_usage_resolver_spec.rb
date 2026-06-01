@@ -338,16 +338,11 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
         expect(standard_charge_usage["projectedPresentationBreakdowns"]).to be_empty
 
         grouped_usage = standard_charge_usage["groupedUsage"]
+        expect(grouped_usage.size).to eq(1)
         expect(grouped_usage.first["presentationBreakdowns"]).to be_empty
         expect(grouped_usage.first["projectedPresentationBreakdowns"]).to be_empty
-        expect(grouped_usage.second["presentationBreakdowns"]).to be_empty
-        expect(grouped_usage.second["projectedPresentationBreakdowns"]).to be_empty
-        expect(standard_charge_usage["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
-        expect(standard_charge_usage["filters"].second["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "8.27"}])
-        expect(standard_charge_usage["filters"].map { |filter| filter["projectedPresentationBreakdowns"] }).to match_array([
-          [],
-          [{"presentationBy" => {"cloud" => "aws"}, "units" => "8.27"}]
-        ])
+        expect(standard_charge_usage["filters"].first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+        expect(standard_charge_usage["filters"].first["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "8.27"}])
       end
     end
 
@@ -441,10 +436,9 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
           expect(sum_charge_usage["groupedUsage"]).to be_empty
           expect(sum_charge_usage["presentationBreakdowns"]).to be_empty
           expect(sum_charge_usage["projectedPresentationBreakdowns"]).to be_empty
-          expect(sum_charge_usage["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
-          expect(sum_charge_usage["filters"].second["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "8.27"}])
+          expect(sum_charge_usage["filters"].first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+          expect(sum_charge_usage["filters"].first["projectedPresentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "8.27"}])
           expect(sum_charge_usage["filters"].map { |filter| filter["projectedPresentationBreakdowns"] }).to match_array([
-            [],
             [{"presentationBy" => {"cloud" => "aws"}, "units" => "8.27"}]
           ])
         end
