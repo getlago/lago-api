@@ -25,6 +25,7 @@ class Subscription < ApplicationRecord
   has_many :entitlement_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
   has_many :fixed_charges, -> { kept }, through: :plan
   has_many :fixed_charge_events
+  has_many :fixed_charge_units_overrides, class_name: "Subscription::FixedChargeUnitsOverride"
   has_many :add_ons, through: :fixed_charges
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
@@ -317,34 +318,34 @@ end
 # Table name: subscriptions
 # Database name: primary
 #
-#  id                            :uuid             not null, primary key
-#  activated_at                  :datetime
-#  billing_time                  :integer          default("calendar"), not null
-#  cancelation_reason            :enum
-#  canceled_at                   :datetime
-#  consolidate_invoice           :boolean          default(TRUE), not null
-#  ending_at                     :datetime
-#  last_received_event_on        :date
-#  name                          :string
-#  on_termination_credit_note    :enum
-#  on_termination_invoice        :enum             default("generate"), not null
-#  payment_method_type           :enum             default("provider"), not null
-#  progressive_billing_disabled  :boolean          default(FALSE), not null
-#  skip_invoice_custom_sections  :boolean          default(FALSE), not null
-#  started_at                    :datetime
-#  status                        :integer          not null
-#  subscription_at               :datetime
-#  terminated_at                 :datetime
-#  trial_ended_at                :datetime
-#  created_at                    :datetime         not null
-#  updated_at                    :datetime         not null
-#  billing_entity_id             :uuid
-#  customer_id                   :uuid             not null
-#  external_id                   :string           not null
-#  organization_id               :uuid             not null
-#  payment_method_id             :uuid
-#  plan_id                       :uuid             not null
-#  previous_subscription_id      :uuid
+#  id                           :uuid             not null, primary key
+#  activated_at                 :datetime
+#  billing_time                 :integer          default("calendar"), not null
+#  cancelation_reason           :enum
+#  canceled_at                  :datetime
+#  consolidate_invoice          :boolean          default(TRUE), not null
+#  ending_at                    :datetime
+#  last_received_event_on       :date
+#  name                         :string
+#  on_termination_credit_note   :enum
+#  on_termination_invoice       :enum             default("generate"), not null
+#  payment_method_type          :enum             default("provider"), not null
+#  progressive_billing_disabled :boolean          default(FALSE), not null
+#  skip_invoice_custom_sections :boolean          default(FALSE), not null
+#  started_at                   :datetime
+#  status                       :integer          not null
+#  subscription_at              :datetime
+#  terminated_at                :datetime
+#  trial_ended_at               :datetime
+#  created_at                   :datetime         not null
+#  updated_at                   :datetime         not null
+#  billing_entity_id            :uuid
+#  customer_id                  :uuid             not null
+#  external_id                  :string           not null
+#  organization_id              :uuid             not null
+#  payment_method_id            :uuid
+#  plan_id                      :uuid             not null
+#  previous_subscription_id     :uuid
 #
 # Indexes
 #
