@@ -24,7 +24,7 @@ def create_quote_version(quote:, **params)
   quote_version
 end
 
-def create_order_form(quote_version:, status: :generated, signed_by: nil, expires_at: nil)
+def create_order_form(quote_version:, status: :generated, marked_as_signed_by_user: nil, expires_at: nil)
   attrs = {
     organization: quote_version.organization,
     customer: quote_version.quote.customer,
@@ -36,7 +36,7 @@ def create_order_form(quote_version:, status: :generated, signed_by: nil, expire
   case status
   when :signed
     attrs[:signed_at] = 1.day.ago
-    attrs[:marked_as_signed_by_user] = signed_by
+    attrs[:marked_as_signed_by_user] = marked_as_signed_by_user
   when :expired
     attrs[:expires_at] = 2.days.ago
     attrs[:voided_at] = 1.day.ago
@@ -96,7 +96,7 @@ end
 # on approved quote_versions, so we build a fresh quote/version dedicated to
 # them — without touching the draft quotes seeded above, which may be relied on
 # by other QA flows.
-def create_approved_quote_with_order_form(organization:, customer:, status: :generated, signed_by: nil, expires_at: nil)
+def create_approved_quote_with_order_form(organization:, customer:, status: :generated, marked_as_signed_by_user: nil, expires_at: nil)
   quote = create_quote(
     organization: organization,
     customer: customer,
@@ -111,7 +111,7 @@ def create_approved_quote_with_order_form(organization:, customer:, status: :gen
   create_order_form(
     quote_version: quote_version,
     status: status,
-    signed_by: signed_by,
+    marked_as_signed_by_user: marked_as_signed_by_user,
     expires_at: expires_at
   )
 end
@@ -123,7 +123,7 @@ gavin = User.find_by(email: "gavin@hooli.com")
 [
   {customer_external_id: "cust_john-doe", status: :generated},
   {customer_external_id: "cust_1", status: :generated},
-  {customer_external_id: "cust_2", status: :signed, signed_by: gavin},
+  {customer_external_id: "cust_2", status: :signed, marked_as_signed_by_user: gavin},
   {customer_external_id: "cust_3", status: :expired},
   {customer_external_id: "cust_4", status: :voided},
   {customer_external_id: "cust_5", status: :generated, expires_at: 7.days.from_now}

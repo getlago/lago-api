@@ -13,7 +13,7 @@ RSpec.describe Types::OrderForms::Object do
     expect(subject).to have_field(:billing_snapshot).of_type("JSON!")
     expect(subject).to have_field(:expires_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:signed_at).of_type("ISO8601DateTime")
-    expect(subject).to have_field(:signed_by_user_id).of_type("ID")
+    expect(subject).to have_field(:marked_as_signed_by_user_id).of_type("ID")
     expect(subject).to have_field(:voided_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:customer).of_type("Customer!")
     expect(subject).to have_field(:quote).of_type("Quote!")
