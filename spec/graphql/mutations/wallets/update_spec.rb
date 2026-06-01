@@ -224,4 +224,31 @@ RSpec.describe Mutations::Wallets::Update, :premium do
       expect_unprocessable_entity(result, details: {code: ["value_already_exist"]})
     end
   end
+
+  context "when updating billing_entity_id with multi_entity_billing enabled" do
+    let(:billing_entity) { create(:billing_entity, organization:) }
+
+    before do
+      organization.update!(feature_flags: ["multi_entity_billing"])
+    end
+
+    it "updates the wallet's billing entity" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: wallet.id,
+            billingEntityId: billing_entity.id,
+            priority: 22
+          }
+        }
+      )
+
+      expect(result["data"]["updateCustomerWallet"]["id"]).to eq(wallet.id)
+      expect(wallet.reload.billing_entity_id).to eq(billing_entity.id)
+    end
+  end
 end

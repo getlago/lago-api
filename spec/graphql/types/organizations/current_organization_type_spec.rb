@@ -35,6 +35,8 @@ RSpec.describe Types::Organizations::CurrentOrganizationType do
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
 
+    expect(subject).to have_field(:events_store).of_type("EventsStoreEnum!")
+
     expect(subject).to have_field(:finalize_zero_amount_invoice).of_type("Boolean!")
     expect(subject).to have_field(:billing_configuration).of_type("OrganizationBillingConfiguration").with_permission("organization:invoices:view")
     expect(subject).to have_field(:email_settings).of_type("[EmailSettingsEnum!]").with_permission("organization:emails:view")

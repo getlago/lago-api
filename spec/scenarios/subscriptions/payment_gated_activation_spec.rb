@@ -219,6 +219,63 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
   end
 
+  describe "timeout: subscription cancels on activation rule expiry" do
+    before do
+      # Best-effort PSP cancel calls Stripe; mock the SDK to return a canceled intent.
+      allow(::Stripe::PaymentIntent).to receive(:cancel).and_return(
+        ::Stripe::PaymentIntent.construct_from(
+          id: payment_intent_id,
+          object: "payment_intent",
+          status: "canceled",
+          amount: 1000,
+          currency: "eur"
+        )
+      )
+    end
+
+    it "expires the gated subscription with cancelation_reason: timeout" do
+      # Stage 1: Create gated subscription
+      create_subscription(subscription_params)
+      perform_all_enqueued_jobs
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.activation_rules.sole).to be_pending
+
+      invoice = subscription.invoices.sole
+      expect(invoice).to be_open
+
+      # Stage 2: Simulate timeout — push the rule's expires_at into the past
+      subscription.activation_rules.sole.update!(expires_at: 1.hour.ago)
+
+      # Stage 3: Clock job runs — picks up the expired rule, enqueues ExpireIncompleteJob
+      Clock::ExpireIncompleteSubscriptionsJob.perform_now
+      perform_all_enqueued_jobs
+
+      subscription.reload
+      expect(subscription).to be_canceled
+      expect(subscription.cancelation_reason).to eq("timeout")
+      expect(subscription.activation_rules.sole).to be_expired
+
+      expect(invoice.reload).to be_closed
+    end
+
+    it "does not act on subscriptions whose rule has not yet expired" do
+      create_subscription(subscription_params)
+      perform_all_enqueued_jobs
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+
+      # Rule's expires_at is still in the future (48 hours from creation)
+      Clock::ExpireIncompleteSubscriptionsJob.perform_now
+      perform_all_enqueued_jobs
+
+      expect(subscription.reload).to be_incomplete
+      expect(subscription.activation_rules.sole).to be_pending
+    end
+  end
+
   describe "gated subscription with pending VIES check" do
     let(:vat_number) { "IT12345678901" }
     let(:organization) do

@@ -2,6 +2,8 @@
 
 module Organizations
   class CreateService < BaseService
+    Result = BaseResult[:organization]
+
     def initialize(params)
       @params = params
       super
@@ -11,6 +13,11 @@ module Organizations
       organization = Organization.new(
         params.slice(:name, :document_numbering, :premium_integrations)
       )
+
+      if ActiveModel::Type::Boolean.new.cast(ENV["LAGO_CLICKHOUSE_ENABLED"]) && ENV["LAGO_DEFAULT_EVENT_STORE"] == "clickhouse"
+        organization.clickhouse_events_store = true
+        organization.clickhouse_deduplication_enabled = true
+      end
 
       ActiveRecord::Base.transaction do
         # TODO: remove when we do not support document_numbering per organization

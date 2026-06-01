@@ -103,14 +103,35 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
       expect(kafka_messages).to be_empty
     end
 
-    it "logs error and returns nil when kafka raises" do
-      allow(karafka_producer).to receive(:produce_async).and_raise(StandardError, "Kafka down")
-      allow(Rails.logger).to receive(:error)
+    [
+      {exception: WaterDrop::Errors::ProduceError, message: "#<Rdkafka::RdkafkaError: Local: Unknown topic (unknown_topic)>"},
+      {exception: WaterDrop::Errors::MessageInvalidError, message: "Message is too large"}
+    ].each do |error_context|
+      exception = error_context[:exception]
+      exception_message = error_context[:message]
+      context "when producer raises #{exception}" do
+        subject(:produce) { described_class.produce(document: invoice, message:) }
 
-      result = described_class.produce(document: invoice, message:)
+        let(:result) { BaseService::Result.new }
 
-      expect(result).to be_nil
-      expect(Rails.logger).to have_received(:error).with("Failed to produce email activity log: Kafka down")
+        before do
+          allow(karafka_producer).to receive(:produce_async).and_raise(exception.new(exception_message))
+        end
+
+        context "when sentry is configured", :sentry do
+          it "captures the exception and returns false" do
+            expect(produce).to eq false
+            expect(sentry_events).to include_sentry_event(exception: exception, message: exception_message)
+          end
+        end
+
+        context "when sentry is not configured" do
+          it "re-raises the error" do
+            expect { produce }.to raise_error(exception, exception_message)
+            expect(sentry_events).to be_empty
+          end
+        end
+      end
     end
 
     context "with credit_note document" do

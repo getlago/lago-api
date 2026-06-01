@@ -10,7 +10,8 @@ class SubscriptionsQuery < BaseQuery
     :overriden, # overriden is a legacy typo kept for backward compatibility
     :overridden,
     :exclude_next_subscriptions,
-    :currency
+    :currency,
+    :billing_entity_ids
   ]
 
   def call
@@ -27,6 +28,7 @@ class SubscriptionsQuery < BaseQuery
       SQL
     )
 
+    subscriptions = with_billing_entity_ids(subscriptions) if filters.billing_entity_ids.present?
     subscriptions = with_external_customer(subscriptions) if filters.external_customer_id
     subscriptions = with_plan_code(subscriptions) if filters.plan_code
     subscriptions = with_overridden(subscriptions) unless overridden_filter.nil?
@@ -95,6 +97,15 @@ class SubscriptionsQuery < BaseQuery
 
   def with_currency(scope)
     scope.joins(:plan).where(plans: {amount_currency: filters.currency})
+  end
+
+  def with_billing_entity_ids(scope)
+    scope.joins(:customer).where(
+      "subscriptions.billing_entity_id IN (?) OR " \
+      "(subscriptions.billing_entity_id IS NULL AND customers.billing_entity_id IN (?))",
+      filters.billing_entity_ids,
+      filters.billing_entity_ids
+    )
   end
 
   def with_excluded_next_subscriptions(scope)

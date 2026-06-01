@@ -155,6 +155,9 @@ module BillableMetrics
       end
 
       def deduplicate?
+        override = Events::Stores::StoreFactory.override
+        return override[:deduplicate] if override
+
         organization = subscription&.organization
         return false unless organization
 

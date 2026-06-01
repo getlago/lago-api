@@ -30,6 +30,7 @@ RSpec.describe QuoteVersion do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:quote)
+      expect(subject).to have_one(:order_form)
     end
   end
 

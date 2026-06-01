@@ -143,15 +143,40 @@ module Plans
       return unless cascade_needed?
 
       old_parent_attrs = charge.attributes
-      old_parent_filters_attrs = charge.filters.map(&:attributes)
       old_parent_applied_pricing_unit_attrs = charge.applied_pricing_unit&.attributes
+      before_filters = capture_filters(charge) if payload_charge.key?(:filters)
 
-      Charges::UpdateChildrenJob.perform_later(
-        params: payload_charge.deep_stringify_keys,
-        old_parent_attrs:,
-        old_parent_filters_attrs:,
-        old_parent_applied_pricing_unit_attrs:
-      )
+      after_commit do
+        Charges::UpdateChildrenJob.perform_later(
+          params: payload_charge.except(:filters).deep_stringify_keys,
+          old_parent_attrs:,
+          old_parent_applied_pricing_unit_attrs:
+        )
+
+        cascade_filter_changes(charge, before_filters, payload_charge[:filters]) if before_filters
+      end
+    end
+
+    def capture_filters(charge)
+      charge.filters.includes(values: :billable_metric_filter).map do |f|
+        {
+          values: f.to_h.deep_stringify_keys,
+          properties: f.properties,
+          invoice_display_name: f.invoice_display_name
+        }
+      end
+    end
+
+    def cascade_filter_changes(charge, before, payload_filters)
+      after = (payload_filters || []).map do |fp|
+        {
+          values: (fp[:values] || {}).deep_stringify_keys,
+          properties: fp[:properties]&.deep_stringify_keys,
+          invoice_display_name: fp[:invoice_display_name]
+        }
+      end
+
+      ChargeFilters::CascadeDispatcher.call(charge:, before:, after:)
     end
 
     def cascade_fixed_charge_removal(fixed_charge)
@@ -325,10 +350,18 @@ module Plans
         next unless subscription.previous_subscription
 
         if plan.yearly_amount_cents >= subscription.previous_subscription.plan.yearly_amount_cents
+          upgrade_params = {name: subscription.name}
+
+          if subscription.activation_rules.any?
+            upgrade_params[:activation_rules] = subscription.activation_rules.map do |rule|
+              {type: rule.type, timeout_hours: rule.timeout_hours}
+            end
+          end
+
           Subscriptions::PlanUpgradeService.call(
             current_subscription: subscription.previous_subscription,
             plan: plan,
-            params: {name: subscription.name}
+            params: upgrade_params
           ).raise_if_error!
         end
       end

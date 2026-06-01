@@ -634,6 +634,88 @@ RSpec.describe Charge do
     end
   end
 
+  describe "#presentation_group_keys_values_displayed_in_invoice" do
+    subject(:charge) { build(:standard_charge, properties:) }
+
+    context "when presentation_group_keys is blank" do
+      let(:properties) { {"amount_cents" => "1000"} }
+
+      it "returns an empty array" do
+        expect(charge.presentation_group_keys_values_displayed_in_invoice).to eq([])
+      end
+    end
+
+    context "when presentation_group_keys is an empty array" do
+      let(:properties) { {"amount_cents" => "1000", "presentation_group_keys" => []} }
+
+      it "returns an empty array" do
+        expect(charge.presentation_group_keys_values_displayed_in_invoice).to eq([])
+      end
+    end
+
+    context "when an element has options with display_in_invoice true" do
+      let(:properties) do
+        {
+          "amount_cents" => "1000",
+          "presentation_group_keys" => [
+            {"value" => "region", "options" => {"display_in_invoice" => true}}
+          ]
+        }
+      end
+
+      it "returns the matching values" do
+        expect(charge.presentation_group_keys_values_displayed_in_invoice).to eq(["region"])
+      end
+    end
+
+    context "when an element has options with display_in_invoice false" do
+      let(:properties) do
+        {
+          "amount_cents" => "1000",
+          "presentation_group_keys" => [
+            {"value" => "region", "options" => {"display_in_invoice" => false}}
+          ]
+        }
+      end
+
+      it "returns an empty array" do
+        expect(charge.presentation_group_keys_values_displayed_in_invoice).to eq([])
+      end
+    end
+
+    context "when only some elements have display_in_invoice true" do
+      let(:properties) do
+        {
+          "amount_cents" => "1000",
+          "presentation_group_keys" => [
+            {"value" => "region", "options" => {"display_in_invoice" => true}},
+            {"value" => "country", "options" => {"display_in_invoice" => false}}
+          ]
+        }
+      end
+
+      it "returns only the values for entries with display_in_invoice true" do
+        expect(charge.presentation_group_keys_values_displayed_in_invoice).to eq(["region"])
+      end
+    end
+
+    context "when multiple elements have display_in_invoice true" do
+      let(:properties) do
+        {
+          "amount_cents" => "1000",
+          "presentation_group_keys" => [
+            {"value" => "region", "options" => {"display_in_invoice" => true}},
+            {"value" => "department_id", "options" => {"display_in_invoice" => true}}
+          ]
+        }
+      end
+
+      it "returns all matching values" do
+        expect(charge.presentation_group_keys_values_displayed_in_invoice).to eq(["region", "department_id"])
+      end
+    end
+  end
+
   describe "#equal_properties?" do
     let(:charge1) { build(:standard_charge, properties: {amount: 100}) }
 

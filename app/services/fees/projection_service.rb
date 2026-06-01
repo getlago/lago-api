@@ -2,7 +2,12 @@
 
 module Fees
   class ProjectionService < ::BaseService
-    Result = BaseResult[:projected_amount_cents, :projected_units, :projected_pricing_unit_amount_cents]
+    Result = BaseResult[
+      :projected_amount_cents,
+      :projected_units,
+      :projected_pricing_unit_amount_cents,
+      :projected_presentation_breakdowns
+    ]
 
     def initialize(fees:)
       @fees = fees
@@ -32,6 +37,7 @@ module Fees
         result.projected_amount_cents = current_amount_cents
         result.projected_units = current_units
         result.projected_pricing_unit_amount_cents = current_pricing_unit_amount_cents
+        result.projected_presentation_breakdowns = fees.flat_map(&:presentation_breakdowns)
         return result
       end
 
@@ -39,6 +45,7 @@ module Fees
         result.projected_amount_cents = BigDecimal(0)
         result.projected_units = BigDecimal(0)
         result.projected_pricing_unit_amount_cents = BigDecimal(0)
+        result.projected_presentation_breakdowns = []
         return result
       end
 
@@ -65,6 +72,7 @@ module Fees
       result.projected_amount_cents = calculate_projected_amount_cents(charge_model_result)
       result.projected_units = charge_model_result.projected_units&.negative? ? BigDecimal(0) : charge_model_result.projected_units
       result.projected_pricing_unit_amount_cents = calculate_projected_pricing_unit_amount_cents(charge_model_result)
+      result.projected_presentation_breakdowns = project_presentation_breakdowns
       result
     end
 
@@ -155,6 +163,14 @@ module Fees
         applied_pricing_unit: charge.applied_pricing_unit
       )
       projected_pricing_unit_usage.to_fiat_currency_cents(currency)[:amount_cents]
+    end
+
+    def project_presentation_breakdowns
+      fees.flat_map(&:presentation_breakdowns).map do |bd|
+        dup_breakdown = bd.dup
+        dup_breakdown.units = (BigDecimal(bd.units) / period_ratio).round(currency.exponent)
+        dup_breakdown
+      end
     end
   end
 end

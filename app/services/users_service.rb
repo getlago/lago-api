@@ -46,8 +46,7 @@ class UsersService < BaseService
       result.user = User.create!(email:, password:)
 
       result.organization = Organizations::CreateService
-        .call(name: organization_name, document_numbering: "per_organization")
-        .raise_if_error!
+        .call!(name: organization_name, document_numbering: "per_organization")
         .organization
 
       result.membership = Membership.create!(
@@ -127,7 +126,8 @@ class UsersService < BaseService
       event: "organization_registered",
       properties: {
         organization_name: organization.name,
-        organization_id: organization.id
+        organization_id: organization.id,
+        email: membership.user.email
       }
     )
   end

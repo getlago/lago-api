@@ -26,10 +26,18 @@ RSpec.describe Types::Fees::Object do
     expect(subject).to have_field(:events_count).of_type("BigInt")
     expect(subject).to have_field(:fee_type).of_type("FeeTypesEnum!")
     expect(subject).to have_field(:offsettable_amount_cents).of_type("BigInt!")
+    expect(subject).to have_field(:pay_in_advance).of_type("Boolean!")
+    expect(subject).to have_field(:precise_amount_cents).of_type("Float!")
+    expect(subject).to have_field(:precise_coupons_amount_cents).of_type("Float!")
+    expect(subject).to have_field(:precise_total_amount_cents).of_type("Float!")
     expect(subject).to have_field(:precise_unit_amount).of_type("Float!")
+    expect(subject).to have_field(:sub_total_excluding_taxes_amount_cents).of_type("BigInt!")
+    expect(subject).to have_field(:sub_total_excluding_taxes_precise_amount_cents).of_type("Float!")
     expect(subject).to have_field(:succeeded_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:taxes_amount_cents).of_type("BigInt!")
+    expect(subject).to have_field(:taxes_precise_amount_cents).of_type("Float!")
     expect(subject).to have_field(:taxes_rate).of_type("Float")
+    expect(subject).to have_field(:total_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:units).of_type("Float!")
 
     expect(subject).to have_field(:applied_taxes).of_type("[FeeAppliedTax!]")
@@ -59,7 +67,7 @@ RSpec.describe Types::Fees::Object do
     end
 
     context "when fee is not a credit" do
-      let(:fee) { create(:charge_fee) }
+      let(:fee) { build(:charge_fee) }
 
       it "returns nil" do
         expect(subject).to be_nil
@@ -71,7 +79,7 @@ RSpec.describe Types::Fees::Object do
     subject { run_graphql_field("Fee.presentationBreakdowns", fee) }
 
     context "when fee has no presentation_breakdowns" do
-      let(:fee) { create(:charge_fee) }
+      let(:fee) { build(:charge_fee) }
 
       it "returns an empty array" do
         expect(subject).to eq([])
@@ -79,9 +87,16 @@ RSpec.describe Types::Fees::Object do
     end
 
     context "when fee has a presentation_breakdown" do
+      let(:charge) do
+        create(:standard_charge, properties: {
+          "amount" => "100",
+          "presentation_group_keys" => [{"value" => "department", "options" => {"display_in_invoice" => true}}]
+        })
+      end
       let(:fee) do
-        create(
+        build(
           :charge_fee,
+          charge:,
           presentation_breakdowns: [build(:presentation_breakdown)]
         )
       end
@@ -97,9 +112,19 @@ RSpec.describe Types::Fees::Object do
     end
 
     context "when fee has a composite presentation_breakdown" do
+      let(:charge) do
+        create(:standard_charge, properties: {
+          "amount" => "100",
+          "presentation_group_keys" => [
+            {"value" => "department", "options" => {"display_in_invoice" => true}},
+            {"value" => "region", "options" => {"display_in_invoice" => true}}
+          ]
+        })
+      end
       let(:fee) do
-        create(
+        build(
           :charge_fee,
+          charge:,
           presentation_breakdowns: [
             build(
               :presentation_breakdown,

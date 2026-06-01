@@ -4,6 +4,7 @@ class BaseQuery < BaseService
   # nil values force Kaminari to apply its default values for page and limit.
   DEFAULT_PAGINATION_PARAMS = {page: nil, limit: nil}
   DEFAULT_ORDER = {created_at: :desc}
+  UUID_REGEX = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
 
   Pagination = Struct.new(:page, :limit, keyword_init: true)
   Filters = BaseFilters

@@ -22,7 +22,7 @@ describe "Stripe Payment Integration Test", :premium, :with_pdf_generation_stub,
   include_context "with webhook tracking"
 
   before do
-    raise "You need to set the SPEC_STRIPE_SECRET_KEY environment variable" unless api_key
+    raise "You need to set the STRIPE_API_KEY environment variable" unless api_key
 
     # Uncomment to print Stripe logs
     # ::Stripe.log_level = Logger::INFO
@@ -279,6 +279,75 @@ describe "Stripe Payment Integration Test", :premium, :with_pdf_generation_stub,
     end
   end
 
+  context "with Shared Payment Token" do
+    it "pays the subscription invoice using the shared payment token" do
+      # Provision the Stripe customer first, attach the shared payment token,
+      # then pass the existing provider id to Lago — same flow as production
+      # where the token is granted before Lago knows about the customer.
+
+      spt_id = create_shared_payment_token(
+        currency: "eur",
+        max_amount: 50_00,
+        expires_at: 30.days.from_now
+      )
+
+      stripe_customer_id = ::Stripe::Customer.create({
+        name: "SPT Integration Test [#{external_id}]",
+        invoice_settings: {default_shared_payment_token: spt_id}
+      }).id
+
+      customer = create_customer(
+        billing_configuration: {
+          payment_provider: "stripe",
+          payment_provider_code: provider.code,
+          provider_customer_id: stripe_customer_id,
+          sync: true,
+          sync_with_provider: true,
+          provider_payment_methods:
+        }
+      )
+      stripe_customer = customer.payment_provider_customers.sole
+      expect(stripe_customer.provider_customer_id).to eq(stripe_customer_id)
+      webhooks_sent.clear
+
+      plan = create(:plan, organization:, code: "spt_plan_#{SecureRandom.hex(3)}",
+        pay_in_advance: true, amount_cents: 1_000, amount_currency: "EUR")
+
+      create_subscription({
+        plan_code: plan.code,
+        external_id: "sub_spt_#{external_id}",
+        external_customer_id: customer.external_id
+      })
+
+      perform_all_enqueued_jobs
+
+      invoice = customer.invoices.subscription.sole
+      expect(invoice.payment_status).to eq("succeeded")
+
+      payment = invoice.payments.sole
+      expect(payment.provider_payment_id).to start_with("pi_")
+
+      pi = ::Stripe::PaymentIntent.retrieve(payment.provider_payment_id)
+      expect(pi.status).to eq("succeeded")
+      expect(pi.shared_payment_granted_token).to eq(spt_id)
+      expect(pi.payment_method).to start_with("pm_")
+
+      # Replay the real `payment_intent.succeeded` event Stripe delivered to the
+      # webhook endpoint — this is what populates the underlying payment method
+      # id / last4 on the Lago payment.
+      event = fetch_payment_intent_succeeded_event(pi.id)
+      PaymentProviders::Stripe::HandleEventService.call(
+        organization:,
+        event_json: event.to_json
+      ).raise_if_error!
+
+      perform_all_enqueued_jobs
+
+      expect(payment.reload.provider_payment_method_id).to eq(pi.payment_method)
+      expect(payment.payment_receipt).to be_present
+    end
+  end
+
   context "with US Bank Account (ACH)" do
     let(:provider_payment_methods) { ["us_bank_account"] }
     let(:currency) { "USD" }
@@ -400,5 +469,32 @@ describe "Stripe Payment Integration Test", :premium, :with_pdf_generation_stub,
       pm.id,
       {customer: stripe_customer.provider_customer_id}
     ).id
+  end
+
+  def create_shared_payment_token(currency:, max_amount:, expires_at:)
+    uri = URI("https://api.stripe.com/v1/test_helpers/shared_payment/granted_tokens")
+    req = Net::HTTP::Post.new(uri)
+    req.basic_auth(api_key, "")
+    req["Stripe-Version"] = ::Stripe.api_version if ::Stripe.api_version
+    req.set_form_data(
+      "payment_method" => "pm_card_visa",
+      "usage_limits[currency]" => currency.downcase,
+      "usage_limits[max_amount]" => max_amount.to_s,
+      "usage_limits[expires_at]" => expires_at.to_i.to_s
+    )
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
+    raise "Failed to create shared payment token: #{response.code} #{response.body}" unless response.is_a?(Net::HTTPSuccess)
+    JSON.parse(response.body).fetch("id")
+  end
+
+  def fetch_payment_intent_succeeded_event(payment_intent_id, timeout: 15)
+    deadline = Time.current + timeout
+    loop do
+      events = ::Stripe::Event.list(type: "payment_intent.succeeded", limit: 30)
+      event = events.data.find { it.data.object.id == payment_intent_id }
+      return event if event
+      raise "Timed out waiting for payment_intent.succeeded event for #{payment_intent_id}" if Time.current > deadline
+      sleep 1
+    end
   end
 end

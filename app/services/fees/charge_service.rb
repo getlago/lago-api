@@ -109,16 +109,16 @@ module Fees
           return []
         end
 
-        breakdowns_by_group = breakdowns_by_grouped_by(aggregation_result)
-
-        if billable_metric.recurring?
-          persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter, breakdowns_by_group)
-        end
-
         charge_model_result = apply_charge_model(aggregation_result:, properties:)
         unless charge_model_result.success?
           result.fail_with_error!(charge_model_result.error)
           return []
+        end
+
+        breakdowns_by_group = breakdowns_by_grouped_by(aggregation_result.breakdowns, charge_model_result)
+
+        if billable_metric.recurring?
+          persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter, breakdowns_by_group)
         end
 
         charge_fees = fees_from_charge_model_result(
@@ -167,17 +167,32 @@ module Fees
         # TODO: check if this is still needed as we now skip certain zero units fees
         next if current_usage && charge_filter && amount_result.units.zero? && !with_zero_units_filters
 
-        fee = init_fee(amount_result, properties:, charge_filter:)
+        adjusted = applicable_adjusted_fee(amount_result:, charge_filter:)
+        fee = init_fee(amount_result, properties:, charge_filter:, adjusted:)
         next if fee.nil?
 
-        build_breakdowns_for_fee(fee:, breakdowns_by_group:)
+        if adjusted.nil? || amount_result.units == fee.units
+          build_breakdowns_for_fee(fee:, breakdowns_by_group:)
+        end
 
         fee
       end.compact
     end
 
+    def applicable_adjusted_fee(amount_result:, charge_filter:)
+      return nil if current_usage
+      return nil unless invoice&.draft?
+
+      adjusted = adjusted_fee(charge_filter:, grouped_by: amount_result.grouped_by)
+      return nil if adjusted.nil? || adjusted.adjusted_display_name?
+
+      adjusted
+    end
+
     def build_breakdowns_for_fee(fee:, breakdowns_by_group:)
-      breakdowns_by_group.fetch(fee.grouped_by, []).each do |breakdown|
+      grouped_by = fee.grouped_by
+
+      (breakdowns_by_group[grouped_by] || []).map do |breakdown|
         fee.presentation_breakdowns.build(
           presentation_by: breakdown[:groups],
           units: breakdown[:value],
@@ -186,20 +201,17 @@ module Fees
       end
     end
 
-    def breakdowns_by_grouped_by(aggregation_result)
-      all_breakdowns = Array(aggregation_result.breakdowns)
-      return {} if all_breakdowns.empty?
+    def breakdowns_by_grouped_by(breakdowns, charge_model_result)
+      charge_model_result.grouped_results.each_with_object({}) do |grouped_result, memo|
+        grouped_by = grouped_result.grouped_by || {}
+        next if memo.key?(grouped_by)
 
-      aggregations = Array(aggregation_result.aggregations).presence || [aggregation_result]
-
-      aggregations.each_with_object({}) do |aggregation, result|
-        grouped_by = aggregation.grouped_by || {}
-        next if result.key?(grouped_by)
-
-        pricing_group_keys = grouped_by.keys
-        result[grouped_by] = all_breakdowns
-          .select { |b| b[:groups].slice(*pricing_group_keys) == grouped_by }
-          .map { |b| b.merge(groups: b[:groups].except(*pricing_group_keys)) }
+        grouped_by_keys = grouped_by.keys
+        memo[grouped_by] = Array(breakdowns)
+          .lazy
+          .select { |b| b[:groups].slice(*grouped_by_keys) == grouped_by }
+          .map { |b| {groups: b[:groups].except(*grouped_by_keys), value: b[:value]} }
+          .to_a
       end
     end
 
@@ -209,22 +221,21 @@ module Fees
       charge_fees.filter { |f| should_persist_fee?(f, charge_fees) }
     end
 
-    def init_fee(amount_result, properties:, charge_filter:)
-      # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
+    def init_fee(amount_result, properties:, charge_filter:, adjusted:)
+      # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted (see applicable_adjusted_fee method).
       # Base fee creation flow handles case when only name has been adjusted
-      if !current_usage && invoice&.draft? && (adjusted = adjusted_fee(
-        charge_filter:,
-        grouped_by: amount_result.grouped_by
-      )) && !adjusted.adjusted_display_name?
+      if adjusted
         adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
           adjusted_fee: adjusted,
           boundaries:,
           properties:
         )
-        return result.fail_with_error!(adjustement_result.error) unless adjustement_result.success?
+        unless adjustement_result.success?
+          result.fail_with_error!(adjustement_result.error)
+          return nil
+        end
 
-        result.fees << adjustement_result.fee
-        return
+        return adjustement_result.fee
       end
 
       # Prevent trying to create a fee with negative units or amount.
@@ -265,7 +276,7 @@ module Fees
       new_fee = Fee.new(
         invoice:,
         organization_id: organization.id,
-        billing_entity_id: subscription.customer.billing_entity_id,
+        billing_entity_id: subscription.applicable_billing_entity_id,
         subscription:,
         charge:,
         amount_cents:,
@@ -475,9 +486,10 @@ module Fees
         # when pricing group keys on a charge are "workspace" and "user", and filter_by_group is {"workspace" => ["A"]},
         # we want to remove the grouping keys "workspace", but keep the grouping key "user", so the usage will still be granular within the workspace
         usage_filters.filter_by_group.keys.each { |key| filters[:grouped_by]&.delete(key) }
-        filters[:matching_filters] ||= {}
+        # NOTE: filters[:matching_filters] may come from ChargeFilter#to_h_with_all_values
+        # which returns a frozen hash, so we must not mutate it in place.
         # expected matching_filters format is { "workspace" => ["A", "B"], "user" => ["U1", "U2"] }
-        filters[:matching_filters].merge!(usage_filters.filter_by_group)
+        filters[:matching_filters] = (filters[:matching_filters] || {}).merge(usage_filters.filter_by_group)
       end
 
       filters

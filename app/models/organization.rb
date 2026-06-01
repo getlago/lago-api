@@ -77,6 +77,7 @@ class Organization < ApplicationRecord
   has_many :roles
   has_many :quotes
   has_many :quote_versions
+  has_many :order_forms
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
   has_many :features, class_name: "Entitlement::Feature"
   has_many :privileges, class_name: "Entitlement::Privilege"
@@ -108,6 +109,11 @@ class Organization < ApplicationRecord
   has_many :system_generated_invoice_custom_sections, -> { where(section_type: "system_generated") }, class_name: "InvoiceCustomSection"
 
   has_one_attached :logo
+
+  EVENTS_STORES = {
+    clickhouse: "clickhouse",
+    postgres: "postgres"
+  }.freeze
 
   DOCUMENT_NUMBERINGS = [
     :per_customer,
@@ -261,6 +267,10 @@ class Organization < ApplicationRecord
 
   def postgres_events_store?
     !clickhouse_events_store?
+  end
+
+  def events_store
+    clickhouse_events_store? ? EVENTS_STORES[:clickhouse] : EVENTS_STORES[:postgres]
   end
 
   # This is added to have a common interface for all organization-related models to access the organization.

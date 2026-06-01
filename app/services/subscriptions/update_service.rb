@@ -2,6 +2,8 @@
 
 module Subscriptions
   class UpdateService < BaseService
+    include Subscriptions::Concerns::BillingEntityResolutionConcern
+
     Result = BaseResult[:subscription, :payment_method]
 
     def initialize(subscription:, params:)
@@ -50,6 +52,7 @@ module Subscriptions
         subscription.name = params[:name] if params.key?(:name)
         subscription.ending_at = params[:ending_at] if params.key?(:ending_at)
         subscription.progressive_billing_disabled = params[:progressive_billing_disabled] if params.key?(:progressive_billing_disabled)
+        subscription.consolidate_invoice = params[:consolidate_invoice] if params.key?(:consolidate_invoice)
 
         if pay_in_advance? && params.key?(:on_termination_credit_note)
           subscription.on_termination_credit_note = params[:on_termination_credit_note]
@@ -62,6 +65,12 @@ module Subscriptions
         if params.key?(:payment_method)
           subscription.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
           subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
+        end
+
+        if subscription.organization.feature_flag_enabled?(:multi_entity_billing) &&
+            (params.key?(:billing_entity_id) || params.key?(:billing_entity_code))
+          new_billing_entity = resolve_billing_entity(organization: subscription.organization, params:)
+          subscription.billing_entity = new_billing_entity
         end
 
         subscription.plan = handle_plan_override.plan if params.key?(:plan_overrides)
