@@ -4972,7 +4972,8 @@ CREATE TABLE public.refunds (
     organization_id uuid NOT NULL,
     refundable_type character varying,
     refundable_id uuid,
-    reason character varying
+    reason character varying,
+    CONSTRAINT refunds_credit_note_or_refundable_present CHECK (((credit_note_id IS NOT NULL) OR ((refundable_type IS NOT NULL) AND (refundable_id IS NOT NULL))))
 );
 
 
@@ -12387,6 +12388,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260601120429'),
+('20260601120428'),
 ('20260526131452'),
 ('20260525102114'),
 ('20260520075420'),
