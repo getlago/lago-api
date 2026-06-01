@@ -18,7 +18,6 @@ RSpec.describe ::V1::OrderFormSerializer do
       "expires_at" => nil,
       "signed_at" => nil,
       "voided_at" => nil,
-      "lago_marked_as_signed_by_user_id" => nil,
       "lago_organization_id" => order_form.organization_id,
       "lago_customer_id" => order_form.customer_id,
       "lago_quote_id" => order_form.quote_version.quote_id,

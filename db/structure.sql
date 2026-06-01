@@ -44,7 +44,6 @@ ALTER TABLE IF EXISTS ONLY public.user_devices DROP CONSTRAINT IF EXISTS fk_rail
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_e4a58fbcac;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_e3cf54daac;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
-ALTER TABLE IF EXISTS ONLY public.order_forms DROP CONSTRAINT IF EXISTS fk_rails_dff929ff7d;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_dfac602b2c;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
 ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_de7694c307;
@@ -503,7 +502,6 @@ DROP INDEX IF EXISTS public.index_order_forms_on_quote_version_id;
 DROP INDEX IF EXISTS public.index_order_forms_on_organization_id_and_status;
 DROP INDEX IF EXISTS public.index_order_forms_on_organization_id_and_expires_at;
 DROP INDEX IF EXISTS public.index_order_forms_on_organization_id_and_created_at;
-DROP INDEX IF EXISTS public.index_order_forms_on_marked_as_signed_by_user_id;
 DROP INDEX IF EXISTS public.index_order_forms_on_customer_id;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id;
@@ -4651,7 +4649,6 @@ CREATE TABLE public.order_forms (
     organization_id uuid NOT NULL,
     customer_id uuid NOT NULL,
     quote_version_id uuid NOT NULL,
-    marked_as_signed_by_user_id uuid,
     number character varying NOT NULL,
     sequential_id integer NOT NULL,
     status public.order_form_status DEFAULT 'generated'::public.order_form_status NOT NULL,
@@ -8803,13 +8800,6 @@ CREATE INDEX index_order_forms_on_customer_id ON public.order_forms USING btree 
 
 
 --
--- Name: index_order_forms_on_marked_as_signed_by_user_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_order_forms_on_marked_as_signed_by_user_id ON public.order_forms USING btree (marked_as_signed_by_user_id);
-
-
---
 -- Name: index_order_forms_on_organization_id_and_created_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12188,14 +12178,6 @@ ALTER TABLE ONLY public.customer_metadata
 
 
 --
--- Name: order_forms fk_rails_dff929ff7d; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.order_forms
-    ADD CONSTRAINT fk_rails_dff929ff7d FOREIGN KEY (marked_as_signed_by_user_id) REFERENCES public.users(id);
-
-
---
 -- Name: integration_collection_mappings fk_rails_e148d17c1f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12482,6 +12464,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260601174030'),
 ('20260601120429'),
 ('20260601120428'),
 ('20260526142247'),
