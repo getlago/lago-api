@@ -9076,7 +9076,6 @@ type OrderForm {
   customer: Customer!
   expiresAt: ISO8601DateTime
   id: ID!
-  markedAsSignedByUserId: ID
   number: String!
   quote: Quote!
   signedAt: ISO8601DateTime
