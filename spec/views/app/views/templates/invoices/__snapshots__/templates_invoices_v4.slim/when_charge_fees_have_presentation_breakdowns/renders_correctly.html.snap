@@ -152,6 +152,7 @@
           </table>
         </div>
         <div class="invoice-resume mb-24 overflow-auto"></div>
+        <div class="presentation-breakdowns-page"></div>
         <div class="breakdown-details overflow-auto mb-24 presentation-breakdowns">
           <table class="breakdown-details-table" width="100%">
             <tr class="first_child section-end">
