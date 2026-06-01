@@ -214,7 +214,7 @@ module Invoices
       # NOTE: Zero fees are excluded from the tax provider request to stay under its
       #       line-item limit (Anrok/Avalara reject payloads above 1200 items). They owe
       #       no tax, so they keep their default zero taxes and stay in the usage response.
-      taxable_fees = invoice.fees.select(&:non_zero?)
+      taxable_fees = invoice.fees.select(&:taxable?)
 
       taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: taxable_fees)
 

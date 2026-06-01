@@ -300,6 +300,10 @@ class Fee < ApplicationRecord
     units.positive? || amount_cents.positive? || events_count.to_i.positive?
   end
 
+  def taxable?
+    amount_cents.positive?
+  end
+
   def date_boundaries
     if charge? && !pay_in_advance? && charge.pay_in_advance?
       timestamp = invoice.invoice_subscription(subscription.id).timestamp
