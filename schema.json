@@ -33544,6 +33544,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "revenue_recognition",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -49094,6 +49100,12 @@
             },
             {
               "name": "order_forms",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "revenue_recognition",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
