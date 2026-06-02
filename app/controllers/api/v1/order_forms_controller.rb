@@ -33,7 +33,10 @@ module Api
       def mark_as_signed
         order_form = current_organization.order_forms.find_by(id: params[:id])
 
-        result = OrderForms::MarkAsSignedService.call(order_form:)
+        result = OrderForms::MarkAsSignedService.call(
+          order_form:,
+          signed_document: mark_as_signed_params[:signed_document]
+        )
 
         if result.success?
           render_order_form(result.order_form)
@@ -67,6 +70,10 @@ module Api
           expires_at_from: params[:expires_at_from],
           expires_at_to: params[:expires_at_to]
         }
+      end
+
+      def mark_as_signed_params
+        params.fetch(:order_form, {}).permit(:signed_document)
       end
 
       def render_order_form(order_form)

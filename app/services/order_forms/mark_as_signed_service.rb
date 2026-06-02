@@ -4,8 +4,9 @@ module OrderForms
   class MarkAsSignedService < BaseService
     Result = BaseResult[:order_form, :order]
 
-    def initialize(order_form:)
+    def initialize(order_form:, signed_document: nil)
       @order_form = order_form
+      @signed_document = signed_document
 
       super
     end
@@ -26,6 +27,7 @@ module OrderForms
       )
 
       ActiveRecord::Base.transaction do
+        attach_signed_document
         order_form.save!
 
         # TODO: Create the Order here
@@ -35,11 +37,27 @@ module OrderForms
 
       result.order_form = order_form
       result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
     end
 
     private
 
-    attr_reader :order_form
+    attr_reader :order_form, :signed_document
+
+    def attach_signed_document
+      return if signed_document.blank?
+
+      base64_data = signed_document.split(",")
+      decoded = Base64.decode64(base64_data.second)
+      content_type = base64_data.first.split(";").first.split(":").second
+
+      order_form.signed_document.attach(
+        io: StringIO.new(decoded),
+        filename: "#{order_form.number}.pdf",
+        content_type:
+      )
+    end
 
     def quote
       @quote ||= order_form.quote

@@ -3,12 +3,13 @@
 require "rails_helper"
 
 RSpec.describe OrderForms::MarkAsSignedService do
-  subject(:service) { described_class.new(order_form:) }
+  subject(:service) { described_class.new(order_form:, signed_document:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, customer:, organization:, order_type: :subscription_creation) }
   let(:order_form) { create(:order_form, customer:, organization:, quote:) }
+  let(:signed_document) { nil }
 
   describe "#call" do
     context "without premium license" do
@@ -77,6 +78,34 @@ RSpec.describe OrderForms::MarkAsSignedService do
           expect(result).to be_success
           expect(result.order_form).to be_signed
           expect(result.order_form.signed_at).to be_present
+        end
+      end
+
+      context "when a signed_document is provided" do
+        let(:signed_document) do
+          "data:application/pdf;base64,#{Base64.encode64(File.read(Rails.root.join("spec/fixtures/blank.pdf")))}"
+        end
+
+        it "signs the order form and attaches the document" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.order_form).to be_signed
+          expect(result.order_form.signed_document).to be_attached
+          expect(result.order_form.signed_document.blob.content_type).to eq("application/pdf")
+        end
+      end
+
+      context "when the signed_document is not a PDF" do
+        let(:signed_document) { "data:text/plain;base64,#{Base64.encode64("not a pdf")}" }
+
+        it "returns a validation failure and does not sign the order form" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to have_key(:signed_document)
+          expect(order_form.reload).to be_generated
         end
       end
     end

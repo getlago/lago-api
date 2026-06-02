@@ -133,5 +133,44 @@ RSpec.describe Api::V1::OrderFormsController do
         expect(response).to be_not_found_error("order_form")
       end
     end
+
+    context "when a signed_document is provided" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v1/order_forms/#{order_form.id}/mark_as_signed",
+          {order_form: {signed_document:}}
+        )
+      end
+
+      let(:signed_document) do
+        "data:application/pdf;base64,#{Base64.encode64(File.read(Rails.root.join("spec/fixtures/blank.pdf")))}"
+      end
+
+      it "marks the order form as signed and returns the document url" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:order_form][:status]).to eq("signed")
+        expect(json[:order_form][:signed_document_url]).to be_present
+      end
+    end
+
+    context "when the signed_document is not a PDF" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v1/order_forms/#{order_form.id}/mark_as_signed",
+          {order_form: {signed_document: "data:text/plain;base64,#{Base64.encode64("not a pdf")}"}}
+        )
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to include(:signed_document)
+      end
+    end
   end
 end

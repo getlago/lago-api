@@ -23,6 +23,8 @@ class OrderForm < ApplicationRecord
   belongs_to :quote_version
   has_one :quote, through: :quote_version
 
+  has_one_attached :signed_document
+
   enum :status, STATUSES,
     default: :generated,
     validate: true
@@ -31,6 +33,9 @@ class OrderForm < ApplicationRecord
     validate: {allow_nil: true}
 
   validates :void_reason, presence: true, if: :voided?
+  validates :signed_document,
+    content_type: ["application/pdf"],
+    size: {less_than: 20.megabytes}
 
   sequenced(
     scope: ->(order_form) { order_form.organization.order_forms },
@@ -39,6 +44,13 @@ class OrderForm < ApplicationRecord
 
   def self.ransackable_attributes(_ = nil)
     %w[number]
+  end
+
+  def signed_document_url
+    return unless signed_document.attached?
+    return unless signed_document.blob&.persisted?
+
+    Rails.application.routes.url_helpers.rails_blob_url(signed_document, host: ENV["LAGO_API_URL"])
   end
 
   private
