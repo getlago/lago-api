@@ -46,8 +46,13 @@ RSpec.describe OrderForm do
     end
 
     describe "signed_document validation" do
-      it { is_expected.to validate_content_type_of(:signed_document).allowing("application/pdf").rejecting("image/png") }
-      it { is_expected.to validate_size_of(:signed_document).less_than(20.megabytes) }
+      it do
+        expect(order_form).to validate_content_type_of(:signed_document)
+          .allowing("application/pdf", "image/jpeg", "image/png")
+          .rejecting("image/gif", "text/plain")
+      end
+
+      it { is_expected.to validate_size_of(:signed_document).less_than(10.megabytes) }
     end
   end
 

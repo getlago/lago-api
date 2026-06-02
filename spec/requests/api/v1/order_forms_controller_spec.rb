@@ -156,7 +156,7 @@ RSpec.describe Api::V1::OrderFormsController do
       end
     end
 
-    context "when the signed_document is not a PDF" do
+    context "when the signed_document type is unsupported" do
       subject do
         post_with_token(
           organization,

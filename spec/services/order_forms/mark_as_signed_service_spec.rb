@@ -98,7 +98,7 @@ RSpec.describe OrderForms::MarkAsSignedService do
         end
       end
 
-      context "when the signed_document is not a PDF" do
+      context "when the signed_document type is unsupported" do
         let(:signed_document) { "data:text/plain;base64,#{Base64.encode64("not a pdf")}" }
 
         it "returns a validation failure and does not sign the order form" do

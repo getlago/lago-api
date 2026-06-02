@@ -63,7 +63,7 @@ module OrderForms
       decoded = Utils::Base64File.decode(signed_document)
       order_form.signed_document.attach(
         io: decoded.io,
-        filename: "#{order_form.number}.pdf",
+        filename: order_form.number,
         content_type: decoded.content_type
       )
     end
