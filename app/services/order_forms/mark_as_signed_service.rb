@@ -33,13 +33,16 @@ module OrderForms
         return result.single_validation_failure!(field: :execution_date, error_code: "invalid_date")
       end
 
+      blob = signed_document_blob
+      return result if result.failure?
+
       order_form.assign_attributes(
         status: :signed,
         signed_at: Time.current
       )
 
       ActiveRecord::Base.transaction do
-        attach_signed_document
+        order_form.signed_document.attach(blob) if blob
         order_form.save!
 
         # TODO: Create the Order here using execution_mode/execution_date
@@ -50,18 +53,34 @@ module OrderForms
       result.order_form = order_form
       result
     rescue ActiveRecord::RecordInvalid => e
+      blob&.purge_later
       result.record_validation_failure!(record: e.record)
+    rescue
+      blob&.purge_later
+      raise
     end
 
     private
 
     attr_reader :order_form, :signed_document, :execution_mode, :execution_date
 
-    def attach_signed_document
+    # Validates and uploads the document OUTSIDE the transaction; returns the persisted blob (or nil).
+    def signed_document_blob
       return if signed_document.blank?
 
       decoded = Utils::Base64File.decode(signed_document)
-      order_form.signed_document.attach(
+
+      unless OrderForm::SIGNED_DOCUMENT_CONTENT_TYPES.include?(decoded.content_type)
+        result.single_validation_failure!(field: :signed_document, error_code: "invalid_content_type")
+        return
+      end
+
+      unless decoded.io.size < OrderForm::SIGNED_DOCUMENT_MAX_SIZE
+        result.single_validation_failure!(field: :signed_document, error_code: "file_too_large")
+        return
+      end
+
+      ActiveStorage::Blob.create_and_upload!(
         io: decoded.io,
         filename: order_form.number,
         content_type: decoded.content_type

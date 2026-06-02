@@ -111,6 +111,44 @@ RSpec.describe OrderForms::MarkAsSignedService do
         end
       end
 
+      context "when the signed_document exceeds the max size" do
+        let(:signed_document) { "data:application/pdf;base64,#{Base64.strict_encode64("pdf")}" }
+
+        before do
+          decoded = Utils::Base64File::Decoded.new(io: instance_double(StringIO, size: 11.megabytes), content_type: "application/pdf")
+          allow(Utils::Base64File).to receive(:decode).and_return(decoded)
+        end
+
+        it "returns a validation failure without uploading" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to have_key(:signed_document)
+          expect(order_form.reload).to be_generated
+        end
+      end
+
+      context "when saving fails after the document is uploaded" do
+        let(:signed_document) { "data:application/pdf;base64,#{Base64.strict_encode64("pdf")}" }
+        let(:uploaded_blob) do
+          ActiveStorage::Blob.create_and_upload!(io: StringIO.new("pdf"), filename: "doc", content_type: "application/pdf")
+        end
+
+        before do
+          allow(ActiveStorage::Blob).to receive(:create_and_upload!).and_return(uploaded_blob)
+          allow(uploaded_blob).to receive(:purge_later)
+          allow(order_form).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(order_form))
+        end
+
+        it "purges the orphaned blob and returns a validation failure" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(uploaded_blob).to have_received(:purge_later)
+        end
+      end
+
       context "when execution_mode and execution_date are provided" do
         let(:execution_mode) { "execute_in_lago" }
         let(:execution_date) { "2026-06-15" }

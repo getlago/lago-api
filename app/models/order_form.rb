@@ -16,6 +16,9 @@ class OrderForm < ApplicationRecord
     invalid: "invalid"
   }.freeze
 
+  SIGNED_DOCUMENT_CONTENT_TYPES = %w[application/pdf image/jpeg image/png].freeze
+  SIGNED_DOCUMENT_MAX_SIZE = 10.megabytes
+
   before_save :ensure_number
 
   belongs_to :organization
@@ -34,8 +37,8 @@ class OrderForm < ApplicationRecord
 
   validates :void_reason, presence: true, if: :voided?
   validates :signed_document,
-    content_type: %w[application/pdf image/jpeg image/png],
-    size: {less_than: 10.megabytes}
+    content_type: SIGNED_DOCUMENT_CONTENT_TYPES,
+    size: {less_than: SIGNED_DOCUMENT_MAX_SIZE}
 
   sequenced(
     scope: ->(order_form) { order_form.organization.order_forms },
