@@ -8985,6 +8985,16 @@ type Mutation {
   ): Invoice
 
   """
+  Void an order form
+  """
+  voidOrderForm(
+    """
+    Parameters for VoidOrderForm
+    """
+    input: VoidOrderFormInput!
+  ): OrderForm
+
+  """
   Void a quote version
   """
   voidQuoteVersion(
@@ -9431,6 +9441,7 @@ enum PermissionEnum {
   invoices_void
   order_forms_sign
   order_forms_view
+  order_forms_void
   organization_emails_update
   organization_emails_view
   organization_integrations_create
@@ -9546,6 +9557,7 @@ type Permissions {
   invoicesVoid: Boolean!
   orderFormsSign: Boolean!
   orderFormsView: Boolean!
+  orderFormsVoid: Boolean!
   organizationEmailsUpdate: Boolean!
   organizationEmailsView: Boolean!
   organizationIntegrationsCreate: Boolean!
@@ -13485,6 +13497,17 @@ input VoidInvoiceInput {
   generateCreditNote: Boolean
   id: ID!
   refundAmount: BigInt
+}
+
+"""
+Void Order Form input arguments
+"""
+input VoidOrderFormInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  id: ID!
 }
 
 """
