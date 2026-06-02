@@ -75,9 +75,5 @@ module DailyUsages
         end
       end
     end
-
-    def existing_daily_usage
-      DailyUsage.usage_date_in_timezone(timestamp.to_date - 1.day).select(:subscription_id)
-    end
   end
 end
