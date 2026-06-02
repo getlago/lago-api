@@ -150,6 +150,7 @@ Rails.application.routes.draw do
       resources :payment_requests, only: %i[create index show]
       resources :order_forms, only: %i[show index] do
         post :mark_as_signed, on: :member
+        post :void, on: :member
       end
       resources :payments, only: %i[create index show]
       resources :plans, param: :code, code: /.*/ do
