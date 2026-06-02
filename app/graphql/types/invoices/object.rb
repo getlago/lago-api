@@ -81,7 +81,7 @@ module Types
       field :integration_salesforce_syncable, GraphQL::Types::Boolean, null: false
       field :integration_syncable, GraphQL::Types::Boolean, null: false
       field :payable_type, GraphQL::Types::String, null: false
-      field :payments, [Types::Payments::Object], null: true
+      field :payments, [Types::Payments::Object], null: true, method: :customer_payments
       field :regenerated_invoice_id, String, null: true
       field :tax_provider_id, String, null: true
       field :tax_provider_voidable, GraphQL::Types::Boolean, null: false
@@ -102,10 +102,6 @@ module Types
         else
           object.applied_taxes.order(tax_rate: :desc)
         end
-      end
-
-      def payments
-        object.payments.where.not(customer_id: nil).order(updated_at: :desc)
       end
 
       def integration_syncable
