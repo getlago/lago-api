@@ -3277,7 +3277,8 @@ CREATE TABLE public.subscriptions (
     incompleted_at timestamp(6) without time zone,
     activated_at timestamp(6) without time zone,
     billing_entity_id uuid,
-    consolidate_invoice boolean DEFAULT true NOT NULL
+    consolidate_invoice boolean DEFAULT true NOT NULL,
+    skip_daily_usage boolean DEFAULT false NOT NULL
 );
 
 
@@ -12465,6 +12466,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260602092156'),
 ('20260601174030'),
 ('20260601120429'),
 ('20260601120428'),
