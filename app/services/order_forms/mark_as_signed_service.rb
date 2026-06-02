@@ -48,14 +48,11 @@ module OrderForms
     def attach_signed_document
       return if signed_document.blank?
 
-      base64_data = signed_document.split(",")
-      decoded = Base64.decode64(base64_data.second)
-      content_type = base64_data.first.split(";").first.split(":").second
-
+      decoded = Utils::Base64File.decode(signed_document)
       order_form.signed_document.attach(
-        io: StringIO.new(decoded),
+        io: decoded.io,
         filename: "#{order_form.number}.pdf",
-        content_type:
+        content_type: decoded.content_type
       )
     end
 
