@@ -172,5 +172,56 @@ RSpec.describe Api::V1::OrderFormsController do
         expect(json[:error_details]).to include(:signed_document)
       end
     end
+
+    context "when execution_mode and execution_date are provided" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v1/order_forms/#{order_form.id}/mark_as_signed",
+          {order_form: {execution_mode: "execute_in_lago", execution_date: "2026-06-15"}}
+        )
+      end
+
+      it "marks the order form as signed" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:order_form][:status]).to eq("signed")
+      end
+    end
+
+    context "when execution_mode is invalid" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v1/order_forms/#{order_form.id}/mark_as_signed",
+          {order_form: {execution_mode: "unknown"}}
+        )
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to include(:execution_mode)
+      end
+    end
+
+    context "when execution_date is not a date" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v1/order_forms/#{order_form.id}/mark_as_signed",
+          {order_form: {execution_date: "not-a-date"}}
+        )
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to include(:execution_date)
+      end
+    end
   end
 end

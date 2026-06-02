@@ -3,13 +3,15 @@
 require "rails_helper"
 
 RSpec.describe OrderForms::MarkAsSignedService do
-  subject(:service) { described_class.new(order_form:, signed_document:) }
+  subject(:service) { described_class.new(order_form:, signed_document:, execution_mode:, execution_date:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, customer:, organization:, order_type: :subscription_creation) }
   let(:order_form) { create(:order_form, customer:, organization:, quote:) }
   let(:signed_document) { nil }
+  let(:execution_mode) { nil }
+  let(:execution_date) { nil }
 
   describe "#call" do
     context "without premium license" do
@@ -106,6 +108,42 @@ RSpec.describe OrderForms::MarkAsSignedService do
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages).to have_key(:signed_document)
           expect(order_form.reload).to be_generated
+        end
+      end
+
+      context "when execution_mode and execution_date are provided" do
+        let(:execution_mode) { "execute_in_lago" }
+        let(:execution_date) { "2026-06-15" }
+
+        it "signs the order form without acting on them" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.order_form).to be_signed
+        end
+      end
+
+      context "when execution_mode is invalid" do
+        let(:execution_mode) { "unknown" }
+
+        it "returns a validation failure on execution_mode" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to have_key(:execution_mode)
+        end
+      end
+
+      context "when execution_date is not a date" do
+        let(:execution_date) { "not-a-date" }
+
+        it "returns a validation failure on execution_date" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to have_key(:execution_date)
         end
       end
     end
