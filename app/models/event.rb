@@ -92,5 +92,6 @@ end
 #  index_events_on_organization_id_and_code            (organization_id,code)
 #  index_events_on_organization_id_and_created_at      (organization_id,created_at DESC) WHERE (deleted_at IS NULL)
 #  index_events_on_organization_id_and_transaction_id  (organization_id,transaction_id) WHERE (deleted_at IS NULL)
+#  index_events_on_organization_id_code_and_timestamp  (organization_id,code,timestamp DESC) WHERE (deleted_at IS NULL)
 #  index_unique_transaction_id                         (organization_id,external_subscription_id,transaction_id) UNIQUE
 #

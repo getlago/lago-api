@@ -622,6 +622,7 @@ DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
+DROP INDEX IF EXISTS public.index_events_on_organization_id_code_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_transaction_id;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_created_at;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
@@ -7960,6 +7961,13 @@ CREATE INDEX index_events_on_organization_id_and_transaction_id ON public.events
 
 
 --
+-- Name: index_events_on_organization_id_code_and_timestamp; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_organization_id_code_and_timestamp ON public.events USING btree (organization_id, code, "timestamp" DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_fees_on_add_on_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12478,6 +12486,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260513105209'),
 ('20260512155310'),
 ('20260512142543'),
+('20260506122830'),
 ('20260504134804'),
 ('20260430102814'),
 ('20260430102813'),
