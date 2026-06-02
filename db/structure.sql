@@ -2026,7 +2026,8 @@ CREATE TABLE public.cached_aggregations (
     grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
     charge_filter_id uuid,
     current_amount numeric,
-    event_transaction_id character varying
+    event_transaction_id character varying,
+    presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 
 
@@ -12478,6 +12479,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260513105209'),
 ('20260512155310'),
 ('20260512142543'),
+('20260508134715'),
 ('20260504134804'),
 ('20260430102814'),
 ('20260430102813'),

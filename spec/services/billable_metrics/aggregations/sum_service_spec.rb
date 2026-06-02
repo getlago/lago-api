@@ -624,6 +624,19 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       expect(result.pay_in_advance_aggregation).to eq(10)
     end
 
+    context "with presentation group keys" do
+      let(:presentation_by) { ["cloud", "region"] }
+      let(:properties) { {"total_count" => 10, "cloud" => "aws", "region" => "eu"} }
+
+      it "assigns pay_in_advance_breakdowns based on the pay_in_advance event" do
+        result = sum_service.aggregate
+
+        expect(result.pay_in_advance_breakdowns).to eq([
+          {groups: {"cloud" => "aws", "region" => "eu"}, value: 10}
+        ])
+      end
+    end
+
     context "when current period aggregation is greater than period maximum" do
       let(:latest_events) do
         create(

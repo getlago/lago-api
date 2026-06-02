@@ -572,6 +572,17 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
         expect(result.pay_in_advance_aggregation).to eq(21.fdiv(31).ceil(5))
       end
 
+      context "with presentation group keys" do
+        let(:presentation_by) { ["cloud", "region"] }
+        let(:properties) { {"unique_id" => SecureRandom.uuid, "cloud" => "aws", "region" => "eu"} }
+
+        it "assigns pay_in_advance_breakdowns based on the pay_in_advance event" do
+          expect(result.pay_in_advance_breakdowns).to eq([
+            {groups: {"cloud" => "aws", "region" => "eu"}, value: 1}
+          ])
+        end
+      end
+
       context "when event is missing properties" do
         let(:properties) { {} }
 
