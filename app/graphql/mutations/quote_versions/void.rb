@@ -12,7 +12,7 @@ module Mutations
       description "Void a quote version"
 
       argument :id, ID, required: true
-      argument :reason, Types::QuoteVersions::VoidReasonEnum, required: true
+      argument :reason, Types::QuoteVersions::ManualVoidReasonEnum, required: true
 
       type Types::QuoteVersions::Object
 

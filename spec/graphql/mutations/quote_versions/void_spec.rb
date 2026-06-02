@@ -61,6 +61,23 @@ RSpec.describe Mutations::QuoteVersions::Void do
     end
   end
 
+  context "with a cascade void reason", :premium do
+    let(:input) { {id: quote_version.id, reason: "cascade_of_expired"} }
+
+    it "is rejected by the schema" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+
+      expect(result["errors"]).to be_present
+      expect(result["data"]).to be_nil
+    end
+  end
+
   context "when quote version is not found", :premium do
     let(:input) { {id: "00000000-0000-0000-0000-000000000000", reason: "manual"} }
 

@@ -35,6 +35,20 @@ RSpec.describe QuoteVersions::VoidService do
       end
     end
 
+    context "when quote version is approved and reason is a cascade", :premium do
+      let(:quote_version) { create(:quote_version, :approved, organization:) }
+      let(:reason) { "cascade_of_expired" }
+
+      it "voids the quote version" do
+        freeze_time do
+          expect(result).to be_success
+          expect(result.quote_version.voided?).to eq(true)
+          expect(result.quote_version.void_reason).to eq("cascade_of_expired")
+          expect(result.quote_version.voided_at).to eq(Time.current)
+        end
+      end
+    end
+
     context "when quote isn't voidable", :premium do
       let(:quote_version) { create(:quote_version, :voided, organization:) }
 

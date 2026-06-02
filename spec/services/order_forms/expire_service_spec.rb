@@ -5,12 +5,26 @@ require "rails_helper"
 RSpec.describe OrderForms::ExpireService do
   subject(:service) { described_class.new(order_form:) }
 
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
   let(:customer) { create(:customer, organization:) }
-  let(:order_form) { create(:order_form, :expired_yesterday, customer:, organization:) }
+  let(:quote) { create(:quote, organization:, customer:) }
+  let(:quote_version) { create(:quote_version, :approved, organization:, quote:) }
+  let(:order_form) { create(:order_form, :expired_yesterday, customer:, organization:, quote_version:) }
 
   describe "#call" do
     context "without premium license" do
+      it "returns a forbidden failure" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("feature_unavailable")
+      end
+    end
+
+    context "when the order_forms feature flag is disabled", :premium do
+      let(:organization) { create(:organization) }
+
       it "returns a forbidden failure" do
         result = service.call
 
@@ -78,8 +92,12 @@ RSpec.describe OrderForms::ExpireService do
           expect(result.order_form.void_reason).to eq("expired")
         end
 
-        # TODO: Test Quote cascade when Quotes::VoidService is implemented
-        pending "cascades expiration to parent quote"
+        it "cascades the expiration by voiding the quote version" do
+          service.call
+
+          expect(quote_version.reload).to be_voided
+          expect(quote_version.void_reason).to eq("cascade_of_expired")
+        end
       end
     end
   end

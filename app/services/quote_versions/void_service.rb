@@ -39,7 +39,13 @@ module QuoteVersions
     private
 
     def voidable?
-      quote_version.draft?
+      return true if quote_version.draft?
+
+      quote_version.approved? && cascade_reason?
+    end
+
+    def cascade_reason?
+      QuoteVersion::CASCADE_VOID_REASONS.key?(reason.to_sym)
     end
 
     def valid_reason?

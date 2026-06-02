@@ -2,6 +2,8 @@
 
 module OrderForms
   class ExpireService < BaseService
+    include OrderForms::Premium
+
     Result = BaseResult[:order_form]
 
     def initialize(order_form:)
@@ -11,8 +13,8 @@ module OrderForms
     end
 
     def call
-      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "order_form") unless order_form
+      return result.forbidden_failure! unless order_forms_enabled?(order_form.organization)
 
       return result.not_allowed_failure!(code: "order_form_is_voided") if order_form.voided?
       return result.not_allowed_failure!(code: "order_form_is_signed") if order_form.signed?
@@ -27,7 +29,7 @@ module OrderForms
       ActiveRecord::Base.transaction do
         order_form.save!
 
-        # TODO: Call Quotes::VoidService.call!(quote: order_form.quote, void_reason: :cascade_of_expired)
+        QuoteVersions::VoidService.call!(quote_version: order_form.quote_version, reason: :cascade_of_expired)
       end
 
       result.order_form = order_form

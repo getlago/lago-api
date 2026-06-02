@@ -59510,6 +59510,29 @@
         },
         {
           "kind": "ENUM",
+          "name": "QuoteVersionManualVoidReasonEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "manual",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "superseded",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
           "name": "RecurringTransactionIntervalEnum",
           "description": null,
           "fields": null,
@@ -72107,7 +72130,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "VoidReasonEnum",
+                  "name": "QuoteVersionManualVoidReasonEnum",
                   "ofType": null
                 }
               },
