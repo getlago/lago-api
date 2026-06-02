@@ -147,4 +147,36 @@ RSpec.describe PaymentProviders::Stripe::Payments::RefundService do
       expect(Refund.where(payment:, reason: :subscription_activation_expired)).not_to exist
     end
   end
+
+  context "when the Refund row cannot be persisted" do
+    before do
+      allow_any_instance_of(Refund).to receive(:save!) # rubocop:disable RSpec/AnyInstance
+        .and_raise(ActiveRecord::RecordInvalid.new(Refund.new))
+    end
+
+    it "returns a record validation failure" do
+      expect(service_result).to be_failure
+      expect(service_result.error).to be_a(BaseService::ValidationFailure)
+    end
+
+    it "does not persist a Refund row" do
+      service_result
+
+      expect(Refund.where(payment:)).not_to exist
+    end
+  end
+
+  context "when called with a different refund reason" do
+    let(:reason) { :credit_note }
+
+    it "propagates the reason to the Refund row and Stripe metadata" do
+      service_result
+
+      expect(service_result.refund.reason).to eq("credit_note")
+      expect(::Stripe::Refund).to have_received(:create).with(
+        hash_including(metadata: hash_including(lago_refund_reason: "credit_note")),
+        anything
+      )
+    end
+  end
 end

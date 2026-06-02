@@ -24,11 +24,20 @@ module PaymentProviders
           )
           refund.save!
 
+          # TODO(M4-webhooks): emit `payment.refunded` outbound webhook once the
+          # webhook services land.
           result.refund = refund
           result
         rescue ActiveRecord::RecordInvalid => e
           result.record_validation_failure!(record: e.record)
         rescue ::Stripe::InvalidRequestError => e
+          # Stripe rejected the refund (e.g. charge already refunded, charge not
+          # refundable). We persist a Refund row in `failed` state so the dispatcher's
+          # "skip if refund already exists" idempotency guard stops further attempts.
+          # The provider_refund_id column is NOT NULL, but there's no PSP refund id
+          # to record here — Stripe never created one. Use the Lago-side idempotency
+          # key as a sentinel: it's unique per payment and clearly not a Stripe id
+          # shape, so lookups by it can't collide with a real refund.
           refund = build_refund(
             amount_cents: payment.amount_cents,
             amount_currency: payment.amount_currency,
@@ -37,6 +46,9 @@ module PaymentProviders
           )
           refund.save!
 
+          # TODO(M4-webhooks): emit `payment.refund_failure` outbound webhook
+          # carrying the PSP message + code, and produce a `payment.refund_failure`
+          # activity log entry. Both land once the webhook services exist.
           result.refund = refund
           result.service_failure!(code: "stripe_error", message: e.message)
         end
