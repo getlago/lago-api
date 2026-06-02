@@ -760,6 +760,65 @@ RSpec.describe DailyUsages::ComputeDiffService do
       expect(diff["charges_usage"].first["units"]).to eq("0.5")
       expect(diff["charges_usage"].first["events_count"]).to eq(3)
     end
+
+    context "when there is a gap of several days without events" do
+      # Simulates: events on day 4, none on days 5-8, events again on day 9 of the same billing
+      # period. The previous daily_usage lives 5 days back, not at usage_date - 1.day, so the
+      # diff must look further back than yesterday to avoid double-counting the day 4 events.
+      let(:daily_usage) do
+        create(:daily_usage, subscription:, from_datetime:, to_datetime:, usage_date: Date.new(2022, 7, 9), usage:)
+      end
+
+      before do
+        # Wipe the default previous_daily_usage at 2022-07-14 created above; here we only want
+        # the 2022-07-04 row to exist as the prior snapshot.
+        DailyUsage.where(subscription:).where.not(usage_date: Date.new(2022, 7, 4)).delete_all
+
+        create(
+          :daily_usage,
+          subscription:,
+          from_datetime:,
+          to_datetime:,
+          usage_date: Date.new(2022, 7, 4),
+          usage: previous_usage_data
+        )
+      end
+
+      it "diffs against the latest prior daily usage in the same billing period" do
+        diff = diff_service.call.usage_diff
+
+        expect(diff["amount_cents"]).to eq(50)
+        expect(diff["charges_usage"].first["amount_cents"]).to eq(50)
+        expect(diff["charges_usage"].first["units"]).to eq("0.5")
+        expect(diff["charges_usage"].first["events_count"]).to eq(3)
+      end
+    end
+
+    context "when a prior daily usage exists in a different billing period" do
+      # The prior daily_usage belongs to the previous billing period (different from_datetime /
+      # to_datetime); it must NOT be used as the diff baseline for the current period's first
+      # row — that row should fall back to "full usage".
+      let(:daily_usage) do
+        create(:daily_usage, subscription:, from_datetime:, to_datetime:, usage_date: Date.new(2022, 7, 1), usage:)
+      end
+
+      before do
+        DailyUsage.where(subscription:).where.not(id: daily_usage.id).delete_all
+
+        create(
+          :daily_usage,
+          subscription:,
+          from_datetime: from_datetime - 1.month,
+          to_datetime: to_datetime - 1.month,
+          usage_date: Date.new(2022, 6, 30),
+          usage: previous_usage_data
+        )
+      end
+
+      it "returns the full current usage instead of diffing across periods" do
+        expect(diff_service.call.usage_diff).to eq(usage)
+      end
+    end
   end
 
   context "when the previous daily usage is nil" do

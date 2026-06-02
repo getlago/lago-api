@@ -53,10 +53,21 @@ module DailyUsages
 
     delegate :subscription, :usage_date, :from_datetime, :to_datetime, to: :daily_usage
 
+    # Returns the most recent daily_usage for the same subscription and billing period that is
+    # strictly older than the current usage_date.
+    #
+    # We intentionally do NOT restrict the lookup to `usage_date - 1.day`. On days without events,
+    # no daily_usage row is saved (see DailyUsages::ComputeAllService `last_received_event_on`
+    # guard and DailyUsages::ComputeService returning early when `current_usage.fees` is empty),
+    # so the immediately preceding row may live several days back. Falling back to "full usage"
+    # in those cases would double-count the gap days in downstream analytics that sum
+    # `usage_diff` (see lago-data `data_pipeline/models/usage/usage_daily_base.sql`).
     def previous_daily_usage
       @previous_daily_usage ||= subscription.daily_usages
         .where(from_datetime:, to_datetime:)
-        .find_by(usage_date: usage_date - 1.day)
+        .where("usage_date < ?", usage_date)
+        .order(usage_date: :desc)
+        .first
     end
 
     # Prorates previous taxes based on how much of the previous amount came from charges
