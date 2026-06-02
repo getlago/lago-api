@@ -30,6 +30,27 @@ RSpec.describe OrderForm do
     end
   end
 
+  describe "Scopes" do
+    describe ".expirable" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+
+      let!(:expired_yesterday) { create(:order_form, :expired_yesterday, organization:, customer:) }
+
+      before do
+        create(:order_form, :expiring_tomorrow, organization:, customer:)
+        create(:order_form, organization:, customer:, expires_at: nil)
+        create(:order_form, :expired, organization:, customer:)
+        create(:order_form, :voided, organization:, customer:)
+        create(:order_form, :signed, organization:, customer:)
+      end
+
+      it "returns only generated order forms past their expires_at" do
+        expect(described_class.expirable).to match_array([expired_yesterday])
+      end
+    end
+  end
+
   describe "validations" do
     describe "void_reason validation" do
       it "requires void_reason when voided" do

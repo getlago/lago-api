@@ -40,6 +40,8 @@ class OrderForm < ApplicationRecord
     content_type: SIGNED_DOCUMENT_CONTENT_TYPES,
     size: {less_than: SIGNED_DOCUMENT_MAX_SIZE}
 
+  scope :expirable, -> { generated.where.not(expires_at: nil).where("expires_at < ?", Time.current) }
+
   sequenced(
     scope: ->(order_form) { order_form.organization.order_forms },
     lock_key: ->(order_form) { order_form.organization_id }

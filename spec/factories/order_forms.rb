@@ -32,5 +32,15 @@ FactoryBot.define do
       voided_at { Time.current }
       void_reason { :manual }
     end
+
+    trait :expired_yesterday do
+      status { :generated }
+      expires_at { 1.day.ago }
+    end
+
+    trait :expiring_tomorrow do
+      status { :generated }
+      expires_at { 1.day.from_now }
+    end
   end
 end

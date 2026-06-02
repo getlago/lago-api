@@ -244,6 +244,27 @@ describe Clockwork do
     end
   end
 
+  describe "schedule:expire_order_forms" do
+    let(:job) { "schedule:expire_order_forms" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("2 Apr 2022 00:00:00") }
+
+    it "enqueues an expire order forms job" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.minute
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::ExpireOrderFormsJob).to have_been_enqueued
+    end
+  end
+
   describe "schedule:clean_inbound_webhooks" do
     let(:job) { "schedule:clean_inbound_webhooks" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
