@@ -7,6 +7,7 @@ module V1
         lago_id: model.id,
         lago_customer_id: model.customer_id,
         external_customer_id: model.customer.external_id,
+        billing_entity_code: model.billing_entity.code,
         status: model.status,
         currency: model.currency,
         name: model.name,

@@ -48,6 +48,16 @@ RSpec.describe Api::V1::WalletsController do
 
       let(:id) { wallet.id }
     end
+
+    it_behaves_like "a wallet update endpoint with billing_entity_id" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v1/wallets/#{wallet.id}",
+          {wallet: update_params}
+        )
+      end
+    end
   end
 
   describe "GET /api/v1/wallets/:id" do
