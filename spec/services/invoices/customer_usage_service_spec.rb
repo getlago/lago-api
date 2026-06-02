@@ -252,6 +252,17 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             end
           end
         end
+
+        it "computes the invoice taxes_rate without diluting it by the excluded fees" do
+          travel_to(current_date) do
+            result = usage_service.call
+
+            # The rate is prorated by amount over the taxable fee only (10%), not by fee
+            # count over all three fees, which would dilute it to 1/3 * 10 = 3.33%.
+            expect(result.invoice.taxes_rate).to eq(10)
+            expect(result.usage.taxes_amount_cents).to eq(253)
+          end
+        end
       end
 
       context "when there is error received from the provider" do
