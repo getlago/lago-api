@@ -86,4 +86,52 @@ RSpec.describe Api::V1::OrderFormsController do
       end
     end
   end
+
+  describe "POST /api/v1/order_forms/:id/mark_as_signed", :premium do
+    subject do
+      post_with_token(
+        organization,
+        "/api/v1/order_forms/#{order_form.id}/mark_as_signed",
+        {}
+      )
+    end
+
+    before { order_form }
+
+    include_examples "requires API permission", "order_form", "write"
+
+    it "marks the order form as signed" do
+      subject
+
+      expect(response).to have_http_status(:ok)
+      expect(json[:order_form][:lago_id]).to eq(order_form.id)
+      expect(json[:order_form][:status]).to eq("signed")
+    end
+
+    context "when order form is not signable" do
+      let(:order_form) { create(:order_form, :signed, organization:, customer:, quote:) }
+
+      it "returns an error" do
+        subject
+
+        expect(response).to have_http_status(:method_not_allowed)
+      end
+    end
+
+    context "when order form does not exist" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v1/order_forms/#{SecureRandom.uuid}/mark_as_signed",
+          {}
+        )
+      end
+
+      it "returns not found" do
+        subject
+
+        expect(response).to be_not_found_error("order_form")
+      end
+    end
+  end
 end

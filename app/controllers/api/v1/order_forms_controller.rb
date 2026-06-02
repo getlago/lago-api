@@ -30,6 +30,18 @@ module Api
         end
       end
 
+      def mark_as_signed
+        order_form = current_organization.order_forms.find_by(id: params[:id])
+
+        result = OrderForms::MarkAsSignedService.call(order_form:)
+
+        if result.success?
+          render_order_form(result.order_form)
+        else
+          render_error_response(result)
+        end
+      end
+
       def show
         order_form = current_organization.order_forms.find_by(id: params[:id])
         return not_found_error(resource: "order_form") unless order_form
