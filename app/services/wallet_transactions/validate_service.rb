@@ -71,7 +71,7 @@ module WalletTransactions
     end
 
     def valid_metadata?
-      validator = ::Validators::MetadataValidator.new(args[:metadata], max_keys: MAX_METADATA_KEYS)
+      validator = ::Validators::MetadataValidator.new(args[:metadata], {max_keys: MAX_METADATA_KEYS})
       unless validator.valid?
         validator.errors.each do |field, error_code|
           add_error(field: field, error_code: error_code)
