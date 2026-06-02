@@ -170,6 +170,44 @@ RSpec.describe WalletTransactions::ValidateService do
       end
     end
 
+    context "with the maximum number of metadata key-value pairs" do
+      let(:args) do
+        {
+          wallet_id:,
+          customer_id: customer.external_id,
+          organization_id: organization.id,
+          paid_credits:,
+          granted_credits:,
+          voided_credits:,
+          metadata: (1..15).map { |i| {"key" => "key#{i}", "value" => "value#{i}"} }
+        }
+      end
+
+      it "returns true" do
+        expect(validate_service).to be_valid
+        expect(result.error).to be_nil
+      end
+    end
+
+    context "with too many metadata key-value pairs" do
+      let(:args) do
+        {
+          wallet_id:,
+          customer_id: customer.external_id,
+          organization_id: organization.id,
+          paid_credits:,
+          granted_credits:,
+          voided_credits:,
+          metadata: (1..16).map { |i| {"key" => "key#{i}", "value" => "value#{i}"} }
+        }
+      end
+
+      it "returns false and result has errors for metadata" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:metadata]).to eq(["too_many_keys"])
+      end
+    end
+
     context "with valid name" do
       let(:name) { "Valid Transaction Name" }
 
