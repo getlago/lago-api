@@ -419,10 +419,11 @@ describe "Payment Gated Subscription Activation Scenarios" do
         expect(credit_note).to be_consumed
         expect(wallet.reload.balance_cents).to eq(0)
 
-        # Push the rule's expires_at into the past and run the clock
-        customer.subscriptions.sole.activation_rules.sole.update!(expires_at: 1.hour.ago)
-        Clock::ExpireIncompleteSubscriptionsJob.perform_now
-        perform_all_enqueued_jobs
+        # Travel past the 48h timeout so the rule expires, then run the clock
+        travel_to(49.hours.from_now) do
+          Clock::ExpireIncompleteSubscriptionsJob.perform_now
+          perform_all_enqueued_jobs
+        end
 
         expect(invoice.reload).to be_closed
 
@@ -451,9 +452,10 @@ describe "Payment Gated Subscription Activation Scenarios" do
           invoice = customer.subscriptions.sole.invoices.sole
           expect(invoice.credits.credit_note_kind).to be_empty
 
-          customer.subscriptions.sole.activation_rules.sole.update!(expires_at: 1.hour.ago)
-          Clock::ExpireIncompleteSubscriptionsJob.perform_now
-          perform_all_enqueued_jobs
+          travel_to(49.hours.from_now) do
+            Clock::ExpireIncompleteSubscriptionsJob.perform_now
+            perform_all_enqueued_jobs
+          end
 
           expect(invoice.reload).to be_closed
           expect(credit_note.reload).to be_voided
@@ -474,9 +476,10 @@ describe "Payment Gated Subscription Activation Scenarios" do
           invoice = customer.subscriptions.sole.invoices.sole
           expect(invoice.wallet_transactions.outbound).to be_empty
 
-          customer.subscriptions.sole.activation_rules.sole.update!(expires_at: 1.hour.ago)
-          Clock::ExpireIncompleteSubscriptionsJob.perform_now
-          perform_all_enqueued_jobs
+          travel_to(49.hours.from_now) do
+            Clock::ExpireIncompleteSubscriptionsJob.perform_now
+            perform_all_enqueued_jobs
+          end
 
           expect(invoice.reload).to be_closed
           expect(wallet.reload).to be_terminated
