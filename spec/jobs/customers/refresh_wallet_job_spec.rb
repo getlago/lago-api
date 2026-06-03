@@ -32,7 +32,7 @@ RSpec.describe Customers::RefreshWalletJob do
   end
 
   describe "#perform" do
-    subject { described_class.perform_now(customer, wallet_ids) }
+    subject { described_class.perform_now(customer, wallet_ids:) }
 
     let(:customer) { create(:customer, awaiting_wallet_refresh:) }
     let(:organization) { customer.organization }
