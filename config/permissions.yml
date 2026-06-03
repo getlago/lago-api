@@ -142,6 +142,10 @@ quotes:
     - manager
   void:
     - manager
+order_forms:
+  view:
+    - finance
+    - manager
 organization:
   view:
     - finance

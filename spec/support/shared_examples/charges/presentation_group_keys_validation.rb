@@ -30,6 +30,17 @@ RSpec.shared_examples "presentation_group_keys property validation" do
     end
   end
 
+  context "when presentation_group_keys has duplicated values" do
+    let(:presentation_group_keys) { [{"value" => "country"}, {"value" => "country"}] }
+
+    it "is invalid" do
+      expect(validation_service).not_to be_valid
+      expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+      expect(validation_service.result.error.messages.keys).to include(:presentation_group_keys)
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to include("value_is_duplicated")
+    end
+  end
+
   context "when presentation_group_keys has options" do
     let(:presentation_group_keys) do
       [

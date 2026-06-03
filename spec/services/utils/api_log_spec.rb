@@ -101,41 +101,70 @@ RSpec.describe Utils::ApiLog do
       end
     end
 
-    describe ".available?" do
-      subject { api_log.available? }
+    [
+      {exception: WaterDrop::Errors::ProduceError, message: "#<Rdkafka::RdkafkaError: Local: Unknown topic (unknown_topic)>"},
+      {exception: WaterDrop::Errors::MessageInvalidError, message: "Message is too large"}
+    ].each do |error_context|
+      exception = error_context[:exception]
+      message = error_context[:message]
+      context "when producer raises #{exception}" do
+        subject(:produce) { api_log.produce(fake_request, fake_response, organization:) }
 
-      context "without clickhouse" do
         before do
-          ENV["LAGO_CLICKHOUSE_ENABLED"] = nil
+          allow(karafka_producer).to receive(:produce_async).and_raise(exception.new(message))
         end
 
-        it { is_expected.to be_falsey }
+        context "when sentry is configured", :sentry do
+          it "captures the exception and returns false" do
+            expect { produce }.not_to raise_error
+            expect(sentry_events).to include_sentry_event(exception: exception, message: message)
+          end
+        end
+
+        context "when sentry is not configured" do
+          it "re-raises the error" do
+            expect { produce }.to raise_error(exception, message)
+            expect(sentry_events).to be_empty
+          end
+        end
+      end
+    end
+  end
+
+  describe ".available?" do
+    subject { api_log.available? }
+
+    context "without clickhouse" do
+      before do
+        ENV["LAGO_CLICKHOUSE_ENABLED"] = nil
       end
 
-      context "without kafka vars" do
-        before do
-          ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
-          ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = nil
-          ENV["LAGO_CLICKHOUSE_ENABLED"] = "true"
-        end
+      it { is_expected.to be_falsey }
+    end
 
-        it { is_expected.to be_falsey }
+    context "without kafka vars" do
+      before do
+        ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
+        ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = nil
+        ENV["LAGO_CLICKHOUSE_ENABLED"] = "true"
       end
 
-      context "with everything configured" do
-        before do
-          ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"
-          ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = "api_logs"
-          ENV["LAGO_CLICKHOUSE_ENABLED"] = "true"
-        end
+      it { is_expected.to be_falsey }
+    end
 
-        after do
-          ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
-          ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = nil
-        end
-
-        it { is_expected.to be_truthy }
+    context "with everything configured" do
+      before do
+        ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"
+        ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = "api_logs"
+        ENV["LAGO_CLICKHOUSE_ENABLED"] = "true"
       end
+
+      after do
+        ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
+        ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = nil
+      end
+
+      it { is_expected.to be_truthy }
     end
   end
 end

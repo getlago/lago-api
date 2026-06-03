@@ -806,6 +806,30 @@ RSpec.describe Fees::ChargeService, :premium do
 
             expect(result.fees.flat_map(&:presentation_breakdowns)).to all(have_attributes(organization_id: organization.id))
           end
+
+          context "with recurring weighted sum aggregation" do
+            let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
+
+            it "stores presentation_breakdowns on each cached aggregation scoped to its group" do
+              result = charge_subscription_service.call
+              expect(result).to be_success
+              expect(result.cached_aggregations.count).to eq(2)
+
+              aws_agg = result.cached_aggregations.find { |a| a.grouped_by["cloud"] == "aws" }
+              gcp_agg = result.cached_aggregations.find { |a| a.grouped_by["cloud"] == "gcp" }
+
+              expect(aws_agg.presentation_breakdowns.map { |b| b["groups"] }).to match_array(
+                [{"region" => "us-east-1"}, {"region" => "us-central-1"}]
+              )
+              expect(aws_agg.presentation_breakdowns.map { |b| b["value"].to_f.round(5) }).to eq([2.58065, 5.16129])
+
+              expect(gcp_agg.presentation_breakdowns.map { |b| b["groups"] }).to match_array(
+                [{"region" => "eu-west-1"}]
+              )
+
+              expect(gcp_agg.presentation_breakdowns.map { |b| b["value"].to_f.round(5) }).to eq([1.54839])
+            end
+          end
         end
       end
 
@@ -2653,6 +2677,38 @@ RSpec.describe Fees::ChargeService, :premium do
         expect(cached_aggregation.timestamp).to eq(boundaries.from_datetime)
         expect(cached_aggregation.current_aggregation).to eq(0.0)
       end
+
+      context "with presentation_group_keys" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan,
+            billable_metric:,
+            properties: {
+              amount: "20",
+              presentation_group_keys: [{value: "region"}]
+            }
+          )
+        end
+
+        before do
+          create(:event, organization: subscription.organization, subscription:, code: billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"), properties: {region: "us-east-1", value: 10})
+          create(:event, organization: subscription.organization, subscription:, code: billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"), properties: {region: "eu-west-1", value: 5})
+        end
+
+        it "stores presentation_breakdowns on the cached aggregation" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+
+          cached_aggregation = result.cached_aggregations.first
+          expect(cached_aggregation.presentation_breakdowns.map { |b| b["groups"] }).to match_array(
+            [{"region" => "us-east-1"}, {"region" => "eu-west-1"}]
+          )
+          expect(cached_aggregation.presentation_breakdowns.map { |b| b["value"].to_f.round(5) }).to eq([2.58065, 5.16129])
+        end
+      end
     end
 
     context "with aggregation error" do
@@ -4499,6 +4555,136 @@ RSpec.describe Fees::ChargeService, :premium do
           units: 15,
           grouped_by: {}
         )
+      end
+    end
+  end
+
+  describe "presentation_breakdowns interaction with adjusted fees" do
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
+    end
+    let(:charge) do
+      create(
+        :standard_charge,
+        plan: subscription.plan,
+        billable_metric:,
+        properties: {
+          amount: "20",
+          pricing_group_keys: ["cloud"],
+          presentation_group_keys: [{value: "region"}]
+        }
+      )
+    end
+
+    let(:invoice) { create(:invoice, customer:, organization:, status: :draft) }
+
+    before do
+      create(
+        :event, organization:, subscription:,
+        code: billable_metric.code,
+        timestamp: Time.zone.parse("2022-03-16"),
+        properties: {cloud: "aws", value: 10, region: "eu"}
+      )
+      create(
+        :event, organization:, subscription:,
+        code: billable_metric.code,
+        timestamp: Time.zone.parse("2022-03-16"),
+        properties: {cloud: "aws", value: 5, region: "us"}
+      )
+      adjusted_fee
+    end
+
+    context "when the adjustment changes units" do
+      let(:adjusted_fee) do
+        create(
+          :adjusted_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          properties: {
+            charges_from_datetime: boundaries.charges_from_datetime,
+            charges_to_datetime: boundaries.charges_to_datetime
+          },
+          fee_type: :charge,
+          adjusted_units: true,
+          adjusted_amount: false,
+          units: 3,
+          grouped_by: {"cloud" => "aws"}
+        )
+      end
+
+      it "does not build presentation_breakdowns on the fee replaced by an adjustment" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        aws_fee = result.fees.find { |f| f.grouped_by["cloud"] == "aws" }
+        expect(aws_fee.units).to eq(3)
+        expect(aws_fee.presentation_breakdowns).to be_empty
+      end
+    end
+
+    context "when the adjustment keeps units the same" do
+      let(:adjusted_fee) do
+        create(
+          :adjusted_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          properties: {
+            charges_from_datetime: boundaries.charges_from_datetime,
+            charges_to_datetime: boundaries.charges_to_datetime
+          },
+          fee_type: :charge,
+          adjusted_units: true,
+          adjusted_amount: true,
+          invoice_display_name: "renamed",
+          units: 15,
+          unit_amount_cents: 100,
+          grouped_by: {"cloud" => "aws"}
+        )
+      end
+
+      it "builds presentation_breakdowns from current events on the adjusted fee" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        aws_fee = result.fees.find { |f| f.grouped_by["cloud"] == "aws" }
+        expect(aws_fee.presentation_breakdowns.map(&:presentation_by))
+          .to match_array([{"region" => "eu"}, {"region" => "us"}])
+        expect(aws_fee.presentation_breakdowns.map { |b| b.units.to_f })
+          .to match_array([10.0, 5.0])
+      end
+    end
+
+    context "when the adjustment only changes the display name" do
+      let(:adjusted_fee) do
+        create(
+          :adjusted_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          properties: {
+            charges_from_datetime: boundaries.charges_from_datetime,
+            charges_to_datetime: boundaries.charges_to_datetime
+          },
+          fee_type: :charge,
+          adjusted_units: false,
+          adjusted_amount: false,
+          invoice_display_name: "renamed",
+          grouped_by: {"cloud" => "aws"}
+        )
+      end
+
+      it "builds presentation_breakdowns from current events on the adjusted fee" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        aws_fee = result.fees.find { |f| f.grouped_by["cloud"] == "aws" }
+        expect(aws_fee.invoice_display_name).to eq("renamed")
+        expect(aws_fee.presentation_breakdowns.map(&:presentation_by))
+          .to match_array([{"region" => "eu"}, {"region" => "us"}])
+        expect(aws_fee.presentation_breakdowns.map { |b| b.units.to_f })
+          .to match_array([10.0, 5.0])
       end
     end
   end

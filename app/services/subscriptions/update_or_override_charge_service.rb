@@ -39,6 +39,9 @@ module Subscriptions
     attr_reader :subscription, :charge, :params
 
     def find_or_update_charge_override(target_plan)
+      # NOTE: If the resolved charge already lives on the overridden plan, update it in place.
+      return update_charge_override(charge) if charge.plan_id == target_plan.id
+
       parent_charge = find_parent_charge
       existing_override = target_plan.charges.find_by(parent_id: parent_charge.id)
 

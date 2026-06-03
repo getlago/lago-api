@@ -22,7 +22,8 @@ module WalletTransactions
     private
 
     MAX_AMOUNT = 10**25 - 1
-    private_constant :MAX_AMOUNT
+    MAX_METADATA_KEYS = 15
+    private_constant :MAX_AMOUNT, :MAX_METADATA_KEYS
 
     def valid_amount?(amount)
       ::Validators::DecimalAmountService.new(amount).valid_amount? &&
@@ -70,7 +71,7 @@ module WalletTransactions
     end
 
     def valid_metadata?
-      validator = ::Validators::MetadataValidator.new(args[:metadata])
+      validator = ::Validators::MetadataValidator.new(args[:metadata], {max_keys: MAX_METADATA_KEYS})
       unless validator.valid?
         validator.errors.each do |field, error_code|
           add_error(field: field, error_code: error_code)

@@ -64,6 +64,7 @@ class Customer < ApplicationRecord
   has_many :add_ons, through: :applied_add_ons
   has_many :daily_usages
   has_many :quotes
+  has_many :order_forms
   has_many :wallets
   has_many :wallet_transactions, through: :wallets
   has_many :payment_provider_customers,
@@ -289,6 +290,17 @@ class Customer < ApplicationRecord
       zipcode: shipping_zipcode,
       state: shipping_state,
       country: shipping_country
+    }
+  end
+
+  def effective_shipping_address
+    {
+      address_line1: shipping_address_line1.presence || address_line1,
+      address_line2: shipping_address_line2.presence || address_line2,
+      city: shipping_city.presence || city,
+      zipcode: shipping_zipcode.presence || zipcode,
+      state: shipping_state.presence || state,
+      country: shipping_country.presence || country
     }
   end
 

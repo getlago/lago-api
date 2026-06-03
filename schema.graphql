@@ -238,6 +238,11 @@ enum ActivityTypeEnum {
   invoice_payment_status_updated
 
   """
+  invoice.ready_to_finalize
+  """
+  invoice_ready_to_finalize
+
+  """
   invoice.regenerated
   """
   invoice_regenerated
@@ -1118,6 +1123,7 @@ type ChargeFilterUsage {
   eventsCount: Int!
   id: ID
   invoiceDisplayName: String
+  presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitAmountCents: BigInt
   units: Float!
   values: ChargeFilterValues!
@@ -2547,7 +2553,7 @@ type Coupon {
   amountCurrency: CurrencyEnum
   appliedCouponsCount: Int!
   billableMetrics: [BillableMetric!]
-  code: String
+  code: String!
   couponType: CouponTypeEnum!
   createdAt: ISO8601DateTime!
 
@@ -2790,7 +2796,7 @@ input CreateCouponInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  code: String
+  code: String!
   couponType: CouponTypeEnum!
   description: String
   expiration: CouponExpiration!
@@ -3264,9 +3270,12 @@ input CreateQuoteInput {
   """
   clientMutationId: String
   content: String
+  currency: String
   customerId: ID!
+  endDate: ISO8601Date
   orderType: OrderTypeEnum!
   owners: [ID!]
+  startDate: ISO8601Date
   subscriptionId: ID
 }
 
@@ -3361,6 +3370,7 @@ input CreateSubscriptionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  consolidateInvoice: Boolean
   customerId: ID!
   endingAt: ISO8601DateTime
   externalId: String
@@ -4287,6 +4297,7 @@ type CurrentOrganization {
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean!
+  eventsStore: EventsStoreEnum!
   featureFlags: [FeatureFlagEnum!]!
   finalizeZeroAmountInvoice: Boolean!
   gocardlessPaymentProviders: [GocardlessProvider!]
@@ -4357,7 +4368,7 @@ type Customer {
   creditNotesBalanceAmountCents: BigInt!
 
   """
-  Credit notes credits balance available per customer per currency
+  Credit notes balances broken down by (currency, billing entity)
   """
   creditNotesBalances: [CustomerCreditNotesBalance!]!
 
@@ -4505,6 +4516,8 @@ type CustomerCollection {
 
 type CustomerCreditNotesBalance {
   amountCents: BigInt!
+  billingEntityId: ID!
+  creditsAvailableCount: Int!
   currency: CurrencyEnum!
 }
 
@@ -5771,6 +5784,7 @@ enum EventTypeEnum {
   invoice_payment_failure
   invoice_payment_overdue
   invoice_payment_status_updated
+  invoice_ready_to_finalize
   invoice_resynced
   invoice_voided
   payment_provider_error
@@ -5802,6 +5816,21 @@ enum EventTypeEnum {
 }
 
 """
+Organization events store values
+"""
+enum EventsStoreEnum {
+  """
+  Clickhouse events store
+  """
+  clickhouse
+
+  """
+  Postgres events store
+  """
+  postgres
+}
+
+"""
 Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
@@ -5813,6 +5842,7 @@ enum FeatureFlagEnum {
   order_forms
   payment_gated_subscriptions
   postgres_enriched_events
+  stripe_shared_payment_token
   wallet_traceability
 }
 
@@ -5866,14 +5896,22 @@ type Fee implements InvoiceItem {
   itemName: String!
   itemType: String!
   offsettableAmountCents: BigInt!
+  payInAdvance: Boolean!
+  preciseAmountCents: Float!
+  preciseCouponsAmountCents: Float!
+  preciseTotalAmountCents: Float!
   preciseUnitAmount: Float!
   presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitUsage: PricingUnitUsage
   properties: FeeProperties
+  subTotalExcludingTaxesAmountCents: BigInt!
+  subTotalExcludingTaxesPreciseAmountCents: Float!
   subscription: Subscription
   succeededAt: ISO8601DateTime
   taxesAmountCents: BigInt!
+  taxesPreciseAmountCents: Float!
   taxesRate: Float
+  totalAmountCents: BigInt!
   trueUpFee: Fee
   trueUpParentFee: Fee
   units: Float!
@@ -6309,6 +6347,7 @@ type GraphqlSubscription {
 
 type GrossRevenue {
   amountCents: BigInt
+  billingEntityId: ID
   currency: CurrencyEnum
   invoicesCount: BigInt!
   month: ISO8601DateTime!
@@ -6476,6 +6515,7 @@ enum IntegrationTypeEnum {
   projected_usage
   remove_branding_watermark
   revenue_analytics
+  revenue_recognition
   revenue_share
   salesforce
   security_logs
@@ -9031,6 +9071,49 @@ enum OrderByEnum {
   net_revenue_amount_cents
 }
 
+type OrderForm {
+  billingSnapshot: JSON!
+  createdAt: ISO8601DateTime!
+  customer: Customer!
+  expiresAt: ISO8601DateTime
+  id: ID!
+  number: String!
+  quote: Quote!
+  signedAt: ISO8601DateTime
+  status: OrderFormStatusEnum!
+  updatedAt: ISO8601DateTime!
+  voidReason: OrderFormVoidReasonEnum
+  voidedAt: ISO8601DateTime
+}
+
+"""
+OrderFormCollection type
+"""
+type OrderFormCollection {
+  """
+  A collection of paginated OrderFormCollection
+  """
+  collection: [OrderForm!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+enum OrderFormStatusEnum {
+  expired
+  generated
+  signed
+  voided
+}
+
+enum OrderFormVoidReasonEnum {
+  expired
+  invalid
+  manual
+}
+
 enum OrderTypeEnum {
   one_off
   subscription_amendment
@@ -9067,6 +9150,7 @@ input OrganizationBillingConfigurationInput {
 
 type OverdueBalance {
   amountCents: BigInt!
+  billingEntityId: ID
   currency: CurrencyEnum!
   lagoInvoiceIds: [String!]!
   month: ISO8601DateTime!
@@ -9316,6 +9400,7 @@ enum PermissionEnum {
   invoices_update
   invoices_view
   invoices_void
+  order_forms_view
   organization_emails_update
   organization_emails_view
   organization_integrations_create
@@ -9429,6 +9514,7 @@ type Permissions {
   invoicesUpdate: Boolean!
   invoicesView: Boolean!
   invoicesVoid: Boolean!
+  orderFormsView: Boolean!
   organizationEmailsUpdate: Boolean!
   organizationEmailsView: Boolean!
   organizationIntegrationsCreate: Boolean!
@@ -9611,6 +9697,7 @@ enum PremiumIntegrationTypeEnum {
   projected_usage
   remove_branding_watermark
   revenue_analytics
+  revenue_recognition
   revenue_share
   salesforce
   security_logs
@@ -9739,9 +9826,11 @@ type ProjectedChargeFilterUsage {
   eventsCount: Int!
   id: ID
   invoiceDisplayName: String
+  presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
+  projectedPresentationBreakdowns: [PresentationBreakdownUsage!]
   projectedUnits: Float!
   units: Float!
   values: ChargeFilterValues!
@@ -9759,6 +9848,7 @@ type ProjectedChargeUsage {
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
+  projectedPresentationBreakdowns: [PresentationBreakdownUsage!]
   projectedUnits: Float!
   units: Float!
 }
@@ -9773,6 +9863,7 @@ type ProjectedGroupedChargeUsage {
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
+  projectedPresentationBreakdowns: [PresentationBreakdownUsage!]
   projectedUnits: Float!
   units: Float!
 }
@@ -10075,7 +10166,7 @@ type Query {
   """
   Query invoices of a customer
   """
-  customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
+  customerInvoices(billingEntityIds: [ID!], currency: CurrencyEnum, customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
 
   """
   Query the projected usage of the customer on the current billing period
@@ -10328,6 +10419,16 @@ type Query {
   ): Invoice
 
   """
+  Build a preview of a single Invoice of an organization for regeneration.
+  """
+  invoiceBuildRegenerationPreview(
+    """
+    Uniq ID of the invoice
+    """
+    id: ID!
+  ): Invoice
+
+  """
   Query invoice collections of an organization
   """
   invoiceCollections(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, isCustomerTinEmpty: Boolean): FinalizedInvoiceCollectionCollection!
@@ -10406,6 +10507,21 @@ type Query {
   mrrs(billingEntityId: ID, currency: CurrencyEnum): MrrCollection!
 
   """
+  Query a single order form
+  """
+  orderForm(
+    """
+    Uniq ID of the order form
+    """
+    id: ID!
+  ): OrderForm
+
+  """
+  Query order forms
+  """
+  orderForms(createdAtFrom: ISO8601DateTime, createdAtTo: ISO8601DateTime, customerId: [ID!], expiresAtFrom: ISO8601DateTime, expiresAtTo: ISO8601DateTime, limit: Int, number: [String!], ownerId: [ID!], page: Int, quoteNumber: [String!], searchTerm: String, status: [OrderFormStatusEnum!]): OrderFormCollection!
+
+  """
   Query the current organization
   """
   organization: CurrentOrganization
@@ -10476,7 +10592,7 @@ type Query {
   """
   Query payments of an organization
   """
-  payments(externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int, searchTerm: String): PaymentCollection!
+  payments(currency: CurrencyEnum, externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int, searchTerm: String): PaymentCollection!
 
   """
   Query a single plan of an organization
@@ -10607,7 +10723,7 @@ type Query {
   """
   Query subscriptions of an organization
   """
-  subscriptions(currency: String, externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  subscriptions(billingEntityIds: [ID!], currency: String, externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query all Superset dashboards with embedded configuration and guest tokens
@@ -10791,10 +10907,13 @@ type QuoteVersion {
   billingItems: JSON
   content: String
   createdAt: ISO8601DateTime!
+  currency: String
+  endDate: ISO8601Date
   id: ID!
   organization: Organization!
   quote: Quote!
   shareToken: String
+  startDate: ISO8601Date
   status: StatusEnum!
   updatedAt: ISO8601DateTime!
   version: Int!
@@ -11349,10 +11468,12 @@ type Subscription {
   activatedAt: ISO8601DateTime
   activationRules: [SubscriptionActivationRule!]!
   activityLogs: [ActivityLog!]
+  billingEntityId: ID
   billingTime: BillingTimeEnum
   cancelationReason: CancelationReasonEnum
   canceledAt: ISO8601DateTime
   charges: [Charge!]
+  consolidateInvoice: Boolean!
   createdAt: ISO8601DateTime!
   currentBillingPeriodEndingAt: ISO8601DateTime
   currentBillingPeriodStartedAt: ISO8601DateTime
@@ -12731,6 +12852,7 @@ Update Wallet Input
 """
 input UpdateCustomerWalletInput {
   appliesTo: AppliesToInput
+  billingEntityId: ID
 
   """
   A unique identifier for the client performing the mutation.
@@ -13039,7 +13161,7 @@ input UpdatePlanInput {
   billChargesMonthly: Boolean
   billFixedChargesMonthly: Boolean
   cascadeUpdates: Boolean
-  charges: [ChargeInput!]!
+  charges: [ChargeInput!]
 
   """
   A unique identifier for the client performing the mutation.
@@ -13108,7 +13230,10 @@ input UpdateQuoteVersionInput {
   """
   clientMutationId: String
   content: String
+  currency: String
+  endDate: ISO8601Date
   id: ID!
+  startDate: ISO8601Date
 }
 
 input UpdateRecurringTransactionRuleInput {
@@ -13248,11 +13373,13 @@ Update Subscription input arguments
 """
 input UpdateSubscriptionInput {
   activationRules: [SubscriptionActivationRuleInput!]
+  billingEntityId: ID
 
   """
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  consolidateInvoice: Boolean
   endingAt: ISO8601DateTime
   id: ID!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
@@ -13385,6 +13512,7 @@ type Wallet {
   activityLogs: [ActivityLog!]
   appliesTo: WalletAppliesTo
   balanceCents: BigInt!
+  billingEntityId: ID
   code: String
   consumedAmountCents: BigInt!
   consumedCredits: Float!

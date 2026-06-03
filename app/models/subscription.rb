@@ -25,6 +25,7 @@ class Subscription < ApplicationRecord
   has_many :entitlement_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
   has_many :fixed_charges, -> { kept }, through: :plan
   has_many :fixed_charge_events
+  has_many :fixed_charge_units_overrides, class_name: "Subscription::FixedChargeUnitsOverride"
   has_many :add_ons, through: :fixed_charges
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
@@ -105,6 +106,10 @@ class Subscription < ApplicationRecord
 
   def billing_entity
     super || customer&.billing_entity
+  end
+
+  def applicable_billing_entity_id
+    billing_entity_id || customer&.billing_entity_id
   end
 
   def mark_as_active!(timestamp = Time.current)
@@ -302,6 +307,10 @@ class Subscription < ApplicationRecord
 
     usage_thresholds.presence || plan.usage_thresholds.presence || plan.applicable_usage_thresholds
   end
+
+  def last_subscription_fee
+    fees.subscription.order(created_at: :desc).first
+  end
 end
 
 # == Schema Information
@@ -314,6 +323,7 @@ end
 #  billing_time                 :integer          default("calendar"), not null
 #  cancelation_reason           :enum
 #  canceled_at                  :datetime
+#  consolidate_invoice          :boolean          default(TRUE), not null
 #  ending_at                    :datetime
 #  last_received_event_on       :date
 #  name                         :string
@@ -321,6 +331,7 @@ end
 #  on_termination_invoice       :enum             default("generate"), not null
 #  payment_method_type          :enum             default("provider"), not null
 #  progressive_billing_disabled :boolean          default(FALSE), not null
+#  skip_daily_usage             :boolean          default(FALSE), not null
 #  skip_invoice_custom_sections :boolean          default(FALSE), not null
 #  started_at                   :datetime
 #  status                       :integer          not null

@@ -14,7 +14,7 @@ RSpec.describe Resolvers::QuoteResolver do
           subscription { id }
           number
           orderType
-          currentVersion { id version status billingItems content }
+          currentVersion { id version status billingItems content currency startDate endDate }
           versions { id version status }
           createdAt
           updatedAt
@@ -71,6 +71,9 @@ RSpec.describe Resolvers::QuoteResolver do
       expect(response.dig("currentVersion", "content")).to eq(quote.current_version.content)
       expect(response.dig("currentVersion", "status")).to eq(quote.current_version.status)
       expect(response.dig("currentVersion", "version")).to eq(quote.current_version.version)
+      expect(response.dig("currentVersion", "currency")).to eq(quote.current_version.currency)
+      expect(response.dig("currentVersion", "startDate")).to eq(quote.current_version.start_date&.iso8601)
+      expect(response.dig("currentVersion", "endDate")).to eq(quote.current_version.end_date&.iso8601)
       expect(response.dig("versions")).to match_array(
         [
           {

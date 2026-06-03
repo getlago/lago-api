@@ -82,6 +82,83 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Avalara do
         expect(subject).to eq payload_body
       end
     end
+
+    describe "shipping address fallback" do
+      let(:firstname) { "John" }
+      let(:lastname) { "Doe" }
+      let(:customer) do
+        create(
+          :customer,
+          firstname:,
+          lastname:,
+          address_line1: "Billing 1",
+          city: "Billing City",
+          zipcode: "12345",
+          state: "Billing State",
+          country: "FR",
+          shipping_address_line1:,
+          shipping_city:,
+          shipping_zipcode:,
+          shipping_state:,
+          shipping_country:,
+          tax_identification_number: "123456789"
+        )
+      end
+
+      context "when shipping fields are empty strings" do
+        let(:shipping_address_line1) { "" }
+        let(:shipping_city) { "" }
+        let(:shipping_zipcode) { "" }
+        let(:shipping_state) { "" }
+        let(:shipping_country) { "" }
+
+        it "falls back to billing address values" do
+          expect(subject.sole).to include(
+            "address_line_1" => "Billing 1",
+            "city" => "Billing City",
+            "zip" => "12345",
+            "state" => "Billing State",
+            "country" => "FR"
+          )
+        end
+      end
+
+      context "when shipping fields are nil" do
+        let(:shipping_address_line1) { nil }
+        let(:shipping_city) { nil }
+        let(:shipping_zipcode) { nil }
+        let(:shipping_state) { nil }
+        let(:shipping_country) { nil }
+
+        it "falls back to billing address values" do
+          expect(subject.sole).to include(
+            "address_line_1" => "Billing 1",
+            "city" => "Billing City",
+            "zip" => "12345",
+            "state" => "Billing State",
+            "country" => "FR"
+          )
+        end
+      end
+
+      context "when shipping fields are populated" do
+        let(:shipping_address_line1) { "Shipping 1" }
+        let(:shipping_city) { "Shipping City" }
+        let(:shipping_zipcode) { "67890" }
+        let(:shipping_state) { "Shipping State" }
+        let(:shipping_country) { "US" }
+
+        it "uses shipping values over billing" do
+          expect(subject.sole).to include(
+            "address_line_1" => "Shipping 1",
+            "city" => "Shipping City",
+            "zip" => "67890",
+            "state" => "Shipping State",
+            "country" => "US"
+          )
+        end
+      end
+    end
   end
 
   describe "#update_body" do

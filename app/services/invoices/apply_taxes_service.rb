@@ -87,7 +87,7 @@ module Invoices
         fees_amount_cents(tax).fdiv(invoice.sub_total_excluding_taxes_amount_cents)
       else
         # NOTE: when invoice have a 0 amount. The prorata is on the number of fees
-        indexed_fees[tax.id].count.fdiv(invoice.fees.count)
+        indexed_fees[tax.id].count.fdiv(invoice.fees.length)
       end
 
       fees_rate * tax.rate

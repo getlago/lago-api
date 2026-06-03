@@ -24,6 +24,7 @@ module BillableMetrics
         # Pay in advance fields
         :pay_in_advance_event, # Event that is triggering a pay in advance aggregation
         :pay_in_advance_aggregation, # Aggregation result for a single pay in advance event
+        :pay_in_advance_breakdowns, # Breakdown result for a single pay in advance event
         :pay_in_advance_precise_total_amount_cents, # Precise total amount in cents when in a pay in advance scenario
         # Cached aggregation fields
         :current_aggregation, # Current total aggregation cached in a pay in advance scenario (billing and current usage)
@@ -154,6 +155,9 @@ module BillableMetrics
       end
 
       def deduplicate?
+        override = Events::Stores::StoreFactory.override
+        return override[:deduplicate] if override
+
         organization = subscription&.organization
         return false unless organization
 
@@ -172,6 +176,15 @@ module BillableMetrics
         return unless event
 
         (event.properties || {})[billable_metric.field_name] || 0
+      end
+
+      def build_pay_in_advance_breakdowns(value:)
+        return [] unless event
+        return [] if event.properties.blank?
+
+        groups = uniq_grouped_by_and_presentation_by.index_with { event.properties[it] }
+
+        [{groups:, value: BigDecimal(value.to_s)}]
       end
 
       def handle_in_advance_current_usage(total_aggregation, target_result: result)

@@ -19,11 +19,11 @@ class EventsQuery < BaseQuery
     events = paginate(events)
 
     events = if pg_event?
-      events.order(timestamp: :desc)
+      events.order(timestamp: :desc, transaction_id: :asc)
     elsif ch_event_raw?
-      events.order(ingested_at: :desc)
+      events.order(ingested_at: :desc, transaction_id: :asc)
     elsif ch_event_enriched?
-      events.order(enriched_at: :desc)
+      events.order(enriched_at: :desc, transaction_id: :asc)
     end
 
     events = with_code(events) if filters.code

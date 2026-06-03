@@ -37,6 +37,7 @@ module BillableMetrics
 
         if presentation_by.present?
           result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by)
+          result.pay_in_advance_breakdowns = build_pay_in_advance_breakdowns(value: event_value)
         end
 
         result.options = options
@@ -158,13 +159,12 @@ module BillableMetrics
       end
 
       def recurring_value(grouped_by_values: nil)
-        previous_charge_fee_units = previous_charge_fee(grouped_by_values:)&.units
-        return previous_charge_fee_units if previous_charge_fee_units
-
         store = persisted_event_store_instance
-        recurring_value_before_first_fee = store.with_grouped_by_values(grouped_by_values) { store.sum }
+        raw_sum = store.with_grouped_by_values(grouped_by_values) { store.sum }
 
-        ((recurring_value_before_first_fee || 0) <= 0) ? nil : recurring_value_before_first_fee
+        return nil if raw_sum.nil? || raw_sum.zero?
+
+        raw_sum
       end
 
       def compute_grouped_event_aggregation

@@ -28,11 +28,12 @@ module Api
       end
 
       def index
-        permitted_params = params.permit(:external_customer_id, :currency)
+        permitted_params = params.permit(:external_customer_id, :currency, billing_entity_codes: [])
         external_customer_id = permitted_params[:external_customer_id]
         currency = permitted_params[:currency]
+        billing_entity_codes = permitted_params[:billing_entity_codes]
 
-        wallet_index(external_customer_id:, currency:)
+        wallet_index(external_customer_id:, currency:, billing_entity_codes:)
       end
 
       private

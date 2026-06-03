@@ -16,6 +16,7 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         customer_updated
         customer_deleted
         invoice_drafted
+        invoice_ready_to_finalize
         invoice_failed
         invoice_one_off_created
         invoice_created

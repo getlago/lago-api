@@ -55,6 +55,7 @@ RSpec.describe Subscription do
       expect(subject).to have_many(:usage_thresholds)
       expect(subject).to have_many(:fixed_charges).through(:plan)
       expect(subject).to have_many(:fixed_charge_events)
+      expect(subject).to have_many(:fixed_charge_units_overrides).class_name("Subscription::FixedChargeUnitsOverride")
       expect(subject).to have_many(:add_ons).through(:fixed_charges)
       expect(subject).to have_one(:lifetime_usage).autosave(true)
       expect(subject).to have_one(:subscription_activity).class_name("UsageMonitoring::SubscriptionActivity")
@@ -89,6 +90,28 @@ RSpec.describe Subscription do
 
       it "falls back to the customer billing_entity" do
         expect(subscription.billing_entity).to eq(customer.billing_entity)
+      end
+    end
+  end
+
+  describe "#applicable_billing_entity_id" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+
+    context "when subscription has a billing_entity_id" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:subscription) { create(:subscription, customer:, billing_entity:) }
+
+      it "returns the subscription's own billing_entity_id" do
+        expect(subscription.applicable_billing_entity_id).to eq(billing_entity.id)
+      end
+    end
+
+    context "when subscription has no billing_entity_id" do
+      let(:subscription) { create(:subscription, customer:, billing_entity: nil) }
+
+      it "falls back to the customer's billing_entity_id" do
+        expect(subscription.applicable_billing_entity_id).to eq(customer.billing_entity_id)
       end
     end
   end

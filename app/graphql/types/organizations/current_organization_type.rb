@@ -38,6 +38,8 @@ module Types
 
       field :eu_tax_management, Boolean, null: false
 
+      field :events_store, Types::Organizations::EventsStoreEnum, null: false
+
       # TODO: Also check if Nango ENV var is set in order to lock/unlock this feature
       #       This would enable us to use premium add_on logic on OSS version
       field :premium_integrations, [Types::Integrations::PremiumIntegrationTypeEnum], null: false
