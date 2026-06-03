@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateJob do
+describe Integrations::Aggregator::Taxes::Invoices::CreateJob do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
