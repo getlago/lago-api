@@ -166,6 +166,58 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
     end
 
+    context "when the subscription has time-dependent usage but no recent events" do
+      let(:plan) { create(:plan, organization:) }
+      let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+      let(:subscriptions) do
+        create_list(:subscription, 5, customer:, plan:, last_received_event_on: timestamp.to_date - 5.days)
+      end
+
+      context "with a prorated charge" do
+        before { create(:standard_charge, plan:, billable_metric:, prorated: true) }
+
+        it "enqueues jobs even though no event was received" do
+          expect(compute_service.call).to be_success
+          subscriptions.each do |subscription|
+            expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+          end
+        end
+      end
+
+      context "with a recurring billable metric" do
+        before { create(:standard_charge, plan:, billable_metric:) }
+
+        it "enqueues jobs even though no event was received" do
+          expect(compute_service.call).to be_success
+          subscriptions.each do |subscription|
+            expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+          end
+        end
+      end
+
+      context "with a weighted_sum aggregation" do
+        let(:billable_metric) { create(:weighted_sum_billable_metric, organization:) }
+
+        before { create(:standard_charge, plan:, billable_metric:) }
+
+        it "enqueues jobs even though no event was received" do
+          expect(compute_service.call).to be_success
+          subscriptions.each do |subscription|
+            expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+          end
+        end
+      end
+
+      context "with a deleted recurring charge" do
+        before { create(:standard_charge, plan:, billable_metric:, prorated: true, deleted_at: timestamp) }
+
+        it "does not enqueue any job" do
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeJob).not_to have_been_enqueued
+        end
+      end
+    end
+
     context "when revenue_analytics premium integration flag is not present" do
       let(:premium_integrations) { [] }
 

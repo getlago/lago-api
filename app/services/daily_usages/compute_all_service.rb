@@ -67,8 +67,11 @@ module DailyUsages
             Subscription.where(customer_id: customer_ids)
               .active
               .where.not(id: subscription_ids_with_daily_usage)
-              .where("last_received_event_on >= ?", timestamp.to_date - 1.day)
               .where(skip_daily_usage: false)
+              .where(
+                "last_received_event_on >= :yesterday ",
+                yesterday: timestamp.to_date - 1.day
+              )
               .find_each do |subscription|
                 yield subscription
             end
@@ -76,5 +79,25 @@ module DailyUsages
         end
       end
     end
+
+    # Subscriptions whose usage can change between billing boundaries even without receiving new
+    # events: prorated charges, recurring billable metrics, and weighted_sum aggregations (which
+    # are time-weighted). These must be recomputed every day regardless of `last_received_event_on`,
+    # otherwise their daily usage would go stale until the next event arrives.
+    TIME_DEPENDENT_USAGE_SQL = <<~SQL.squish.freeze
+      EXISTS (
+        SELECT 1
+        FROM charges
+        JOIN billable_metrics ON billable_metrics.id = charges.billable_metric_id
+        WHERE charges.plan_id = subscriptions.plan_id
+          AND charges.deleted_at IS NULL
+          AND billable_metrics.deleted_at IS NULL
+          AND (
+            charges.prorated = TRUE
+            OR billable_metrics.recurring = TRUE
+            OR billable_metrics.aggregation_type = #{BillableMetric.aggregation_types[:weighted_sum_agg]}
+          )
+      )
+    SQL
   end
 end
