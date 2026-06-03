@@ -5,8 +5,15 @@ module SubscriptionIndex
   extend ActiveSupport::Concern
 
   def subscription_index(external_customer_id: nil)
-    billing_entities = current_organization.all_billing_entities.where(code: params[:billing_entity_codes]) if params[:billing_entity_codes].present?
-    return not_found_error(resource: "billing_entity") if params[:billing_entity_codes].present? && billing_entities.count != params[:billing_entity_codes].count
+    billing_entity_codes = (
+      Array.wrap(params[:billing_entity_codes]) +
+      Array.wrap(params[:billing_entity_code])
+    ).compact_blank.uniq
+
+    if billing_entity_codes.present?
+      billing_entities = current_organization.all_billing_entities.where(code: billing_entity_codes)
+      return not_found_error(resource: "billing_entity") if billing_entities.count != billing_entity_codes.count
+    end
 
     filters = params.permit(:plan_code, :overriden, :overridden, :currency, status: [])
     filters[:status] = ["active"] if filters[:status].blank?

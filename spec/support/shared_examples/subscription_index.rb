@@ -192,6 +192,38 @@ RSpec.shared_examples "a subscription index endpoint" do
         expect(response).to be_not_found_error("billing_entity")
       end
     end
+
+    context "with the scalar billing_entity_code form" do
+      let(:params) { {billing_entity_code: eu_entity.code} }
+
+      it "returns only subscriptions stamped under that entity" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscriptions].pluck(:lago_id)).to eq([eu_subscription.id])
+      end
+
+      context "when the scalar code does not exist" do
+        let(:params) { {billing_entity_code: "unknown"} }
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to be_not_found_error("billing_entity")
+        end
+      end
+
+      context "when combined with the bracketed form" do
+        let(:params) { {billing_entity_code: eu_entity.code, billing_entity_codes: [us_entity.code]} }
+
+        it "unions both inputs into the filter" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:subscriptions].pluck(:lago_id)).to match_array([eu_subscription.id, us_subscription.id])
+        end
+      end
+    end
   end
 
   context "with N+1 query detection", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
