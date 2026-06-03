@@ -30,7 +30,10 @@ module Resolvers
         search_term:
       )
 
-      result.subscriptions
+      result.subscriptions.preload(
+        :next_subscriptions,
+        {customer: :billing_entity}
+      )
     end
   end
 end
