@@ -214,17 +214,28 @@ module Fees
     end
 
     def breakdowns_by_grouped_by(breakdowns, charge_model_result)
-      charge_model_result.grouped_results.each_with_object({}) do |grouped_result, memo|
+      grouped_bys = charge_model_result.grouped_results.each_with_object(Set.new) do |grouped_result, memo|
         grouped_by = grouped_result.grouped_by || {}
-        next if memo.key?(grouped_by)
-
-        grouped_by_keys = grouped_by.keys
-        memo[grouped_by] = Array(breakdowns)
-          .lazy
-          .select { |b| b[:groups].slice(*grouped_by_keys) == grouped_by }
-          .map { |b| {groups: b[:groups].except(*grouped_by_keys), value: b[:value]} }
-          .to_a
+        memo.add(grouped_by)
       end
+
+      result = grouped_bys.index_with { [] }
+
+      grouped_bys.group_by(&:keys).each do |grouped_by_keys, grouped_bys_for_keys|
+        grouped_by_lookup = grouped_bys_for_keys.to_set
+
+        Array(breakdowns).each do |breakdown|
+          grouped_by = breakdown[:groups].slice(*grouped_by_keys)
+          next unless grouped_by_lookup.include?(grouped_by)
+
+          result[grouped_by] << {
+            groups: breakdown[:groups].except(*grouped_by_keys),
+            value: breakdown[:value]
+          }
+        end
+      end
+
+      result
     end
 
     def filter_non_persistable_fees_for_caching(charge_fees)
