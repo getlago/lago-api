@@ -69,7 +69,7 @@ module DailyUsages
               .where.not(id: subscription_ids_with_daily_usage)
               .where(skip_daily_usage: false)
               .where(
-                "last_received_event_on >= :yesterday ",
+                "last_received_event_on >= :yesterday OR #{TIME_DEPENDENT_USAGE_SQL}",
                 yesterday: timestamp.to_date - 1.day
               )
               .find_each do |subscription|
