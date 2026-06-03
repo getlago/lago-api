@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe OrderForms::MarkAsSignedService do
-  subject(:service) { described_class.new(order_form:, signed_document:, execution_mode:, execution_date:) }
+  subject(:service) { described_class.new(order_form:, signed_document:, execution_mode:, execute_at:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -11,7 +11,7 @@ RSpec.describe OrderForms::MarkAsSignedService do
   let(:order_form) { create(:order_form, customer:, organization:, quote:) }
   let(:signed_document) { nil }
   let(:execution_mode) { nil }
-  let(:execution_date) { nil }
+  let(:execute_at) { nil }
 
   describe "#call" do
     context "without premium license" do
@@ -149,9 +149,9 @@ RSpec.describe OrderForms::MarkAsSignedService do
         end
       end
 
-      context "when execution_mode and execution_date are provided" do
+      context "when execution_mode and execute_at are provided" do
         let(:execution_mode) { "execute_in_lago" }
-        let(:execution_date) { "2026-06-15" }
+        let(:execute_at) { 1.month.from_now.iso8601 }
 
         it "signs the order form without acting on them" do
           result = service.call
@@ -173,15 +173,54 @@ RSpec.describe OrderForms::MarkAsSignedService do
         end
       end
 
-      context "when execution_date is not a date" do
-        let(:execution_date) { "not-a-date" }
+      context "when execute_at is set without execution_mode" do
+        let(:execute_at) { 1.month.from_now.iso8601 }
 
-        it "returns a validation failure on execution_date" do
+        it "returns a validation failure on execution_mode" do
           result = service.call
 
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages).to have_key(:execution_date)
+          expect(result.error.messages[:execution_mode]).to eq(["value_is_mandatory"])
+        end
+      end
+
+      context "when execute_at is not a date" do
+        let(:execution_mode) { "execute_in_lago" }
+        let(:execute_at) { "not-a-date" }
+
+        it "returns a validation failure on execute_at" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to have_key(:execute_at)
+        end
+      end
+
+      context "when execute_at is in the past" do
+        let(:execution_mode) { "execute_in_lago" }
+        let(:execute_at) { 1.day.ago.iso8601 }
+
+        it "returns a validation failure on execute_at" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:execute_at]).to eq(["invalid_date"])
+        end
+      end
+
+      context "when execute_at is the current date" do
+        let(:execution_mode) { "execute_in_lago" }
+        let(:execute_at) { Date.current.iso8601 }
+
+        it "returns a validation failure on execute_at" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:execute_at]).to eq(["invalid_date"])
         end
       end
     end

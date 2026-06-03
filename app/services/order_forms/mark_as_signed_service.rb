@@ -6,11 +6,11 @@ module OrderForms
 
     EXECUTION_MODES = %w[execute_in_lago order_only].freeze
 
-    def initialize(order_form:, signed_document: nil, execution_mode: nil, execution_date: nil)
+    def initialize(order_form:, signed_document: nil, execution_mode: nil, execute_at: nil)
       @order_form = order_form
       @signed_document = signed_document
       @execution_mode = execution_mode
-      @execution_date = execution_date
+      @execute_at = execute_at
 
       super
     end
@@ -25,13 +25,8 @@ module OrderForms
       return result.not_found_failure!(resource: "order_form") unless order_form
       return result.not_allowed_failure!(code: "not_signable") unless order_form.generated?
 
-      if execution_mode.present? && EXECUTION_MODES.exclude?(execution_mode)
-        return result.single_validation_failure!(field: :execution_mode, error_code: "value_is_invalid")
-      end
-
-      if execution_date.present? && !Utils::Datetime.valid_format?(execution_date, format: :any)
-        return result.single_validation_failure!(field: :execution_date, error_code: "invalid_date")
-      end
+      validate_execution_settings
+      return result if result.failure?
 
       blob = signed_document_blob
       return result if result.failure?
@@ -45,7 +40,7 @@ module OrderForms
         order_form.signed_document.attach(blob) if blob
         order_form.save!
 
-        # TODO: Create the Order here using execution_mode/execution_date
+        # TODO: Create the Order here using execution_mode/execute_at
 
         # TODO: Enqueue Orders::ExecuteOrderJob.perform_after_commit(result.order) when execution_mode == "execute_in_lago"
       end
@@ -62,7 +57,33 @@ module OrderForms
 
     private
 
-    attr_reader :order_form, :signed_document, :execution_mode, :execution_date
+    attr_reader :order_form, :signed_document, :execution_mode, :execute_at
+
+    def validate_execution_settings
+      validate_execution_mode
+      return if result.failure?
+
+      validate_execute_at
+    end
+
+    def validate_execution_mode
+      return if execution_mode.blank? && execute_at.blank?
+
+      if execution_mode.blank?
+        return result.single_validation_failure!(field: :execution_mode, error_code: "value_is_mandatory")
+      end
+
+      return if EXECUTION_MODES.include?(execution_mode)
+
+      result.single_validation_failure!(field: :execution_mode, error_code: "value_is_invalid")
+    end
+
+    def validate_execute_at
+      return if execute_at.blank?
+      return if Utils::Datetime.future_date?(execute_at)
+
+      result.single_validation_failure!(field: :execute_at, error_code: "invalid_date")
+    end
 
     # Validates and uploads the document OUTSIDE the transaction; returns the persisted blob (or nil).
     def signed_document_blob
@@ -85,10 +106,6 @@ module OrderForms
         filename: order_form.number,
         content_type: decoded.content_type
       )
-    end
-
-    def quote
-      @quote ||= order_form.quote
     end
   end
 end

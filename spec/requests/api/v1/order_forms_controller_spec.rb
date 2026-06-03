@@ -173,12 +173,12 @@ RSpec.describe Api::V1::OrderFormsController do
       end
     end
 
-    context "when execution_mode and execution_date are provided" do
+    context "when execution_mode and execute_at are provided" do
       subject do
         post_with_token(
           organization,
           "/api/v1/order_forms/#{order_form.id}/mark_as_signed",
-          {order_form: {execution_mode: "execute_in_lago", execution_date: "2026-06-15"}}
+          {order_form: {execution_mode: "execute_in_lago", execute_at: 1.month.from_now.iso8601}}
         )
       end
 
@@ -207,12 +207,12 @@ RSpec.describe Api::V1::OrderFormsController do
       end
     end
 
-    context "when execution_date is not a date" do
+    context "when execute_at is set without execution_mode" do
       subject do
         post_with_token(
           organization,
           "/api/v1/order_forms/#{order_form.id}/mark_as_signed",
-          {order_form: {execution_date: "not-a-date"}}
+          {order_form: {execute_at: 1.month.from_now.iso8601}}
         )
       end
 
@@ -220,7 +220,41 @@ RSpec.describe Api::V1::OrderFormsController do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to include(:execution_date)
+        expect(json[:error_details]).to include(:execution_mode)
+      end
+    end
+
+    context "when execute_at is not a date" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v1/order_forms/#{order_form.id}/mark_as_signed",
+          {order_form: {execution_mode: "execute_in_lago", execute_at: "not-a-date"}}
+        )
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to include(:execute_at)
+      end
+    end
+
+    context "when execute_at is in the past" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v1/order_forms/#{order_form.id}/mark_as_signed",
+          {order_form: {execution_mode: "execute_in_lago", execute_at: 1.day.ago.iso8601}}
+        )
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to include(:execute_at)
       end
     end
   end
