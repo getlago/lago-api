@@ -43,6 +43,7 @@ module Subscriptions
             Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
             Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
             Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
+            Integrations::Aggregator::Taxes::Invoices::CreateJob.perform_later(invoice:) if invoice.customer.tax_customer
             Utils::SegmentTrack.invoice_created(invoice)
           end
         end

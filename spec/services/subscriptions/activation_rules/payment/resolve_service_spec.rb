@@ -171,6 +171,28 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
       end
     end
 
+    context "when customer has a tax provider integration" do
+      let(:integration) { create(:anrok_integration, organization:) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+      end
+
+      it "enqueues Aggregator::Taxes::Invoices::CreateJob to commit the finalized tax record" do
+        result
+
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateJob).to have_been_enqueued.with(invoice:)
+      end
+    end
+
+    context "when customer does not have a tax provider integration" do
+      it "does not enqueue Aggregator::Taxes::Invoices::CreateJob" do
+        result
+
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateJob).not_to have_been_enqueued
+      end
+    end
+
     context "when subscription is already active (idempotency)" do
       let(:subscription) { create(:subscription, organization:, customer:, plan:) }
 
