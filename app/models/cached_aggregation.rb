@@ -26,6 +26,7 @@ end
 #  grouped_by                     :jsonb            not null
 #  max_aggregation                :decimal(, )
 #  max_aggregation_with_proration :decimal(, )
+#  presentation_breakdowns        :jsonb            not null
 #  timestamp                      :datetime         not null
 #  created_at                     :datetime         not null
 #  updated_at                     :datetime         not null

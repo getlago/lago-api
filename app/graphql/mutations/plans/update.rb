@@ -15,7 +15,7 @@ module Mutations
       type Types::Plans::Object
 
       def resolve(entitlements: nil, **args)
-        args[:charges].map!(&:to_h)
+        args[:charges]&.map!(&:to_h)
         args[:fixed_charges]&.map!(&:to_h)
         plan = current_organization.plans.find_by(id: args[:id])
 

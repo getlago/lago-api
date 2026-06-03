@@ -59,8 +59,9 @@ module Analytics
             SELECT
               DATE_TRUNC('month', payment_due_date) AS month,
               i.currency,
+              i.billing_entity_id,
               COALESCE(SUM(
-                i.total_amount_cents - 
+                i.total_amount_cents -
                 i.total_paid_amount_cents -
                 COALESCE(cn.offset_amount_cents_sum, 0)
                ), 0) AS total_amount_cents,
@@ -80,12 +81,13 @@ module Analytics
             #{and_external_customer_id_sql}
             #{and_billing_entity_id_sql}
             #{and_billing_entity_code_sql}
-            GROUP BY month, i.currency, total_amount_cents
+            GROUP BY month, i.currency, i.billing_entity_id, total_amount_cents
             ORDER BY month ASC
           )
           SELECT
             am.month,
             #{select_currency_sql},
+            invs.billing_entity_id,
             SUM(invs.total_amount_cents) AS amount_cents,
             jsonb_agg(DISTINCT invs.ids) AS lago_invoice_ids
           FROM all_months am
@@ -94,7 +96,7 @@ module Analytics
           #{and_months_sql}
           #{and_currency_sql}
           AND invs.total_amount_cents IS NOT NULL
-          GROUP BY am.month, invs.currency
+          GROUP BY am.month, invs.currency, invs.billing_entity_id
           ORDER BY am.month;
         SQL
 

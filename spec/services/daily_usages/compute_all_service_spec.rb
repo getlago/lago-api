@@ -175,4 +175,13 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
     end
   end
+
+  context "when skip_daily_usage is true" do
+    let(:subscriptions) { create_list(:subscription, 5, customer:, last_received_event_on: timestamp.to_date, skip_daily_usage: true) }
+
+    it "does not enqueue any job" do
+      expect(compute_service.call).to be_success
+      expect(DailyUsages::ComputeJob).not_to have_been_enqueued
+    end
+  end
 end

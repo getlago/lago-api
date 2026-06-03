@@ -68,16 +68,13 @@ module DailyUsages
               .active
               .where.not(id: subscription_ids_with_daily_usage)
               .where("last_received_event_on >= ?", timestamp.to_date - 1.day)
+              .where(skip_daily_usage: false)
               .find_each do |subscription|
                 yield subscription
             end
           end
         end
       end
-    end
-
-    def existing_daily_usage
-      DailyUsage.usage_date_in_timezone(timestamp.to_date - 1.day).select(:subscription_id)
     end
   end
 end

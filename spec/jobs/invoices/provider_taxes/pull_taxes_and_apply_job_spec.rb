@@ -35,7 +35,15 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob do
       [LagoHttpClient::HttpError.new(401, "body", "uri"), 6],
       [OpenSSL::SSL::SSLError.new("OpenSSL::SSL::SSLError"), 6],
       [Net::ReadTimeout.new("Net::ReadTimeout"), 6],
-      [Net::OpenTimeout.new("Net::OpenTimeout"), 6]
+      [Net::OpenTimeout.new("Net::OpenTimeout"), 6],
+      [Integrations::Aggregator::BadGatewayError.new("body", "uri"), 6],
+      [Integrations::Aggregator::RequestLimitError.new(LagoHttpClient::HttpError.new(429, "limit", "uri")), 6],
+      [Integrations::Aggregator::OutOfMemoryError.new, 6],
+      [Integrations::Aggregator::TaskInProgressError.new, 6],
+      [Integrations::Aggregator::TaskExpiredError.new, 6],
+      [Integrations::Aggregator::OrchestratorFailureError.new, 6],
+      [Integrations::Aggregator::ServerContentionError.new, 6],
+      [Integrations::Aggregator::TimeoutError.new, 6]
     ].each do |error, attempts|
       error_class = error.class
 

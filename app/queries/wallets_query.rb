@@ -2,7 +2,7 @@
 
 class WalletsQuery < BaseQuery
   Result = BaseResult[:wallets]
-  Filters = BaseFilters[:external_customer_id, :currency]
+  Filters = BaseFilters[:external_customer_id, :currency, :billing_entity_ids]
 
   def call
     validate_filters
@@ -12,6 +12,7 @@ class WalletsQuery < BaseQuery
 
     wallets = with_external_customer_id(wallets) if filters.external_customer_id
     wallets = with_currency(wallets) if filters.currency
+    wallets = with_billing_entity_ids(wallets) if filters.billing_entity_ids.present?
 
     wallets = paginate(wallets)
     wallets = apply_consistent_ordering(wallets)
@@ -32,6 +33,13 @@ class WalletsQuery < BaseQuery
 
   def with_currency(scope)
     scope.where(balance_currency: filters.currency)
+  end
+
+  def with_billing_entity_ids(scope)
+    scope.joins(:customer).where(
+      "COALESCE(wallets.billing_entity_id, customers.billing_entity_id) IN (?)",
+      filters.billing_entity_ids
+    )
   end
 
   def validate_filters

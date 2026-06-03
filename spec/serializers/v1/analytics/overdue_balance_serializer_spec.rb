@@ -10,7 +10,8 @@ RSpec.describe ::V1::Analytics::OverdueBalanceSerializer do
       "month" => "2024-06-01T00:00:00Z",
       "amount_cents" => 100,
       "currency" => "EUR",
-      "lago_invoice_ids" => "[\"1\", \"2\", \"3\"]"
+      "lago_invoice_ids" => "[\"1\", \"2\", \"3\"]",
+      "billing_entity_id" => "be-id-1"
     }
   end
 
@@ -22,7 +23,8 @@ RSpec.describe ::V1::Analytics::OverdueBalanceSerializer do
         "month" => "2024-06-01T00:00:00Z",
         "amount_cents" => 100,
         "currency" => "EUR",
-        "lago_invoice_ids" => ["1", "2", "3"]
+        "lago_invoice_ids" => ["1", "2", "3"],
+        "billing_entity_id" => "be-id-1"
       }
     )
   end

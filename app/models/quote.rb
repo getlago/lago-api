@@ -22,6 +22,7 @@ class Quote < ApplicationRecord
 
   has_many :versions, -> { order(sequential_id: :desc) }, class_name: "QuoteVersion"
   has_one :current_version, -> { order(sequential_id: :desc) }, class_name: "QuoteVersion"
+  has_many :order_forms, through: :versions
 
   enum :order_type, ORDER_TYPES,
     instance_methods: false,

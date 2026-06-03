@@ -27,7 +27,8 @@ module V1
         document_number_prefix: model.document_number_prefix,
         tax_identification_number: model.tax_identification_number,
         finalize_zero_amount_invoice: model.finalize_zero_amount_invoice,
-        billing_configuration:
+        billing_configuration:,
+        events_store: model.events_store
       }
 
       payload = payload.merge(taxes) if include?(:taxes)

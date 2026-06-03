@@ -150,8 +150,34 @@ RSpec.describe Events::Common do
         "external_subscription_id" => subscription.external_id,
         "code" => billable_metric.code,
         "properties" => {},
-        "timestamp" => timestamp.to_f
+        "timestamp" => timestamp.to_f,
+        "timestamp_with_precision" => timestamp.iso8601(9)
       )
+    end
+  end
+
+  describe ".timestamp_from_source" do
+    let(:timestamp) { Time.zone.parse("2026-05-22 10:04:50.227587000 +0000") }
+    let(:source) { event.as_json }
+
+    it "preserves timestamp precision from the serialized event" do
+      expect(described_class.timestamp_from_source(source)).to eq(timestamp)
+    end
+
+    context "when the precise timestamp is not present" do
+      before { source.delete("timestamp_with_precision") }
+
+      it "falls back to the float timestamp" do
+        expect(described_class.timestamp_from_source(source)).to eq(Time.zone.at(source["timestamp"].to_f))
+      end
+    end
+
+    context "when the precise timestamp cannot be parsed" do
+      before { source["timestamp_with_precision"] = "invalid" }
+
+      it "falls back to the float timestamp" do
+        expect(described_class.timestamp_from_source(source)).to eq(Time.zone.at(source["timestamp"].to_f))
+      end
     end
   end
 end

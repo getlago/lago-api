@@ -207,6 +207,29 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
+      context "when updating consolidate_invoice" do
+        let(:params) { {consolidate_invoice: false} }
+
+        it "updates consolidate_invoice to false" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.consolidate_invoice).to be(false)
+        end
+
+        context "when re-enabling consolidation" do
+          let(:subscription) { create(:subscription, consolidate_invoice: false) }
+          let(:params) { {consolidate_invoice: true} }
+
+          it "updates consolidate_invoice to true" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.consolidate_invoice).to be(true)
+          end
+        end
+      end
+
       context "when updating payment method" do
         let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
         let(:params) { {payment_method: payment_method_params} }
@@ -948,6 +971,8 @@ RSpec.describe Subscriptions::UpdateService do
     end
 
     context "with activation_rules" do
+      before { create(:payment_method, customer: subscription.customer, organization: subscription.organization) }
+
       context "when subscription is pending" do
         context "when activation rules exist" do
           let(:subscription) { create(:subscription, :pending, :with_activation_rules, activation_rules_config: [{type: "payment", timeout_hours: 48}], subscription_at: Time.current + 5.days) }
@@ -1200,6 +1225,88 @@ RSpec.describe Subscriptions::UpdateService do
             expect(result.error.resource).to eq("billing_entity")
           end
         end
+
+        context "when the subscription already has a billing_entity attached" do
+          let(:current_entity) { create(:billing_entity, organization:) }
+          let(:other_entity) { create(:billing_entity, organization:) }
+          let(:subscription) { create(:subscription, customer:, plan:, organization:, billing_entity: current_entity) }
+
+          context "when billing_entity_id is nil" do
+            let(:params) { {billing_entity_id: nil} }
+
+            it "clears the billing_entity_id" do
+              update_service.call
+
+              expect(subscription.reload.billing_entity_id).to be_nil
+            end
+          end
+
+          context "when billing_entity_id points at a different entity" do
+            let(:params) { {billing_entity_id: other_entity.id} }
+
+            it "switches to the new entity" do
+              update_service.call
+
+              expect(subscription.reload.billing_entity_id).to eq(other_entity.id)
+            end
+          end
+
+          context "when billing_entity_id is unknown" do
+            let(:params) { {billing_entity_id: SecureRandom.uuid} }
+
+            it "returns not_found_failure and leaves billing_entity_id unchanged" do
+              result = update_service.call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::NotFoundFailure)
+              expect(result.error.resource).to eq("billing_entity")
+              expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
+            end
+          end
+
+          context "when billing_entity_code is nil" do
+            let(:params) { {billing_entity_code: nil} }
+
+            it "clears the billing_entity_id" do
+              update_service.call
+
+              expect(subscription.reload.billing_entity_id).to be_nil
+            end
+          end
+
+          context "when billing_entity_code points at a different entity" do
+            let(:params) { {billing_entity_code: other_entity.code} }
+
+            it "switches to the new entity" do
+              update_service.call
+
+              expect(subscription.reload.billing_entity_id).to eq(other_entity.id)
+            end
+          end
+
+          context "when no billing_entity key is sent" do
+            let(:params) { {name: "renamed"} }
+
+            it "leaves billing_entity_id unchanged" do
+              update_service.call
+
+              expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
+            end
+          end
+
+          context "when billing_entity_code is unknown" do
+            let(:params) { {billing_entity_code: "nonexistent"} }
+
+            it "returns not_found_failure and leaves billing_entity_id unchanged" do
+              result = update_service.call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::NotFoundFailure)
+              expect(result.error.resource).to eq("billing_entity")
+              expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
+            end
+          end
+        end
       end
 
       context "with multi_entity_billing feature flag disabled" do
@@ -1213,6 +1320,23 @@ RSpec.describe Subscriptions::UpdateService do
 
         it "returns success" do
           expect(update_service.call).to be_success
+        end
+
+        context "when the subscription already has a billing_entity attached" do
+          let(:current_entity) { create(:billing_entity, organization:) }
+          let(:subscription) { create(:subscription, customer:, plan:, organization:, billing_entity: current_entity) }
+
+          it "leaves billing_entity_id unchanged when an id is sent" do
+            update_service.call
+
+            expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
+          end
+
+          it "leaves billing_entity_id unchanged when nil is sent" do
+            described_class.new(subscription:, params: {billing_entity_id: nil}).call
+
+            expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
+          end
         end
       end
     end
