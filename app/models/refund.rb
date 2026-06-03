@@ -3,11 +3,27 @@
 class Refund < ApplicationRecord
   include PaperTrailTraceable
 
+  REASONS = {
+    credit_note: "credit_note",
+    subscription_activation_expired: "subscription_activation_expired"
+  }.freeze
+
   belongs_to :payment
-  belongs_to :credit_note
+  belongs_to :credit_note, optional: true
+  belongs_to :refundable, polymorphic: true, optional: true
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, class_name: "PaymentProviderCustomers::BaseCustomer"
   belongs_to :organization
+
+  enum :reason, REASONS, validate: {allow_nil: true}
+
+  validates :refundable, presence: true, unless: :credit_note_present?
+
+  private
+
+  def credit_note_present?
+    credit_note_id.present? || credit_note.present?
+  end
 end
 
 # == Schema Information
