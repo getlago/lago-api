@@ -5,12 +5,15 @@ module PaymentRequestIndex
   extend ActiveSupport::Concern
 
   def payment_request_index(external_customer_id:)
-    filters = params.permit(:payment_status, :currency, billing_entity_codes: []).to_h
-    billing_entity_codes = filters.delete(:billing_entity_codes)
+    filters = params.permit(:payment_status, :currency, :billing_entity_code, billing_entity_codes: []).to_h
+    billing_entity_codes = (
+      Array.wrap(filters.delete(:billing_entity_codes)) +
+      Array.wrap(filters.delete(:billing_entity_code))
+    ).compact_blank.uniq
 
     if billing_entity_codes.present?
       billing_entities = current_organization.all_billing_entities.where(code: billing_entity_codes)
-      return not_found_error(resource: "billing_entity") if billing_entities.count != billing_entity_codes.uniq.count
+      return not_found_error(resource: "billing_entity") if billing_entities.count != billing_entity_codes.count
 
       filters[:billing_entity_ids] = billing_entities.ids
     end

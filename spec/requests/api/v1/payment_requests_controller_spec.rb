@@ -136,6 +136,38 @@ RSpec.describe Api::V1::PaymentRequestsController do
           expect(response).to be_not_found_error("billing_entity")
         end
       end
+
+      context "with the scalar billing_entity_code form" do
+        it "returns only payment requests under the requested billing entity" do
+          get_with_token(organization, "/api/v1/payment_requests?billing_entity_code=EU")
+
+          expect(response).to have_http_status(:success)
+          expect(json[:payment_requests].map { |r| r[:lago_id] }).to contain_exactly(payment_request_eu.id)
+        end
+
+        context "when the scalar billing_entity_code is unknown" do
+          it "returns a not found error" do
+            get_with_token(organization, "/api/v1/payment_requests?billing_entity_code=BOGUS")
+
+            expect(response).to be_not_found_error("billing_entity")
+          end
+        end
+
+        context "when combined with the bracketed form" do
+          it "unions both inputs into the filter" do
+            get_with_token(
+              organization,
+              "/api/v1/payment_requests?billing_entity_code=EU&billing_entity_codes[]=US"
+            )
+
+            expect(response).to have_http_status(:success)
+            expect(json[:payment_requests].map { |r| r[:lago_id] }).to contain_exactly(
+              payment_request_eu.id,
+              payment_request_us.id
+            )
+          end
+        end
+      end
     end
   end
 
