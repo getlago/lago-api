@@ -353,7 +353,6 @@ end
 #  index_subscriptions_on_external_id                          (external_id)
 #  index_subscriptions_on_last_received_event_on               (last_received_event_on)
 #  index_subscriptions_on_last_received_event_on_null          (id) WHERE (last_received_event_on IS NULL)
-#  index_subscriptions_on_org_external_id_active               (organization_id,external_id) UNIQUE WHERE ((status = 1) AND ((created_at >= '2026-05-20 00:00:00'::timestamp without time zone) OR (activated_at >= '2026-05-20 00:00:00'::timestamp without time zone)))
 #  index_subscriptions_on_organization_id                      (organization_id)
 #  index_subscriptions_on_payment_method_id                    (payment_method_id)
 #  index_subscriptions_on_plan_id                              (plan_id)

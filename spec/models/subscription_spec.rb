@@ -1119,45 +1119,4 @@ RSpec.describe Subscription do
       end
     end
   end
-
-  describe "unique index on active subscriptions" do
-    # We skip model validations in this test in order to check that database unique index is applied
-
-    let(:organization) { create(:organization) }
-    let(:external_id) { SecureRandom.uuid }
-
-    context "when two new active subscriptions share the same (organization_id, external_id)" do
-      before do
-        create(:subscription, customer: create(:customer, organization:), external_id:)
-      end
-
-      it "raises a database uniqueness error" do
-        duplicate_sub = build(:subscription, customer: create(:customer, organization:), external_id:)
-
-        expect { duplicate_sub.save(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
-      end
-    end
-
-    context "when two old pending subscriptions created before the index cutoff are activated after deploy" do
-      let(:sub_a) do
-        build(:subscription, :pending, customer: create(:customer, organization:), external_id:, created_at: 2.years.ago)
-      end
-      let(:sub_b) do
-        build(:subscription, :pending, customer: create(:customer, organization:), external_id:, created_at: 2.years.ago)
-      end
-
-      # rubocop:disable Rails/SkipsModelValidations
-      it "raises a database uniqueness error on the second activation" do
-        sub_a.save(validate: false)
-        sub_b.save(validate: false)
-
-        sub_a.update_columns(status: described_class.statuses[:active], activated_at: Time.current)
-
-        expect {
-          sub_b.update_columns(status: described_class.statuses[:active], activated_at: Time.current)
-        }.to raise_error(ActiveRecord::RecordNotUnique)
-      end
-      # rubocop:enable Rails/SkipsModelValidations
-    end
-  end
 end
