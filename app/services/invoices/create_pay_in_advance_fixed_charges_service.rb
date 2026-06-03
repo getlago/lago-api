@@ -45,7 +45,7 @@ module Invoices
 
         create_credit_note_credit
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: [subscription])
 
         skip_payment_gating_for_zero_amount if subscription.payment_gated? && invoice.total_amount_cents.zero? && !invoice.tax_pending?
 

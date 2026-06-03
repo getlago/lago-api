@@ -99,6 +99,58 @@ RSpec.describe Wallets::ThresholdTopUpService do
       end
     end
 
+    context "when rule has invoice custom sections" do
+      let(:invoice_custom_section) { create(:invoice_custom_section, organization: wallet.organization) }
+
+      before do
+        create(:recurring_rule_applied_invoice_custom_section,
+          recurring_transaction_rule:,
+          invoice_custom_section:)
+      end
+
+      it "forwards invoice_custom_section params to the job" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(
+              invoice_custom_section: {
+                skip_invoice_custom_sections: false,
+                invoice_custom_section_ids: [invoice_custom_section.id]
+              }
+            ),
+            unique_transaction: true
+          )
+      end
+    end
+
+    context "when rule has skip_invoice_custom_sections" do
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "6.0",
+          paid_credits: "10.0",
+          granted_credits: "3.0",
+          skip_invoice_custom_sections: true
+        )
+      end
+
+      it "forwards the skip flag to the job without fallback to other sections" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(
+              invoice_custom_section: {
+                skip_invoice_custom_sections: true,
+                invoice_custom_section_ids: []
+              }
+            ),
+            unique_transaction: true
+          )
+      end
+    end
+
     context "when rule does not contain transaction_name" do
       let(:recurring_transaction_rule) do
         create(

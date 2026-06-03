@@ -76,6 +76,39 @@ RSpec.describe Invoices::PaidCreditService do
       let(:service_call) { invoice_service.call }
     end
 
+    it_behaves_like "applies invoice_custom_sections from resource" do
+      let(:service_call) { invoice_service.call }
+      let(:resource_with_custom_section) { wallet_transaction }
+      let(:applied_section_factory) { :wallet_transaction_applied_invoice_custom_section }
+      let(:resource_association_key) { :wallet_transaction }
+    end
+
+    it_behaves_like "applies invoice_custom_sections from resource" do
+      let(:service_call) { invoice_service.call }
+      let(:resource_with_custom_section) { wallet }
+      let(:applied_section_factory) { :wallet_applied_invoice_custom_section }
+      let(:resource_association_key) { :wallet }
+    end
+
+    context "when wallet_transaction has skip_invoice_custom_sections" do
+      let(:wallet_transaction) do
+        create(:wallet_transaction, wallet:, amount: "15.00", credit_amount: "15.00",
+          invoice_requires_successful_payment:, skip_invoice_custom_sections: true)
+      end
+
+      before do
+        create(:billing_entity_applied_invoice_custom_section, organization:,
+          billing_entity:, invoice_custom_section: create(:invoice_custom_section, organization:))
+        create(:wallet_applied_invoice_custom_section, organization:, wallet:,
+          invoice_custom_section: create(:invoice_custom_section, organization:))
+      end
+
+      it "skips all sections without falling back to wallet or customer sections" do
+        result = invoice_service.call
+        expect(result.invoice.applied_invoice_custom_sections).to be_empty
+      end
+    end
+
     it "does not enqueue an SendEmailJob" do
       expect do
         invoice_service.call
