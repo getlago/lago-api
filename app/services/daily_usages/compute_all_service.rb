@@ -84,6 +84,10 @@ module DailyUsages
     # events: prorated charges, recurring billable metrics, and weighted_sum aggregations (which
     # are time-weighted). These must be recomputed every day regardless of `last_received_event_on`,
     # otherwise their daily usage would go stale until the next event arrives.
+    #
+    # NOTE: fixed charges are intentionally excluded — they are not part of the metered daily usage
+    # (`CustomerUsageService` only computes usage charges), so a prorated fixed charge does not
+    # change the daily usage value.
     PLAN_HAS_TIME_DEPENDENT_CHARGE_SQL = <<~SQL.squish.freeze
       EXISTS (
         SELECT 1

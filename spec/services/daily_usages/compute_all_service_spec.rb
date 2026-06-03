@@ -208,8 +208,19 @@ RSpec.describe DailyUsages::ComputeAllService do
         end
       end
 
+      context "with a charge that is not time-dependent" do
+        let(:billable_metric) { create(:billable_metric, organization:, recurring: false) }
+
+        before { create(:standard_charge, plan:, billable_metric:) }
+
+        it "does not enqueue any job" do
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeJob).not_to have_been_enqueued
+        end
+      end
+
       context "with a deleted recurring charge" do
-        before { create(:standard_charge, plan:, billable_metric:, prorated: true, deleted_at: timestamp) }
+        before { create(:standard_charge, plan:, billable_metric:, deleted_at: timestamp) }
 
         it "does not enqueue any job" do
           expect(compute_service.call).to be_success
