@@ -38,11 +38,9 @@ RSpec.describe Wallets::Balance::IncreaseService do
       expect(wallet.credits_balance).to eq(14.5)
     end
 
-    it "refreshes wallet ongoing balance" do
-      call_and_reload_wallet
-
-      expect(wallet.ongoing_balance_cents).to eq(1450)
-      expect(wallet.credits_ongoing_balance).to eq(14.5)
+    it "enqueues a RefreshWalletJob targeting the wallet" do
+      expect { create_service.call }
+        .to have_enqueued_job(Customers::RefreshWalletJob).with(wallet.customer, wallet_ids: [wallet.id])
     end
 
     it "sends a `wallet.updated` webhook" do

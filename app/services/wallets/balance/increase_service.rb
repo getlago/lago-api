@@ -33,9 +33,8 @@ module Wallets
 
         # we only need to update all wallets when there is usage applied. In case we're increasing balance of only one wallet,
         # only this wallet will be affected and needs recalculation
-        Customers::RefreshWalletsService.call(customer: wallet.customer, target_wallet_ids: [wallet.id])
-
         after_commit do
+          Customers::RefreshWalletJob.perform_later(wallet.customer, wallet_ids: [wallet.id])
           SendWebhookJob.perform_later("wallet.updated", wallet)
           UsageMonitoring::ProcessWalletAlertsJob.perform_later(wallet)
         end
