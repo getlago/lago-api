@@ -51,6 +51,24 @@ RSpec.describe Api::V1::PaymentRequestsController do
       expect(json[:payment_request][:invoices].map { |i| i[:lago_id] }).to contain_exactly(invoice.id)
       expect(json[:payment_request][:customer][:lago_id]).to eq(customer.id)
     end
+
+    context "when invoices belong to different billing entities" do
+      before do
+        allow(PaymentRequests::CreateService).to receive(:call).and_return(
+          BaseService::Result.new.tap do |r|
+            r.single_validation_failure!(error_code: "invoices_have_different_billing_entities")
+          end
+        )
+      end
+
+      it "responds with 422 and the validation_errors body shape" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:code]).to eq("validation_errors")
+        expect(json[:error_details][:base]).to eq(["invoices_have_different_billing_entities"])
+      end
+    end
   end
 
   describe "GET /api/v1/payment_requests" do

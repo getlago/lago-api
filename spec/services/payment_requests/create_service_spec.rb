@@ -97,12 +97,12 @@ RSpec.describe PaymentRequests::CreateService, :premium do
 
       before { second_invoice.update!(billing_entity: other_billing_entity) }
 
-      it "returns not allowed failure" do
+      it "returns a validation failure" do
         result = create_service.call
 
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("invoices_have_different_billing_entities")
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(base: ["invoices_have_different_billing_entities"])
       end
     end
 

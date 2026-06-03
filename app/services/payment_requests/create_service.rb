@@ -79,7 +79,7 @@ module PaymentRequests
       end
 
       if invoices.pluck(:billing_entity_id).uniq.size > 1
-        return result.not_allowed_failure!(code: "invoices_have_different_billing_entities")
+        return result.single_validation_failure!(error_code: "invoices_have_different_billing_entities")
       end
 
       if invoices.exists?(ready_for_payment_processing: false)
