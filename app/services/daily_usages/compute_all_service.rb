@@ -69,7 +69,7 @@ module DailyUsages
               .where.not(id: subscription_ids_with_daily_usage)
               .where(skip_daily_usage: false)
               .where(
-                "last_received_event_on >= :yesterday OR #{TIME_DEPENDENT_USAGE_SQL}",
+                "last_received_event_on >= :yesterday OR #{PLAN_HAS_TIME_DEPENDENT_CHARGE_SQL}",
                 yesterday: timestamp.to_date - 1.day
               )
               .find_each do |subscription|
@@ -84,7 +84,7 @@ module DailyUsages
     # events: prorated charges, recurring billable metrics, and weighted_sum aggregations (which
     # are time-weighted). These must be recomputed every day regardless of `last_received_event_on`,
     # otherwise their daily usage would go stale until the next event arrives.
-    TIME_DEPENDENT_USAGE_SQL = <<~SQL.squish.freeze
+    PLAN_HAS_TIME_DEPENDENT_CHARGE_SQL = <<~SQL.squish.freeze
       EXISTS (
         SELECT 1
         FROM charges
