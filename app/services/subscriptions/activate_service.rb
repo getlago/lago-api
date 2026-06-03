@@ -15,10 +15,14 @@ module Subscriptions
       return result if subscription.active?
       return result if subscription.gated?
 
-      if subscription.pending?
-        activate_from_pending
-      elsif subscription.incomplete?
-        activate_from_incomplete
+      ActiveRecord::Base.transaction do
+        ActivationRules::EvaluateService.call!(subscription:) if subscription.pending?
+
+        if subscription.pending? && subscription.pending_rules?
+          gate_subscription
+        else
+          activate_subscription
+        end
       end
 
       result.subscription = subscription
@@ -28,16 +32,6 @@ module Subscriptions
     private
 
     attr_reader :subscription, :timestamp, :during_creation
-
-    def activate_from_pending
-      ActivationRules::EvaluateService.call!(subscription:)
-
-      if subscription.pending_rules?
-        gate_subscription
-      else
-        activate_with_side_effects
-      end
-    end
 
     def gate_subscription
       subscription.mark_as_incomplete!(timestamp)
@@ -52,7 +46,9 @@ module Subscriptions
       end
     end
 
-    def activate_with_side_effects
+    def activate_subscription
+      return if subscription.incomplete? && subscription.activation_rules.rejected.exists?
+
       if upgrade?
         activate_for_upgrade
       elsif downgrade?
@@ -62,39 +58,9 @@ module Subscriptions
       end
     end
 
-    def activate_from_incomplete
-      return if subscription.activation_rules.rejected.exists?
-
-      if upgrade?
-        activate_for_upgrade
-      elsif downgrade?
-        activate_for_downgrade
-      else
-        subscription.mark_as_active!(timestamp)
-
-        after_commit do
-          bill_subscription if subscription.activation_rules.payment.none?
-          notify_started
-        end
-      end
-    end
-
-    def upgrade?
-      return false unless subscription.previous_subscription
-      return false if subscription.plan.id == subscription.previous_subscription.plan.id
-
-      subscription.plan.yearly_amount_cents >= subscription.previous_subscription.plan.yearly_amount_cents
-    end
-
-    def downgrade?
-      return false unless subscription.previous_subscription
-      return false if subscription.plan.id == subscription.previous_subscription.plan.id
-
-      subscription.plan.yearly_amount_cents < subscription.previous_subscription.plan.yearly_amount_cents
-    end
-
     def activate_for_upgrade
       from_incomplete = subscription.incomplete?
+      billed_during_gating = from_incomplete && subscription.activation_rules.payment.any?
       previous_subscription = subscription.previous_subscription
 
       Subscriptions::TerminateService.call(
@@ -106,10 +72,11 @@ module Subscriptions
 
       billable_subscriptions = [previous_subscription]
 
-      # When from_incomplete, the new subscription was already billed and its fixed-charge
-      # events emitted during gate_subscription — only the previous needs billing.
-      unless from_incomplete
-        emit_fixed_charge_events
+      # Fixed-charge events are always emitted during gate_subscription, so re-emit only
+      # when activating straight from pending.
+      emit_fixed_charge_events unless from_incomplete
+
+      unless billed_during_gating
         billable_subscriptions << subscription if subscription.fixed_charges.pay_in_advance.any? ||
           (subscription.plan.pay_in_advance? && !subscription.in_trial_period?)
       end
@@ -121,6 +88,7 @@ module Subscriptions
 
     def activate_for_downgrade
       from_incomplete = subscription.incomplete?
+      billed_during_gating = from_incomplete && subscription.activation_rules.payment.any?
       previous_subscription = subscription.previous_subscription
 
       previous_subscription.mark_as_terminated!(timestamp)
@@ -129,10 +97,11 @@ module Subscriptions
 
       billable_subscriptions = [previous_subscription]
 
-      # When from_incomplete, the new subscription was already billed and its fixed-charge
-      # events emitted during gate_subscription — only the previous needs billing.
-      unless from_incomplete
-        emit_fixed_charge_events
+      # Fixed-charge events are always emitted during gate_subscription, so re-emit only
+      # when activating straight from pending.
+      emit_fixed_charge_events unless from_incomplete
+
+      unless billed_during_gating
         billable_subscriptions << subscription if subscription.fixed_charges.pay_in_advance.any? || subscription.plan.pay_in_advance?
       end
 
@@ -151,12 +120,20 @@ module Subscriptions
     end
 
     def activate_standalone
+      from_incomplete = subscription.incomplete?
+
       subscription.mark_as_active!(timestamp)
 
-      emit_fixed_charge_events
+      # When from_incomplete, fixed-charge events were already emitted during gate_subscription.
+      emit_fixed_charge_events unless from_incomplete
 
       after_commit do
-        bill_subscription(skip_charges: true)
+        if from_incomplete
+          bill_subscription if subscription.activation_rules.payment.none?
+        else
+          bill_subscription(skip_charges: true)
+        end
+
         notify_started
       end
     end
@@ -193,11 +170,17 @@ module Subscriptions
     end
 
     def bill_subscription(skip_charges: false)
+      invoicing_reason = if upgrade? || downgrade?
+        :upgrading
+      else
+        :subscription_starting
+      end
+
       if subscription.plan.pay_in_advance? && !subscription.in_trial_period?
         BillSubscriptionJob.perform_later(
           [subscription],
           timestamp.to_i,
-          invoicing_reason: :subscription_starting,
+          invoicing_reason:,
           skip_charges:
         )
       elsif subscription.fixed_charges.pay_in_advance.any?
@@ -206,6 +189,20 @@ module Subscriptions
           subscription.started_at + 1.second
         )
       end
+    end
+
+    def upgrade?
+      return false unless subscription.previous_subscription
+      return false if subscription.plan.id == subscription.previous_subscription.plan.id
+
+      subscription.plan.yearly_amount_cents >= subscription.previous_subscription.plan.yearly_amount_cents
+    end
+
+    def downgrade?
+      return false unless subscription.previous_subscription
+      return false if subscription.plan.id == subscription.previous_subscription.plan.id
+
+      subscription.plan.yearly_amount_cents < subscription.previous_subscription.plan.yearly_amount_cents
     end
   end
 end

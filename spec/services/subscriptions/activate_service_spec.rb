@@ -673,18 +673,33 @@ RSpec.describe Subscriptions::ActivateService do
         expect(SendWebhookJob).to have_been_enqueued.with("subscription.incomplete", subscription)
       end
 
-      it "enqueues BillSubscriptionJob for the incomplete subscription with skip_charges" do
+      it "enqueues BillSubscriptionJob for the incomplete subscription with skip_charges and :upgrading" do
         result
 
         expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription], anything, invoicing_reason: :subscription_starting, skip_charges: true)
+          .with([subscription], anything, invoicing_reason: :upgrading, skip_charges: true)
+      end
+    end
+
+    context "when the subscription is incomplete with no payment rules" do
+      let(:plan) { create(:plan, organization:, amount_cents: 100, pay_in_advance: true) }
+      let(:subscription) do
+        create(
+          :subscription,
+          :incomplete,
+          organization:,
+          customer:,
+          plan:,
+          previous_subscription:,
+          subscription_at: Time.current
+        )
       end
 
-      it "does not enqueue a BillSubscriptionJob with invoicing_reason :upgrading" do
+      it "includes the new subscription in the upgrade bill (never billed during gating)" do
         result
 
-        expect(BillSubscriptionJob).not_to have_been_enqueued
-          .with(anything, anything, invoicing_reason: :upgrading)
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([previous_subscription, subscription], anything, invoicing_reason: :upgrading)
       end
     end
   end
@@ -860,11 +875,33 @@ RSpec.describe Subscriptions::ActivateService do
         expect(SendWebhookJob).to have_been_enqueued.with("subscription.incomplete", subscription)
       end
 
-      it "does not enqueue BillSubscriptionJob with invoicing_reason :upgrading" do
+      it "enqueues BillSubscriptionJob for the incomplete subscription with skip_charges and :upgrading" do
         result
 
-        expect(BillSubscriptionJob).not_to have_been_enqueued
-          .with(anything, anything, invoicing_reason: :upgrading)
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([subscription], anything, invoicing_reason: :upgrading, skip_charges: true)
+      end
+    end
+
+    context "when the subscription is incomplete with no payment rules" do
+      let(:plan) { create(:plan, organization:, amount_cents: 50, pay_in_advance: true) }
+      let(:subscription) do
+        create(
+          :subscription,
+          :incomplete,
+          organization:,
+          customer:,
+          plan:,
+          previous_subscription:,
+          subscription_at: Time.current
+        )
+      end
+
+      it "includes the new subscription in the downgrade bill (never billed during gating)" do
+        result
+
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([previous_subscription, subscription], anything, invoicing_reason: :upgrading)
       end
     end
   end
