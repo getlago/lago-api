@@ -52,7 +52,7 @@ module Resolvers
         :hubspot_customer,
         :netsuite_customer,
         :salesforce_customer,
-        :xero_customer,
+        :xero_customer
       )
     end
   end

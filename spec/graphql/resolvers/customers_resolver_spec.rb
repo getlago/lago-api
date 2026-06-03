@@ -320,20 +320,17 @@ RSpec.describe Resolvers::CustomersResolver do
                 country
                 state
                 zipcode
-                __typename
               }
               metadata {
                 id
                 key
                 value
                 displayInInvoice
-                __typename
               }
               billingEntity {
                 id
                 code
                 name
-                __typename
               }
               netsuiteCustomer {
                 id
@@ -343,10 +340,8 @@ RSpec.describe Resolvers::CustomersResolver do
                 integrationType
                 subsidiaryId
                 syncWithProvider
-                __typename
               }
               anrokCustomer {
-                __typename
                 id
                 integrationId
                 externalCustomerId
@@ -355,7 +350,6 @@ RSpec.describe Resolvers::CustomersResolver do
                 syncWithProvider
               }
               avalaraCustomer {
-                __typename
                 id
                 integrationId
                 externalCustomerId
@@ -364,7 +358,6 @@ RSpec.describe Resolvers::CustomersResolver do
                 syncWithProvider
               }
               xeroCustomer {
-                __typename
                 id
                 integrationId
                 externalCustomerId
@@ -373,7 +366,6 @@ RSpec.describe Resolvers::CustomersResolver do
                 syncWithProvider
               }
               hubspotCustomer {
-                __typename
                 id
                 integrationId
                 externalCustomerId
@@ -383,7 +375,6 @@ RSpec.describe Resolvers::CustomersResolver do
                 targetedObject
               }
               salesforceCustomer {
-                __typename
                 id
                 integrationId
                 externalCustomerId
@@ -396,9 +387,7 @@ RSpec.describe Resolvers::CustomersResolver do
                 providerCustomerId
                 syncWithProvider
                 providerPaymentMethods
-                __typename
               }
-              __typename
             }
             metadata { currentPage, totalCount }
           }
