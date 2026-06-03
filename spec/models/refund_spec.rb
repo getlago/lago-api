@@ -49,5 +49,9 @@ RSpec.describe Refund do
       expect(activation_refund.refundable).to be_closed
       expect(activation_refund.reason).to eq("subscription_activation_expired")
     end
+
+    it "is valid with an unpersisted credit note" do
+      expect(build(:refund, refundable: nil)).to be_valid
+    end
   end
 end
