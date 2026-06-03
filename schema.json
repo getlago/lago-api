@@ -59510,29 +59510,6 @@
         },
         {
           "kind": "ENUM",
-          "name": "QuoteVersionManualVoidReasonEnum",
-          "description": null,
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": [
-            {
-              "name": "manual",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "superseded",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "possibleTypes": null
-        },
-        {
-          "kind": "ENUM",
           "name": "RecurringTransactionIntervalEnum",
           "description": null,
           "fields": null,
@@ -72115,22 +72092,6 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "ID",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "reason",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "QuoteVersionManualVoidReasonEnum",
                   "ofType": null
                 }
               },

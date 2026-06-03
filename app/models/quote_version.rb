@@ -17,7 +17,6 @@ class QuoteVersion < ApplicationRecord
   }.freeze
 
   CASCADE_VOID_REASONS = VOID_REASONS.slice(:cascade_of_expired, :cascade_of_voided).freeze
-  MANUAL_VOID_REASONS = VOID_REASONS.except(:cascade_of_expired, :cascade_of_voided).freeze
 
   before_save :ensure_share_token
 

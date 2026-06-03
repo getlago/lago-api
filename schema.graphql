@@ -10921,11 +10921,6 @@ type QuoteVersion {
   voidedAt: ISO8601DateTime
 }
 
-enum QuoteVersionManualVoidReasonEnum {
-  manual
-  superseded
-}
-
 enum RecurringTransactionIntervalEnum {
   monthly
   quarterly
@@ -13470,7 +13465,6 @@ input VoidQuoteVersionInput {
   """
   clientMutationId: String
   id: ID!
-  reason: QuoteVersionManualVoidReasonEnum!
 }
 
 enum VoidReasonEnum {
