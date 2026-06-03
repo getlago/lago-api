@@ -28,10 +28,18 @@ module Api
       end
 
       def index
-        permitted_params = params.permit(:external_customer_id, :currency, billing_entity_codes: [])
+        permitted_params = params.permit(
+          :external_customer_id,
+          :currency,
+          :billing_entity_code,
+          billing_entity_codes: []
+        )
         external_customer_id = permitted_params[:external_customer_id]
         currency = permitted_params[:currency]
-        billing_entity_codes = permitted_params[:billing_entity_codes]
+        billing_entity_codes = (
+          Array.wrap(permitted_params[:billing_entity_codes]) +
+          Array.wrap(permitted_params[:billing_entity_code])
+        ).compact_blank.uniq.presence
 
         wallet_index(external_customer_id:, currency:, billing_entity_codes:)
       end
