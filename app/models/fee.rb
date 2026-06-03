@@ -159,6 +159,12 @@ class Fee < ApplicationRecord
     charge_filter&.display_name(separator:)
   end
 
+  def grouped_by_display
+    return "" if !charge? || grouped_by.values.compact.blank?
+
+    " • #{grouped_by.values.compact.join(" • ")}"
+  end
+
   def invoice_sorting_clause
     base_clause = "#{invoice_name} #{filter_display_name}".downcase
 
