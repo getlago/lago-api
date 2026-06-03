@@ -6515,6 +6515,7 @@ enum IntegrationTypeEnum {
   projected_usage
   remove_branding_watermark
   revenue_analytics
+  revenue_recognition
   revenue_share
   salesforce
   security_logs
@@ -9696,6 +9697,7 @@ enum PremiumIntegrationTypeEnum {
   projected_usage
   remove_branding_watermark
   revenue_analytics
+  revenue_recognition
   revenue_share
   salesforce
   security_logs

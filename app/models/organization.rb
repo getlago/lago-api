@@ -153,6 +153,7 @@ class Organization < ApplicationRecord
     security_logs
     granular_lifetime_usage
     order_forms
+    revenue_recognition
   ].freeze
 
   SECURITY_LOGS_RETENTION_DAYS = 90
