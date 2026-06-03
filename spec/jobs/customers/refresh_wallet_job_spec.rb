@@ -31,6 +31,12 @@ RSpec.describe Customers::RefreshWalletJob do
     end
   end
 
+  describe "unique" do
+    it "has unique :until_executing constraint" do
+      expect(described_class.lock_strategy_class).to eq(ActiveJob::Uniqueness::Strategies::UntilExecuting)
+    end
+  end
+
   describe "#perform" do
     subject { described_class.perform_now(customer, wallet_ids:) }
 

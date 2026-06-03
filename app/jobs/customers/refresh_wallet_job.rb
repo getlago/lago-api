@@ -11,7 +11,7 @@ module Customers
       end
     end
 
-    unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
+    unique :until_executing, on_conflict: :log, lock_ttl: 12.hours
 
     retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
     retry_on BaseService::TooManyProviderRequestsFailure, wait: :polynomially_longer, attempts: 25
