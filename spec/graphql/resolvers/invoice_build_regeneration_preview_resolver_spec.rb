@@ -9,52 +9,244 @@ RSpec.describe Resolvers::InvoiceBuildRegenerationPreviewResolver do
       query($id: ID!) {
         invoiceBuildRegenerationPreview(id: $id) {
           id
+          invoiceType
           number
-          feesAmountCents
+          paymentStatus
+          status
+          taxStatus
+          totalAmountCents
+          currency
+          refundableAmountCents
+          creditableAmountCents
+          offsettableAmountCents
+          voidable
+          paymentDisputeLostAt
+          paymentDisputeLosable
+          integrationSyncable
+          externalIntegrationId
+          taxProviderId
+          taxProviderVoidable
+          integrationHubspotSyncable
+          externalHubspotIntegrationId
+          integrationSalesforceSyncable
+          externalSalesforceIntegrationId
+          associatedActiveWalletPresent
+          xmlUrl
+          voidedAt
+          voidedInvoiceId
+          regeneratedInvoiceId
+          expectedFinalizationDate
+          subTotalExcludingTaxesAmountCents
+          subTotalIncludingTaxesAmountCents
+          totalDueAmountCents
+          totalSettledAmountCents
+          totalPaidAmountCents
           couponsAmountCents
           creditNotesAmountCents
           prepaidCreditAmountCents
-          refundableAmountCents
-          creditableAmountCents
-          paymentDisputeLosable
-          paymentStatus
+          prepaidGrantedCreditAmountCents
+          prepaidPurchasedCreditAmountCents
+          progressiveBillingCreditAmountCents
+          feesAmountCents
+          issuingDate
+          paymentDueDate
+          paymentOverdue
+          allChargesHaveFees
+          allFixedChargesHaveFees
+          versionNumber
           taxesRate
-          status
-          customer {
+          errorDetails {
+            errorCode
+            errorDetails
+          }
+          billingEntity {
             id
             name
+            code
+            email
+            einvoicing
+            emailSettings
+            logoUrl
+          }
+          customer {
+            id
+            email
+            name
+            displayName
+            legalNumber
+            legalName
+            taxIdentificationNumber
+            addressLine1
+            addressLine2
+            state
+            country
+            city
+            zipcode
+            applicableTimezone
             deletedAt
+            accountType
+          }
+          subscriptions {
+            id
+            name
+            currentBillingPeriodStartedAt
+            currentBillingPeriodEndingAt
+            plan {
+              id
+              name
+              interval
+            }
+          }
+          invoiceSubscriptions {
+            subscription {
+              id
+            }
+            invoice {
+              id
+            }
+            acceptNewChargeFees
           }
           appliedTaxes {
+            id
+            amountCents
+            feesAmountCents
+            taxableAmountCents
+            taxRate
             taxCode
             taxName
-            taxRate
+            enumedTaxCode
             taxDescription
-            amountCents
             amountCurrency
           }
           fees {
             id
+            invoiceId
+            succeededAt
+            amountCents
+            currency
+            preciseUnitAmount
+            adjustedFee
+            adjustedFeeType
+            eventsCount
+            description
+            feeType
             itemType
             itemCode
             itemName
+            invoiceName
+            invoiceDisplayName
+            units
+            groupedBy
             creditableAmountCents
             taxesRate
+            addOn {
+              id
+            }
+            trueUpParentFee {
+              id
+            }
+            walletTransaction {
+              id
+              name
+              wallet {
+                id
+                name
+              }
+            }
+            properties {
+              fromDatetime
+              toDatetime
+            }
+            pricingUnitUsage {
+              amountCents
+              conversionRate
+              shortName
+              preciseUnitAmount
+            }
             appliedTaxes {
+              id
               taxCode
               taxName
               taxRate
               taxDescription
               amountCents
               amountCurrency
+              tax {
+                id
+                name
+                code
+                rate
+              }
+            }
+            amountDetails {
+              freeUnits
+              fixedFeeUnitAmount
+              fixedFeeTotalAmount
+              flatUnitAmount
+              freeEvents
+              paidEvents
+              freeUnits
+              paidUnits
+              minMaxAdjustmentTotalAmount
+              perPackageSize
+              perPackageUnitAmount
+              perUnitAmount
+              perUnitTotalAmount
+              perUnitTotalAmount
+              rate
+              units
+              graduatedRanges {
+                flatUnitAmount
+                fromValue
+                perUnitAmount
+                perUnitTotalAmount
+                toValue
+                totalWithFlatAmount
+                units
+              }
+              graduatedPercentageRanges {
+                flatUnitAmount
+                fromValue
+                perUnitTotalAmount
+                rate
+                toValue
+                totalWithFlatAmount
+                units
+              }
             }
             charge {
               id
+              payInAdvance
+              minAmountCents
+              chargeModel
+              prorated
               billableMetric {
+                id
+                name
+                recurring
+                aggregationType
                 code
                 filters { key values }
               }
               filters { invoiceDisplayName values }
+            }
+            chargeFilter {
+              id
+              invoiceDisplayName
+              values
+            }
+            subscription {
+              id
+              plan {
+                id
+                interval
+                name
+              }
+            }
+            fixedCharge {
+              id
+              chargeModel
+              prorated
             }
           }
         }
@@ -132,6 +324,68 @@ RSpec.describe Resolvers::InvoiceBuildRegenerationPreviewResolver do
     invoice_fixed_charge_fee = data["fees"].find { |f| f["itemType"] == "fixed_charge" }
     expect(invoice_fixed_charge_fee["id"]).to eq(fixed_charge_fee.id)
     expect(invoice_fixed_charge_fee["taxesRate"]).to eq(0)
+  end
+
+  context "when taxes apply to regenerated fees" do
+    let(:tax) { create(:tax, organization:, code: "vat", description: "VAT 20", name: "VAT", rate: 20.0) }
+
+    before do
+      create(:billing_entity_applied_tax, billing_entity: customer.billing_entity, organization:, tax:)
+    end
+
+    it "returns applied taxes on the invoice and each fee" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          id: invoice.id
+        }
+      )
+
+      data = result["data"]["invoiceBuildRegenerationPreview"]
+
+      expect(data["taxesRate"]).to eq(20.0)
+      expect(data["appliedTaxes"]).to contain_exactly(
+        include(
+          "amountCents" => "90",
+          "feesAmountCents" => "450",
+          "taxableAmountCents" => "450",
+          "taxCode" => tax.code,
+          "taxDescription" => tax.description,
+          "taxName" => tax.name,
+          "taxRate" => tax.rate
+        )
+      )
+
+      expect(data["fees"].map { |fee_data| fee_data["id"] }).to match_array([fee.id, charge_fee.id, fixed_charge_fee.id])
+
+      expected_fee_taxes = {
+        fee.id => "10",
+        charge_fee.id => "50",
+        fixed_charge_fee.id => "30"
+      }
+
+      data["fees"].each do |fee_data|
+        expect(fee_data["taxesRate"]).to eq(20.0)
+        expect(fee_data["appliedTaxes"]).to contain_exactly(
+          include(
+            "amountCents" => expected_fee_taxes[fee_data["id"]],
+            "taxCode" => tax.code,
+            "taxDescription" => tax.description,
+            "taxName" => tax.name,
+            "taxRate" => tax.rate,
+            "tax" => include(
+              "id" => tax.id,
+              "name" => tax.name,
+              "code" => tax.code,
+              "rate" => tax.rate
+            )
+          )
+        )
+      end
+    end
   end
 
   context "when invoice is not found" do
