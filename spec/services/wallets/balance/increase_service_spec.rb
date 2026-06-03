@@ -40,7 +40,7 @@ RSpec.describe Wallets::Balance::IncreaseService do
 
     it "enqueues a RefreshWalletJob targeting the wallet" do
       expect { create_service.call }
-        .to have_enqueued_job(Customers::RefreshWalletJob).with(wallet.customer, wallet_ids: [wallet.id])
+        .to have_enqueued_job_after_commit(Customers::RefreshWalletJob).with(wallet.customer, wallet_ids: [wallet.id])
     end
 
     it "sends a `wallet.updated` webhook" do
