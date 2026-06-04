@@ -136,6 +136,8 @@ module PaymentRequests
 
       def update_invoices_payment_status(payment_status:)
         payable.invoices.each do |invoice|
+          next if invoice.payment_succeeded? && payment_status.to_sym != :succeeded
+
           Invoices::UpdateService.call!(
             invoice:,
             params: {
