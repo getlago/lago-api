@@ -33,6 +33,8 @@ class RateCardRate < ApplicationRecord
   belongs_to :organization
   belongs_to :rate_card
 
+  has_many :fees
+
   enum :rate_model, RATE_MODELS, validate: true
   enum :billing_interval_unit, BILLING_INTERVAL_UNITS, validate: true
 
