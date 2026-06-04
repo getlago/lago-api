@@ -31,7 +31,7 @@ module Resolvers
       )
 
       result.subscriptions.preload(
-        :next_subscriptions,
+        {next_subscriptions: :plan},
         {customer: :billing_entity}
       )
     end
