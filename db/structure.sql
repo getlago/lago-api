@@ -26,7 +26,6 @@ ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_f435d13904;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_f375d320ad;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_f32b205d44;
-ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_f2ab981080;
 ALTER TABLE IF EXISTS ONLY public.enriched_store_subscription_migrations DROP CONSTRAINT IF EXISTS fk_rails_f232478e56;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_f228550fda;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_f18cd04d51;
@@ -60,7 +59,6 @@ ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXI
 ALTER TABLE IF EXISTS ONLY public.product_items DROP CONSTRAINT IF EXISTS fk_rails_d9e7580aa8;
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_d9448a540b;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_d9342a8ca7;
-ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_d844d6b2b1;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_d72a9877be;
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS fk_rails_d648e28d9f;
 ALTER TABLE IF EXISTS ONLY public.rate_card_rates DROP CONSTRAINT IF EXISTS fk_rails_d53feb5721;
@@ -117,7 +115,6 @@ ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.subscription_product_items DROP CONSTRAINT IF EXISTS fk_rails_a8771420b2;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_a7f20c73bb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
-ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_a61520ac30;
 ALTER TABLE IF EXISTS ONLY public.product_item_filter_values DROP CONSTRAINT IF EXISTS fk_rails_a32a8f7fc6;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_a2d2cb3819;
 ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_a1ab65f1f7;
@@ -144,6 +141,7 @@ ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_8fa6f0d920;
 ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS fk_rails_8e0c3d0c5b;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_8df9bf2b6c;
+ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_8d4c29e03f;
 ALTER TABLE IF EXISTS ONLY public.product_items DROP CONSTRAINT IF EXISTS fk_rails_8c9cbcf514;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_8c18828b53;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_8c09ee2428;
@@ -234,6 +232,7 @@ ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF 
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_4ff087c52e;
 ALTER TABLE IF EXISTS ONLY public.rate_cards DROP CONSTRAINT IF EXISTS fk_rails_4f7ffc3e03;
 ALTER TABLE IF EXISTS ONLY public.order_forms DROP CONSTRAINT IF EXISTS fk_rails_4ed54bfec0;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_4cadfc14f3;
 ALTER TABLE IF EXISTS ONLY public.product_item_filter_values DROP CONSTRAINT IF EXISTS fk_rails_4b395cde98;
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_4aa58496c3;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_49fcc221b0;
@@ -268,6 +267,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_34ab15
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_348acbd245;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_33d169382f;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_32600e5a72;
+ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_32197619c6;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_310fcb3585;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_309d3a4412;
 ALTER TABLE IF EXISTS ONLY public.wallets_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_3092f5f2e0;
@@ -303,6 +303,7 @@ ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_20
 ALTER TABLE IF EXISTS ONLY public.plan_products DROP CONSTRAINT IF EXISTS fk_rails_1df4cf80e4;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_1db0057d9b;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_1d112bf8a0;
+ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_1c069c1c44;
 ALTER TABLE IF EXISTS ONLY public.plan_products DROP CONSTRAINT IF EXISTS fk_rails_19f4567acb;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_19c47827ba;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_195153290d;
@@ -703,6 +704,7 @@ DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_true_up_parent_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_subscription_id;
+DROP INDEX IF EXISTS public.index_fees_on_rate_card_rate_id;
 DROP INDEX IF EXISTS public.index_fees_on_pay_in_advance_event_transaction_id;
 DROP INDEX IF EXISTS public.index_fees_on_original_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_organization_id;
@@ -3490,7 +3492,8 @@ CREATE TABLE public.fees (
     precise_credit_notes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     fixed_charge_id uuid,
     duplicated_in_advance boolean DEFAULT false,
-    original_fee_id uuid
+    original_fee_id uuid,
+    rate_card_rate_id uuid
 );
 
 
@@ -8739,6 +8742,13 @@ CREATE INDEX index_fees_on_pay_in_advance_event_transaction_id ON public.fees US
 
 
 --
+-- Name: index_fees_on_rate_card_rate_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_rate_card_rate_id ON public.fees USING btree (rate_card_rate_id);
+
+
+--
 -- Name: index_fees_on_subscription_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11485,6 +11495,14 @@ ALTER TABLE ONLY public.plan_products
 
 
 --
+-- Name: rate_phases fk_rails_1c069c1c44; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rate_phases
+    ADD CONSTRAINT fk_rails_1c069c1c44 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: applied_usage_thresholds fk_rails_1d112bf8a0; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11765,6 +11783,14 @@ ALTER TABLE ONLY public.credits
 
 
 --
+-- Name: rate_phases fk_rails_32197619c6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rate_phases
+    ADD CONSTRAINT fk_rails_32197619c6 FOREIGN KEY (subscription_product_item_id) REFERENCES public.subscription_product_items(id);
+
+
+--
 -- Name: payment_requests fk_rails_32600e5a72; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12026,6 +12052,22 @@ ALTER TABLE ONLY public.recurring_transaction_rules_invoice_custom_sections
 
 ALTER TABLE ONLY public.billing_entities
     ADD CONSTRAINT fk_rails_4aa58496c3 FOREIGN KEY (applied_dunning_campaign_id) REFERENCES public.dunning_campaigns(id) ON DELETE SET NULL;
+
+
+--
+-- Name: product_item_filter_values fk_rails_4b395cde98; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_item_filter_values
+    ADD CONSTRAINT fk_rails_4b395cde98 FOREIGN KEY (billable_metric_filter_id) REFERENCES public.billable_metric_filters(id);
+
+
+--
+-- Name: fees fk_rails_4cadfc14f3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_4cadfc14f3 FOREIGN KEY (rate_card_rate_id) REFERENCES public.rate_card_rates(id) NOT VALID;
 
 
 --
@@ -12749,6 +12791,14 @@ ALTER TABLE ONLY public.product_items
 
 
 --
+-- Name: rate_phases fk_rails_8d4c29e03f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rate_phases
+    ADD CONSTRAINT fk_rails_8d4c29e03f FOREIGN KEY (plan_product_item_id) REFERENCES public.plan_product_items(id);
+
+
+--
 -- Name: usage_thresholds fk_rails_8df9bf2b6c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12957,14 +13007,6 @@ ALTER TABLE ONLY public.product_item_filter_values
 
 
 --
--- Name: rate_phases fk_rails_a61520ac30; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.rate_phases
-    ADD CONSTRAINT fk_rails_a61520ac30 FOREIGN KEY (plan_product_item_id) REFERENCES public.plan_product_items(id);
-
-
---
 -- Name: charges fk_rails_a710519346; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13157,16 +13199,19 @@ ALTER TABLE ONLY public.plans_taxes
 
 
 --
--- Name: wallet_transactions fk_rails_bcb5aecd6c; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.wallet_transactions
-    ADD CONSTRAINT fk_rails_bcb5aecd6c FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
 -- Name: product_item_filter_values fk_rails_bbe7738882; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.product_item_filter_values
     ADD CONSTRAINT fk_rails_bbe7738882 FOREIGN KEY (product_item_filter_id) REFERENCES public.product_item_filters(id);
+
+
+--
+-- Name: wallet_transactions fk_rails_bcb5aecd6c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transactions
+    ADD CONSTRAINT fk_rails_bcb5aecd6c FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
 
 
 --
@@ -13407,14 +13452,6 @@ ALTER TABLE ONLY public.entitlement_privileges
 
 ALTER TABLE ONLY public.subscription_fixed_charge_units_overrides
     ADD CONSTRAINT fk_rails_d72a9877be FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
-
-
---
--- Name: rate_phases fk_rails_d844d6b2b1; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.rate_phases
-    ADD CONSTRAINT fk_rails_d844d6b2b1 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -13682,14 +13719,6 @@ ALTER TABLE ONLY public.enriched_store_subscription_migrations
 
 
 --
--- Name: rate_phases fk_rails_f2ab981080; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.rate_phases
-    ADD CONSTRAINT fk_rails_f2ab981080 FOREIGN KEY (subscription_product_item_id) REFERENCES public.subscription_product_items(id);
-
-
---
 -- Name: wallet_transactions fk_rails_f32b205d44; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13849,6 +13878,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260608111837'),
 ('20260608074112'),
 ('20260605170919'),
+('20260604182138'),
 ('20260604181958'),
 ('20260604181826'),
 ('20260604181654'),
