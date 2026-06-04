@@ -177,3 +177,5 @@ group :development do
 
   gem "ruby-lsp-rails", require: false
 end
+
+gem "openapi_first", "~> 3.4"

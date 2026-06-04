@@ -947,7 +947,7 @@ RSpec.describe Api::V1::Customers::UsageController do
 
     include_examples "requires API permission", "customer_usage", "read"
 
-    it "returns the past usage" do
+    it "returns the past usage", :openapi do
       subject
 
       expect(response).to have_http_status(:success)
@@ -975,7 +975,7 @@ RSpec.describe Api::V1::Customers::UsageController do
       expect(charge_usage[:amount_currency]).to eq(fee1.currency)
     end
 
-    context "when missing external_subscription_id" do
+    context "when missing external_subscription_id", openapi: {status: 422, skip_request: true} do
       let(:params) { {} }
 
       it "returns an unprocessable entity" do
@@ -984,7 +984,7 @@ RSpec.describe Api::V1::Customers::UsageController do
       end
     end
 
-    context "with invalid billable metric code" do
+    context "with invalid billable metric code", openapi: {status: 404} do
       let(:params) do
         {
           billable_metric_code: "invalid_code",

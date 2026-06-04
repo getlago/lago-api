@@ -27,8 +27,33 @@ require "money-rails/test_helpers"
 require "active_storage_validations/matchers"
 require "karafka/testing/rspec/helpers"
 require "super_diff/rspec-rails"
+require "openapi_first"
 
 DatabaseCleaner.allow_remote_database_url = true
+
+openapi_file = ENV["OPENAPI_FILE_PATH"] || begin
+  # load file from https://swagger.getlago.com/openapi.yaml
+  require "net/http"
+  require "uri"
+
+  uri = URI.parse("https://swagger.getlago.com/openapi.yaml")
+  response = Net::HTTP.get_response(uri)
+  if response.is_a?(Net::HTTPSuccess)
+    # write response body to a tempfile and return its path
+    file = Tempfile.new(["openapi", ".yaml"])
+    file.write(response.body.dup.force_encoding(Encoding::UTF_8))
+    file.flush
+    file.path
+  else
+    raise "Failed to download OpenAPI spec: #{response.code} #{response.message}"
+  end
+end
+OpenapiFirst::Test.setup do |test|
+  test.coverage_reporter = OpenapiFirst::Test::Coverage::HtmlReporter
+  OpenapiFirst::Test.register Rails.root.join(openapi_file) do |config|
+    config.path = ->(req) { req.path.delete_prefix("/api/v1") }
+  end
+end
 
 SimpleCov.start do
   enable_coverage :branch
@@ -87,6 +112,8 @@ RSpec.configure do |config|
   config.include Karafka::Testing::RSpec::Helpers
   config.include GraphQL::Testing::Helpers.for(LagoApiSchema)
   config.include Sentry::TestHelper
+  config.include OpenapiFirst::Test::Methods
+  config.include OpenapiFirstHelper # OpenapiFirst is not flexible enough so we override some helpers
 
   # NOTE: these files make real API calls and should be excluded from build
   #       run them manually when needed
@@ -245,5 +272,15 @@ RSpec.configure do |config|
     end
 
     example.run
+  end
+
+  config.after(:each, :openapi) do |example|
+    metadata = example.metadata[:openapi]
+    if metadata == true
+      metadata = {}
+    end
+    http_status = metadata[:status] || 200
+    skip_request = metadata[:skip_request] || false
+    assert_api_conform(status: http_status, skip_request: skip_request)
   end
 end
