@@ -8,6 +8,8 @@ class ClockJob < ApplicationJob
   queue_as do
     if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_CLOCK"])
       :clock_worker
+    elsif ActiveModel::Type::Boolean.new.cast(ENV["LAGO_REDIS_ANALYTICS_ENABLED"])
+      :analytics
     else
       :clock
     end
