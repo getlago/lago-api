@@ -10,6 +10,7 @@ RSpec.describe ProductCategory do
   describe "associations" do
     it do
       expect(product_category).to belong_to(:organization)
+      expect(product_category).to have_many(:products)
     end
   end
 
