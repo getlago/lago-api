@@ -294,6 +294,34 @@ RSpec.describe FixedCharges::UpdateService do
               .to have_been_enqueued
               .with(subscription, timestamp)
           end
+
+          context "when the subscription has a per-subscription units override" do
+            let(:other_subscription) { create(:subscription, plan:) }
+
+            before do
+              other_subscription
+              create(:subscription_fixed_charge_units_override,
+                subscription:,
+                fixed_charge:,
+                organization:)
+            end
+
+            it "does not enqueue the billing job for the overridden subscription" do
+              result
+
+              expect(Invoices::CreatePayInAdvanceFixedChargesJob)
+                .not_to have_been_enqueued
+                .with(subscription, timestamp)
+            end
+
+            it "still enqueues the billing job for other plan subscriptions" do
+              result
+
+              expect(Invoices::CreatePayInAdvanceFixedChargesJob)
+                .to have_been_enqueued
+                .with(other_subscription, timestamp)
+            end
+          end
         end
 
         context "when apply_units_immediately is false" do

@@ -238,5 +238,21 @@ RSpec.describe FixedCharges::EmitEventsService do
         end
       end
     end
+
+    context "when one of the plan subscriptions has a per-subscription units override" do
+      before do
+        create(:subscription_fixed_charge_units_override,
+          subscription: active_subscription_1,
+          fixed_charge:,
+          organization:)
+      end
+
+      it "skips the overridden subscription when iterating plan subscriptions" do
+        expect { result }.to change(FixedChargeEvent, :count).by(1)
+
+        expect(result.fixed_charge_events.map(&:subscription_id)).to contain_exactly(active_subscription_2.id)
+        expect(FixedChargeEvent.where(subscription: active_subscription_1, fixed_charge:)).not_to exist
+      end
+    end
   end
 end
