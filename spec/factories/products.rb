@@ -17,5 +17,20 @@ FactoryBot.define do
     trait :standalone do
       product_category { nil }
     end
+
+    trait :with_filters do
+      transient do
+        filters_count { 1 }
+      end
+
+      after(:build) do |product, evaluator|
+        product.filters = build_list(
+          :product_filter,
+          evaluator.filters_count,
+          organization: product.organization,
+          product:
+        )
+      end
+    end
   end
 end

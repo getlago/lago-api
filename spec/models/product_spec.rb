@@ -25,6 +25,7 @@ RSpec.describe Product do
       expect(build(:product, :fixed, :standalone)).to belong_to(:billable_metric).optional
       expect(product).to belong_to(:add_on).optional
       expect(product).to belong_to(:charge).optional
+      expect(product).to have_many(:filters).class_name("ProductFilter")
     end
   end
 
