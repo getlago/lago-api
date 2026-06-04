@@ -21,6 +21,7 @@ class Fee < ApplicationRecord
   belongs_to :organization
   belongs_to :billing_entity
   belongs_to :fixed_charge, -> { with_discarded }, optional: true
+  belongs_to :rate_card_rate, optional: true
 
   has_one :adjusted_fee, dependent: :nullify
   has_one :billable_metric, -> { with_discarded }, through: :charge
@@ -45,7 +46,7 @@ class Fee < ApplicationRecord
   monetize :unit_amount_cents, disable_validation: true, allow_nil: true, with_model_currency: :currency
 
   # TODO: Deprecate add_on type in the near future
-  FEE_TYPES = %i[charge add_on subscription credit commitment fixed_charge].freeze
+  FEE_TYPES = %i[charge add_on subscription credit commitment fixed_charge product_item].freeze
   PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
 
   enum :fee_type, FEE_TYPES
@@ -414,6 +415,7 @@ end
 #  original_fee_id                     :uuid
 #  pay_in_advance_event_id             :uuid
 #  pay_in_advance_event_transaction_id :string
+#  rate_card_rate_id                   :uuid
 #  subscription_id                     :uuid
 #  true_up_parent_fee_id               :uuid
 #
@@ -436,6 +438,7 @@ end
 #  index_fees_on_organization_id_and_created_at_and_id  (organization_id,created_at,id) WHERE (deleted_at IS NULL)
 #  index_fees_on_original_fee_id                        (original_fee_id)
 #  index_fees_on_pay_in_advance_event_transaction_id    (pay_in_advance_event_transaction_id) WHERE (deleted_at IS NULL)
+#  index_fees_on_rate_card_rate_id                      (rate_card_rate_id)
 #  index_fees_on_subscription_id                        (subscription_id)
 #  index_fees_on_true_up_parent_fee_id                  (true_up_parent_fee_id)
 #
@@ -450,6 +453,7 @@ end
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (original_fee_id => fees.id)
+#  fk_rails_...  (rate_card_rate_id => rate_card_rates.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)
 #  fk_rails_...  (true_up_parent_fee_id => fees.id)
 #
