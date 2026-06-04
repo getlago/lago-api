@@ -19,6 +19,7 @@ class Subscription < ApplicationRecord
   has_many :invoices, through: :invoice_subscriptions
   has_many :integration_resources, as: :syncable
   has_many :fees
+  has_many :subscription_product_items
   has_many :daily_usages
   has_many :usage_thresholds
   has_many :entitlements, class_name: "Entitlement::Entitlement"
