@@ -239,10 +239,10 @@ RSpec.describe Invoices::VoidService do
           )
         end
         let(:charge) { create(:standard_charge, plan:) }
-        let!(:invoice_subscription) do
+        let(:invoice_subscription) do
           create(:invoice_subscription, invoice:, subscription:, organization:)
         end
-        let!(:fee) do
+        let(:fee) do
           create(
             :charge_fee,
             invoice:,
@@ -254,6 +254,11 @@ RSpec.describe Invoices::VoidService do
             taxes_amount_cents: 0,
             taxes_precise_amount_cents: 0
           )
+        end
+
+        before do
+          invoice_subscription
+          fee
         end
 
         it "creates the requested credit note from the net remaining amount" do
