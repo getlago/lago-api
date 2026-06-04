@@ -19,6 +19,7 @@ class ProductItem < ApplicationRecord
 
   has_many :filters, class_name: "ProductItemFilter"
   has_many :rate_cards
+  has_many :plan_product_items
 
   enum :item_type, ITEM_TYPES, validate: true
 
