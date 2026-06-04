@@ -48,7 +48,7 @@ class Subscription < ApplicationRecord
   delegate :amount_currency, to: :plan, prefix: true
 
   validates :external_id, :billing_time, presence: true
-  validate :validate_external_id, on: :create
+  validate :validate_external_id, on: [:create, :update], if: -> { status_changed? }
 
   STATUSES = [
     :pending,
