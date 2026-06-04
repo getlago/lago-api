@@ -2872,10 +2872,10 @@ RSpec.describe Fees::ChargeService, :premium do
             expect(usage_fee.units).to eq(0)
           end
 
-          it "does not load adjusted fees" do
+          it "loads adjusted fees only once for hydration" do
             charge_subscription_service.call
 
-            expect(AdjustedFee).not_to have_received(:where)
+            expect(AdjustedFee).to have_received(:where).once
           end
         end
       end
@@ -2960,11 +2960,7 @@ RSpec.describe Fees::ChargeService, :premium do
         end
       end
 
-      context "with non_persistable_charge_cache_optimization flag" do
-        before do
-          organization.update!(feature_flags: ["non_persistable_charge_cache_optimization"])
-        end
-
+      context "with non-persistable fees" do
         context "when all fees are zero" do
           it "returns a zero fee" do
             result = charge_subscription_service.call
@@ -3972,31 +3968,6 @@ RSpec.describe Fees::ChargeService, :premium do
             end
           end
 
-          context "when flag is disabled" do
-            before do
-              organization.update!(feature_flags: [])
-            end
-
-            it "caches the zero fee data" do
-              charge_subscription_service.call
-
-              cached_value = Rails.cache.read(cache_key)
-              parsed = JSON.parse(cached_value)
-              expect(parsed.length).to eq(1)
-              expect(parsed.first["events_count"]).to eq(0)
-              expect(parsed.first["units"].to_f).to eq(0.0)
-            end
-
-            it "returns zero fees from cache on subsequent calls" do
-              charge_subscription_service.call
-              second_result = charge_subscription_service.call
-
-              expect(second_result).to be_success
-              expect(second_result.fees.count).to eq(1)
-              expect(second_result.fees.first).to have_attributes(units: 0, events_count: 0)
-            end
-          end
-
           context "with charge filters" do
             let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa]) }
             let(:europe_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
@@ -4045,36 +4016,6 @@ RSpec.describe Fees::ChargeService, :premium do
                   expect(second_fee.events_count).to eq(first_fee.events_count)
                   expect(second_fee.amount_cents).to eq(first_fee.amount_cents)
                 end
-              end
-            end
-
-            context "when flag is disabled" do
-              before do
-                organization.update!(feature_flags: [])
-              end
-
-              it "caches zero fee data for all filters" do
-                charge_subscription_service.call
-
-                [europe_filter, usa_filter].each do |filter|
-                  filter_cache_key = Subscriptions::ChargeCacheService.new(
-                    subscription:, charge:, charge_filter: filter
-                  ).cache_key
-                  cached = JSON.parse(Rails.cache.read(filter_cache_key))
-                  expect(cached.length).to eq(1)
-                  expect(cached.first["events_count"]).to eq(0)
-                  expect(cached.first["units"].to_f).to eq(0.0)
-                end
-              end
-
-              it "returns all zero filter fees from cache on subsequent calls" do
-                charge_subscription_service.call
-                second_result = charge_subscription_service.call
-
-                expect(second_result).to be_success
-                expect(second_result.fees.count).to eq(3)
-                expect(second_result.fees).to all(have_attributes(units: 0, amount_cents: 0, events_count: 0))
-                expect(second_result.fees.map(&:charge_filter_id)).to match_array([europe_filter.id, usa_filter.id, nil])
               end
             end
           end
@@ -4413,7 +4354,7 @@ RSpec.describe Fees::ChargeService, :premium do
               presentation_by: ["department", "region"]
             )
           )
-        )
+        ).twice
       end
 
       context "when presentation_group_keys is empty" do
@@ -4428,7 +4369,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 charge_id: charge.id
               )
             )
-          )
+          ).twice
         end
       end
 
@@ -4444,7 +4385,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 presentation_by: []
               )
             )
-          )
+          ).twice
         end
 
         context "when presentation_group_keys is empty" do
@@ -4459,7 +4400,7 @@ RSpec.describe Fees::ChargeService, :premium do
                   charge_id: charge.id
                 )
               )
-            )
+            ).twice
           end
         end
       end
@@ -4476,7 +4417,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 presentation_by: ["region"]
               )
             )
-          )
+          ).twice
         end
 
         context "when presentation_group_keys is empty" do
@@ -4491,7 +4432,7 @@ RSpec.describe Fees::ChargeService, :premium do
                   charge_id: charge.id
                 )
               )
-            )
+            ).twice
           end
         end
       end
@@ -4508,7 +4449,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 presentation_by: []
               )
             )
-          )
+          ).twice
         end
       end
     end
