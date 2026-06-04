@@ -6026,6 +6026,7 @@ enum FeeTypesEnum {
   commitment
   credit
   fixed_charge
+  product_item
   subscription
 }
 
