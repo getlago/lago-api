@@ -85,7 +85,7 @@ module Types
       end
 
       def period_end_date
-        ::Subscriptions::DatesService.new_instance(object, Time.current)
+        ::Subscriptions::DatesService.new_instance(object, billing_reference_time)
           .next_end_of_period
       end
 
@@ -116,7 +116,18 @@ module Types
       end
 
       def dates_service
-        @dates_service ||= ::Subscriptions::DatesService.new_instance(object, Time.current, current_usage: true)
+        @dates_service ||= ::Subscriptions::DatesService.new_instance(object, billing_reference_time, current_usage: true)
+      end
+
+      # NOTE: For a subscription that has not started yet (e.g. a scheduled downgrade), `Time.current`
+      #       precedes `started_at`, so DatesService computes boundaries for the period containing "now"
+      #       — before the subscription exists — and collapses current_billing_period_* (and skews
+      #       period_end_date) onto `started_at`. Anchoring on the later of the two reports the real
+      #       first period. No-op for already-started subscriptions (started_at is in the past).
+      #       `compact` guards against a nil started_at (pending subscription with no start yet); it is
+      #       load-bearing — `max` raises on a nil element, so do not drop it.
+      def billing_reference_time
+        [Time.current, object.started_at].compact.max
       end
     end
   end
