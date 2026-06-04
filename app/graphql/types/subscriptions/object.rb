@@ -113,6 +113,7 @@ module Types
         object.plan.fixed_charges
           .includes(:add_on, :taxes)
           .order(created_at: :asc)
+          .map { |fc| ::Subscription::FixedChargePresenter.new(fc, object) }
       end
 
       def dates_service

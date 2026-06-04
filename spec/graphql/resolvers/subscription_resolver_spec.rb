@@ -217,6 +217,60 @@ RSpec.describe Resolvers::SubscriptionResolver do
     end
   end
 
+  context "with fixed_charges field" do
+    let(:query) do
+      <<~GQL
+        query($id: ID!) {
+          subscription(id: $id) {
+            id
+            fixedCharges { id units }
+          }
+        }
+      GQL
+    end
+
+    let(:plan) { create(:plan, organization:) }
+    let(:add_on) { create(:add_on, organization:) }
+    let(:subscription) { create(:subscription, customer:, plan:) }
+    let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, units: 10) }
+
+    context "without a per-subscription override" do
+      before { fixed_charge }
+
+      it "returns the plan-level units" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {id: subscription.id}
+        )
+
+        units = result["data"]["subscription"]["fixedCharges"].first["units"]
+        expect(units).to eq("10")
+      end
+    end
+
+    context "with a per-subscription override" do
+      before do
+        create(:subscription_fixed_charge_units_override, subscription:, fixed_charge:, organization:, units: 42)
+      end
+
+      it "returns the overridden units" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {id: subscription.id}
+        )
+
+        units = result["data"]["subscription"]["fixedCharges"].first["units"]
+        expect(units).to eq("42")
+      end
+    end
+  end
+
   context "with billing_entity_id field" do
     let(:query) do
       <<~GQL

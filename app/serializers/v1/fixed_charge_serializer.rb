@@ -14,7 +14,7 @@ module V1
         pay_in_advance: model.pay_in_advance,
         prorated: model.prorated,
         properties: model.properties,
-        units: model.units,
+        units: model.effective_units_for(options[:subscription]),
         lago_parent_id: model.parent_id
       }
 
