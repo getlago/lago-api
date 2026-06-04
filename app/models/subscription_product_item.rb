@@ -10,6 +10,8 @@ class SubscriptionProductItem < ApplicationRecord
   belongs_to :subscription
   belongs_to :product_item
 
+  has_many :rate_phases
+
   validates :billing_anchor_date, presence: true
   validates :next_billing_at, presence: true
   validates :started_at, presence: true

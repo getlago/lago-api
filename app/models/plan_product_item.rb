@@ -11,6 +11,7 @@ class PlanProductItem < ApplicationRecord
   belongs_to :rate_card
 
   has_one :product_item, through: :rate_card
+  has_many :rate_phases
 
   validates :rate_card_id, uniqueness: {scope: :plan_id, conditions: -> { where(deleted_at: nil) }}
 
