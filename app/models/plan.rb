@@ -28,6 +28,8 @@ class Plan < ApplicationRecord
   has_many :coupons, through: :coupon_targets
   has_many :invoices, through: :subscriptions
   has_many :usage_thresholds
+  has_many :plan_products
+  has_many :products, through: :plan_products
 
   has_many :applied_taxes, class_name: "Plan::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes

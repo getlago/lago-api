@@ -9,6 +9,8 @@ class Product < ApplicationRecord
   belongs_to :organization
 
   has_many :product_items
+  has_many :plan_products
+  has_many :plans, through: :plan_products
 
   validates :name, presence: true
   validates :code,
