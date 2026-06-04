@@ -200,8 +200,8 @@ describe "Invoice Preview Scenarios", :premium do
           fee[:item][:type] == "subscription" && fee[:item][:code] == downgrade_plan.code
         end
         expect(pending_fee).to be_present
-        expect(pending_plan[:current_billing_period_started_at]).to eq(pending_fee[:from_date])
-        expect(pending_plan[:current_billing_period_ending_at]).to eq(pending_fee[:to_date])
+        expect(Time.zone.parse(pending_plan[:current_billing_period_started_at])).to eq(Time.zone.parse(pending_fee[:from_date]))
+        expect(Time.zone.parse(pending_plan[:current_billing_period_ending_at])).to eq(Time.zone.parse(pending_fee[:to_date]))
       end
     end
   end
