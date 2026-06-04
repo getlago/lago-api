@@ -216,6 +216,58 @@ RSpec.describe Invoices::VoidService do
           expect(result.error.code).to eq("not_voidable")
         end
       end
+
+      context "when the invoice has progressive billing credits", :premium do
+        let(:params) { {generate_credit_note: true, credit_amount: 200} }
+        let(:organization) { create(:organization) }
+        let(:customer) { create(:customer, organization:) }
+        let(:plan) { create(:plan, organization:) }
+        let(:subscription) { create(:subscription, customer:, organization:, plan:) }
+        let(:invoice) do
+          create(
+            :invoice,
+            customer:,
+            organization:,
+            invoice_type: :subscription,
+            status: :finalized,
+            payment_status: :pending,
+            fees_amount_cents: 400,
+            progressive_billing_credit_amount_cents: 200,
+            sub_total_excluding_taxes_amount_cents: 200,
+            sub_total_including_taxes_amount_cents: 200,
+            total_amount_cents: 200
+          )
+        end
+        let(:charge) { create(:standard_charge, plan:) }
+        let!(:invoice_subscription) do
+          create(:invoice_subscription, invoice:, subscription:, organization:)
+        end
+        let!(:fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            subscription:,
+            charge:,
+            amount_cents: 400,
+            precise_amount_cents: 400,
+            precise_coupons_amount_cents: 0,
+            taxes_amount_cents: 0,
+            taxes_precise_amount_cents: 0
+          )
+        end
+
+        it "creates the requested credit note from the net remaining amount" do
+          result = void_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_voided
+
+          credit_note = invoice.credit_notes.find_by!(credit_status: :available)
+          expect(credit_note.total_amount_cents).to eq(200)
+          expect(credit_note.credit_amount_cents).to eq(200)
+          expect(credit_note.items.sole.amount_cents).to eq(200)
+        end
+      end
     end
 
     describe "guard against concurrent calls" do

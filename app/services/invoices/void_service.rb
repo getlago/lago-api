@@ -102,7 +102,7 @@ module Invoices
 
       remaining_amount = invoice.reload.creditable_amount_cents.round
       if remaining_amount.positive?
-        estimate_result = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: remaining_amount)
+        estimate_result = estimate_credit_note_for_remaining_credit(invoice:)
         estimate_result = CreditNotes::EstimateService.call!(invoice: invoice, items: estimate_result)
 
         credit_note_to_void = CreditNotes::CreateService.call!(
@@ -119,16 +119,43 @@ module Invoices
       result
     end
 
-    def estimate_credit_note_for_target_credit(invoice:, target_credit_cents:)
-      base_total = invoice.sub_total_including_taxes_amount_cents.to_f
-      ratio = target_credit_cents.to_f / base_total
+    def estimate_credit_note_for_remaining_credit(invoice:)
+      invoice.fees.filter_map do |fee|
+        next unless fee.creditable_amount_cents.positive?
 
-      invoice.fees.map do |fee|
         {
           fee_id: fee.id,
-          amount_cents: (fee.amount_cents * ratio)
+          amount_cents: fee.creditable_amount_cents
         }
       end
+    end
+
+    def estimate_credit_note_for_target_credit(invoice:, target_credit_cents:)
+      base_items = estimate_credit_note_for_remaining_credit(invoice:)
+      base_total = credit_note_total_for_items(invoice:, items: base_items).to_f
+      return [] if base_total.zero?
+
+      ratio = target_credit_cents.to_f / base_total
+
+      base_items.map do |item|
+        {
+          fee_id: item[:fee_id],
+          amount_cents: (item[:amount_cents] * ratio)
+        }
+      end
+    end
+
+    def credit_note_total_for_items(invoice:, items:)
+      taxes_result = CreditNotes::ApplyTaxesService.call(
+        invoice:,
+        items: items.map do |item|
+          CreditNoteItem.new(fee_id: item[:fee_id], precise_amount_cents: item[:amount_cents])
+        end
+      )
+
+      items.sum { |item| item[:amount_cents] } -
+        taxes_result.coupons_adjustment_amount_cents +
+        taxes_result.precise_taxes_amount_cents
     end
   end
 end
