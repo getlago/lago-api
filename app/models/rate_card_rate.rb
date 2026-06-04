@@ -33,6 +33,8 @@ class RateCardRate < ApplicationRecord
   belongs_to :organization
   belongs_to :rate_card
 
+  has_many :fees
+
   # allow_nil + explicit presence: a missing value reads as value_is_mandatory,
   # an unknown value as value_is_invalid.
   enum :rate_model, RATE_MODELS, validate: {allow_nil: true}
