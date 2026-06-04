@@ -107,6 +107,38 @@ RSpec.describe ::V1::SubscriptionSerializer do
     end
   end
 
+  context "when the subscription starts in the future (e.g. a scheduled downgrade in an invoice preview)" do
+    let(:plan) { create(:plan, interval: "monthly", pay_in_advance: true) }
+    let(:future_start) { Time.zone.parse("2026-07-03T00:00:00Z") }
+    let(:subscription) do
+      create(
+        :subscription,
+        :anniversary,
+        plan:,
+        status: :active,
+        subscription_at: future_start,
+        started_at: future_start,
+        activated_at: future_start,
+        created_at: future_start
+      )
+    end
+
+    # Before the fix, the serializer anchored the dates service on `Time.current`, which is before
+    # `started_at` here, so both billing-period bounds collapsed onto `started_at`. They must instead
+    # describe the real first billing period (2026-07-03 → 2026-08-02), matching the invoice fees.
+    it "serializes the real first billing period instead of collapsing both bounds onto started_at" do
+      travel_to(Time.zone.parse("2026-06-04T10:00:00Z")) do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["subscription"]).to include(
+          "started_at" => "2026-07-03T00:00:00.000Z",
+          "current_billing_period_started_at" => "2026-07-03T00:00:00Z",
+          "current_billing_period_ending_at" => "2026-08-02T23:59:59Z"
+        )
+      end
+    end
+  end
+
   context "when including usage threshold" do
     subject(:serializer) do
       described_class.new(
