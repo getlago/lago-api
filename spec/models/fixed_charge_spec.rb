@@ -369,4 +369,41 @@ RSpec.describe FixedCharge do
       end
     end
   end
+
+  describe "#effective_units_for" do
+    subject(:effective_units_for) { fixed_charge.effective_units_for(subscription) }
+
+    let(:fixed_charge) { create(:fixed_charge, units: 7) }
+    let(:subscription) { create(:subscription, plan: fixed_charge.plan) }
+
+    context "when no override exists" do
+      it { is_expected.to eq(7) }
+    end
+
+    context "when an override exists for the (subscription, fixed_charge) pair" do
+      before { create(:subscription_fixed_charge_units_override, subscription:, fixed_charge:, units: 42) }
+
+      it { is_expected.to eq(42) }
+    end
+
+    context "when the override has been discarded" do
+      before do
+        override = create(:subscription_fixed_charge_units_override, subscription:, fixed_charge:, units: 42)
+        override.discard!
+      end
+
+      it "falls back to the fixed charge units" do
+        expect(effective_units_for).to eq(7)
+      end
+    end
+
+    context "when an override exists for a different subscription" do
+      before do
+        other_subscription = create(:subscription, plan: fixed_charge.plan)
+        create(:subscription_fixed_charge_units_override, subscription: other_subscription, fixed_charge:, units: 42)
+      end
+
+      it { is_expected.to eq(7) }
+    end
+  end
 end
