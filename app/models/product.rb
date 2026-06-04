@@ -8,6 +8,8 @@ class Product < ApplicationRecord
 
   belongs_to :organization
 
+  has_many :product_items
+
   validates :name, presence: true
   validates :code,
     presence: true,
