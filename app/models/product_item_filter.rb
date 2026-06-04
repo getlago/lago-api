@@ -9,6 +9,9 @@ class ProductItemFilter < ApplicationRecord
   belongs_to :organization
   belongs_to :product_item
 
+  has_many :values, class_name: "ProductItemFilterValue"
+  has_many :billable_metric_filters, through: :values
+
   validates :name, presence: true
   validates :code,
     presence: true,
@@ -22,6 +25,12 @@ class ProductItemFilter < ApplicationRecord
 
   def invoice_name
     invoice_display_name.presence || name
+  end
+
+  def to_h
+    @to_h ||= values.each_with_object({}) do |filter_value, result|
+      (result[filter_value.billable_metric_filter.key] ||= []) << filter_value.value
+    end.freeze
   end
 end
 
