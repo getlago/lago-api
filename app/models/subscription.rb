@@ -350,6 +350,7 @@ end
 #
 # Indexes
 #
+#  idx_on_organization_id_subscription_at_created_at_id        (organization_id,subscription_at DESC NULLS LAST,created_at DESC,id)
 #  index_subscriptions_on_billing_entity_id                    (billing_entity_id)
 #  index_subscriptions_on_customer_id                          (customer_id)
 #  index_subscriptions_on_ending_at_active                     (ending_at) WHERE ((status = 1) AND (ending_at IS NOT NULL))

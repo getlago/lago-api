@@ -815,6 +815,7 @@ DROP INDEX IF EXISTS public.idx_on_subscription_id_295edd8bb3;
 DROP INDEX IF EXISTS public.idx_on_recurring_transaction_rule_id_fba3d39cca;
 DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
 DROP INDEX IF EXISTS public.idx_on_outbound_wallet_transaction_id_cf6ff733c6;
+DROP INDEX IF EXISTS public.idx_on_organization_id_subscription_at_created_at_id;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
 DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
 DROP INDEX IF EXISTS public.idx_on_organization_id_e742f77454;
@@ -6668,6 +6669,13 @@ CREATE INDEX idx_on_organization_id_external_subscription_id_df3a30d96d ON publi
 --
 
 CREATE INDEX idx_on_organization_id_organization_sequential_id_2387146f54 ON public.invoices USING btree (organization_id, organization_sequential_id DESC) INCLUDE (self_billed);
+
+
+--
+-- Name: idx_on_organization_id_subscription_at_created_at_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_organization_id_subscription_at_created_at_id ON public.subscriptions USING btree (organization_id, subscription_at DESC NULLS LAST, created_at DESC, id);
 
 
 --
@@ -12530,6 +12538,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260603121349'),
 ('20260602092156'),
 ('20260601174030'),
 ('20260601120429'),
