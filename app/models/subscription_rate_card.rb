@@ -12,6 +12,8 @@ class SubscriptionRateCard < ApplicationRecord
 
   has_one :product_item, through: :rate_card
 
+  has_many :rate_phases
+
   validates :billing_anchor_date, presence: true
   validates :next_billing_at, presence: true
   validates :started_at, presence: true
