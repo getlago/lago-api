@@ -32,6 +32,7 @@ RSpec.describe RateCard do
       expect(rate_card).to belong_to(:organization)
       expect(rate_card).to belong_to(:product_item)
       expect(rate_card).to belong_to(:product_item_filter).optional
+      expect(rate_card).to have_many(:rates).class_name("RateCardRate")
     end
   end
 

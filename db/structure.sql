@@ -37,6 +37,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_eaca94
 ALTER TABLE IF EXISTS ONLY public.product_items DROP CONSTRAINT IF EXISTS fk_rails_eab202bbcf;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ea80151038;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_e95f72749e;
+ALTER TABLE IF EXISTS ONLY public.rate_card_rates DROP CONSTRAINT IF EXISTS fk_rails_e910b02a08;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_e8bac9c5bb;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_e88403f4b9;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
@@ -60,6 +61,7 @@ ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXIST
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_d9342a8ca7;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_d72a9877be;
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS fk_rails_d648e28d9f;
+ALTER TABLE IF EXISTS ONLY public.rate_card_rates DROP CONSTRAINT IF EXISTS fk_rails_d53feb5721;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_d53f825a88;
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS fk_rails_d4f02c82b2;
 ALTER TABLE IF EXISTS ONLY public.wallet_transaction_consumptions DROP CONSTRAINT IF EXISTS fk_rails_d4abfdb375;
@@ -456,6 +458,10 @@ DROP INDEX IF EXISTS public.index_rate_cards_on_product_item_filter_id;
 DROP INDEX IF EXISTS public.index_rate_cards_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_rate_cards_on_deleted_at;
+DROP INDEX IF EXISTS public.index_rate_card_rates_on_rate_card_id_and_effective_datetime;
+DROP INDEX IF EXISTS public.index_rate_card_rates_on_rate_card_id;
+DROP INDEX IF EXISTS public.index_rate_card_rates_on_organization_id;
+DROP INDEX IF EXISTS public.index_rate_card_rates_on_deleted_at;
 DROP INDEX IF EXISTS public.index_quotes_on_subscription_id;
 DROP INDEX IF EXISTS public.index_quotes_on_customer_id;
 DROP INDEX IF EXISTS public.index_quote_versions_on_quote_id;
@@ -951,6 +957,7 @@ ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS refunds_pkey
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS recurring_transaction_rules_pkey;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS recurring_transaction_rules_invoice_custom_sections_pkey;
 ALTER TABLE IF EXISTS ONLY public.rate_cards DROP CONSTRAINT IF EXISTS rate_cards_pkey;
+ALTER TABLE IF EXISTS ONLY public.rate_card_rates DROP CONSTRAINT IF EXISTS rate_card_rates_pkey;
 ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS quotes_pkey;
 ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS quote_versions_pkey;
 ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS quote_owners_pkey;
@@ -1078,6 +1085,7 @@ DROP TABLE IF EXISTS public.refunds;
 DROP TABLE IF EXISTS public.recurring_transaction_rules_invoice_custom_sections;
 DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.rate_cards;
+DROP TABLE IF EXISTS public.rate_card_rates;
 DROP TABLE IF EXISTS public.quotes;
 DROP TABLE IF EXISTS public.quote_versions;
 DROP SEQUENCE IF EXISTS public.quote_owners_id_seq;
@@ -1241,6 +1249,8 @@ DROP TYPE IF EXISTS public.subscription_cancelation_reasons;
 DROP TYPE IF EXISTS public.subscription_activation_rule_types;
 DROP TYPE IF EXISTS public.subscription_activation_rule_statuses;
 DROP TYPE IF EXISTS public.rate_card_regroup_paid_fees;
+DROP TYPE IF EXISTS public.rate_card_rate_model;
+DROP TYPE IF EXISTS public.rate_card_rate_billing_interval_unit;
 DROP TYPE IF EXISTS public.rate_card_proration;
 DROP TYPE IF EXISTS public.rate_card_billing_timing;
 DROP TYPE IF EXISTS public.quote_void_reason;
@@ -1586,6 +1596,34 @@ CREATE TYPE public.rate_card_billing_timing AS ENUM (
 CREATE TYPE public.rate_card_proration AS ENUM (
     'full',
     'none'
+);
+
+
+--
+-- Name: rate_card_rate_billing_interval_unit; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.rate_card_rate_billing_interval_unit AS ENUM (
+    'day',
+    'week',
+    'month',
+    'year'
+);
+
+
+--
+-- Name: rate_card_rate_model; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.rate_card_rate_model AS ENUM (
+    'standard',
+    'graduated',
+    'package',
+    'percentage',
+    'volume',
+    'graduated_percentage',
+    'custom',
+    'dynamic'
 );
 
 
@@ -5194,6 +5232,28 @@ CREATE TABLE public.quotes (
 
 
 --
+-- Name: rate_card_rates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_card_rates (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    rate_card_id uuid NOT NULL,
+    effective_datetime timestamp(6) without time zone NOT NULL,
+    rate_model public.rate_card_rate_model NOT NULL,
+    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    min_amount_cents bigint DEFAULT 0 NOT NULL,
+    billing_interval_count integer DEFAULT 1 NOT NULL,
+    billing_interval_unit public.rate_card_rate_billing_interval_unit NOT NULL,
+    applied_pricing_unit_conversion_rate numeric(30,10),
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT rate_card_rates_billing_interval_count_positive CHECK ((billing_interval_count >= 1))
+);
+
+
+--
 -- Name: rate_cards; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6425,6 +6485,14 @@ ALTER TABLE ONLY public.quote_versions
 
 ALTER TABLE ONLY public.quotes
     ADD CONSTRAINT quotes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: rate_card_rates rate_card_rates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rate_card_rates
+    ADD CONSTRAINT rate_card_rates_pkey PRIMARY KEY (id);
 
 
 --
@@ -9952,6 +10020,34 @@ CREATE INDEX index_quotes_on_subscription_id ON public.quotes USING btree (subsc
 
 
 --
+-- Name: index_rate_card_rates_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_rate_card_rates_on_deleted_at ON public.rate_card_rates USING btree (deleted_at);
+
+
+--
+-- Name: index_rate_card_rates_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_rate_card_rates_on_organization_id ON public.rate_card_rates USING btree (organization_id);
+
+
+--
+-- Name: index_rate_card_rates_on_rate_card_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_rate_card_rates_on_rate_card_id ON public.rate_card_rates USING btree (rate_card_id);
+
+
+--
+-- Name: index_rate_card_rates_on_rate_card_id_and_effective_datetime; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_rate_card_rates_on_rate_card_id_and_effective_datetime ON public.rate_card_rates USING btree (rate_card_id, effective_datetime) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_rate_cards_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12887,6 +12983,14 @@ ALTER TABLE ONLY public.entitlement_entitlements
 
 
 --
+-- Name: rate_card_rates fk_rails_d53feb5721; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rate_card_rates
+    ADD CONSTRAINT fk_rails_d53feb5721 FOREIGN KEY (rate_card_id) REFERENCES public.rate_cards(id);
+
+
+--
 -- Name: entitlement_privileges fk_rails_d648e28d9f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13068,6 +13172,14 @@ ALTER TABLE ONLY public.plans_taxes
 
 ALTER TABLE ONLY public.recurring_transaction_rules
     ADD CONSTRAINT fk_rails_e8bac9c5bb FOREIGN KEY (wallet_id) REFERENCES public.wallets(id);
+
+
+--
+-- Name: rate_card_rates fk_rails_e910b02a08; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rate_card_rates
+    ADD CONSTRAINT fk_rails_e910b02a08 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -13321,6 +13433,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260608111837'),
 ('20260608074112'),
 ('20260605170919'),
+('20260604181339'),
 ('20260604181043'),
 ('20260604180513'),
 ('20260604175731'),
