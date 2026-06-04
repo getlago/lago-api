@@ -61,8 +61,6 @@ RSpec.describe Types::Subscriptions::Object do
     expect(subject).to have_field(:cancelation_reason).of_type("CancelationReasonEnum")
   end
 
-  # For a subscription that has not started yet (e.g. a scheduled downgrade), the billing period
-  # resolvers must report its real first period rather than collapsing both bounds onto started_at.
   context "when the subscription starts in the future" do
     let(:plan) { create(:plan, interval: "monthly", pay_in_advance: true) }
     let(:future_start) { Time.zone.parse("2026-07-03T00:00:00Z") }

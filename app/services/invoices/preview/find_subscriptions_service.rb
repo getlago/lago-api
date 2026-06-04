@@ -65,11 +65,8 @@ module Invoices
           .end_of_period + 1.day
       end
 
-      # NOTE: `rotation_date` is the old subscription's end-of-period timestamp shifted by a day,
-      #       so it lands on the end of the day (`T23:59:59`). The downgraded subscription actually
-      #       starts at the *beginning* of that day, so we normalize to the start of the day in the
-      #       customer timezone. Without this, `started_at` (and the serialized current billing period)
-      #       would be reported one day's worth of seconds late.
+      # rotation_date lands at the end of the day, but the new subscription starts at the beginning
+      # of that day in the customer timezone.
       def next_subscription_started_at(subscription)
         rotation_date(subscription)
           .in_time_zone(subscription.customer.applicable_timezone)

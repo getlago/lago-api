@@ -116,8 +116,6 @@ module Types
       end
 
       def dates_service
-        # NOTE: anchored on `billing_reference_time` (not `Time.current`) so a not-yet-started
-        #       subscription reports its real first billing period instead of collapsing the bounds.
         @dates_service ||= ::Subscriptions::DatesService.new_instance(object, object.billing_reference_time, current_usage: true)
       end
     end

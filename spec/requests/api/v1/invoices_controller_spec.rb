@@ -1428,8 +1428,6 @@ RSpec.describe Api::V1::InvoicesController do
     end
 
     context "with a scheduled downgrade (projection)" do
-      # POST /invoices/preview must serialize the pending (downgrade) subscription's real first
-      # billing period, not collapse both bounds onto its started_at.
       let(:customer) { create(:customer, organization:, external_id: "downgrade_customer") }
       let(:current_plan) do
         create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 1000)
@@ -1482,7 +1480,6 @@ RSpec.describe Api::V1::InvoicesController do
           expect(pending_plan[:started_at]).to eq("2026-07-03T00:00:00.000Z")
           expect(pending_plan[:current_billing_period_started_at]).to eq("2026-07-03T00:00:00Z")
           expect(pending_plan[:current_billing_period_ending_at]).to eq("2026-08-02T23:59:59Z")
-          # Regression guard: the two bounds must not collapse onto the same value.
           expect(pending_plan[:current_billing_period_started_at])
             .not_to eq(pending_plan[:current_billing_period_ending_at])
         end

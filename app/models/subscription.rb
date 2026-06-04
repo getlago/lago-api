@@ -182,10 +182,8 @@ class Subscription < ApplicationRecord
     started_at.to_date < created_at.to_date
   end
 
-  # Anchor for the current billing period. When a subscription has not started yet (e.g. a scheduled
-  # downgrade in an invoice preview), Time.current precedes started_at and DatesService would collapse
-  # the period onto started_at; using the later of the two yields its real first period instead.
-  # compact handles a nil started_at (pending subscription).
+  # Falls back to started_at when the subscription has not started yet, so the billing period is
+  # computed from its first period rather than the period around Time.current.
   def billing_reference_time
     [Time.current, started_at].compact.max
   end

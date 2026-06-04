@@ -123,9 +123,6 @@ RSpec.describe ::V1::SubscriptionSerializer do
       )
     end
 
-    # Before the fix, the serializer anchored the dates service on `Time.current`, which is before
-    # `started_at` here, so both billing-period bounds collapsed onto `started_at`. They must instead
-    # describe the real first billing period (2026-07-03 → 2026-08-02), matching the invoice fees.
     it "serializes the real first billing period instead of collapsing both bounds onto started_at" do
       travel_to(Time.zone.parse("2026-06-04T10:00:00Z")) do
         result = JSON.parse(serializer.to_json)

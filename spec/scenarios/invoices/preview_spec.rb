@@ -140,9 +140,6 @@ describe "Invoice Preview Scenarios", :premium do
     end
   end
 
-  # Previewing an invoice while a downgrade is scheduled must serialize the pending plan's real first
-  # billing period, matching the fee boundaries on the same invoice — not collapse both bounds onto
-  # the old subscription's termination timestamp.
   context "when a downgrade is scheduled" do
     let(:customer) { create(:customer, organization:) }
     let(:current_plan) do
@@ -153,7 +150,6 @@ describe "Invoice Preview Scenarios", :premium do
     end
 
     it "serializes the pending plan's first period, matching its fee boundaries", transaction: false do
-      # Anniversary subscription started on the 3rd.
       travel_to(DateTime.parse("2026-03-03T08:00:00Z")) do
         create_subscription(
           {
@@ -166,8 +162,7 @@ describe "Invoice Preview Scenarios", :premium do
         )
       end
 
-      # Mid-period (current period: Jun 3 -> Jul 2): schedule the downgrade, then preview before the
-      # rotation date. The new plan's first period is Jul 3 -> Aug 2.
+      # Current period runs Jun 3 to Jul 2, so the downgrade starts a new period on Jul 3.
       travel_to(DateTime.parse("2026-06-04T10:00:00Z")) do
         create_subscription(
           {
@@ -198,14 +193,11 @@ describe "Invoice Preview Scenarios", :premium do
         expect(pending_plan[:started_at]).to eq("2026-07-03T00:00:00.000Z")
         expect(pending_plan[:current_billing_period_started_at]).to eq("2026-07-03T00:00:00Z")
         expect(pending_plan[:current_billing_period_ending_at]).to eq("2026-08-02T23:59:59Z")
-        # Regression guard: the two bounds must not collapse onto the same value.
         expect(pending_plan[:current_billing_period_started_at])
           .not_to eq(pending_plan[:current_billing_period_ending_at])
 
-        # The ticket's invariant: the serialized period must match the fee boundaries for the same
-        # plan on the same invoice.
         pending_fee = json[:invoice][:fees].find do |fee|
-          fee[:item][:type] == "Subscription" && fee[:item][:code] == downgrade_plan.code
+          fee[:item][:type] == "subscription" && fee[:item][:code] == downgrade_plan.code
         end
         expect(pending_fee).to be_present
         expect(pending_plan[:current_billing_period_started_at]).to eq(pending_fee[:from_date])
