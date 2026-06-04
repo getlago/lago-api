@@ -163,6 +163,7 @@ ALTER TABLE IF EXISTS ONLY public.subscriptions_invoice_custom_sections DROP CON
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_7c0e340dbd;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_7b324610ad;
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS fk_rails_7aab96f30e;
+ALTER TABLE IF EXISTS ONLY public.plan_product_items DROP CONSTRAINT IF EXISTS fk_rails_7a3b19c417;
 ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS fk_rails_7a0704ce72;
 ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS fk_rails_7995206484;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_78f6642ddf;
@@ -200,6 +201,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62d18ea517;
 ALTER TABLE IF EXISTS ONLY public.order_forms DROP CONSTRAINT IF EXISTS fk_rails_6298debfc7;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_626209b8d2;
+ALTER TABLE IF EXISTS ONLY public.plan_product_items DROP CONSTRAINT IF EXISTS fk_rails_6108ed8c27;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3f2dd;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_5efea6fe31;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_5e06da3c18;
@@ -238,6 +240,7 @@ ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rail
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_3ff27d7624;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_3f7be5debc;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_3ec3563cf3;
+ALTER TABLE IF EXISTS ONLY public.plan_product_items DROP CONSTRAINT IF EXISTS fk_rails_3e740f366f;
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS fk_rails_3e4df02771;
 ALTER TABLE IF EXISTS ONLY public.orders DROP CONSTRAINT IF EXISTS fk_rails_3dad120da9;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_3d568ff9de;
@@ -282,6 +285,7 @@ ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_252
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_25232a0ec3;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_2496c105ed;
 ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS fk_rails_23975f5a47;
+ALTER TABLE IF EXISTS ONLY public.plan_product_items DROP CONSTRAINT IF EXISTS fk_rails_2372808742;
 ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS fk_rails_22bb2c0770;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_22af6c6d28;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_2259c88f26;
@@ -517,6 +521,12 @@ DROP INDEX IF EXISTS public.index_plan_products_on_plan_id_and_product_id;
 DROP INDEX IF EXISTS public.index_plan_products_on_plan_id;
 DROP INDEX IF EXISTS public.index_plan_products_on_organization_id;
 DROP INDEX IF EXISTS public.index_plan_products_on_deleted_at;
+DROP INDEX IF EXISTS public.index_plan_product_items_on_rate_card_id;
+DROP INDEX IF EXISTS public.index_plan_product_items_on_product_item_id;
+DROP INDEX IF EXISTS public.index_plan_product_items_on_plan_item_and_rate_card;
+DROP INDEX IF EXISTS public.index_plan_product_items_on_plan_id;
+DROP INDEX IF EXISTS public.index_plan_product_items_on_organization_id;
+DROP INDEX IF EXISTS public.index_plan_product_items_on_deleted_at;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_organization_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_customer_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_billing_entity_id;
@@ -981,6 +991,7 @@ ALTER TABLE IF EXISTS ONLY public.presentation_breakdowns DROP CONSTRAINT IF EXI
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS plans_pkey;
 ALTER TABLE IF EXISTS ONLY public.plan_products DROP CONSTRAINT IF EXISTS plan_products_pkey;
+ALTER TABLE IF EXISTS ONLY public.plan_product_items DROP CONSTRAINT IF EXISTS plan_product_items_pkey;
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS pending_vies_checks_pkey;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS payments_pkey;
 ALTER TABLE IF EXISTS public.payments DROP CONSTRAINT IF EXISTS payments_customer_id_null;
@@ -1109,6 +1120,7 @@ DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
 DROP TABLE IF EXISTS public.presentation_breakdowns;
 DROP TABLE IF EXISTS public.plan_products;
+DROP TABLE IF EXISTS public.plan_product_items;
 DROP TABLE IF EXISTS public.pending_vies_checks;
 DROP TABLE IF EXISTS public.payment_receipts;
 DROP TABLE IF EXISTS public.payment_providers;
@@ -5017,6 +5029,23 @@ CREATE TABLE public.pending_vies_checks (
 
 
 --
+-- Name: plan_product_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.plan_product_items (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    product_item_id uuid NOT NULL,
+    rate_card_id uuid NOT NULL,
+    units numeric(30,10),
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: plan_products; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6405,6 +6434,14 @@ ALTER TABLE ONLY public.payments
 
 ALTER TABLE ONLY public.pending_vies_checks
     ADD CONSTRAINT pending_vies_checks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: plan_product_items plan_product_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plan_product_items
+    ADD CONSTRAINT plan_product_items_pkey PRIMARY KEY (id);
 
 
 --
@@ -9730,6 +9767,48 @@ CREATE INDEX index_pending_vies_checks_on_organization_id ON public.pending_vies
 
 
 --
+-- Name: index_plan_product_items_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plan_product_items_on_deleted_at ON public.plan_product_items USING btree (deleted_at);
+
+
+--
+-- Name: index_plan_product_items_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plan_product_items_on_organization_id ON public.plan_product_items USING btree (organization_id);
+
+
+--
+-- Name: index_plan_product_items_on_plan_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plan_product_items_on_plan_id ON public.plan_product_items USING btree (plan_id);
+
+
+--
+-- Name: index_plan_product_items_on_plan_item_and_rate_card; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_plan_product_items_on_plan_item_and_rate_card ON public.plan_product_items USING btree (plan_id, product_item_id, rate_card_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_plan_product_items_on_product_item_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plan_product_items_on_product_item_id ON public.plan_product_items USING btree (product_item_id);
+
+
+--
+-- Name: index_plan_product_items_on_rate_card_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plan_product_items_on_rate_card_id ON public.plan_product_items USING btree (rate_card_id);
+
+
+--
 -- Name: index_plan_products_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11332,6 +11411,14 @@ ALTER TABLE ONLY public.applied_pricing_units
 
 
 --
+-- Name: plan_product_items fk_rails_2372808742; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plan_product_items
+    ADD CONSTRAINT fk_rails_2372808742 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: taxes fk_rails_23975f5a47; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11684,6 +11771,14 @@ ALTER TABLE ONLY public.entitlement_privileges
 
 
 --
+-- Name: plan_product_items fk_rails_3e740f366f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plan_product_items
+    ADD CONSTRAINT fk_rails_3e740f366f FOREIGN KEY (product_item_id) REFERENCES public.product_items(id);
+
+
+--
 -- Name: invoices_payment_requests fk_rails_3ec3563cf3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11980,6 +12075,14 @@ ALTER TABLE ONLY public.fees
 
 
 --
+-- Name: plan_product_items fk_rails_6108ed8c27; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plan_product_items
+    ADD CONSTRAINT fk_rails_6108ed8c27 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
+
+
+--
 -- Name: credit_notes_taxes fk_rails_626209b8d2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12273,6 +12376,14 @@ ALTER TABLE ONLY public.applied_add_ons
 
 ALTER TABLE ONLY public.billable_metric_filters
     ADD CONSTRAINT fk_rails_7a0704ce72 FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
+
+
+--
+-- Name: plan_product_items fk_rails_7a3b19c417; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plan_product_items
+    ADD CONSTRAINT fk_rails_7a3b19c417 FOREIGN KEY (rate_card_id) REFERENCES public.rate_cards(id);
 
 
 --
@@ -13528,6 +13639,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260608111837'),
 ('20260608074112'),
 ('20260605170919'),
+('20260604181654'),
 ('20260604181531'),
 ('20260604181339'),
 ('20260604181043'),

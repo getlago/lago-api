@@ -26,6 +26,7 @@ class RateCard < ApplicationRecord
   belongs_to :product_item_filter, optional: true
 
   has_many :rates, class_name: "RateCardRate"
+  has_many :plan_product_items
 
   enum :billing_timing, BILLING_TIMINGS, validate: true
   enum :proration, PRORATIONS, validate: true, prefix: true
