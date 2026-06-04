@@ -140,9 +140,9 @@ describe "Invoice Preview Scenarios", :premium do
     end
   end
 
-  # BIL-97: previewing an invoice while a downgrade is scheduled must serialize the pending plan's
-  # real first billing period, matching the fee boundaries on the same invoice — not collapse both
-  # bounds onto the old subscription's termination timestamp.
+  # Previewing an invoice while a downgrade is scheduled must serialize the pending plan's real first
+  # billing period, matching the fee boundaries on the same invoice — not collapse both bounds onto
+  # the old subscription's termination timestamp.
   context "when a downgrade is scheduled" do
     let(:customer) { create(:customer, organization:) }
     let(:current_plan) do
