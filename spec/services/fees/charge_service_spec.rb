@@ -2872,7 +2872,7 @@ RSpec.describe Fees::ChargeService, :premium do
             expect(usage_fee.units).to eq(0)
           end
 
-          it "loads adjusted fees only once for hydration" do
+          it "loads adjusted fees only once for the persistable-fee check" do
             charge_subscription_service.call
 
             expect(AdjustedFee).to have_received(:where).once
