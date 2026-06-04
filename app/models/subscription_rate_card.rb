@@ -12,6 +12,9 @@ class SubscriptionRateCard < ApplicationRecord
 
   has_one :product, through: :rate_card
 
+  # Phases are an ordered sequence; heap order is not deterministic.
+  has_many :rate_phases, -> { order(:position) }
+
   validates :billing_anchor_date, presence: true
   validates :next_billing_at, presence: true
   validates :started_at, presence: true
@@ -51,9 +54,9 @@ end
 #
 # Indexes
 #
-#  index_subscription_rate_cards_on_next_billing_at        (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
 #  index_active_subscription_rate_cards_on_sub_and_card  (subscription_id,rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
 #  index_subscription_rate_cards_on_deleted_at           (deleted_at)
+#  index_subscription_rate_cards_on_next_billing_at      (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
 #  index_subscription_rate_cards_on_organization_id      (organization_id)
 #  index_subscription_rate_cards_on_rate_card_id         (rate_card_id)
 #  index_subscription_rate_cards_on_subscription_id      (subscription_id)

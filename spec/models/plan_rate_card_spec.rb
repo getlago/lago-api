@@ -12,6 +12,7 @@ RSpec.describe PlanRateCard do
       expect(plan_rate_card).to belong_to(:organization)
       expect(plan_rate_card).to belong_to(:plan)
       expect(plan_rate_card).to belong_to(:rate_card)
+      expect(plan_rate_card).to have_many(:rate_phases).order(:position)
       expect(plan_rate_card).to have_one(:product).through(:rate_card)
     end
   end

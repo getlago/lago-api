@@ -12,6 +12,7 @@ RSpec.describe SubscriptionRateCard do
       expect(subscription_rate_card).to belong_to(:organization)
       expect(subscription_rate_card).to belong_to(:subscription)
       expect(subscription_rate_card).to belong_to(:rate_card)
+      expect(subscription_rate_card).to have_many(:rate_phases).order(:position)
       expect(subscription_rate_card).to have_one(:product).through(:rate_card)
     end
   end
