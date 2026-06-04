@@ -49,5 +49,18 @@ RSpec.describe FixedChargeEvents::CreateService do
         expect(result.error).to be_a(BaseService::ValidationFailure)
       end
     end
+
+    context "when a units override exists for the (subscription, fixed_charge) pair" do
+      let(:fixed_charge) { create(:fixed_charge, organization:, plan:, add_on:, units: 3) }
+
+      before do
+        create(:subscription_fixed_charge_units_override, subscription:, fixed_charge:, units: 25)
+      end
+
+      it "stores the override units on the event" do
+        expect(result).to be_success
+        expect(result.fixed_charge_event.units).to eq(25)
+      end
+    end
   end
 end
