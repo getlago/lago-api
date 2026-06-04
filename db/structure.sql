@@ -242,6 +242,7 @@ ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_3ab959bfc4;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_3a303bf667;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_3926855f12;
+ALTER TABLE IF EXISTS ONLY public.product_categories DROP CONSTRAINT IF EXISTS fk_rails_37c75ac37a;
 ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS fk_rails_36cda06530;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_364213cc3e;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_3640b4a66a;
@@ -455,6 +456,9 @@ DROP INDEX IF EXISTS public.index_quantified_events_on_external_id;
 DROP INDEX IF EXISTS public.index_quantified_events_on_deleted_at;
 DROP INDEX IF EXISTS public.index_quantified_events_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_quantified_events_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_product_categories_on_organization_id_and_code;
+DROP INDEX IF EXISTS public.index_product_categories_on_organization_id;
+DROP INDEX IF EXISTS public.index_product_categories_on_deleted_at;
 DROP INDEX IF EXISTS public.index_pricing_units_on_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_units_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_pricing_unit_id;
@@ -941,6 +945,7 @@ ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS quotes_pkey;
 ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS quote_versions_pkey;
 ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS quote_owners_pkey;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS quantified_events_pkey;
+ALTER TABLE IF EXISTS ONLY public.product_categories DROP CONSTRAINT IF EXISTS product_categories_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS pricing_units_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS pricing_unit_usages_pkey;
 ALTER TABLE IF EXISTS ONLY public.presentation_breakdowns DROP CONSTRAINT IF EXISTS presentation_breakdowns_pkey;
@@ -1065,6 +1070,7 @@ DROP TABLE IF EXISTS public.quote_versions;
 DROP SEQUENCE IF EXISTS public.quote_owners_id_seq;
 DROP TABLE IF EXISTS public.quote_owners;
 DROP TABLE IF EXISTS public.quantified_events;
+DROP TABLE IF EXISTS public.product_categories;
 DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
 DROP TABLE IF EXISTS public.presentation_breakdowns;
@@ -5032,6 +5038,23 @@ CREATE TABLE public.pricing_units (
 
 
 --
+-- Name: product_categories; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_categories (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    description character varying,
+    invoice_display_name character varying,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: quantified_events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6284,6 +6307,14 @@ ALTER TABLE ONLY public.pricing_unit_usages
 
 ALTER TABLE ONLY public.pricing_units
     ADD CONSTRAINT pricing_units_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: product_categories product_categories_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_categories
+    ADD CONSTRAINT product_categories_pkey PRIMARY KEY (id);
 
 
 --
@@ -9751,6 +9782,27 @@ CREATE INDEX index_pricing_units_on_organization_id ON public.pricing_units USIN
 
 
 --
+-- Name: index_product_categories_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_categories_on_deleted_at ON public.product_categories USING btree (deleted_at);
+
+
+--
+-- Name: index_product_categories_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_categories_on_organization_id ON public.product_categories USING btree (organization_id);
+
+
+--
+-- Name: index_product_categories_on_organization_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_product_categories_on_organization_id_and_code ON public.product_categories USING btree (organization_id, code) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_quantified_events_on_billable_metric_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11224,6 +11276,14 @@ ALTER TABLE ONLY public.subscriptions
 
 ALTER TABLE ONLY public.inbound_webhooks
     ADD CONSTRAINT fk_rails_36cda06530 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: product_categories fk_rails_37c75ac37a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_categories
+    ADD CONSTRAINT fk_rails_37c75ac37a FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -13158,6 +13218,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260608111837'),
 ('20260608074112'),
 ('20260605170919'),
+('20260604175126'),
 ('20260604153307'),
 ('20260603121349'),
 ('20260602175438'),
