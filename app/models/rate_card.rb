@@ -22,6 +22,7 @@ class RateCard < ApplicationRecord
 
   has_many :rates, class_name: "RateCardRate"
   has_many :plan_applied_rate_cards, class_name: "PlanRateCard"
+  has_many :subscription_applied_rate_cards, class_name: "SubscriptionRateCard"
 
   enum :billing_timing, BILLING_TIMINGS, validate: true
   enum :regroup_paid_fees, REGROUP_PAID_FEES, validate: {allow_nil: true}
