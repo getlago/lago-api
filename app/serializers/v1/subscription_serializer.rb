@@ -86,19 +86,9 @@ module V1
     end
 
     def dates_service
-      @dates_service ||= ::Subscriptions::DatesService.new_instance(model, billing_reference_time, current_usage: true)
-    end
-
-    # NOTE: For a subscription that has not started yet (e.g. a scheduled downgrade returned in an
-    #       invoice preview), `Time.current` falls before `started_at`. The dates service would then
-    #       compute boundaries for the period containing "now" and clamp both ends down to `started_at`,
-    #       collapsing `current_billing_period_started_at` and `current_billing_period_ending_at` onto the
-    #       same value. Anchoring on the later of the two makes it report the real first billing period.
-    #       For already-started subscriptions this is a no-op (started_at is in the past).
-    #       `compact` guards against a nil started_at (pending subscription with no start yet); it is
-    #       load-bearing — `max` raises on a nil element, so do not drop it.
-    def billing_reference_time
-      [Time.current, model.started_at].compact.max
+      # NOTE: anchored on `billing_reference_time` (not `Time.current`) so a not-yet-started
+      #       subscription reports its real first billing period instead of collapsing the bounds.
+      @dates_service ||= ::Subscriptions::DatesService.new_instance(model, model.billing_reference_time, current_usage: true)
     end
 
     def applicable_usage_thresholds
