@@ -11,6 +11,8 @@ RSpec.describe ProductFilter do
     it do
       expect(product_filter).to belong_to(:organization)
       expect(product_filter).to belong_to(:product)
+      expect(product_filter).to have_many(:values).class_name("ProductFilterValue")
+      expect(product_filter).to have_many(:billable_metric_filters).through(:values)
     end
   end
 
@@ -49,6 +51,19 @@ RSpec.describe ProductFilter do
     it "falls back to name when invoice_display_name is blank" do
       filter = build_stubbed(:product_filter, invoice_display_name: nil, name: "Name")
       expect(filter.invoice_name).to eq("Name")
+    end
+  end
+
+  describe "#to_h" do
+    it "groups values by billable metric filter key" do
+      filter = create(:product_filter)
+      region = create(:billable_metric_filter, organization: filter.organization, key: "region", values: %w[us eu])
+      scheme = create(:billable_metric_filter, organization: filter.organization, key: "scheme", values: %w[visa])
+      create(:product_filter_value, product_filter: filter, organization: filter.organization, billable_metric_filter: region, value: "us")
+      create(:product_filter_value, product_filter: filter, organization: filter.organization, billable_metric_filter: region, value: "eu")
+      create(:product_filter_value, product_filter: filter, organization: filter.organization, billable_metric_filter: scheme, value: "visa")
+
+      expect(filter.reload.to_h).to eq("region" => %w[us eu], "scheme" => %w[visa])
     end
   end
 end
