@@ -18,6 +18,7 @@ class Product < ApplicationRecord
   belongs_to :charge, -> { with_discarded }, optional: true
 
   has_many :filters, class_name: "ProductFilter"
+  has_many :rate_cards
 
   enum :product_type, PRODUCT_TYPES, validate: true
 

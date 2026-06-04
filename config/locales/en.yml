@@ -9,6 +9,7 @@ en:
         country_code_invalid: not_a_valid_country_code
         country_must_be_present: country_must_be_present
         country_not_supported: country_not_supported
+        does_not_belong_to_product: does_not_belong_to_product
         exclusion: value_is_reserved
         feature_unavailable: feature_unavailable
         file_size_not_less_than: file_too_large

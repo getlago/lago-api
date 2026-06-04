@@ -26,6 +26,7 @@ RSpec.describe Product do
       expect(product).to belong_to(:add_on).optional
       expect(product).to belong_to(:charge).optional
       expect(product).to have_many(:filters).class_name("ProductFilter")
+      expect(product).to have_many(:rate_cards)
     end
   end
 
