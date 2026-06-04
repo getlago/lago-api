@@ -17,6 +17,8 @@ class ProductItem < ApplicationRecord
   belongs_to :add_on, -> { with_discarded }, optional: true
   belongs_to :charge, -> { with_discarded }, optional: true
 
+  has_many :filters, class_name: "ProductItemFilter"
+
   enum :item_type, ITEM_TYPES, validate: true
 
   validates :name, presence: true
@@ -39,9 +41,11 @@ class ProductItem < ApplicationRecord
   private
 
   def validate_billable_metric_presence
-    if usage? && billable_metric_id.blank?
+    has_billable_metric = billable_metric_id.present? || billable_metric.present?
+
+    if usage? && !has_billable_metric
       errors.add(:billable_metric_id, :blank)
-    elsif fixed? && billable_metric_id.present?
+    elsif fixed? && has_billable_metric
       errors.add(:billable_metric_id, :present)
     end
   end
