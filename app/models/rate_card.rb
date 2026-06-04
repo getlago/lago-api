@@ -21,6 +21,7 @@ class RateCard < ApplicationRecord
   belongs_to :product_item_filter, optional: true
 
   has_many :rates, class_name: "RateCardRate"
+  has_many :plan_rate_cards
 
   enum :billing_timing, BILLING_TIMINGS, validate: true
   enum :regroup_paid_fees, REGROUP_PAID_FEES, validate: {allow_nil: true}

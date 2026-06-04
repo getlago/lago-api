@@ -30,6 +30,8 @@ class Plan < ApplicationRecord
   has_many :usage_thresholds
   has_many :plan_products
   has_many :products, through: :plan_products
+  has_many :plan_rate_cards
+  has_many :product_items, through: :plan_rate_cards
 
   has_many :applied_taxes, class_name: "Plan::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
