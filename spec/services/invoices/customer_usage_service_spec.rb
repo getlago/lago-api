@@ -265,6 +265,36 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
+      context "when there are no taxable fees" do
+        # The single charge produces a zero-amount fee, so taxable_fees is empty.
+        let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "0"}) }
+
+        before do
+          allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call)
+        end
+
+        it "skips the provider request and returns a zero-tax usage" do
+          result = usage_service.call
+
+          expect(result).to be_success
+          expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).not_to have_received(:call)
+          expect(result.usage).to have_attributes(
+            amount_cents: 0,
+            taxes_amount_cents: 0,
+            total_amount_cents: 0
+          )
+        end
+
+        it "leaves the zero fee with default zero taxes" do
+          result = usage_service.call
+
+          fee = result.usage.fees.sole
+          expect(fee.taxes_amount_cents).to eq(0)
+          expect(fee.taxes_rate).to eq(0)
+          expect(fee.applied_taxes).to be_empty
+        end
+      end
+
       context "when there is error received from the provider" do
         before do
           stub_request(:post, endpoint).to_return do |request|
