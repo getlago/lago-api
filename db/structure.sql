@@ -1073,7 +1073,6 @@ DROP TABLE IF EXISTS public.payments;
 DROP TABLE IF EXISTS public.payment_requests;
 DROP TABLE IF EXISTS public.invoices_payment_requests;
 DROP VIEW IF EXISTS public.exports_item_metadata;
-DROP TABLE IF EXISTS public.item_metadata;
 DROP VIEW IF EXISTS public.exports_invoices_taxes;
 DROP TABLE IF EXISTS public.invoices_taxes;
 DROP VIEW IF EXISTS public.exports_invoices;
@@ -1100,6 +1099,7 @@ DROP TABLE IF EXISTS public.payment_provider_customers;
 DROP TABLE IF EXISTS public.organizations;
 DROP VIEW IF EXISTS public.exports_credit_notes_taxes;
 DROP VIEW IF EXISTS public.exports_credit_notes;
+DROP TABLE IF EXISTS public.item_metadata;
 DROP VIEW IF EXISTS public.exports_coupons;
 DROP VIEW IF EXISTS public.exports_charges;
 DROP VIEW IF EXISTS public.exports_billing_entities;
@@ -2922,6 +2922,22 @@ CREATE VIEW public.exports_coupons AS
 
 
 --
+-- Name: item_metadata; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.item_metadata (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    owner_type character varying NOT NULL,
+    owner_id uuid NOT NULL,
+    value jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT item_metadata_value_must_be_json_object CHECK ((jsonb_typeof(value) = 'object'::text))
+);
+
+
+--
 -- Name: exports_credit_notes; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -2971,9 +2987,13 @@ CREATE VIEW public.exports_credit_notes AS
     ( SELECT json_agg(json_build_object('lago_id', ci.id, 'amount_cents', ci.amount_cents, 'amount_currency', ci.amount_currency, 'lago_fee_id', ci.fee_id)) AS json_agg
            FROM public.credit_note_items ci
           WHERE (ci.credit_note_id = cn.id)) AS items,
+    ( SELECT json_agg(json_build_object('lago_id', im.id, 'key', je.key, 'value', je.value, 'created_at', im.created_at)) AS json_agg
+           FROM public.item_metadata im,
+            LATERAL jsonb_each_text(im.value) je(key, value)
+          WHERE (((im.owner_type)::text = 'CreditNote'::text) AND (im.owner_id = cn.id))) AS metadata,
     ( SELECT json_agg(json_build_object('lago_id', ed.id, 'error_code', ed.error_code, 'details', ed.details)) AS json_agg
            FROM public.error_details ed
-          WHERE (ed.owner_id = cn.id)) AS error_details
+          WHERE (((ed.owner_type)::text = 'CreditNote'::text) AND (ed.owner_id = cn.id))) AS error_details
    FROM public.credit_notes cn;
 
 
@@ -3757,22 +3777,6 @@ CREATE VIEW public.exports_invoices_taxes AS
     it.created_at,
     it.updated_at
    FROM public.invoices_taxes it;
-
-
---
--- Name: item_metadata; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.item_metadata (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    owner_type character varying NOT NULL,
-    owner_id uuid NOT NULL,
-    value jsonb DEFAULT '{}'::jsonb NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT item_metadata_value_must_be_json_object CHECK ((jsonb_typeof(value) = 'object'::text))
-);
 
 
 --
@@ -12591,6 +12595,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260609161044'),
 ('20260608111837'),
 ('20260608074112'),
+('20260604153307'),
 ('20260603121349'),
 ('20260602092156'),
 ('20260601174030'),
@@ -13607,3 +13612,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
