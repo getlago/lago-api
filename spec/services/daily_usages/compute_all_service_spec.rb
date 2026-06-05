@@ -246,6 +246,44 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
     end
 
+    context "when leg conditions overlap" do
+      let(:plan) { create(:plan, organization:) }
+
+      context "when a recurring subscription received a recent event off its rollover day" do
+        # 2024-10-22 is not a rollover for a calendar monthly plan, but the recent event keeps the
+        # subscription in the daily (event) leg — active recurring subs are not starved off-rollover.
+        let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+        let(:subscriptions) do
+          create_list(:subscription, 1, :calendar, customer:, plan:, last_received_event_on: timestamp.to_date)
+        end
+
+        before { create(:standard_charge, plan:, billable_metric:) }
+
+        it "still enqueues a job via the event leg" do
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscriptions.first, timestamp:)
+        end
+      end
+
+      context "when a subscription matches both the time-dependent and recurring legs" do
+        # A prorated charge on a recurring metric puts the plan in both the time-dependent leg
+        # (prorated) and the recurring leg (recurring metric). With no recent event, on its rollover
+        # day, the subscription matches both — the Set union must enqueue it only once.
+        let(:timestamp) { Time.zone.parse("2024-10-02 00:05:00") }
+        let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+        let(:subscriptions) do
+          create_list(:subscription, 1, :calendar, customer:, plan:, last_received_event_on: timestamp.to_date - 5.days)
+        end
+
+        before { create(:standard_charge, plan:, billable_metric:, prorated: true) }
+
+        it "enqueues the job only once" do
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscriptions.first, timestamp:).once
+        end
+      end
+    end
+
     context "when revenue_analytics premium integration flag is not present" do
       let(:premium_integrations) { [] }
 
