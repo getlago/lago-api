@@ -436,48 +436,35 @@ RSpec.describe Subscriptions::CreateService do
         fixed_charge2
       end
 
-      it "creates the subscription with overridden plan" do
+      it "creates the subscription on the parent plan and writes a units override row" do
         result = create_service.call
 
         expect(result).to be_success
         expect(result.subscription).to be_active
-        expect(result.subscription.plan.parent_id).to eq(plan.id)
+        expect(result.subscription.plan).to eq(plan)
+        expect(result.subscription.plan.parent_id).to be_nil
 
-        # Both fixed charges should be overridden in the new plan
-        overridden_plan = result.subscription.plan
-        expect(overridden_plan.fixed_charges.count).to eq(2)
-
-        fc1_override = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge1.id)
-        fc2_override = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge2.id)
-
-        expect(fc1_override).to be_present
-        expect(fc1_override.units).to eq(5) # Original units (not specified in override)
-        expect(fc2_override).to be_present
-        expect(fc2_override.units).to eq(100) # Overridden units
+        override = result.subscription.fixed_charge_units_overrides.sole
+        expect(override.fixed_charge).to eq(fixed_charge2)
+        expect(override.units).to eq(100)
       end
 
-      it "creates fixed charge events with timestamp = subscription.started_at for active subscription" do
+      it "emits fixed charge events with the override units for the active subscription" do
         result = create_service.call
 
         expect(result).to be_success
 
         subscription = result.subscription
-        expect(subscription.fixed_charge_events.count).to eq(2)
-
-        overridden_plan = subscription.plan
-        fc1_override = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge1.id)
-        fc2_override = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge2.id)
-
         expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :units, :timestamp)).to contain_exactly(
-          [fc1_override.id, 5, be_within(1.second).of(subscription.started_at)],
-          [fc2_override.id, 100, be_within(1.second).of(subscription.started_at)]
+          [fixed_charge1.id, 5, be_within(1.second).of(subscription.started_at)],
+          [fixed_charge2.id, 100, be_within(1.second).of(subscription.started_at)]
         )
       end
 
       context "when subscription starts in the future" do
         let(:subscription_at) { 7.days.from_now }
 
-        it "creates pending subscription with overridden plan but does not create fixed charge events" do
+        it "creates a pending subscription on the parent plan with the override row and no fixed charge events" do
           result = create_service.call
 
           expect(result).to be_success
@@ -485,20 +472,95 @@ RSpec.describe Subscriptions::CreateService do
           subscription = result.subscription
           expect(subscription).to be_pending
           expect(subscription.started_at).to be_nil
-          expect(subscription.plan.parent_id).to eq(plan.id)
+          expect(subscription.plan).to eq(plan)
+          expect(subscription.plan.parent_id).to be_nil
 
-          # Plan should have overridden fixed charges
-          overridden_plan = subscription.plan
+          override = subscription.fixed_charge_units_overrides.sole
+          expect(override.fixed_charge).to eq(fixed_charge2)
+          expect(override.units).to eq(100)
+
+          # NO fixed charge events for pending subscription
+          expect(subscription.fixed_charge_events.count).to eq(0)
+        end
+      end
+
+      context "when plan_overrides carries non-units fields (plan-override path)" do
+        let(:params) do
+          {
+            external_customer_id:,
+            plan_code:,
+            name:,
+            external_id:,
+            billing_time:,
+            subscription_at:,
+            subscription_id:,
+            started_at:,
+            plan_overrides: {
+              amount_cents: 12_345,
+              fixed_charges: [
+                {
+                  id: fixed_charge2.id,
+                  units: 100
+                }
+              ]
+            }
+          }
+        end
+
+        it "creates an overridden plan with overridden fixed charges and no override row" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription).to be_active
+          expect(result.subscription.plan.parent_id).to eq(plan.id)
+          expect(result.subscription.fixed_charge_units_overrides).to be_empty
+
+          overridden_plan = result.subscription.plan
           expect(overridden_plan.fixed_charges.count).to eq(2)
 
           fc1_override = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge1.id)
           fc2_override = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge2.id)
 
-          expect(fc1_override.units).to eq(5)
-          expect(fc2_override.units).to eq(100)
+          expect(fc1_override.units).to eq(5) # default carried over
+          expect(fc2_override.units).to eq(100) # overridden
 
-          # NO fixed charge events should be created for pending subscription
-          expect(subscription.fixed_charge_events.count).to eq(0)
+          expect(result.subscription.fixed_charge_events.pluck(:fixed_charge_id, :units, :timestamp)).to contain_exactly(
+            [fc1_override.id, 5, be_within(1.second).of(result.subscription.started_at)],
+            [fc2_override.id, 100, be_within(1.second).of(result.subscription.started_at)]
+          )
+        end
+
+        context "when subscription starts in the future" do
+          let(:subscription_at) { 7.days.from_now }
+
+          it "creates a pending subscription with the overridden plan and no events" do
+            result = create_service.call
+
+            expect(result).to be_success
+
+            subscription = result.subscription
+            expect(subscription).to be_pending
+            expect(subscription.started_at).to be_nil
+            expect(subscription.plan.parent_id).to eq(plan.id)
+
+            overridden_plan = subscription.plan
+            expect(overridden_plan.fixed_charges.count).to eq(2)
+            expect(overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge2.id).units).to eq(100)
+
+            expect(subscription.fixed_charge_events.count).to eq(0)
+          end
+        end
+      end
+
+      context "when the target plan is itself an override" do
+        let(:parent_plan) { create(:plan, organization:, amount_cents: 100, amount_currency: "EUR") }
+        let(:plan) { create(:plan, organization:, parent: parent_plan) }
+
+        it "routes through the plan-override path rather than the units-only branch" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.fixed_charge_units_overrides).to be_empty
         end
       end
 
