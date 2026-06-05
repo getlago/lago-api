@@ -121,6 +121,8 @@ module PaymentRequests
 
       def update_invoices_payment_status(payment_status:, deliver_webhook: true)
         payable.invoices.each do |invoice|
+          next if invoice.payment_succeeded? && !payment_status_succeeded?(payment_status)
+
           Invoices::UpdateService.call(
             invoice:,
             params: {

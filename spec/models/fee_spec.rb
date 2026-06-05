@@ -701,6 +701,32 @@ RSpec.describe Fee do
     end
   end
 
+  describe "#taxable?" do
+    subject { fee.taxable? }
+
+    let(:fee) { build(:fee, units:, amount_cents:, events_count:) }
+    let(:units) { 0 }
+    let(:amount_cents) { 0 }
+    let(:events_count) { 0 }
+
+    context "when amount_cents is positive" do
+      let(:amount_cents) { 100 }
+
+      it { is_expected.to be true }
+    end
+
+    context "when amount_cents is zero" do
+      it { is_expected.to be false }
+    end
+
+    context "when amount_cents is zero but units and events_count are positive" do
+      let(:units) { 5 }
+      let(:events_count) { 3 }
+
+      it { is_expected.to be false }
+    end
+  end
+
   describe "#has_charge_filter?" do
     subject(:fee) { create(:add_on_fee) }
 

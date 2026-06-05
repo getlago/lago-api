@@ -44,7 +44,16 @@ module Resolvers
         filters:
       )
 
-      result.customers
+      result.customers.preload(
+        :billing_entity,
+        :metadata,
+        :anrok_customer,
+        :avalara_customer,
+        :hubspot_customer,
+        :netsuite_customer,
+        :salesforce_customer,
+        :xero_customer
+      )
     end
   end
 end

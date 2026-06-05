@@ -660,6 +660,12 @@ DROP INDEX IF EXISTS public.index_customers_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id;
 DROP INDEX IF EXISTS public.index_customers_on_sequential_id;
+DROP INDEX IF EXISTS public.index_customers_on_organization_id_name_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_customers_on_organization_id_legal_name_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_customers_on_organization_id_lastname_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_customers_on_organization_id_firstname_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_customers_on_organization_id_external_id_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_customers_on_organization_id_email_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_org_id_and_sequential_id_unique;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id;
@@ -809,6 +815,7 @@ DROP INDEX IF EXISTS public.idx_on_subscription_id_295edd8bb3;
 DROP INDEX IF EXISTS public.idx_on_recurring_transaction_rule_id_fba3d39cca;
 DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
 DROP INDEX IF EXISTS public.idx_on_outbound_wallet_transaction_id_cf6ff733c6;
+DROP INDEX IF EXISTS public.idx_on_organization_id_subscription_at_created_at_id;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
 DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
 DROP INDEX IF EXISTS public.idx_on_organization_id_e742f77454;
@@ -1181,7 +1188,9 @@ DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
+DROP EXTENSION IF EXISTS pg_trgm;
 DROP EXTENSION IF EXISTS pg_partman;
+DROP EXTENSION IF EXISTS btree_gin;
 DROP SCHEMA IF EXISTS partman;
 --
 -- Name: partman; Type: SCHEMA; Schema: -; Owner: -
@@ -1191,10 +1200,24 @@ CREATE SCHEMA partman;
 
 
 --
+-- Name: btree_gin; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS btree_gin WITH SCHEMA public;
+
+
+--
 -- Name: pg_partman; Type: EXTENSION; Schema: -; Owner: -
 --
 
 CREATE EXTENSION IF NOT EXISTS pg_partman WITH SCHEMA partman;
+
+
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
 
 --
@@ -6649,6 +6672,13 @@ CREATE INDEX idx_on_organization_id_organization_sequential_id_2387146f54 ON pub
 
 
 --
+-- Name: idx_on_organization_id_subscription_at_created_at_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_organization_id_subscription_at_created_at_id ON public.subscriptions USING btree (organization_id, subscription_at DESC NULLS LAST, created_at DESC, id);
+
+
+--
 -- Name: idx_on_outbound_wallet_transaction_id_cf6ff733c6; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7693,6 +7723,48 @@ CREATE UNIQUE INDEX index_customers_on_external_id_and_organization_id ON public
 --
 
 CREATE UNIQUE INDEX index_customers_on_org_id_and_sequential_id_unique ON public.customers USING btree (organization_id, sequential_id) WHERE (sequential_id IS NOT NULL);
+
+
+--
+-- Name: index_customers_on_organization_id_email_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_organization_id_email_gin_trgm_ops ON public.customers USING gin (organization_id, email public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_customers_on_organization_id_external_id_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_organization_id_external_id_gin_trgm_ops ON public.customers USING gin (organization_id, external_id public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_customers_on_organization_id_firstname_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_organization_id_firstname_gin_trgm_ops ON public.customers USING gin (organization_id, firstname public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_customers_on_organization_id_lastname_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_organization_id_lastname_gin_trgm_ops ON public.customers USING gin (organization_id, lastname public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_customers_on_organization_id_legal_name_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_organization_id_legal_name_gin_trgm_ops ON public.customers USING gin (organization_id, legal_name public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_customers_on_organization_id_name_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_organization_id_name_gin_trgm_ops ON public.customers USING gin (organization_id, name public.gin_trgm_ops) WHERE (deleted_at IS NULL);
 
 
 --
@@ -12466,6 +12538,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260603121349'),
 ('20260602092156'),
 ('20260601174030'),
 ('20260601120429'),
@@ -12485,10 +12558,12 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260504134804'),
 ('20260430102814'),
 ('20260430102813'),
+('20260429145254'),
 ('20260429133747'),
 ('20260429123434'),
 ('20260424170418'),
 ('20260424131927'),
+('20260422085615'),
 ('20260421123920'),
 ('20260421103557'),
 ('20260421021503'),

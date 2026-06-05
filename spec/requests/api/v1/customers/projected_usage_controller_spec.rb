@@ -155,9 +155,11 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController, :premium do
         }
 
         it "rescue from provider throttles" do
-          subject
-          expect(response).to have_http_status(:too_many_requests)
-          expect(response.body).to match(/anrok.*Try again later/)
+          travel_to(Time.parse("2025-07-03T10:00:00Z")) do
+            subject
+            expect(response).to have_http_status(:too_many_requests)
+            expect(response.body).to match(/anrok.*Try again later/)
+          end
         end
       end
     end

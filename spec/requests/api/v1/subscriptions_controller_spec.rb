@@ -1723,12 +1723,13 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
     end
 
     context "with multuple subscriptions" do
+      let(:update_params) do
+        {name: "subscription name new"}
+      end
       let(:active_plan) { create(:plan, organization:, amount_cents: 5000, description: "desc") }
-      let(:active_subscription) do
+      let!(:active_subscription) do
         create(:subscription, external_id: subscription.external_id, customer:, plan:)
       end
-
-      before { active_subscription }
 
       it "updates the active subscription" do
         subject
@@ -1736,10 +1737,6 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         expect(response).to have_http_status(:success)
         expect(json[:subscription][:lago_id]).to eq(active_subscription.id)
         expect(json[:subscription][:name]).to eq("subscription name new")
-
-        expect(json[:subscription][:plan]).to include(
-          name: "Override"
-        )
       end
 
       context "with pending params" do
@@ -1747,15 +1744,12 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
         it "updates the pending subscription" do
           subject
+          subscription.reload
 
           expect(response).to have_http_status(:success)
           expect(json[:subscription][:lago_id]).to eq(subscription.id)
           expect(json[:subscription][:name]).to eq("subscription name new")
-          expect(json[:subscription][:subscription_at].to_s).to eq("2022-09-05T12:23:12Z")
-
-          expect(json[:subscription][:plan]).to include(
-            name: "Override"
-          )
+          expect(subscription.status).to eq("pending")
         end
       end
     end

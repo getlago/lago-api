@@ -245,6 +245,12 @@ class Invoice < ApplicationRecord
     sorted_invoice_subscriptions.map(&:subscription)
   end
 
+  def progressive_billing_last_applied_usage_threshold
+    return unless progressive_billing?
+
+    applied_usage_thresholds.order(created_at: :asc).last
+  end
+
   def subscription_fees(subscription_id)
     invoice_subscription(subscription_id).fees
   end

@@ -471,6 +471,22 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
         expect(SendWebhookJob).to have_been_enqueued.with("fee.created", anything)
         expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
       end
+
+      context "with custom sections applied at the billing entity level" do
+        let(:custom_section) { create(:invoice_custom_section, organization:) }
+
+        before do
+          create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: custom_section)
+        end
+
+        it "applies the custom sections even though tax resolution is deferred" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.status).to eq("pending")
+          expect(result.invoice.applied_invoice_custom_sections.pluck(:code)).to eq([custom_section.code])
+        end
+      end
     end
 
     context "when an error occurs" do

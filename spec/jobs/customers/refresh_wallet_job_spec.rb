@@ -50,6 +50,15 @@ RSpec.describe Customers::RefreshWalletJob do
         subject
         expect(Customers::RefreshWalletsService).not_to have_received(:call)
       end
+
+      context "when wallet_ids are provided" do
+        let(:wallet_ids) { create_list(:wallet, 2, customer:).map(&:id) }
+
+        it "calls the Customers::RefreshWalletsService service scoped to the given wallets" do
+          subject
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: wallet_ids)
+        end
+      end
     end
 
     context "when customer is awaiting wallet refresh" do
