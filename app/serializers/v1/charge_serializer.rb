@@ -39,8 +39,14 @@ module V1
     end
 
     def charge_filters
+      filters = if model.filters.loaded?
+        model.filters
+      else
+        model.filters.includes(:charge, values: :billable_metric_filter)
+      end
+
       ::CollectionSerializer.new(
-        model.filters.includes(:charge, values: :billable_metric_filter),
+        filters,
         ::V1::ChargeFilterSerializer,
         collection_name: "filters"
       ).serialize
