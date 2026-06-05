@@ -241,6 +241,22 @@ RSpec.describe Invoices::CreateOneOffService do
 
         expect(Utils::ActivityLog).not_to have_produced("invoice.one_off_created").with(result.invoice)
       end
+
+      context "with custom sections applied at the billing entity level" do
+        let(:custom_section) { create(:invoice_custom_section, organization:) }
+
+        before do
+          create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: custom_section)
+        end
+
+        it "applies the custom sections even though tax resolution is deferred" do
+          result = described_class.call(**args)
+
+          expect(result).to be_success
+          expect(result.invoice.status).to eq("pending")
+          expect(result.invoice.applied_invoice_custom_sections.pluck(:code)).to eq([custom_section.code])
+        end
+      end
     end
 
     context "when invoice amount in cents is zero" do
