@@ -128,6 +128,107 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       expect(invoice.reload).to be_closed
     end
+
+    context "with consumed coupon, credit note, and wallet credits" do
+      let(:coupon) do
+        create(:coupon, organization:, coupon_type: :fixed_amount,
+          amount_cents: 10, amount_currency: "EUR", frequency: :once)
+      end
+      let(:applied_coupon) do
+        create(:applied_coupon, customer:, coupon:, organization:,
+          amount_cents: 10, amount_currency: "EUR", frequency: :once, status: :active)
+      end
+      let(:source_invoice) do
+        create(:invoice, customer:, organization:, status: :finalized, currency: "EUR")
+      end
+      let(:credit_note) do
+        create(:credit_note, customer:, organization:, invoice: source_invoice,
+          credit_status: :available,
+          total_amount_cents: 10, total_amount_currency: "EUR",
+          credit_amount_cents: 10, credit_amount_currency: "EUR",
+          balance_amount_cents: 10, balance_amount_currency: "EUR")
+      end
+      let(:wallet) do
+        create(:wallet, :with_inbound_transaction, customer:, organization:, currency: "EUR",
+          balance_cents: 10, credits_balance: 0.1, rate_amount: 1)
+      end
+
+      before do
+        applied_coupon
+        credit_note
+        wallet
+      end
+
+      it "restores the coupon, credit note balance, and wallet credits when payment fails" do
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+
+        invoice = customer.subscriptions.sole.invoices.sole
+        expect(invoice).to be_open
+
+        # Resources consumed by the gated invoice
+        expect(applied_coupon.reload).to be_terminated
+        expect(credit_note.reload.balance_amount_cents).to eq(0)
+        expect(credit_note).to be_consumed
+        expect(wallet.reload.balance_cents).to eq(0)
+
+        simulate_stripe_webhook(status: "failed")
+
+        expect(invoice.reload).to be_closed
+
+        # Resources restored after the gated invoice was closed
+        expect(applied_coupon.reload).to be_active
+        expect(applied_coupon.remaining_amount).to eq(10)
+        expect(credit_note.reload.balance_amount_cents).to eq(10)
+        expect(credit_note).to be_available
+        expect(wallet.reload.balance_cents).to eq(10)
+        expect(wallet.wallet_transactions.inbound.where(voided_invoice_id: invoice.id)).to exist
+      end
+
+      context "when the credit note is voided" do
+        let(:credit_note) do
+          create(:credit_note, customer:, organization:, invoice: source_invoice,
+            credit_status: :voided,
+            total_amount_cents: 10, total_amount_currency: "EUR",
+            credit_amount_cents: 10, credit_amount_currency: "EUR",
+            balance_amount_cents: 10, balance_amount_currency: "EUR")
+        end
+
+        it "leaves the voided credit note untouched when payment fails" do
+          create_subscription(subscription_params)
+          perform_all_enqueued_jobs
+
+          simulate_stripe_webhook(status: "failed")
+
+          invoice = customer.subscriptions.sole.invoices.sole
+
+          expect(invoice.reload).to be_closed
+          expect(credit_note.reload).to be_voided
+          expect(credit_note.balance_amount_cents).to eq(10)
+        end
+      end
+
+      context "when the wallet is terminated" do
+        let(:wallet) do
+          create(:wallet, :terminated, customer:, organization:, currency: "EUR",
+            balance_cents: 10, credits_balance: 0.1, rate_amount: 1)
+        end
+
+        it "leaves the terminated wallet untouched when payment fails" do
+          create_subscription(subscription_params)
+          perform_all_enqueued_jobs
+
+          simulate_stripe_webhook(status: "failed")
+
+          invoice = customer.subscriptions.sole.invoices.sole
+
+          expect(invoice.reload).to be_closed
+          expect(wallet.reload).to be_terminated
+          expect(wallet.balance_cents).to eq(10)
+          expect(wallet.wallet_transactions.inbound.where(voided_invoice_id: invoice.id)).not_to exist
+        end
+      end
+    end
   end
 
   describe "backdated subscription: rules ignored" do
@@ -273,6 +374,119 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       expect(subscription.reload).to be_incomplete
       expect(subscription.activation_rules.sole).to be_pending
+    end
+
+    context "with consumed coupon, credit note, and wallet credits" do
+      let(:coupon) do
+        create(:coupon, organization:, coupon_type: :fixed_amount,
+          amount_cents: 10, amount_currency: "EUR", frequency: :once)
+      end
+      let(:applied_coupon) do
+        create(:applied_coupon, customer:, coupon:, organization:,
+          amount_cents: 10, amount_currency: "EUR", frequency: :once, status: :active)
+      end
+      let(:source_invoice) do
+        create(:invoice, customer:, organization:, status: :finalized, currency: "EUR")
+      end
+      let(:credit_note) do
+        create(:credit_note, customer:, organization:, invoice: source_invoice,
+          credit_status: :available,
+          total_amount_cents: 10, total_amount_currency: "EUR",
+          credit_amount_cents: 10, credit_amount_currency: "EUR",
+          balance_amount_cents: 10, balance_amount_currency: "EUR")
+      end
+      let(:wallet) do
+        create(:wallet, :with_inbound_transaction, customer:, organization:, currency: "EUR",
+          balance_cents: 10, credits_balance: 0.1, rate_amount: 1)
+      end
+
+      before do
+        applied_coupon
+        credit_note
+        wallet
+      end
+
+      it "restores the coupon, credit note balance, and wallet credits when the rule expires" do
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+
+        invoice = customer.subscriptions.sole.invoices.sole
+        expect(invoice).to be_open
+
+        # Resources consumed by the gated invoice
+        expect(applied_coupon.reload).to be_terminated
+        expect(credit_note.reload.balance_amount_cents).to eq(0)
+        expect(credit_note).to be_consumed
+        expect(wallet.reload.balance_cents).to eq(0)
+
+        # Travel past the 48h timeout so the rule expires, then run the clock
+        travel_to(49.hours.from_now) do
+          Clock::ExpireIncompleteSubscriptionsJob.perform_now
+          perform_all_enqueued_jobs
+        end
+
+        expect(invoice.reload).to be_closed
+
+        # Resources restored after the gated invoice was closed
+        expect(applied_coupon.reload).to be_active
+        expect(applied_coupon.remaining_amount).to eq(10)
+        expect(credit_note.reload.balance_amount_cents).to eq(10)
+        expect(credit_note).to be_available
+        expect(wallet.reload.balance_cents).to eq(10)
+        expect(wallet.wallet_transactions.inbound.where(voided_invoice_id: invoice.id)).to exist
+      end
+
+      context "when the credit note is voided" do
+        let(:credit_note) do
+          create(:credit_note, customer:, organization:, invoice: source_invoice,
+            credit_status: :voided,
+            total_amount_cents: 10, total_amount_currency: "EUR",
+            credit_amount_cents: 10, credit_amount_currency: "EUR",
+            balance_amount_cents: 10, balance_amount_currency: "EUR")
+        end
+
+        it "leaves the voided credit note untouched when the rule expires" do
+          create_subscription(subscription_params)
+          perform_all_enqueued_jobs
+
+          invoice = customer.subscriptions.sole.invoices.sole
+          expect(invoice.credits.credit_note_kind).to be_empty
+
+          travel_to(49.hours.from_now) do
+            Clock::ExpireIncompleteSubscriptionsJob.perform_now
+            perform_all_enqueued_jobs
+          end
+
+          expect(invoice.reload).to be_closed
+          expect(credit_note.reload).to be_voided
+          expect(credit_note.balance_amount_cents).to eq(10)
+        end
+      end
+
+      context "when the wallet is terminated" do
+        let(:wallet) do
+          create(:wallet, :terminated, customer:, organization:, currency: "EUR",
+            balance_cents: 10, credits_balance: 0.1, rate_amount: 1)
+        end
+
+        it "leaves the terminated wallet untouched when the rule expires" do
+          create_subscription(subscription_params)
+          perform_all_enqueued_jobs
+
+          invoice = customer.subscriptions.sole.invoices.sole
+          expect(invoice.wallet_transactions.outbound).to be_empty
+
+          travel_to(49.hours.from_now) do
+            Clock::ExpireIncompleteSubscriptionsJob.perform_now
+            perform_all_enqueued_jobs
+          end
+
+          expect(invoice.reload).to be_closed
+          expect(wallet.reload).to be_terminated
+          expect(wallet.balance_cents).to eq(10)
+          expect(wallet.wallet_transactions.inbound.where(voided_invoice_id: invoice.id)).not_to exist
+        end
+      end
     end
   end
 
