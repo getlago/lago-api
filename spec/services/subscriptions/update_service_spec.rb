@@ -724,30 +724,24 @@ RSpec.describe Subscriptions::UpdateService do
           subscription
         end
 
-        it "creates override fixed charges for both fixed charges" do
-          expect { update_service.call }.to change(FixedCharge, :count).by(2)
+        it "writes an override row for fc2 and leaves fc1 untouched" do
+          expect { update_service.call }
+            .to not_change(FixedCharge, :count)
+            .and not_change(Plan, :count)
 
-          fc1_override = FixedCharge.find_sole_by(parent_id: fixed_charge1.id)
-          fc2_override = FixedCharge.find_sole_by(parent_id: fixed_charge2.id)
-
-          expect(fc1_override.units).to eq(fixed_charge1.units)
-          expect(fc2_override.units).to eq(300)
+          expect(subscription.fixed_charge_units_overrides.pluck(:fixed_charge_id, :units)).to contain_exactly(
+            [fixed_charge2.id, 300]
+          )
         end
 
-        it "creates 2 fixed charge events with correct timestamps and units" do
+        it "emits one fixed charge event for fc2 at the current time with the override units" do
           travel_to(Time.zone.local(2025, 10, 10, 15, 33)) do # Friday
-            expect { update_service.call }.to change(FixedChargeEvent, :count).by(2)
+            expect { update_service.call }.to change(FixedChargeEvent, :count).by(1)
 
-            fc1_override = FixedCharge.find_sole_by(parent_id: fixed_charge1.id)
-            fc2_override = FixedCharge.find_sole_by(parent_id: fixed_charge2.id)
-
-            next_billing_period_start = Time.zone.local(2025, 10, 13) # Next Monday
-            events = subscription.fixed_charge_events.pluck(%i[fixed_charge_id units timestamp])
-
-            expect(events).to contain_exactly(
-              [fc1_override.id, fixed_charge1.units, be_within(1.second).of(next_billing_period_start)],
-              [fc2_override.id, 300, be_within(1.second).of(Time.current)]
-            )
+            event = subscription.fixed_charge_events.sole
+            expect(event.fixed_charge_id).to eq(fixed_charge2.id)
+            expect(event.units).to eq(300)
+            expect(event.timestamp).to be_within(1.second).of(Time.current)
           end
         end
 
@@ -898,14 +892,15 @@ RSpec.describe Subscriptions::UpdateService do
           subscription
         end
 
-        it "creates override fixed charges for both fixed charges" do
-          expect { update_service.call }.to change(FixedCharge, :count).by(2)
+        it "writes override rows for both fixed charges without cloning the plan" do
+          expect { update_service.call }
+            .to not_change(FixedCharge, :count)
+            .and not_change(Plan, :count)
 
-          fc1_override = FixedCharge.find_sole_by(parent_id: fixed_charge1.id)
-          fc2_override = FixedCharge.find_sole_by(parent_id: fixed_charge2.id)
-
-          expect(fc1_override.units).to eq(200)
-          expect(fc2_override.units).to eq(300)
+          expect(subscription.fixed_charge_units_overrides.pluck(:fixed_charge_id, :units)).to contain_exactly(
+            [fixed_charge1.id, 200],
+            [fixed_charge2.id, 300]
+          )
         end
 
         it "does not create fixed charge events for pending subscription" do
@@ -915,9 +910,78 @@ RSpec.describe Subscriptions::UpdateService do
             subscription.reload
 
             expect(subscription).to be_pending
-            expect(subscription.plan.parent_id).to eq(plan.id)
+            expect(subscription.plan).to eq(plan)
             expect(subscription.fixed_charge_events.count).to be_zero
           end
+        end
+      end
+
+      context "with existing units override on the (subscription, fixed_charge) pair", :premium do
+        let(:organization) { membership.organization }
+        let(:plan) { create(:plan, organization:) }
+        let(:fixed_charge) { create(:fixed_charge, plan:, units: 5) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) { create(:subscription, plan:, customer:) }
+        let(:params) do
+          {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 25}]}}
+        end
+
+        before do
+          fixed_charge
+          subscription
+          create(:subscription_fixed_charge_units_override, subscription:, fixed_charge:, organization:, units: 10)
+        end
+
+        it "updates the existing override row rather than creating a new one" do
+          expect { update_service.call }
+            .not_to change(::Subscription::FixedChargeUnitsOverride, :count)
+
+          override = ::Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)
+          expect(override.units).to eq(25)
+        end
+      end
+
+      context "when apply_units_immediately is true on a pay-in-advance fixed charge", :premium do
+        let(:organization) { membership.organization }
+        let(:plan) { create(:plan, organization:) }
+        let(:fixed_charge) { create(:fixed_charge, plan:, units: 5, pay_in_advance: true) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) { create(:subscription, plan:, customer:) }
+        let(:params) do
+          {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 25, apply_units_immediately: true}]}}
+        end
+
+        before do
+          fixed_charge
+          subscription
+        end
+
+        it "enqueues the pay-in-advance billing job" do
+          expect { update_service.call }
+            .to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+            .with(subscription, kind_of(Integer))
+        end
+      end
+
+      context "when the subscription is already on an overridden plan", :premium do
+        let(:organization) { membership.organization }
+        let(:parent_plan) { create(:plan, organization:) }
+        let(:plan) { create(:plan, organization:, parent: parent_plan) }
+        let(:fixed_charge) { create(:fixed_charge, plan:, units: 5) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) { create(:subscription, plan:, customer:) }
+        let(:params) do
+          {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 25}]}}
+        end
+
+        before do
+          fixed_charge
+          subscription
+        end
+
+        it "routes through Plans::UpdateService rather than the units-only branch" do
+          expect { update_service.call }
+            .not_to change(::Subscription::FixedChargeUnitsOverride, :count)
         end
       end
     end
