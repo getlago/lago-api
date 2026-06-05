@@ -246,8 +246,8 @@ describe Clockwork do
 
   describe "schedule:expire_order_forms" do
     let(:job) { "schedule:expire_order_forms" }
-    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
-    let(:end_time) { Time.zone.parse("2 Apr 2022 00:00:00") }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:30:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 01:30:00") }
 
     it "enqueues an expire order forms job" do
       Clockwork::Test.run(

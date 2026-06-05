@@ -146,9 +146,9 @@ module Clockwork
       .perform_later
   end
 
-  every(1.day, "schedule:expire_order_forms", at: "00:05") do
+  every(1.hour, "schedule:expire_order_forms", at: "*:40") do
     Clock::ExpireOrderFormsJob
-      .set(sentry: {"slug" => "lago_expire_order_forms", "cron" => "5 0 * * *"})
+      .set(sentry: {"slug" => "lago_expire_order_forms", "cron" => "40 */1 * * *"})
       .perform_later
   end
 
