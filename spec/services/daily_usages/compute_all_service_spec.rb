@@ -185,12 +185,29 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
 
       context "with a recurring billable metric" do
+        # Recurring metrics are constant between events, so they are recomputed once per period,
+        # on the run following the period rollover (timestamp - 1.day). With a calendar monthly
+        # plan, that rollover is the 1st of the month.
+        let(:timestamp) { Time.zone.parse("2024-10-02 00:05:00") }
+        let(:subscriptions) do
+          create_list(:subscription, 5, :calendar, customer:, plan:, last_received_event_on: timestamp.to_date - 5.days)
+        end
+
         before { create(:standard_charge, plan:, billable_metric:) }
 
-        it "enqueues jobs even though no event was received" do
+        it "enqueues jobs on the run following the period rollover" do
           expect(compute_service.call).to be_success
           subscriptions.each do |subscription|
             expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+          end
+        end
+
+        context "when no period rolled over the previous day" do
+          let(:timestamp) { Time.zone.parse("2024-10-22 00:05:00") }
+
+          it "does not enqueue any job" do
+            expect(compute_service.call).to be_success
+            expect(DailyUsages::ComputeJob).not_to have_been_enqueued
           end
         end
       end
