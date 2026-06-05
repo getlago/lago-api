@@ -3,6 +3,7 @@
 module Subscriptions
   class UpdateOrOverrideFixedChargeService < BaseService
     include Concerns::PlanOverrideConcern
+    include Concerns::FixedChargeUnitsOverrideDetectionConcern
 
     Result = BaseResult[:fixed_charge]
 
@@ -20,10 +21,7 @@ module Subscriptions
       return result.not_found_failure!(resource: "fixed_charge") unless fixed_charge
 
       ActiveRecord::Base.transaction do
-        target_plan = ensure_plan_override
-        target_fixed_charge = find_or_create_fixed_charge_override(target_plan)
-
-        result.fixed_charge = target_fixed_charge
+        result.fixed_charge = units_only_change? ? override_units_only : override_via_plan
       end
 
       result
@@ -36,6 +34,46 @@ module Subscriptions
     private
 
     attr_reader :subscription, :fixed_charge, :params
+
+    def units_only_change?
+      return false if subscription.plan.parent_id
+
+      units_only_fixed_charge_params?(params)
+    end
+
+    def override_units_only
+      apply_units_immediately = !!params[:apply_units_immediately]
+      timestamp = Time.current.to_i
+      parent_fixed_charge = find_parent_fixed_charge
+
+      override = ::Subscription::FixedChargeUnitsOverride.find_or_initialize_by(
+        subscription:,
+        fixed_charge: parent_fixed_charge
+      )
+      override.organization = subscription.organization
+      override.units = params[:units]
+      override.save!
+
+      FixedCharges::EmitEventsService.call!(
+        fixed_charge: parent_fixed_charge,
+        subscription:,
+        apply_units_immediately:,
+        timestamp:
+      )
+
+      if apply_units_immediately && parent_fixed_charge.pay_in_advance?
+        after_commit do
+          Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
+        end
+      end
+
+      parent_fixed_charge
+    end
+
+    def override_via_plan
+      target_plan = ensure_plan_override
+      find_or_create_fixed_charge_override(target_plan)
+    end
 
     def find_or_create_fixed_charge_override(target_plan)
       parent_fixed_charge = find_parent_fixed_charge
