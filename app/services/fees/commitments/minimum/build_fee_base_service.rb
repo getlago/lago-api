@@ -22,6 +22,9 @@ module Fees
           subscription.plan.pay_in_advance? && !reconciliation_invoice_subscription
         end
 
+        # Returns the invoice_subscription that represents the period being reconciled.
+        # - For pay in arrears: the current invoice_subscription
+        # - For pay in advance: the previous invoice_subscription (nil on first period)
         def reconciliation_invoice_subscription
           return @reconciliation_invoice_subscription if defined?(@reconciliation_invoice_subscription)
 
@@ -32,6 +35,9 @@ module Fees
           end
         end
 
+        # Returns the billing period boundaries that the commitment fee covers.
+        # These boundaries come directly from the invoice_subscription that represents
+        # the period being reconciled, not from computed dates.
         def commitment_boundaries
           return {} unless reconciliation_invoice_subscription
 
