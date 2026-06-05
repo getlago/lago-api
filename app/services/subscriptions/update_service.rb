@@ -3,6 +3,7 @@
 module Subscriptions
   class UpdateService < BaseService
     include Subscriptions::Concerns::BillingEntityResolutionConcern
+    include Subscriptions::Concerns::FixedChargeUnitsOverrideDetectionConcern
 
     Result = BaseResult[:subscription, :payment_method]
 
@@ -73,7 +74,11 @@ module Subscriptions
           subscription.billing_entity = new_billing_entity
         end
 
-        subscription.plan = handle_plan_override.plan if params.key?(:plan_overrides)
+        if units_only_plan_overrides_change?
+          apply_units_only_plan_overrides
+        elsif params.key?(:plan_overrides)
+          subscription.plan = handle_plan_override.plan
+        end
 
         if params.key?(:usage_thresholds)
           UpdateUsageThresholdsService.call!(subscription:, usage_thresholds_params: params[:usage_thresholds], partial: false)
@@ -173,6 +178,45 @@ module Subscriptions
           params: params[:plan_overrides].to_h.with_indifferent_access,
           subscription:
         )
+      end
+    end
+
+    def units_only_plan_overrides_change?
+      return @units_only_plan_overrides_change if defined?(@units_only_plan_overrides_change)
+
+      @units_only_plan_overrides_change = !subscription.plan.parent_id &&
+        params.key?(:plan_overrides) &&
+        units_only_fixed_charges_plan_overrides?(params[:plan_overrides])
+    end
+
+    def apply_units_only_plan_overrides
+      timestamp = Time.current.to_i
+
+      params[:plan_overrides][:fixed_charges].each do |entry|
+        entry = entry.to_h.symbolize_keys
+        fixed_charge = subscription.plan.fixed_charges.find(entry[:id])
+        apply_units_immediately = !!entry[:apply_units_immediately]
+
+        override = ::Subscription::FixedChargeUnitsOverride.find_or_initialize_by(
+          subscription:,
+          fixed_charge:
+        )
+        override.organization = subscription.organization
+        override.units = entry[:units]
+        override.save!
+
+        FixedCharges::EmitEventsService.call!(
+          fixed_charge:,
+          subscription:,
+          apply_units_immediately:,
+          timestamp:
+        )
+
+        if apply_units_immediately && fixed_charge.pay_in_advance?
+          after_commit do
+            Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
+          end
+        end
       end
     end
 
