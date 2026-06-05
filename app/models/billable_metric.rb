@@ -88,6 +88,14 @@ class BillableMetric < ApplicationRecord
     AGGREGATION_TYPES_PAYABLE_IN_ADVANCE.include?(aggregation_type.to_sym)
   end
 
+  # NOTE: Replaces billable_metric.plans.exists?
+  #       to force planner to use Index Scan (index_charges_on_billable_metric_id) instead of Seq Scan on charges
+  def attached_to_plan?
+    charges
+      .where("EXISTS (SELECT 1 FROM plans WHERE plans.id = charges.plan_id AND plans.deleted_at IS NULL)")
+      .exists?
+  end
+
   private
 
   def should_have_field_name?
