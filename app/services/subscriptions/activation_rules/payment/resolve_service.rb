@@ -43,6 +43,7 @@ module Subscriptions
             Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
             Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
             Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
+            Integrations::Aggregator::Taxes::Invoices::CreateJob.perform_later(invoice:) if invoice.customer.tax_customer
             Utils::SegmentTrack.invoice_created(invoice)
           end
         end
@@ -54,6 +55,24 @@ module Subscriptions
           invoice.closed!
           ActivationRules::ResolveSubscriptionStatusService.call!(subscription:)
           subscription.update!(cancelation_reason: :payment_failed)
+
+          after_commit do
+            enqueue_recredit_jobs
+          end
+        end
+
+        def enqueue_recredit_jobs
+          invoice.credits.coupon_kind.find_each do |credit|
+            AppliedCoupons::RecreditJob.perform_later(credit)
+          end
+
+          invoice.credits.credit_note_kind.find_each do |credit|
+            CreditNotes::RecreditJob.perform_later(credit)
+          end
+
+          invoice.wallet_transactions.outbound.find_each do |wallet_transaction|
+            WalletTransactions::RecreditJob.perform_later(wallet_transaction)
+          end
         end
 
         def payment_rule

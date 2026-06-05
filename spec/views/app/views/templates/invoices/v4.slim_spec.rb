@@ -1604,6 +1604,103 @@ RSpec.describe "templates/invoices/v4.slim" do
     end
   end
 
+  context "when charge fees have presentation breakdowns" do
+    let(:organization) { create(:organization, :with_static_values) }
+    let(:customer) { create(:customer, :with_static_values, organization:) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+
+    let(:plan) do
+      create(
+        :plan,
+        organization:,
+        interval: "monthly",
+        pay_in_advance: false,
+        invoice_display_name: "Plan with Breakdowns"
+      )
+    end
+
+    let(:subscription) { create(:subscription, customer:, plan:, status: "active") }
+
+    let(:charge) do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric:,
+        invoice_display_name: "Compute",
+        properties: {
+          "amount" => "100",
+          "presentation_group_keys" => [
+            {"value" => "region", "options" => {"display_in_invoice" => true}},
+            {"value" => "env", "options" => {"display_in_invoice" => true}}
+          ]
+        }
+      )
+    end
+
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        number: "LAGO-202509-009",
+        payment_due_date: Date.parse("2025-10-01"),
+        issuing_date: Date.parse("2025-09-01"),
+        invoice_type: :subscription,
+        total_amount_cents: 10000,
+        currency: "USD",
+        fees_amount_cents: 10000,
+        sub_total_excluding_taxes_amount_cents: 10000,
+        sub_total_including_taxes_amount_cents: 10000
+      )
+    end
+
+    let(:invoice_subscription) do
+      create(
+        :invoice_subscription,
+        invoice:,
+        subscription:,
+        from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        fixed_charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        fixed_charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        timestamp: Time.zone.parse("2025-08-31 23:59:59")
+      )
+    end
+
+    let(:charge_fee) do
+      create(
+        :charge_fee,
+        invoice:,
+        subscription:,
+        charge:,
+        amount_cents: 10000,
+        amount_currency: "USD",
+        units: 100,
+        unit_amount_cents: 100,
+        precise_unit_amount: 1.00,
+        invoice_display_name: "Compute",
+        grouped_by: {},
+        properties: {
+          "timestamp" => "2025-08-31 23:59:59",
+          "charges_from_datetime" => "2025-08-01 00:00:00",
+          "charges_to_datetime" => "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    before do
+      invoice_subscription
+      charge_fee
+      create(:presentation_breakdown, fee: charge_fee, units: 60, presentation_by: {"region" => "us", "env" => "prod"})
+      create(:presentation_breakdown, fee: charge_fee, units: 40, presentation_by: {"region" => "eu", "env" => "prod"})
+    end
+
+    it "renders correctly" do
+      expect(rendered_template).to match_html_snapshot
+    end
+  end
+
   context "when invoice has multiple subscriptions with prepaid credits" do
     let(:organization) { create(:organization, :with_static_values) }
     let(:customer) { create(:customer, :with_static_values, organization:) }

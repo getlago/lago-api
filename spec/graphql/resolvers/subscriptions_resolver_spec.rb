@@ -144,4 +144,71 @@ RSpec.describe Resolvers::SubscriptionsResolver do
       expect(response["metadata"]["totalCount"]).to eq(1)
     end
   end
+
+  context "with N+1 query detection on associations", bullet: {unused_eager_loading: false} do
+    let(:query) do
+      <<~GQL
+        query {
+          subscriptions(limit: 5, planCode: "#{plan.code}", status: [active]) {
+            collection { 
+              id
+              status
+              startedAt
+              nextSubscriptionAt
+              nextSubscriptionType
+              name
+              nextName
+              externalId
+              subscriptionAt
+              endingAt
+              terminatedAt
+              customer {
+                id
+                name
+                displayName
+                applicableTimezone
+              }
+              plan {
+                id
+                isOverridden
+                payInAdvance
+                amountCurrency
+                name
+                interval
+              }
+              nextPlan {
+                id
+                name
+                code
+                interval
+              }
+              nextSubscription {
+                id
+                name
+                externalId
+                status
+              }
+            }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      create(:subscription, customer:, plan:)
+      create(:subscription, customer:, plan:)
+    end
+
+    it "does not trigger N+1 queries on associations" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect(result["data"]["subscriptions"]["collection"].count).to eq(2)
+    end
+  end
 end

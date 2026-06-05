@@ -20,6 +20,16 @@ RSpec.describe QuoteVersions::ApproveService do
           expect(result.quote_version.approved_at).to eq(Time.current)
         end
       end
+
+      it "creates an order form for the approved quote version" do
+        expect { result }.to change(OrderForm, :count).by(1)
+
+        expect(result.order_form).to have_attributes(
+          quote_version_id: quote_version.id,
+          customer_id: quote.customer_id,
+          status: "generated"
+        )
+      end
     end
 
     context "when the quote version is voided", :premium do
@@ -33,6 +43,10 @@ RSpec.describe QuoteVersions::ApproveService do
         quote_version.reload
         expect(quote_version.approved?).to eq(false)
         expect(quote_version.approved_at).to eq(nil)
+      end
+
+      it "does not create an order form" do
+        expect { result }.not_to change(OrderForm, :count)
       end
     end
 

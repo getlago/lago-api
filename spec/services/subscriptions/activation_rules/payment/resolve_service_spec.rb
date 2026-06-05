@@ -171,6 +171,28 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
       end
     end
 
+    context "when customer has a tax provider integration" do
+      let(:integration) { create(:anrok_integration, organization:) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+      end
+
+      it "enqueues Aggregator::Taxes::Invoices::CreateJob to commit the finalized tax record" do
+        result
+
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateJob).to have_been_enqueued.with(invoice:)
+      end
+    end
+
+    context "when customer does not have a tax provider integration" do
+      it "does not enqueue Aggregator::Taxes::Invoices::CreateJob" do
+        result
+
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateJob).not_to have_been_enqueued
+      end
+    end
+
     context "when subscription is already active (idempotency)" do
       let(:subscription) { create(:subscription, organization:, customer:, plan:) }
 
@@ -209,6 +231,45 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
       result
 
       expect(SendWebhookJob).to have_been_enqueued.with("subscription.canceled", subscription)
+    end
+
+    context "when an applied-coupon credit was consumed" do
+      let(:applied_coupon) { create(:applied_coupon, customer:, organization:, status: :terminated) }
+      let(:credit) { create(:credit, invoice:, organization:, applied_coupon:) }
+
+      before { credit }
+
+      it "enqueues an AppliedCoupons::RecreditJob" do
+        result
+
+        expect(AppliedCoupons::RecreditJob).to have_been_enqueued.with(credit)
+      end
+    end
+
+    context "when a credit-note credit was consumed" do
+      let(:credit_note) { create(:credit_note, customer:, organization:, invoice:, credit_status: :available) }
+      let(:credit) { create(:credit_note_credit, invoice:, organization:, credit_note:) }
+
+      before { credit }
+
+      it "enqueues a CreditNotes::RecreditJob" do
+        result
+
+        expect(CreditNotes::RecreditJob).to have_been_enqueued.with(credit)
+      end
+    end
+
+    context "when an outbound wallet transaction was consumed" do
+      let(:wallet) { create(:wallet, customer:, organization:) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:, organization:, invoice:, transaction_type: :outbound) }
+
+      before { wallet_transaction }
+
+      it "enqueues a WalletTransactions::RecreditJob" do
+        result
+
+        expect(WalletTransactions::RecreditJob).to have_been_enqueued.with(wallet_transaction)
+      end
     end
   end
 end

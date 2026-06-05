@@ -67,9 +67,10 @@ module Subscriptions
           subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
         end
 
-        if params.key?(:billing_entity_id) || params.key?(:billing_entity_code)
+        if subscription.organization.feature_flag_enabled?(:multi_entity_billing) &&
+            (params.key?(:billing_entity_id) || params.key?(:billing_entity_code))
           new_billing_entity = resolve_billing_entity(organization: subscription.organization, params:)
-          subscription.billing_entity = new_billing_entity if new_billing_entity
+          subscription.billing_entity = new_billing_entity
         end
 
         subscription.plan = handle_plan_override.plan if params.key?(:plan_overrides)

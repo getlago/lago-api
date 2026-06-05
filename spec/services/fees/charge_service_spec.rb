@@ -806,6 +806,30 @@ RSpec.describe Fees::ChargeService, :premium do
 
             expect(result.fees.flat_map(&:presentation_breakdowns)).to all(have_attributes(organization_id: organization.id))
           end
+
+          context "with recurring weighted sum aggregation" do
+            let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
+
+            it "stores presentation_breakdowns on each cached aggregation scoped to its group" do
+              result = charge_subscription_service.call
+              expect(result).to be_success
+              expect(result.cached_aggregations.count).to eq(2)
+
+              aws_agg = result.cached_aggregations.find { |a| a.grouped_by["cloud"] == "aws" }
+              gcp_agg = result.cached_aggregations.find { |a| a.grouped_by["cloud"] == "gcp" }
+
+              expect(aws_agg.presentation_breakdowns.map { |b| b["groups"] }).to match_array(
+                [{"region" => "us-east-1"}, {"region" => "us-central-1"}]
+              )
+              expect(aws_agg.presentation_breakdowns.map { |b| b["value"].to_f.round(5) }).to eq([2.58065, 5.16129])
+
+              expect(gcp_agg.presentation_breakdowns.map { |b| b["groups"] }).to match_array(
+                [{"region" => "eu-west-1"}]
+              )
+
+              expect(gcp_agg.presentation_breakdowns.map { |b| b["value"].to_f.round(5) }).to eq([1.54839])
+            end
+          end
         end
       end
 
@@ -2652,6 +2676,38 @@ RSpec.describe Fees::ChargeService, :premium do
         expect(cached_aggregation.charge_id).to eq(charge.id)
         expect(cached_aggregation.timestamp).to eq(boundaries.from_datetime)
         expect(cached_aggregation.current_aggregation).to eq(0.0)
+      end
+
+      context "with presentation_group_keys" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan,
+            billable_metric:,
+            properties: {
+              amount: "20",
+              presentation_group_keys: [{value: "region"}]
+            }
+          )
+        end
+
+        before do
+          create(:event, organization: subscription.organization, subscription:, code: billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"), properties: {region: "us-east-1", value: 10})
+          create(:event, organization: subscription.organization, subscription:, code: billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"), properties: {region: "eu-west-1", value: 5})
+        end
+
+        it "stores presentation_breakdowns on the cached aggregation" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+
+          cached_aggregation = result.cached_aggregations.first
+          expect(cached_aggregation.presentation_breakdowns.map { |b| b["groups"] }).to match_array(
+            [{"region" => "us-east-1"}, {"region" => "eu-west-1"}]
+          )
+          expect(cached_aggregation.presentation_breakdowns.map { |b| b["value"].to_f.round(5) }).to eq([2.58065, 5.16129])
+        end
       end
     end
 

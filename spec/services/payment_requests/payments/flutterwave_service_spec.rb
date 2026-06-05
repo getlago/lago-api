@@ -249,6 +249,25 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
         expect(PaymentRequestMailer).to have_received(:with).with(payment_request: payment_request)
       end
     end
+
+    context "when a failed webhook arrives after the invoice was already paid through another path" do
+      before do
+        payment_request.payment_failed!
+        invoice.payment_succeeded!
+      end
+
+      it "leaves the already-succeeded invoice untouched" do
+        expect do
+          flutterwave_service.update_payment_status(
+            organization_id: organization.id,
+            status: :failed,
+            flutterwave_payment: flutterwave_payment
+          )
+        end.not_to change { invoice.reload.payment_status }
+
+        expect(invoice.reload).to be_payment_succeeded
+      end
+    end
   end
 
   describe "private methods" do

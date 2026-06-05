@@ -365,6 +365,32 @@ html
         border-bottom: 1px solid #d9dee7;
         padding-bottom: 24px;
       }
+      .breakdown-details.presentation-breakdowns {
+        overflow: visible;
+      }
+      .presentation-breakdowns-page {
+        page-break-before: always;
+        padding-top: 24px;
+      }
+      .presentation-breakdowns .breakdown-details-table tr td {
+        border-bottom: none;
+        border-top: none;
+        color: #66758f;
+        padding-bottom: 8px;
+        padding-top: 0;
+      }
+      .presentation-breakdowns .breakdown-details-table tr.fee td {
+        color: #19212e;
+        padding-bottom: 6px;
+        padding-top: 8px;
+      }
+      .presentation-breakdowns .breakdown-details-table tr.section-end td {
+        border-bottom: 1px solid #d9dee7;
+        padding-bottom: 8px;
+      }
+      .presentation-breakdowns .breakdown-details-table tr.presentation-group td:first-child {
+        padding-left: 8px;
+      }
 
       .powered-by {
         width: 100%;
@@ -464,6 +490,8 @@ html
 
       - if applied_invoice_custom_sections.present?
         == SlimHelper.render('templates/invoices/v4/_custom_sections', self)
+
+      == SlimHelper.render('templates/invoices/v4/_presentation_breakdowns', self, fees: fees.includes(:presentation_breakdowns, :charge, :charge_filter))
 
       p.body-3.mb-24 = LineBreakHelper.break_lines(billing_entity.invoice_footer)
 

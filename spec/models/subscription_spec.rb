@@ -55,6 +55,7 @@ RSpec.describe Subscription do
       expect(subject).to have_many(:usage_thresholds)
       expect(subject).to have_many(:fixed_charges).through(:plan)
       expect(subject).to have_many(:fixed_charge_events)
+      expect(subject).to have_many(:fixed_charge_units_overrides).class_name("Subscription::FixedChargeUnitsOverride")
       expect(subject).to have_many(:add_ons).through(:fixed_charges)
       expect(subject).to have_one(:lifetime_usage).autosave(true)
       expect(subject).to have_one(:subscription_activity).class_name("UsageMonitoring::SubscriptionActivity")
@@ -262,6 +263,46 @@ RSpec.describe Subscription do
             customer: create(:customer, organization:)
           )
           expect(incomplete_sub).not_to be_valid
+        end
+      end
+
+      context "when a pending subscription transitions to active" do
+        let(:external_id) { SecureRandom.uuid }
+        let(:pending_subscription) do
+          create(
+            :subscription,
+            plan:,
+            status: :pending,
+            external_id:,
+            customer: create(:customer, organization:)
+          )
+        end
+
+        before { pending_subscription }
+
+        context "when another active subscription with the same external_id exists" do
+          before do
+            create(
+              :subscription,
+              plan:,
+              status: :active,
+              external_id:,
+              customer: create(:customer, organization:)
+            )
+          end
+
+          it "rejects the activation" do
+            pending_subscription.assign_attributes(status: :active)
+            expect(pending_subscription).not_to be_valid
+            expect(pending_subscription.errors[:external_id]).to include("value_already_exist")
+          end
+        end
+
+        context "when no other active subscription with the same external_id exists" do
+          it "allows the activation" do
+            pending_subscription.assign_attributes(status: :active)
+            expect(pending_subscription).to be_valid
+          end
         end
       end
     end

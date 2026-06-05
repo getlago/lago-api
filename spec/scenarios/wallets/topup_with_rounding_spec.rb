@@ -59,7 +59,7 @@ describe "Wallet Transaction with rounding", :premium do
     expect(wallet.balance_cents).to eq 1797
   end
 
-  it "does not apply rounding handling granted_credits" do
+  it "does apply rounding handling granted_credits" do
     wallet = create_wallet({
       external_customer_id: customer.external_id,
       rate_amount: "1",
@@ -79,13 +79,13 @@ describe "Wallet Transaction with rounding", :premium do
     expect(wt.status).to eq "settled"
     expect(wt.transaction_status).to eq "granted"
     expect(wt.invoice_requires_successful_payment).to be false
-    expect(wt.credit_amount).to eq(17.96999)
+    expect(wt.credit_amount).to eq(17.97)
     expect(wt.amount).to eq(17.97)
 
     perform_all_enqueued_jobs
 
     wallet.reload
-    expect(wallet.credits_balance).to eq 17.96999
+    expect(wallet.credits_balance).to eq 17.97
     expect(wallet.balance.to_d).to eq 17.97
   end
 end

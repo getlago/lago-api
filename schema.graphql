@@ -1123,6 +1123,7 @@ type ChargeFilterUsage {
   eventsCount: Int!
   id: ID
   invoiceDisplayName: String
+  presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitAmountCents: BigInt
   units: Float!
   values: ChargeFilterValues!
@@ -3269,9 +3270,12 @@ input CreateQuoteInput {
   """
   clientMutationId: String
   content: String
+  currency: String
   customerId: ID!
+  endDate: ISO8601Date
   orderType: OrderTypeEnum!
   owners: [ID!]
+  startDate: ISO8601Date
   subscriptionId: ID
 }
 
@@ -5838,6 +5842,7 @@ enum FeatureFlagEnum {
   order_forms
   payment_gated_subscriptions
   postgres_enriched_events
+  stripe_shared_payment_token
   wallet_traceability
 }
 
@@ -5891,14 +5896,22 @@ type Fee implements InvoiceItem {
   itemName: String!
   itemType: String!
   offsettableAmountCents: BigInt!
+  payInAdvance: Boolean!
+  preciseAmountCents: Float!
+  preciseCouponsAmountCents: Float!
+  preciseTotalAmountCents: Float!
   preciseUnitAmount: Float!
   presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitUsage: PricingUnitUsage
   properties: FeeProperties
+  subTotalExcludingTaxesAmountCents: BigInt!
+  subTotalExcludingTaxesPreciseAmountCents: Float!
   subscription: Subscription
   succeededAt: ISO8601DateTime
   taxesAmountCents: BigInt!
+  taxesPreciseAmountCents: Float!
   taxesRate: Float
+  totalAmountCents: BigInt!
   trueUpFee: Fee
   trueUpParentFee: Fee
   units: Float!
@@ -6502,6 +6515,7 @@ enum IntegrationTypeEnum {
   projected_usage
   remove_branding_watermark
   revenue_analytics
+  revenue_recognition
   revenue_share
   salesforce
   security_logs
@@ -9057,6 +9071,49 @@ enum OrderByEnum {
   net_revenue_amount_cents
 }
 
+type OrderForm {
+  billingSnapshot: JSON!
+  createdAt: ISO8601DateTime!
+  customer: Customer!
+  expiresAt: ISO8601DateTime
+  id: ID!
+  number: String!
+  quote: Quote!
+  signedAt: ISO8601DateTime
+  status: OrderFormStatusEnum!
+  updatedAt: ISO8601DateTime!
+  voidReason: OrderFormVoidReasonEnum
+  voidedAt: ISO8601DateTime
+}
+
+"""
+OrderFormCollection type
+"""
+type OrderFormCollection {
+  """
+  A collection of paginated OrderFormCollection
+  """
+  collection: [OrderForm!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+enum OrderFormStatusEnum {
+  expired
+  generated
+  signed
+  voided
+}
+
+enum OrderFormVoidReasonEnum {
+  expired
+  invalid
+  manual
+}
+
 enum OrderTypeEnum {
   one_off
   subscription_amendment
@@ -9343,6 +9400,7 @@ enum PermissionEnum {
   invoices_update
   invoices_view
   invoices_void
+  order_forms_view
   organization_emails_update
   organization_emails_view
   organization_integrations_create
@@ -9456,6 +9514,7 @@ type Permissions {
   invoicesUpdate: Boolean!
   invoicesView: Boolean!
   invoicesVoid: Boolean!
+  orderFormsView: Boolean!
   organizationEmailsUpdate: Boolean!
   organizationEmailsView: Boolean!
   organizationIntegrationsCreate: Boolean!
@@ -9638,6 +9697,7 @@ enum PremiumIntegrationTypeEnum {
   projected_usage
   remove_branding_watermark
   revenue_analytics
+  revenue_recognition
   revenue_share
   salesforce
   security_logs
@@ -9766,9 +9826,11 @@ type ProjectedChargeFilterUsage {
   eventsCount: Int!
   id: ID
   invoiceDisplayName: String
+  presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
+  projectedPresentationBreakdowns: [PresentationBreakdownUsage!]
   projectedUnits: Float!
   units: Float!
   values: ChargeFilterValues!
@@ -9786,6 +9848,7 @@ type ProjectedChargeUsage {
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
+  projectedPresentationBreakdowns: [PresentationBreakdownUsage!]
   projectedUnits: Float!
   units: Float!
 }
@@ -9800,6 +9863,7 @@ type ProjectedGroupedChargeUsage {
   pricingUnitAmountCents: BigInt
   pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
+  projectedPresentationBreakdowns: [PresentationBreakdownUsage!]
   projectedUnits: Float!
   units: Float!
 }
@@ -10355,6 +10419,16 @@ type Query {
   ): Invoice
 
   """
+  Build a preview of a single Invoice of an organization for regeneration.
+  """
+  invoiceBuildRegenerationPreview(
+    """
+    Uniq ID of the invoice
+    """
+    id: ID!
+  ): Invoice
+
+  """
   Query invoice collections of an organization
   """
   invoiceCollections(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, isCustomerTinEmpty: Boolean): FinalizedInvoiceCollectionCollection!
@@ -10431,6 +10505,21 @@ type Query {
   Query MRR of an organization
   """
   mrrs(billingEntityId: ID, currency: CurrencyEnum): MrrCollection!
+
+  """
+  Query a single order form
+  """
+  orderForm(
+    """
+    Uniq ID of the order form
+    """
+    id: ID!
+  ): OrderForm
+
+  """
+  Query order forms
+  """
+  orderForms(createdAtFrom: ISO8601DateTime, createdAtTo: ISO8601DateTime, customerId: [ID!], expiresAtFrom: ISO8601DateTime, expiresAtTo: ISO8601DateTime, limit: Int, number: [String!], ownerId: [ID!], page: Int, quoteNumber: [String!], searchTerm: String, status: [OrderFormStatusEnum!]): OrderFormCollection!
 
   """
   Query the current organization
@@ -10818,10 +10907,13 @@ type QuoteVersion {
   billingItems: JSON
   content: String
   createdAt: ISO8601DateTime!
+  currency: String
+  endDate: ISO8601Date
   id: ID!
   organization: Organization!
   quote: Quote!
   shareToken: String
+  startDate: ISO8601Date
   status: StatusEnum!
   updatedAt: ISO8601DateTime!
   version: Int!
@@ -13138,7 +13230,10 @@ input UpdateQuoteVersionInput {
   """
   clientMutationId: String
   content: String
+  currency: String
+  endDate: ISO8601Date
   id: ID!
+  startDate: ISO8601Date
 }
 
 input UpdateRecurringTransactionRuleInput {

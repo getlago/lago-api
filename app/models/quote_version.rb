@@ -20,6 +20,7 @@ class QuoteVersion < ApplicationRecord
 
   belongs_to :organization
   belongs_to :quote
+  has_one :order_form
 
   enum :status, STATUSES,
     default: :draft,
@@ -66,7 +67,10 @@ end
 #  approved_at     :datetime
 #  billing_items   :jsonb
 #  content         :text
+#  currency        :string
+#  end_date        :date
 #  share_token     :string
+#  start_date      :date
 #  status          :enum             default("draft"), not null
 #  void_reason     :enum
 #  voided_at       :datetime

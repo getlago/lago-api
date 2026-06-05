@@ -99,7 +99,7 @@ module Events
 
     def enqueue_post_process_jobs
       jobs = result.events.map { |event| Events::PostProcessJob.new(event:) }
-      ActiveJob.perform_all_later(jobs)
+      ApplicationJob.perform_all_later(jobs)
     end
   end
 end

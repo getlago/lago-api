@@ -47,14 +47,23 @@ module WalletActions
     render_wallet(wallet)
   end
 
-  def wallet_index(external_customer_id:, currency:)
+  def wallet_index(external_customer_id:, currency:, billing_entity_codes: nil)
+    if billing_entity_codes.present?
+      billing_entities = current_organization.all_billing_entities.where(code: billing_entity_codes)
+      return not_found_error(resource: "billing_entity") if billing_entities.count != billing_entity_codes.uniq.count
+    end
+
     result = WalletsQuery.call(
       organization: current_organization,
       pagination: {
         page: params[:page],
         limit: params[:per_page] || PER_PAGE
       },
-      filters: {external_customer_id: external_customer_id, currency:}
+      filters: {
+        external_customer_id: external_customer_id,
+        currency:,
+        billing_entity_ids: billing_entities&.ids
+      }.compact
     )
 
     if result.success?
