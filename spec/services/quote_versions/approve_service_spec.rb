@@ -30,6 +30,14 @@ RSpec.describe QuoteVersions::ApproveService do
           status: "generated"
         )
       end
+
+      it "persists the computed mention variables snapshot" do
+        expect(result).to be_success
+        expect(result.quote_version.reload.mention_variables).to include(
+          "customer_name" => quote.customer.name,
+          "quote_number" => quote.number
+        )
+      end
     end
 
     context "when the quote version is voided", :premium do

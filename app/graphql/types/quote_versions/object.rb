@@ -12,6 +12,7 @@ module Types
       field :currency, String, null: true
       field :end_date, GraphQL::Types::ISO8601Date, null: true
       field :id, ID, null: false
+      field :mention_variables, GraphQL::Types::JSON, null: false
       field :organization, Types::Organizations::OrganizationType, null: false
       field :quote, Types::Quotes::Object, null: false
       field :share_token, String, null: true
@@ -24,6 +25,13 @@ module Types
       # TODO: field :order_form, Types::OrderForms::Object, null: true
 
       dataload_association :organization, :quote
+
+      # Computed live while the version is editable; the frozen snapshot persisted at approval
+      # time is returned once present.
+      def mention_variables
+        object.mention_variables.presence ||
+          ::QuoteVersions::ComputeMentionVariablesService.call(quote_version: object).mention_variables
+      end
     end
   end
 end
