@@ -200,6 +200,22 @@ RSpec.describe Subscriptions::BillingDateQuery do
         bill_fixed_charges_monthly: true,
         billed_on: ["20 Jul 2022", "20 Aug 2022"],
         not_billed_on: ["21 Jul 2022"]
+      },
+      {
+        interval: :yearly,
+        billing_time: :calendar,
+        bill_fixed_charges_monthly: true,
+        billed_on: ["01 Aug 2022", "01 Sep 2022", "01 Oct 2022"],
+        not_billed_on: ["02 Aug 2022", "31 Aug 2022"]
+      },
+      # Semiannual anniversary anchored on a month divisible by 6 (exercises the MOD(month, 6) = 0
+      # branch: bills in June and December).
+      {
+        interval: :semiannual,
+        billing_time: :anniversary,
+        subscription_at: "20 Jun 2021",
+        billed_on: ["20 Jun 2022", "20 Dec 2022"],
+        not_billed_on: ["20 Aug 2022", "20 Sep 2022"]
       }
     ].each do |test_case|
       case_subscription_at = test_case[:subscription_at] || "20 Feb 2021"
