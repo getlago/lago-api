@@ -83,7 +83,11 @@ module Subscriptions
 
       after_commit { notify_started }
 
-      bill_rotation_subscriptions(billable_subscriptions, billing_at: Time.current + 1.second)
+      bill_rotation_subscriptions(
+        billable_subscriptions,
+        billing_at: Time.current + 1.second,
+        non_invoiceable_subscriptions: billable_subscriptions
+      )
     end
 
     def activate_for_downgrade
@@ -138,10 +142,12 @@ module Subscriptions
       end
     end
 
-    def bill_rotation_subscriptions(billable_subscriptions, billing_at:)
+    # Downgrades default to billing only the previous subscription for non-invoiceable fees:
+    # the downgrade subscription has no events yet.
+    def bill_rotation_subscriptions(billable_subscriptions, billing_at:, non_invoiceable_subscriptions: [subscription.previous_subscription])
       after_commit do
         BillSubscriptionJob.perform_later(billable_subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
-        BillNonInvoiceableFeesJob.perform_later([subscription.previous_subscription], billing_at)
+        BillNonInvoiceableFeesJob.perform_later(non_invoiceable_subscriptions, billing_at)
       end
     end
 

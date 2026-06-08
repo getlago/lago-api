@@ -625,10 +625,10 @@ RSpec.describe Subscriptions::ActivateService do
         .with([previous_subscription], anything, invoicing_reason: :upgrading)
     end
 
-    it "enqueues BillNonInvoiceableFeesJob" do
+    it "enqueues BillNonInvoiceableFeesJob for the previous subscription only" do
       result
 
-      expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+      expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([previous_subscription], anything)
     end
 
     context "when the new plan is pay in advance" do
@@ -639,6 +639,13 @@ RSpec.describe Subscriptions::ActivateService do
 
         expect(BillSubscriptionJob).to have_been_enqueued
           .with([previous_subscription, subscription], anything, invoicing_reason: :upgrading)
+      end
+
+      it "includes both previous and new subscription in BillNonInvoiceableFeesJob" do
+        result
+
+        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+          .with([previous_subscription, subscription], anything)
       end
     end
 
