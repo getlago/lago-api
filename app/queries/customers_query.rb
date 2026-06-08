@@ -59,10 +59,6 @@ class CustomersQuery < BaseQuery
     Customer.where(organization:).where(id: matching_ids_by_search)
   end
 
-  # Rather than a single OR across the searchable columns (which the planner
-  # evaluates as a per-row filter and cannot serve from the per-column trgm GIN
-  # indexes), build one branch per column and UNION them so each branch uses its
-  # own index, then filter the main scope by the resulting ids.
   def matching_ids_by_search
     search_base = Customer.where(organization:)
     search_base = search_base.with_discarded if filters.with_deleted
