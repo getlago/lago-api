@@ -1580,8 +1580,7 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'current_usage_amount',
     'billable_metric_current_usage_amount',
     'billable_metric_current_usage_units',
-    'lifetime_usage_amount',
-    'wallet_balance_amount'
+    'lifetime_usage_amount'
 );
 
 
