@@ -41,6 +41,7 @@ end
 #  index_daily_usages_on_customer_id                           (customer_id)
 #  index_daily_usages_on_organization_id                       (organization_id)
 #  index_daily_usages_on_subscription_id                       (subscription_id)
+#  index_daily_usages_on_subscription_id_and_usage_date        (subscription_id,usage_date)
 #  index_daily_usages_on_usage_date                            (usage_date)
 #
 # Foreign Keys

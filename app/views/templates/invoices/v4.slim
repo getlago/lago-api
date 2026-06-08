@@ -496,9 +496,9 @@ html
 
       == SlimHelper.render('templates/invoices/v4/_eu_tax_management', self)
 
-      - if progressive_billing?
+      - applied_usage_threshold = progressive_billing_last_applied_usage_threshold
+      - if applied_usage_threshold
         p.body-3.mb-24
-          - applied_usage_threshold = applied_usage_thresholds.order(created_at: :asc).last
           = I18n.t('invoice.reached_usage_threshold', usage_amount: MoneyHelper.format(applied_usage_threshold.lifetime_usage_amount), threshold_amount: MoneyHelper.format(applied_usage_threshold.passed_threshold_amount))
 
       - if applied_invoice_custom_sections.present?

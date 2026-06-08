@@ -528,6 +528,7 @@ DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_due_date;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_id_and_sequential_id;
 DROP INDEX IF EXISTS public.index_invoices_by_cursor;
@@ -652,6 +653,7 @@ DROP INDEX IF EXISTS public.index_data_exports_on_membership_id;
 DROP INDEX IF EXISTS public.index_data_export_parts_on_organization_id;
 DROP INDEX IF EXISTS public.index_data_export_parts_on_data_export_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_usage_date;
+DROP INDEX IF EXISTS public.index_daily_usages_on_subscription_id_and_usage_date;
 DROP INDEX IF EXISTS public.index_daily_usages_on_subscription_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_organization_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_customer_id;
@@ -7824,6 +7826,13 @@ CREATE INDEX index_daily_usages_on_subscription_id ON public.daily_usages USING 
 
 
 --
+-- Name: index_daily_usages_on_subscription_id_and_usage_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_daily_usages_on_subscription_id_and_usage_date ON public.daily_usages USING btree (subscription_id, usage_date);
+
+
+--
 -- Name: index_daily_usages_on_usage_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8689,6 +8698,13 @@ CREATE UNIQUE INDEX index_invoices_on_customer_id_and_sequential_id ON public.in
 --
 
 CREATE INDEX index_invoices_on_number ON public.invoices USING btree (number);
+
+
+--
+-- Name: index_invoices_on_organization_id_number_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_number_gin_trgm_ops ON public.invoices USING gin (organization_id, number public.gin_trgm_ops);
 
 
 --
@@ -12538,6 +12554,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260608111837'),
+('20260608074112'),
 ('20260603121349'),
 ('20260602092156'),
 ('20260601174030'),
@@ -13554,4 +13572,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-

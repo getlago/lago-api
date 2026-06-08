@@ -86,7 +86,7 @@ module V1
     end
 
     def dates_service
-      @dates_service ||= ::Subscriptions::DatesService.new_instance(model, Time.current, current_usage: true)
+      @dates_service ||= ::Subscriptions::DatesService.new_instance(model, model.billing_reference_time, current_usage: true)
     end
 
     def applicable_usage_thresholds

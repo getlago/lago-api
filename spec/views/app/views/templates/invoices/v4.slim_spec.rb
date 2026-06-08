@@ -1290,6 +1290,14 @@ RSpec.describe "templates/invoices/v4.slim" do
     it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
+
+    context "when invoice does not have any applied usage threshold" do
+      let(:applied_usage_threshold) { nil }
+
+      it "renders without the reached usage threshold line" do
+        expect(rendered_template).not_to include("This progressive billing is generated because your cumulative usage has reached")
+      end
+    end
   end
 
   context "when charge has filters and minimum commitment (true_up fee)" do

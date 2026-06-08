@@ -51,16 +51,18 @@ module Invoices
         invoice.payment_method = payment_method
         invoice.skip_automatic_payment = skip_psp
 
+        # NOTE: Custom sections are applied before computing taxes so they are persisted even when
+        #       tax computation is deferred to a tax provider (the `next` below skips the rest of the block).
+        unless skip_custom_sections?
+          Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, custom_section_ids: invoice_custom_section_ids)
+        end
+
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
         if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
           tax_deferred = true
           next
         end
         totals_result.raise_if_error!
-
-        unless skip_custom_sections?
-          Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, custom_section_ids: invoice_custom_section_ids)
-        end
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)

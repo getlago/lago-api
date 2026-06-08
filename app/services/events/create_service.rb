@@ -20,7 +20,7 @@ module Events
       event.external_subscription_id = params[:external_subscription_id]
       event.properties = params[:properties] || {}
       event.metadata = metadata || {}
-      event.timestamp = Time.zone.at(params[:timestamp] ? Float(params[:timestamp]) : timestamp)
+      event.timestamp = Time.zone.at(params[:timestamp] ? BigDecimal(params[:timestamp].to_s) : timestamp)
       event.precise_total_amount_cents = params[:precise_total_amount_cents]
 
       expression_result = CalculateExpressionService.call(organization:, event:)
