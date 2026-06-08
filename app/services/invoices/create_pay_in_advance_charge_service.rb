@@ -29,7 +29,7 @@ module Invoices
 
         # NOTE: Custom sections are applied before computing taxes so they are persisted even when
         #       tax computation is deferred to a tax provider (the `next` below skips the rest of the block).
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: [subscription])
 
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
         if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
@@ -40,10 +40,6 @@ module Invoices
 
         create_credit_note_credit
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
-<<<<<<< feat/apply-invoice-custom-sections
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: [subscription])
-=======
->>>>>>> main
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)
