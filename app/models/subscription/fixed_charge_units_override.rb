@@ -13,6 +13,17 @@ class Subscription::FixedChargeUnitsOverride < ApplicationRecord
   belongs_to :fixed_charge
 
   validates :units, presence: true, numericality: {greater_than_or_equal_to: 0}
+
+  # Returns a {fixed_charge_id => units} map for the given subscription and
+  # fixed_charges in one query. Lets collection callers (REST index, GraphQL
+  # Subscription type) resolve subscription-aware units without an N+1.
+  def self.units_map_for(subscription:, fixed_charges:)
+    return {} unless subscription
+
+    where(subscription:, fixed_charge_id: fixed_charges)
+      .pluck(:fixed_charge_id, :units)
+      .to_h
+  end
 end
 
 # == Schema Information

@@ -14,7 +14,7 @@ module V1
         pay_in_advance: model.pay_in_advance,
         prorated: model.prorated,
         properties: model.properties,
-        units: model.units,
+        units: effective_units,
         lago_parent_id: model.parent_id
       }
 
@@ -24,6 +24,14 @@ module V1
     end
 
     private
+
+    def effective_units
+      if (map = options[:effective_units_by_id])
+        map[model.id] || model.units
+      else
+        model.effective_units_for(options[:subscription])
+      end
+    end
 
     def taxes
       ::CollectionSerializer.new(

@@ -13,13 +13,20 @@ module Api
             .page(params[:page])
             .per(params[:per_page] || PER_PAGE)
 
+          effective_units_by_id = ::Subscription::FixedChargeUnitsOverride.units_map_for(
+            subscription:,
+            fixed_charges:
+          )
+
           render(
             json: ::CollectionSerializer.new(
               fixed_charges,
               ::V1::FixedChargeSerializer,
               collection_name: "fixed_charges",
               meta: pagination_metadata(fixed_charges),
-              includes: %i[taxes]
+              includes: %i[taxes],
+              subscription:,
+              effective_units_by_id:
             )
           )
         end
@@ -29,7 +36,8 @@ module Api
             json: ::V1::FixedChargeSerializer.new(
               fixed_charge,
               root_name: "fixed_charge",
-              includes: %i[taxes]
+              includes: %i[taxes],
+              subscription:
             )
           )
         end
@@ -46,7 +54,8 @@ module Api
               json: ::V1::FixedChargeSerializer.new(
                 result.fixed_charge,
                 root_name: "fixed_charge",
-                includes: %i[taxes]
+                includes: %i[taxes],
+                subscription:
               )
             )
           else
