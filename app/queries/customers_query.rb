@@ -63,8 +63,10 @@ class CustomersQuery < BaseQuery
     search_base = Customer.where(organization:)
     search_base = search_base.with_discarded if filters.with_deleted
 
+    escaped_term = "%#{Customer.sanitize_sql_like(search_term)}%"
+
     branches = SEARCHABLE_FIELDS.map do |field|
-      search_base.where("customers.#{field} ILIKE ?", "%#{search_term}%").select(:id)
+      search_base.where("customers.#{field} ILIKE ?", escaped_term).select(:id)
     end
 
     union_sql = branches.map(&:to_sql).join(" UNION ")

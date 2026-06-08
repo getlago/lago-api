@@ -268,6 +268,14 @@ RSpec.describe CustomersQuery do
       end
     end
 
+    context "when the term contains LIKE wildcards" do
+      let(:search_term) { "d_fgh" }
+
+      it "matches the wildcards literally" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
     context "when a matching customer is discarded" do
       let(:search_term) { "defgh" }
 
