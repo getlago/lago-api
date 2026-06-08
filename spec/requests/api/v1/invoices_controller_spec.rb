@@ -1537,6 +1537,51 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "with a not-yet-scheduled downgrade (plan_code)" do
+      let(:customer) { create(:customer, organization:, external_id: "plan_change_customer") }
+      let(:current_plan) do
+        create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 1000)
+      end
+      let(:target_plan) do
+        create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 500)
+      end
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: current_plan,
+          status: :active,
+          billing_time: "anniversary",
+          subscription_at: Time.zone.parse("2026-03-03"),
+          started_at: Time.zone.parse("2026-03-03")
+        )
+      end
+      let(:preview_params) do
+        {
+          customer: {external_id: customer.external_id},
+          subscriptions: {external_ids: [subscription.external_id], plan_code: target_plan.code}
+        }
+      end
+
+      before { subscription }
+
+      it "serializes the target plan's real first billing period" do
+        travel_to(Time.zone.parse("2026-06-04T10:00:00Z")) do
+          subject
+
+          expect(response).to have_http_status(:success)
+
+          pending_plan = json[:invoice][:subscriptions].find { |s| s[:plan_code] == target_plan.code }
+          expect(pending_plan).to be_present
+          expect(pending_plan[:started_at]).to eq("2026-07-03T00:00:00.000Z")
+          expect(pending_plan[:current_billing_period_started_at]).to eq("2026-07-03T00:00:00Z")
+          expect(pending_plan[:current_billing_period_ending_at]).to eq("2026-08-02T23:59:59Z")
+          expect(pending_plan[:current_billing_period_started_at])
+            .not_to eq(pending_plan[:current_billing_period_ending_at])
+        end
+      end
+    end
+
     context "when subscription has a minimum commitment and terminated_at is provided" do
       let(:timestamp) { Time.zone.parse("2026-01-15") }
       let(:commitment_customer) { create(:customer, organization:, external_id: "commitment_customer") }

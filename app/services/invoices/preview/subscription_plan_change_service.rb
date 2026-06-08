@@ -58,9 +58,17 @@ module Invoices
           billing_time: current_subscription.billing_time,
           ending_at: current_subscription.ending_at,
           status: :active,
-          started_at: upgrade? ? Time.current : termination_date,
+          started_at: new_subscription_started_at,
           created_at: Time.current
         )
+      end
+
+      # For a downgrade, termination_date is the end-of-day rotation timestamp, but the new
+      # subscription starts at the beginning of that day in the customer timezone.
+      def new_subscription_started_at
+        return Time.current if upgrade?
+
+        termination_date.in_time_zone(customer.applicable_timezone).beginning_of_day
       end
 
       def termination_date
