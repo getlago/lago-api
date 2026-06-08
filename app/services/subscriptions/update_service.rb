@@ -4,6 +4,7 @@ module Subscriptions
   class UpdateService < BaseService
     include Subscriptions::Concerns::BillingEntityResolutionConcern
     include Subscriptions::Concerns::FixedChargeUnitsOverrideDetectionConcern
+    include Subscriptions::Concerns::FixedChargeUnitsOverridePromotionConcern
 
     Result = BaseResult[:subscription, :payment_method]
 
