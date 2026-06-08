@@ -202,29 +202,14 @@ module Subscriptions
 
       params[:plan_overrides][:fixed_charges].each do |entry|
         entry = entry.to_h.symbolize_keys
-        fixed_charge = subscription.plan.fixed_charges.find(entry[:id])
-        apply_units_immediately = !!entry[:apply_units_immediately]
 
-        override = ::Subscription::FixedChargeUnitsOverride.find_or_initialize_by(
+        Subscriptions::FixedChargeUnitsOverrides::WriteService.call!(
           subscription:,
-          fixed_charge:
-        )
-        override.organization = subscription.organization
-        override.units = entry[:units]
-        override.save!
-
-        FixedCharges::EmitEventsService.call!(
-          fixed_charge:,
-          subscription:,
-          apply_units_immediately:,
+          fixed_charge: subscription.plan.fixed_charges.find(entry[:id]),
+          units: entry[:units],
+          apply_units_immediately: entry[:apply_units_immediately],
           timestamp:
         )
-
-        if apply_units_immediately && fixed_charge.pay_in_advance?
-          after_commit do
-            Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
-          end
-        end
       end
     end
 
