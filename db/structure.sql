@@ -669,7 +669,6 @@ DROP INDEX IF EXISTS public.index_customers_on_organization_id_firstname_gin_trg
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_external_id_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_email_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_org_id_and_sequential_id_unique;
-DROP INDEX IF EXISTS public.index_customers_on_external_id_only;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id;
 DROP INDEX IF EXISTS public.index_customers_on_deleted_at;
@@ -1582,11 +1581,9 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'billable_metric_current_usage_amount',
     'billable_metric_current_usage_units',
     'lifetime_usage_amount',
-    'billable_metric_lifetime_usage_units',
     'wallet_balance_amount',
     'wallet_credits_balance',
-    'wallet_ongoing_balance_amount',
-    'wallet_credits_ongoing_balance'
+    'wallet_ongoing_balance_amount'
 );
 
 
@@ -7722,13 +7719,6 @@ CREATE UNIQUE INDEX index_customers_on_external_id_and_organization_id ON public
 
 
 --
--- Name: index_customers_on_external_id_only; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_customers_on_external_id_only ON public.customers USING btree (external_id);
-
-
---
 -- Name: index_customers_on_org_id_and_sequential_id_unique; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12626,7 +12616,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260305161302'),
 ('20260305100007'),
 ('20260304074158'),
-('20260302163856'),
 ('20260227184913'),
 ('20260224134805'),
 ('20260220131101'),
@@ -13581,4 +13570,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-
