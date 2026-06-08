@@ -160,6 +160,38 @@ RSpec.describe Subscription do
         expect(described_class.expirable).to match_array([expirable_subscription])
       end
     end
+
+    describe ".without_fixed_charge_units_override_for" do
+      let(:organization) { create(:organization) }
+      let(:plan) { create(:plan, organization:) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, organization:) }
+      let(:other_fixed_charge) { create(:fixed_charge, plan:, organization:) }
+      let(:overridden_sub) { create(:subscription, plan:) }
+      let(:bare_sub) { create(:subscription, plan:) }
+      let(:other_fc_overridden_sub) { create(:subscription, plan:) }
+
+      before do
+        create(:subscription_fixed_charge_units_override, subscription: overridden_sub, fixed_charge:, organization:)
+        create(:subscription_fixed_charge_units_override, subscription: other_fc_overridden_sub, fixed_charge: other_fixed_charge, organization:)
+      end
+
+      it "excludes subscriptions with a kept override for the given fixed charge" do
+        result = described_class.without_fixed_charge_units_override_for(fixed_charge)
+
+        expect(result).to include(bare_sub, other_fc_overridden_sub)
+        expect(result).not_to include(overridden_sub)
+      end
+
+      context "when the override row was discarded" do
+        before do
+          Subscription::FixedChargeUnitsOverride.unscoped.find_by(subscription: overridden_sub, fixed_charge:).discard!
+        end
+
+        it "stops excluding the subscription" do
+          expect(described_class.without_fixed_charge_units_override_for(fixed_charge)).to include(overridden_sub)
+        end
+      end
+    end
   end
 
   describe "validations" do
