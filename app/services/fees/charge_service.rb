@@ -145,7 +145,7 @@ module Fees
     end
 
     def skip_caching_of_non_persistable_fee?
-      current_usage && organization.feature_flag_enabled?(:non_persistable_charge_cache_optimization)
+      current_usage
     end
 
     def hydrate_non_persistable_fees(properties:, charge_filter:)
