@@ -80,6 +80,7 @@ end
 #  event_types     :string           is an Array
 #  name            :string
 #  signature_algo  :integer          default("jwt"), not null
+#  slow_response   :boolean          default(FALSE), not null
 #  webhook_url     :string           not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
@@ -88,6 +89,7 @@ end
 # Indexes
 #
 #  index_webhook_endpoints_on_organization_id                  (organization_id)
+#  index_webhook_endpoints_on_slow_response                    (slow_response)
 #  index_webhook_endpoints_on_webhook_url_and_organization_id  (webhook_url,organization_id) UNIQUE
 #
 # Foreign Keys
