@@ -11,8 +11,8 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
   let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
 
   let(:event_timestamp) { (billable_metric.deleted_at || Time.current) - 1.minute }
-  let(:event) { create(:event, code: billable_metric.code, subscription_id: subscription.id, organization_id: billable_metric.organization_id, timestamp: event_timestamp) }
-  let(:not_impacted_event) { create(:event, subscription_id: subscription.id, organization_id: billable_metric.organization_id, timestamp: event_timestamp) }
+  let(:event) { create(:event, code: billable_metric.code, subscription_id: subscription.id, organization_id: billable_metric.organization_id, timestamp: event_timestamp, created_at: event_timestamp) }
+  let(:not_impacted_event) { create(:event, subscription_id: subscription.id, organization_id: billable_metric.organization_id, timestamp: event_timestamp, created_at: event_timestamp) }
 
   before do
     charge
@@ -29,8 +29,8 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
     end
 
     context "with new-style external_subscription based events" do
-      let(:event) { create(:event, code: billable_metric.code, external_subscription_id: subscription.external_id, organization_id: billable_metric.organization_id, timestamp: event_timestamp) }
-      let(:not_impacted_event) { create(:event, external_subscription_id: SecureRandom.uuid, organization_id: billable_metric.organization_id, timestamp: event_timestamp) }
+      let(:event) { create(:event, code: billable_metric.code, external_subscription_id: subscription.external_id, organization_id: billable_metric.organization_id, timestamp: event_timestamp, created_at: event_timestamp) }
+      let(:not_impacted_event) { create(:event, external_subscription_id: SecureRandom.uuid, organization_id: billable_metric.organization_id, timestamp: event_timestamp, created_at: event_timestamp) }
 
       it "deletes related events" do
         expect { service.call }.to change { event.reload.deleted_at }.from(nil).to(billable_metric.deleted_at)
@@ -48,13 +48,13 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
       end
     end
 
-    context "when event timestamp is after billable_metric deletion" do
+    context "when event is received after billable_metric deletion" do
       let(:event) do
         create(
           :event,
           code: billable_metric.code,
           subscription_id: subscription.id,
-          timestamp: billable_metric.deleted_at + 1.hour
+          created_at: billable_metric.deleted_at + 1.hour
         )
       end
 
@@ -82,7 +82,7 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
           organization_id: billable_metric.organization_id,
           code: billable_metric.code,
           external_subscription_id: subscription.external_id,
-          timestamp: event_timestamp
+          ingested_at: event_timestamp
         )
       end
 
@@ -91,7 +91,7 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
           :clickhouse_events_raw,
           organization_id: billable_metric.organization_id,
           external_subscription_id: SecureRandom.uuid,
-          timestamp: event_timestamp
+          ingested_at: event_timestamp
         )
       end
 
@@ -101,7 +101,7 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
           organization_id: billable_metric.organization_id,
           code: billable_metric.code,
           external_subscription_id: subscription.external_id,
-          timestamp: event_timestamp
+          enriched_at: event_timestamp
         )
       end
 
@@ -110,7 +110,7 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
           :clickhouse_events_enriched,
           organization_id: billable_metric.organization_id,
           external_subscription_id: SecureRandom.uuid,
-          timestamp: event_timestamp
+          enriched_at: event_timestamp
         )
       end
 
@@ -120,7 +120,7 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
           organization_id: billable_metric.organization_id,
           code: billable_metric.code,
           external_subscription_id: subscription.external_id,
-          timestamp: event_timestamp
+          enriched_at: event_timestamp
         )
       end
 
@@ -129,7 +129,7 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
           :clickhouse_events_enriched_expanded,
           organization_id: billable_metric.organization_id,
           external_subscription_id: SecureRandom.uuid,
-          timestamp: event_timestamp
+          enriched_at: event_timestamp
         )
       end
 
@@ -180,7 +180,7 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
             organization_id: billable_metric.organization_id,
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            timestamp: billable_metric.deleted_at + 1.hour
+            ingested_at: billable_metric.deleted_at + 1.hour
           )
         end
 
