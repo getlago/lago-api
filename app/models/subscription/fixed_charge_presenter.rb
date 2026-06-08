@@ -1,21 +1,20 @@
 # frozen_string_literal: true
 
-# Wraps a FixedCharge with subscription context so #units returns the
-# per-subscription override when one exists. Used by the GraphQL
-# Subscription type to expose subscription-aware units without changing
-# the FixedCharge GraphQL type's contract. Every other method is
-# delegated to the wrapped FixedCharge record.
+# Wraps a FixedCharge with a pre-resolved override units value so `#units`
+# returns the per-subscription override when one exists, falling back to
+# the plan-level units otherwise. Used by the GraphQL Subscription type
+# to expose subscription-aware units without changing the FixedCharge
+# GraphQL type's contract. Callers must batch the override lookup once
+# per request (see `Subscription::FixedChargeUnitsOverride.units_map_for`)
+# and pass the matching value as `effective_units:` — `nil` means "no
+# override". Every other method is delegated to the wrapped FixedCharge.
 class Subscription::FixedChargePresenter < SimpleDelegator
   attr_reader :subscription
 
-  # Accepts an optional pre-resolved override units value via `effective_units:`.
-  # Collection callers (GraphQL Subscription type) pass the value from a batched
-  # lookup to avoid an N+1 against subscription_fixed_charge_units_overrides;
-  # standalone callers can omit it and the presenter resolves it on its own.
-  def initialize(fixed_charge, subscription, **opts)
+  def initialize(fixed_charge, subscription, effective_units:)
     super(fixed_charge)
     @subscription = subscription
-    @effective_units = opts.fetch(:effective_units) { fixed_charge.effective_units_for(subscription) }
+    @effective_units = effective_units
   end
 
   def units

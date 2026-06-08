@@ -34,27 +34,22 @@ RSpec.describe ::V1::FixedChargeSerializer do
     end
   end
 
-  context "when a subscription option is provided" do
-    let(:serializer) { described_class.new(fixed_charge, root_name: "fixed_charge", subscription:) }
+  context "when effective_units_by_id is provided" do
+    let(:serializer) do
+      described_class.new(fixed_charge, root_name: "fixed_charge", effective_units_by_id:)
+    end
     let(:fixed_charge) { create(:fixed_charge, units: 10, properties:) }
-    let(:plan) { fixed_charge.plan }
-    let(:customer) { create(:customer, organization: plan.organization) }
-    let(:subscription) { create(:subscription, plan:, customer:) }
 
-    context "when there is no per-subscription units override" do
+    context "when the map has no entry for the fixed_charge" do
+      let(:effective_units_by_id) { {} }
+
       it "serializes the plan-level units" do
         expect(result["fixed_charge"]["units"]).to eq("10.0")
       end
     end
 
-    context "when a per-subscription units override exists" do
-      before do
-        create(:subscription_fixed_charge_units_override,
-          subscription:,
-          fixed_charge:,
-          organization: plan.organization,
-          units: 25)
-      end
+    context "when the map carries an override for the fixed_charge" do
+      let(:effective_units_by_id) { {fixed_charge.id => BigDecimal("25")} }
 
       it "serializes the overridden units" do
         expect(result["fixed_charge"]["units"]).to eq("25.0")

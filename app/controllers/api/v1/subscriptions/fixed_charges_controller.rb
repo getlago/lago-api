@@ -13,11 +13,6 @@ module Api
             .page(params[:page])
             .per(params[:per_page] || PER_PAGE)
 
-          effective_units_by_id = ::Subscription::FixedChargeUnitsOverride.units_map_for(
-            subscription:,
-            fixed_charges:
-          )
-
           render(
             json: ::CollectionSerializer.new(
               fixed_charges,
@@ -25,8 +20,7 @@ module Api
               collection_name: "fixed_charges",
               meta: pagination_metadata(fixed_charges),
               includes: %i[taxes],
-              subscription:,
-              effective_units_by_id:
+              effective_units_by_id: effective_units_map_for(fixed_charges)
             )
           )
         end
@@ -37,7 +31,7 @@ module Api
               fixed_charge,
               root_name: "fixed_charge",
               includes: %i[taxes],
-              subscription:
+              effective_units_by_id: effective_units_map_for([fixed_charge])
             )
           )
         end
@@ -55,7 +49,7 @@ module Api
                 result.fixed_charge,
                 root_name: "fixed_charge",
                 includes: %i[taxes],
-                subscription:
+                effective_units_by_id: effective_units_map_for([result.fixed_charge])
               )
             )
           else
@@ -66,6 +60,10 @@ module Api
         private
 
         attr_reader :fixed_charge
+
+        def effective_units_map_for(fixed_charges)
+          ::Subscription::FixedChargeUnitsOverride.units_map_for(subscription:, fixed_charges:)
+        end
 
         def resource_name
           "subscription"

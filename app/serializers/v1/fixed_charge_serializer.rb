@@ -25,12 +25,13 @@ module V1
 
     private
 
+    # Subscription-scoped callers pre-resolve override units into the
+    # `effective_units_by_id` option (one query per request, regardless of
+    # collection size). Plan-scoped callers (plan endpoints, plan webhooks)
+    # don't pass the option and naturally fall back to the plan-level units
+    # on the FixedCharge record.
     def effective_units
-      if (map = options[:effective_units_by_id])
-        map[model.id] || model.units
-      else
-        model.effective_units_for(options[:subscription])
-      end
+      options.fetch(:effective_units_by_id, {})[model.id] || model.units
     end
 
     def taxes
