@@ -10,10 +10,12 @@ RSpec.describe Lago::RedisConfigBuilder do
     env_keys = %w[
       REDIS_URL REDIS_PASSWORD
       LAGO_REDIS_SIDEKIQ_SENTINELS LAGO_REDIS_SIDEKIQ_MASTER_NAME
+      LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS
       LAGO_REDIS_CACHE_URL LAGO_REDIS_CACHE_PASSWORD
       LAGO_REDIS_CACHE_SENTINELS LAGO_REDIS_CACHE_MASTER_NAME
     ]
     original_env = ENV.to_h.slice(*env_keys)
+    env_keys.each { |key| ENV.delete(key) }
     example.run
     ENV.update(original_env)
     ENV.delete_if { |k, _| env_keys.include?(k) && !original_env.key?(k) }
@@ -27,11 +29,16 @@ RSpec.describe Lago::RedisConfigBuilder do
         ENV.delete("REDIS_URL")
         ENV.delete("REDIS_PASSWORD")
         ENV.delete("LAGO_REDIS_SIDEKIQ_SENTINELS")
+        allow(builder).to receive(:rand).and_return(1.0) # rubocop:disable RSpec/SubjectStub -- neutralize jitter
       end
 
-      it "returns base config" do
+      it "returns base config with the default retry window applied" do
         expect(result).to eq(
-          ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE}
+          ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE},
+          timeout: 1,
+          reconnect_attempts: [0.1, 0.4, 0.9, 1.6],
+          middlewares: [Lago::RedisLoadingRetryMiddleware],
+          custom: {loading_retry_attempts: [0.1, 0.4, 0.9, 1.6]}
         )
       end
     end
@@ -128,6 +135,92 @@ RSpec.describe Lago::RedisConfigBuilder do
       end
     end
 
+    context "with LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS set" do
+      before do
+        ENV.delete("REDIS_URL")
+        ENV.delete("REDIS_PASSWORD")
+        ENV.delete("LAGO_REDIS_SIDEKIQ_SENTINELS")
+        ENV["LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS"] = "8"
+        allow(builder).to receive(:rand).and_return(1.0) # rubocop:disable RSpec/SubjectStub -- neutralize jitter
+      end
+
+      it "generates quadratically increasing intervals within the window" do
+        expect(result).to include(reconnect_attempts: [0.1, 0.4, 0.9, 1.6, 2.5])
+      end
+
+      it "wires the loading retry middleware with the same schedule" do
+        expect(result).to include(
+          middlewares: [Lago::RedisLoadingRetryMiddleware],
+          custom: {loading_retry_attempts: [0.1, 0.4, 0.9, 1.6, 2.5]}
+        )
+      end
+
+      context "with jitter" do
+        before { allow(builder).to receive(:rand).and_call_original } # rubocop:disable RSpec/SubjectStub -- restore real jitter
+
+        it "keeps each interval within +-25% of the base series and the total within the window" do
+          intervals = result[:reconnect_attempts]
+
+          expect(intervals.sum).to be <= 8
+          intervals.each_with_index do |interval, index|
+            base_tenths = (index + 1)**2
+            expect(interval).to be_between(
+              (base_tenths * 0.75).round / 10.0,
+              (base_tenths * 1.25).round / 10.0
+            )
+          end
+        end
+      end
+
+      context "with a small window" do
+        before { ENV["LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS"] = "1" }
+
+        it "stops before the cumulative sum exceeds the window" do
+          expect(result).to include(reconnect_attempts: [0.1, 0.4])
+        end
+      end
+
+      context "with a non-integer window" do
+        before { ENV["LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS"] = "2.5" }
+
+        it "generates intervals within the fractional window" do
+          expect(result).to include(reconnect_attempts: [0.1, 0.4, 0.9])
+        end
+      end
+
+      context "with a window smaller than the first interval" do
+        before { ENV["LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS"] = "0" }
+
+        it "generates no reconnect attempts" do
+          expect(result).to include(reconnect_attempts: [])
+        end
+      end
+
+      context "with an invalid value" do
+        before { ENV["LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS"] = "abc" }
+
+        it "raises an error" do
+          expect { result }.to raise_error(ArgumentError, /Invalid Redis retry attempts window/)
+        end
+      end
+
+      context "with an empty value" do
+        before { ENV["LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS"] = "" }
+
+        it "falls back to the default retry window" do
+          expect(result).to include(reconnect_attempts: [0.1, 0.4, 0.9, 1.6])
+        end
+      end
+
+      context "with a reconnect_attempts override via with_options" do
+        subject(:result) { builder.with_options(reconnect_attempts: 4).sidekiq }
+
+        it "lets the override win" do
+          expect(result).to include(reconnect_attempts: 4)
+        end
+      end
+    end
+
     context "with sentinels and REDIS_URL set" do
       before do
         ENV["REDIS_URL"] = "redis://localhost:6379"
@@ -146,16 +239,21 @@ RSpec.describe Lago::RedisConfigBuilder do
         ENV["REDIS_PASSWORD"] = "secret"
         ENV["LAGO_REDIS_SIDEKIQ_SENTINELS"] = "sentinel1:26379"
         ENV["LAGO_REDIS_SIDEKIQ_MASTER_NAME"] = "mymaster"
+        allow(builder).to receive(:rand).and_return(1.0) # rubocop:disable RSpec/SubjectStub -- neutralize jitter
       end
 
       it "includes all config options" do
         expect(result).to eq(
           url: "redis://localhost:6379",
           ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE},
+          timeout: 1,
           sentinels: [{host: "sentinel1", port: 26379}],
           role: :master,
           name: "mymaster",
-          password: "secret"
+          password: "secret",
+          reconnect_attempts: [0.1, 0.4, 0.9, 1.6],
+          middlewares: [Lago::RedisLoadingRetryMiddleware],
+          custom: {loading_retry_attempts: [0.1, 0.4, 0.9, 1.6]}
         )
       end
     end
@@ -173,7 +271,8 @@ RSpec.describe Lago::RedisConfigBuilder do
 
       it "returns base config" do
         expect(result).to eq(
-          ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE}
+          ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE},
+          timeout: 1
         )
       end
     end
@@ -286,6 +385,7 @@ RSpec.describe Lago::RedisConfigBuilder do
         expect(result).to eq(
           url: "redis://cache:6379",
           ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE},
+          timeout: 1,
           sentinels: [{host: "cache-sentinel", port: 26379}],
           role: :master,
           name: "cache-master",
