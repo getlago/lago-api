@@ -40,8 +40,7 @@ describe "Charge Models - Graduated Scenarios" do
 
         travel_to(DateTime.new(2024, 3, 6)) do
           # First call exercises the previously-crashing hydrate_non_persistable_fees path
-          # when the feature flag is enabled.
-          fetch_current_usage(customer:)
+          # for current usage when there are no persistable fees.
           expect(json[:customer_usage][:total_amount_cents]).to eq(0)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
           expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(0)
