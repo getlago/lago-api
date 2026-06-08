@@ -2,6 +2,8 @@
 
 module OrderForms
   class MarkAsSignedService < BaseService
+    include OrderForms::Premium
+
     Result = BaseResult[:order_form, :order]
 
     EXECUTION_MODES = %w[execute_in_lago order_only].freeze
@@ -21,8 +23,8 @@ module OrderForms
     )
 
     def call
-      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "order_form") unless order_form
+      return result.forbidden_failure! unless order_forms_enabled?(order_form.organization)
       return result.not_allowed_failure!(code: "not_signable") unless order_form.generated?
 
       validate_execution_settings
