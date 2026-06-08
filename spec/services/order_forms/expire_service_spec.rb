@@ -61,11 +61,11 @@ RSpec.describe OrderForms::ExpireService do
       context "when order_form is already voided" do
         let(:order_form) { create(:order_form, :voided, customer:, organization:) }
 
-        it "returns a not allowed failure" do
+        it "returns a forbidden failure" do
           result = service.call
 
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
           expect(result.error.code).to eq("order_form_is_voided")
         end
       end
@@ -73,11 +73,11 @@ RSpec.describe OrderForms::ExpireService do
       context "when order_form is already signed" do
         let(:order_form) { create(:order_form, :signed, customer:, organization:) }
 
-        it "returns a not allowed failure" do
+        it "returns a forbidden failure" do
           result = service.call
 
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
           expect(result.error.code).to eq("order_form_is_signed")
         end
       end
