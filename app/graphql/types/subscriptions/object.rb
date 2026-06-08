@@ -85,7 +85,7 @@ module Types
       end
 
       def period_end_date
-        ::Subscriptions::DatesService.new_instance(object, Time.current)
+        ::Subscriptions::DatesService.new_instance(object, object.billing_reference_time)
           .next_end_of_period
       end
 
@@ -116,7 +116,7 @@ module Types
       end
 
       def dates_service
-        @dates_service ||= ::Subscriptions::DatesService.new_instance(object, Time.current, current_usage: true)
+        @dates_service ||= ::Subscriptions::DatesService.new_instance(object, object.billing_reference_time, current_usage: true)
       end
     end
   end

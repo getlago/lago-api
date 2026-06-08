@@ -182,6 +182,12 @@ class Subscription < ApplicationRecord
     started_at.to_date < created_at.to_date
   end
 
+  # Falls back to started_at when the subscription has not started yet, so the billing period is
+  # computed from its first period rather than the period around Time.current.
+  def billing_reference_time
+    [Time.current, started_at].compact.max
+  end
+
   def initial_started_at
     customer.subscriptions
       .where(external_id:)

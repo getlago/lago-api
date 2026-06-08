@@ -139,4 +139,70 @@ describe "Invoice Preview Scenarios", :premium do
       end
     end
   end
+
+  context "when a downgrade is scheduled" do
+    let(:customer) { create(:customer, organization:) }
+    let(:current_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 12_900)
+    end
+    let(:downgrade_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 5_000)
+    end
+
+    it "serializes the pending plan's first period, matching its fee boundaries", transaction: false do
+      travel_to(DateTime.parse("2026-03-03T08:00:00Z")) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: current_plan.code,
+            billing_time: "anniversary",
+            subscription_at: "2026-03-03T08:00:00Z"
+          }
+        )
+      end
+
+      # Current period runs Jun 3 to Jul 2, so the downgrade starts a new period on Jul 3.
+      travel_to(DateTime.parse("2026-06-04T10:00:00Z")) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: downgrade_plan.code,
+            billing_time: "anniversary"
+          }
+        )
+
+        subscription = customer.subscriptions.active.first
+        expect(subscription.plan).to eq(current_plan)
+        expect(subscription.next_subscription.plan).to eq(downgrade_plan)
+
+        post_with_token(
+          organization,
+          "/api/v1/invoices/preview",
+          {
+            customer: {external_id: customer.external_id},
+            subscriptions: {external_ids: [subscription.external_id]}
+          }
+        )
+
+        expect(response).to have_http_status(:success)
+
+        pending_plan = json[:invoice][:subscriptions].find { |s| s[:plan_code] == downgrade_plan.code }
+        expect(pending_plan).to be_present
+        expect(pending_plan[:started_at]).to eq("2026-07-03T00:00:00.000Z")
+        expect(pending_plan[:current_billing_period_started_at]).to eq("2026-07-03T00:00:00Z")
+        expect(pending_plan[:current_billing_period_ending_at]).to eq("2026-08-02T23:59:59Z")
+        expect(pending_plan[:current_billing_period_started_at])
+          .not_to eq(pending_plan[:current_billing_period_ending_at])
+
+        pending_fee = json[:invoice][:fees].find do |fee|
+          fee[:item][:type] == "subscription" && fee[:item][:code] == downgrade_plan.code
+        end
+        expect(pending_fee).to be_present
+        expect(Time.zone.parse(pending_plan[:current_billing_period_started_at])).to eq(Time.zone.parse(pending_fee[:from_date]))
+        expect(Time.zone.parse(pending_plan[:current_billing_period_ending_at])).to eq(Time.zone.parse(pending_fee[:to_date]))
+      end
+    end
+  end
 end

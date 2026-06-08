@@ -633,6 +633,34 @@ RSpec.describe Subscription do
     end
   end
 
+  describe "#billing_reference_time" do
+    around { |example| travel_to(Time.zone.parse("2026-06-04T10:00:00Z")) { example.run } }
+
+    context "when the subscription has already started" do
+      let(:subscription) { build(:subscription, started_at: Time.zone.parse("2026-03-03T00:00:00Z")) }
+
+      it "returns the current time" do
+        expect(subscription.billing_reference_time).to eq(Time.current)
+      end
+    end
+
+    context "when the subscription starts in the future" do
+      let(:subscription) { build(:subscription, started_at: Time.zone.parse("2026-07-03T00:00:00Z")) }
+
+      it "returns started_at" do
+        expect(subscription.billing_reference_time).to eq(subscription.started_at)
+      end
+    end
+
+    context "when started_at is nil" do
+      let(:subscription) { build(:subscription, started_at: nil) }
+
+      it "falls back to the current time" do
+        expect(subscription.billing_reference_time).to eq(Time.current)
+      end
+    end
+  end
+
   describe "#initial_started_at" do
     let(:customer) { create(:customer) }
     let(:subscription) do
