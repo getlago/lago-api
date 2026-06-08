@@ -50,7 +50,7 @@ describe "Subscription fixed charge units override via subscription endpoint", :
     end
   end
 
-  it "records the override row, skips plan/fixed_charge cloning, and emits an event with the override units" do
+  it "records the override row, skips plan/fixed_charge override creation, and emits an event with the override units" do
     travel_to subscription_date + 5.days do
       update_subscription_fixed_charge(
         subscription,
@@ -75,5 +75,39 @@ describe "Subscription fixed charge units override via subscription endpoint", :
     events = FixedChargeEvent.where(subscription:, fixed_charge:).order(:created_at)
     expect(events.count).to eq(2)
     expect(events.last.units).to eq(15)
+  end
+
+  it "promotes an existing units override row onto the plan override when a subsequent non-units change arrives" do
+    tax = create(:tax, organization:)
+
+    travel_to subscription_date + 5.days do
+      update_subscription_fixed_charge(
+        subscription,
+        fixed_charge.code,
+        {units: 15}
+      )
+      perform_all_enqueued_jobs
+    end
+
+    expect(subscription.fixed_charge_units_overrides.kept.count).to eq(1)
+
+    travel_to subscription_date + 10.days do
+      update_subscription_fixed_charge(
+        subscription,
+        fixed_charge.code,
+        {units: 20, tax_codes: [tax.code]}
+      )
+      perform_all_enqueued_jobs
+    end
+
+    subscription.reload
+    overridden_plan = subscription.plan
+    expect(overridden_plan.parent_id).to eq(plan.id)
+
+    overridden_fixed_charge = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge.id)
+    expect(overridden_fixed_charge.units).to eq(20)
+    expect(overridden_fixed_charge.taxes).to include(tax)
+
+    expect(subscription.fixed_charge_units_overrides.kept).to be_empty
   end
 end
