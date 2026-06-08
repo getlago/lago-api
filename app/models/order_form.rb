@@ -50,8 +50,7 @@ class OrderForm < ApplicationRecord
   end
 
   def signed_document_url
-    return unless signed_document.attached?
-    return unless signed_document.blob&.persisted?
+    return if signed_document.blank?
 
     Rails.application.routes.url_helpers.rails_blob_url(signed_document, host: ENV["LAGO_API_URL"])
   end
