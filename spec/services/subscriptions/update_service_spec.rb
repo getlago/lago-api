@@ -984,6 +984,50 @@ RSpec.describe Subscriptions::UpdateService do
             .not_to change(::Subscription::FixedChargeUnitsOverride, :count)
         end
       end
+
+      context "when the subscription has existing units overrides and params trigger plan override", :premium do
+        let(:organization) { membership.organization }
+        let(:plan) { create(:plan, organization:) }
+        let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
+        let(:fixed_charge2) { create(:fixed_charge, plan:, units: 8) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) { create(:subscription, plan:, customer:) }
+        let(:params) do
+          {
+            plan_overrides: {
+              amount_cents: 12_345,
+              fixed_charges: [{id: fixed_charge1.id, units: 99}]
+            }
+          }
+        end
+
+        before do
+          fixed_charge1
+          fixed_charge2
+          subscription
+          create(:subscription_fixed_charge_units_override, subscription:, fixed_charge: fixed_charge1, organization:, units: 11)
+          create(:subscription_fixed_charge_units_override, subscription:, fixed_charge: fixed_charge2, organization:, units: 22)
+        end
+
+        it "discards the override rows and promotes their units into the new plan override" do
+          expect { update_service.call }
+            .to change(Plan, :count).by(1)
+            .and change { ::Subscription::FixedChargeUnitsOverride.kept.where(subscription:).count }.from(2).to(0)
+
+          subscription.reload
+          overridden_plan = subscription.plan
+          expect(overridden_plan.parent_id).to eq(plan.id)
+          expect(overridden_plan.amount_cents).to eq(12_345)
+
+          # Caller's explicit entry wins on fc1 (99 not the captured 11)
+          fc1_overridden = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge1.id)
+          expect(fc1_overridden.units).to eq(99)
+
+          # fc2 had only an override row, no caller entry — gets the captured units (22)
+          fc2_overridden = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge2.id)
+          expect(fc2_overridden.units).to eq(22)
+        end
+      end
     end
 
     context "with empty params" do
