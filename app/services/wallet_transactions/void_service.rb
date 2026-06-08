@@ -33,6 +33,7 @@ module WalletTransactions
             status: :settled,
             settled_at: Time.current,
             transaction_status: :voided,
+            billing_entity_id: inbound_wallet_transaction&.billing_entity_id,
             **transaction_params
           ).wallet_transaction
 

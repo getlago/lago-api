@@ -63,8 +63,11 @@ RSpec.describe Invoices::PaidCreditService do
         expect(invoice.billing_entity).to eq(customer.billing_entity)
       end
 
-      context "when wallet has its own billing_entity" do
+      context "when wallet has its own billing_entity and transaction has no snapshot" do
         let(:other_billing_entity) { create(:billing_entity, organization:) }
+        let(:wallet_transaction) do
+          create(:wallet_transaction, wallet:, amount: "15.00", credit_amount: "15.00", invoice_requires_successful_payment:, billing_entity: nil)
+        end
 
         before { wallet.update!(billing_entity: other_billing_entity) }
 
@@ -234,6 +237,32 @@ RSpec.describe Invoices::PaidCreditService do
         expect(SegmentTrackJob).not_to have_been_enqueued
         expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
         expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when wallet_transaction was snapshotted on a different billing entity" do
+      let(:snapshot_billing_entity) { create(:billing_entity, organization:) }
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+      let(:wallet_transaction) do
+        create(
+          :wallet_transaction,
+          wallet:,
+          billing_entity: snapshot_billing_entity,
+          amount: "15.00",
+          credit_amount: "15.00",
+          invoice_requires_successful_payment:
+        )
+      end
+
+      before do
+        wallet.update!(billing_entity: other_billing_entity)
+      end
+
+      it "issues the invoice under the transaction's snapshotted entity, not the wallet's current one" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.billing_entity_id).to eq(snapshot_billing_entity.id)
       end
     end
   end
