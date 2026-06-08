@@ -528,6 +528,7 @@ DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_due_date;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_id_and_sequential_id;
 DROP INDEX IF EXISTS public.index_invoices_by_cursor;
@@ -668,6 +669,7 @@ DROP INDEX IF EXISTS public.index_customers_on_organization_id_firstname_gin_trg
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_external_id_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_email_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_org_id_and_sequential_id_unique;
+DROP INDEX IF EXISTS public.index_customers_on_external_id_only;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id;
 DROP INDEX IF EXISTS public.index_customers_on_deleted_at;
@@ -1580,11 +1582,11 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'billable_metric_current_usage_amount',
     'billable_metric_current_usage_units',
     'lifetime_usage_amount',
+    'billable_metric_lifetime_usage_units',
     'wallet_balance_amount',
     'wallet_credits_balance',
     'wallet_ongoing_balance_amount',
-    'wallet_credits_ongoing_balance',
-    'billable_metric_lifetime_usage_units'
+    'wallet_credits_ongoing_balance'
 );
 
 
@@ -7720,6 +7722,13 @@ CREATE UNIQUE INDEX index_customers_on_external_id_and_organization_id ON public
 
 
 --
+-- Name: index_customers_on_external_id_only; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_external_id_only ON public.customers USING btree (external_id);
+
+
+--
 -- Name: index_customers_on_org_id_and_sequential_id_unique; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8697,6 +8706,13 @@ CREATE UNIQUE INDEX index_invoices_on_customer_id_and_sequential_id ON public.in
 --
 
 CREATE INDEX index_invoices_on_number ON public.invoices USING btree (number);
+
+
+--
+-- Name: index_invoices_on_organization_id_number_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_number_gin_trgm_ops ON public.invoices USING gin (organization_id, number public.gin_trgm_ops);
 
 
 --
@@ -12546,6 +12562,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260608111837'),
 ('20260608074112'),
 ('20260603121349'),
 ('20260602092156'),
@@ -12609,6 +12626,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260305161302'),
 ('20260305100007'),
 ('20260304074158'),
+('20260302163856'),
 ('20260227184913'),
 ('20260224134805'),
 ('20260220131101'),
