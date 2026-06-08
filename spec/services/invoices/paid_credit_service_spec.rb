@@ -109,6 +109,20 @@ RSpec.describe Invoices::PaidCreditService do
       end
     end
 
+    context "when wallet has skip_invoice_custom_sections and wallet_transaction has no opinion" do
+      let(:wallet) { create(:wallet, customer:, skip_invoice_custom_sections: true) }
+
+      before do
+        create(:billing_entity_applied_invoice_custom_section, organization:,
+          billing_entity:, invoice_custom_section: create(:invoice_custom_section, organization:))
+      end
+
+      it "skips all sections without falling back to customer sections" do
+        result = invoice_service.call
+        expect(result.invoice.applied_invoice_custom_sections).to be_empty
+      end
+    end
+
     it "does not enqueue an SendEmailJob" do
       expect do
         invoice_service.call
