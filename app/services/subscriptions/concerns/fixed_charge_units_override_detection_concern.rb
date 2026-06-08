@@ -55,39 +55,6 @@ module Subscriptions
         (entry.keys - PLAN_OVERRIDES_FIXED_CHARGE_ALLOWED_KEYS).empty?
       end
 
-      # When a subscription that carries units override rows receives a change
-      # that requires a plan override (any non-units field), the override rows
-      # must be promoted into the resulting override plan or the customer
-      # silently snaps back to the plan-level units. Each calling service
-      # invokes this before falling through to `Plans::OverrideService`:
-      # discards the override rows on the subscription and returns a
-      # fixed_charges params array combining the caller's existing entries
-      # with a synthetic entry per discarded override (units carried forward)
-      # so `Plans::OverrideService` builds the override plan with the
-      # customer's actual seat counts already in place. The caller's explicit
-      # params win when both an existing entry and an override row exist for
-      # the same fixed_charge.
-      def promote_units_overrides_to_fixed_charges_params(existing_params = [])
-        overrides = subscription.fixed_charge_units_overrides.to_a
-        return existing_params if overrides.empty?
-
-        params_by_id = existing_params.each_with_object({}) do |entry, acc|
-          entry = normalize_hash(entry)
-          acc[entry[:id]] = entry if entry && entry[:id]
-        end
-
-        overrides.each do |override|
-          params_by_id[override.fixed_charge_id] ||= {
-            id: override.fixed_charge_id,
-            units: override.units
-          }
-        end
-
-        overrides.each(&:discard!)
-
-        params_by_id.values
-      end
-
       def normalize_hash(value)
         return nil if value.nil?
         return value.symbolize_keys if value.is_a?(Hash)
