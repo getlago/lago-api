@@ -4,8 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::OrderForms::MarkAsSigned do
   let(:required_permission) { "order_forms:sign" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+  let(:membership) { create(:membership, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:order_form) { create(:order_form, organization:, customer:, quote:) }
