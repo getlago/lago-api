@@ -13,7 +13,7 @@ module Mutations
 
       input_object_class Types::OrderForms::MarkAsSignedInput
 
-      type Types::OrderForms::ObjectWithSignedDocument
+      type Types::OrderForms::Object
 
       def resolve(**args)
         order_form = current_organization.order_forms.find_by(id: args[:id])

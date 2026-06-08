@@ -11,7 +11,7 @@ module Resolvers
 
     argument :id, ID, required: true, description: "Uniq ID of the order form"
 
-    type Types::OrderForms::ObjectWithSignedDocument, null: true
+    type Types::OrderForms::Object, null: true
 
     def resolve(id:)
       current_organization.order_forms.find(id)

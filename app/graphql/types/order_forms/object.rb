@@ -15,6 +15,8 @@ module Types
       field :signed_at, GraphQL::Types::ISO8601DateTime, null: true
       field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
 
+      field :signed_document_url, String, null: true
+
       field :customer, Types::Customers::Object, null: false
       field :quote, Types::Quotes::Object, null: false
 

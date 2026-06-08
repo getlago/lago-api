@@ -8189,7 +8189,7 @@ type Mutation {
     Parameters for MarkOrderFormAsSigned
     """
     input: MarkOrderFormAsSignedInput!
-  ): OrderFormWithSignedDocument
+  ): OrderForm
 
   """
   Accepts a membership invite with Okta Oauth
@@ -9104,6 +9104,7 @@ type OrderForm {
   number: String!
   quote: Quote!
   signedAt: ISO8601DateTime
+  signedDocumentUrl: String
   status: OrderFormStatusEnum!
   updatedAt: ISO8601DateTime!
   voidReason: OrderFormVoidReasonEnum
@@ -9141,22 +9142,6 @@ enum OrderFormVoidReasonEnum {
   expired
   invalid
   manual
-}
-
-type OrderFormWithSignedDocument {
-  billingSnapshot: JSON!
-  createdAt: ISO8601DateTime!
-  customer: Customer!
-  expiresAt: ISO8601DateTime
-  id: ID!
-  number: String!
-  quote: Quote!
-  signedAt: ISO8601DateTime
-  signedDocumentUrl: String
-  status: OrderFormStatusEnum!
-  updatedAt: ISO8601DateTime!
-  voidReason: OrderFormVoidReasonEnum
-  voidedAt: ISO8601DateTime
 }
 
 enum OrderTypeEnum {
@@ -10561,7 +10546,7 @@ type Query {
     Uniq ID of the order form
     """
     id: ID!
-  ): OrderFormWithSignedDocument
+  ): OrderForm
 
   """
   Query order forms
