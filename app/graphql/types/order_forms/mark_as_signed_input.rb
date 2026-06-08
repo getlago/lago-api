@@ -6,7 +6,7 @@ module Types
       description "Mark Order Form as signed input arguments"
 
       argument :execute_at, GraphQL::Types::ISO8601DateTime, required: false
-      argument :execution_mode, Types::OrderForms::ExecutionModeEnum, required: false
+      argument :execution_mode, Types::Orders::ExecutionModeEnum, required: false
       argument :id, ID, required: true
       argument :signed_document, String, required: false
     end

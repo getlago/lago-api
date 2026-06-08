@@ -36879,7 +36879,7 @@
               "description": null,
               "type": {
                 "kind": "ENUM",
-                "name": "OrderFormExecutionModeEnum",
+                "name": "OrderExecutionModeEnum",
                 "ofType": null
               },
               "defaultValue": null,
@@ -43621,6 +43621,29 @@
           "possibleTypes": null
         },
         {
+          "kind": "ENUM",
+          "name": "OrderExecutionModeEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "execute_in_lago",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_only",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
           "kind": "OBJECT",
           "name": "OrderForm",
           "description": null,
@@ -43868,29 +43891,6 @@
           "inputFields": null,
           "interfaces": [],
           "enumValues": null,
-          "possibleTypes": null
-        },
-        {
-          "kind": "ENUM",
-          "name": "OrderFormExecutionModeEnum",
-          "description": null,
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": [
-            {
-              "name": "execute_in_lago",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "order_only",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
           "possibleTypes": null
         },
         {

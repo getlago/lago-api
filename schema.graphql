@@ -7056,7 +7056,7 @@ input MarkOrderFormAsSignedInput {
   """
   clientMutationId: String
   executeAt: ISO8601DateTime
-  executionMode: OrderFormExecutionModeEnum
+  executionMode: OrderExecutionModeEnum
   id: ID!
   signedDocument: String
 }
@@ -9095,6 +9095,11 @@ enum OrderByEnum {
   net_revenue_amount_cents
 }
 
+enum OrderExecutionModeEnum {
+  execute_in_lago
+  order_only
+}
+
 type OrderForm {
   billingSnapshot: JSON!
   createdAt: ISO8601DateTime!
@@ -9124,11 +9129,6 @@ type OrderFormCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
-}
-
-enum OrderFormExecutionModeEnum {
-  execute_in_lago
-  order_only
 }
 
 enum OrderFormStatusEnum {
