@@ -652,6 +652,7 @@ DROP INDEX IF EXISTS public.index_data_exports_on_membership_id;
 DROP INDEX IF EXISTS public.index_data_export_parts_on_organization_id;
 DROP INDEX IF EXISTS public.index_data_export_parts_on_data_export_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_usage_date;
+DROP INDEX IF EXISTS public.index_daily_usages_on_subscription_id_and_usage_date;
 DROP INDEX IF EXISTS public.index_daily_usages_on_subscription_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_organization_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_customer_id;
@@ -7824,6 +7825,13 @@ CREATE INDEX index_daily_usages_on_subscription_id ON public.daily_usages USING 
 
 
 --
+-- Name: index_daily_usages_on_subscription_id_and_usage_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_daily_usages_on_subscription_id_and_usage_date ON public.daily_usages USING btree (subscription_id, usage_date);
+
+
+--
 -- Name: index_daily_usages_on_usage_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12538,6 +12546,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260608074112'),
 ('20260603121349'),
 ('20260602092156'),
 ('20260601174030'),
