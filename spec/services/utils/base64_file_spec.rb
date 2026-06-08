@@ -24,5 +24,21 @@ RSpec.describe Utils::Base64File do
         expect(decoded.content_type).to eq("image/png")
       end
     end
+
+    context "when the data URI has no comma" do
+      let(:data_uri) { "not-a-data-uri" }
+
+      it "returns nil" do
+        expect(decoded).to be_nil
+      end
+    end
+
+    context "when the metadata carries no content type" do
+      let(:data_uri) { "base64,#{Base64.strict_encode64(content)}" }
+
+      it "returns nil" do
+        expect(decoded).to be_nil
+      end
+    end
   end
 end

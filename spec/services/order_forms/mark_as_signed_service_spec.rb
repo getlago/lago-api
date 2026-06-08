@@ -122,6 +122,19 @@ RSpec.describe OrderForms::MarkAsSignedService do
         end
       end
 
+      context "when the signed_document is malformed" do
+        let(:signed_document) { "not-a-data-uri" }
+
+        it "returns a validation failure without signing" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:signed_document]).to eq(["invalid_format"])
+          expect(order_form.reload).to be_generated
+        end
+      end
+
       context "when the signed_document exceeds the max size" do
         let(:signed_document) { "data:application/pdf;base64,#{Base64.strict_encode64("pdf")}" }
 

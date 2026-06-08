@@ -93,6 +93,11 @@ module OrderForms
 
       decoded = Utils::Base64File.decode(signed_document)
 
+      if decoded.nil?
+        result.single_validation_failure!(field: :signed_document, error_code: "invalid_format")
+        return
+      end
+
       unless OrderForm::SIGNED_DOCUMENT_CONTENT_TYPES.include?(decoded.content_type)
         result.single_validation_failure!(field: :signed_document, error_code: "invalid_content_type")
         return

@@ -173,6 +173,23 @@ RSpec.describe Api::V1::OrderFormsController do
       end
     end
 
+    context "when the signed_document is malformed" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v1/order_forms/#{order_form.id}/mark_as_signed",
+          {order_form: {signed_document: "not-a-data-uri"}}
+        )
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to include(:signed_document)
+      end
+    end
+
     context "when execution_mode and execute_at are provided" do
       subject do
         post_with_token(
