@@ -19,6 +19,8 @@ module Mutations
         subscription = current_organization.subscriptions.find_by(id: args[:subscription_id])
         fixed_charge = subscription&.plan&.fixed_charges&.find_by(code: args[:fixed_charge_code])
 
+        args[:properties] = args[:properties].to_h if args[:properties]
+
         result = ::Subscriptions::UpdateOrOverrideFixedChargeService.call(
           subscription:,
           fixed_charge:,
