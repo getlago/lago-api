@@ -71,8 +71,13 @@ module Subscriptions
     end
 
     def override_via_plan
-      target_plan = ensure_plan_override
+      target_plan = ensure_plan_override(override_params: promoted_plan_override_params)
       find_or_create_fixed_charge_override(target_plan)
+    end
+
+    def promoted_plan_override_params
+      promoted_fixed_charges = promote_units_overrides_to_fixed_charges_params
+      promoted_fixed_charges.any? ? {fixed_charges: promoted_fixed_charges} : {}
     end
 
     def find_or_create_fixed_charge_override(target_plan)
