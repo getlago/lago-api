@@ -27,6 +27,7 @@ module Subscriptions
           subscription.update!(cancelation_reason: :timeout)
 
           enqueue_psp_cancel(invoice)
+          enqueue_recredit_jobs(invoice)
         end
 
         result.subscription = subscription
@@ -36,6 +37,20 @@ module Subscriptions
       private
 
       attr_reader :subscription
+
+      def enqueue_recredit_jobs(invoice)
+        invoice.credits.coupon_kind.find_each do |credit|
+          AppliedCoupons::RecreditJob.perform_after_commit(credit)
+        end
+
+        invoice.credits.credit_note_kind.find_each do |credit|
+          CreditNotes::RecreditJob.perform_after_commit(credit)
+        end
+
+        invoice.wallet_transactions.outbound.find_each do |wallet_transaction|
+          WalletTransactions::RecreditJob.perform_after_commit(wallet_transaction)
+        end
+      end
 
       def enqueue_psp_cancel(invoice)
         # A partial unique index on payments guarantees at most one

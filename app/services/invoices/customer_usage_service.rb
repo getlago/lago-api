@@ -209,15 +209,31 @@ module Invoices
     end
 
     def compute_amounts_with_provider_taxes
+      # NOTE: Only fees with a positive amount can incur tax, so non-taxable fees are
+      #       excluded from the provider request. This also keeps the payload under the
+      #       provider line-item limit (Anrok/Avalara reject payloads above 1200 items).
+      #       Excluded fees owe no tax and keep their default zero taxes in the usage response.
+      taxable_fees = invoice.fees.select(&:taxable?)
+
+      # NOTE: With no taxable fees the provider request would carry an empty line-item
+      #       array, which Anrok/Avalara reject. There is no tax to compute, so fall back
+      #       to the zero-tax path and skip the provider entirely.
+      return compute_amounts_without_tax if taxable_fees.empty?
+
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
 
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
+      # NOTE: Set the sub total so Invoices::ApplyProviderTaxesService prorates taxes_rate
+      #       by amount (like persisted invoices) instead of falling back to its zero-amount
+      #       count-based branch, which would dilute the rate with the excluded non-taxable fees.
+      invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: taxable_fees)
 
       return result.validation_failure!(errors: {tax_error: [taxes_result.error.message]}) unless taxes_result.success?
 
       result.fees_taxes = taxes_result.fees
 
-      invoice.fees.each do |fee|
+      taxable_fees.each do |fee|
         fee_taxes = result.fees_taxes.find do |item|
           item.item_key == fee.item_key
         end

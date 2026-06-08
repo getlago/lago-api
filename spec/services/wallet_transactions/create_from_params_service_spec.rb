@@ -423,5 +423,15 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
         expect(applied_sections.first.invoice_custom_section.code).to eq("section_code_1")
       end
     end
+
+    context "when granted credits should be calculated using amount and wallet rate" do
+      let(:granted_credits) { "10.34567" }
+      let(:rate_amount) { 1.375 }
+
+      it "creates wallet transaction with expected credit amount" do
+        expect(result.wallet_transactions.find(&:granted?).credit_amount).to eq(10.34909) # 14.23/1.375
+        expect(result.wallet_transactions.find(&:granted?).amount).to eq(14.23) # 10.34567*1.375
+      end
+    end
   end
 end

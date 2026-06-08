@@ -578,6 +578,16 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
       end
 
+      it "calls Integrations::Aggregator::Taxes::Invoices::CreateDraftService" do
+        allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
+        allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call).and_call_original
+
+        pull_taxes_service.call
+
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call).with(invoice:, fees: invoice.fees)
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateService).not_to have_received(:call)
+      end
+
       context "when invoice total is zero after tax computation" do
         let(:rule) { subscription.activation_rules.payment.sole }
         let(:fee_subscription) do

@@ -24,7 +24,6 @@ module Api
           plan = Plan.includes(
             :usage_thresholds,
             :fixed_charges,
-            charges: {filters: {values: :billable_metric_filter}},
             entitlements: [:feature, values: :privilege]
           ).find(result.plan.id)
 
@@ -42,7 +41,6 @@ module Api
           # Reload to eager-load relationships, like :entitlements
           plan = Plan.with_discarded.includes(
             :usage_thresholds,
-            charges: {filters: {values: :billable_metric_filter}},
             entitlements: [:feature, values: :privilege]
           ).find(result.plan.id)
 
@@ -56,7 +54,6 @@ module Api
         plan = current_organization.plans.parents
           .includes(
             :usage_thresholds,
-            charges: {filters: {values: :billable_metric_filter}},
             entitlements: [:feature, values: :privilege]
           )
           .find_by(code: params[:code])
@@ -85,7 +82,6 @@ module Api
                 :usage_thresholds,
                 :taxes,
                 :minimum_commitment,
-                charges: {filters: {values: :billable_metric_filter}},
                 entitlements: [:feature, values: :privilege]
               ),
               ::V1::PlanSerializer,

@@ -147,6 +147,28 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
 
       expect(result.pay_in_advance_aggregation).to eq(1)
     end
+
+    context "with presentation group keys" do
+      let(:presentation_by) { ["cloud", "region"] }
+      let(:pay_in_advance_event) do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          subscription:,
+          customer:,
+          properties: {"cloud" => "aws", "region" => "eu"}
+        )
+      end
+
+      it "assigns pay_in_advance_breakdowns based on the pay_in_advance event" do
+        result = count_service.aggregate
+
+        expect(result.pay_in_advance_breakdowns).to eq([
+          {groups: {"cloud" => "aws", "region" => "eu"}, value: 1}
+        ])
+      end
+    end
   end
 
   context "with presentation group keys" do

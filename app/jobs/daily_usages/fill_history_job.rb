@@ -4,7 +4,7 @@ module DailyUsages
   class FillHistoryJob < ApplicationJob
     queue_as do
       if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_ANALYTICS"])
-        :analytics
+        :analytics_low_priority
       else
         :long_running
       end

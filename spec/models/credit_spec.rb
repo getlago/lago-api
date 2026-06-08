@@ -16,11 +16,16 @@ RSpec.describe Credit do
   describe "scopes" do
     let!(:active_invoice) { create(:invoice, status: :finalized) }
     let!(:voided_invoice) { create(:invoice, status: :voided) }
+    let(:closed_invoice) { create(:invoice, status: :closed) }
     let!(:active_credit) { create(:credit, invoice: active_invoice) }
     let!(:voided_credit) { create(:credit, invoice: voided_invoice) }
 
+    before do
+      create(:credit, invoice: closed_invoice)
+    end
+
     describe ".active" do
-      it "returns only credits with non-voided invoices" do
+      it "returns only credits with non-voided and non-closed invoices" do
         expect(described_class.active).to match_array([active_credit])
       end
     end

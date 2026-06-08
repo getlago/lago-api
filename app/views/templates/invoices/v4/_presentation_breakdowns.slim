@@ -1,5 +1,8 @@
 - fees_with_presentation_breakdowns = fees.select { |fee| fee.charge? && fee.presentation_breakdowns_displayed_in_invoice.any? }
 
+- if fees_with_presentation_breakdowns.any?
+  .presentation-breakdowns-page
+
 - fees_with_presentation_breakdowns.group_by(&:charge_id).each do |_charge_id, charge_group_fees|
   - displayable_keys = charge_group_fees.first.presentation_group_keys_values_displayed_in_invoice
 

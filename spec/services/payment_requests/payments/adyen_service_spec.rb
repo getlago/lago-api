@@ -260,6 +260,26 @@ RSpec.describe PaymentRequests::Payments::AdyenService do
       end
     end
 
+    context "when a failed webhook arrives after the invoices were already paid through another path" do
+      let(:status) { "Refused" }
+
+      before do
+        payment_request.payment_failed!
+        invoice_1.payment_succeeded!
+        invoice_2.payment_succeeded!
+      end
+
+      it "leaves already-succeeded invoices untouched" do
+        expect { result }
+          .to not_change { invoice_1.reload.payment_status }
+          .and not_change { invoice_2.reload.payment_status }
+
+        expect(result).to be_success
+        expect(invoice_1.reload).to be_payment_succeeded
+        expect(invoice_2.reload).to be_payment_succeeded
+      end
+    end
+
     context "with invalid status" do
       let(:status) { "invalid-status" }
 

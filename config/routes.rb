@@ -148,6 +148,7 @@ Rails.application.routes.draw do
         post :resend_email, on: :member
       end
       resources :payment_requests, only: %i[create index show]
+      resources :order_forms, only: %i[show index]
       resources :payments, only: %i[create index show]
       resources :plans, param: :code, code: /.*/ do
         resources :charges, only: %i[index show create update destroy], param: :code, code: /.*/, controller: "plans/charges" do

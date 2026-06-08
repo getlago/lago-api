@@ -305,5 +305,26 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
         expect(payable.reload.payment_status).to eq("succeeded")
       end
     end
+
+    context "when a failed webhook arrives after the invoices were already paid through another path" do
+      before do
+        payable.payment_failed!
+        invoice_1.payment_succeeded!
+        invoice_2.payment_succeeded!
+      end
+
+      it "leaves already-succeeded invoices untouched" do
+        result = moneyhash_service.update_payment_status(
+          organization_id: organization.id,
+          provider_payment_id: payment_response_json.dig("data", "id"),
+          status: "FAILED",
+          metadata: payment_response_json.dig("data", "custom_fields")
+        )
+
+        expect(result).to be_success
+        expect(invoice_1.reload).to be_payment_succeeded
+        expect(invoice_2.reload).to be_payment_succeeded
+      end
+    end
   end
 end

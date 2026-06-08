@@ -125,16 +125,16 @@ module BillableMetricFilters
         .where(id: filter_value_ids)
         .unscope(:order)
         .distinct
-        .select(:charge_filter_id)
+        .pluck(:charge_filter_id)
 
       return if charge_filter_ids.empty?
 
       ChargeFilter
         .where(id: charge_filter_ids, deleted_at: nil)
-        .where.not(
-          id: ChargeFilterValue
-            .where(deleted_at: nil, charge_filter_id: charge_filter_ids)
-            .select(:charge_filter_id)
+        .where(
+          "NOT EXISTS (SELECT 1 FROM charge_filter_values" \
+          " WHERE charge_filter_values.charge_filter_id = charge_filters.id" \
+          " AND charge_filter_values.deleted_at IS NULL)"
         )
         .unscope(:order)
         .update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations

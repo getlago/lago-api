@@ -25,6 +25,7 @@ class Subscription < ApplicationRecord
   has_many :entitlement_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
   has_many :fixed_charges, -> { kept }, through: :plan
   has_many :fixed_charge_events
+  has_many :fixed_charge_units_overrides, class_name: "Subscription::FixedChargeUnitsOverride"
   has_many :add_ons, through: :fixed_charges
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
@@ -47,7 +48,7 @@ class Subscription < ApplicationRecord
   delegate :amount_currency, to: :plan, prefix: true
 
   validates :external_id, :billing_time, presence: true
-  validate :validate_external_id, on: :create
+  validate :validate_external_id, on: [:create, :update], if: -> { status_changed? }
 
   STATUSES = [
     :pending,
@@ -179,6 +180,12 @@ class Subscription < ApplicationRecord
 
   def started_in_past?
     started_at.to_date < created_at.to_date
+  end
+
+  # Falls back to started_at when the subscription has not started yet, so the billing period is
+  # computed from its first period rather than the period around Time.current.
+  def billing_reference_time
+    [Time.current, started_at].compact.max
   end
 
   def initial_started_at
@@ -317,37 +324,39 @@ end
 # Table name: subscriptions
 # Database name: primary
 #
-#  id                            :uuid             not null, primary key
-#  activated_at                  :datetime
-#  billing_time                  :integer          default("calendar"), not null
-#  cancelation_reason            :enum
-#  canceled_at                   :datetime
-#  consolidate_invoice           :boolean          default(TRUE), not null
-#  ending_at                     :datetime
-#  last_received_event_on        :date
-#  name                          :string
-#  on_termination_credit_note    :enum
-#  on_termination_invoice        :enum             default("generate"), not null
-#  payment_method_type           :enum             default("provider"), not null
-#  progressive_billing_disabled  :boolean          default(FALSE), not null
-#  skip_invoice_custom_sections  :boolean          default(FALSE), not null
-#  started_at                    :datetime
-#  status                        :integer          not null
-#  subscription_at               :datetime
-#  terminated_at                 :datetime
-#  trial_ended_at                :datetime
-#  created_at                    :datetime         not null
-#  updated_at                    :datetime         not null
-#  billing_entity_id             :uuid
-#  customer_id                   :uuid             not null
-#  external_id                   :string           not null
-#  organization_id               :uuid             not null
-#  payment_method_id             :uuid
-#  plan_id                       :uuid             not null
-#  previous_subscription_id      :uuid
+#  id                           :uuid             not null, primary key
+#  activated_at                 :datetime
+#  billing_time                 :integer          default("calendar"), not null
+#  cancelation_reason           :enum
+#  canceled_at                  :datetime
+#  consolidate_invoice          :boolean          default(TRUE), not null
+#  ending_at                    :datetime
+#  last_received_event_on       :date
+#  name                         :string
+#  on_termination_credit_note   :enum
+#  on_termination_invoice       :enum             default("generate"), not null
+#  payment_method_type          :enum             default("provider"), not null
+#  progressive_billing_disabled :boolean          default(FALSE), not null
+#  skip_daily_usage             :boolean          default(FALSE), not null
+#  skip_invoice_custom_sections :boolean          default(FALSE), not null
+#  started_at                   :datetime
+#  status                       :integer          not null
+#  subscription_at              :datetime
+#  terminated_at                :datetime
+#  trial_ended_at               :datetime
+#  created_at                   :datetime         not null
+#  updated_at                   :datetime         not null
+#  billing_entity_id            :uuid
+#  customer_id                  :uuid             not null
+#  external_id                  :string           not null
+#  organization_id              :uuid             not null
+#  payment_method_id            :uuid
+#  plan_id                      :uuid             not null
+#  previous_subscription_id     :uuid
 #
 # Indexes
 #
+#  idx_on_organization_id_subscription_at_created_at_id        (organization_id,subscription_at DESC NULLS LAST,created_at DESC,id)
 #  index_subscriptions_on_billing_entity_id                    (billing_entity_id)
 #  index_subscriptions_on_customer_id                          (customer_id)
 #  index_subscriptions_on_ending_at_active                     (ending_at) WHERE ((status = 1) AND (ending_at IS NOT NULL))

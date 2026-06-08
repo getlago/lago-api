@@ -259,6 +259,22 @@ RSpec.describe PaymentRequests::Payments::CreateService do
             .to have_enqueued_mail(PaymentRequestMailer, :requested)
             .with(params: {payment_request:}, args: [])
         end
+
+        context "when invoices were already paid through another path" do
+          before do
+            invoice_1.payment_succeeded!
+            invoice_2.payment_succeeded!
+          end
+
+          it "leaves already-succeeded invoices untouched" do
+            expect { create_service.call }
+              .to not_change { invoice_1.reload.payment_status }
+              .and not_change { invoice_2.reload.payment_status }
+
+            expect(invoice_1.reload).to be_payment_succeeded
+            expect(invoice_2.reload).to be_payment_succeeded
+          end
+        end
       end
 
       context "when manual payment method is passed in params" do

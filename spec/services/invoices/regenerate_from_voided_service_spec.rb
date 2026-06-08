@@ -99,12 +99,37 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
         let(:original_fee) do
           create(:charge_fee, invoice: voided_invoice, subscription:, amount_cents: 1000, unit_amount_cents: 1000)
         end
+        let(:second_usage_threshold) { create(:usage_threshold, plan:, amount_cents: 2000) }
+        let(:second_applied_usage_threshold) do
+          create(
+            :applied_usage_threshold,
+            invoice: voided_invoice,
+            usage_threshold: second_usage_threshold,
+            organization:,
+            lifetime_usage_amount_cents: 2000
+          )
+        end
+
+        before do
+          second_applied_usage_threshold
+        end
 
         it "duplicates invoice_subscriptions to the regenerated invoice" do
           regenerated_invoice = regenerate_result.invoice
 
           expect(regenerated_invoice.invoice_subscriptions).not_to be_empty
           expect(regenerated_invoice.invoice_subscriptions.count).to eq(voided_invoice.invoice_subscriptions.count)
+        end
+
+        it "duplicates applied_usage_thresholds to the regenerated invoice" do
+          regenerated_invoice = regenerate_result.invoice
+
+          expect(voided_invoice.applied_usage_thresholds.count).to eq(2)
+          expect(regenerated_invoice.applied_usage_thresholds.count).to eq(2)
+          expect(regenerated_invoice.applied_usage_thresholds.pluck(:usage_threshold_id, :lifetime_usage_amount_cents))
+            .to match_array(voided_invoice.applied_usage_thresholds.pluck(:usage_threshold_id, :lifetime_usage_amount_cents))
+          expect(regenerated_invoice.applied_usage_thresholds.pluck(:id))
+            .not_to match_array(voided_invoice.applied_usage_thresholds.pluck(:id))
         end
       end
 

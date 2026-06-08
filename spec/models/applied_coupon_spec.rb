@@ -76,6 +76,14 @@ RSpec.describe AppliedCoupon do
         expect(applied_coupon.remaining_amount).to eq(50)
       end
     end
+
+    context "when invoice is closed" do
+      let(:invoice) { create(:invoice, status: :closed) }
+
+      it "ignores the credit amount" do
+        expect(applied_coupon.remaining_amount).to eq(50)
+      end
+    end
   end
 
   describe "#mark_as_terminated!" do
