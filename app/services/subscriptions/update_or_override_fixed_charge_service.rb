@@ -4,6 +4,7 @@ module Subscriptions
   class UpdateOrOverrideFixedChargeService < BaseService
     include Concerns::PlanOverrideConcern
     include Concerns::FixedChargeUnitsOverrideDetectionConcern
+    include Concerns::FixedChargeUnitsOverridePromotionConcern
 
     Result = BaseResult[:fixed_charge]
 
