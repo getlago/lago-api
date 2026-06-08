@@ -43,30 +43,14 @@ module Subscriptions
     end
 
     def override_units_only
-      apply_units_immediately = !!params[:apply_units_immediately]
-      timestamp = Time.current.to_i
       parent_fixed_charge = fixed_charge.parent_or_self
 
-      override = ::Subscription::FixedChargeUnitsOverride.find_or_initialize_by(
+      Subscriptions::FixedChargeUnitsOverrides::WriteService.call!(
         subscription:,
-        fixed_charge: parent_fixed_charge
-      )
-      override.organization = subscription.organization
-      override.units = params[:units]
-      override.save!
-
-      FixedCharges::EmitEventsService.call!(
         fixed_charge: parent_fixed_charge,
-        subscription:,
-        apply_units_immediately:,
-        timestamp:
+        units: params[:units],
+        apply_units_immediately: params[:apply_units_immediately]
       )
-
-      if apply_units_immediately && parent_fixed_charge.pay_in_advance? && subscription.active?
-        after_commit do
-          Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
-        end
-      end
 
       parent_fixed_charge
     end
