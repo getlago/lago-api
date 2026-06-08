@@ -75,7 +75,7 @@ module Api
       end
 
       def mark_as_signed_params
-        params.fetch(:order_form, {}).permit(:signed_document, :execution_mode, :execute_at)
+        params.permit(order_form: [:signed_document, :execution_mode, :execute_at]).fetch(:order_form, {})
       end
 
       def render_order_form(order_form)
