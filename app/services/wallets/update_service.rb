@@ -63,12 +63,14 @@ module Wallets
 
         update_metadata!
 
-        wallet.customer.flag_wallets_for_refresh if needs_refresh?
+        if needs_refresh?
+          wallet.customer.flag_wallets_for_refresh
+          Customers::RefreshWalletJob.perform_after_commit(wallet.customer)
+        end
       end
 
       InvoiceCustomSections::AttachToResourceService.call(resource: wallet, params:)
       SendWebhookJob.perform_later("wallet.updated", wallet)
-      Customers::RefreshWalletJob.perform_after_commit(wallet.customer) if needs_refresh?
 
       result.wallet = wallet
       result

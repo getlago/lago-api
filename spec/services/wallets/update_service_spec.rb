@@ -106,6 +106,18 @@ RSpec.describe Wallets::UpdateService do
         include_examples "flags refresh"
       end
 
+      context "when code changes together with an invoice_custom_section update" do
+        let(:params) do
+          {
+            id: wallet.id,
+            code: "new_code",
+            invoice_custom_section: {skip_invoice_custom_sections: true}
+          }
+        end
+
+        include_examples "flags refresh"
+      end
+
       context "when only name changes" do
         let(:params) { {id: wallet.id, name: "new name"} }
 
