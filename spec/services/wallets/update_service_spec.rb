@@ -45,47 +45,44 @@ RSpec.describe Wallets::UpdateService do
       expect(Utils::ActivityLog).to have_produced("wallet.updated").after_commit.with(wallet)
     end
 
-    it "calls Customers::RefreshWalletsService" do
-      allow(Customers::RefreshWalletsService).to receive(:call)
-      subject
-
-      expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
-      expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+    it "flags the customer wallets for refresh and enqueues a refresh job" do
+      expect { result }.to have_enqueued_job_after_commit(Customers::RefreshWalletJob).with(customer)
+      expect(customer.reload).to be_awaiting_wallet_refresh
     end
 
-    describe "Customers::RefreshWalletsService gating" do
-      before { allow(Customers::RefreshWalletsService).to receive(:call) }
-
-      shared_examples "calls refresh" do
-        it "calls Customers::RefreshWalletsService" do
+    describe "wallet refresh gating" do
+      shared_examples "flags refresh" do
+        it "flags the customer wallets for refresh and enqueues a refresh job" do
+          expect { result }.to have_enqueued_job_after_commit(Customers::RefreshWalletJob).with(customer)
           expect(result).to be_success
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
+          expect(customer.reload).to be_awaiting_wallet_refresh
         end
       end
 
-      shared_examples "does not call refresh" do
-        it "does not call Customers::RefreshWalletsService" do
+      shared_examples "does not flag refresh" do
+        it "does not flag the customer wallets for refresh nor enqueue a refresh job" do
+          expect { result }.not_to have_enqueued_job(Customers::RefreshWalletJob)
           expect(result).to be_success
-          expect(Customers::RefreshWalletsService).not_to have_received(:call)
+          expect(customer.reload).not_to be_awaiting_wallet_refresh
         end
       end
 
       context "when code changes" do
         let(:params) { {id: wallet.id, code: "new_code"} }
 
-        include_examples "calls refresh"
+        include_examples "flags refresh"
       end
 
       context "when priority changes" do
         let(:params) { {id: wallet.id, priority: wallet.priority - 1} }
 
-        include_examples "calls refresh"
+        include_examples "flags refresh"
       end
 
       context "when allowed_fee_types change" do
         let(:params) { {id: wallet.id, applies_to: {fee_types: %w[charge]}} }
 
-        include_examples "calls refresh"
+        include_examples "flags refresh"
       end
 
       context "when a wallet_target is added" do
@@ -94,7 +91,7 @@ RSpec.describe Wallets::UpdateService do
 
         before { CurrentContext.source = "graphql" }
 
-        include_examples "calls refresh"
+        include_examples "flags refresh"
       end
 
       context "when a wallet_target is removed" do
@@ -106,19 +103,19 @@ RSpec.describe Wallets::UpdateService do
           create(:wallet_target, wallet:, billable_metric:)
         end
 
-        include_examples "calls refresh"
+        include_examples "flags refresh"
       end
 
       context "when only name changes" do
         let(:params) { {id: wallet.id, name: "new name"} }
 
-        include_examples "does not call refresh"
+        include_examples "does not flag refresh"
       end
 
       context "when only expiration_at changes" do
         let(:params) { {id: wallet.id, expiration_at: (Time.current + 1.year).iso8601} }
 
-        include_examples "does not call refresh"
+        include_examples "does not flag refresh"
       end
 
       context "when only paid_top_up_* change" do
@@ -130,7 +127,7 @@ RSpec.describe Wallets::UpdateService do
           }
         end
 
-        include_examples "does not call refresh"
+        include_examples "does not flag refresh"
       end
 
       context "when only payment_method changes" do
@@ -144,7 +141,7 @@ RSpec.describe Wallets::UpdateService do
 
         before { payment_method }
 
-        include_examples "does not call refresh"
+        include_examples "does not flag refresh"
       end
 
       context "when only recurring_transaction_rules change", :premium do
@@ -157,19 +154,19 @@ RSpec.describe Wallets::UpdateService do
           }
         end
 
-        include_examples "does not call refresh"
+        include_examples "does not flag refresh"
       end
 
       context "when only metadata changes" do
         let(:params) { {id: wallet.id, metadata: {"foo" => "bar"}} }
 
-        include_examples "does not call refresh"
+        include_examples "does not flag refresh"
       end
 
       context "when client resends a refresh-relevant attribute with the same value (no-op)" do
         let(:params) { {id: wallet.id, code: wallet.code, name: "new name"} }
 
-        include_examples "does not call refresh"
+        include_examples "does not flag refresh"
       end
     end
 
