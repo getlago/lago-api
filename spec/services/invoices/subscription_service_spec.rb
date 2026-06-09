@@ -194,6 +194,60 @@ RSpec.describe Invoices::SubscriptionService do
       let(:service_call) { invoice_service.call }
     end
 
+    it_behaves_like "applies invoice_custom_sections from resource" do
+      let(:service_call) { invoice_service.call }
+      let(:resource_with_custom_section) { subscription }
+      let(:applied_section_factory) { :subscription_applied_invoice_custom_section }
+      let(:resource_association_key) { :subscription }
+    end
+
+    context "with multiple subscriptions" do
+      let(:subscription_2) { create(:subscription, plan:, customer:, subscription_at: started_at.to_date, started_at:, created_at: started_at) }
+      let(:subscriptions) { [subscription, subscription_2] }
+      let(:section_1) { create(:invoice_custom_section, organization:) }
+      let(:section_2) { create(:invoice_custom_section, organization:) }
+
+      before do
+        create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: create(:invoice_custom_section, organization:))
+      end
+
+      context "when all subscriptions have ICS configured" do
+        before do
+          create(:subscription_applied_invoice_custom_section, organization:, subscription:, invoice_custom_section: section_1)
+          create(:subscription_applied_invoice_custom_section, organization:, subscription: subscription_2, invoice_custom_section: section_2)
+        end
+
+        it "applies the union of all subscriptions' sections, ignoring billing entity sections" do
+          result = invoice_service.call
+          expect(result.invoice.applied_invoice_custom_sections.pluck(:code)).to match_array([section_1.code, section_2.code])
+        end
+      end
+
+      context "when only some subscriptions have ICS configured" do
+        let(:customer_section) { create(:invoice_custom_section, organization:) }
+
+        before do
+          create(:subscription_applied_invoice_custom_section, organization:, subscription:, invoice_custom_section: section_1)
+          create(:customer_applied_invoice_custom_section, organization:, billing_entity:, customer:, invoice_custom_section: customer_section)
+        end
+
+        it "merges sections from configured subscriptions with customer sections" do
+          result = invoice_service.call
+          expect(result.invoice.applied_invoice_custom_sections.pluck(:code)).to match_array([section_1.code, customer_section.code])
+        end
+      end
+
+      context "when all subscriptions have skip_invoice_custom_sections" do
+        let(:subscription) { create(:subscription, plan:, customer:, subscription_at: started_at.to_date, started_at:, created_at: started_at, skip_invoice_custom_sections: true) }
+        let(:subscription_2) { create(:subscription, plan:, customer:, subscription_at: started_at.to_date, started_at:, created_at: started_at, skip_invoice_custom_sections: true) }
+
+        it "does not apply any sections" do
+          result = invoice_service.call
+          expect(result.invoice.applied_invoice_custom_sections).to be_empty
+        end
+      end
+    end
+
     it "enqueues a SendWebhookJob" do
       expect do
         invoice_service.call

@@ -106,6 +106,15 @@ class WalletTransaction < ApplicationRecord
     remaining_amount_cents.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount).to_s
   end
 
+  # Returns the resource that should drive invoice custom sections for this transaction.
+  # Priority chain: transaction first, then wallet.
+  def invoice_custom_section_resource
+    return self if skip_invoice_custom_sections || selected_invoice_custom_sections.any?
+    return wallet if wallet.skip_invoice_custom_sections || wallet.selected_invoice_custom_sections.any?
+
+    self
+  end
+
   def mark_as_failed!(timestamp = Time.zone.now)
     return if failed?
 

@@ -331,6 +331,13 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       let(:service_call) { invoice_service.call }
     end
 
+    it_behaves_like "applies invoice_custom_sections from resource" do
+      let(:service_call) { invoice_service.call }
+      let(:resource_with_custom_section) { subscription }
+      let(:applied_section_factory) { :subscription_applied_invoice_custom_section }
+      let(:resource_association_key) { :subscription }
+    end
+
     context "when fee build service fails" do
       before do
         allow(Fees::BuildPayInAdvanceFixedChargeService)
