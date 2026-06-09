@@ -93,9 +93,21 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
         preview_applied_tax = result.invoice.applied_taxes.first
 
         expect(preview_applied_tax).not_to be_nil
+        expect(preview_applied_tax.id).to be_present
         expect(preview_applied_tax.invoice_id).to eq(invoice.id)
         expect(preview_applied_tax.tax_rate).to eq(12)
         expect(result.invoice.taxes_rate).to eq(12)
+      end
+
+      it "assigns ids and original fee ids to fee applied taxes" do
+        result = preview_service.call
+        preview_fee = result.invoice.fees.find { |result_fee| result_fee.id == fee.id }
+        preview_fee_applied_tax = preview_fee.applied_taxes.first
+
+        expect(preview_fee_applied_tax).not_to be_nil
+        expect(preview_fee_applied_tax.id).to be_present
+        expect(preview_fee_applied_tax.fee_id).to eq(fee.id)
+        expect(preview_fee_applied_tax.tax_rate).to eq(12)
       end
     end
   end

@@ -22,6 +22,10 @@ module Invoices
         result.raise_if_error!
 
         dup_fee.id = fee.id
+        dup_fee.applied_taxes.each do |applied_tax|
+          applied_tax.fee_id = fee.id
+          applied_tax.id = SecureRandom.uuid
+        end
       end
 
       # NOTE: Provider taxes doesn't apply in this service.
