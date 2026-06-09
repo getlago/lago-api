@@ -160,6 +160,119 @@ RSpec.describe Subscriptions::PlanUpgradeService do
         expect(result.subscription.plan_id).to eq(plan.id)
         expect(result.subscription.name).to eq(subscription_name)
       end
+
+      context "with activation_rules in params" do
+        let(:params) do
+          {
+            name: subscription_name,
+            activation_rules: [{type: "payment", timeout_hours: 48}]
+          }
+        end
+
+        it "applies the activation rules to the current subscription" do
+          expect(result).to be_success
+
+          rules = subscription.reload.activation_rules
+          expect(rules.count).to eq(1)
+          expect(rules.first).to be_inactive
+          expect(rules.first.timeout_hours).to eq(48)
+        end
+
+        it "still updates the pending subscription's plan and name" do
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(subscription.id)
+          expect(result.subscription.plan_id).to eq(plan.id)
+          expect(result.subscription.name).to eq(subscription_name)
+        end
+      end
+
+      context "with an empty activation_rules array in params" do
+        let(:existing_rule) { create(:subscription_activation_rule, subscription:, organization:) }
+        let(:params) do
+          {
+            name: subscription_name,
+            activation_rules: []
+          }
+        end
+
+        before { existing_rule }
+
+        it "removes the activation rules from the current subscription" do
+          expect { result }
+            .to change { subscription.reload.activation_rules.count }
+            .from(1).to(0)
+        end
+      end
+    end
+
+    context "with activation_rules in params" do
+      let(:params) do
+        {
+          name: subscription_name,
+          activation_rules: [{type: "payment", timeout_hours: 48}]
+        }
+      end
+
+      context "when the plan is pay-in-advance" do
+        let(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true) }
+
+        it "keeps the current subscription active" do
+          result
+          expect(subscription.reload).to be_active
+        end
+
+        it "creates the new subscription as incomplete" do
+          expect(result).to be_success
+          expect(result.subscription).to be_incomplete
+          expect(result.subscription.previous_subscription_id).to eq(subscription.id)
+          expect(result.subscription.activation_rules.pending.count).to eq(1)
+        end
+
+        it "sends the subscription.incomplete webhook" do
+          result
+          expect(SendWebhookJob).to have_been_enqueued.with("subscription.incomplete", result.subscription)
+        end
+
+        it "does not fire upgrade-completion webhooks" do
+          result
+          expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.terminated", subscription)
+          expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.started", result.subscription)
+        end
+
+        it "enqueues BillSubscriptionJob for the incomplete subscription with skip_charges" do
+          new_subscription = result.subscription
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([new_subscription], anything, invoicing_reason: :upgrading, skip_charges: true)
+        end
+
+        context "with a pending next_subscription" do
+          let(:pending_next) do
+            create(:subscription, status: :pending, previous_subscription: subscription, organization:, customer:)
+          end
+
+          before { pending_next }
+
+          it "cancels the pending next_subscription before gating" do
+            expect { result }.to change { pending_next.reload.status }.from("pending").to("canceled")
+          end
+        end
+      end
+
+      context "when the plan has no upfront billing" do
+        let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: false) }
+
+        it "marks the activation rule as not_applicable" do
+          expect(result).to be_success
+          expect(result.subscription.activation_rules.not_applicable.count).to eq(1)
+        end
+
+        it "runs the existing immediate-upgrade flow" do
+          result
+          expect(subscription.reload).to be_terminated
+          expect(result.subscription).to be_active
+        end
+      end
     end
 
     context "when old subscription is payed in arrear" do

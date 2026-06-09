@@ -6,7 +6,7 @@ module QuoteVersions
 
     attr_reader :quote_version
 
-    Result = BaseResult[:quote_version]
+    Result = BaseResult[:quote_version, :order_form]
 
     def initialize(quote_version:)
       @quote_version = quote_version
@@ -18,12 +18,15 @@ module QuoteVersions
       return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
       return result.not_allowed_failure!(code: "inappropriate_state") unless approvable?
 
-      quote_version.update!(
-        status: :approved,
-        approved_at: Time.current
-      )
+      QuoteVersion.transaction do
+        quote_version.update!(
+          status: :approved,
+          approved_at: Time.current
+        )
 
-      # TODO: OrderForms::CreateService.call
+        result.order_form = OrderForms::CreateService.call!(quote_version:).order_form
+      end
+
       # TODO: SendWebhookJob.perform_after_commit("quote_version.approved", quote_version)
 
       result.quote_version = quote_version

@@ -40,7 +40,7 @@ module V1
 
     def charges
       ::CollectionSerializer.new(
-        model.charges.includes(:applied_pricing_unit, :billable_metric, :taxes),
+        model.charges.includes(:applied_pricing_unit, :billable_metric, :taxes, filters: [:charge, {values: :billable_metric_filter}]),
         ::V1::ChargeSerializer,
         collection_name: "charges",
         includes: include?(:taxes) ? %i[taxes] : []

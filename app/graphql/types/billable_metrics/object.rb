@@ -25,7 +25,7 @@ module Types
 
       field :has_active_subscriptions, Boolean, null: false
       field :has_draft_invoices, Boolean, null: false
-      field :has_plans, Boolean, null: false
+      field :has_plans, Boolean, null: false, method: :attached_to_plan?
       field :has_subscriptions, Boolean, null: false
 
       field :rounding_function, Types::BillableMetrics::RoundingFunctionEnum, null: true
@@ -51,10 +51,6 @@ module Types
 
       def has_draft_invoices
         object.invoices.draft.exists?
-      end
-
-      def has_plans
-        object.plans.exists?
       end
 
       def integration_mappings(integration_id: nil)

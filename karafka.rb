@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+# You can enable debug logging for Karafka by adding `debug: "topic"` to the `config.kafka` configuration. This will log
+# debug information about topics (unknown topics, topic metadata, etc.) which can be helpful for troubleshooting Kafka
+# connectivity issues locally.
+#
 class KarafkaApp < Karafka::App
   setup do |config|
     config.kafka = {
@@ -34,6 +38,12 @@ class KarafkaApp < Karafka::App
 
   Karafka.monitor.subscribe "error.occurred" do |event|
     Sentry.capture_exception(event[:error])
+  end
+
+  # Logs producer errors to Sentry.
+  Karafka.producer.monitor.subscribe "error.occurred" do |event|
+    Sentry.capture_exception(event[:error])
+    Rails.logger.error("Karafka producer error: #{event[:error].message}")
   end
 
   if ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"].present?

@@ -15,10 +15,14 @@ module Subscriptions
       return result if subscription.active?
       return result if subscription.gated?
 
-      if subscription.pending?
-        activate_from_pending
-      elsif subscription.incomplete?
-        activate_from_incomplete
+      ActiveRecord::Base.transaction do
+        ActivationRules::EvaluateService.call!(subscription:) if subscription.pending?
+
+        if subscription.pending? && subscription.pending_rules?
+          gate_subscription
+        else
+          activate_subscription
+        end
       end
 
       result.subscription = subscription
@@ -29,34 +33,10 @@ module Subscriptions
 
     attr_reader :subscription, :timestamp, :during_creation
 
-    def activate_from_pending
-      ActivationRules::EvaluateService.call!(subscription:)
-
-      if subscription.pending_rules?
-        gate_subscription
-      else
-        activate_with_side_effects
-      end
-    end
-
-    def activate_from_incomplete
-      return if subscription.activation_rules.rejected.exists?
-
-      subscription.mark_as_active!(timestamp)
-
-      after_commit do
-        bill_subscription if subscription.activation_rules.payment.none?
-        notify_started
-      end
-    end
-
     def gate_subscription
       subscription.mark_as_incomplete!(timestamp)
 
-      EmitFixedChargeEventsService.call!(
-        subscriptions: [subscription],
-        timestamp: subscription.started_at + 1.second
-      )
+      emit_fixed_charge_events
 
       after_commit do
         bill_subscription(skip_charges: true) if subscription.payment_gated?
@@ -66,17 +46,108 @@ module Subscriptions
       end
     end
 
-    def activate_with_side_effects
-      subscription.mark_as_active!(timestamp)
+    def activate_subscription
+      return if subscription.incomplete? && subscription.activation_rules.rejected.exists?
 
-      EmitFixedChargeEventsService.call!(
-        subscriptions: [subscription],
-        timestamp: subscription.started_at + 1.second
+      if upgrade?
+        activate_for_upgrade
+      elsif downgrade?
+        activate_for_downgrade
+      else
+        activate_standalone
+      end
+    end
+
+    def activate_for_upgrade
+      from_incomplete = subscription.incomplete?
+      billed_during_gating = from_incomplete && subscription.activation_rules.payment.any?
+      previous_subscription = subscription.previous_subscription
+
+      Subscriptions::TerminateService.call(
+        subscription: previous_subscription,
+        upgrade: true
       )
 
+      subscription.mark_as_active!(timestamp)
+
+      billable_subscriptions = [previous_subscription]
+
+      # Fixed-charge events are always emitted during gate_subscription, so re-emit only
+      # when activating straight from pending.
+      emit_fixed_charge_events unless from_incomplete
+
+      unless billed_during_gating
+        billable_subscriptions << subscription if subscription.fixed_charges.pay_in_advance.any? ||
+          (subscription.plan.pay_in_advance? && !subscription.in_trial_period?)
+      end
+
+      after_commit { notify_started }
+
+      bill_rotation_subscriptions(
+        billable_subscriptions,
+        billing_at: Time.current + 1.second,
+        non_invoiceable_subscriptions: billable_subscriptions
+      )
+    end
+
+    def activate_for_downgrade
+      from_incomplete = subscription.incomplete?
+      billed_during_gating = from_incomplete && subscription.activation_rules.payment.any?
+      previous_subscription = subscription.previous_subscription
+
+      previous_subscription.mark_as_terminated!(timestamp)
+
+      subscription.mark_as_active!(timestamp)
+
+      billable_subscriptions = [previous_subscription]
+
+      # Fixed-charge events are always emitted during gate_subscription, so re-emit only
+      # when activating straight from pending.
+      emit_fixed_charge_events unless from_incomplete
+
+      unless billed_during_gating
+        billable_subscriptions << subscription if subscription.fixed_charges.pay_in_advance.any? || subscription.plan.pay_in_advance?
+      end
+
       after_commit do
-        bill_subscription(skip_charges: true)
+        SendWebhookJob.perform_later("subscription.terminated", previous_subscription)
+        Utils::ActivityLog.produce(previous_subscription, "subscription.terminated")
+
+        if previous_subscription.should_sync_hubspot_subscription?
+          Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: previous_subscription)
+        end
+
         notify_started
+      end
+
+      bill_rotation_subscriptions(billable_subscriptions, billing_at: timestamp)
+    end
+
+    def activate_standalone
+      from_incomplete = subscription.incomplete?
+
+      subscription.mark_as_active!(timestamp)
+
+      # When from_incomplete, fixed-charge events were already emitted during gate_subscription.
+      emit_fixed_charge_events unless from_incomplete
+
+      after_commit do
+        if from_incomplete
+          bill_subscription if subscription.activation_rules.payment.none?
+        else
+          bill_subscription(skip_charges: true)
+        end
+
+        notify_started
+      end
+    end
+
+    # Downgrades default to billing only the previous subscription for non-invoiceable fees:
+    # the downgrade subscription has no events yet.
+    def bill_rotation_subscriptions(billable_subscriptions, billing_at:, non_invoiceable_subscriptions: [subscription.previous_subscription])
+      after_commit do
+        BillSubscriptionJob.perform_later(billable_subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
+        BillNonInvoiceableFeesJob.perform_later(non_invoiceable_subscriptions, billing_at)
       end
     end
 
@@ -84,22 +155,38 @@ module Subscriptions
       SendWebhookJob.perform_later("subscription.started", subscription)
       Utils::ActivityLog.produce(subscription, "subscription.started")
 
-      # Skip Hubspot UpdateJob when activating during subscription creation —
-      # CreateService fires Hubspot::CreateJob after this, which captures the
-      # active state and avoids a redundant Update that would race with Create.
-      return if during_creation
+      return unless subscription.should_sync_hubspot_subscription?
 
-      if subscription.should_sync_hubspot_subscription?
+      if upgrade? || downgrade?
+        # The new upgrade/downgrade subscription has no Hubspot record yet.
+        Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription:)
+      elsif !during_creation
+        # Skip when activating during subscription creation — CreateService
+        # fires Hubspot::CreateJob after this, which captures the active state
+        # and avoids a redundant Update that would race with Create.
         Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
       end
     end
 
+    def emit_fixed_charge_events
+      EmitFixedChargeEventsService.call!(
+        subscriptions: [subscription],
+        timestamp: subscription.started_at + 1.second
+      )
+    end
+
     def bill_subscription(skip_charges: false)
+      invoicing_reason = if upgrade? || downgrade?
+        :upgrading
+      else
+        :subscription_starting
+      end
+
       if subscription.plan.pay_in_advance? && !subscription.in_trial_period?
         BillSubscriptionJob.perform_later(
           [subscription],
           timestamp.to_i,
-          invoicing_reason: :subscription_starting,
+          invoicing_reason:,
           skip_charges:
         )
       elsif subscription.fixed_charges.pay_in_advance.any?
@@ -108,6 +195,20 @@ module Subscriptions
           subscription.started_at + 1.second
         )
       end
+    end
+
+    def upgrade?
+      return false unless subscription.previous_subscription
+      return false if subscription.plan.id == subscription.previous_subscription.plan.id
+
+      subscription.plan.yearly_amount_cents >= subscription.previous_subscription.plan.yearly_amount_cents
+    end
+
+    def downgrade?
+      return false unless subscription.previous_subscription
+      return false if subscription.plan.id == subscription.previous_subscription.plan.id
+
+      subscription.plan.yearly_amount_cents < subscription.previous_subscription.plan.yearly_amount_cents
     end
   end
 end

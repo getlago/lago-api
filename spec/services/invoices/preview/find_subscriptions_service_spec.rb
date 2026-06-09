@@ -95,7 +95,7 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService do
               expect(subscriptions_result.second).to have_attributes(
                 id: next_subscription.id,
                 status: "active",
-                started_at: end_of_period
+                started_at: end_of_period.beginning_of_day
               )
             end
 

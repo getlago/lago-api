@@ -423,6 +423,74 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
       end
     end
 
+    context "when rule has invoice custom sections" do
+      let(:invoice_custom_section) { create(:invoice_custom_section, organization: customer.organization) }
+      let(:interval) { :weekly }
+      let(:current_date) do
+        DateTime.parse("20 Jun 2022").prev_occurring(created_at.strftime("%A").downcase.to_sym)
+      end
+
+      before do
+        create(
+          :recurring_rule_applied_invoice_custom_section,
+          recurring_transaction_rule:,
+          invoice_custom_section:
+        )
+      end
+
+      it "forwards invoice_custom_section params to the job" do
+        travel_to(current_date) do
+          create_interval_transactions_service.call
+
+          expect(WalletTransactions::CreateJob).to have_been_enqueued
+            .with(
+              organization_id: customer.organization_id,
+              params: hash_including(
+                invoice_custom_section: {
+                  skip_invoice_custom_sections: false,
+                  invoice_custom_section_ids: [invoice_custom_section.id]
+                }
+              )
+            )
+        end
+      end
+    end
+
+    context "when rule has skip_invoice_custom_sections" do
+      let(:interval) { :weekly }
+      let(:current_date) do
+        DateTime.parse("20 Jun 2022").prev_occurring(created_at.strftime("%A").downcase.to_sym)
+      end
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          trigger: :interval,
+          wallet:,
+          interval:,
+          created_at: created_at + 1.second,
+          started_at:,
+          skip_invoice_custom_sections: true
+        )
+      end
+
+      it "forwards the skip flag to the job without fallback to other sections" do
+        travel_to(current_date) do
+          create_interval_transactions_service.call
+
+          expect(WalletTransactions::CreateJob).to have_been_enqueued
+            .with(
+              organization_id: customer.organization_id,
+              params: hash_including(
+                invoice_custom_section: {
+                  skip_invoice_custom_sections: true,
+                  invoice_custom_section_ids: []
+                }
+              )
+            )
+        end
+      end
+    end
+
     context "when recurring transaction rule has expired" do
       let(:created_at) { DateTime.parse("20 Feb 2021") }
       let(:recurring_transaction_rule) do

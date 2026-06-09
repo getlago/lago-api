@@ -42,6 +42,7 @@ class Invoice < ApplicationRecord
   has_many :payment_requests, through: :applied_payment_requests
   has_many :payments, as: :payable
   has_many :payment_receipts, through: :payments
+  has_many :customer_payments, -> { where.not(customer_id: nil).order(updated_at: :desc) }, class_name: "Payment", as: :payable
 
   has_many :applied_usage_thresholds
   has_many :usage_thresholds, through: :applied_usage_thresholds
@@ -242,6 +243,12 @@ class Invoice < ApplicationRecord
 
   def sorted_subscriptions
     sorted_invoice_subscriptions.map(&:subscription)
+  end
+
+  def progressive_billing_last_applied_usage_threshold
+    return unless progressive_billing?
+
+    applied_usage_thresholds.order(created_at: :asc).last
   end
 
   def subscription_fees(subscription_id)
@@ -734,6 +741,7 @@ end
 #  index_invoices_by_cursor                                        (organization_id,issuing_date DESC,created_at DESC,id)
 #  index_invoices_on_customer_id_and_sequential_id                 (customer_id,sequential_id) UNIQUE
 #  index_invoices_on_number                                        (number)
+#  index_invoices_on_organization_id_number_gin_trgm_ops           (organization_id,number) USING gin
 #  index_invoices_on_payment_due_date                              (payment_due_date) WHERE ((status = 1) AND (payment_status <> 1) AND (payment_overdue = false) AND (payment_dispute_lost_at IS NULL))
 #  index_invoices_on_payment_method_id                             (payment_method_id)
 #  index_invoices_on_ready_to_be_refreshed                         (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)

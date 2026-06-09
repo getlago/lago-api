@@ -196,6 +196,105 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
+      context "when a charge produces a zero fee" do
+        let(:current_date) { DateTime.parse("2025-06-15") }
+        let(:timestamp) { current_date }
+        let(:empty_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+        let(:empty_charge) { create(:standard_charge, plan:, billable_metric: empty_metric, properties: {amount: "5"}) }
+        # Free usage: has events and units but a zero amount, so it is non_zero? but not taxable?
+        let(:free_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+        let(:free_charge) { create(:standard_charge, plan:, billable_metric: free_metric, properties: {amount: "0"}) }
+
+        before do
+          empty_charge
+          free_charge
+          create_list(:event, 2, organization:, subscription:, customer:, code: free_metric.code, timestamp:)
+          allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
+
+          stub_request(:post, endpoint).to_return do |request|
+            response = JSON.parse(File.read(
+              Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
+            ))
+
+            key = JSON.parse(request.body).first["fees"].last["item_key"]
+            response["succeededInvoices"].first["fees"].last["item_key"] = key
+            response["succeededInvoices"].first["fees"].last["item_id"] = charge.billable_metric.id
+            response["succeededInvoices"].first["fees"].last["amount_cents"] = 2532
+
+            {body: response.to_json}
+          end
+        end
+
+        it "keeps the non-taxable fees in the usage but excludes them from the tax provider payload" do
+          travel_to(current_date) do
+            result = usage_service.call
+
+            expect(result).to be_success
+            # both zero-amount fees (empty + free usage) stay in the usage response
+            expect(result.usage.fees.map(&:amount_cents)).to match_array([0, 0, 2532])
+            # only the taxable (positive-amount) fee is sent to the provider
+            expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call) do |invoice:, fees:|
+              expect(fees.map(&:amount_cents)).to match_array([2532])
+            end
+          end
+        end
+
+        it "leaves the excluded non-taxable fees with default zero taxes" do
+          travel_to(current_date) do
+            result = usage_service.call
+
+            non_taxable_fees = result.usage.fees.reject(&:taxable?)
+            expect(non_taxable_fees.size).to eq(2)
+            non_taxable_fees.each do |fee|
+              expect(fee.taxes_amount_cents).to eq(0)
+              expect(fee.taxes_rate).to eq(0)
+              expect(fee.applied_taxes).to be_empty
+            end
+          end
+        end
+
+        it "computes the invoice taxes_rate without diluting it by the excluded fees" do
+          travel_to(current_date) do
+            result = usage_service.call
+
+            # The rate is prorated by amount over the taxable fee only (10%), not by fee
+            # count over all three fees, which would dilute it to 1/3 * 10 = 3.33%.
+            expect(result.invoice.taxes_rate).to eq(10)
+            expect(result.usage.taxes_amount_cents).to eq(253)
+          end
+        end
+      end
+
+      context "when there are no taxable fees" do
+        # The single charge produces a zero-amount fee, so taxable_fees is empty.
+        let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "0"}) }
+
+        before do
+          allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call)
+        end
+
+        it "skips the provider request and returns a zero-tax usage" do
+          result = usage_service.call
+
+          expect(result).to be_success
+          expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).not_to have_received(:call)
+          expect(result.usage).to have_attributes(
+            amount_cents: 0,
+            taxes_amount_cents: 0,
+            total_amount_cents: 0
+          )
+        end
+
+        it "leaves the zero fee with default zero taxes" do
+          result = usage_service.call
+
+          fee = result.usage.fees.sole
+          expect(fee.taxes_amount_cents).to eq(0)
+          expect(fee.taxes_rate).to eq(0)
+          expect(fee.applied_taxes).to be_empty
+        end
+      end
+
       context "when there is error received from the provider" do
         before do
           stub_request(:post, endpoint).to_return do |request|

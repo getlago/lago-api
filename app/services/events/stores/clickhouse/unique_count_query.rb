@@ -288,8 +288,8 @@ module Events
           :with_ctes,
           :charges_duration,
           :events_cte_queries,
-          :grouped_arel_columns,
           :operation_type_sql,
+          :grouped_arel_columns,
           to: :store
 
         def joined_group_names

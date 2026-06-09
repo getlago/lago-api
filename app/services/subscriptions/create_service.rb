@@ -62,6 +62,12 @@ module Subscriptions
           @current_subscription = editable_subscriptions
             .find_by("id = ? OR external_id = ?", params[:subscription_id], external_id)
 
+          if current_subscription.nil? &&
+              customer.organization.subscriptions.active.exists?(external_id:)
+            result.validation_failure!(errors: {external_id: ["value_already_exist"]})
+            result.raise_if_error!
+          end
+
           subscription = handle_subscription
 
           if params[:usage_thresholds].present?
@@ -133,7 +139,7 @@ module Subscriptions
         ending_at: params[:ending_at],
         progressive_billing_disabled: params[:progressive_billing_disabled] || false,
         consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : true,
-        billing_entity: resolve_billing_entity(customer:, params:)
+        billing_entity: resolve_billing_entity(organization: customer.organization, params:)
       )
 
       if params.key?(:payment_method)

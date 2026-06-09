@@ -101,6 +101,31 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#progressive_billing_last_applied_usage_threshold" do
+    context "when invoice is progressive billing" do
+      let(:invoice) { create(:invoice, invoice_type: :progressive_billing) }
+
+      it "returns the last applied usage threshold" do
+        create(:applied_usage_threshold, invoice:, organization:, created_at: 2.days.ago)
+        applied_usage_threshold = create(:applied_usage_threshold, invoice:, organization:, created_at: 1.day.ago)
+
+        expect(invoice.progressive_billing_last_applied_usage_threshold).to eq(applied_usage_threshold)
+      end
+
+      it "returns nil when no applied usage threshold exists" do
+        expect(invoice.progressive_billing_last_applied_usage_threshold).to be_nil
+      end
+    end
+
+    context "when invoice is not progressive billing" do
+      it "returns nil" do
+        create(:applied_usage_threshold, invoice:, organization:)
+
+        expect(invoice.progressive_billing_last_applied_usage_threshold).to be_nil
+      end
+    end
+  end
+
   describe "sequential_id" do
     let(:customer) { create(:customer, organization:) }
     let(:billing_entity) { customer.billing_entity }

@@ -68,6 +68,13 @@ class RecurringTransactionRule < ApplicationRecord
     end
   end
 
+  def invoice_custom_section_params
+    section_ids = applied_invoice_custom_sections.pluck(:invoice_custom_section_id)
+    return if section_ids.none? && !skip_invoice_custom_sections
+
+    {skip_invoice_custom_sections:, invoice_custom_section_ids: section_ids}
+  end
+
   def compute_paid_credits(ongoing_balance:)
     if target?
       compute_target_paid_credits(ongoing_balance:)

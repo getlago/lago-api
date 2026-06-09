@@ -2,9 +2,11 @@
 
 class FeeDisplayHelper
   def self.grouped_by_display(fee)
-    return "" if !fee.charge? || fee.grouped_by.values.compact.blank?
+    fee.grouped_by_display
+  end
 
-    " • #{fee.grouped_by.values.compact.join(" • ")}"
+  def self.fee_title(fee)
+    fee.invoice_name + grouped_by_display(fee) + (fee.charge_filter_id? ? " • #{fee.filter_display_name(separator: " • ")}" : "")
   end
 
   def self.should_display_subscription_fee?(invoice_subscription)
@@ -48,6 +50,12 @@ class FeeDisplayHelper
       money = amount.to_money(fee.currency)
       MoneyHelper.format(money)
     end
+  end
+
+  def self.sorted_presentation_breakdowns_displayed_in_invoice(fee)
+    rows = fee.presentation_breakdowns_displayed_in_invoice.map { |b| [fee.presentation_group_keys_values_displayed_in_invoice.map { |k| b.presentation_by[k] }, b.units] }
+    clean, blank = rows.partition { |values, _| values.all?(&:present?) }
+    clean.sort_by { |values, _| values.map(&:to_s) } + blank.sort_by { |values, _| values.compact.map(&:to_s) }
   end
 
   def self.format_amount(fee)

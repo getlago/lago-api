@@ -24,7 +24,7 @@ module Utils
       return unless self.class.available?
 
       current_time = Time.current.iso8601[...-1]
-      Karafka.producer.produce_async(
+      KafkaProducer.produce_async(
         topic: ENV["LAGO_KAFKA_API_LOGS_TOPIC"],
         key:,
         payload: {

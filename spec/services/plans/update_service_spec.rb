@@ -247,6 +247,37 @@ RSpec.describe Plans::UpdateService do
           end.not_to have_enqueued_job(Plans::UpdateAmountJob)
         end
       end
+
+      context "when an in-transaction failure follows a charge update" do
+        let(:existing_charge) { create(:standard_charge, plan:, billable_metric:) }
+        let(:update_args) do
+          {
+            charges: [
+              {
+                id: existing_charge.id,
+                billable_metric_id: billable_metric.id,
+                charge_model: "standard",
+                properties: {amount: "0"}
+              },
+              {
+                billable_metric_id: billable_metric.id,
+                charge_model: "standard"
+              }
+            ]
+          }
+        end
+
+        before do
+          existing_charge
+          allow(Charges::CreateService).to receive(:call!).and_raise(
+            ActiveRecord::RecordInvalid.new(Charge.new.tap { |c| c.errors.add(:base, "boom") })
+          )
+        end
+
+        it "does not enqueue Charges::UpdateChildrenJob" do
+          expect { plans_service.call }.not_to have_enqueued_job(Charges::UpdateChildrenJob)
+        end
+      end
     end
 
     context "when thresholds are present" do
@@ -458,7 +489,11 @@ RSpec.describe Plans::UpdateService do
         it "upgrades subscription plan" do
           plans_service.call
 
-          expect(Subscriptions::PlanUpgradeService).to have_received(:call)
+          expect(Subscriptions::PlanUpgradeService).to have_received(:call).with(
+            current_subscription: subscription,
+            plan: plan,
+            params: {name: pending_subscription.name}
+          )
         end
 
         it "updates the plan" do
@@ -466,6 +501,25 @@ RSpec.describe Plans::UpdateService do
 
           expect(result.plan.name).to eq("Updated plan name")
           expect(result.plan.amount_cents).to eq(200)
+        end
+
+        context "when the pending subscription has activation rules" do
+          before do
+            create(:subscription_activation_rule, subscription: pending_subscription, organization:, timeout_hours: 24)
+          end
+
+          it "forwards the activation_rules to the plan upgrade" do
+            plans_service.call
+
+            expect(Subscriptions::PlanUpgradeService).to have_received(:call).with(
+              current_subscription: subscription,
+              plan: plan,
+              params: {
+                name: pending_subscription.name,
+                activation_rules: [{type: "payment", timeout_hours: 24}]
+              }
+            )
+          end
         end
 
         context "when pending subscription does not have a previous one" do

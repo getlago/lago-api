@@ -49,7 +49,9 @@ describe "Daily Usages: Fill History", :premium, :time_travel, transaction: fals
 
     DailyUsages::FillHistoryService.call!(subscription:, from_date: mar_18.to_date, to_date: apr_20.to_date)
 
-    expect(DailyUsage.count).to eq(34) # 34 days from mar_18 to apr_20
+    # NOTE: events are received from mar_18 to apr_18 (32 days). apr_19 and apr_20
+    #       receive no event, so the guard skips them and no daily usage is created.
+    expect(DailyUsage.count).to eq(32)
 
     first_daily_usage = DailyUsage.find_by(usage_date: mar_18.to_date)
     second_daily_usage = DailyUsage.find_by(usage_date: mar_19.to_date)
@@ -58,7 +60,6 @@ describe "Daily Usages: Fill History", :premium, :time_travel, transaction: fals
     last_daily_usage = DailyUsage.find_by(usage_date: apr_17.to_date)
 
     first_next_period_daily_usage = DailyUsage.find_by(usage_date: apr_18.to_date)
-    second_next_period_daily_usage = DailyUsage.find_by(usage_date: apr_19.to_date)
 
     expect(first_daily_usage).to have_attributes(
       usage_date: mar_18.to_date,
@@ -100,13 +101,9 @@ describe "Daily Usages: Fill History", :premium, :time_travel, transaction: fals
       usage_diff: match(including("amount_cents" => 100))
     )
 
-    expect(second_next_period_daily_usage).to have_attributes(
-      usage_date: apr_19.to_date,
-      from_datetime: apr_18.beginning_of_day,
-      to_datetime: may_18.beginning_of_day - 1.second,
-      usage: match(including("amount_cents" => 100)),
-      usage_diff: match(including("amount_cents" => 0))
-    )
+    # apr_19 and apr_20 received no event, so no daily usage is created for them
+    expect(DailyUsage.find_by(usage_date: apr_19.to_date)).to be_nil
+    expect(DailyUsage.find_by(usage_date: apr_20.to_date)).to be_nil
   end
 
   context "with recurring metric and prorated charge" do
@@ -146,6 +143,8 @@ describe "Daily Usages: Fill History", :premium, :time_travel, transaction: fals
 
       DailyUsages::FillHistoryService.call!(subscription:, from_date: from.to_date, to_date: to.to_date)
 
+      # The recurring metric reports usage even on days without events, so the
+      # guard does not skip and a daily usage is created for every day in the range.
       usages = DailyUsage.where(usage_date: from.to_date..to.to_date)
       expect(usages.count).to eq(31)
       expect(usages.pluck(Arel.sql("usage['amount_cents']")).uniq).to eq([100])
@@ -190,6 +189,8 @@ describe "Daily Usages: Fill History", :premium, :time_travel, transaction: fals
 
       DailyUsages::FillHistoryService.call!(subscription:, from_date: from.to_date, to_date: to.to_date)
 
+      # The recurring metric reports usage every day, so the guard never skips
+      # and a daily usage is created for each day in the range.
       expect(DailyUsage.count).to eq(32)
       expect(DailyUsage.order(usage_date: :asc).first.usage_date).to eq(Date.new(2025, 4, 30))
       expect(DailyUsage.order(usage_date: :asc).last.usage_date).to eq(Date.new(2025, 5, 31))

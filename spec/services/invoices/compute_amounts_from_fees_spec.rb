@@ -61,6 +61,28 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
     expect { compute_amounts.call }.to change(invoice, :total_amount_cents).from(0).to(559)
   end
 
+  context "when invoice is not persisted and has no persisted fees" do
+    subject { described_class.new(invoice: draft_invoice) }
+
+    let(:draft_invoice) { build(:invoice, organization:, customer:, fees: fees) }
+    let(:fees) do
+      [build(:fee, amount_cents: 100), build(:fee, amount_cents: 150)]
+    end
+
+    it "avoids persisting fees" do
+      result = subject.call
+
+      expect(result.invoice.fees.length).to eq(2)
+      expect(result.invoice.fees.map(&:id)).to eq([nil, nil])
+    end
+
+    it "calculates taxes amounts" do
+      result = subject.call
+
+      expect(result.invoice.taxes_rate).to eq(30)
+    end
+  end
+
   context "when invoice is one_off" do
     let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :one_off) }
 

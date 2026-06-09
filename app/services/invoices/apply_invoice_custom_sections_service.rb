@@ -2,10 +2,10 @@
 
 module Invoices
   class ApplyInvoiceCustomSectionsService < BaseService
-    def initialize(invoice:, resource: nil, custom_section_ids: [])
+    def initialize(invoice:, resources: [], custom_section_ids: [])
       @invoice = invoice
       @customer = invoice.customer
-      @resource = resource
+      @resources = resources
       @custom_section_ids = custom_section_ids
 
       super()
@@ -32,11 +32,11 @@ module Invoices
 
     private
 
-    attr_reader :invoice, :customer, :resource, :custom_section_ids
+    attr_reader :invoice, :customer, :resources, :custom_section_ids
 
     def skip_custom_sections?
-      return false if resource_has_custom_sections?
-      return true if resource&.skip_invoice_custom_sections
+      return false if participating_resources.any? { |r| resource_has_invoice_custom_sections?(r) }
+      return true if resources.any? && participating_resources.none?
       return false if custom_section_ids.present?
 
       customer.skip_invoice_custom_sections
@@ -45,8 +45,8 @@ module Invoices
     def applicable_sections
       manual_sections = if custom_section_ids.present?
         organization.invoice_custom_sections.where(id: custom_section_ids)
-      elsif resource_has_custom_sections?
-        resource.selected_invoice_custom_sections
+      elsif resources.any?
+        sections_from_resources
       else
         customer.configurable_invoice_custom_sections
       end
@@ -54,10 +54,23 @@ module Invoices
       manual_sections | customer.system_generated_invoice_custom_sections
     end
 
-    def resource_has_custom_sections?
-      return false unless resource
-      return false unless resource.respond_to?(:selected_invoice_custom_sections)
-      return false if resource.skip_invoice_custom_sections
+    def sections_from_resources
+      with_ics, without_ics = participating_resources.partition { |r| resource_has_invoice_custom_sections?(r) }
+
+      return customer.configurable_invoice_custom_sections if with_ics.empty?
+
+      sections = with_ics.flat_map(&:selected_invoice_custom_sections).uniq
+      sections |= customer.configurable_invoice_custom_sections if without_ics.any?
+
+      sections
+    end
+
+    def participating_resources
+      @participating_resources ||= resources.reject(&:skip_invoice_custom_sections)
+    end
+
+    def resource_has_invoice_custom_sections?(resource)
+      return false unless resource&.respond_to?(:selected_invoice_custom_sections)
 
       resource.selected_invoice_custom_sections.any?
     end

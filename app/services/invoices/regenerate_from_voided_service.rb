@@ -24,6 +24,7 @@ module Invoices
         create_invoice_subscriptions
         process_fees
         adjust_fees
+        assign_applied_usage_thresholds
         Invoices::ApplyInvoiceCustomSectionsService.call!(invoice: regenerated_invoice)
         regenerated_invoice.fees_amount_cents = regenerated_invoice.fees.sum(:amount_cents)
         regenerated_invoice.sub_total_excluding_taxes_amount_cents = regenerated_invoice.fees.sum(:amount_cents)
@@ -177,10 +178,25 @@ module Invoices
       end
     end
 
+    def assign_applied_usage_thresholds
+      return unless voided_invoice.progressive_billing?
+
+      voided_invoice.applied_usage_thresholds.find_each do |applied_usage_threshold|
+        applied_usage_threshold.dup.tap do |duplicate|
+          duplicate.invoice = regenerated_invoice
+          duplicate.save!
+        end
+      end
+    end
+
+    def voided_invoice_fees
+      @voided_invoice_fees ||= voided_invoice.fees.where(id: fees_params.map { |fee| fee[:id] }.compact).index_by(&:id)
+    end
+
     def process_fees
       fees_params.each do |fee_params|
         if fee_params[:id].present?
-          voided_fee = voided_invoice.fees.find_by(id: fee_params[:id])
+          voided_fee = voided_invoice_fees[fee_params[:id]]
           dup_fee = duplicate_fee(voided_fee, fee_params) if voided_fee
         end
 

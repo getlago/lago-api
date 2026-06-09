@@ -86,5 +86,28 @@ RSpec.describe Wallets::Balance::DecreaseService do
           .and change { stale_wallet.consumed_credits }.from(0).to(4.5)
       end
     end
+
+    context "when the rate can produce rounding issues" do
+      let(:wallet) do
+        create(
+          :wallet,
+          balance_cents: 13750,
+          credits_balance: 100.0,
+          rate_amount: BigDecimal("1.375")
+        )
+      end
+
+      let(:wallet_transaction) do
+        create(:wallet_transaction, wallet:, amount: "1.00", credit_amount: BigDecimal("0.72727"))
+      end
+
+      it "correctly updates wallet balance and consumed status" do
+        expect { subject }
+          .to change(wallet.reload, :consumed_credits).from(0).to(0.72727)
+          .and change(wallet, :consumed_amount_cents).from(0).to(100)
+          .and change(wallet, :balance_cents).from(13750).to(13650)
+          .and change(wallet, :credits_balance).from(100.0).to(99.27273)
+      end
+    end
   end
 end

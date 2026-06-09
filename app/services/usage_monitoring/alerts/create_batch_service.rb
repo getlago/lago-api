@@ -29,7 +29,7 @@ module UsageMonitoring
               create_result = CreateAlertService.call(
                 organization:,
                 alertable:,
-                params: alert_params.to_h
+                params: billable_metric_params(alert_params.to_h)
               )
 
               if create_result.success?
@@ -58,6 +58,34 @@ module UsageMonitoring
       private
 
       attr_reader :organization, :alertable, :alerts_params
+
+      def preloaded_billable_metrics
+        @preloaded_billable_metrics ||= begin
+          codes = alerts_params.filter_map { |p| p[:billable_metric_code] }.uniq
+          ids = alerts_params.filter_map { |p| p[:billable_metric_id] }.uniq
+
+          metrics = organization.billable_metrics.where(code: codes).or(
+            organization.billable_metrics.where(id: ids)
+          )
+
+          {
+            by_code: metrics.index_by(&:code),
+            by_id: metrics.index_by { |m| m.id.to_s }
+          }
+        end
+      end
+
+      def billable_metric_params(alert_params)
+        if alert_params[:billable_metric_code]
+          bm = preloaded_billable_metrics.fetch(:by_code).fetch(alert_params[:billable_metric_code], nil)
+          alert_params[:billable_metric] = bm if bm
+        elsif alert_params[:billable_metric_id]
+          bm = preloaded_billable_metrics.fetch(:by_id).fetch(alert_params[:billable_metric_id].to_s, nil)
+          alert_params[:billable_metric] = bm if bm
+        end
+
+        alert_params
+      end
     end
   end
 end

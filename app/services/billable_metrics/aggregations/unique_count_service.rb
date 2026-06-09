@@ -25,6 +25,7 @@ module BillableMetrics
 
         if presentation_by.present?
           result.breakdowns = event_store.grouped_unique_count(uniq_grouped_by_and_presentation_by)
+          result.pay_in_advance_breakdowns = build_pay_in_advance_breakdowns(value: result.pay_in_advance_aggregation)
         end
 
         result.options = {running_total: running_total(options, aggregation:)}

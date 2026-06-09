@@ -27,6 +27,7 @@ module BillableMetrics
 
         if presentation_by.present?
           result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by)
+          result.pay_in_advance_breakdowns = build_pay_in_advance_breakdowns(value: event_value)
         end
 
         result.options = {running_total: running_total(options)}
@@ -145,7 +146,7 @@ module BillableMetrics
         return BigDecimal(0) unless event
         return BigDecimal(0) if event.properties.blank?
 
-        value = event.properties.fetch(billable_metric.field_name, 0).to_s
+        value = event_value.to_s
 
         cached_aggregation = find_cached_aggregation(
           with_from_datetime: from_datetime,

@@ -23,14 +23,15 @@ module Wallets
       end
 
       bm_id = fee.charge&.billable_metric_id
+      fee_currency = fee.amount_currency
 
-      bm_wallets = allocation_rules[:bm_map][bm_id]
+      bm_wallets = filter_by_currency(allocation_rules[:bm_map][bm_id], fee_currency)
       return result_with(bm_wallets) if bm_wallets&.any?
 
-      type_wallets = allocation_rules[:type_map][fee.fee_type]
+      type_wallets = filter_by_currency(allocation_rules[:type_map][fee.fee_type], fee_currency)
       return result_with(type_wallets) if type_wallets&.any?
 
-      unrestricted_wallets = allocation_rules[:unrestricted]
+      unrestricted_wallets = filter_by_currency(allocation_rules[:unrestricted], fee_currency)
       return result_with(unrestricted_wallets) if unrestricted_wallets&.any?
 
       result_with([])
@@ -39,6 +40,16 @@ module Wallets
     private
 
     attr_reader :allocation_rules, :fee, :customer_id, :fee_targeting_wallets_enabled
+
+    def filter_by_currency(wallet_ids, fee_currency)
+      return nil if wallet_ids.nil?
+
+      wallet_currencies = allocation_rules[:wallet_currencies]
+      return wallet_ids if wallet_currencies.blank?
+
+      wallet_ids.select { |id| wallet_currencies[id] == fee_currency }
+    end
+
     def find_wallet_by_code(code)
       return nil unless customer_id
 
