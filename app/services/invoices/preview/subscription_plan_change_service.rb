@@ -63,22 +63,21 @@ module Invoices
         )
       end
 
-      # For a downgrade, termination_date is the end-of-day rotation timestamp, but the new
-      # subscription starts at the beginning of that day in the customer timezone.
       def new_subscription_started_at
         return Time.current if upgrade?
 
-        termination_date.in_time_zone(customer.applicable_timezone).beginning_of_day
+        date_service.next_period_started_at
       end
 
       def termination_date
-        @termination_date ||= if upgrade?
-          Time.current
-        else
-          Subscriptions::DatesService
-            .new_instance(current_subscription, Time.current, current_usage: true)
-            .end_of_period + 1.day
-        end
+        return Time.current if upgrade?
+
+        date_service.end_of_period + 1.day
+      end
+
+      def date_service
+        @date_service ||= Subscriptions::DatesService
+          .new_instance(current_subscription, Time.current, current_usage: true)
       end
 
       def upgrade?

@@ -65,12 +65,10 @@ module Invoices
           .end_of_period + 1.day
       end
 
-      # rotation_date lands at the end of the day, but the new subscription starts at the beginning
-      # of that day in the customer timezone.
       def next_subscription_started_at(subscription)
-        rotation_date(subscription)
-          .in_time_zone(subscription.customer.applicable_timezone)
-          .beginning_of_day
+        Subscriptions::DatesService
+          .new_instance(subscription, Time.current, current_usage: true)
+          .next_period_started_at
       end
     end
   end
