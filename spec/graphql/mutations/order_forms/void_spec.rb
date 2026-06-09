@@ -41,6 +41,20 @@ RSpec.describe Mutations::OrderForms::Void do
     expect(data["voidReason"]).to eq("manual")
   end
 
+  context "without a premium license" do
+    it "returns a forbidden error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input: {id: order_form.id}}
+      )
+
+      expect_graphql_error(result:, message: "feature_unavailable")
+    end
+  end
+
   context "when order form is not voidable", :premium do
     let(:order_form) { create(:order_form, :signed, organization:, customer:) }
 
