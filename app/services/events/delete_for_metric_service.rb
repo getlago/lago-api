@@ -34,7 +34,11 @@ module Events
     private
 
     BATCH_SIZE = 10_000
-    CLICKHOUSE_TABLES = %w[events_raw events_enriched events_enriched_expanded].freeze
+    CLICKHOUSE_TABLES = {
+      events_raw: :ingested_at,
+      events_enriched: :enriched_at,
+      events_enriched_expanded: :enriched_at
+    }.freeze
     CLICKHOUSE_MUTATIONS_SYNC = "0" # Async
 
     attr_reader :billable_metric, :deleted_at
@@ -57,7 +61,7 @@ module Events
         organization_id: organization_id,
         code: code,
         subscription_id: subscription_ids
-      ).where("events.timestamp <= ?", deleted_at)
+      ).where("events.created_at <= ?", deleted_at)
         .in_batches.update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations
 
       # Delete events using the new `external_subscription_id`
@@ -65,23 +69,23 @@ module Events
         organization_id: organization_id,
         code: code,
         external_subscription_id: external_subscription_ids
-      ).where("events.timestamp <= ?", deleted_at)
+      ).where("events.created_at <= ?", deleted_at)
         .in_batches.update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations
     end
 
     # Delete clickhouse events using async mutations to avoid blocking or
     # timeouts when the metric is attached to a large number of events.
     def delete_clickhouse_events(external_subscription_ids)
-      CLICKHOUSE_TABLES.each do |table|
-        async_delete_clickhouse(table, external_subscription_ids)
+      CLICKHOUSE_TABLES.each do |table, date_field|
+        async_delete_clickhouse(table, date_field, external_subscription_ids)
       end
     end
 
-    def async_delete_clickhouse(table, external_subscription_ids)
+    def async_delete_clickhouse(table, date_field, external_subscription_ids)
       sql = ::Clickhouse::BaseRecord.sanitize_sql_array([
         "ALTER TABLE #{table} DELETE " \
           "WHERE organization_id = ? AND code = ? " \
-          "AND external_subscription_id IN (?) AND timestamp <= ? " \
+          "AND external_subscription_id IN (?) AND #{date_field} <= ? " \
           "SETTINGS mutations_sync = #{CLICKHOUSE_MUTATIONS_SYNC}",
         organization_id,
         code,
