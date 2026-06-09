@@ -102,7 +102,7 @@ module Invoices
         description: "Credit note created due to voided invoice #{invoice.id}",
         credit_amount_cents: credit_amount,
         refund_amount_cents: refund_amount,
-        items: credit_note_items_matching_total_amount(invoice:, total_amount_cents: requested_credit_note_total_amount_cents)
+        items: credit_note_items_matching_requested_amount(invoice:, requested_amount_cents: requested_credit_note_total_amount_cents)
       )
     end
 
@@ -132,12 +132,12 @@ module Invoices
       end
     end
 
-    def credit_note_items_matching_total_amount(invoice:, total_amount_cents:)
+    def credit_note_items_matching_requested_amount(invoice:, requested_amount_cents:)
       base_items = remaining_credit_note_items(invoice:)
-      base_total = estimated_credit_note_total_amount_cents(invoice:, items: base_items).to_f
+      base_total = estimate_credit_note(invoice:, items: base_items).total_amount_cents.to_f
       return [] if base_total.zero?
 
-      ratio = total_amount_cents.to_f / base_total
+      ratio = requested_amount_cents.to_f / base_total
 
       base_items.map do |item|
         {
@@ -145,10 +145,6 @@ module Invoices
           amount_cents: (item[:amount_cents] * ratio)
         }
       end
-    end
-
-    def estimated_credit_note_total_amount_cents(invoice:, items:)
-      estimate_credit_note(invoice:, items:).total_amount_cents
     end
 
     def estimate_credit_note(invoice:, items:)
