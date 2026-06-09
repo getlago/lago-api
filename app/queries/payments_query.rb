@@ -7,7 +7,7 @@ class PaymentsQuery < BaseQuery
   def call
     return result unless validate_filters.success?
 
-    payments = base_scope.result
+    payments = base_scope
     payments = apply_filters(payments)
     payments = paginate(payments)
     payments = apply_consistent_ordering(payments)
@@ -23,11 +23,17 @@ class PaymentsQuery < BaseQuery
   end
 
   def base_scope
-    Payment.where.not(customer_id: nil)
+    scope = Payment.where.not(customer_id: nil)
       .where(organization:)
       .where.not(payable_id: nil)
       .where(visible_payable_condition)
-      .ransack(search_params)
+
+    return scope if search_term.blank?
+
+    by_attributes = scope.ransack(search_params).result
+    return by_attributes unless search_term.match?(BaseQuery::UUID_REGEX)
+
+    scope.where(id: by_attributes.select(:id)).or(scope.where(id: search_term))
   end
 
   def visible_payable_condition
@@ -55,7 +61,6 @@ class PaymentsQuery < BaseQuery
 
     terms = {
       m: "or",
-      id_cont: search_term,
       provider_payment_id_cont: search_term,
       reference_cont: search_term
     }
