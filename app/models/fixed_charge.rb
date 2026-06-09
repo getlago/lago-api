@@ -52,6 +52,8 @@ class FixedCharge < ApplicationRecord
   end
 
   def effective_units_for(subscription)
+    return units unless subscription
+
     subscription_units_overrides.find_by(subscription:)&.units || units
   end
 

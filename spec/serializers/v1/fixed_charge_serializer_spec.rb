@@ -33,4 +33,27 @@ RSpec.describe ::V1::FixedChargeSerializer do
       expect(result["fixed_charge"]["taxes"].map { |tax| tax["lago_id"] }).to match_array(taxes.map(&:id))
     end
   end
+
+  context "when effective_units_by_id is provided" do
+    let(:serializer) do
+      described_class.new(fixed_charge, root_name: "fixed_charge", effective_units_by_id:)
+    end
+    let(:fixed_charge) { create(:fixed_charge, units: 10, properties:) }
+
+    context "when the map has no entry for the fixed_charge" do
+      let(:effective_units_by_id) { {} }
+
+      it "serializes the plan-level units" do
+        expect(result["fixed_charge"]["units"]).to eq("10.0")
+      end
+    end
+
+    context "when the map carries an override for the fixed_charge" do
+      let(:effective_units_by_id) { {fixed_charge.id => BigDecimal("25")} }
+
+      it "serializes the overridden units" do
+        expect(result["fixed_charge"]["units"]).to eq("25.0")
+      end
+    end
+  end
 end

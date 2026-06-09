@@ -380,6 +380,19 @@ RSpec.describe FixedCharge do
       it { is_expected.to eq(7) }
     end
 
+    context "when subscription is nil" do
+      let(:subscription) { nil }
+
+      before do
+        allow(fixed_charge).to receive(:subscription_units_overrides)
+      end
+
+      it "returns the fixed charge units without hitting the overrides table" do
+        expect(effective_units_for).to eq(7)
+        expect(fixed_charge).not_to have_received(:subscription_units_overrides)
+      end
+    end
+
     context "when an override exists for the (subscription, fixed_charge) pair" do
       before { create(:subscription_fixed_charge_units_override, subscription:, fixed_charge:, units: 42) }
 
