@@ -23,7 +23,7 @@ module FixedCharges
             else
               payload.merge(code: fixed_charge.code)
             end
-            FixedCharges::CreateService.call!(plan: child, params: create_params.merge(parent_id: fixed_charge.id))
+            FixedCharges::CreateService.call!(plan: child, params: create_params.merge(parent_id: fixed_charge.id), send_webhook: false)
           end
         end
       end

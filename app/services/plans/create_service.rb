@@ -52,13 +52,14 @@ module Plans
 
         if args[:charges].present?
           args[:charges].each do |charge_params|
-            Charges::CreateService.call!(plan:, params: charge_params_with_code(plan, charge_params))
+            # NOTE: plan.created already covers the nested charges; suppress per-charge webhooks.
+            Charges::CreateService.call!(plan:, params: charge_params_with_code(plan, charge_params), send_webhook: false)
           end
         end
 
         if args[:fixed_charges].present?
           args[:fixed_charges].each do |fixed_charge_args|
-            FixedCharges::CreateService.call!(plan:, params: fixed_charge_params_with_code(plan, fixed_charge_args))
+            FixedCharges::CreateService.call!(plan:, params: fixed_charge_params_with_code(plan, fixed_charge_args), send_webhook: false)
           end
         end
 

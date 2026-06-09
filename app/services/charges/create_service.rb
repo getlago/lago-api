@@ -2,10 +2,11 @@
 
 module Charges
   class CreateService < BaseService
-    def initialize(plan:, params:, cascade_updates: false)
+    def initialize(plan:, params:, cascade_updates: false, send_webhook: true)
       @plan = plan
       @params = params
       @cascade_updates = cascade_updates
+      @send_webhook = send_webhook
 
       super
     end
@@ -67,6 +68,8 @@ module Charges
         Charges::CreateChildrenJob.perform_later(charge: result.charge, payload: params)
       end
 
+      SendWebhookJob.perform_after_commit("charge.created", result.charge) if send_webhook && result.success?
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -78,7 +81,7 @@ module Charges
 
     private
 
-    attr_reader :plan, :params, :cascade_updates
+    attr_reader :plan, :params, :cascade_updates, :send_webhook
 
     def billable_metric
       @billable_metric ||= plan.organization.billable_metrics.find_by(id: params[:billable_metric_id])

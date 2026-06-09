@@ -23,7 +23,7 @@ module Charges
             else
               payload.merge(code: charge.code)
             end
-            Charges::CreateService.call!(plan: child, params: create_params.merge(parent_id: charge.id))
+            Charges::CreateService.call!(plan: child, params: create_params.merge(parent_id: charge.id), send_webhook: false)
           end
         end
       end

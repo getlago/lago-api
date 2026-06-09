@@ -27,7 +27,8 @@ module FixedCharges
                 cascade: true,
                 equal_properties: old_parent.equal_properties?(child_fixed_charge)
               },
-              trigger_billing: false
+              trigger_billing: false,
+              send_webhook: false
             )
           end
         end

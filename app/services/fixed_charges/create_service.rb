@@ -4,11 +4,12 @@ module FixedCharges
   class CreateService < BaseService
     Result = BaseResult[:fixed_charge]
 
-    def initialize(plan:, params:, timestamp: Time.current.to_i, cascade_updates: false)
+    def initialize(plan:, params:, timestamp: Time.current.to_i, cascade_updates: false, send_webhook: true)
       @plan = plan
       @params = params
       @timestamp = timestamp.to_i
       @cascade_updates = cascade_updates
+      @send_webhook = send_webhook
 
       super
     end
@@ -55,6 +56,8 @@ module FixedCharges
         FixedCharges::CreateChildrenJob.perform_later(fixed_charge: result.fixed_charge, payload: params)
       end
 
+      SendWebhookJob.perform_after_commit("fixed_charge.created", result.fixed_charge) if send_webhook && result.success?
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -68,7 +71,7 @@ module FixedCharges
 
     private
 
-    attr_reader :plan, :params, :timestamp, :cascade_updates
+    attr_reader :plan, :params, :timestamp, :cascade_updates, :send_webhook
 
     delegate :organization, to: :plan
 

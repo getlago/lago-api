@@ -22,7 +22,7 @@ module FixedCharges
           cascade_fixed_charges_payload.each do |payload|
             case payload[:action]&.to_sym
             when :create
-              FixedCharges::CreateService.call!(plan:, params: payload, timestamp:)
+              FixedCharges::CreateService.call!(plan:, params: payload, timestamp:, send_webhook: false)
 
             when :update
               fixed_charge = plan.fixed_charges.find_by!(parent_id: payload[:id])
@@ -37,7 +37,8 @@ module FixedCharges
                   cascade: true,
                   equal_properties: old_parent.equal_properties?(fixed_charge)
                 },
-                trigger_billing: false
+                trigger_billing: false,
+                send_webhook: false
               )
             else
               raise UnknownActionError, "Unknown action #{payload[:action]} for fixed charge cascade"

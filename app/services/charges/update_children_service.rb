@@ -36,7 +36,8 @@ module Charges
                   cascade: true,
                   equal_properties: old_parent.equal_properties?(child_charge),
                   equal_applied_pricing_unit_rate: old_parent.equal_applied_pricing_unit_rate?(child_charge)
-                }
+                },
+                send_webhook: false
               )
             end
           end

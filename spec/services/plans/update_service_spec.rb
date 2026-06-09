@@ -170,6 +170,31 @@ RSpec.describe Plans::UpdateService do
       expect(plan.fixed_charges.order(created_at: :asc).second.invoice_display_name).to eq("fixed_charge2")
     end
 
+    it "enqueues the plan.updated_details webhook with only the changed fields" do
+      result = plans_service.call
+      updated_plan = result.plan
+
+      expect(SendWebhookJob).to have_been_enqueued.with(
+        "plan.updated_details",
+        updated_plan,
+        hash_including(
+          changes: hash_including(name: {from: anything, to: "Updated plan name"}),
+          associations_changed: {charges: true, fixed_charges: true, taxes: true, usage_thresholds: false}
+        )
+      )
+    end
+
+    it "does not emit per-charge webhooks during a plan update" do
+      plans_service.call
+
+      expect(SendWebhookJob).not_to have_been_enqueued.with("charge.created", anything)
+      expect(SendWebhookJob).not_to have_been_enqueued.with("charge.updated", anything)
+      expect(SendWebhookJob).not_to have_been_enqueued.with("charge.deleted", anything)
+      expect(SendWebhookJob).not_to have_been_enqueued.with("fixed_charge.created", anything)
+      expect(SendWebhookJob).not_to have_been_enqueued.with("fixed_charge.updated", anything)
+      expect(SendWebhookJob).not_to have_been_enqueued.with("fixed_charge.deleted", anything)
+    end
+
     it "marks invoices as ready to be refreshed" do
       subscription = create(:subscription, organization:, plan:)
       invoice = create(:invoice, :draft)
@@ -1509,11 +1534,11 @@ RSpec.describe Plans::UpdateService do
             expect(FixedCharges::CreateService).to have_received(:call!).twice
             expect(FixedCharges::CreateService)
               .to have_received(:call!)
-              .with(plan:, params: fixed_charges_args.first.merge(code: add_on.code), timestamp: Time.current.to_i)
+              .with(plan:, params: fixed_charges_args.first.merge(code: add_on.code), timestamp: Time.current.to_i, send_webhook: false)
 
             expect(FixedCharges::CreateService)
               .to have_received(:call!)
-              .with(plan:, params: fixed_charges_args.second.merge(code: "#{add_on.code}_2"), timestamp: Time.current.to_i)
+              .with(plan:, params: fixed_charges_args.second.merge(code: "#{add_on.code}_2"), timestamp: Time.current.to_i, send_webhook: false)
           end
         end
 
@@ -1650,7 +1675,8 @@ RSpec.describe Plans::UpdateService do
                 tax_codes: [tax1.code]
               },
               timestamp: Time.current.to_i,
-              trigger_billing: false
+              trigger_billing: false,
+              send_webhook: false
             )
           end
         end

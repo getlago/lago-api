@@ -23,6 +23,11 @@ module Plans
 
       old_amount_cents = plan.amount_cents
 
+      # NOTE: Snapshots captured before any mutation, used to build the
+      #       `plan.updated_details` webhook payload (changed fields only).
+      before_minimum_commitment = commitment_snapshot(plan.minimum_commitment)
+      before_metadata = plan.metadata&.value&.deep_dup
+
       plan.name = params[:name] if params.key?(:name)
       plan.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
       plan.description = params[:description] if params.key?(:description)
@@ -49,6 +54,9 @@ module Plans
 
       ActiveRecord::Base.transaction do
         plan.save!
+        # NOTE: Captured right after save, before sub-services mutate associated
+        #       records, so it reflects only the plan's own changed attributes.
+        @scalar_changes = plan.previous_changes.except("created_at", "updated_at")
         update_metadata!
 
         if params[:tax_codes]
@@ -77,6 +85,9 @@ module Plans
 
       SendWebhookJob.perform_after_commit("plan.updated", plan)
       result.plan = plan.reload
+
+      enqueue_updated_details_webhook(before_minimum_commitment, before_metadata)
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -89,6 +100,57 @@ module Plans
     attr_reader :plan, :params, :timestamp, :partial_metadata
 
     delegate :organization, to: :plan
+
+    # NOTE: Fired alongside `plan.updated`. Carries only the fields that changed
+    #       (scalar attributes + the cheap single-model associations as from/to
+    #       diffs) plus boolean flags for which nested associations were modified.
+    def enqueue_updated_details_webhook(before_minimum_commitment, before_metadata)
+      changes = scalar_changes
+        .merge(metadata_changes(before_metadata))
+        .merge(minimum_commitment_changes(before_minimum_commitment))
+
+      associations_changed = {
+        charges: params[:charges].present?,
+        fixed_charges: params[:fixed_charges].present?,
+        taxes: params.key?(:tax_codes),
+        usage_thresholds: params.key?(:usage_thresholds) && License.premium?
+      }
+
+      return if changes.blank? && associations_changed.values.none?
+
+      SendWebhookJob.perform_after_commit("plan.updated_details", plan, {changes:, associations_changed:})
+    end
+
+    def scalar_changes
+      (@scalar_changes || {}).each_with_object({}) do |(attribute, (from, to)), acc|
+        acc[attribute.to_sym] = {from:, to:}
+      end
+    end
+
+    def metadata_changes(before_metadata)
+      return {} unless @metadata_changed
+
+      {metadata: {from: before_metadata, to: plan.metadata&.value}}
+    end
+
+    def minimum_commitment_changes(before_minimum_commitment)
+      after_minimum_commitment = commitment_snapshot(plan.minimum_commitment)
+      return {} if before_minimum_commitment == after_minimum_commitment
+
+      field_changes = %i[amount_cents invoice_display_name].each_with_object({}) do |key, acc|
+        from = before_minimum_commitment&.fetch(key, nil)
+        to = after_minimum_commitment&.fetch(key, nil)
+        acc[key] = {from:, to:} if from != to
+      end
+
+      {minimum_commitment: field_changes}
+    end
+
+    def commitment_snapshot(commitment)
+      return unless commitment
+
+      {amount_cents: commitment.amount_cents, invoice_display_name: commitment.invoice_display_name}
+    end
 
     def update_metadata!
       return unless params.key?(:metadata)
@@ -220,12 +282,14 @@ module Plans
 
         if charge
           cascade_charge_update(charge, payload_charge)
-          Charges::UpdateService.call!(charge:, params: payload_charge)
+          # NOTE: charge.* webhooks are emitted only for standalone charge operations.
+          #       Plan-level changes are covered by plan.updated / plan.updated_details.
+          Charges::UpdateService.call!(charge:, params: payload_charge, send_webhook: false)
 
           next
         end
 
-        create_charge_result = Charges::CreateService.call!(plan:, params: charge_params_with_code(payload_charge))
+        create_charge_result = Charges::CreateService.call!(plan:, params: charge_params_with_code(payload_charge), send_webhook: false)
 
         after_commit { cascade_charge_creation(create_charge_result.charge, payload_charge) }
         created_charges_ids.push(create_charge_result.charge.id)
@@ -240,7 +304,7 @@ module Plans
       charges_ids = plan.charges.pluck(:id) - args_charges_ids - created_charges_ids
       plan.charges.where(id: charges_ids).find_each do |charge|
         after_commit { cascade_charge_removal(charge) }
-        Charges::DestroyService.call(charge:)
+        Charges::DestroyService.call(charge:, send_webhook: false)
       end
     end
 
@@ -257,12 +321,12 @@ module Plans
             old_parent_attrs: fixed_charge.attributes,
             action: :update
           )
-          FixedCharges::UpdateService.call!(fixed_charge:, params: payload_fixed_charge, timestamp:, trigger_billing: false)
+          FixedCharges::UpdateService.call!(fixed_charge:, params: payload_fixed_charge, timestamp:, trigger_billing: false, send_webhook: false)
 
           next
         end
 
-        create_fixed_charge_result = FixedCharges::CreateService.call!(plan:, params: fixed_charge_params_with_code(payload_fixed_charge), timestamp:)
+        create_fixed_charge_result = FixedCharges::CreateService.call!(plan:, params: fixed_charge_params_with_code(payload_fixed_charge), timestamp:, send_webhook: false)
 
         cascade_fixed_charges_payload << payload_fixed_charge.merge(
           parent_id: create_fixed_charge_result.fixed_charge.id,
@@ -308,7 +372,7 @@ module Plans
       fixed_charges_ids = plan.fixed_charges.pluck(:id) - args_fixed_charges_ids - created_fixed_charges_ids
       plan.fixed_charges.where(id: fixed_charges_ids).find_each do |fixed_charge|
         after_commit { cascade_fixed_charge_removal(fixed_charge) }
-        FixedCharges::DestroyService.call(fixed_charge:)
+        FixedCharges::DestroyService.call(fixed_charge:, send_webhook: false)
       end
     end
 

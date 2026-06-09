@@ -17,7 +17,7 @@ module Charges
         # skip touching to avoid deadlocks
         Plan.no_touching do
           charge.children.joins(plan: :subscriptions).where(subscriptions: {status: %w[active pending]}).distinct.find_each do |charge|
-            Charges::DestroyService.call!(charge:)
+            Charges::DestroyService.call!(charge:, send_webhook: false)
           end
         end
       end

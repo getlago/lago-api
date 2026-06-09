@@ -4,9 +4,10 @@ module FixedCharges
   class DestroyService < BaseService
     Result = BaseResult[:fixed_charge]
 
-    def initialize(fixed_charge:, cascade_updates: false)
+    def initialize(fixed_charge:, cascade_updates: false, send_webhook: true)
       @fixed_charge = fixed_charge
       @cascade_updates = cascade_updates
+      @send_webhook = send_webhook
 
       super
     end
@@ -21,6 +22,8 @@ module FixedCharges
         FixedCharges::DestroyChildrenJob.perform_later(fixed_charge.id)
       end
 
+      SendWebhookJob.perform_after_commit("fixed_charge.deleted", result.fixed_charge) if send_webhook && result.success?
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -32,6 +35,6 @@ module FixedCharges
 
     private
 
-    attr_reader :fixed_charge, :cascade_updates
+    attr_reader :fixed_charge, :cascade_updates, :send_webhook
   end
 end

@@ -4,12 +4,13 @@ module Charges
   class UpdateService < BaseService
     include CascadeUpdatable
 
-    def initialize(charge:, params:, cascade_options: {}, cascade_updates: false)
+    def initialize(charge:, params:, cascade_options: {}, cascade_updates: false, send_webhook: true)
       @charge = charge
       @params = params.to_h.deep_symbolize_keys
       @cascade_options = cascade_options
       @cascade = cascade_options[:cascade]
       @cascade_updates = cascade_updates
+      @send_webhook = send_webhook
 
       super
     end
@@ -88,6 +89,8 @@ module Charges
 
       trigger_cascade(old_filters_attrs, old_parent_attrs:, old_applied_pricing_unit_attrs:)
 
+      SendWebhookJob.perform_after_commit("charge.updated", result.charge) if send_webhook && result.success?
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -99,7 +102,7 @@ module Charges
 
     private
 
-    attr_reader :charge, :params, :cascade_options, :cascade, :cascade_updates
+    attr_reader :charge, :params, :cascade_options, :cascade, :cascade_updates, :send_webhook
 
     delegate :plan, to: :charge
 

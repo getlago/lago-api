@@ -4,9 +4,10 @@ module Charges
   class DestroyService < BaseService
     Result = BaseResult[:charge]
 
-    def initialize(charge:, cascade_updates: false)
+    def initialize(charge:, cascade_updates: false, send_webhook: true)
       @charge = charge
       @cascade_updates = cascade_updates
+      @send_webhook = send_webhook
 
       super
     end
@@ -30,6 +31,8 @@ module Charges
         Charges::DestroyChildrenJob.perform_later(charge.id)
       end
 
+      SendWebhookJob.perform_after_commit("charge.deleted", result.charge) if send_webhook && result.success?
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -39,6 +42,6 @@ module Charges
 
     private
 
-    attr_reader :charge, :cascade_updates
+    attr_reader :charge, :cascade_updates, :send_webhook
   end
 end

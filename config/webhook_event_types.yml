@@ -243,9 +243,44 @@ plan_updated:
   description: A plan has been updated
   category: Plans
   deprecated: false
+plan_updated_details:
+  name: plan.updated_details
+  description: A plan has been updated, carrying only the fields that changed
+  category: Plans
+  deprecated: false
 plan_deleted:
   name: plan.deleted
   description: A plan has been deleted
+  category: Plans
+  deprecated: false
+charge_created:
+  name: charge.created
+  description: A charge has been added to a plan
+  category: Plans
+  deprecated: false
+charge_updated:
+  name: charge.updated
+  description: A charge has been updated
+  category: Plans
+  deprecated: false
+charge_deleted:
+  name: charge.deleted
+  description: A charge has been removed from a plan
+  category: Plans
+  deprecated: false
+fixed_charge_created:
+  name: fixed_charge.created
+  description: A fixed charge has been added to a plan
+  category: Plans
+  deprecated: false
+fixed_charge_updated:
+  name: fixed_charge.updated
+  description: A fixed charge has been updated
+  category: Plans
+  deprecated: false
+fixed_charge_deleted:
+  name: fixed_charge.deleted
+  description: A fixed charge has been removed from a plan
   category: Plans
   deprecated: false
 subscription_canceled:
