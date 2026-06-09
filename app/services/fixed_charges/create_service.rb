@@ -4,17 +4,26 @@ module FixedCharges
   class CreateService < BaseService
     Result = BaseResult[:fixed_charge]
 
-    def initialize(plan:, params:, timestamp: Time.current.to_i, cascade_updates: false)
+    def initialize(
+      plan:,
+      params:,
+      timestamp: Time.current.to_i,
+      cascade_updates: false,
+      emit_plan_updated_details_webhook: false
+    )
       @plan = plan
       @params = params
       @timestamp = timestamp.to_i
       @cascade_updates = cascade_updates
+      @emit_plan_updated_details_webhook = emit_plan_updated_details_webhook
 
       super
     end
 
     def call
       return result.not_found_failure!(resource: "plan") unless plan
+
+      previous_webhook_payload = plan_updated_details_payload
 
       ActiveRecord::Base.transaction do
         fixed_charge = plan.fixed_charges.new(
@@ -55,6 +64,8 @@ module FixedCharges
         FixedCharges::CreateChildrenJob.perform_later(fixed_charge: result.fixed_charge, payload: params)
       end
 
+      send_updated_details_webhook(previous_webhook_payload)
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -68,9 +79,25 @@ module FixedCharges
 
     private
 
-    attr_reader :plan, :params, :timestamp, :cascade_updates
+    attr_reader :plan, :params, :timestamp, :cascade_updates, :emit_plan_updated_details_webhook
 
     delegate :organization, to: :plan
+
+    def plan_updated_details_payload
+      if emit_plan_updated_details_webhook && plan.organization.webhook_endpoints.exists?
+        Plans::WebhookPayload.snapshot(plan)
+      end
+    end
+
+    def send_updated_details_webhook(previous_payload)
+      if previous_payload
+        SendWebhookJob.perform_after_commit(
+          "plan.updated_details",
+          plan,
+          Plans::WebhookPayload.updated_details_options(previous: previous_payload, current_plan: plan)
+        )
+      end
+    end
 
     def add_on
       @add_on ||= if params[:add_on_id].present?

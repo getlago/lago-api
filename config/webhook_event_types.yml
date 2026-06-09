@@ -243,6 +243,11 @@ plan_updated:
   description: A plan has been updated
   category: Plans
   deprecated: false
+plan_updated_details:
+  name: plan.updated_details
+  description: A plan has been updated with details about changed fields
+  category: Plans
+  deprecated: false
 plan_deleted:
   name: plan.deleted
   description: A plan has been deleted

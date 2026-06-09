@@ -4,12 +4,19 @@ module Charges
   class UpdateService < BaseService
     include CascadeUpdatable
 
-    def initialize(charge:, params:, cascade_options: {}, cascade_updates: false)
+    def initialize(
+      charge:,
+      params:,
+      cascade_options: {},
+      cascade_updates: false,
+      emit_plan_updated_details_webhook: false
+    )
       @charge = charge
       @params = params.to_h.deep_symbolize_keys
       @cascade_options = cascade_options
       @cascade = cascade_options[:cascade]
       @cascade_updates = cascade_updates
+      @emit_plan_updated_details_webhook = emit_plan_updated_details_webhook
 
       super
     end
@@ -18,6 +25,7 @@ module Charges
       return result.not_found_failure!(resource: "charge") unless charge
       return result if cascade && charge.charge_model != params[:charge_model]
 
+      previous_webhook_payload = plan_updated_details_payload
       old_filters_attrs = capture_old_filters_attrs
       old_parent_attrs = charge.attributes.deep_dup
       old_applied_pricing_unit_attrs = charge.applied_pricing_unit&.attributes&.deep_dup
@@ -87,6 +95,7 @@ module Charges
       end
 
       trigger_cascade(old_filters_attrs, old_parent_attrs:, old_applied_pricing_unit_attrs:)
+      send_updated_details_webhook(previous_webhook_payload)
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -99,9 +108,25 @@ module Charges
 
     private
 
-    attr_reader :charge, :params, :cascade_options, :cascade, :cascade_updates
+    attr_reader :charge, :params, :cascade_options, :cascade, :cascade_updates, :emit_plan_updated_details_webhook
 
     delegate :plan, to: :charge
+
+    def plan_updated_details_payload
+      if emit_plan_updated_details_webhook && plan.organization.webhook_endpoints.exists?
+        Plans::WebhookPayload.snapshot(plan)
+      end
+    end
+
+    def send_updated_details_webhook(previous_payload)
+      if previous_payload
+        SendWebhookJob.perform_after_commit(
+          "plan.updated_details",
+          plan,
+          Plans::WebhookPayload.updated_details_options(previous: previous_payload, current_plan: plan)
+        )
+      end
+    end
 
     def cascade_presentation_group_keys
       presentation_group_keys = params.dig(:properties, :presentation_group_keys)

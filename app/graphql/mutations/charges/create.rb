@@ -23,7 +23,12 @@ module Mutations
         params[:filters]&.map!(&:to_h)
         params[:applied_pricing_unit] = params[:applied_pricing_unit].to_h if params[:applied_pricing_unit]
 
-        result = ::Charges::CreateService.call(plan:, params:, cascade_updates:)
+        result = ::Charges::CreateService.call(
+          plan:,
+          params:,
+          cascade_updates:,
+          emit_plan_updated_details_webhook: true
+        )
 
         result.success? ? result.charge : result_error(result)
       end

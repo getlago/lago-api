@@ -52,6 +52,39 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", plan)
     end
 
+    it "sends `plan.updated_details` webhook with entitlement changes" do
+      expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with(
+        "plan.updated_details",
+        plan,
+        hash_including(
+          changes: hash_including(
+            "entitlements" => hash_including(
+              "updated" => include(
+                hash_including(
+                  "code" => feature.code,
+                  "changes" => hash_including(
+                    "privileges" => hash_including(
+                      "updated" => include(
+                        hash_including(
+                          "code" => privilege.code,
+                          "changes" => hash_including(
+                            "value" => {
+                              "previous_value" => 10,
+                              "current_value" => 60
+                            }
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    end
+
     it "produces an activity log" do
       subject
       expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(plan)

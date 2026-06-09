@@ -3,8 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Charges::UpdateService do
-  let(:update_service) { described_class.new(charge:, params:, cascade_options:, cascade_updates:) }
+  let(:update_service) do
+    described_class.new(charge:, params:, cascade_options:, cascade_updates:, emit_plan_updated_details_webhook:)
+  end
   let(:cascade_updates) { false }
+  let(:emit_plan_updated_details_webhook) { false }
 
   let(:plan) { create(:plan) }
   let(:organization) { plan.organization }
@@ -126,6 +129,34 @@ RSpec.describe Charges::UpdateService do
           billable_metric_filter_id: billable_metric_filter.id,
           values: ["card"]
         )
+      end
+
+      context "when plan updated details webhook is enabled" do
+        let(:emit_plan_updated_details_webhook) { true }
+
+        it "enqueues a plan.updated_details webhook with charge changes" do
+          expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with(
+            "plan.updated_details",
+            plan,
+            hash_including(
+              changes: hash_including(
+                "charges" => hash_including(
+                  "updated" => include(
+                    hash_including(
+                      "lago_id" => charge.id,
+                      "changes" => hash_including(
+                        "properties" => {
+                          "previous_value" => {"amount" => "300"},
+                          "current_value" => {"amount" => "400"}
+                        }
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        end
       end
 
       it "does not update premium attributes" do

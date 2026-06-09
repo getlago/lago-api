@@ -19,7 +19,11 @@ module Mutations
       def resolve(id:, cascade_updates: false)
         charge = current_organization.charges.parents.find_by(id:)
 
-        result = ::Charges::DestroyService.call(charge:, cascade_updates:)
+        result = ::Charges::DestroyService.call(
+          charge:,
+          cascade_updates:,
+          emit_plan_updated_details_webhook: true
+        )
 
         result.success? ? result.charge : result_error(result)
       end

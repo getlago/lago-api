@@ -37,7 +37,10 @@ module Api
 
         def create
           result = FixedCharges::CreateService.call(
-            plan:, params: input_params.to_h.deep_symbolize_keys, cascade_updates: cascade_updates?
+            plan:,
+            params: input_params.to_h.deep_symbolize_keys,
+            cascade_updates: cascade_updates?,
+            emit_plan_updated_details_webhook: true
           )
 
           if result.success?
@@ -58,7 +61,8 @@ module Api
             fixed_charge:,
             params: input_params.to_h.deep_symbolize_keys,
             timestamp: Time.current.to_i,
-            cascade_updates: cascade_updates?
+            cascade_updates: cascade_updates?,
+            emit_plan_updated_details_webhook: true
           )
 
           if result.success?
@@ -75,7 +79,11 @@ module Api
         end
 
         def destroy
-          result = FixedCharges::DestroyService.call(fixed_charge:, cascade_updates: cascade_updates?)
+          result = FixedCharges::DestroyService.call(
+            fixed_charge:,
+            cascade_updates: cascade_updates?,
+            emit_plan_updated_details_webhook: true
+          )
 
           if result.success?
             render(

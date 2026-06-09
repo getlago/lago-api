@@ -153,11 +153,41 @@ RSpec.describe Plans::UpdateService do
     end
 
     it "updates a plan" do
+      previous_plan_name = plan.name
+
       result = plans_service.call
 
       updated_plan = result.plan
 
       expect(SendWebhookJob).to have_been_enqueued.with("plan.updated", updated_plan)
+      expect(SendWebhookJob).to have_been_enqueued.with(
+        "plan.updated_details",
+        updated_plan,
+        hash_including(
+          changes: hash_including(
+            "plan" => hash_including(
+              "name" => {
+                "previous_value" => previous_plan_name,
+                "current_value" => plan_name
+              }
+            ),
+            "charges" => hash_including(
+              "created" => include(
+                hash_including(
+                  "current_value" => hash_including("invoice_display_name" => "charge1")
+                )
+              )
+            ),
+            "fixed_charges" => hash_including(
+              "created" => include(
+                hash_including(
+                  "current_value" => hash_including("invoice_display_name" => "fixed_charge1")
+                )
+              )
+            )
+          )
+        )
+      )
 
       expect(updated_plan.name).to eq("Updated plan name")
       expect(updated_plan.invoice_display_name).to eq(plan_invoice_display_name)

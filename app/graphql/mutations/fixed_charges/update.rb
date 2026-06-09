@@ -21,7 +21,13 @@ module Mutations
         params[:properties] = params[:properties].to_h if params[:properties]
 
         cascade_updates = params.delete(:cascade_updates) || false
-        result = ::FixedCharges::UpdateService.call(fixed_charge:, params:, timestamp: Time.current.to_i, cascade_updates:)
+        result = ::FixedCharges::UpdateService.call(
+          fixed_charge:,
+          params:,
+          timestamp: Time.current.to_i,
+          cascade_updates:,
+          emit_plan_updated_details_webhook: true
+        )
 
         result.success? ? result.fixed_charge : result_error(result)
       end

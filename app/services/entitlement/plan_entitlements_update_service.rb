@@ -22,6 +22,8 @@ module Entitlement
     def call
       return result.not_found_failure!(resource: "plan") unless plan
 
+      previous_webhook_payload = plan_updated_details_payload
+
       ActiveRecord::Base.transaction do
         delete_missing_entitlements unless partial?
         update_entitlements
@@ -29,6 +31,7 @@ module Entitlement
 
       # NOTE: The webhooks is sent even if no changes were made to the plan
       SendWebhookJob.perform_after_commit("plan.updated", plan)
+      send_updated_details_webhook(previous_webhook_payload)
 
       result.entitlements = plan.entitlements.includes(:feature, values: :privilege).reload
       result
@@ -55,6 +58,22 @@ module Entitlement
 
     attr_reader :organization, :plan, :entitlements_params, :partial
     alias_method :partial?, :partial
+
+    def plan_updated_details_payload
+      if plan.organization.webhook_endpoints.exists?
+        Plans::WebhookPayload.snapshot(plan)
+      end
+    end
+
+    def send_updated_details_webhook(previous_payload)
+      if previous_payload
+        SendWebhookJob.perform_after_commit(
+          "plan.updated_details",
+          plan,
+          Plans::WebhookPayload.updated_details_options(previous: previous_payload, current_plan: plan)
+        )
+      end
+    end
 
     def delete_missing_entitlements
       missing = plan.entitlements.joins(:feature).where.not(feature: {code: entitlements_params.keys})

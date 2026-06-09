@@ -6,7 +6,15 @@ module FixedCharges
 
     Result = BaseResult[:fixed_charge]
 
-    def initialize(fixed_charge:, params:, timestamp:, cascade_options: {}, trigger_billing: true, cascade_updates: false)
+    def initialize(
+      fixed_charge:,
+      params:,
+      timestamp:,
+      cascade_options: {},
+      trigger_billing: true,
+      cascade_updates: false,
+      emit_plan_updated_details_webhook: false
+    )
       @fixed_charge = fixed_charge
       @params = params.to_h.deep_symbolize_keys
       @cascade_options = cascade_options
@@ -14,6 +22,7 @@ module FixedCharges
       @timestamp = timestamp
       @trigger_billing = trigger_billing
       @cascade_updates = cascade_updates
+      @emit_plan_updated_details_webhook = emit_plan_updated_details_webhook
 
       super
     end
@@ -22,6 +31,7 @@ module FixedCharges
       return result.not_found_failure!(resource: "fixed_charge") unless fixed_charge
       return result if cascade && fixed_charge.charge_model != params[:charge_model]
 
+      previous_webhook_payload = plan_updated_details_payload
       old_parent_attrs = fixed_charge.attributes.deep_dup
 
       ActiveRecord::Base.transaction do
@@ -70,6 +80,7 @@ module FixedCharges
       end
 
       trigger_cascade(old_parent_attrs:)
+      send_updated_details_webhook(previous_webhook_payload)
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -82,8 +93,31 @@ module FixedCharges
 
     private
 
-    attr_reader :fixed_charge, :params, :cascade_options, :cascade, :timestamp, :trigger_billing, :cascade_updates
+    attr_reader :fixed_charge,
+      :params,
+      :cascade_options,
+      :cascade,
+      :timestamp,
+      :trigger_billing,
+      :cascade_updates,
+      :emit_plan_updated_details_webhook
 
     delegate :plan, to: :fixed_charge
+
+    def plan_updated_details_payload
+      if emit_plan_updated_details_webhook && plan.organization.webhook_endpoints.exists?
+        Plans::WebhookPayload.snapshot(plan)
+      end
+    end
+
+    def send_updated_details_webhook(previous_payload)
+      if previous_payload
+        SendWebhookJob.perform_after_commit(
+          "plan.updated_details",
+          plan,
+          Plans::WebhookPayload.updated_details_options(previous: previous_payload, current_plan: plan)
+        )
+      end
+    end
   end
 end

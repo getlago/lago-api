@@ -21,6 +21,7 @@ module Plans
     def call
       return result.not_found_failure!(resource: "plan") unless plan
 
+      previous_webhook_payload = plan_updated_details_payload
       old_amount_cents = plan.amount_cents
 
       plan.name = params[:name] if params.key?(:name)
@@ -76,6 +77,7 @@ module Plans
       plan.invoices.draft.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 
       SendWebhookJob.perform_after_commit("plan.updated", plan)
+      send_updated_details_webhook(previous_webhook_payload)
       result.plan = plan.reload
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -187,6 +189,22 @@ module Plans
 
     def cascade?
       ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
+    end
+
+    def plan_updated_details_payload
+      if plan.organization.webhook_endpoints.exists?
+        Plans::WebhookPayload.snapshot(plan)
+      end
+    end
+
+    def send_updated_details_webhook(previous_payload)
+      if previous_payload
+        SendWebhookJob.perform_after_commit(
+          "plan.updated_details",
+          plan,
+          Plans::WebhookPayload.updated_details_options(previous: previous_payload, current_plan: plan)
+        )
+      end
     end
 
     def process_minimum_commitment(plan, params)

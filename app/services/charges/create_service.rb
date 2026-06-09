@@ -2,10 +2,11 @@
 
 module Charges
   class CreateService < BaseService
-    def initialize(plan:, params:, cascade_updates: false)
+    def initialize(plan:, params:, cascade_updates: false, emit_plan_updated_details_webhook: false)
       @plan = plan
       @params = params
       @cascade_updates = cascade_updates
+      @emit_plan_updated_details_webhook = emit_plan_updated_details_webhook
 
       super
     end
@@ -13,6 +14,8 @@ module Charges
     def call
       return result.not_found_failure!(resource: "plan") unless plan
       return result.not_found_failure!(resource: "billable_metric") unless billable_metric
+
+      previous_webhook_payload = plan_updated_details_payload
 
       ActiveRecord::Base.transaction do
         charge = plan.charges.new(
@@ -67,6 +70,8 @@ module Charges
         Charges::CreateChildrenJob.perform_later(charge: result.charge, payload: params)
       end
 
+      send_updated_details_webhook(previous_webhook_payload)
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -78,10 +83,26 @@ module Charges
 
     private
 
-    attr_reader :plan, :params, :cascade_updates
+    attr_reader :plan, :params, :cascade_updates, :emit_plan_updated_details_webhook
 
     def billable_metric
       @billable_metric ||= plan.organization.billable_metrics.find_by(id: params[:billable_metric_id])
+    end
+
+    def plan_updated_details_payload
+      if emit_plan_updated_details_webhook && plan.organization.webhook_endpoints.exists?
+        Plans::WebhookPayload.snapshot(plan)
+      end
+    end
+
+    def send_updated_details_webhook(previous_payload)
+      if previous_payload
+        SendWebhookJob.perform_after_commit(
+          "plan.updated_details",
+          plan,
+          Plans::WebhookPayload.updated_details_options(previous: previous_payload, current_plan: plan)
+        )
+      end
     end
   end
 end

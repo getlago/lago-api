@@ -4,13 +4,14 @@ require "rails_helper"
 
 RSpec.describe FixedCharges::UpdateService do
   subject(:update_service) do
-    described_class.new(fixed_charge:, params:, cascade_options:, timestamp:)
+    described_class.new(fixed_charge:, params:, cascade_options:, timestamp:, emit_plan_updated_details_webhook:)
   end
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
   let(:add_on) { create(:add_on, organization:) }
   let(:timestamp) { Time.current.to_i }
+  let(:emit_plan_updated_details_webhook) { false }
 
   let(:fixed_charge) do
     create(:fixed_charge, plan:, add_on:, prorated: false, pay_in_advance: false, units: 10)
@@ -72,6 +73,34 @@ RSpec.describe FixedCharges::UpdateService do
           pay_in_advance: false,
           properties: {"amount" => "200"}
         )
+      end
+
+      context "when plan updated details webhook is enabled" do
+        let(:emit_plan_updated_details_webhook) { true }
+
+        it "enqueues a plan.updated_details webhook with fixed charge changes" do
+          expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with(
+            "plan.updated_details",
+            plan,
+            hash_including(
+              changes: hash_including(
+                "fixed_charges" => hash_including(
+                  "updated" => include(
+                    hash_including(
+                      "lago_id" => fixed_charge.id,
+                      "changes" => hash_including(
+                        "invoice_display_name" => {
+                          "previous_value" => fixed_charge.invoice_display_name,
+                          "current_value" => "Updated Display Name"
+                        }
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        end
       end
 
       context "when plan is attached to subscriptions" do

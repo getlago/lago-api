@@ -61,6 +61,7 @@ class SendWebhookJob < ApplicationJob
     "plan.created" => Webhooks::Plans::CreatedService,
     "plan.deleted" => Webhooks::Plans::DeletedService,
     "plan.updated" => Webhooks::Plans::UpdatedService,
+    "plan.updated_details" => Webhooks::Plans::UpdatedDetailsService,
     "feature.created" => Webhooks::Features::CreatedService,
     "feature.updated" => Webhooks::Features::UpdatedService,
     "feature.deleted" => Webhooks::Features::DeletedService,
