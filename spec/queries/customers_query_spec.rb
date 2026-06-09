@@ -251,6 +251,48 @@ RSpec.describe CustomersQuery do
         expect(returned_ids).to eq([customer_first.id])
       end
     end
+
+    context "when the term matches several customers across different fields" do
+      let(:search_term) { "example" }
+
+      it "returns all matching customers without duplicates" do
+        expect(returned_ids).to match_array([customer_first.id, customer_second.id, customer_third.id])
+      end
+    end
+
+    context "when the term matches no customer" do
+      let(:search_term) { "nonexistent" }
+
+      it "returns no customer" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when the term contains LIKE wildcards" do
+      let(:search_term) { "d_fgh" }
+
+      it "matches the wildcards literally" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when a matching customer is discarded" do
+      let(:search_term) { "defgh" }
+
+      before { customer_first.discard! }
+
+      it "excludes the discarded customer by default" do
+        expect(returned_ids).to be_empty
+      end
+
+      context "with with_deleted filter" do
+        let(:filters) { {with_deleted: true} }
+
+        it "returns the discarded customer" do
+          expect(returned_ids).to eq([customer_first.id])
+        end
+      end
+    end
   end
 
   context "when filtering by countries" do
