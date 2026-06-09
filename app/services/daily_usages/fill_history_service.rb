@@ -4,6 +4,8 @@ require "timecop"
 
 module DailyUsages
   class FillHistoryService < BaseService
+    Result = BaseResult[]
+
     def initialize(subscription:, from_date:, to_date: nil, sandbox: false)
       @subscription = subscription
       @from_date = from_date
