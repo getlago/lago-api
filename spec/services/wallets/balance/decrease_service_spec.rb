@@ -20,7 +20,6 @@ RSpec.describe Wallets::Balance::DecreaseService do
   before do
     wallet
     wallet_transaction
-    allow(Customers::RefreshWalletsService).to receive(:call).and_call_original
   end
 
   describe ".call" do
@@ -40,10 +39,13 @@ RSpec.describe Wallets::Balance::DecreaseService do
         .and change(wallet, :consumed_amount_cents).from(0).to(450)
     end
 
-    it "refreshes wallet ongoing balance" do
+    it "flags the customer wallets for refresh" do
+      expect { subject }.to change { wallet.customer.reload.awaiting_wallet_refresh }.from(false).to(true)
+    end
+
+    it "enqueues a RefreshWalletJob including generating invoices" do
       expect { subject }
-        .to change { wallet.reload.ongoing_balance_cents }.from(800).to(550)
-        .and change { wallet.reload.credits_ongoing_balance }.from(8.0).to(5.5)
+        .to have_enqueued_job_after_commit(Customers::RefreshWalletJob).with(wallet.customer, include_generating_invoices: true)
     end
 
     it "sends a `wallet.updated` webhook" do
@@ -54,17 +56,15 @@ RSpec.describe Wallets::Balance::DecreaseService do
       expect { subject }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).at_least(:once)
     end
 
-    it "calls Customers::RefreshWalletsService" do
-      subject
-      expect(Customers::RefreshWalletsService).to have_received(:call).with(customer: wallet.customer, include_generating_invoices: true)
-    end
-
     context "when skip refresh flag is set" do
       let(:skip_refresh) { true }
 
-      it "does not call Customers::RefreshWalletsService" do
-        subject
-        expect(Customers::RefreshWalletsService).not_to have_received(:call)
+      it "does not flag the customer wallets for refresh" do
+        expect { subject }.not_to change { wallet.customer.reload.awaiting_wallet_refresh }.from(false)
+      end
+
+      it "does not enqueue a RefreshWalletJob" do
+        expect { subject }.not_to have_enqueued_job(Customers::RefreshWalletJob)
       end
     end
 

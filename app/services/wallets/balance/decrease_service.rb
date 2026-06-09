@@ -26,16 +26,12 @@ module Wallets
         )
 
         unless skip_refresh
-          Customers::RefreshWalletsService.call(
-            customer: wallet.customer,
-            include_generating_invoices: true
-          )
+          wallet.customer.flag_wallets_for_refresh
+          Customers::RefreshWalletJob.perform_after_commit(wallet.customer, include_generating_invoices: true)
         end
 
-        after_commit do
-          SendWebhookJob.perform_later("wallet.updated", wallet)
-          UsageMonitoring::ProcessWalletAlertsJob.perform_later(wallet)
-        end
+        SendWebhookJob.perform_after_commit("wallet.updated", wallet)
+        UsageMonitoring::ProcessWalletAlertsJob.perform_after_commit(wallet)
 
         result.wallet = wallet
         result

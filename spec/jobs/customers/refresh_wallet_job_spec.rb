@@ -32,15 +32,16 @@ RSpec.describe Customers::RefreshWalletJob do
   end
 
   describe "#perform" do
-    subject { described_class.perform_now(customer, wallet_ids:) }
+    subject { described_class.perform_now(customer, wallet_ids:, include_generating_invoices:) }
 
     let(:customer) { create(:customer, awaiting_wallet_refresh:) }
     let(:organization) { customer.organization }
     let(:result) { BaseService::Result.new }
     let(:wallet_ids) { nil }
+    let(:include_generating_invoices) { false }
 
     before do
-      allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, target_wallet_ids: wallet_ids).and_return(result)
+      allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, target_wallet_ids: wallet_ids, include_generating_invoices:).and_return(result)
     end
 
     context "when customer is not awaiting wallet refresh" do
@@ -56,7 +57,7 @@ RSpec.describe Customers::RefreshWalletJob do
 
         it "calls the Customers::RefreshWalletsService service scoped to the given wallets" do
           subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: wallet_ids)
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: wallet_ids, include_generating_invoices: false)
         end
       end
     end
@@ -67,7 +68,7 @@ RSpec.describe Customers::RefreshWalletJob do
       context "when refresh customer's wallets succeeds" do
         it "calls the Customers::RefreshWalletsService service" do
           subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: nil)
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: nil, include_generating_invoices: false)
         end
       end
 
@@ -76,7 +77,16 @@ RSpec.describe Customers::RefreshWalletJob do
 
         it "calls the Customers::RefreshWalletsService service scoped to the given wallets" do
           subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: wallet_ids)
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: wallet_ids, include_generating_invoices: false)
+        end
+      end
+
+      context "when include_generating_invoices is true" do
+        let(:include_generating_invoices) { true }
+
+        it "calls the Customers::RefreshWalletsService service including generating invoices" do
+          subject
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: nil, include_generating_invoices: true)
         end
       end
 
@@ -114,7 +124,7 @@ RSpec.describe Customers::RefreshWalletJob do
         ].each do |error_class|
           context "when the error is #{error_class.name.demodulize.underscore.humanize.downcase}" do
             before do
-              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, target_wallet_ids: nil).and_raise(error_class)
+              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, target_wallet_ids: nil, include_generating_invoices: false).and_raise(error_class)
             end
 
             it "raises the error and retries the job" do
