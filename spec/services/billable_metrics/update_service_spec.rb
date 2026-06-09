@@ -52,6 +52,13 @@ RSpec.describe BillableMetrics::UpdateService do
       expect(SendWebhookJob).to have_been_enqueued.with("billable_metric.updated", billable_metric)
     end
 
+    it "uses with_lock to prevent race conditions" do
+      allow(billable_metric).to receive(:with_lock).and_call_original
+      described_class.call(billable_metric:, params:)
+
+      expect(billable_metric).to have_received(:with_lock)
+    end
+
     context "with filters arguments" do
       let(:filters) do
         [
@@ -83,6 +90,26 @@ RSpec.describe BillableMetrics::UpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
+      end
+    end
+
+    context "when the filters change but a metric attribute is invalid" do
+      let(:existing_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[US EU]) }
+      let(:params) { {name: nil, filters: [{key: "region", values: %w[US]}]} }
+
+      before { existing_filter }
+
+      it "rolls back the filter changes" do
+        result = described_class.call(billable_metric:, params:)
+
+        expect(result).not_to be_success
+        expect(existing_filter.reload.values).to eq(%w[US EU])
+      end
+
+      it "does not enqueue the refresh draft invoices job" do
+        described_class.call(billable_metric:, params:)
+
+        expect(BillableMetricFilters::RefreshDraftInvoicesJob).not_to have_been_enqueued
       end
     end
 
