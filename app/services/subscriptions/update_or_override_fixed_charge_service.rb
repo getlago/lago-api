@@ -10,6 +10,7 @@ module Subscriptions
       @subscription = subscription
       @fixed_charge = fixed_charge
       @params = params
+      @subscription_plan_parent_present = subscription&.plan&.parent_id.present?
 
       super
     end
@@ -20,8 +21,11 @@ module Subscriptions
       return result.not_found_failure!(resource: "fixed_charge") unless fixed_charge
 
       ActiveRecord::Base.transaction do
-        target_plan = ensure_plan_override
-        target_fixed_charge = find_or_create_fixed_charge_override(target_plan)
+        parent_fixed_charge = fixed_charge.parent_or_self
+        target_plan = ensure_plan_override(params: plan_override_params(parent_fixed_charge))
+        target_fixed_charge = find_or_create_fixed_charge_override(parent_fixed_charge, target_plan)
+
+        publish_invoice_pay_in_advance_job(target_fixed_charge)
 
         result.fixed_charge = target_fixed_charge
       end
@@ -35,24 +39,23 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :fixed_charge, :params
+    attr_reader :subscription, :fixed_charge, :params, :subscription_plan_parent_present
 
-    def find_or_create_fixed_charge_override(target_plan)
-      parent_fixed_charge = find_parent_fixed_charge
+    def plan_override_params(parent_fixed_charge)
+      return {} if subscription_plan_parent_present
+
+      {fixed_charges: [params.merge(id: parent_fixed_charge.id)]}
+    end
+
+    def find_or_create_fixed_charge_override(parent_fixed_charge, target_plan)
       existing_override = target_plan.fixed_charges.find_by(parent_id: parent_fixed_charge.id)
+
+      return existing_override.reload unless subscription_plan_parent_present
 
       if existing_override
         update_fixed_charge_override(existing_override)
       else
         create_fixed_charge_override(parent_fixed_charge, target_plan)
-      end
-    end
-
-    def find_parent_fixed_charge
-      if fixed_charge.parent_id
-        fixed_charge.parent
-      else
-        fixed_charge
       end
     end
 
@@ -88,6 +91,14 @@ module Subscriptions
       end
 
       existing_fixed_charge.reload
+    end
+
+    def publish_invoice_pay_in_advance_job(target_fixed_charge)
+      return unless params.key?(:units)
+      return unless params[:apply_units_immediately]
+      return unless target_fixed_charge.pay_in_advance?
+
+      Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, Time.current.to_i)
     end
   end
 end
