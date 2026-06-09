@@ -115,10 +115,10 @@ RSpec.describe Subscriptions::ActivateAllPendingService, clickhouse: true do
         )
       end
 
-      it "enqueues Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob" do
-        allow(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to receive(:perform_later)
+      it "enqueues Integrations::Aggregator::Subscriptions::Hubspot::CreateJob" do
+        allow(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).to receive(:perform_later)
         activate_service.call
-        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob)
           .to have_received(:perform_later).with(subscription: pending_subscription)
       end
 

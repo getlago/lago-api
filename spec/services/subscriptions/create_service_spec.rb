@@ -138,6 +138,25 @@ RSpec.describe Subscriptions::CreateService do
         create_service.call
         expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).not_to have_been_enqueued
       end
+
+      context "when the subscription starts in the future" do
+        let(:subscription_at) { Time.current + 5.days }
+
+        it "does not sync to Hubspot while pending" do
+          create_service.call
+          expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).not_to have_received(:perform_later)
+          expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when the subscription is backdated" do
+        let(:subscription_at) { Time.current - 5.days }
+
+        it "enqueues the Hubspot create job" do
+          create_service.call
+          expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).to have_received(:perform_later)
+        end
+      end
     end
 
     it "produces an activity log" do
