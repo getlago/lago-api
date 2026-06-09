@@ -356,20 +356,23 @@ end
 #
 # Indexes
 #
-#  idx_on_organization_id_subscription_at_created_at_id        (organization_id,subscription_at DESC NULLS LAST,created_at DESC,id)
-#  index_subscriptions_on_billing_entity_id                    (billing_entity_id)
-#  index_subscriptions_on_customer_id                          (customer_id)
-#  index_subscriptions_on_ending_at_active                     (ending_at) WHERE ((status = 1) AND (ending_at IS NOT NULL))
-#  index_subscriptions_on_external_id                          (external_id)
-#  index_subscriptions_on_last_received_event_on               (last_received_event_on)
-#  index_subscriptions_on_last_received_event_on_null          (id) WHERE (last_received_event_on IS NULL)
-#  index_subscriptions_on_organization_id                      (organization_id)
-#  index_subscriptions_on_payment_method_id                    (payment_method_id)
-#  index_subscriptions_on_plan_id                              (plan_id)
-#  index_subscriptions_on_previous_subscription_id_and_status  (previous_subscription_id,status)
-#  index_subscriptions_on_started_at                           (started_at)
-#  index_subscriptions_on_started_at_and_ending_at             (started_at,ending_at)
-#  index_subscriptions_on_status                               (status)
+#  idx_on_organization_id_external_id_gin_trgm_ops_fb8058a497      (organization_id,external_id) USING gin
+#  idx_on_organization_id_subscription_at_created_at_id            (organization_id,subscription_at DESC NULLS LAST,created_at DESC,id)
+#  index_subscriptions_on_billing_entity_id                        (billing_entity_id)
+#  index_subscriptions_on_customer_id                              (customer_id)
+#  index_subscriptions_on_ending_at_active                         (ending_at) WHERE ((status = 1) AND (ending_at IS NOT NULL))
+#  index_subscriptions_on_external_id                              (external_id)
+#  index_subscriptions_on_last_received_event_on                   (last_received_event_on)
+#  index_subscriptions_on_last_received_event_on_null              (id) WHERE (last_received_event_on IS NULL)
+#  index_subscriptions_on_organization_id                          (organization_id)
+#  index_subscriptions_on_organization_id_id_varchar_gin_trgm_ops  (organization_id, ((id)::character varying) gin_trgm_ops) USING gin
+#  index_subscriptions_on_organization_id_name_gin_trgm_ops        (organization_id,name) USING gin
+#  index_subscriptions_on_payment_method_id                        (payment_method_id)
+#  index_subscriptions_on_plan_id                                  (plan_id)
+#  index_subscriptions_on_previous_subscription_id_and_status      (previous_subscription_id,status)
+#  index_subscriptions_on_started_at                               (started_at)
+#  index_subscriptions_on_started_at_and_ending_at                 (started_at,ending_at)
+#  index_subscriptions_on_status                                   (status)
 #
 # Foreign Keys
 #
