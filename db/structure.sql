@@ -720,6 +720,7 @@ DROP INDEX IF EXISTS public.index_charges_taxes_on_charge_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_charges_taxes_on_charge_id;
 DROP INDEX IF EXISTS public.index_charges_pay_in_advance;
 DROP INDEX IF EXISTS public.index_charges_on_plan_id_and_code;
+DROP INDEX IF EXISTS public.index_charges_on_plan_id_and_billable_metric_id_and_prorated;
 DROP INDEX IF EXISTS public.index_charges_on_plan_id;
 DROP INDEX IF EXISTS public.index_charges_on_parent_id;
 DROP INDEX IF EXISTS public.index_charges_on_organization_id;
@@ -7364,6 +7365,13 @@ CREATE INDEX index_charges_on_plan_id ON public.charges USING btree (plan_id);
 
 
 --
+-- Name: index_charges_on_plan_id_and_billable_metric_id_and_prorated; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_charges_on_plan_id_and_billable_metric_id_and_prorated ON public.charges USING btree (plan_id, billable_metric_id, prorated) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_charges_on_plan_id_and_code; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12554,6 +12562,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260609161044'),
 ('20260608111837'),
 ('20260608074112'),
 ('20260603121349'),
