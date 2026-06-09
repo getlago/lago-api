@@ -469,6 +469,7 @@ DROP INDEX IF EXISTS public.index_payments_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_type_and_payable_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type_and_error_code;
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type;
+DROP INDEX IF EXISTS public.index_payments_on_organization_id_reference_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_payments_on_organization_id;
 DROP INDEX IF EXISTS public.index_payments_on_invoice_id;
 DROP INDEX IF EXISTS public.index_payments_on_customer_id;
@@ -819,6 +820,7 @@ DROP INDEX IF EXISTS public.idx_on_recurring_transaction_rule_id_fba3d39cca;
 DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
 DROP INDEX IF EXISTS public.idx_on_outbound_wallet_transaction_id_cf6ff733c6;
 DROP INDEX IF EXISTS public.idx_on_organization_id_subscription_at_created_at_id;
+DROP INDEX IF EXISTS public.idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
 DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
 DROP INDEX IF EXISTS public.idx_on_organization_id_e742f77454;
@@ -6683,6 +6685,13 @@ CREATE INDEX idx_on_organization_id_organization_sequential_id_2387146f54 ON pub
 
 
 --
+-- Name: idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b ON public.payments USING gin (organization_id, provider_payment_id public.gin_trgm_ops);
+
+
+--
 -- Name: idx_on_organization_id_subscription_at_created_at_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9134,6 +9143,13 @@ CREATE INDEX index_payments_on_invoice_id ON public.payments USING btree (invoic
 --
 
 CREATE INDEX index_payments_on_organization_id ON public.payments USING btree (organization_id);
+
+
+--
+-- Name: index_payments_on_organization_id_reference_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payments_on_organization_id_reference_gin_trgm_ops ON public.payments USING gin (organization_id, reference public.gin_trgm_ops);
 
 
 --
@@ -12570,6 +12586,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260609173731'),
 ('20260609165032'),
 ('20260609161044'),
 ('20260608111837'),
