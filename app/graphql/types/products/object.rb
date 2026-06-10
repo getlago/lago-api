@@ -18,6 +18,7 @@ module Types
       field :product_type, Types::Products::ProductTypeEnum, null: false
 
       field :billable_metric, Types::BillableMetrics::Object, null: true
+      field :filters, [Types::ProductFilters::Object], null: false
       field :product_category, Types::ProductCategories::Object, null: true
 
       field :filters_count, Integer, null: false

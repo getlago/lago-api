@@ -1,0 +1,16 @@
+# frozen_string_literal: true
+
+module Types
+  module ProductFilters
+    class UpdateInput < BaseInputObject
+      description "Update product filter input arguments"
+
+      argument :id, ID, required: true
+
+      argument :description, String, required: false
+      argument :invoice_display_name, String, required: false
+      argument :name, String, required: false
+      argument :values, [Types::ProductFilterValues::Input], required: false
+    end
+  end
+end
