@@ -77,7 +77,7 @@ module Invoices
       invoice_result = CreateGeneratingService.call(
         customer: subscription.customer,
         invoice_type: :progressive_billing,
-        currency: sorted_usage_thresholds.first.currency,
+        currency: subscription.plan.amount_currency,
         datetime: Time.zone.at(timestamp)
       ) do |invoice|
         CreateInvoiceSubscriptionService

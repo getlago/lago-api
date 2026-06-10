@@ -225,6 +225,20 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end
 
+    context "when the subscription overrides the plan's currency" do
+      let(:organization) { create(:organization) }
+      let(:plan) { create(:plan, organization:, amount_currency: "USD") }
+      let(:override_plan) { create(:plan, organization:, parent: plan, amount_currency: "EUR") }
+      let(:subscription) { create(:subscription, plan: override_plan, customer:, started_at: timestamp - 1.week) }
+
+      it "uses the subscription's plan currency, not the threshold's parent-plan currency" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.currency).to eq("EUR")
+      end
+    end
+
     context "with lago_premium", :premium do
       it "enqueues an GenerateDocumentsJob with email true" do
         expect { create_service.call }
