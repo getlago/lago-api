@@ -68,7 +68,7 @@ module Wallets
           Customers::RefreshWalletJob.perform_after_commit(wallet.customer)
         end
 
-        InvoiceCustomSections::AttachToResourceService.call(resource: wallet, params:)
+        InvoiceCustomSections::AttachToResourceService.call!(resource: wallet, params:)
         SendWebhookJob.perform_after_commit("wallet.updated", wallet)
       end
 
