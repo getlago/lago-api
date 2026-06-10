@@ -57,7 +57,14 @@ module ActiveJob
         job = event.payload[:job]
         extra = job.enqueued_at ? {enqueued_at: job.enqueued_at.utc} : {}
 
-        entry(level: "info", event: "perform", status: "start", job:, **job_context(job), **extra)
+        entry(
+          level: "info",
+          event: "perform",
+          status: "start",
+          job:,
+          **job_context(job),
+          **extra
+        )
       end
     end
     subscribe_log_level :perform_start, :info
@@ -70,14 +77,38 @@ module ActiveJob
       if ex
         error do
           entry(
-            level: "error", event: "perform", status: "error", job:,
-            duration:, **job_context(job), retries: job.executions, exception: exception_payload(ex)
+            level: "error",
+            event: "perform",
+            status: "error",
+            job:,
+            duration:,
+            **job_context(job),
+            retries: job.executions,
+            exception: exception_payload(ex)
           )
         end
       elsif event.payload[:aborted]
-        info { entry(level: "info", event: "perform", status: "aborted", job:, duration:, **job_identity(job)) }
+        info do
+          entry(
+            level: "info",
+            event: "perform",
+            status: "aborted",
+            job:,
+            duration:,
+            **job_identity(job)
+          )
+        end
       else
-        info { entry(level: "info", event: "perform", status: "success", job:, duration:, **job_identity(job)) }
+        info do
+          entry(
+            level: "info",
+            event: "perform",
+            status: "success",
+            job:,
+            duration:,
+            **job_identity(job)
+          )
+        end
       end
     end
     subscribe_log_level :perform, :info
@@ -90,13 +121,24 @@ module ActiveJob
       info do
         if ex
           entry(
-            level: "error", event: "retry", status: "error", job:,
-            **job_context(job), execution: job.executions, wait:, exception: exception_payload(ex)
+            level: "error",
+            event: "retry",
+            status: "error",
+            job:,
+            **job_context(job),
+            execution: job.executions,
+            wait:,
+            exception: exception_payload(ex)
           )
         else
           entry(
-            level: "info", event: "retry", status: "success", job:,
-            **job_context(job), execution: job.executions, wait:
+            level: "info",
+            event: "retry",
+            status: "success",
+            job:,
+            **job_context(job),
+            execution: job.executions,
+            wait:
           )
         end
       end
@@ -109,8 +151,13 @@ module ActiveJob
 
       error do
         entry(
-          level: "error", event: "retry", status: "stopped", job:,
-          **job_context(job), retries: job.executions, exception: exception_payload(ex)
+          level: "error",
+          event: "retry",
+          status: "stopped",
+          job:,
+          **job_context(job),
+          retries: job.executions,
+          exception: exception_payload(ex)
         )
       end
     end
@@ -122,8 +169,13 @@ module ActiveJob
 
       error do
         entry(
-          level: "error", event: "discard", status: "error", job:,
-          **job_context(job), retries: job.executions, exception: exception_payload(ex)
+          level: "error",
+          event: "discard",
+          status: "error",
+          job:,
+          **job_context(job),
+          retries: job.executions,
+          exception: exception_payload(ex)
         )
       end
     end
@@ -171,21 +223,38 @@ module ActiveJob
     end
 
     def enqueue_aborted(job)
-      entry(level: "info", event: "enqueue", status: "aborted", job:, queue: job.queue_name)
+      entry(
+        level: "info",
+        event: "enqueue",
+        status: "aborted",
+        job:,
+        queue: job.queue_name
+      )
     end
 
     def enqueue_error(job, ex)
       error do
         entry(
-          level: "error", event: "enqueue", status: "error", job:,
-          **job_context(job), exception: exception_payload(ex)
+          level: "error",
+          event: "enqueue",
+          status: "error",
+          job:,
+          **job_context(job),
+          exception: exception_payload(ex)
         )
       end
     end
 
     def enqueue_success(job, **extra)
       info do
-        entry(level: "info", event: "enqueue", status: "success", job:, **job_context(job), **extra)
+        entry(
+          level: "info",
+          event: "enqueue",
+          status: "success",
+          job:,
+          **job_context(job),
+          **extra
+        )
       end
     end
 

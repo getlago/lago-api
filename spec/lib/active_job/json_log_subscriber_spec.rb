@@ -10,6 +10,13 @@ class TestLogJob < ApplicationJob
   end
 end
 
+class TestLogJobWithArgs < ApplicationJob
+  self.log_arguments = true
+
+  def perform(*)
+  end
+end
+
 RSpec.describe ActiveJob::JsonLogSubscriber do
   subject(:subscriber) { described_class.new }
 
@@ -39,6 +46,13 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
       job.enqueued_at = enqueued_at
       job.scheduled_at = scheduled_at
       job.executions = executions
+    end
+  end
+
+  def build_job_with_args(*args, job_id: "test-job-id", queue_name: "default")
+    TestLogJobWithArgs.new(*args).tap do |job|
+      job.job_id = job_id
+      job.queue_name = queue_name
     end
   end
 
@@ -607,6 +621,78 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
         "retries" => 2,
         "exception" => {"class" => "RuntimeError", "message" => "unrecoverable error"}
       })
+    end
+  end
+
+  describe "argument logging" do
+    def logged_arguments(job)
+      subscriber.perform_start(build_event("perform_start.active_job", {job: job}))
+      parsed_log_lines.first["arguments"]
+    end
+
+    context "when the job does not log its arguments" do
+      it "logs an empty arguments object" do
+        job = build_job(job_id: "abc-123")
+
+        expect(logged_arguments(job)).to eq({})
+      end
+    end
+
+    context "when the job logs its arguments but has none" do
+      it "logs an empty arguments object" do
+        job = build_job_with_args
+
+        expect(logged_arguments(job)).to eq({})
+      end
+    end
+
+    context "when the arguments are scalars" do
+      it "logs them inspected and comma-joined" do
+        job = build_job_with_args("hello", 42, true)
+
+        expect(logged_arguments(job)).to eq("\"hello\", 42, true")
+      end
+    end
+
+    context "when an argument is a hash with symbol keys" do
+      it "logs the inspected hash" do
+        job = build_job_with_args({plan: "pro", seats: 3})
+
+        expect(logged_arguments(job)).to eq("{plan: \"pro\", seats: 3}")
+      end
+    end
+
+    context "when an argument is a hash with string keys" do
+      it "logs the inspected hash" do
+        job = build_job_with_args({"plan" => "pro"})
+
+        expect(logged_arguments(job)).to eq("{\"plan\" => \"pro\"}")
+      end
+    end
+
+    context "when an argument is an array" do
+      it "logs the inspected array" do
+        job = build_job_with_args([1, 2, 3])
+
+        expect(logged_arguments(job)).to eq("[1, 2, 3]")
+      end
+    end
+
+    context "when arguments are nested hashes and arrays" do
+      it "formats them recursively" do
+        job = build_job_with_args({items: [1, {label: "a"}]})
+
+        expect(logged_arguments(job)).to eq("{items: [1, {label: \"a\"}]}")
+      end
+    end
+
+    context "when an argument is a GlobalID::Identification" do
+      it "logs it as its global id" do
+        organization = build(:organization, id: "11111111-1111-1111-1111-111111111111")
+        job = build_job_with_args(organization)
+
+        expect(logged_arguments(job)).to include(organization.to_global_id.to_s)
+      end
     end
   end
 end
