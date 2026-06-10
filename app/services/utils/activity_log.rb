@@ -3,7 +3,7 @@
 module Utils
   class ActivityLog
     IGNORED_FIELDS = %i[updated_at].freeze
-    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity Entitlement::Feature ProductItemFilter].freeze
+    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity Entitlement::Feature ProductItem ProductItemFilter].freeze
     MAX_SERIALIZED_FEES = 25
     MAX_SERIALIZED_CHARGES = 50
     MAX_SERIALIZED_CHARGE_FILTERS = 100

@@ -22,7 +22,7 @@ module Clickhouse
     belongs_to :user, optional: true
     belongs_to :api_key, optional: true
 
-    RESOURCE_TYPES_WITH_DISCARDED = %w[BillableMetric Plan Customer BillingEntity Coupon ProductItemFilter].freeze
+    RESOURCE_TYPES_WITH_DISCARDED = %w[BillableMetric Plan Customer BillingEntity Coupon ProductItem ProductItemFilter].freeze
 
     RESOURCE_TYPES = {
       billable_metric: "BillableMetric",
@@ -37,6 +37,7 @@ module Clickhouse
       payment_receipt: "PaymentReceipt",
       payment_request: "PaymentRequest",
       feature: "Entitlement::Feature",
+      product_item: "ProductItem",
       product_item_filter: "ProductItemFilter"
     }.freeze
 
@@ -91,6 +92,9 @@ module Clickhouse
       feature_created: "feature.created",
       feature_deleted: "feature.deleted",
       feature_updated: "feature.updated",
+      product_item_created: "product_item.created",
+      product_item_updated: "product_item.updated",
+      product_item_deleted: "product_item.deleted",
       product_item_filter_created: "product_item_filter.created",
       product_item_filter_updated: "product_item_filter.updated",
       product_item_filter_deleted: "product_item_filter.deleted"
