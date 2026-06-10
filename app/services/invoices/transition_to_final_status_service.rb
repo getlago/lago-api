@@ -5,7 +5,7 @@ module Invoices
     def initialize(invoice:)
       @invoice = invoice
       @customer = @invoice.customer
-      @billing_entity = @customer.billing_entity
+      @billing_entity = @invoice.billing_entity
       super
     end
 
