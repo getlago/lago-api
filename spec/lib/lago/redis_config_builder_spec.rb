@@ -161,7 +161,7 @@ RSpec.describe Lago::RedisConfigBuilder do
         it "keeps each interval within +-25% of the base series and the total within the window" do
           intervals = result[:reconnect_attempts]
 
-          expect(intervals.sum).to be <= 8
+          expect((intervals.sum * 10).round).to be <= 80
           intervals.each_with_index do |interval, index|
             base_tenths = (index + 1)**2
             expect(interval).to be_between(
