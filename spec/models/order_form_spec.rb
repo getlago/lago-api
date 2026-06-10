@@ -102,5 +102,10 @@ RSpec.describe OrderForm do
       order_form = create(:order_form, :with_signed_document)
       expect(order_form.signed_document_url).to include("/rails/active_storage/blobs")
     end
+
+    it "returns nil when the attached document is not persisted yet" do
+      order_form.signed_document.attach(io: StringIO.new("pdf"), filename: "doc", content_type: "application/pdf")
+      expect(order_form.signed_document_url).to be_nil
+    end
   end
 end

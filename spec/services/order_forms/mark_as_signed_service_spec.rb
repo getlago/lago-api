@@ -117,7 +117,7 @@ RSpec.describe OrderForms::MarkAsSignedService do
 
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages).to have_key(:signed_document)
+          expect(result.error.messages[:signed_document]).to eq(["invalid_content_type"])
           expect(order_form.reload).to be_generated
         end
       end
@@ -139,7 +139,9 @@ RSpec.describe OrderForms::MarkAsSignedService do
         let(:signed_document) { "data:application/pdf;base64,#{Base64.strict_encode64("pdf")}" }
 
         before do
-          decoded = Utils::Base64File::Decoded.new(io: instance_double(StringIO, size: 11.megabytes), content_type: "application/pdf")
+          io = StringIO.new("pdf")
+          allow(io).to receive(:size).and_return(11.megabytes)
+          decoded = Utils::Base64File::Decoded.new(io:, content_type: "application/pdf")
           allow(Utils::Base64File).to receive(:decode).and_return(decoded)
         end
 
@@ -148,28 +150,28 @@ RSpec.describe OrderForms::MarkAsSignedService do
 
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages).to have_key(:signed_document)
+          expect(result.error.messages[:signed_document]).to eq(["file_too_large"])
           expect(order_form.reload).to be_generated
         end
       end
 
-      context "when saving fails after the document is uploaded" do
+      context "when saving fails" do
         let(:signed_document) { "data:application/pdf;base64,#{Base64.strict_encode64("pdf")}" }
-        let(:uploaded_blob) do
-          ActiveStorage::Blob.create_and_upload!(io: StringIO.new("pdf"), filename: "doc", content_type: "application/pdf")
-        end
 
         before do
-          allow(ActiveStorage::Blob).to receive(:create_and_upload!).and_return(uploaded_blob)
-          allow(uploaded_blob).to receive(:purge_later)
           allow(order_form).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(order_form))
         end
 
-        it "purges the orphaned blob and returns a validation failure" do
+        it "rolls back without persisting a blob" do
+          expect { service.call }.not_to change(ActiveStorage::Blob, :count)
+        end
+
+        it "returns a validation failure without signing" do
           result = service.call
 
           expect(result).not_to be_success
-          expect(uploaded_blob).to have_received(:purge_later)
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(order_form.reload).to be_generated
         end
       end
 
