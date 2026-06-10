@@ -18,6 +18,7 @@ RSpec.describe Types::ActivityLogs::ResourceTypeEnum do
         payment_request
         feature
         payment_receipt
+        product_item
         product_item_filter
       ]
     )
