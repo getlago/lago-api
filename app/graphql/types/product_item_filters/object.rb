@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 module Types
-  module ProductItems
+  module ProductItemFilters
     class Object < Types::BaseObject
-      graphql_name "ProductItem"
-      description "Base product item"
+      graphql_name "ProductItemFilter"
+      description "Base product item filter"
 
-      dataload_association :product, :billable_metric
+      dataload_association :product_item
 
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType
@@ -14,12 +14,10 @@ module Types
       field :code, String, null: false
       field :description, String, null: true
       field :invoice_display_name, String, null: true
-      field :item_type, Types::ProductItems::ItemTypeEnum, null: false
       field :name, String, null: false
 
-      field :billable_metric, Types::BillableMetrics::Object, null: true
-      field :filters, [Types::ProductItemFilters::Object], null: false
-      field :product, Types::Products::Object, null: true
+      field :product_item, Types::ProductItems::Object, null: false
+      field :values, [Types::ProductItemFilterValues::Object], null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
