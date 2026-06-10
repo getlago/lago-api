@@ -47,9 +47,8 @@ RSpec.describe BillableMetrics::UpdateService do
     end
 
     it "enqueues a billable_metric.updated webhook" do
-      described_class.call(billable_metric:, params:)
-
-      expect(SendWebhookJob).to have_been_enqueued.with("billable_metric.updated", billable_metric)
+      expect { described_class.call(billable_metric:, params:) }.to have_enqueued_job_after_commit(SendWebhookJob)
+        .with("billable_metric.updated", billable_metric)
     end
 
     it "uses with_lock to prevent race conditions" do
@@ -159,6 +158,32 @@ RSpec.describe BillableMetrics::UpdateService do
           rounding_function: "ceil",
           rounding_precision: 2
         )
+      end
+    end
+
+    context "with two threads racing on the same invoice", transaction: false do
+      let(:params) { {filters: [{key: "region", values: %w[US]}]} }
+
+      before do
+        allow(billable_metric).to receive(:save!).and_wrap_original do |original, *args|
+          sleep(0.05)
+          original.call(*args)
+        end
+      end
+
+      it "serializes the requests and creates the filter exactly once" do
+        results = Concurrent::Array.new
+
+        threads = Array.new(2) do
+          Thread.new do
+            results << described_class.call(billable_metric:, params:)
+          end
+        end
+
+        threads.each(&:join)
+
+        expect(results.count(&:success?)).to eq(2)
+        expect(billable_metric.filters.where(key: "region").count).to eq(1)
       end
     end
   end

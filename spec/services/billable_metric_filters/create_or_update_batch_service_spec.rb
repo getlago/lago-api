@@ -80,7 +80,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
     end
 
     it "enqueues the refresh draft invoices job" do
-      expect { service }.to have_enqueued_job(BillableMetricFilters::RefreshDraftInvoicesJob)
+      expect { service }.to have_enqueued_job_after_commit(BillableMetricFilters::RefreshDraftInvoicesJob)
         .with(billable_metric.id)
     end
 
