@@ -65,9 +65,15 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
     log_output.read.lines.map { |l| JSON.parse(l) }
   end
 
-  # Each including group defines `arguments_logged_for(job)`, which triggers the
-  # subscriber method under test and returns the "arguments" value it logged.
+  # Each including group sets `let(:trigger)` to a lambda that runs the subscriber
+  # method under test for a given job. The job's logged "arguments" value is then
+  # asserted across the formatting branches below.
   shared_examples "logs formatted arguments" do
+    def arguments_logged_for(job)
+      trigger.call(job)
+      parsed_log_lines.first["arguments"]
+    end
+
     context "when the job does not log its arguments" do
       it "logs an empty arguments object" do
         expect(arguments_logged_for(build_job(job_id: "abc-123"))).to eq({})
@@ -208,51 +214,23 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
       end
     end
 
-    context "when a job logging arguments has an exception" do
-      it "includes the formatted arguments in the error entry" do
-        job = build_job_with_args({plan: "pro"}, job_id: "abc-123")
-        event = build_event("enqueue.active_job", {job: job, exception_object: RuntimeError.new("boom")})
+    context "when successfully enqueued" do
+      let(:trigger) { ->(job) { subscriber.enqueue(build_event("enqueue.active_job", {job: job, exception_object: nil, aborted: false})) } }
 
-        subscriber.enqueue(event)
-
-        expect(parsed_log_lines.first).to eq({
-          "level" => "error",
-          "event" => "enqueue",
-          "status" => "error",
-          "job" => "TestLogJobWithArgs",
-          "job_id" => "abc-123",
-          "queue" => "default",
-          "arguments" => "{plan: \"pro\"}",
-          "exception" => {"class" => "RuntimeError", "message" => "boom"}
-        })
-      end
+      it_behaves_like "logs formatted arguments"
     end
 
-    context "when a job logging arguments is aborted" do
-      it "includes the formatted arguments in the aborted entry" do
-        job = build_job_with_args({plan: "pro"}, job_id: "abc-123")
-        event = build_event("enqueue.active_job", {job: job, exception_object: nil, aborted: true})
+    context "when it has an exception" do
+      let(:trigger) { ->(job) { subscriber.enqueue(build_event("enqueue.active_job", {job: job, exception_object: RuntimeError.new("boom")})) } }
 
-        subscriber.enqueue(event)
-
-        expect(parsed_log_lines.first).to eq({
-          "level" => "info",
-          "event" => "enqueue",
-          "status" => "aborted",
-          "job" => "TestLogJobWithArgs",
-          "job_id" => "abc-123",
-          "queue" => "default",
-          "arguments" => "{plan: \"pro\"}"
-        })
-      end
+      it_behaves_like "logs formatted arguments"
     end
 
-    def arguments_logged_for(job)
-      subscriber.enqueue(build_event("enqueue.active_job", {job: job, exception_object: nil, aborted: false}))
-      parsed_log_lines.first["arguments"]
-    end
+    context "when it is aborted" do
+      let(:trigger) { ->(job) { subscriber.enqueue(build_event("enqueue.active_job", {job: job, exception_object: nil, aborted: true})) } }
 
-    it_behaves_like "logs formatted arguments"
+      it_behaves_like "logs formatted arguments"
+    end
   end
 
   describe "#enqueue_all" do
@@ -418,32 +396,17 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
       end
     end
 
-    context "when a job logging arguments fails to enqueue" do
-      it "includes the formatted arguments in the error entry" do
-        job = build_job_with_args({plan: "pro"}, job_id: "abc-123")
-        event = build_event("enqueue_all.active_job", {jobs: [job], exception_object: RuntimeError.new("boom")})
+    context "when the jobs are successfully enqueued" do
+      let(:trigger) { ->(job) { subscriber.enqueue_all(build_event("enqueue_all.active_job", {jobs: [job], exception_object: nil})) } }
 
-        subscriber.enqueue_all(event)
-
-        expect(parsed_log_lines.first).to eq({
-          "level" => "error",
-          "event" => "enqueue",
-          "status" => "error",
-          "job" => "TestLogJobWithArgs",
-          "job_id" => "abc-123",
-          "queue" => "default",
-          "arguments" => "{plan: \"pro\"}",
-          "exception" => {"class" => "RuntimeError", "message" => "boom"}
-        })
-      end
+      it_behaves_like "logs formatted arguments"
     end
 
-    def arguments_logged_for(job)
-      subscriber.enqueue_all(build_event("enqueue_all.active_job", {jobs: [job], exception_object: nil}))
-      parsed_log_lines.first["arguments"]
-    end
+    context "when there is an exception" do
+      let(:trigger) { ->(job) { subscriber.enqueue_all(build_event("enqueue_all.active_job", {jobs: [job], exception_object: RuntimeError.new("boom")})) } }
 
-    it_behaves_like "logs formatted arguments"
+      it_behaves_like "logs formatted arguments"
+    end
   end
 
   describe "#enqueue_at" do
@@ -538,52 +501,28 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
       end
     end
 
-    context "when a job logging arguments is successfully enqueued" do
-      it "includes the formatted arguments in the success entry" do
-        job = build_job_with_args({plan: "pro"}, job_id: "abc-123")
-        job.scheduled_at = scheduled_time.to_f
-        event = build_event("enqueue_at.active_job", {job: job, exception_object: nil, aborted: false})
-
-        subscriber.enqueue_at(event)
-
-        expect(parsed_log_lines.first).to eq({
-          "level" => "info",
-          "event" => "enqueue",
-          "status" => "success",
-          "job" => "TestLogJobWithArgs",
-          "job_id" => "abc-123",
-          "queue" => "default",
-          "arguments" => "{plan: \"pro\"}",
-          "enqueued_at" => "2024-06-15T10:30:00.000Z"
-        })
+    context "when successfully enqueued" do
+      let(:trigger) do
+        lambda do |job|
+          job.scheduled_at = scheduled_time.to_f
+          subscriber.enqueue_at(build_event("enqueue_at.active_job", {job: job, exception_object: nil, aborted: false}))
+        end
       end
+
+      it_behaves_like "logs formatted arguments"
     end
 
-    context "when a job logging arguments is aborted" do
-      it "includes the formatted arguments in the aborted entry" do
-        job = build_job_with_args({plan: "pro"}, job_id: "abc-123")
-        event = build_event("enqueue_at.active_job", {job: job, exception_object: nil, aborted: true})
+    context "when it has an exception" do
+      let(:trigger) { ->(job) { subscriber.enqueue_at(build_event("enqueue_at.active_job", {job: job, exception_object: RuntimeError.new("boom")})) } }
 
-        subscriber.enqueue_at(event)
-
-        expect(parsed_log_lines.first).to eq({
-          "level" => "info",
-          "event" => "enqueue",
-          "status" => "aborted",
-          "job" => "TestLogJobWithArgs",
-          "job_id" => "abc-123",
-          "queue" => "default",
-          "arguments" => "{plan: \"pro\"}"
-        })
-      end
+      it_behaves_like "logs formatted arguments"
     end
 
-    def arguments_logged_for(job)
-      subscriber.enqueue_at(build_event("enqueue_at.active_job", {job: job, exception_object: RuntimeError.new("boom")}))
-      parsed_log_lines.first["arguments"]
-    end
+    context "when it is aborted" do
+      let(:trigger) { ->(job) { subscriber.enqueue_at(build_event("enqueue_at.active_job", {job: job, exception_object: nil, aborted: true})) } }
 
-    it_behaves_like "logs formatted arguments"
+      it_behaves_like "logs formatted arguments"
+    end
   end
 
   describe "#perform_start" do
@@ -631,12 +570,11 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
       end
     end
 
-    def arguments_logged_for(job)
-      subscriber.perform_start(build_event("perform_start.active_job", {job: job}))
-      parsed_log_lines.first["arguments"]
-    end
+    context "when logging arguments" do
+      let(:trigger) { ->(job) { subscriber.perform_start(build_event("perform_start.active_job", {job: job})) } }
 
-    it_behaves_like "logs formatted arguments"
+      it_behaves_like "logs formatted arguments"
+    end
   end
 
   describe "#perform" do
@@ -712,56 +650,41 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
       end
     end
 
-    context "when a job logging arguments is aborted" do
-      it "includes the formatted arguments in the aborted entry" do
-        job = build_job_with_args({plan: "pro"}, job_id: "abc-123")
-        event = build_event("perform.active_job", {job: job, exception_object: nil, aborted: true})
-        allow(event).to receive(:duration).and_return(0.12)
-
-        subscriber.perform(event)
-
-        expect(parsed_log_lines.first).to eq({
-          "level" => "info",
-          "event" => "perform",
-          "status" => "aborted",
-          "job" => "TestLogJobWithArgs",
-          "duration" => 0.12,
-          "job_id" => "abc-123",
-          "queue" => "default",
-          "arguments" => "{plan: \"pro\"}"
-        })
+    context "when it raises an exception" do
+      let(:trigger) do
+        lambda do |job|
+          event = build_event("perform.active_job", {job: job, exception_object: RuntimeError.new("boom")})
+          allow(event).to receive(:duration).and_return(1.0)
+          subscriber.perform(event)
+        end
       end
+
+      it_behaves_like "logs formatted arguments"
     end
 
-    context "when a job logging arguments completes successfully" do
-      it "includes the formatted arguments in the success entry" do
-        job = build_job_with_args({plan: "pro"}, job_id: "abc-123", queue_name: "billing")
-        event = build_event("perform.active_job", {job: job, exception_object: nil, aborted: false})
-        allow(event).to receive(:duration).and_return(1.0)
-
-        subscriber.perform(event)
-
-        expect(parsed_log_lines.first).to eq({
-          "level" => "info",
-          "event" => "perform",
-          "status" => "success",
-          "job" => "TestLogJobWithArgs",
-          "duration" => 1.0,
-          "job_id" => "abc-123",
-          "queue" => "billing",
-          "arguments" => "{plan: \"pro\"}"
-        })
+    context "when it is aborted" do
+      let(:trigger) do
+        lambda do |job|
+          event = build_event("perform.active_job", {job: job, exception_object: nil, aborted: true})
+          allow(event).to receive(:duration).and_return(0.12)
+          subscriber.perform(event)
+        end
       end
+
+      it_behaves_like "logs formatted arguments"
     end
 
-    def arguments_logged_for(job)
-      event = build_event("perform.active_job", {job: job, exception_object: RuntimeError.new("boom")})
-      allow(event).to receive(:duration).and_return(1.0)
-      subscriber.perform(event)
-      parsed_log_lines.first["arguments"]
-    end
+    context "when it completes successfully" do
+      let(:trigger) do
+        lambda do |job|
+          event = build_event("perform.active_job", {job: job, exception_object: nil, aborted: false})
+          allow(event).to receive(:duration).and_return(1.0)
+          subscriber.perform(event)
+        end
+      end
 
-    it_behaves_like "logs formatted arguments"
+      it_behaves_like "logs formatted arguments"
+    end
   end
 
   describe "#enqueue_retry" do
@@ -813,34 +736,17 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
       end
     end
 
-    context "when a job logging arguments is retried without error" do
-      it "includes the formatted arguments in the success entry" do
-        job = build_job_with_args({plan: "pro"}, job_id: "abc-123")
-        job.executions = 1
-        event = build_event("enqueue_retry.active_job", {job: job, error: nil, wait: 5})
+    context "when logging arguments with an error" do
+      let(:trigger) { ->(job) { subscriber.enqueue_retry(build_event("enqueue_retry.active_job", {job: job, error: RuntimeError.new("boom"), wait: 5})) } }
 
-        subscriber.enqueue_retry(event)
-
-        expect(parsed_log_lines.first).to eq({
-          "level" => "info",
-          "event" => "retry",
-          "status" => "success",
-          "job" => "TestLogJobWithArgs",
-          "job_id" => "abc-123",
-          "queue" => "default",
-          "arguments" => "{plan: \"pro\"}",
-          "execution" => 1,
-          "wait" => 5
-        })
-      end
+      it_behaves_like "logs formatted arguments"
     end
 
-    def arguments_logged_for(job)
-      subscriber.enqueue_retry(build_event("enqueue_retry.active_job", {job: job, error: RuntimeError.new("boom"), wait: 5}))
-      parsed_log_lines.first["arguments"]
-    end
+    context "when logging arguments without an error" do
+      let(:trigger) { ->(job) { subscriber.enqueue_retry(build_event("enqueue_retry.active_job", {job: job, error: nil, wait: 5})) } }
 
-    it_behaves_like "logs formatted arguments"
+      it_behaves_like "logs formatted arguments"
+    end
   end
 
   describe "#retry_stopped" do
@@ -866,12 +772,11 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
       })
     end
 
-    def arguments_logged_for(job)
-      subscriber.retry_stopped(build_event("retry_stopped.active_job", {job: job, error: RuntimeError.new("boom")}))
-      parsed_log_lines.first["arguments"]
-    end
+    context "when logging arguments" do
+      let(:trigger) { ->(job) { subscriber.retry_stopped(build_event("retry_stopped.active_job", {job: job, error: RuntimeError.new("boom")})) } }
 
-    it_behaves_like "logs formatted arguments"
+      it_behaves_like "logs formatted arguments"
+    end
   end
 
   describe "#discard" do
@@ -897,11 +802,10 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
       })
     end
 
-    def arguments_logged_for(job)
-      subscriber.discard(build_event("discard.active_job", {job: job, error: RuntimeError.new("boom")}))
-      parsed_log_lines.first["arguments"]
-    end
+    context "when logging arguments" do
+      let(:trigger) { ->(job) { subscriber.discard(build_event("discard.active_job", {job: job, error: RuntimeError.new("boom")})) } }
 
-    it_behaves_like "logs formatted arguments"
+      it_behaves_like "logs formatted arguments"
+    end
   end
 end
