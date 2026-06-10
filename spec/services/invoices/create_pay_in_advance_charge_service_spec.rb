@@ -159,6 +159,34 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end
 
+    context "when the subscription has its own billing entity (different from the customer's)" do
+      let(:customer_billing_entity) { create(:billing_entity, organization:, code: "acme_us") }
+      let(:subscription_billing_entity) { create(:billing_entity, organization:, code: "acme_eu") }
+      let(:customer) { create(:customer, organization:, billing_entity: customer_billing_entity) }
+      let(:subscription) { create(:subscription, customer:, plan:, billing_entity: subscription_billing_entity) }
+
+      it "stamps the invoice with the subscription's billing entity, not the customer's" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.billing_entity_id).to eq(subscription_billing_entity.id)
+        expect(result.invoice.billing_entity_id).not_to eq(customer_billing_entity.id)
+      end
+    end
+
+    context "when the subscription has no explicit billing entity" do
+      let(:customer_billing_entity) { create(:billing_entity, organization:, code: "acme_us") }
+      let(:customer) { create(:customer, organization:, billing_entity: customer_billing_entity) }
+      let(:subscription) { create(:subscription, customer:, plan:, billing_entity: nil) }
+
+      it "falls back to the customer's billing entity" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.billing_entity_id).to eq(customer_billing_entity.id)
+      end
+    end
+
     it "enqueues GenerateDocumentsJob with email false" do
       expect do
         invoice_service.call
