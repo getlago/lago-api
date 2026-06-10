@@ -105,7 +105,7 @@ module ActiveJob
             retries: job.executions,
             exception: exception_payload(ex)
           }
-          merge_organization_id(payload, job).to_json
+          payload.to_json
         end
       elsif event.payload[:aborted]
         info do
@@ -167,7 +167,7 @@ module ActiveJob
             wait: wait.to_i
           }
         end
-        merge_organization_id(payload, job).to_json
+        payload.to_json
       end
     end
     subscribe_log_level :enqueue_retry, :info
@@ -188,7 +188,7 @@ module ActiveJob
           retries: job.executions,
           exception: exception_payload(ex)
         }
-        merge_organization_id(payload, job).to_json
+        payload.to_json
       end
     end
     subscribe_log_level :retry_stopped, :error
@@ -209,7 +209,7 @@ module ActiveJob
           retries: job.executions,
           exception: exception_payload(ex)
         }
-        merge_organization_id(payload, job).to_json
+        payload.to_json
       end
     end
     subscribe_log_level :discard, :error
@@ -255,7 +255,7 @@ module ActiveJob
           arguments: args_info(job),
           exception: exception_payload(ex)
         }
-        merge_organization_id(payload, job).to_json
+        payload.to_json
       end
     end
 
@@ -276,30 +276,6 @@ module ActiveJob
 
     def exception_payload(ex)
       {class: ex.class.name, message: ex.message}
-    end
-
-    def merge_organization_id(payload, job)
-      org_id = organization_id_from(job)
-      unless org_id.nil?
-        payload[:organization_id] = org_id
-      end
-      payload
-    end
-
-    def organization_id_from(job)
-      arg = job.arguments&.find { |a| !organization_id_in(a).nil? }
-      organization_id_in(arg) if arg
-    rescue
-      nil
-    end
-
-    def organization_id_in(arg)
-      case arg
-      when Hash
-        arg[:organization_id].presence || arg["organization_id"].presence
-      else
-        arg.organization_id if arg.respond_to?(:organization_id)
-      end
     end
   end
 end

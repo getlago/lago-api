@@ -576,12 +576,6 @@ RSpec.describe Organization do
     end
   end
 
-  describe "#organization_id" do
-    it "returns the organization id" do
-      expect(organization.organization_id).to eq(organization.id)
-    end
-  end
-
   # this requires double confirmation: value on the org + premium integration
   describe "#maximum_wallets_per_customer", :premium do
     subject { organization.maximum_wallets_per_customer }
