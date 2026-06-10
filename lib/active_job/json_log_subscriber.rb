@@ -106,7 +106,7 @@ module ActiveJob
             status: "success",
             job:,
             duration:,
-            **job_identity(job)
+            **job_context(job)
           )
         end
       end
@@ -187,12 +187,8 @@ module ActiveJob
       {level:, event:, status:, job: job.class.name, **extra}.to_json
     end
 
-    def job_identity(job)
-      {job_id: job.job_id, queue: job.queue_name}
-    end
-
     def job_context(job)
-      job_identity(job).merge(arguments: args_info(job))
+      {job_id: job.job_id, queue: job.queue_name, arguments: args_info(job)}
     end
 
     def args_info(job)

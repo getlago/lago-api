@@ -657,7 +657,8 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "job" => "TestLogJob",
           "duration" => 123.46,
           "job_id" => "abc-123",
-          "queue" => "billing"
+          "queue" => "billing",
+          "arguments" => {}
         })
       end
     end
@@ -733,23 +734,22 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
     end
 
     context "when a job logging arguments completes successfully" do
-      it "omits the arguments from the success entry" do
+      it "includes the formatted arguments in the success entry" do
         job = build_job_with_args({plan: "pro"}, job_id: "abc-123", queue_name: "billing")
         event = build_event("perform.active_job", {job: job, exception_object: nil, aborted: false})
         allow(event).to receive(:duration).and_return(1.0)
 
         subscriber.perform(event)
 
-        log = parsed_log_lines.first
-        expect(log).not_to have_key("arguments")
-        expect(log).to eq({
+        expect(parsed_log_lines.first).to eq({
           "level" => "info",
           "event" => "perform",
           "status" => "success",
           "job" => "TestLogJobWithArgs",
           "duration" => 1.0,
           "job_id" => "abc-123",
-          "queue" => "billing"
+          "queue" => "billing",
+          "arguments" => "{plan: \"pro\"}"
         })
       end
     end
