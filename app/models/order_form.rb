@@ -16,12 +16,17 @@ class OrderForm < ApplicationRecord
     invalid: "invalid"
   }.freeze
 
+  SIGNED_DOCUMENT_CONTENT_TYPES = %w[application/pdf image/jpeg image/png].freeze
+  SIGNED_DOCUMENT_MAX_SIZE = 10.megabytes
+
   before_save :ensure_number
 
   belongs_to :organization
   belongs_to :customer
   belongs_to :quote_version
   has_one :quote, through: :quote_version
+
+  has_one_attached :signed_document
 
   enum :status, STATUSES,
     default: :generated,
@@ -31,6 +36,9 @@ class OrderForm < ApplicationRecord
     validate: {allow_nil: true}
 
   validates :void_reason, presence: true, if: :voided?
+  validates :signed_document,
+    content_type: SIGNED_DOCUMENT_CONTENT_TYPES,
+    size: {less_than: SIGNED_DOCUMENT_MAX_SIZE}
 
   sequenced(
     scope: ->(order_form) { order_form.organization.order_forms },
@@ -39,6 +47,13 @@ class OrderForm < ApplicationRecord
 
   def self.ransackable_attributes(_ = nil)
     %w[number]
+  end
+
+  def signed_document_url
+    return if signed_document.blank?
+    return unless signed_document.blob.persisted?
+
+    Rails.application.routes.url_helpers.rails_blob_url(signed_document, host: ENV["LAGO_API_URL"])
   end
 
   private

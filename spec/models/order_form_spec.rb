@@ -44,6 +44,16 @@ RSpec.describe OrderForm do
         expect(order_form.errors.added?(:void_reason, :blank)).to be(false)
       end
     end
+
+    describe "signed_document validation" do
+      it do
+        expect(order_form).to validate_content_type_of(:signed_document)
+          .allowing("application/pdf", "image/jpeg", "image/png")
+          .rejecting("image/gif", "text/plain")
+      end
+
+      it { is_expected.to validate_size_of(:signed_document).less_than(10.megabytes) }
+    end
   end
 
   describe "sequencing" do
@@ -80,6 +90,22 @@ RSpec.describe OrderForm do
     it "preserves an explicitly assigned number" do
       order_form = create(:order_form, number: "OF-CUSTOM-0001")
       expect(order_form.number).to eq("OF-CUSTOM-0001")
+    end
+  end
+
+  describe "#signed_document_url" do
+    it "returns nil when no document is attached" do
+      expect(order_form.signed_document_url).to be_nil
+    end
+
+    it "returns a blob url when a document is attached" do
+      order_form = create(:order_form, :with_signed_document)
+      expect(order_form.signed_document_url).to include("/rails/active_storage/blobs")
+    end
+
+    it "returns nil when the attached document is not persisted yet" do
+      order_form.signed_document.attach(io: StringIO.new("pdf"), filename: "doc", content_type: "application/pdf")
+      expect(order_form.signed_document_url).to be_nil
     end
   end
 end
