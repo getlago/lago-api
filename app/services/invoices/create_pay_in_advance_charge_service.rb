@@ -82,7 +82,6 @@ module Invoices
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
-        billing_entity: subscription.billing_entity,
         invoice_type: :subscription,
         currency: subscription.plan_amount_currency,
         datetime: Time.zone.at(timestamp),
