@@ -97,11 +97,41 @@ RSpec.describe ::V1::SubscriptionSerializer do
           "trial_ended_at" => nil,
           "current_billing_period_started_at" => "2024-05-01T00:00:00Z",
           "current_billing_period_ending_at" => "2024-05-31T23:59:59Z",
-          "progressive_billing_disabled" => false
+          "progressive_billing_disabled" => false,
+          "consolidate_invoice" => true
         )
 
         expect(result["subscription"]["customer"]["lago_id"]).to be_present
         expect(result["subscription"]["plan"]["minimum_commitment"]).to be_nil
+      end
+    end
+  end
+
+  context "when the subscription starts in the future (e.g. a scheduled downgrade in an invoice preview)" do
+    let(:plan) { create(:plan, interval: "monthly", pay_in_advance: true) }
+    let(:future_start) { Time.zone.parse("2026-07-03T00:00:00Z") }
+    let(:subscription) do
+      create(
+        :subscription,
+        :anniversary,
+        plan:,
+        status: :active,
+        subscription_at: future_start,
+        started_at: future_start,
+        activated_at: future_start,
+        created_at: future_start
+      )
+    end
+
+    it "serializes the real first billing period instead of collapsing both bounds onto started_at" do
+      travel_to(Time.zone.parse("2026-06-04T10:00:00Z")) do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["subscription"]).to include(
+          "started_at" => "2026-07-03T00:00:00.000Z",
+          "current_billing_period_started_at" => "2026-07-03T00:00:00Z",
+          "current_billing_period_ending_at" => "2026-08-02T23:59:59Z"
+        )
       end
     end
   end

@@ -25,7 +25,22 @@ RSpec.describe Wallets::TerminateService do
     end
 
     it "sends a `wallet.terminated` webhook" do
-      expect { terminate_service.call }.to have_enqueued_job(SendWebhookJob).with("wallet.terminated", Wallet)
+      expect { terminate_service.call }.to have_enqueued_job_after_commit(SendWebhookJob).with("wallet.terminated", Wallet)
+    end
+
+    context "when the customer has another active wallet" do
+      before { create(:wallet, customer:, organization:) }
+
+      it "flags the customer for ongoing balance refresh" do
+        expect { terminate_service.call }.to change { customer.reload.awaiting_wallet_refresh }.from(false).to(true)
+      end
+    end
+
+    context "when terminating the customer's last active wallet" do
+      it "does not raise and leaves the flag untouched" do
+        expect { terminate_service.call }.not_to change { customer.reload.awaiting_wallet_refresh }
+        expect(customer.reload.awaiting_wallet_refresh).to be(false)
+      end
     end
 
     context "when wallet has recurring transaction rules" do
@@ -61,6 +76,10 @@ RSpec.describe Wallets::TerminateService do
 
       it "does not send the `wallet.terminated` webhook" do
         expect { terminate_service.call }.not_to have_enqueued_job(SendWebhookJob)
+      end
+
+      it "does not flag the customer for ongoing balance refresh" do
+        expect { terminate_service.call }.not_to change { customer.reload.awaiting_wallet_refresh }
       end
     end
   end

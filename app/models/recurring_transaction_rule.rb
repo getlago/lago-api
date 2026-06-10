@@ -51,6 +51,10 @@ class RecurringTransactionRule < ApplicationRecord
   }
   scope :expired, -> { where("recurring_transaction_rules.expiration_at::timestamp(0) <= ?", Time.current) }
 
+  def currently_active?
+    active? && (expiration_at.nil? || expiration_at > Time.current)
+  end
+
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp
     terminated!
@@ -62,6 +66,13 @@ class RecurringTransactionRule < ApplicationRecord
     else
       credit_amount.clamp(wallet.paid_top_up_min_credits, nil)
     end
+  end
+
+  def invoice_custom_section_params
+    section_ids = applied_invoice_custom_sections.pluck(:invoice_custom_section_id)
+    return if section_ids.none? && !skip_invoice_custom_sections
+
+    {skip_invoice_custom_sections:, invoice_custom_section_ids: section_ids}
   end
 
   def compute_paid_credits(ongoing_balance:)

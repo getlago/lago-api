@@ -46,8 +46,7 @@ class UsersService < BaseService
       result.user = User.create!(email:, password:)
 
       result.organization = Organizations::CreateService
-        .call(name: organization_name, document_numbering: "per_organization")
-        .raise_if_error!
+        .call!(name: organization_name, document_numbering: "per_organization")
         .organization
 
       result.membership = Membership.create!(
@@ -79,7 +78,16 @@ class UsersService < BaseService
 
   def register_from_invite(invite, password)
     ActiveRecord::Base.transaction do
-      result.user = User.find_or_create_by!(email: invite.email) { |u| u.password = password }
+      user = User.find_or_initialize_by(email: invite.email)
+
+      if user.new_record?
+        user.password = password
+        user.save!
+      elsif user.memberships.active.none?
+        user.update!(password:)
+      end
+
+      result.user = user
       result.organization = invite.organization
 
       result.membership = Membership.create!(
@@ -118,7 +126,8 @@ class UsersService < BaseService
       event: "organization_registered",
       properties: {
         organization_name: organization.name,
-        organization_id: organization.id
+        organization_id: organization.id,
+        email: membership.user.email
       }
     )
   end

@@ -5,6 +5,7 @@ module Types
     class Object < Types::BaseObject
       graphql_name "Subscription"
 
+      field :billing_entity_id, ID, null: true
       field :customer, Types::Customers::Object, null: false
       field :external_id, String, null: false
       field :id, ID, null: false
@@ -50,6 +51,7 @@ module Types
 
       field :usage_thresholds, [Types::UsageThresholds::Object], null: false
 
+      field :consolidate_invoice, Boolean, null: false
       field :payment_method, Types::PaymentMethods::Object
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum
       field :progressive_billing_disabled, Boolean
@@ -83,7 +85,7 @@ module Types
       end
 
       def period_end_date
-        ::Subscriptions::DatesService.new_instance(object, Time.current)
+        ::Subscriptions::DatesService.new_instance(object, object.billing_reference_time)
           .next_end_of_period
       end
 
@@ -108,13 +110,22 @@ module Types
       end
 
       def fixed_charges
-        object.plan.fixed_charges
+        fcs = object.plan.fixed_charges
           .includes(:add_on, :taxes)
           .order(created_at: :asc)
+
+        effective_units_by_id = ::Subscription::FixedChargeUnitsOverride.units_map_for(
+          subscription: object,
+          fixed_charges: fcs
+        )
+
+        fcs.map do |fc|
+          ::Subscription::FixedChargePresenter.new(fc, object, effective_units: effective_units_by_id[fc.id])
+        end
       end
 
       def dates_service
-        @dates_service ||= ::Subscriptions::DatesService.new_instance(object, Time.current, current_usage: true)
+        @dates_service ||= ::Subscriptions::DatesService.new_instance(object, object.billing_reference_time, current_usage: true)
       end
     end
   end

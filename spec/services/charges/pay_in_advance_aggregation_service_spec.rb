@@ -160,6 +160,99 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             options: {free_units_per_events: 0, free_units_per_total_aggregation: 0}
           )
         end
+
+        context "with presentation_group_keys" do
+          let(:charge) do
+            create(
+              :standard_charge,
+              billable_metric:,
+              pay_in_advance: true,
+              properties: {
+                "pricing_group_keys" => ["cloud"],
+                "presentation_group_keys" => [{"value" => "region"}],
+                "amount" => "100"
+              }
+            )
+          end
+
+          let(:event) do
+            create(
+              :event,
+              organization:,
+              external_subscription_id: subscription.external_id,
+              properties: {"cloud" => "aws", "region" => "us-east-1"}
+            )
+          end
+
+          it "includes both grouped_by_values and presentation_by in filters" do
+            allow(BillableMetrics::Aggregations::CountService).to receive(:new).and_return(count_service)
+
+            agg_service.call
+
+            expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
+              .with(
+                event_store_class: Events::Stores::PostgresStore,
+                charge:,
+                subscription:,
+                boundaries: {
+                  from_datetime: boundaries.charges_from_datetime,
+                  to_datetime: boundaries.charges_to_datetime,
+                  charges_duration: boundaries.charges_duration,
+                  max_timestamp: event.timestamp
+                },
+                filters: {
+                  event:,
+                  charge_id: charge.id,
+                  grouped_by_values: {"cloud" => "aws"},
+                  presentation_by: ["region"]
+                }
+              )
+          end
+        end
+      end
+
+      describe "when charge model has presentation_group_keys property" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            billable_metric:,
+            pay_in_advance: true,
+            properties: {"presentation_group_keys" => [{"value" => "region"}], "amount" => "100"}
+          )
+        end
+
+        let(:event) do
+          create(
+            :event,
+            organization:,
+            external_subscription_id: subscription.external_id,
+            properties: {"region" => "us-east-1"}
+          )
+        end
+
+        it "includes presentation_by in filters" do
+          allow(BillableMetrics::Aggregations::CountService).to receive(:new).and_return(count_service)
+
+          agg_service.call
+
+          expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
+            .with(
+              event_store_class: Events::Stores::PostgresStore,
+              charge:,
+              subscription:,
+              boundaries: {
+                from_datetime: boundaries.charges_from_datetime,
+                to_datetime: boundaries.charges_to_datetime,
+                charges_duration: boundaries.charges_duration,
+                max_timestamp: event.timestamp
+              },
+              filters: {
+                event:,
+                charge_id: charge.id,
+                presentation_by: ["region"]
+              }
+            )
+        end
       end
 
       describe "when charge accepts_target_wallet", :premium do

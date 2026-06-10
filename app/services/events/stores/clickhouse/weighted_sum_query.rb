@@ -55,11 +55,23 @@ module Events
           :with_ctes,
           :charges_duration,
           :events_cte_queries,
-          :group_names,
-          :joined_group_names,
-          :grouped_arel_columns,
           :grouped_by_columns,
+          :grouped_arel_columns,
           to: :store
+
+        def group_names
+          _, names = grouped_arel_columns
+
+          if names.is_a?(Array)
+            return names
+          end
+
+          names.to_s.split(",")
+        end
+
+        def joined_group_names
+          group_names.join(", ")
+        end
 
         def events_cte_sql
           events_cte = events_cte_queries(
@@ -127,7 +139,7 @@ module Events
               arel_table[:timestamp].as("timestamp"),
               arel_table[:decimal_value].as("difference")
             ],
-            deduplicated_columns: %w[decimal_value]
+            deduplicated_columns: store.with_presentation_by_in_grouped_by? ? %w[decimal_value sorted_properties] : %w[decimal_value]
           )
 
           events_data = <<-SQL

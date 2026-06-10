@@ -62,10 +62,11 @@ RSpec.describe Invoices::UpdateService do
           create(:payment_request, customer:, invoices: [invoice], dunning_campaign:)
         end
 
-        it "resets customer dunning campaign status counters" do
+        it "resets customer dunning campaign status counters for the invoice currency" do
           expect { result && customer.reload }
             .to change(customer, :last_dunning_campaign_attempt).to(0)
             .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+            .and change(customer, :dunning_currency_attempts).to({"EUR" => 0})
         end
       end
     end

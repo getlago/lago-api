@@ -602,6 +602,120 @@ RSpec.shared_examples "a wallet create endpoint" do
       expect(json[:wallet][:applied_invoice_custom_sections].count).to eq(wallet.applied_invoice_custom_sections.count)
     end
   end
+
+  context "when multi_entity_billing is enabled" do
+    before { organization.update!(feature_flags: ["multi_entity_billing"]) }
+
+    context "when billing_entity_code is provided" do
+      let(:billing_entity) { create(:billing_entity, organization:, code: "be_wallet") }
+
+      before { create_params[:billing_entity_code] = billing_entity.code }
+
+      it "assigns the billing entity to the wallet" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet = Wallet.find(json[:wallet][:lago_id])
+        expect(wallet.billing_entity_id).to eq(billing_entity.id)
+      end
+    end
+
+    context "when neither billing_entity_code nor billing_entity_id is provided" do
+      it "creates the wallet without a billing entity" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet = Wallet.find(json[:wallet][:lago_id])
+        expect(wallet.billing_entity_id).to be_nil
+      end
+    end
+
+    context "when billing_entity_code does not match any entity" do
+      before { create_params[:billing_entity_code] = "nonexistent" }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
+  context "when multi_entity_billing is not enabled" do
+    context "when billing_entity_code is provided" do
+      let(:billing_entity) { create(:billing_entity, organization:, code: "be_wallet") }
+
+      before { create_params[:billing_entity_code] = billing_entity.code }
+
+      it "does not assign a billing entity" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet = Wallet.find(json[:wallet][:lago_id])
+        expect(wallet.billing_entity_id).to be_nil
+      end
+    end
+  end
+end
+
+RSpec.shared_examples "a wallet create endpoint with billing_entity_id" do
+  let(:create_params) do
+    {
+      external_customer_id: customer.external_id,
+      rate_amount: "1",
+      name: "Wallet1",
+      currency: "EUR"
+    }
+  end
+
+  context "when multi_entity_billing is enabled" do
+    before { organization.update!(feature_flags: ["multi_entity_billing"]) }
+
+    context "when billing_entity_id is provided" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+
+      before { create_params[:billing_entity_id] = billing_entity.id }
+
+      it "assigns the billing entity to the wallet" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet = Wallet.find(json[:wallet][:lago_id])
+        expect(wallet.billing_entity_id).to eq(billing_entity.id)
+      end
+    end
+
+    context "when billing_entity_id does not match any entity" do
+      before { create_params[:billing_entity_id] = SecureRandom.uuid }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
+  context "when multi_entity_billing is not enabled" do
+    context "when billing_entity_id is provided" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+
+      before { create_params[:billing_entity_id] = billing_entity.id }
+
+      it "does not assign a billing entity" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet = Wallet.find(json[:wallet][:lago_id])
+        expect(wallet.billing_entity_id).to be_nil
+      end
+    end
+  end
 end
 
 RSpec.shared_examples "a wallet update endpoint" do
@@ -1181,6 +1295,30 @@ RSpec.shared_examples "a wallet index endpoint" do
       expect(response).to have_http_status(:success)
       expect(json[:wallets].count).to eq(1)
       expect(json[:wallets].first[:lago_id]).to eq(brl_wallet.id)
+    end
+  end
+
+  context "with N+1 query detection", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    let(:params) { {} }
+
+    before do
+      [wallet, create(:wallet, customer:), create(:wallet, customer:)].each do |w|
+        create(:wallet_target, wallet: w)
+        create(:wallet_applied_invoice_custom_section, wallet: w)
+        create(:recurring_transaction_rule, wallet: w)
+      end
+    end
+
+    it "does not trigger N+1 queries on wallet associations" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallets].count).to eq(3)
+      json[:wallets].each do |wallet_payload|
+        expect(wallet_payload[:applies_to][:billable_metric_codes]).to be_present
+        expect(wallet_payload[:recurring_transaction_rules]).to be_present
+        expect(wallet_payload[:applied_invoice_custom_sections]).to be_present
+      end
     end
   end
 end

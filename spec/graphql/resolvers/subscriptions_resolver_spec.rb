@@ -55,6 +55,66 @@ RSpec.describe Resolvers::SubscriptionsResolver do
     expect(response["metadata"]["totalCount"]).to eq(2)
   end
 
+  context "with billing_entity_ids filter" do
+    let(:billing_entity_eu) { create(:billing_entity, organization:, code: "EU") }
+    let(:billing_entity_us) { create(:billing_entity, organization:, code: "US") }
+    let!(:eu_subscription) { create(:subscription, customer:, plan:, billing_entity: billing_entity_eu) }
+    let!(:us_subscription) { create(:subscription, customer:, plan:, billing_entity: billing_entity_us) }
+
+    let(:query) do
+      <<~GQL
+        query {
+          subscriptions(limit: 5, billingEntityIds: ["#{billing_entity_eu.id}"]) {
+            collection { id }
+            metadata { totalCount }
+          }
+        }
+      GQL
+    end
+
+    it "returns only subscriptions for the specified billing entity" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+      response = result["data"]["subscriptions"]
+
+      expect(response["collection"].map { |s| s["id"] }).to contain_exactly(eu_subscription.id)
+      expect(response["metadata"]["totalCount"]).to eq(1)
+    end
+
+    context "with multiple billing_entity_ids" do
+      let(:query) do
+        <<~GQL
+          query {
+            subscriptions(limit: 5, billingEntityIds: ["#{billing_entity_eu.id}", "#{billing_entity_us.id}"]) {
+              collection { id }
+              metadata { totalCount }
+            }
+          }
+        GQL
+      end
+
+      it "returns subscriptions matching any of the provided ids" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:
+        )
+        response = result["data"]["subscriptions"]
+
+        expect(response["collection"].map { |s| s["id"] }).to contain_exactly(
+          eu_subscription.id,
+          us_subscription.id
+        )
+        expect(response["metadata"]["totalCount"]).to eq(2)
+      end
+    end
+  end
+
   context "with currency filter" do
     let(:brl_plan) { create(:plan, organization:, amount_currency: "BRL") }
     let!(:brl_subscription) { create(:subscription, customer:, plan: brl_plan) }
@@ -82,6 +142,73 @@ RSpec.describe Resolvers::SubscriptionsResolver do
       expect(response["collection"].count).to eq(1)
       expect(response["collection"].first["id"]).to eq(brl_subscription.id)
       expect(response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
+
+  context "with N+1 query detection on associations", bullet: {unused_eager_loading: false} do
+    let(:query) do
+      <<~GQL
+        query {
+          subscriptions(limit: 5, planCode: "#{plan.code}", status: [active]) {
+            collection { 
+              id
+              status
+              startedAt
+              nextSubscriptionAt
+              nextSubscriptionType
+              name
+              nextName
+              externalId
+              subscriptionAt
+              endingAt
+              terminatedAt
+              customer {
+                id
+                name
+                displayName
+                applicableTimezone
+              }
+              plan {
+                id
+                isOverridden
+                payInAdvance
+                amountCurrency
+                name
+                interval
+              }
+              nextPlan {
+                id
+                name
+                code
+                interval
+              }
+              nextSubscription {
+                id
+                name
+                externalId
+                status
+              }
+            }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      create(:subscription, customer:, plan:)
+      create(:subscription, customer:, plan:)
+    end
+
+    it "does not trigger N+1 queries on associations" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect(result["data"]["subscriptions"]["collection"].count).to eq(2)
     end
   end
 end

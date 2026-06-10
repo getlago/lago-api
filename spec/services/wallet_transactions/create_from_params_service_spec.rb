@@ -417,10 +417,55 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
         create(:invoice_custom_section, organization:, code: "section_code_1")
       end
 
+      after { CurrentContext.source = nil }
+
       it "creates wallet transaction with invoice_custom_section" do
         applied_sections = result.wallet_transactions.first.applied_invoice_custom_sections
         expect(applied_sections.count).to eq(1)
         expect(applied_sections.first.invoice_custom_section.code).to eq("section_code_1")
+      end
+    end
+
+    context "when invoice_custom_section_ids param exists (job context)" do
+      let(:section) { create(:invoice_custom_section, organization:) }
+      let(:params) do
+        {
+          wallet_id: wallet.id,
+          paid_credits:,
+          invoice_custom_section: {skip_invoice_custom_sections: false, invoice_custom_section_ids: [section.id]}
+        }
+      end
+
+      it "attaches the ICS to the wallet transaction by ID" do
+        applied_sections = result.wallet_transactions.first.applied_invoice_custom_sections
+        expect(applied_sections.count).to eq(1)
+        expect(applied_sections.first.invoice_custom_section).to eq(section)
+      end
+    end
+
+    context "when invoice_custom_section param has skip_invoice_custom_sections: true (job context)" do
+      let(:params) do
+        {
+          wallet_id: wallet.id,
+          paid_credits:,
+          invoice_custom_section: {skip_invoice_custom_sections: true, invoice_custom_section_ids: []}
+        }
+      end
+
+      it "marks the wallet transaction as skipping custom sections" do
+        transaction = result.wallet_transactions.first
+        expect(transaction.skip_invoice_custom_sections).to be(true)
+        expect(transaction.applied_invoice_custom_sections).to be_empty
+      end
+    end
+
+    context "when granted credits should be calculated using amount and wallet rate" do
+      let(:granted_credits) { "10.34567" }
+      let(:rate_amount) { 1.375 }
+
+      it "creates wallet transaction with expected credit amount" do
+        expect(result.wallet_transactions.find(&:granted?).credit_amount).to eq(10.34909) # 14.23/1.375
+        expect(result.wallet_transactions.find(&:granted?).amount).to eq(14.23) # 10.34567*1.375
       end
     end
   end

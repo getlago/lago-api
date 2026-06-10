@@ -169,6 +169,97 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       end
     end
 
+    context "when customer has a default shared payment token" do
+      let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider) }
+      let(:shared_payment_token) { "spt_test_123" }
+
+      before do
+        organization.enable_feature_flag!("stripe_shared_payment_token")
+
+        allow(Stripe::Customer).to receive(:retrieve)
+          .and_return(Stripe::StripeObject.construct_from(
+            {
+              invoice_settings: {
+                default_payment_method: nil,
+                default_shared_payment_token: shared_payment_token
+              },
+              default_source: nil
+            }
+          ))
+
+        allow(Stripe::Customer).to receive(:list_payment_methods).and_call_original
+        stub_request(:get, %r{/v1/customers/#{stripe_customer.provider_customer_id}/payment_methods}).and_return(
+          status: 200, body: payment_methods_response
+        )
+      end
+
+      context "when no other payment method is attached" do
+        let(:payment_methods_response) do
+          get_stripe_fixtures("customer_list_payment_methods_response.json") do |h|
+            h[:data] = []
+          end
+        end
+
+        it "uses the shared payment token in the payment intent payload" do
+          WebMock.stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+            .with(body: ->(request) {
+              params = Rack::Utils.parse_nested_query(request)
+              expect(params.dig("payment_method_data", "shared_payment_granted_token")).to eq(shared_payment_token)
+              expect(params).not_to have_key("payment_method")
+              expect(params).not_to have_key("return_url")
+              expect(params).not_to have_key("off_session")
+              expect(params["error_on_requires_action"]).to eq("true")
+            })
+            .to_return(body: stripe_payment_intent_data.to_json)
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(Stripe::Customer).to have_received(:list_payment_methods).once
+        end
+
+        context "when the stripe_shared_payment_token feature flag is disabled" do
+          before { organization.disable_feature_flag!("stripe_shared_payment_token") }
+
+          it "ignores the shared payment token even when no other payment method is attached" do
+            WebMock.stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+              .with(body: ->(request) {
+                params = Rack::Utils.parse_nested_query(request)
+                expect(params).not_to have_key("payment_method_data")
+              })
+              .to_return(body: stripe_payment_intent_data.to_json)
+
+            result = create_service.call
+
+            expect(result).to be_success
+          end
+        end
+      end
+
+      context "when another payment method is attached" do
+        let(:payment_methods_response) do
+          get_stripe_fixtures("customer_list_payment_methods_response.json") do |h|
+            h[:data][0][:id] = "pm_existing"
+          end
+        end
+
+        it "ignores the shared payment token and uses the existing payment method" do
+          WebMock.stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+            .with(body: ->(request) {
+              params = Rack::Utils.parse_nested_query(request)
+              expect(params).not_to have_key("payment_method_data")
+              expect(params["payment_method"]).to eq("pm_existing")
+            })
+            .to_return(body: stripe_payment_intent_data.to_json)
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(Stripe::Customer).to have_received(:list_payment_methods).once
+        end
+      end
+    end
+
     context "with card error on stripe" do
       let(:payment_response) do
         get_stripe_fixtures("payment_intent_card_declined_response.json") do |h|

@@ -114,6 +114,38 @@ RSpec.describe Mutations::Subscriptions::UpdateFixedCharge, :premium do
     end
   end
 
+  context "with properties" do
+    let(:input) do
+      {
+        subscriptionId: subscription.id,
+        fixedChargeCode: fixed_charge.code,
+        properties: {amount: "150"}
+      }
+    end
+
+    it "creates a fixed charge override with the given properties" do
+      result_data = subject["data"]["updateSubscriptionFixedCharge"]
+
+      override = FixedCharge.find(result_data["id"])
+      expect(override.properties).to eq("amount" => "150")
+    end
+
+    context "when subscription already has a fixed charge override" do
+      let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+      let(:subscription) { create(:subscription, organization:, plan: overridden_plan) }
+      let(:overridden_fixed_charge) { create(:fixed_charge, plan: overridden_plan, organization:, add_on:, parent: fixed_charge, code: fixed_charge.code) }
+
+      before { overridden_fixed_charge }
+
+      it "updates the existing override properties" do
+        result_data = subject["data"]["updateSubscriptionFixedCharge"]
+
+        expect(result_data["id"]).to eq(overridden_fixed_charge.id)
+        expect(overridden_fixed_charge.reload.properties).to eq("amount" => "150")
+      end
+    end
+  end
+
   context "with taxes" do
     let(:tax) { create(:tax, organization:) }
     let(:input) do

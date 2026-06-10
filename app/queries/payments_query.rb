@@ -2,12 +2,12 @@
 
 class PaymentsQuery < BaseQuery
   Result = BaseResult[:payments]
-  Filters = BaseFilters[:invoice_id, :external_customer_id]
+  Filters = BaseFilters[:invoice_id, :external_customer_id, :currency]
 
   def call
     return result unless validate_filters.success?
 
-    payments = base_scope.result
+    payments = base_scope
     payments = apply_filters(payments)
     payments = paginate(payments)
     payments = apply_consistent_ordering(payments)
@@ -23,9 +23,37 @@ class PaymentsQuery < BaseQuery
   end
 
   def base_scope
-    Payment.where.not(customer_id: nil)
-      .for_organization(organization)
-      .ransack(search_params)
+    scope = Payment.where.not(customer_id: nil)
+      .where(organization:)
+      .where.not(payable_id: nil)
+      .where(visible_payable_condition)
+
+    return scope if search_term.blank?
+
+    by_attributes = scope.ransack(search_params).result
+    return by_attributes unless search_term.match?(BaseQuery::UUID_REGEX)
+
+    scope.where(id: by_attributes.select(:id)).or(scope.where(id: search_term))
+  end
+
+  def visible_payable_condition
+    ActiveRecord::Base.sanitize_sql_array([
+      <<~SQL.squish,
+        CASE payments.payable_type
+          WHEN 'Invoice' THEN EXISTS(
+            SELECT 1 FROM invoices
+            WHERE invoices.id = payments.payable_id
+            AND invoices.status IN (:visible_statuses)
+            AND organization_id = :organization_id
+          )
+          ELSE TRUE
+        END
+      SQL
+      {
+        visible_statuses: Invoice::VISIBLE_STATUS.values,
+        organization_id: organization.id
+      }
+    ])
   end
 
   def search_params
@@ -33,7 +61,6 @@ class PaymentsQuery < BaseQuery
 
     terms = {
       m: "or",
-      id_cont: search_term,
       provider_payment_id_cont: search_term,
       reference_cont: search_term
     }
@@ -60,6 +87,7 @@ class PaymentsQuery < BaseQuery
   def apply_filters(scope)
     scope = filter_by_invoice(scope) if filters.invoice_id.present?
     scope = filter_by_customer(scope) if filters.external_customer_id.present?
+    scope = filter_by_currency(scope) if filters.currency.present?
     scope
   end
 
@@ -72,7 +100,19 @@ class PaymentsQuery < BaseQuery
   def filter_by_invoice(scope)
     invoice_id = filters.invoice_id
 
-    scope.joins("LEFT JOIN invoices_payment_requests ON invoices_payment_requests.payment_request_id = payments.payable_id")
-      .where("invoices.id = :invoice_id OR invoices_payment_requests.invoice_id = :invoice_id", invoice_id:)
+    scope.joins(<<~SQL.squish)
+      LEFT JOIN invoices_payment_requests
+        ON invoices_payment_requests.payment_request_id = payments.payable_id
+        AND payments.payable_type = 'PaymentRequest'
+    SQL
+      .where(
+        "(payments.payable_type = 'Invoice' AND payments.payable_id = :invoice_id) " \
+        "OR invoices_payment_requests.invoice_id = :invoice_id",
+        invoice_id:
+      )
+  end
+
+  def filter_by_currency(scope)
+    scope.where(amount_currency: filters.currency)
   end
 end

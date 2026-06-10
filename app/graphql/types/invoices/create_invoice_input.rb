@@ -5,6 +5,7 @@ module Types
     class CreateInvoiceInput < BaseInputObject
       description "Create Invoice input arguments"
 
+      argument :billing_entity_id, ID, required: false
       argument :currency, Types::CurrencyEnum, required: false
       argument :customer_id, ID, required: true
       argument :fees, [Types::Invoices::FeeInput], required: true

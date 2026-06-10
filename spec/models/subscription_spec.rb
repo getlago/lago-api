@@ -42,7 +42,7 @@ RSpec.describe Subscription do
       expect(subject).to belong_to(:plan)
       expect(subject).to belong_to(:previous_subscription).optional
       expect(subject).to belong_to(:organization)
-      expect(subject).to have_one(:billing_entity).through(:customer)
+      expect(subject).to belong_to(:billing_entity).optional
       expect(subject).to have_many(:applied_invoice_custom_sections).class_name("Subscription::AppliedInvoiceCustomSection").dependent(:destroy)
       expect(subject).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
       expect(subject).to have_many(:next_subscriptions).class_name("Subscription").with_foreign_key(:previous_subscription_id)
@@ -55,6 +55,7 @@ RSpec.describe Subscription do
       expect(subject).to have_many(:usage_thresholds)
       expect(subject).to have_many(:fixed_charges).through(:plan)
       expect(subject).to have_many(:fixed_charge_events)
+      expect(subject).to have_many(:fixed_charge_units_overrides).class_name("Subscription::FixedChargeUnitsOverride")
       expect(subject).to have_many(:add_ons).through(:fixed_charges)
       expect(subject).to have_one(:lifetime_usage).autosave(true)
       expect(subject).to have_one(:subscription_activity).class_name("UsageMonitoring::SubscriptionActivity")
@@ -68,6 +69,50 @@ RSpec.describe Subscription do
   describe "Clickhouse associations", clickhouse: true do
     it do
       expect(subject).to have_many(:activity_logs).class_name("Clickhouse::ActivityLog")
+    end
+  end
+
+  describe "#billing_entity" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+
+    context "when subscription has a billing_entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:subscription) { create(:subscription, customer:, billing_entity:) }
+
+      it "returns the subscription billing_entity" do
+        expect(subscription.billing_entity).to eq(billing_entity)
+      end
+    end
+
+    context "when subscription does not have a billing_entity" do
+      let(:subscription) { create(:subscription, customer:, billing_entity: nil) }
+
+      it "falls back to the customer billing_entity" do
+        expect(subscription.billing_entity).to eq(customer.billing_entity)
+      end
+    end
+  end
+
+  describe "#applicable_billing_entity_id" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+
+    context "when subscription has a billing_entity_id" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:subscription) { create(:subscription, customer:, billing_entity:) }
+
+      it "returns the subscription's own billing_entity_id" do
+        expect(subscription.applicable_billing_entity_id).to eq(billing_entity.id)
+      end
+    end
+
+    context "when subscription has no billing_entity_id" do
+      let(:subscription) { create(:subscription, customer:, billing_entity: nil) }
+
+      it "falls back to the customer's billing_entity_id" do
+        expect(subscription.applicable_billing_entity_id).to eq(customer.billing_entity_id)
+      end
     end
   end
 
@@ -218,6 +263,46 @@ RSpec.describe Subscription do
             customer: create(:customer, organization:)
           )
           expect(incomplete_sub).not_to be_valid
+        end
+      end
+
+      context "when a pending subscription transitions to active" do
+        let(:external_id) { SecureRandom.uuid }
+        let(:pending_subscription) do
+          create(
+            :subscription,
+            plan:,
+            status: :pending,
+            external_id:,
+            customer: create(:customer, organization:)
+          )
+        end
+
+        before { pending_subscription }
+
+        context "when another active subscription with the same external_id exists" do
+          before do
+            create(
+              :subscription,
+              plan:,
+              status: :active,
+              external_id:,
+              customer: create(:customer, organization:)
+            )
+          end
+
+          it "rejects the activation" do
+            pending_subscription.assign_attributes(status: :active)
+            expect(pending_subscription).not_to be_valid
+            expect(pending_subscription.errors[:external_id]).to include("value_already_exist")
+          end
+        end
+
+        context "when no other active subscription with the same external_id exists" do
+          it "allows the activation" do
+            pending_subscription.assign_attributes(status: :active)
+            expect(pending_subscription).to be_valid
+          end
         end
       end
     end
@@ -545,6 +630,34 @@ RSpec.describe Subscription do
       let(:plan) { create(:plan, trial_period: 2) }
 
       it { expect(subscription.in_trial_period?).to be false }
+    end
+  end
+
+  describe "#billing_reference_time" do
+    around { |example| travel_to(Time.zone.parse("2026-06-04T10:00:00Z")) { example.run } }
+
+    context "when the subscription has already started" do
+      let(:subscription) { build(:subscription, started_at: Time.zone.parse("2026-03-03T00:00:00Z")) }
+
+      it "returns the current time" do
+        expect(subscription.billing_reference_time).to eq(Time.current)
+      end
+    end
+
+    context "when the subscription starts in the future" do
+      let(:subscription) { build(:subscription, started_at: Time.zone.parse("2026-07-03T00:00:00Z")) }
+
+      it "returns started_at" do
+        expect(subscription.billing_reference_time).to eq(subscription.started_at)
+      end
+    end
+
+    context "when started_at is nil" do
+      let(:subscription) { build(:subscription, started_at: nil) }
+
+      it "falls back to the current time" do
+        expect(subscription.billing_reference_time).to eq(Time.current)
+      end
     end
   end
 

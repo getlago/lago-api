@@ -32,6 +32,10 @@ module Events
         def quote(value)
           ::Clickhouse::BaseRecord.connection.quote(value)
         end
+
+        def sql_condition(template, *values)
+          ActiveRecord::Base.sanitize_sql_for_conditions([template, *values])
+        end
       end
     end
   end

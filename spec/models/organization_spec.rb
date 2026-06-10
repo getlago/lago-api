@@ -56,6 +56,7 @@ RSpec.describe Organization do
       expect(subject).to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true)
       expect(subject).to have_one(:enriched_store_migration)
       expect(subject).to have_many(:pending_vies_checks)
+      expect(subject).to have_many(:order_forms)
     end
   end
 
@@ -551,6 +552,20 @@ RSpec.describe Organization do
       it "returns false" do
         expect(organization).not_to be_clickhouse_events_store
         expect(organization).to be_postgres_events_store
+      end
+    end
+  end
+
+  describe "#events_store" do
+    it "returns the events store" do
+      expect(organization.events_store).to eq("postgres")
+    end
+
+    context "when clickhouse_events_store is true" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it "returns clickhouse" do
+        expect(organization.events_store).to eq("clickhouse")
       end
     end
   end

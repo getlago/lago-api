@@ -141,6 +141,23 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
       end
     end
 
+    context "when invoice was finalized by a concurrent job" do
+      before do
+        allow(invoice).to receive(:reload).and_wrap_original do |method|
+          method.call
+          invoice.update(status: "finalized")
+          invoice
+        end
+      end
+
+      it "returns early without emitting webhook or activity log" do
+        result = pull_taxes_service.call
+
+        expect(result).to be_success
+        expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
+      end
+    end
+
     context "when taxes are fetched successfully" do
       it "marks the invoice as finalized" do
         expect { pull_taxes_service.call }
@@ -240,6 +257,12 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         described_class.call(invoice:)
 
         expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
+      end
+
+      it "does not enqueue invoice.ready_to_finalize" do
+        expect do
+          pull_taxes_service.call
+        end.not_to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
       end
 
       it "enqueues GenerateDocumentsJob with email false" do
@@ -378,6 +401,17 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
           end.not_to have_enqueued_job(SendWebhookJob).with("invoice.created", Invoice)
         end
 
+        it "enqueues a SendWebhookJob for invoice.ready_to_finalize" do
+          expect do
+            pull_taxes_service.call
+          end.to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
+        end
+
+        it "produces an activity log for invoice.ready_to_finalize" do
+          pull_taxes_service.call
+          expect(Utils::ActivityLog).to have_produced("invoice.ready_to_finalize").with(invoice)
+        end
+
         it "does not create a payment" do
           allow(Invoices::Payments::CreateService).to receive(:call_async)
 
@@ -435,31 +469,25 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
       end
 
+      it "does not enqueue invoice.ready_to_finalize" do
+        expect do
+          pull_taxes_service.call
+        end.not_to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
+      end
+
       context "with api limit error" do
         let(:body) do
           p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/api_limit_response.json")
           File.read(p)
         end
 
-        it "puts invoice in failed status" do
-          result = pull_taxes_service.call
-
-          expect(result).to be_success
-          expect(invoice.reload.status).to eq("failed")
+        it "raises ServerContentionError so the job can retry" do
+          expect { pull_taxes_service.call }.to raise_error(Integrations::Aggregator::ServerContentionError)
         end
 
-        it "resolves old tax error and creates new one" do
-          old_error_id = invoice.reload.error_details.last.id
-
-          pull_taxes_service.call
-
-          expect(invoice.error_details.tax_error.last.id).not_to eql(old_error_id)
-          expect(invoice.error_details.tax_error.count).to be(1)
-          expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
-          expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error"])
-            .to eq("validationError")
-          expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error_message"])
-            .to eq("You've exceeded your API limit of 10 per second")
+        it "does not change the invoice status" do
+          expect { pull_taxes_service.call }.to raise_error(Integrations::Aggregator::ServerContentionError)
+          expect(invoice.reload.status).not_to eq("failed")
         end
       end
 
@@ -511,6 +539,17 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
           expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error_message"])
             .to eq("Error starting integration 'netsuite-customer-create': {\n  \"name\": \"TRPCClientError\",\n  \"message\": \"fetch failed\"\n}")
         end
+
+        it "enqueues a SendWebhookJob for invoice.ready_to_finalize" do
+          expect do
+            pull_taxes_service.call
+          end.to have_enqueued_job(SendWebhookJob).with("invoice.ready_to_finalize", Invoice)
+        end
+
+        it "produces an activity log for invoice.ready_to_finalize" do
+          pull_taxes_service.call
+          expect(Utils::ActivityLog).to have_produced("invoice.ready_to_finalize").with(invoice)
+        end
       end
     end
 
@@ -537,6 +576,54 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(result).to be_success
         expect(Invoices::Payments::CreateService).to have_received(:call_async)
         expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
+      end
+
+      it "calls Integrations::Aggregator::Taxes::Invoices::CreateDraftService" do
+        allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
+        allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call).and_call_original
+
+        pull_taxes_service.call
+
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call).with(invoice:, fees: invoice.fees)
+        expect(Integrations::Aggregator::Taxes::Invoices::CreateService).not_to have_received(:call)
+      end
+
+      context "when invoice total is zero after tax computation" do
+        let(:rule) { subscription.activation_rules.payment.sole }
+        let(:fee_subscription) do
+          create(:fee, invoice:, subscription:, fee_type: :subscription, amount_cents: 0)
+        end
+        let(:fee_charge) do
+          create(:fee, invoice:, charge:, fee_type: :charge, total_aggregated_units: 0, amount_cents: 0)
+        end
+        let(:body) do
+          {
+            succeededInvoices: [{
+              id: invoice.id,
+              issuing_date: Time.current.to_date.iso8601,
+              sub_total_excluding_taxes: 0,
+              taxes_amount_cents: 0,
+              currency: "EUR",
+              fees: [
+                {item_id: fee_subscription.id, amount_cents: 0, tax_amount_cents: 0, tax_breakdown: []},
+                {item_id: fee_charge.id, amount_cents: 0, tax_amount_cents: 0, tax_breakdown: []}
+              ]
+            }],
+            failedInvoices: []
+          }.to_json
+        end
+
+        it "marks the payment activation rule as satisfied" do
+          pull_taxes_service.call
+
+          expect(rule.reload).to be_satisfied
+        end
+
+        it "activates the subscription" do
+          pull_taxes_service.call
+
+          expect(subscription.reload).to be_active
+        end
       end
     end
   end

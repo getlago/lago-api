@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::AppliedCouponsController, :with_bullet do
+RSpec.describe Api::V1::AppliedCouponsController, :bullet do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
 

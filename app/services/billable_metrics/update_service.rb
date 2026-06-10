@@ -37,7 +37,7 @@ module BillableMetrics
 
       # NOTE: Only name and description are editable if billable metric
       #       is attached to a plan
-      unless billable_metric.plans.exists?
+      unless billable_metric.attached_to_plan?
         billable_metric.code = params[:code] if params.key?(:code)
         billable_metric.aggregation_type = params[:aggregation_type]&.to_sym if params.key?(:aggregation_type)
         billable_metric.weighted_interval = params[:weighted_interval]&.to_sym if params.key?(:weighted_interval)
@@ -54,6 +54,8 @@ module BillableMetrics
       end
 
       billable_metric.save!
+
+      SendWebhookJob.perform_after_commit("billable_metric.updated", billable_metric)
 
       result.billable_metric = billable_metric
       result

@@ -26,6 +26,7 @@ module DailyUsages
 
         apply_diff(previous_charge_usage, current_charge_usage)
         apply_filters_diff(previous_charge_usage, current_charge_usage)
+        apply_presentation_breakdowns_diff(previous_charge_usage, current_charge_usage)
 
         previous_grouped_index = previous_charge_usage["grouped_usage"].index_by { |gu| gu["grouped_by"] }
         current_charge_usage["grouped_usage"].each do |current_grouped_usage|
@@ -34,6 +35,7 @@ module DailyUsages
 
           apply_diff(previous_grouped_usage, current_grouped_usage)
           apply_filters_diff(previous_grouped_usage, current_grouped_usage)
+          apply_presentation_breakdowns_diff(previous_grouped_usage, current_grouped_usage)
         end
       end
 
@@ -51,10 +53,21 @@ module DailyUsages
 
     delegate :subscription, :usage_date, :from_datetime, :to_datetime, to: :daily_usage
 
+    # Returns the most recent daily_usage for the same subscription and billing period that is
+    # strictly older than the current usage_date.
+    #
+    # We intentionally do NOT restrict the lookup to `usage_date - 1.day`. On days without events,
+    # no daily_usage row is saved (see DailyUsages::ComputeAllService `last_received_event_on`
+    # guard and DailyUsages::ComputeService returning early when `current_usage.fees` is empty),
+    # so the immediately preceding row may live several days back. Falling back to "full usage"
+    # in those cases would double-count the gap days in downstream analytics that sum
+    # `usage_diff` (see lago-data `data_pipeline/models/usage/usage_daily_base.sql`).
     def previous_daily_usage
       @previous_daily_usage ||= subscription.daily_usages
         .where(from_datetime:, to_datetime:)
-        .find_by(usage_date: usage_date - 1.day)
+        .where("usage_date < ?", usage_date)
+        .order(usage_date: :desc)
+        .first
     end
 
     # Prorates previous taxes based on how much of the previous amount came from charges
@@ -81,6 +94,20 @@ module DailyUsages
         next unless previous_filter
 
         apply_diff(previous_filter, current_filter)
+        apply_presentation_breakdowns_diff(previous_filter, current_filter)
+      end
+    end
+
+    def apply_presentation_breakdowns_diff(previous_parent, current_parent)
+      previous_index = Array(previous_parent["presentation_breakdowns"]).index_by { |pb| pb["presentation_by"] }
+
+      current_parent.fetch("presentation_breakdowns", []).each do |current_breakdown|
+        previous_breakdown = previous_index[current_breakdown["presentation_by"]]
+        next unless previous_breakdown
+
+        current_units = BigDecimal(current_breakdown["units"] || 0)
+        previous_units = BigDecimal(previous_breakdown["units"] || 0)
+        current_breakdown["units"] = (current_units - previous_units).to_s
       end
     end
 

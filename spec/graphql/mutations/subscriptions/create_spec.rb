@@ -126,6 +126,90 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
     )
   end
 
+  context "with billing entity binding" do
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:mutation) do
+      <<~GQL
+        mutation($input: CreateSubscriptionInput!) {
+          createSubscription(input: $input) {
+            id
+            externalId
+          }
+        }
+      GQL
+    end
+
+    context "when multi_entity_billing flag is enabled" do
+      before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+      it "binds the subscription to the resolved entity" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {
+              customerId: customer.id,
+              planId: plan.id,
+              billingTime: "anniversary",
+              billingEntityId: billing_entity.id
+            }
+          }
+        )
+
+        external_id = result["data"]["createSubscription"]["externalId"]
+        subscription = Subscription.find_by(external_id:)
+        expect(subscription.billing_entity_id).to eq(billing_entity.id)
+      end
+
+      it "returns a not_found error when billing_entity_id is unknown" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {
+              customerId: customer.id,
+              planId: plan.id,
+              billingTime: "anniversary",
+              billingEntityId: SecureRandom.uuid
+            }
+          }
+        )
+
+        expect(result["errors"].first["extensions"]).to include(
+          "code" => "not_found",
+          "details" => {"billingEntity" => ["not_found"]}
+        )
+      end
+    end
+
+    context "when multi_entity_billing flag is disabled" do
+      it "ignores the billing entity binding" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {
+              customerId: customer.id,
+              planId: plan.id,
+              billingTime: "anniversary",
+              billingEntityId: billing_entity.id
+            }
+          }
+        )
+
+        external_id = result["data"]["createSubscription"]["externalId"]
+        subscription = Subscription.find_by(external_id:)
+        expect(subscription.billing_entity_id).to be_nil
+      end
+    end
+  end
+
   context "with activation rules" do
     let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
 
@@ -149,6 +233,8 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
         }
       GQL
     end
+
+    before { create(:payment_method, customer:, organization:) }
 
     it "creates a subscription with activation rules" do
       result = execute_graphql(

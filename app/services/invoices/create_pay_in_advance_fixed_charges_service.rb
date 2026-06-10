@@ -36,6 +36,10 @@ module Invoices
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
         Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
+        # NOTE: Custom sections are applied before computing taxes so they are persisted even when
+        #       tax computation is deferred to a tax provider (the `next` below skips the rest of the block).
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: [subscription])
+
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
         if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
           tax_deferred = true
@@ -45,7 +49,8 @@ module Invoices
 
         create_credit_note_credit
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+
+        skip_payment_gating_for_zero_amount if subscription.payment_gated? && invoice.total_amount_cents.zero? && !invoice.tax_pending?
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)
@@ -84,6 +89,14 @@ module Invoices
 
     attr_reader :subscription, :timestamp, :customer, :organization
     attr_accessor :invoice
+
+    def skip_payment_gating_for_zero_amount
+      Subscriptions::ActivationRules::Payment::EvaluateService.call!(
+        rule: subscription.activation_rules.payment.sole,
+        status: :satisfied
+      )
+      Subscriptions::ActivationRules::ResolveSubscriptionStatusService.call!(subscription:)
+    end
 
     def fixed_charge_events
       @fixed_charge_events ||= subscription

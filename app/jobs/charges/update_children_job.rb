@@ -4,7 +4,7 @@ module Charges
   class UpdateChildrenJob < ApplicationJob
     queue_as :default
 
-    def perform(params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:)
+    def perform(params:, old_parent_attrs:, old_parent_applied_pricing_unit_attrs:)
       charge = Charge.find_by(id: old_parent_attrs["id"])
       return unless charge
 
@@ -13,7 +13,6 @@ module Charges
           child_ids:,
           params:,
           old_parent_attrs:,
-          old_parent_filters_attrs:,
           old_parent_applied_pricing_unit_attrs:
         )
       end

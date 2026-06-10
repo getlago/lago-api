@@ -17,6 +17,7 @@ class FixedCharge < ApplicationRecord
   has_many :taxes, through: :applied_taxes
   has_many :fees
   has_many :events, class_name: "FixedChargeEvent", dependent: :destroy
+  has_many :subscription_units_overrides, class_name: "Subscription::FixedChargeUnitsOverride"
 
   has_many :applied_taxes, class_name: "FixedCharge::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
@@ -48,6 +49,12 @@ class FixedCharge < ApplicationRecord
     charge_model == fixed_charge.charge_model &&
       properties == fixed_charge.properties &&
       units == fixed_charge.units
+  end
+
+  def effective_units_for(subscription)
+    return units unless subscription
+
+    subscription_units_overrides.find_by(subscription:)&.units || units
   end
 
   # When upgrading a subscription with fixed_charges paid_in_advance,

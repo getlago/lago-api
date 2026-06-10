@@ -12,7 +12,6 @@ module Events
 
         @grouped_by = filters[:grouped_by]
         @grouped_by_values = filters[:grouped_by_values]
-        @presentation_by = filters[:presentation_by]
 
         @charge_id = filters[:charge_id]
         @charge_filter_id = filters[:charge_filter]&.id
@@ -141,7 +140,17 @@ module Events
         @timezone ||= customer.applicable_timezone
       end
 
-      attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :presentation_by, :charge_id, :charge_filter_id
+      # NOTE: This method is used mainly for WeightedSumQuery and UniqueCountQuery.
+      #
+      # The idea is to identify when the grouped_by includes the presentation_by,
+      # so we decide when to use the sorted_grouped_by (only grouped_by from filters) or sorted_properties (grouped_by + presentation_by).
+      def with_presentation_by_in_grouped_by?
+        return false if grouped_by.blank?
+
+        filters[:presentation_by].present? && (grouped_by & filters[:presentation_by]).size.positive?
+      end
+
+      attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :charge_id, :charge_filter_id
 
       protected
 

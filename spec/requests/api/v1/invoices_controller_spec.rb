@@ -117,6 +117,86 @@ RSpec.describe Api::V1::InvoicesController do
         expect(response).to have_http_status(:success)
       end
     end
+
+    context "when multi_entity_billing feature flag is enabled" do
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+      before do
+        organization.enable_feature_flag!(:multi_entity_billing)
+        create(:tax, :applied_to_billing_entity, billing_entity: other_billing_entity, organization:, rate: 20)
+      end
+
+      context "with a known billing_entity_code" do
+        let(:create_params) do
+          {
+            external_customer_id: customer_external_id,
+            currency: "EUR",
+            billing_entity_code: other_billing_entity.code,
+            fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}]
+          }
+        end
+
+        it "stamps the invoice with the resolved billing entity" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice][:billing_entity_code]).to eq(other_billing_entity.code)
+        end
+      end
+
+      context "with an unknown billing_entity_code" do
+        let(:create_params) do
+          {
+            external_customer_id: customer_external_id,
+            currency: "EUR",
+            billing_entity_code: "unknown_code",
+            fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}]
+          }
+        end
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to be_not_found_error("billing_entity")
+        end
+      end
+
+      context "without billing_entity_code" do
+        let(:create_params) do
+          {
+            external_customer_id: customer_external_id,
+            currency: "EUR",
+            fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}]
+          }
+        end
+
+        it "stamps the invoice with the customer's billing entity" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice][:billing_entity_code]).to eq(customer.billing_entity.code)
+        end
+      end
+    end
+
+    context "when multi_entity_billing feature flag is disabled" do
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+      let(:create_params) do
+        {
+          external_customer_id: customer_external_id,
+          currency: "EUR",
+          billing_entity_code: other_billing_entity.code,
+          fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}]
+        }
+      end
+
+      it "ignores billing_entity_code and falls back to the customer's billing entity" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:billing_entity_code]).to eq(customer.billing_entity.code)
+      end
+    end
   end
 
   describe "PUT /api/v1/invoices/:id" do
@@ -332,7 +412,7 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
-    context "with N+1 query detection on customer associations", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    context "with N+1 query detection on customer associations", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 
       before do
@@ -1343,6 +1423,65 @@ RSpec.describe Api::V1::InvoicesController do
               total_amount_cents: 120
             )
           end
+        end
+      end
+    end
+
+    context "with a scheduled downgrade (projection)" do
+      let(:customer) { create(:customer, organization:, external_id: "downgrade_customer") }
+      let(:current_plan) do
+        create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 1000)
+      end
+      let(:next_plan) do
+        create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 500)
+      end
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: current_plan,
+          status: :active,
+          billing_time: "anniversary",
+          subscription_at: Time.zone.parse("2026-03-03"),
+          started_at: Time.zone.parse("2026-03-03")
+        )
+      end
+      let(:next_subscription) do
+        create(
+          :subscription,
+          :pending,
+          customer:,
+          plan: next_plan,
+          billing_time: "anniversary",
+          previous_subscription: subscription,
+          subscription_at: Time.zone.parse("2026-07-03")
+        )
+      end
+      let(:preview_params) do
+        {
+          customer: {external_id: customer.external_id},
+          subscriptions: {external_ids: [subscription.external_id]}
+        }
+      end
+
+      before { next_subscription }
+
+      it "serializes the pending plan's real first billing period" do
+        travel_to(Time.zone.parse("2026-06-04T10:00:00Z")) do
+          subject
+
+          expect(response).to have_http_status(:success)
+
+          subscriptions = json[:invoice][:subscriptions]
+          expect(subscriptions.size).to eq(2)
+
+          pending_plan = subscriptions.find { |s| s[:plan_code] == next_plan.code }
+          expect(pending_plan).to be_present
+          expect(pending_plan[:started_at]).to eq("2026-07-03T00:00:00.000Z")
+          expect(pending_plan[:current_billing_period_started_at]).to eq("2026-07-03T00:00:00Z")
+          expect(pending_plan[:current_billing_period_ending_at]).to eq("2026-08-02T23:59:59Z")
+          expect(pending_plan[:current_billing_period_started_at])
+            .not_to eq(pending_plan[:current_billing_period_ending_at])
         end
       end
     end

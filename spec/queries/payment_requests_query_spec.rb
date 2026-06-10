@@ -96,6 +96,69 @@ RSpec.describe PaymentRequestsQuery do
     end
   end
 
+  context "when filtering by billing_entity_ids" do
+    let(:billing_entity_eu) { create(:billing_entity, organization:, code: "EU") }
+    let(:billing_entity_us) { create(:billing_entity, organization:, code: "US") }
+
+    let(:customer_first) { create(:customer, organization:) }
+    let(:customer_second) { create(:customer, organization:) }
+
+    let(:invoice_eu) { create(:invoice, organization:, customer: customer_first, billing_entity: billing_entity_eu) }
+    let(:invoice_us) { create(:invoice, organization:, customer: customer_second, billing_entity: billing_entity_us) }
+
+    let(:payment_request_first) do
+      create(:payment_request, organization:, customer: customer_first, invoices: [invoice_eu])
+    end
+    let(:payment_request_second) do
+      create(:payment_request, organization:, customer: customer_second, invoices: [invoice_us])
+    end
+
+    let(:filters) { {billing_entity_ids: [billing_entity_eu.id]} }
+
+    it "returns payment requests whose invoices belong to the billing entity" do
+      expect(result).to be_success
+      expect(returned_ids).to contain_exactly(payment_request_first.id)
+    end
+
+    context "with multiple billing_entity_ids" do
+      let(:filters) { {billing_entity_ids: [billing_entity_eu.id, billing_entity_us.id]} }
+
+      it "returns payment requests matching any of the provided ids" do
+        expect(returned_ids).to contain_exactly(
+          payment_request_first.id,
+          payment_request_second.id
+        )
+      end
+    end
+
+    context "when a payment request has multiple invoices in the same billing entity" do
+      let(:second_invoice_eu) do
+        create(:invoice, organization:, customer: customer_first, billing_entity: billing_entity_eu)
+      end
+      let(:payment_request_first) do
+        create(
+          :payment_request,
+          organization:,
+          customer: customer_first,
+          invoices: [invoice_eu, second_invoice_eu]
+        )
+      end
+
+      it "does not return duplicates" do
+        expect(returned_ids.count(payment_request_first.id)).to eq(1)
+      end
+    end
+
+    context "when no payment request matches the billing entity" do
+      let(:filters) { {billing_entity_ids: [create(:billing_entity, organization:).id]} }
+
+      it "returns no payment requests" do
+        expect(result).to be_success
+        expect(returned_ids).to be_empty
+      end
+    end
+  end
+
   context "when filtering by payment_status" do
     context "when pending status" do
       let(:filters) { {payment_status: :pending} }

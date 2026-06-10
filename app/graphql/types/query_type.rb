@@ -66,6 +66,7 @@ module Types
     field :invite, resolver: Resolvers::InviteResolver
     field :invites, resolver: Resolvers::InvitesResolver
     field :invoice, resolver: Resolvers::InvoiceResolver
+    field :invoice_build_regeneration_preview, resolver: Resolvers::InvoiceBuildRegenerationPreviewResolver
     field :invoice_collections, resolver: Resolvers::Analytics::InvoiceCollectionsResolver
     field :invoice_credit_notes, resolver: Resolvers::InvoiceCreditNotesResolver
     field :invoice_custom_section, resolver: Resolvers::InvoiceCustomSectionResolver
@@ -74,6 +75,8 @@ module Types
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :mrrs, resolver: Resolvers::Analytics::MrrsResolver
+    field :order_form, resolver: Resolvers::OrderFormResolver
+    field :order_forms, resolver: Resolvers::OrderFormsResolver
     field :organization, resolver: Resolvers::OrganizationResolver
     field :overdue_balances, resolver: Resolvers::Analytics::OverdueBalancesResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver
@@ -87,6 +90,8 @@ module Types
     field :plans, resolver: Resolvers::PlansResolver
     field :pricing_unit, resolver: Resolvers::PricingUnitResolver
     field :pricing_units, resolver: Resolvers::PricingUnitsResolver
+    field :quote, resolver: Resolvers::QuoteResolver
+    field :quotes, resolver: Resolvers::QuotesResolver
     field :role, resolver: Resolvers::RoleResolver
     field :roles, resolver: Resolvers::RolesResolver
     field :security_log, resolver: Resolvers::SecurityLogResolver

@@ -101,6 +101,31 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#progressive_billing_last_applied_usage_threshold" do
+    context "when invoice is progressive billing" do
+      let(:invoice) { create(:invoice, invoice_type: :progressive_billing) }
+
+      it "returns the last applied usage threshold" do
+        create(:applied_usage_threshold, invoice:, organization:, created_at: 2.days.ago)
+        applied_usage_threshold = create(:applied_usage_threshold, invoice:, organization:, created_at: 1.day.ago)
+
+        expect(invoice.progressive_billing_last_applied_usage_threshold).to eq(applied_usage_threshold)
+      end
+
+      it "returns nil when no applied usage threshold exists" do
+        expect(invoice.progressive_billing_last_applied_usage_threshold).to be_nil
+      end
+    end
+
+    context "when invoice is not progressive billing" do
+      it "returns nil" do
+        create(:applied_usage_threshold, invoice:, organization:)
+
+        expect(invoice.progressive_billing_last_applied_usage_threshold).to be_nil
+      end
+    end
+  end
+
   describe "sequential_id" do
     let(:customer) { create(:customer, organization:) }
     let(:billing_entity) { customer.billing_entity }
@@ -1136,6 +1161,47 @@ RSpec.describe Invoice do
       end
 
       context "when subscription is gated" do
+        let(:subscription) { create(:subscription, :incomplete) }
+
+        before do
+          create(:subscription_activation_rule, subscription:, status: "pending")
+        end
+
+        it { is_expected.to be(true) }
+      end
+
+      context "when subscription is not gated" do
+        let(:subscription) { create(:subscription, :incomplete) }
+
+        it { is_expected.to be(false) }
+      end
+    end
+  end
+
+  describe "#subscription_payment_gated?" do
+    subject(:subscription_payment_gated?) { invoice.subscription_payment_gated? }
+
+    before { invoice }
+
+    context "when invoice is not open" do
+      let(:invoice) { create(:invoice) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when invoice is open" do
+      let(:invoice) do
+        create(
+          :invoice,
+          :open,
+          :with_subscriptions,
+          subscriptions: [subscription],
+          organization: subscription.organization,
+          customer: subscription.customer
+        )
+      end
+
+      context "when subscription is payment-gated" do
         let(:subscription) { create(:subscription, :incomplete) }
 
         before do

@@ -10,7 +10,7 @@ module Types
 
       field :amount_cents, GraphQL::Types::BigInt, null: true
       field :amount_currency, Types::CurrencyEnum, null: true
-      field :code, String, null: true
+      field :code, String, null: false
       field :coupon_type, Types::Coupons::CouponTypeEnum, null: false
       field :description, String, null: true
       field :frequency, Types::Coupons::FrequencyEnum, null: false

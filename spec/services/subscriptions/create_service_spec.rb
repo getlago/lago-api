@@ -133,6 +133,11 @@ RSpec.describe Subscriptions::CreateService do
         create_service.call
         expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).to have_received(:perform_later)
       end
+
+      it "does not enqueue Hubspot::UpdateJob (CreateJob captures the active state)" do
+        create_service.call
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).not_to have_been_enqueued
+      end
     end
 
     it "produces an activity log" do
@@ -184,6 +189,37 @@ RSpec.describe Subscriptions::CreateService do
 
         expect(result).to be_success
         expect(result.subscription.progressive_billing_disabled).to be(true)
+      end
+    end
+
+    context "when consolidate_invoice is not passed" do
+      it "defaults to true on the created subscription" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.consolidate_invoice).to be(true)
+      end
+    end
+
+    context "when consolidate_invoice is passed as false" do
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          consolidate_invoice: false
+        }
+      end
+
+      it "creates a subscription with consolidate_invoice set to false" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.consolidate_invoice).to be(false)
       end
     end
 
@@ -518,14 +554,6 @@ RSpec.describe Subscriptions::CreateService do
     context "when plan is pay_in_advance" do
       let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
 
-      context "when subscription is not active" do
-        let(:subscription_at) { Time.current + 1.hour }
-
-        it "does not enqueue a job to bill the subscription" do
-          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
-        end
-      end
-
       context "when subscription_at is current date" do
         it "enqueues a job to bill the subscription" do
           expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
@@ -729,6 +757,24 @@ RSpec.describe Subscriptions::CreateService do
         it "does not enqueue a job to bill the pay in advance fixed charges" do
           expect { create_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
         end
+      end
+    end
+
+    context "when subscription_at is earlier today" do
+      let(:now) { Time.zone.local(2026, 5, 20, 14, 30) }
+      let(:subscription_at) { now.beginning_of_day }
+
+      around { |example| travel_to(now) { example.run } }
+
+      it "sets started_at to subscription_at so events in the gap are included in usage" do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        subscription = result.subscription
+        expect(subscription).to be_active
+        expect(subscription.started_at).to eq(subscription_at)
+        expect(subscription.subscription_at).to eq(subscription_at)
       end
     end
 
@@ -1219,6 +1265,50 @@ RSpec.describe Subscriptions::CreateService do
             end
           end
 
+          context "when current subscription has consolidate_invoice disabled" do
+            let(:subscription) do
+              create(
+                :subscription,
+                customer:,
+                plan: old_plan,
+                status: :active,
+                subscription_at: Time.current,
+                started_at: Time.current,
+                external_id:,
+                consolidate_invoice: false
+              )
+            end
+
+            it "preserves consolidate_invoice on the next subscription" do
+              result = create_service.call
+
+              expect(result).to be_success
+              expect(result.subscription.next_subscription.consolidate_invoice).to be(false)
+            end
+
+            context "when params override consolidate_invoice to true" do
+              let(:params) do
+                {
+                  external_customer_id:,
+                  plan_code:,
+                  name:,
+                  external_id:,
+                  billing_time:,
+                  subscription_at:,
+                  subscription_id:,
+                  consolidate_invoice: true
+                }
+              end
+
+              it "applies the override on the next subscription" do
+                result = create_service.call
+
+                expect(result).to be_success
+                expect(result.subscription.next_subscription.consolidate_invoice).to be(true)
+              end
+            end
+          end
+
           context "when plan has fixed charges" do
             let(:fixed_charge_1) { create(:fixed_charge, plan:) }
             let(:fixed_charge_2) { create(:fixed_charge, plan:) }
@@ -1356,6 +1446,28 @@ RSpec.describe Subscriptions::CreateService do
               expect(result.error.messages[:subscription]).to eq(["subscription_incomplete"])
             end
           end
+
+          context "when subscription downgrade fails" do
+            let(:result_failure) do
+              BaseService::Result.new.validation_failure!(
+                errors: {billing_time: ["value_is_invalid"]}
+              )
+            end
+
+            before do
+              allow(Subscriptions::PlanDowngradeService)
+                .to receive(:call)
+                .and_return(result_failure)
+            end
+
+            it "returns an error" do
+              result = create_service.call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages).to eq({billing_time: ["value_is_invalid"]})
+            end
+          end
         end
       end
     end
@@ -1376,6 +1488,22 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
+    context "when another customer in the same organization has an active subscription with the same external_id" do
+      let(:other_customer) { create(:customer, organization:) }
+
+      before do
+        create(:subscription, customer: other_customer, plan:, organization:, external_id:)
+      end
+
+      it "returns an external_id already exist error" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:external_id]).to eq(["value_already_exist"])
+      end
+    end
+
     context "with activation_rules" do
       let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
 
@@ -1392,6 +1520,8 @@ RSpec.describe Subscriptions::CreateService do
         }
       end
 
+      before { create(:payment_method, customer:, organization:) }
+
       context "when subscription_at is in the past" do
         let(:subscription_at) { (Time.current - 5.days).iso8601 }
 
@@ -1403,18 +1533,102 @@ RSpec.describe Subscriptions::CreateService do
           expect(subscription).to be_active
           expect(subscription.activation_rules.count).to eq(0)
         end
+      end
 
-        context "when subscription_at is today" do
-          let(:subscription_at) { Time.current.beginning_of_day.iso8601 }
+      context "when subscription_at is today" do
+        let(:subscription_at) { Time.current.beginning_of_day.iso8601 }
 
-          # TODO: The final version of this flow will set the subscription to pending and create the activation rules
-          it "creates active subscription without activation rules" do
+        it "creates active subscription with not_applicable activation rules (pay-in-arrears plan)" do
+          result = create_service.call
+
+          expect(result).to be_success
+          subscription = result.subscription
+          expect(subscription).to be_active
+          expect(subscription.activation_rules.count).to eq(1)
+          expect(subscription.activation_rules.first).to be_not_applicable
+        end
+
+        context "when plan is pay in advance" do
+          let(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", pay_in_advance: true) }
+
+          it "creates incomplete subscription with pending activation rule" do
+            result = create_service.call
+
+            expect(result).to be_success
+            subscription = result.subscription
+            expect(subscription).to be_incomplete
+            expect(subscription.activation_rules.count).to eq(1)
+            expect(subscription.activation_rules.first).to be_pending
+          end
+
+          it "enqueues BillSubscriptionJob" do
+            expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+          end
+
+          context "when subscription_at is earlier today" do
+            let(:now) { Time.zone.local(2026, 5, 20, 14, 30) }
+            let(:subscription_at) { now.beginning_of_day.iso8601 }
+
+            around { |example| travel_to(now) { example.run } }
+
+            it "sets started_at to subscription_at on the gated incomplete subscription" do
+              result = create_service.call
+
+              expect(result).to be_success
+              subscription = result.subscription
+              expect(subscription).to be_incomplete
+              expect(subscription.started_at).to eq(now.beginning_of_day)
+            end
+          end
+        end
+
+        context "when plan is pay in arrears with pay-in-advance fixed charges" do
+          let(:add_on) { create(:add_on, organization:) }
+
+          before { create(:fixed_charge, plan:, add_on:, pay_in_advance: true) }
+
+          it "creates incomplete subscription with pending activation rule" do
+            result = create_service.call
+
+            expect(result).to be_success
+            subscription = result.subscription
+            expect(subscription).to be_incomplete
+            expect(subscription.activation_rules.count).to eq(1)
+            expect(subscription.activation_rules.first).to be_pending
+          end
+
+          it "enqueues CreatePayInAdvanceFixedChargesJob" do
+            expect { create_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
+        end
+
+        context "when plan is pay in advance with trial period" do
+          let(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", pay_in_advance: true, trial_period: 30) }
+
+          it "creates active subscription with not_applicable activation rule" do
             result = create_service.call
 
             expect(result).to be_success
             subscription = result.subscription
             expect(subscription).to be_active
-            expect(subscription.activation_rules.count).to eq(0)
+            expect(subscription.activation_rules.count).to eq(1)
+            expect(subscription.activation_rules.first).to be_not_applicable
+          end
+
+          context "when plan has pay-in-advance fixed charges" do
+            let(:add_on) { create(:add_on, organization:) }
+
+            before { create(:fixed_charge, plan:, add_on:, pay_in_advance: true) }
+
+            it "creates incomplete subscription with pending activation rule" do
+              result = create_service.call
+
+              expect(result).to be_success
+              subscription = result.subscription
+              expect(subscription).to be_incomplete
+              expect(subscription.activation_rules.count).to eq(1)
+              expect(subscription.activation_rules.first).to be_pending
+            end
           end
         end
       end
@@ -1556,6 +1770,248 @@ RSpec.describe Subscriptions::CreateService do
 
         expect(result).to be_success
         expect(result.subscription.activation_rules.count).to eq(0)
+      end
+    end
+
+    describe "billing entity binding" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+
+      context "when multi_entity_billing flag is OFF" do
+        it "ignores billing_entity_code and persists nil" do
+          params[:billing_entity_code] = billing_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to be_nil
+        end
+
+        it "ignores billing_entity_id and persists nil" do
+          params[:billing_entity_id] = billing_entity.id
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to be_nil
+        end
+      end
+
+      context "when multi_entity_billing flag is ON" do
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "persists nil when no billing entity reference is provided" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to be_nil
+        end
+
+        it "binds the subscription to the entity matched by billing_entity_id" do
+          params[:billing_entity_id] = billing_entity.id
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to eq(billing_entity.id)
+        end
+
+        it "binds the subscription to the entity matched by billing_entity_code" do
+          params[:billing_entity_code] = billing_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to eq(billing_entity.id)
+        end
+
+        it "fails with billing_entity_not_found when billing_entity_id is unknown" do
+          params[:billing_entity_id] = SecureRandom.uuid
+
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("billing_entity_not_found")
+        end
+
+        it "fails with billing_entity_not_found when billing_entity_code is unknown" do
+          params[:billing_entity_code] = "unknown-entity-code"
+
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("billing_entity_not_found")
+        end
+
+        it "prefers billing_entity_id over billing_entity_code when both are provided" do
+          other_entity = create(:billing_entity, organization:)
+          params[:billing_entity_id] = billing_entity.id
+          params[:billing_entity_code] = other_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+    end
+
+    describe "billing entity binding on downgrade" do
+      let(:current_entity) { create(:billing_entity, organization:, code: "entity-x") }
+      let(:target_entity) { create(:billing_entity, organization:, code: "entity-y") }
+      let(:old_plan) { create(:plan, amount_cents: 100, organization:) }
+      let(:plan) { create(:plan, amount_cents: 50, organization:) }
+
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: old_plan,
+          status: :active,
+          subscription_at: Time.current,
+          started_at: Time.current,
+          external_id:,
+          billing_entity: current_entity
+        )
+      end
+
+      before { CurrentContext.source = "api" }
+
+      context "when multi_entity_billing flag is OFF" do
+        before { subscription.mark_as_active! }
+
+        it "carries over current_subscription.billing_entity_id to the pending subscription" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to eq(current_entity.id)
+        end
+
+        it "carries over NULL when current_subscription is not bound to any entity" do
+          subscription.update!(billing_entity_id: nil)
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to be_nil
+        end
+
+        it "ignores billing_entity_code param and still carries over from current_subscription" do
+          params[:billing_entity_code] = target_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to eq(current_entity.id)
+        end
+      end
+
+      context "when multi_entity_billing flag is ON" do
+        before do
+          subscription.mark_as_active!
+          organization.enable_feature_flag!(:multi_entity_billing)
+        end
+
+        it "carries over current_subscription.billing_entity_id when no param is provided" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to eq(current_entity.id)
+        end
+
+        it "persists NULL when current_subscription is not bound and no param is provided" do
+          subscription.update!(billing_entity_id: nil)
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to be_nil
+        end
+
+        it "binds the pending subscription to the entity matched by billing_entity_code" do
+          params[:billing_entity_code] = target_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to eq(target_entity.id)
+        end
+
+        it "leaves the current subscription bound to its original entity when the param overrides it" do
+          params[:billing_entity_code] = target_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.reload.billing_entity_id).to eq(current_entity.id)
+        end
+
+        it "binds the pending subscription to the entity matched by billing_entity_id" do
+          params[:billing_entity_id] = target_entity.id
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.billing_entity_id).to eq(target_entity.id)
+        end
+
+        it "fails with billing_entity_not_found when billing_entity_code is unknown" do
+          params[:billing_entity_code] = "unknown-entity-code"
+
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("billing_entity_not_found")
+        end
+
+        it "fails with billing_entity_not_found when billing_entity_id is unknown" do
+          params[:billing_entity_id] = SecureRandom.uuid
+
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("billing_entity_not_found")
+        end
+      end
+
+      context "when re-downgrading a starting_in_the_future subscription" do
+        let(:subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan: old_plan,
+            status: :pending,
+            subscription_at: 1.day.from_now,
+            external_id:,
+            billing_entity: current_entity
+          )
+        end
+
+        before do
+          subscription
+          organization.enable_feature_flag!(:multi_entity_billing)
+        end
+
+        it "re-binds the pending subscription when billing_entity_code is provided" do
+          params[:billing_entity_code] = target_entity.code
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(subscription.id)
+          expect(result.subscription.reload.billing_entity_id).to eq(target_entity.id)
+        end
+
+        it "leaves the pending subscription's billing entity untouched when no param is provided" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(subscription.id)
+          expect(result.subscription.reload.billing_entity_id).to eq(current_entity.id)
+        end
       end
     end
   end
