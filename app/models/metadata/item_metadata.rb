@@ -31,7 +31,8 @@ module Metadata
           errors.add(:value, "key '#{key}' must be a String up to #{MAX_KEY_LENGTH} characters")
         end
 
-        unless val.nil? || (val.is_a?(String) && val.length <= MAX_VALUE_LENGTH)
+        valid_value = val.nil? || (val.is_a?(String) && val.length <= MAX_VALUE_LENGTH)
+        unless valid_value
           errors.add(:value, "value for key '#{key}' must be empty or a String up to #{MAX_VALUE_LENGTH} characters")
         end
       end
