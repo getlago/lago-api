@@ -6,6 +6,7 @@ RSpec.describe Subscriptions::Concerns::FixedChargeUnitsOverrideDetectionConcern
   subject(:host) do
     Class.new do
       include Subscriptions::Concerns::FixedChargeUnitsOverrideDetectionConcern
+
       public :units_only_fixed_charges_plan_overrides?, :units_only_fixed_charge_params?
     end.new
   end
