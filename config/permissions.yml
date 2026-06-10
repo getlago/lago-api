@@ -215,6 +215,11 @@ pricing_units:
     - finance
   create:
   update:
+products:
+  view:
+  create:
+  update:
+  delete:
 roles:
   view:
   create:
