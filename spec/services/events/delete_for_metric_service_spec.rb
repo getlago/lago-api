@@ -74,14 +74,14 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
     end
 
     context "with charge-usage cache invalidation" do
-      it "expires the charge-usage cache for each affected subscription" do
-        allow(Subscriptions::ChargeCacheService).to receive(:expire_for_subscription).and_call_original
+      it "expires the charge-usage cache for each (subscription, charge) of each affected subscription" do
+        allow(Subscriptions::ChargeCacheService).to receive(:expire_for_subscription_charge).and_call_original
 
         service.call
 
         expect(Subscriptions::ChargeCacheService)
-          .to have_received(:expire_for_subscription)
-          .with(having_attributes(id: subscription.id))
+          .to have_received(:expire_for_subscription_charge)
+          .with(subscription: having_attributes(id: subscription.id), charge: having_attributes(id: charge.id))
       end
 
       context "when a cached usage value has already been written", cache: :memory do

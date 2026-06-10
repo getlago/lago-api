@@ -83,9 +83,7 @@ module Events
     end
 
     def expire_charge_caches(subscription_ids)
-      Subscription.where(id: subscription_ids).find_each do |subscription|
-        Subscriptions::ChargeCacheService.expire_for_subscription(subscription)
-      end
+      Subscriptions::ChargeCacheService.expire_for_subscriptions(subscription_ids)
     end
 
     def async_delete_clickhouse(table, date_field, external_subscription_ids)
