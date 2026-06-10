@@ -4,7 +4,7 @@ module Api
   module V1
     class ProductCategoriesController < Api::BaseController
       def create
-        result = ProductCategories::CreateService.call(
+        result = ::ProductCategories::CreateService.call(
           organization: current_organization,
           params: input_params.to_h.symbolize_keys
         )
@@ -18,7 +18,7 @@ module Api
 
       def update
         product_category = current_organization.product_categories.find_by(code: params[:code])
-        result = ProductCategories::UpdateService.call(product_category:, params: update_params.to_h.symbolize_keys)
+        result = ::ProductCategories::UpdateService.call(product_category:, params: update_params.to_h.symbolize_keys)
 
         if result.success?
           render_product_category(result.product_category)
@@ -29,7 +29,7 @@ module Api
 
       def destroy
         product_category = current_organization.product_categories.find_by(code: params[:code])
-        result = ProductCategories::DestroyService.call(product_category:)
+        result = ::ProductCategories::DestroyService.call(product_category:)
 
         if result.success?
           render_product_category(result.product_category)
@@ -47,7 +47,7 @@ module Api
       end
 
       def index
-        result = ProductCategoriesQuery.call(
+        result = ::ProductCategoriesQuery.call(
           organization: current_organization,
           pagination: {
             page: params[:page],
