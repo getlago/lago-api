@@ -24,7 +24,8 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
       Types::Entitlement::FeatureObject,
       Types::PaymentReceipts::Object,
       Types::ProductCategories::Object,
-      Types::Products::Object
+      Types::Products::Object,
+      Types::ProductFilters::Object
     )
   end
 
@@ -42,6 +43,7 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
     let(:feature) { create(:feature) }
     let(:product_category) { create(:product_category) }
     let(:product) { create(:product) }
+    let(:product_filter) { create(:product_filter) }
 
     it "returns Types::BillableMetrics::Object for BillableMetric objects" do
       expect(subject.resolve_type(billable_metric, {})).to eq(Types::BillableMetrics::Object)
@@ -97,6 +99,10 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
 
     it "returns Types::Products::Object for Product objects" do
       expect(subject.resolve_type(product, {})).to eq(Types::Products::Object)
+    end
+
+    it "returns Types::ProductFilters::Object for ProductFilter objects" do
+      expect(subject.resolve_type(product_filter, {})).to eq(Types::ProductFilters::Object)
     end
   end
 end
