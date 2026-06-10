@@ -10,14 +10,14 @@ module Lago
   # (REDIS_PASSWORD), and optional Sentinel support
   # (LAGO_REDIS_SIDEKIQ_SENTINELS, LAGO_REDIS_SIDEKIQ_MASTER_NAME).
   #
-  # When LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS is set, the window value (in
-  # seconds) is turned into a series of quadratically increasing retry intervals
+  # LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS (default: 5) defines a retry window (in seconds).
+  # The window is turned into a series of quadratically increasing retry intervals
   # (0.1, 0.4, 0.9, ...) whose total stays within the window. Each interval is
   # jittered by +-25% so processes don't retry in lockstep. The same schedule is
   # used both for `reconnect_attempts` (connection retry) and for
-  # `RedisLoadingRetryMiddleware`, which is wired in via `middlewares` with its
-  # schedule passed through `custom[:loading_retry_attempts]` (LOADING command
-  # retry while a node loads its dataset).
+  # `RedisLoadingRetryMiddleware`, wired in via `middlewares`, with its schedule
+  # passed through `custom[:loading_retry_attempts]` (LOADING command retry while
+  # a node loads its dataset).
   #
   # Base config for `#cache` includes URL (LAGO_REDIS_CACHE_URL), SSL params,
   # password (LAGO_REDIS_CACHE_PASSWORD), and optional Sentinel support
