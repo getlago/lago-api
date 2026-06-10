@@ -2987,7 +2987,7 @@ CREATE VIEW public.exports_credit_notes AS
     ( SELECT json_agg(json_build_object('lago_id', ci.id, 'amount_cents', ci.amount_cents, 'amount_currency', ci.amount_currency, 'lago_fee_id', ci.fee_id)) AS json_agg
            FROM public.credit_note_items ci
           WHERE (ci.credit_note_id = cn.id)) AS items,
-    ( SELECT json_agg(json_build_object('lago_id', im.id, 'key', je.key, 'value', je.value, 'created_at', im.created_at)) AS json_agg
+    ( SELECT json_agg(json_build_object('key', je.key, 'value', je.value)) AS json_agg
            FROM public.item_metadata im,
             LATERAL jsonb_each_text(im.value) je(key, value)
           WHERE (((im.owner_type)::text = 'CreditNote'::text) AND (im.owner_id = cn.id))) AS metadata,

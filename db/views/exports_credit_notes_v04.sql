@@ -68,14 +68,10 @@ SELECT
     SELECT
       json_agg (
         json_build_object (
-          'lago_id',
-          im.id,
           'key',
           je.key,
           'value',
-          je.value,
-          'created_at',
-          im.created_at
+          je.value
         )
       )
     FROM

@@ -91,10 +91,8 @@ RSpec.describe "exports_credit_notes view" do # rubocop:disable RSpec/DescribeCl
           ],
           "metadata" => [
             {
-              "lago_id" => metadata.id,
               "key" => "key",
-              "value" => "value",
-              "created_at" => metadata.reload.created_at.strftime("%FT%H:%M:%S.%6N")
+              "value" => "value"
             }
           ],
           # The view exports the raw integer error_code column, not the enum string.
@@ -292,7 +290,6 @@ RSpec.describe "exports_credit_notes view" do # rubocop:disable RSpec/DescribeCl
         parsed = JSON.parse(metadata_for(credit_note.id))
 
         expect(parsed.map { |m| [m["key"], m["value"]] }).to match_array([["key", "value"], ["another", "thing"]])
-        expect(parsed.map { |m| m["lago_id"] }.uniq).to eq([credit_note.metadata.id])
       end
     end
 
