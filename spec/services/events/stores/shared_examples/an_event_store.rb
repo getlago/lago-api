@@ -430,6 +430,12 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       it "returns the distinct event codes" do
         expect(event_store.distinct_codes).to match_array([code, "other_code"])
       end
+
+      context "when codes are provided" do
+        it "returns only the distinct event codes matching the provided codes" do
+          expect(event_store.distinct_codes(codes: [code, "unknown_code"])).to eq([code])
+        end
+      end
     end
   end
 
@@ -2585,6 +2591,13 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         it "returns the distinct event codes" do
           expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, nil]])
+        end
+      end
+
+      context "when codes are provided" do
+        it "returns only the charges and filters matching the provided codes" do
+          expect(event_store.distinct_charges_and_filters(codes: [code])).to match_array([[charge.id, charge_filter.id]])
+          expect(event_store.distinct_charges_and_filters(codes: ["unknown_code"])).to eq([])
         end
       end
     end

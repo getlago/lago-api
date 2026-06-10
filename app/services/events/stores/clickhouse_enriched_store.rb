@@ -153,24 +153,31 @@ module Events
       # DEPRECATED: This method will be replaced by distinct_charges_and_filters
       #             to filter the charge and filters in a billing period.
       #             See app/services/events/billing_period_filter_service.rb:42
-      def distinct_codes
+      def distinct_codes(codes: nil)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
-          ::Clickhouse::EventsEnrichedExpanded
+          scope = ::Clickhouse::EventsEnrichedExpanded
             .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization_id)
             .where(timestamp: from_datetime..applicable_to_datetime)
-            .pluck("DISTINCT(code)")
+
+          scope = scope.where(code: codes) unless codes.nil?
+          scope.pluck("DISTINCT(code)")
         end
       end
 
-      def distinct_charges_and_filters
+      # NOTE: `codes` should be provided whenever the list of possible codes is known
+      #       (eg: the billable metric codes of a plan). The table is sorted by
+      #       (organization_id, code, external_subscription_id, ...), so without a code
+      #       predicate ClickHouse cannot prune granules and scans the whole organization.
+      def distinct_charges_and_filters(codes: nil)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
-          ::Clickhouse::EventsEnrichedExpanded
+          scope = ::Clickhouse::EventsEnrichedExpanded
             .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization_id)
             .where(timestamp: from_datetime..to_datetime)
-            .distinct
-            .pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"))
+
+          scope = scope.where(code: codes) unless codes.nil?
+          scope.distinct.pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"))
         end
       end
 

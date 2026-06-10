@@ -148,24 +148,30 @@ module Events
         conditions.join(" AND ")
       end
 
-      def distinct_codes
+      # NOTE: `codes` should be provided whenever the list of possible codes is known
+      #       (eg: the billable metric codes of a plan). The table is sorted by
+      #       (organization_id, code, external_subscription_id, ...), so without a code
+      #       predicate ClickHouse cannot prune granules and scans the whole organization.
+      def distinct_codes(codes: nil)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
-          ::Clickhouse::EventsEnriched
+          scope = ::Clickhouse::EventsEnriched
             .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization.id)
             .where("events_enriched.timestamp >= ?", from_datetime)
             .where("events_enriched.timestamp <= ?", applicable_to_datetime)
-            .pluck("DISTINCT(code)")
+
+          scope = scope.where(code: codes) unless codes.nil?
+          scope.pluck("DISTINCT(code)")
         end
       end
 
-      def distinct_charges_and_filters
+      def distinct_charges_and_filters(codes: nil)
         # Implementation relies directly on the events_enriched_expanded table,
         # so we delegate the implementation to the ClickhouseEnrichedStore
         Events::Stores::ClickhouseEnrichedStore.new(
           subscription:,
           boundaries:
-        ).distinct_charges_and_filters
+        ).distinct_charges_and_filters(codes:)
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)

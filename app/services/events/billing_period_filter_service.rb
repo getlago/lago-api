@@ -36,7 +36,15 @@ module Events
     end
 
     def distinct_event_codes
-      event_store.distinct_codes
+      event_store.distinct_codes(codes: plan_codes)
+    end
+
+    # NOTE: Both event store queries are scoped to the plan's billable metric codes.
+    #       Events with other codes cannot match any of the plan's charges, and the
+    #       code predicate allows the event store to prune data efficiently
+    #       (ClickHouse tables are sorted by organization_id then code).
+    def plan_codes
+      @plan_codes ||= plan.billable_metrics.distinct.pluck(:code)
     end
 
     def charges_and_filters
@@ -64,7 +72,7 @@ module Events
     # The result will be a hash where the key is the charge id and the value is an array of filter ids
     # filter ids also include "nil" as a default filter when applicable
     def charges_and_filters_from_pre_enriched_events
-      values = event_store.distinct_charges_and_filters
+      values = event_store.distinct_charges_and_filters(codes: plan_codes)
 
       charge_filter_ids = values.map(&:last).reject(&:blank?)
       charge_ids = values.map(&:first).uniq
