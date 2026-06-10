@@ -17,10 +17,10 @@ module V1
 
     private
 
+    # options[:values] lets the destroy endpoint echo values discarded by the service
     def values
-      model.values.map do |value|
+      (options[:values] || model.values).map do |value|
         {
-          billable_metric_filter_id: value.billable_metric_filter_id,
           key: value.key,
           value: value.value
         }
