@@ -48,6 +48,30 @@ RSpec.describe OrderForm do
       it "returns only generated order forms past their expires_at" do
         expect(described_class.expirable).to match_array([expired_yesterday])
       end
+
+      context "with customer timezone" do
+        let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+
+        it "includes a form whose expiry day has started in the customer timezone but not in UTC" do
+          # 2026-01-16 02:00 UTC is 2026-01-15 21:00 in New York
+          form = create(:order_form, organization:, customer:, expires_at: Time.zone.parse("2026-01-16 02:00:00"))
+
+          # Jan 15 everywhere; the expiry day has started only in New York terms
+          travel_to(Time.zone.parse("2026-01-15 23:30:00")) do
+            expect(described_class.expirable).to include(form)
+          end
+        end
+
+        it "excludes a form whose expiry day has started in UTC but not in the customer timezone" do
+          # 2026-01-16 06:00 UTC is 2026-01-16 01:00 in New York
+          form = create(:order_form, organization:, customer:, expires_at: Time.zone.parse("2026-01-16 06:00:00"))
+
+          # already Jan 16 in UTC, still Jan 15 in New York
+          travel_to(Time.zone.parse("2026-01-16 04:00:00")) do
+            expect(described_class.expirable).not_to include(form)
+          end
+        end
+      end
     end
   end
 

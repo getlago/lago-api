@@ -40,7 +40,14 @@ class OrderForm < ApplicationRecord
     content_type: SIGNED_DOCUMENT_CONTENT_TYPES,
     size: {less_than: SIGNED_DOCUMENT_MAX_SIZE}
 
-  scope :expirable, -> { generated.where.not(expires_at: nil).where("expires_at < ?", Time.current) }
+  scope :expirable, -> do
+    at_time_zone = Utils::Timezone.at_time_zone_sql
+
+    generated
+      .joins(customer: :billing_entity)
+      .where.not(expires_at: nil)
+      .where("DATE(order_forms.expires_at#{at_time_zone}) <= DATE(?#{at_time_zone})", Time.current)
+  end
 
   sequenced(
     scope: ->(order_form) { order_form.organization.order_forms },
