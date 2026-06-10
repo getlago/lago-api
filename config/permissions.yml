@@ -220,6 +220,11 @@ pricing_units:
     - finance
   create:
   update:
+product_categories:
+  view:
+  create:
+  update:
+  delete:
 roles:
   view:
   create:

@@ -252,6 +252,10 @@ module Types
     field :create_pricing_unit, mutation: Mutations::PricingUnits::Create
     field :update_pricing_unit, mutation: Mutations::PricingUnits::Update
 
+    field :create_product_category, mutation: Mutations::ProductCategories::Create
+    field :destroy_product_category, mutation: Mutations::ProductCategories::Destroy
+    field :update_product_category, mutation: Mutations::ProductCategories::Update
+
     field :create_role, mutation: Mutations::Roles::Create
     field :destroy_role, mutation: Mutations::Roles::Destroy
     field :update_role, mutation: Mutations::Roles::Update
