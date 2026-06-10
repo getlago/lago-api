@@ -320,6 +320,106 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
   end
 
+  describe "fixed-charge delta catch-up on activation" do
+    let(:add_on) { create(:add_on, organization:) }
+    let(:fixed_charge) do
+      create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"})
+    end
+
+    before do
+      allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
+        .to receive(:create_payment_intent) do
+          Stripe::PaymentIntent.construct_from(
+            id: "pi_#{SecureRandom.hex(12)}", status: "processing", amount: 1000, currency: "eur"
+          )
+        end
+    end
+
+    def update_fixed_charge_units(units)
+      FixedCharges::UpdateService.call!(
+        fixed_charge:,
+        params: {units:, charge_model: "standard", properties: {amount: "10"}, apply_units_immediately: true},
+        timestamp: Time.current.to_i
+      )
+      perform_all_enqueued_jobs
+    end
+
+    it "bills a mid-incomplete unit increase as a delta invoice on activation" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.invoices.count).to eq(1)
+
+      # Mid-gap: units 10 -> 15. The event is emitted for the incomplete sub but not billed yet.
+      travel_to(Time.zone.local(2026, 3, 10, 10)) { update_fixed_charge_units(15) }
+      expect(subscription.invoices.count).to eq(1)
+
+      # Payment succeeds within the same period -> activation bills the 5-unit delta.
+      travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(2)
+
+      delta_invoice = subscription.invoices.order(:created_at).last
+      expect(delta_invoice.fees.fixed_charge.count).to eq(1)
+      expect(delta_invoice.fees.fixed_charge.sole.units).to eq(5)
+    end
+
+    it "bills one delta invoice per distinct plan-update timestamp" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+
+      travel_to(Time.zone.local(2026, 3, 10, 10)) { update_fixed_charge_units(15) }
+      travel_to(Time.zone.local(2026, 3, 15, 10)) { update_fixed_charge_units(20) }
+      expect(subscription.invoices.count).to eq(1)
+
+      travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(3)
+    end
+
+    it "documents a mid-incomplete unit reduction with a zero-amount invoice (no refund)" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.invoices.count).to eq(1)
+
+      # Mid-gap: units 10 -> 5. Pay-in-advance is never refunded.
+      travel_to(Time.zone.local(2026, 3, 10, 10)) { update_fixed_charge_units(5) }
+      expect(subscription.invoices.count).to eq(1)
+
+      travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(2)
+
+      delta_invoice = subscription.invoices.order(:created_at).last
+      expect(delta_invoice).to be_finalized
+      expect(delta_invoice.total_amount_cents).to eq(0)
+      expect(delta_invoice.fees.fixed_charge.sole.units).to eq(0)
+    end
+  end
+
   describe "timeout: subscription cancels on activation rule expiry" do
     before do
       # Best-effort PSP cancel calls Stripe; mock the SDK to return a canceled intent.

@@ -45,6 +45,8 @@ module Subscriptions
             Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
             Integrations::Aggregator::Taxes::Invoices::CreateJob.perform_later(invoice:) if invoice.customer.tax_customer
             Utils::SegmentTrack.invoice_created(invoice)
+
+            ActivationRules::BillFixedChargesDeltaService.call(subscription:, invoice:)
           end
         end
 

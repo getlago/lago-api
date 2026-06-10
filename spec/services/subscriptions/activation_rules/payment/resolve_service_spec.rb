@@ -131,6 +131,15 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
       expect(Utils::SegmentTrack).to have_received(:invoice_created).with(invoice)
     end
 
+    it "bills pay-in-advance fixed-charge deltas accrued during the incomplete window" do
+      allow(Subscriptions::ActivationRules::BillFixedChargesDeltaService).to receive(:call).and_call_original
+
+      result
+
+      expect(Subscriptions::ActivationRules::BillFixedChargesDeltaService)
+        .to have_received(:call).with(subscription:, invoice:)
+    end
+
     context "when invoice should be synced to accounting integration" do
       before { allow(invoice).to receive(:should_sync_invoice?).and_return(true) }
 
@@ -201,6 +210,14 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
 
         expect(rule.reload.status).to eq("pending")
         expect(invoice.reload.status).to eq("open")
+      end
+
+      it "does not bill fixed-charge deltas" do
+        allow(Subscriptions::ActivationRules::BillFixedChargesDeltaService).to receive(:call)
+
+        result
+
+        expect(Subscriptions::ActivationRules::BillFixedChargesDeltaService).not_to have_received(:call)
       end
     end
   end
