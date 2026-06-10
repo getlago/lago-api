@@ -179,7 +179,9 @@ Rails.application.routes.draw do
           end
         end
       end
-      resources :product_items, only: %i[index show create update destroy]
+      resources :product_items, only: %i[index show create update destroy] do
+        resources :filters, only: %i[index show create update destroy], controller: "product_items/filters"
+      end
       resources :products, param: :code, code: /.*/, only: %i[index show create update destroy]
       resources :taxes, param: :code, code: /.*/
       resources :wallet_transactions, only: %i[create show] do
