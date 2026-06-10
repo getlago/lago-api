@@ -22,7 +22,7 @@ module Clickhouse
     belongs_to :user, optional: true
     belongs_to :api_key, optional: true
 
-    RESOURCE_TYPES_WITH_DISCARDED = %w[BillableMetric Plan Customer BillingEntity Coupon].freeze
+    RESOURCE_TYPES_WITH_DISCARDED = %w[BillableMetric Plan Customer BillingEntity Coupon ProductItemFilter].freeze
 
     RESOURCE_TYPES = {
       billable_metric: "BillableMetric",
@@ -36,7 +36,8 @@ module Clickhouse
       coupon: "Coupon",
       payment_receipt: "PaymentReceipt",
       payment_request: "PaymentRequest",
-      feature: "Entitlement::Feature"
+      feature: "Entitlement::Feature",
+      product_item_filter: "ProductItemFilter"
     }.freeze
 
     ACTIVITY_TYPES = {
@@ -89,7 +90,10 @@ module Clickhouse
       email_sent: "email.sent",
       feature_created: "feature.created",
       feature_deleted: "feature.deleted",
-      feature_updated: "feature.updated"
+      feature_updated: "feature.updated",
+      product_item_filter_created: "product_item_filter.created",
+      product_item_filter_updated: "product_item_filter.updated",
+      product_item_filter_deleted: "product_item_filter.deleted"
     }
 
     before_save :ensure_activity_id
