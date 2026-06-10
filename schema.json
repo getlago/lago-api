@@ -28354,12 +28354,6 @@
               "deprecationReason": null
             },
             {
-              "name": "non_persistable_charge_cache_optimization",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "postgres_enriched_events",
               "description": null,
               "isDeprecated": false,
