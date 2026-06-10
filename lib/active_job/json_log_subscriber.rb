@@ -16,15 +16,7 @@ module ActiveJob
       if ex
         enqueue_error(job, ex)
       elsif event.payload[:aborted]
-        info do
-          {
-            level: "info",
-            event: "enqueue",
-            status: "aborted",
-            job: job.class.name,
-            queue: job.queue_name
-          }.to_json
-        end
+        info { enqueue_aborted(job) }
       else
         enqueue_success(job)
       end
@@ -53,15 +45,7 @@ module ActiveJob
       if ex
         enqueue_error(job, ex)
       elsif event.payload[:aborted]
-        info do
-          {
-            level: "info",
-            event: "enqueue",
-            status: "aborted",
-            job: job.class.name,
-            queue: job.queue_name
-          }.to_json
-        end
+        info { enqueue_aborted(job) }
       else
         enqueue_success(job, enqueued_at: scheduled_at(job))
       end
@@ -71,18 +55,9 @@ module ActiveJob
     def perform_start(event)
       info do
         job = event.payload[:job]
+        extra = job.enqueued_at ? {enqueued_at: job.enqueued_at.utc} : {}
 
-        message = {
-          level: "info",
-          event: "perform",
-          status: "start",
-          job: job.class.name,
-          job_id: job.job_id,
-          arguments: args_info(job),
-          queue: job.queue_name
-        }
-
-        job.enqueued_at ? message.merge(enqueued_at: job.enqueued_at.utc).to_json : message.to_json
+        entry(level: "info", event: "perform", status: "start", job:, **job_context(job), **extra)
       end
     end
     subscribe_log_level :perform_start, :info
@@ -90,47 +65,19 @@ module ActiveJob
     def perform(event)
       job = event.payload[:job]
       ex = event.payload[:exception_object]
+      duration = event.duration.round(2)
 
       if ex
         error do
-          payload = {
-            level: "error",
-            event: "perform",
-            status: "error",
-            job: job.class.name,
-            duration: event.duration.round(2),
-            job_id: job.job_id,
-            queue: job.queue_name,
-            arguments: args_info(job),
-            retries: job.executions,
-            exception: exception_payload(ex)
-          }
-          payload.to_json
+          entry(
+            level: "error", event: "perform", status: "error", job:,
+            duration:, **job_context(job), retries: job.executions, exception: exception_payload(ex)
+          )
         end
       elsif event.payload[:aborted]
-        info do
-          {
-            level: "info",
-            event: "perform",
-            status: "aborted",
-            job: job.class.name,
-            duration: event.duration.round(2),
-            job_id: job.job_id,
-            queue: job.queue_name
-          }.to_json
-        end
+        info { entry(level: "info", event: "perform", status: "aborted", job:, duration:, **job_identity(job)) }
       else
-        info do
-          {
-            level: "info",
-            event: "perform",
-            status: "success",
-            job: job.class.name,
-            duration: event.duration.round(2),
-            job_id: job.job_id,
-            queue: job.queue_name
-          }.to_json
-        end
+        info { entry(level: "info", event: "perform", status: "success", job:, duration:, **job_identity(job)) }
       end
     end
     subscribe_log_level :perform, :info
@@ -138,36 +85,20 @@ module ActiveJob
     def enqueue_retry(event)
       job = event.payload[:job]
       ex = event.payload[:error]
-      wait = event.payload[:wait]
+      wait = event.payload[:wait].to_i
 
       info do
-        payload = if ex
-          {
-            level: "error",
-            event: "retry",
-            status: "error",
-            job: job.class.name,
-            job_id: job.job_id,
-            queue: job.queue_name,
-            arguments: args_info(job),
-            execution: job.executions,
-            wait: wait.to_i,
-            exception: exception_payload(ex)
-          }
+        if ex
+          entry(
+            level: "error", event: "retry", status: "error", job:,
+            **job_context(job), execution: job.executions, wait:, exception: exception_payload(ex)
+          )
         else
-          {
-            level: "info",
-            event: "retry",
-            status: "success",
-            job: job.class.name,
-            job_id: job.job_id,
-            queue: job.queue_name,
-            arguments: args_info(job),
-            execution: job.executions,
-            wait: wait.to_i
-          }
+          entry(
+            level: "info", event: "retry", status: "success", job:,
+            **job_context(job), execution: job.executions, wait:
+          )
         end
-        payload.to_json
       end
     end
     subscribe_log_level :enqueue_retry, :info
@@ -177,18 +108,10 @@ module ActiveJob
       ex = event.payload[:error]
 
       error do
-        payload = {
-          level: "error",
-          event: "retry",
-          status: "stopped",
-          job: job.class.name,
-          job_id: job.job_id,
-          queue: job.queue_name,
-          arguments: args_info(job),
-          retries: job.executions,
-          exception: exception_payload(ex)
-        }
-        payload.to_json
+        entry(
+          level: "error", event: "retry", status: "stopped", job:,
+          **job_context(job), retries: job.executions, exception: exception_payload(ex)
+        )
       end
     end
     subscribe_log_level :retry_stopped, :error
@@ -198,23 +121,27 @@ module ActiveJob
       ex = event.payload[:error]
 
       error do
-        payload = {
-          level: "error",
-          event: "discard",
-          status: "error",
-          job: job.class.name,
-          job_id: job.job_id,
-          queue: job.queue_name,
-          arguments: args_info(job),
-          retries: job.executions,
-          exception: exception_payload(ex)
-        }
-        payload.to_json
+        entry(
+          level: "error", event: "discard", status: "error", job:,
+          **job_context(job), retries: job.executions, exception: exception_payload(ex)
+        )
       end
     end
     subscribe_log_level :discard, :error
 
     private
+
+    def entry(level:, event:, status:, job:, **extra)
+      {level:, event:, status:, job: job.class.name, **extra}.to_json
+    end
+
+    def job_identity(job)
+      {job_id: job.job_id, queue: job.queue_name}
+    end
+
+    def job_context(job)
+      job_identity(job).merge(arguments: args_info(job))
+    end
 
     def args_info(job)
       if job.class.log_arguments? && job.arguments.any?
@@ -243,34 +170,22 @@ module ActiveJob
       Time.at(job.scheduled_at).utc
     end
 
+    def enqueue_aborted(job)
+      entry(level: "info", event: "enqueue", status: "aborted", job:, queue: job.queue_name)
+    end
+
     def enqueue_error(job, ex)
       error do
-        payload = {
-          level: "error",
-          event: "enqueue",
-          status: "error",
-          job: job.class.name,
-          job_id: job.job_id,
-          queue: job.queue_name,
-          arguments: args_info(job),
-          exception: exception_payload(ex)
-        }
-        payload.to_json
+        entry(
+          level: "error", event: "enqueue", status: "error", job:,
+          **job_context(job), exception: exception_payload(ex)
+        )
       end
     end
 
     def enqueue_success(job, **extra)
       info do
-        {
-          level: "info",
-          event: "enqueue",
-          status: "success",
-          job: job.class.name,
-          job_id: job.job_id,
-          queue: job.queue_name,
-          arguments: args_info(job),
-          **extra
-        }.to_json
+        entry(level: "info", event: "enqueue", status: "success", job:, **job_context(job), **extra)
       end
     end
 
