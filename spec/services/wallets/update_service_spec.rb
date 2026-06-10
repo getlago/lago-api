@@ -41,8 +41,11 @@ RSpec.describe Wallets::UpdateService do
       expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
       expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
 
-      expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
       expect(Utils::ActivityLog).to have_produced("wallet.updated").after_commit.with(wallet)
+    end
+
+    it "sends a `wallet.updated` webhook" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("wallet.updated", Wallet)
     end
 
     it "flags the customer wallets for refresh and enqueues a refresh job" do
