@@ -47,9 +47,6 @@ RSpec.describe "exports_credit_notes view" do # rubocop:disable RSpec/DescribeCl
       let!(:item) do
         create(:credit_note_item, credit_note:, precise_amount_cents: 100.4, amount_cents: 100, amount_currency: "EUR")
       end
-      let!(:metadata) do
-        create(:item_metadata, owner: credit_note, organization: credit_note.organization, value: {"key" => "value"})
-      end
       let!(:error_detail) do
         create(:error_detail, owner: credit_note, organization: credit_note.organization, error_code: "tax_error", details: {"foo" => "bar"})
       end
@@ -104,6 +101,10 @@ RSpec.describe "exports_credit_notes view" do # rubocop:disable RSpec/DescribeCl
             }
           ]
         }
+      end
+
+      before do
+        create(:item_metadata, owner: credit_note, organization: credit_note.organization, value: {"key" => "value"})
       end
 
       it "exposes every column of the view" do
