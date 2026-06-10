@@ -18,6 +18,7 @@ module Types
       field :name, String, null: false
 
       field :billable_metric, Types::BillableMetrics::Object, null: true
+      field :filters, [Types::ProductItemFilters::Object], null: false
       field :product, Types::Products::Object, null: true
 
       field :filters_count, Integer, null: false
