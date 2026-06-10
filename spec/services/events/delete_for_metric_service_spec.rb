@@ -73,6 +73,42 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
       end
     end
 
+    context "with charge-usage cache invalidation" do
+      it "expires the charge-usage cache for each affected subscription" do
+        allow(Subscriptions::ChargeCacheService).to receive(:expire_for_subscription).and_call_original
+
+        service.call
+
+        expect(Subscriptions::ChargeCacheService)
+          .to have_received(:expire_for_subscription)
+          .with(having_attributes(id: subscription.id))
+      end
+
+      context "when a cached usage value has already been written", cache: :memory do
+        let(:cache_key) do
+          [
+            "charge-usage",
+            Subscriptions::ChargeCacheService::CACHE_KEY_VERSION,
+            charge.id,
+            subscription.id,
+            charge.updated_at.iso8601
+          ].join("/")
+        end
+
+        before do
+          Rails.cache.write(cache_key, '[{"amount_cents":3000}]')
+        end
+
+        it "invalidates the cached usage so a subsequent read recomputes without the deleted metric" do
+          expect(Rails.cache.exist?(cache_key)).to be true
+
+          service.call
+
+          expect(Rails.cache.exist?(cache_key)).to be false
+        end
+      end
+    end
+
     context "with clickhouse events" do
       include_context "with clickhouse availability"
 

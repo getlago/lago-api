@@ -26,6 +26,7 @@ module Events
 
         delete_postgres_events(subscription_ids, external_subscription_ids)
         delete_clickhouse_events(external_subscription_ids) if clickhouse_enabled
+        expire_charge_caches(subscription_ids)
       end
 
       result
@@ -78,6 +79,12 @@ module Events
     def delete_clickhouse_events(external_subscription_ids)
       CLICKHOUSE_TABLES.each do |table, date_field|
         async_delete_clickhouse(table, date_field, external_subscription_ids)
+      end
+    end
+
+    def expire_charge_caches(subscription_ids)
+      Subscription.where(id: subscription_ids).find_each do |subscription|
+        Subscriptions::ChargeCacheService.expire_for_subscription(subscription)
       end
     end
 
