@@ -65,6 +65,60 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
     log_output.read.lines.map { |l| JSON.parse(l) }
   end
 
+  # Each including group defines `arguments_logged_for(job)`, which triggers the
+  # subscriber method under test and returns the "arguments" value it logged.
+  shared_examples "logs formatted arguments" do
+    context "when the job does not log its arguments" do
+      it "logs an empty arguments object" do
+        expect(arguments_logged_for(build_job(job_id: "abc-123"))).to eq({})
+      end
+    end
+
+    context "when the job logs its arguments but has none" do
+      it "logs an empty arguments object" do
+        expect(arguments_logged_for(build_job_with_args)).to eq({})
+      end
+    end
+
+    context "when the arguments are scalars" do
+      it "logs them inspected and comma-joined" do
+        expect(arguments_logged_for(build_job_with_args("hello", 42, true))).to eq("\"hello\", 42, true")
+      end
+    end
+
+    context "when an argument is a hash with symbol keys" do
+      it "logs the inspected hash" do
+        expect(arguments_logged_for(build_job_with_args({plan: "pro", seats: 3}))).to eq("{plan: \"pro\", seats: 3}")
+      end
+    end
+
+    context "when an argument is a hash with string keys" do
+      it "logs the inspected hash" do
+        expect(arguments_logged_for(build_job_with_args({"plan" => "pro"}))).to eq("{\"plan\" => \"pro\"}")
+      end
+    end
+
+    context "when an argument is an array" do
+      it "logs the inspected array" do
+        expect(arguments_logged_for(build_job_with_args([1, 2, 3]))).to eq("[1, 2, 3]")
+      end
+    end
+
+    context "when arguments are nested hashes and arrays" do
+      it "formats them recursively" do
+        expect(arguments_logged_for(build_job_with_args({items: [1, {label: "a"}]}))).to eq("{items: [1, {label: \"a\"}]}")
+      end
+    end
+
+    context "when an argument is a GlobalID::Identification" do
+      it "logs it as its global id" do
+        organization = build(:organization, id: "11111111-1111-1111-1111-111111111111")
+
+        expect(arguments_logged_for(build_job_with_args(organization))).to include(organization.to_global_id.to_s)
+      end
+    end
+  end
+
   describe "#enqueue" do
     context "when the job is successfully enqueued" do
       it "logs a success entry with all expected attributes" do
@@ -147,10 +201,19 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "event" => "enqueue",
           "status" => "aborted",
           "job" => "TestLogJob",
-          "queue" => "default"
+          "job_id" => "test-job-id",
+          "queue" => "default",
+          "arguments" => {}
         })
       end
     end
+
+    def arguments_logged_for(job)
+      subscriber.enqueue(build_event("enqueue.active_job", {job: job, exception_object: nil, aborted: false}))
+      parsed_log_lines.first["arguments"]
+    end
+
+    it_behaves_like "logs formatted arguments"
   end
 
   describe "#enqueue_all" do
@@ -315,6 +378,13 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
         })
       end
     end
+
+    def arguments_logged_for(job)
+      subscriber.enqueue_all(build_event("enqueue_all.active_job", {jobs: [job], exception_object: nil}))
+      parsed_log_lines.first["arguments"]
+    end
+
+    it_behaves_like "logs formatted arguments"
   end
 
   describe "#enqueue_at" do
@@ -402,10 +472,19 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "event" => "enqueue",
           "status" => "aborted",
           "job" => "TestLogJob",
-          "queue" => "default"
+          "job_id" => "test-job-id",
+          "queue" => "default",
+          "arguments" => {}
         })
       end
     end
+
+    def arguments_logged_for(job)
+      subscriber.enqueue_at(build_event("enqueue_at.active_job", {job: job, exception_object: RuntimeError.new("boom")}))
+      parsed_log_lines.first["arguments"]
+    end
+
+    it_behaves_like "logs formatted arguments"
   end
 
   describe "#perform_start" do
@@ -452,6 +531,13 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
         })
       end
     end
+
+    def arguments_logged_for(job)
+      subscriber.perform_start(build_event("perform_start.active_job", {job: job}))
+      parsed_log_lines.first["arguments"]
+    end
+
+    it_behaves_like "logs formatted arguments"
   end
 
   describe "#perform" do
@@ -520,10 +606,20 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
           "job" => "TestLogJob",
           "duration" => 0.12,
           "job_id" => "abc-123",
-          "queue" => "default"
+          "queue" => "default",
+          "arguments" => {}
         })
       end
     end
+
+    def arguments_logged_for(job)
+      event = build_event("perform.active_job", {job: job, exception_object: RuntimeError.new("boom")})
+      allow(event).to receive(:duration).and_return(1.0)
+      subscriber.perform(event)
+      parsed_log_lines.first["arguments"]
+    end
+
+    it_behaves_like "logs formatted arguments"
   end
 
   describe "#enqueue_retry" do
@@ -574,6 +670,13 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
         })
       end
     end
+
+    def arguments_logged_for(job)
+      subscriber.enqueue_retry(build_event("enqueue_retry.active_job", {job: job, error: RuntimeError.new("boom"), wait: 5}))
+      parsed_log_lines.first["arguments"]
+    end
+
+    it_behaves_like "logs formatted arguments"
   end
 
   describe "#retry_stopped" do
@@ -598,6 +701,13 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
         "exception" => {"class" => "RuntimeError", "message" => "permanent failure"}
       })
     end
+
+    def arguments_logged_for(job)
+      subscriber.retry_stopped(build_event("retry_stopped.active_job", {job: job, error: RuntimeError.new("boom")}))
+      parsed_log_lines.first["arguments"]
+    end
+
+    it_behaves_like "logs formatted arguments"
   end
 
   describe "#discard" do
@@ -622,77 +732,12 @@ RSpec.describe ActiveJob::JsonLogSubscriber do
         "exception" => {"class" => "RuntimeError", "message" => "unrecoverable error"}
       })
     end
-  end
 
-  describe "argument logging" do
-    def logged_arguments(job)
-      subscriber.perform_start(build_event("perform_start.active_job", {job: job}))
+    def arguments_logged_for(job)
+      subscriber.discard(build_event("discard.active_job", {job: job, error: RuntimeError.new("boom")}))
       parsed_log_lines.first["arguments"]
     end
 
-    context "when the job does not log its arguments" do
-      it "logs an empty arguments object" do
-        job = build_job(job_id: "abc-123")
-
-        expect(logged_arguments(job)).to eq({})
-      end
-    end
-
-    context "when the job logs its arguments but has none" do
-      it "logs an empty arguments object" do
-        job = build_job_with_args
-
-        expect(logged_arguments(job)).to eq({})
-      end
-    end
-
-    context "when the arguments are scalars" do
-      it "logs them inspected and comma-joined" do
-        job = build_job_with_args("hello", 42, true)
-
-        expect(logged_arguments(job)).to eq("\"hello\", 42, true")
-      end
-    end
-
-    context "when an argument is a hash with symbol keys" do
-      it "logs the inspected hash" do
-        job = build_job_with_args({plan: "pro", seats: 3})
-
-        expect(logged_arguments(job)).to eq("{plan: \"pro\", seats: 3}")
-      end
-    end
-
-    context "when an argument is a hash with string keys" do
-      it "logs the inspected hash" do
-        job = build_job_with_args({"plan" => "pro"})
-
-        expect(logged_arguments(job)).to eq("{\"plan\" => \"pro\"}")
-      end
-    end
-
-    context "when an argument is an array" do
-      it "logs the inspected array" do
-        job = build_job_with_args([1, 2, 3])
-
-        expect(logged_arguments(job)).to eq("[1, 2, 3]")
-      end
-    end
-
-    context "when arguments are nested hashes and arrays" do
-      it "formats them recursively" do
-        job = build_job_with_args({items: [1, {label: "a"}]})
-
-        expect(logged_arguments(job)).to eq("{items: [1, {label: \"a\"}]}")
-      end
-    end
-
-    context "when an argument is a GlobalID::Identification" do
-      it "logs it as its global id" do
-        organization = build(:organization, id: "11111111-1111-1111-1111-111111111111")
-        job = build_job_with_args(organization)
-
-        expect(logged_arguments(job)).to include(organization.to_global_id.to_s)
-      end
-    end
+    it_behaves_like "logs formatted arguments"
   end
 end

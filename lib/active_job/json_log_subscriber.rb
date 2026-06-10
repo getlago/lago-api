@@ -95,7 +95,7 @@ module ActiveJob
             status: "aborted",
             job:,
             duration:,
-            **job_identity(job)
+            **job_context(job)
           )
         end
       else
@@ -228,7 +228,7 @@ module ActiveJob
         event: "enqueue",
         status: "aborted",
         job:,
-        queue: job.queue_name
+        **job_context(job)
       )
     end
 
