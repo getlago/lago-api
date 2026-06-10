@@ -401,7 +401,6 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_previous_subscription_id_and_
 DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_organization_id;
-DROP INDEX IF EXISTS public.index_subscriptions_on_org_external_id_active;
 DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on_null;
 DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on;
 DROP INDEX IF EXISTS public.index_subscriptions_on_external_id;
@@ -9630,13 +9629,6 @@ CREATE INDEX index_subscriptions_on_last_received_event_on_null ON public.subscr
 
 
 --
--- Name: index_subscriptions_on_org_external_id_active; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_subscriptions_on_org_external_id_active ON public.subscriptions USING btree (organization_id, external_id) WHERE ((status = 1) AND ((created_at >= '2026-05-20 00:00:00'::timestamp without time zone) OR (activated_at >= '2026-05-20 00:00:00'::timestamp without time zone)));
-
-
---
 -- Name: index_subscriptions_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12607,7 +12599,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260526142247'),
 ('20260526131452'),
 ('20260525102114'),
-('20260520140601'),
 ('20260520075420'),
 ('20260518152858'),
 ('20260517101105'),
@@ -13616,4 +13607,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-
