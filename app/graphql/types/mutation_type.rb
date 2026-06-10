@@ -235,6 +235,10 @@ module Types
     field :destroy_product, mutation: Mutations::Products::Destroy
     field :update_product, mutation: Mutations::Products::Update
 
+    field :create_product_item, mutation: Mutations::ProductItems::Create
+    field :destroy_product_item, mutation: Mutations::ProductItems::Destroy
+    field :update_product_item, mutation: Mutations::ProductItems::Update
+
     field :create_role, mutation: Mutations::Roles::Create
     field :destroy_role, mutation: Mutations::Roles::Destroy
     field :update_role, mutation: Mutations::Roles::Update

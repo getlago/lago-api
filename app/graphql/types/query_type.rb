@@ -93,6 +93,8 @@ module Types
     field :pricing_unit, resolver: Resolvers::PricingUnitResolver
     field :pricing_units, resolver: Resolvers::PricingUnitsResolver
     field :product, resolver: Resolvers::ProductResolver
+    field :product_item, resolver: Resolvers::ProductItemResolver
+    field :product_items, resolver: Resolvers::ProductItemsResolver
     field :products, resolver: Resolvers::ProductsResolver
     field :quote, resolver: Resolvers::QuoteResolver
     field :quotes, resolver: Resolvers::QuotesResolver
