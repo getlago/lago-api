@@ -179,6 +179,7 @@ Rails.application.routes.draw do
           end
         end
       end
+      resources :product_items, only: %i[index show create update destroy]
       resources :products, param: :code, code: /.*/, only: %i[index show create update destroy]
       resources :taxes, param: :code, code: /.*/
       resources :wallet_transactions, only: %i[create show] do
