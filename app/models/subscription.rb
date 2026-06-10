@@ -79,6 +79,12 @@ class Subscription < ApplicationRecord
 
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
   scope :expirable, -> { incomplete.joins(:activation_rules).merge(Subscription::ActivationRule.expirable) }
+  scope :without_fixed_charge_units_override_for, ->(fixed_charge) {
+    overrides = Subscription::FixedChargeUnitsOverride
+      .where(fixed_charge:)
+      .where("subscription_fixed_charge_units_overrides.subscription_id = subscriptions.id")
+    where.not(overrides.arel.exists)
+  }
 
   # NOTE: SQL query to get subscription_at into customer timezone
   def self.subscription_at_in_timezone_sql

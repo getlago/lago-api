@@ -80,5 +80,17 @@ RSpec.describe Mutations::CreditNotes::Update do
       result_data = result["data"]["updateCreditNote"]
       expect(result_data["metadata"]).to eq([{"key" => "new", "value" => "data"}])
     end
+
+    it "keeps the existing metadata when only the refund status is updated" do
+      execute_query(
+        query: mutation,
+        input: {
+          id: credit_note.id,
+          refundStatus: "succeeded"
+        }
+      )
+
+      expect(credit_note.reload.metadata.value).to eq({"existing" => "value"})
+    end
   end
 end
