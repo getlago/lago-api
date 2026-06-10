@@ -271,5 +271,147 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateBatchService do
         end
       end
     end
+
+    context "when re-sending an existing integration customer without its id" do
+      let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
+      let(:integration_code) { integration.code }
+      let(:sync_with_provider) { true }
+      let(:external_customer_id) { "12345" }
+      let(:new_customer) { false }
+
+      before { integration_customer }
+
+      it "does not enqueue a create job" do
+        expect { service_call }.not_to have_enqueued_job(IntegrationCustomers::CreateJob)
+      end
+
+      it "enqueues an update job" do
+        expect { service_call }.to have_enqueued_job(IntegrationCustomers::UpdateJob)
+      end
+
+      it "keeps the same integration customer" do
+        service_call
+
+        expect(customer.reload.integration_customers.pluck(:id)).to eq([integration_customer.id])
+      end
+    end
+
+    context "when re-sending an existing anrok integration customer without its id" do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:integration_customer) { create(:anrok_customer, customer:, integration:, external_customer_id: nil) }
+      let(:new_customer) { false }
+      let(:integration_customers) do
+        [
+          {
+            integration_type: "anrok",
+            integration_code: integration.code,
+            sync_with_provider: true,
+            external_customer_id: nil
+          }
+        ]
+      end
+
+      before { integration_customer }
+
+      it "does not enqueue a create job" do
+        expect { service_call }.not_to have_enqueued_job(IntegrationCustomers::CreateJob)
+      end
+
+      it "enqueues an update job" do
+        expect { service_call }.to have_enqueued_job(IntegrationCustomers::UpdateJob)
+      end
+
+      it "keeps the same integration customer" do
+        service_call
+
+        expect(customer.reload.integration_customers.pluck(:id)).to eq([integration_customer.id])
+      end
+    end
+
+    context "when re-sending an existing integration customer with a placeholder id" do
+      let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
+      let(:integration_code) { integration.code }
+      let(:sync_with_provider) { true }
+      let(:external_customer_id) { "12345" }
+      let(:new_customer) { false }
+      let(:integration_customers) do
+        [
+          {
+            id: "00000000-0000-0000-0000-000000000000",
+            integration_type: "netsuite",
+            integration_code:,
+            sync_with_provider:,
+            external_customer_id:,
+            subsidiary_id:
+          }
+        ]
+      end
+
+      before { integration_customer }
+
+      it "does not enqueue a create job" do
+        expect { service_call }.not_to have_enqueued_job(IntegrationCustomers::CreateJob)
+      end
+
+      it "enqueues an update job" do
+        expect { service_call }.to have_enqueued_job(IntegrationCustomers::UpdateJob)
+      end
+
+      it "keeps the same integration customer" do
+        service_call
+
+        expect(customer.reload.integration_customers.pluck(:id)).to eq([integration_customer.id])
+      end
+    end
+
+    context "when switching an existing integration customer to another connection of the same type" do
+      let(:integration) { create(:netsuite_integration, organization:, code: "netsuite_old") }
+      let(:new_integration) { create(:netsuite_integration, organization:, code: "netsuite_new") }
+      let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
+      let(:integration_code) { new_integration.code }
+      let(:sync_with_provider) { true }
+      let(:external_customer_id) { nil }
+      let(:new_customer) { false }
+
+      before do
+        integration_customer
+        new_integration
+      end
+
+      it "enqueues a create job for the new connection" do
+        expect { service_call }.to have_enqueued_job(IntegrationCustomers::CreateJob)
+          .with(hash_including(integration: new_integration))
+      end
+
+      it "removes the link to the old connection" do
+        service_call
+
+        expect(customer.reload.integration_customers.pluck(:id)).to eq([])
+      end
+    end
+
+    context "when re-sending an existing integration customer with an unknown connection code" do
+      let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
+      let(:integration_code) { "unknown-code" }
+      let(:sync_with_provider) { true }
+      let(:external_customer_id) { "12345" }
+      let(:new_customer) { false }
+
+      before { integration_customer }
+
+      it "does not enqueue a create job" do
+        expect { service_call }.not_to have_enqueued_job(IntegrationCustomers::CreateJob)
+      end
+
+      it "does not enqueue an update job" do
+        expect { service_call }.not_to have_enqueued_job(IntegrationCustomers::UpdateJob)
+      end
+
+      it "keeps the same integration customer" do
+        service_call
+
+        expect(customer.reload.integration_customers.pluck(:id)).to eq([integration_customer.id])
+      end
+    end
   end
 end

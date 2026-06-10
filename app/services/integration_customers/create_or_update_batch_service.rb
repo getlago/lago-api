@@ -80,10 +80,47 @@ module IntegrationCustomers
     end
 
     def sanitize_integration_customers
-      updated_int_customers = integration_customers.reject { |m| m[:id].nil? }.map { |m| m[:id] }
-      not_needed_ids = customer.integration_customers.pluck(:id) - updated_int_customers
+      existing_ids = customer.integration_customers.ids
 
-      customer.integration_customers.where(id: not_needed_ids).destroy_all
+      kept_ids = integration_customers.filter_map do |params|
+        id = params[:id].presence
+
+        if id && existing_ids.include?(id)
+          id
+        else
+          existing_integration_customer_id(params)
+        end
+      end
+
+      if kept_ids.empty?
+        customer.integration_customers.destroy_all
+      else
+        customer.integration_customers.where.not(id: kept_ids).destroy_all
+      end
+    end
+
+    def existing_integration_customer_id(params)
+      return if params[:integration_type].blank?
+
+      integration_customer_type = IntegrationCustomers::BaseCustomer.customer_type(params[:integration_type])
+      integration_customer = customer.integration_customers.find_by(type: integration_customer_type)
+
+      integration_customer.id if integration_customer && !switching_connection?(integration_customer, params)
+    rescue NotImplementedError
+      nil
+    end
+
+    def switching_connection?(integration_customer, params)
+      return false if params[:integration_code].blank?
+
+      integration_type = Integrations::BaseIntegration.integration_type(params[:integration_type])
+      integration = Integrations::BaseIntegration.find_by(
+        type: integration_type,
+        code: params[:integration_code],
+        organization_id: customer.organization_id
+      )
+
+      integration.present? && integration.id != integration_customer.integration_id
     end
 
     def skip_creating_integration_customer?
