@@ -12,7 +12,7 @@ module Api
           return not_found_error(resource: "billable_metric")
         end
 
-        result = Products::CreateService.call(
+        result = ::Products::CreateService.call(
           organization: current_organization,
           params: input_params
             .except(:product_category_code, :billable_metric_code)
@@ -29,7 +29,7 @@ module Api
 
       def update
         product = current_organization.products.find_by(code: params[:code])
-        result = Products::UpdateService.call(product:, params: update_params.to_h.symbolize_keys)
+        result = ::Products::UpdateService.call(product:, params: update_params.to_h.symbolize_keys)
 
         if result.success?
           render_product(result.product)
@@ -40,7 +40,7 @@ module Api
 
       def destroy
         product = current_organization.products.find_by(code: params[:code])
-        result = Products::DestroyService.call(product:)
+        result = ::Products::DestroyService.call(product:)
 
         if result.success?
           render_product(result.product)
@@ -62,7 +62,7 @@ module Api
           return not_found_error(resource: "product_category")
         end
 
-        result = ProductsQuery.call(
+        result = ::ProductsQuery.call(
           organization: current_organization,
           pagination: {
             page: params[:page],
