@@ -90,6 +90,22 @@ RSpec.describe CustomersQuery do
     expect(returned_ids).to include(customer_third.id)
   end
 
+  context "when filtering by external_id" do
+    let(:filters) { {external_id: customer_first.external_id} }
+
+    it "returns the customer with matching external_id" do
+      expect(result.customers).to match_array([customer_first])
+    end
+
+    context "when search_term is present" do
+      let(:search_term) { customer_second.external_id }
+
+      it "ignores the search_term" do
+        expect(result.customers).to match_array([customer_first])
+      end
+    end
+  end
+
   context "when filtering by customer_type" do
     context "when filtering by company" do
       let(:filters) { {customer_type: "company"} }
