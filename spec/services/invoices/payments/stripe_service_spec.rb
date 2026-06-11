@@ -518,4 +518,30 @@ RSpec.describe Invoices::Payments::StripeService do
       end
     end
   end
+
+  describe "#payment_already_in_progress?" do
+    subject { stripe_service.payment_already_in_progress? }
+
+    context "when a provider payment is processing" do
+      before { create(:payment, payable: invoice, payable_payment_status: :processing) }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when a provider payment has succeeded" do
+      before { create(:payment, payable: invoice, payable_payment_status: :succeeded) }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when the only provider payment is pending" do
+      before { create(:payment, payable: invoice, payable_payment_status: :pending) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when there is no provider payment" do
+      it { is_expected.to be(false) }
+    end
+  end
 end

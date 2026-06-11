@@ -12,11 +12,13 @@ module PaymentIntents
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
 
-      if stripe_provider? && provider_payment_in_progress?
-        # An off-session provider payment is already pending, processing or succeeded
-        # for this invoice. Generating a hosted checkout would let the customer pay a
-        # second time, so we don't offer one.
-        # NOTE: scoped to Stripe for now; other providers get this in their own PR.
+      payment_provider = Invoices::Payments::PaymentProviders::Factory.new_instance(invoice:)
+
+      if payment_provider.try(:payment_already_in_progress?)
+        # A provider payment is already in flight or settled for this invoice; offering
+        # a hosted checkout would let the customer pay a second time. Each provider
+        # decides what "in progress" means (see the provider service); providers that
+        # don't implement it yet simply skip this check.
         return result.single_validation_failure!(error_code: "payment_already_processing")
       end
 
@@ -24,9 +26,7 @@ module PaymentIntents
       payment_intent = PaymentIntent.non_expired.find_or_create_by!(invoice:, organization: invoice.organization)
 
       if payment_intent.payment_url.blank?
-        payment_url_result = Invoices::Payments::PaymentProviders::Factory
-          .new_instance(invoice:)
-          .generate_payment_url(payment_intent)
+        payment_url_result = payment_provider.generate_payment_url(payment_intent)
 
         payment_url_result.raise_if_error!
 
@@ -51,15 +51,5 @@ module PaymentIntents
     private
 
     attr_reader :invoice
-
-    def stripe_provider?
-      invoice.customer.payment_provider == "stripe"
-    end
-
-    def provider_payment_in_progress?
-      invoice.payments
-        .where(payment_type: :provider, payable_payment_status: %i[pending processing succeeded])
-        .exists?
-    end
   end
 end

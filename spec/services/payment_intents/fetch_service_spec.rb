@@ -99,7 +99,7 @@ RSpec.describe PaymentIntents::FetchService do
       let(:customer) { create(:customer, payment_provider: "stripe") }
       let(:invoice) { create(:invoice, customer:) }
 
-      before { create(:payment, payable: invoice, payable_payment_status: :pending) }
+      before { create(:payment, payable: invoice, payable_payment_status: :processing) }
 
       it "refuses to generate a checkout URL" do
         expect(result).to be_failure

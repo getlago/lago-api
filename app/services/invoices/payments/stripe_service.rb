@@ -113,6 +113,16 @@ module Invoices
         result
       end
 
+      # Whether a provider payment is already in flight or settled for this invoice.
+      # Used to avoid offering a hosted checkout that would let the customer pay twice.
+      # `pending` is intentionally excluded: it's a transient pre-charge state that
+      # could otherwise block manual collection if a payment got stuck.
+      def payment_already_in_progress?
+        invoice.payments
+          .where(payment_type: :provider, payable_payment_status: %i[processing succeeded])
+          .exists?
+      end
+
       private
 
       attr_accessor :invoice
