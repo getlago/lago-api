@@ -31,8 +31,7 @@ module OrderForms
       ActiveRecord::Base.transaction do
         order_form.save!
 
-        # TODO: Cascade the void to the parent quote version
-        # (QuoteVersions::VoidService.call!(quote_version: order_form.quote_version, ...))
+        QuoteVersions::VoidService.call!(quote_version: order_form.quote_version, reason: :cascade_of_voided)
       end
 
       result.order_form = order_form

@@ -7,7 +7,9 @@ RSpec.describe OrderForms::VoidService do
 
   let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
   let(:customer) { create(:customer, organization:) }
-  let(:order_form) { create(:order_form, customer:, organization:) }
+  let(:quote) { create(:quote, organization:, customer:) }
+  let(:quote_version) { create(:quote_version, :approved, organization:, quote:) }
+  let(:order_form) { create(:order_form, customer:, organization:, quote_version:) }
 
   describe "#call" do
     context "when license is not premium" do
@@ -55,8 +57,12 @@ RSpec.describe OrderForms::VoidService do
           expect(result.order_form.void_reason).to eq("manual")
         end
 
-        # TODO: Test the cascade to the parent quote version once implemented
-        pending "cascades void to parent quote version"
+        it "cascades the void to the parent quote version" do
+          service.call
+
+          expect(quote_version.reload).to be_voided
+          expect(quote_version.void_reason).to eq("cascade_of_voided")
+        end
       end
     end
   end
