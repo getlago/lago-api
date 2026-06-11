@@ -75,6 +75,18 @@ RSpec.describe FixedCharges::CascadeChildPlanUpdateService do
       end
     end
 
+    context "when plan has an incomplete subscription" do
+      let(:subscription) { create(:subscription, :incomplete, plan:) }
+
+      it "creates a fixed charge event for the incomplete subscription" do
+        expect { result }.to change(subscription.fixed_charge_events, :count).by(1)
+      end
+
+      it "does not schedule invoice creation jobs" do
+        expect { result }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+      end
+    end
+
     context "when plan has active subscriptions but no pay in advance fixed charges" do
       let(:subscription) { create(:subscription, :active, plan:) }
       let(:cascade_fixed_charges_payload) do
@@ -200,6 +212,18 @@ RSpec.describe FixedCharges::CascadeChildPlanUpdateService do
       it "schedules invoice creation jobs for each active subscription" do
         expect { result }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
           .with(subscription, timestamp)
+      end
+    end
+
+    context "when plan has an incomplete subscription" do
+      let(:subscription) { create(:subscription, :incomplete, plan:) }
+
+      it "creates a fixed charge event for the incomplete subscription" do
+        expect { result }.to change(subscription.fixed_charge_events, :count).by(1)
+      end
+
+      it "does not schedule invoice creation jobs" do
+        expect { result }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
       end
     end
 
