@@ -30,7 +30,7 @@ RSpec.describe Subscription do
         .backed_by_column_of_type(:enum)
         .with_values(generate: "generate", skip: "skip")
         .with_prefix(:on_termination_invoice)
-      expect(subject).to define_enum_for(:cancelation_reason)
+      expect(subject).to define_enum_for(:cancellation_reason)
         .backed_by_column_of_type(:enum)
         .with_values(payment_failed: "payment_failed", timeout: "timeout")
     end

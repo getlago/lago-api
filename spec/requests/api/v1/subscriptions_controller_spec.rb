@@ -761,7 +761,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
           expect(response).to have_http_status(:ok)
           expect(json[:subscription][:status]).to eq("pending")
-          expect(json[:subscription][:cancelation_reason]).to be_nil
+          expect(json[:subscription][:cancellation_reason]).to be_nil
           expect(json[:subscription][:activated_at]).to be_nil
           expect(json[:subscription][:activation_rules].size).to eq(1)
           expect(json[:subscription][:activation_rules].first).to include(
@@ -804,7 +804,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           expect(subscription.activation_rules.count).to eq(1)
 
           expect(json[:subscription]).not_to have_key(:activation_rules)
-          expect(json[:subscription]).not_to have_key(:cancelation_reason)
+          expect(json[:subscription]).not_to have_key(:cancellation_reason)
           expect(json[:subscription]).not_to have_key(:activated_at)
         end
       end
@@ -1813,7 +1813,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           expect(subscription.activation_rules.count).to eq(1)
 
           expect(json[:subscription]).not_to have_key(:activation_rules)
-          expect(json[:subscription]).not_to have_key(:cancelation_reason)
+          expect(json[:subscription]).not_to have_key(:cancellation_reason)
           expect(json[:subscription]).not_to have_key(:activated_at)
         end
       end

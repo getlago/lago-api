@@ -122,7 +122,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       subscription.reload
       expect(subscription).to be_canceled
-      expect(subscription.cancelation_reason).to eq("payment_failed")
+      expect(subscription.cancellation_reason).to eq("payment_failed")
       expect(subscription.activated_at).to be_nil
       expect(subscription.activation_rules.sole).to be_failed
 
@@ -334,7 +334,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       )
     end
 
-    it "expires the gated subscription with cancelation_reason: timeout" do
+    it "expires the gated subscription with cancellation_reason: timeout" do
       # Stage 1: Create gated subscription
       create_subscription(subscription_params)
       perform_all_enqueued_jobs
@@ -355,7 +355,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       subscription.reload
       expect(subscription).to be_canceled
-      expect(subscription.cancelation_reason).to eq("timeout")
+      expect(subscription.cancellation_reason).to eq("timeout")
       expect(subscription.activation_rules.sole).to be_expired
 
       expect(invoice.reload).to be_closed
@@ -696,7 +696,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       previous_subscription.reload
       new_subscription.reload
       expect(new_subscription).to be_canceled
-      expect(new_subscription.cancelation_reason).to eq("payment_failed")
+      expect(new_subscription.cancellation_reason).to eq("payment_failed")
       expect(new_subscription.activation_rules.sole).to be_failed
       expect(previous_subscription).to be_active
       expect(invoice.reload).to be_closed
@@ -846,7 +846,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       previous_subscription.reload
       new_subscription.reload
       expect(new_subscription).to be_canceled
-      expect(new_subscription.cancelation_reason).to eq("payment_failed")
+      expect(new_subscription.cancellation_reason).to eq("payment_failed")
       expect(new_subscription.activation_rules.sole).to be_failed
       expect(previous_subscription).to be_active
       expect(invoice.reload).to be_closed
