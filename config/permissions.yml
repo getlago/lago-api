@@ -148,6 +148,8 @@ order_forms:
     - manager
   sign:
     - manager
+  void:
+    - manager
 organization:
   view:
     - finance
