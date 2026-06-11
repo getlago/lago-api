@@ -164,7 +164,6 @@ module WalletActions
       :paid_top_up_min_amount_cents,
       :paid_top_up_max_amount_cents,
       :billing_entity_code,
-      :billing_entity_id,
       metadata: {},
       recurring_transaction_rules: [
         :lago_id,

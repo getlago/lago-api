@@ -1193,52 +1193,6 @@ RSpec.shared_examples "a wallet update endpoint" do
   end
 end
 
-RSpec.shared_examples "a wallet update endpoint with billing_entity_id" do
-  let(:initial_billing_entity) { create(:billing_entity, organization:) }
-  let(:target_billing_entity) { create(:billing_entity, organization:) }
-  let(:wallet) { create(:wallet, customer:, billing_entity: initial_billing_entity) }
-
-  before { wallet }
-
-  context "when multi_entity_billing is enabled" do
-    before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
-    context "when billing_entity_id matches an entity" do
-      let(:update_params) { {billing_entity_id: target_billing_entity.id} }
-
-      it "moves the wallet to the new billing entity" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(wallet.reload.billing_entity_id).to eq(target_billing_entity.id)
-        expect(json[:wallet][:billing_entity_code]).to eq(target_billing_entity.code)
-      end
-    end
-
-    context "when billing_entity_id does not match any entity" do
-      let(:update_params) { {billing_entity_id: SecureRandom.uuid} }
-
-      it "returns a not found error and leaves the wallet untouched" do
-        subject
-
-        expect(response).to be_not_found_error("billing_entity")
-        expect(wallet.reload.billing_entity_id).to eq(initial_billing_entity.id)
-      end
-    end
-  end
-
-  context "when multi_entity_billing is not enabled" do
-    let(:update_params) { {billing_entity_id: target_billing_entity.id} }
-
-    it "ignores billing_entity_id and leaves the wallet untouched" do
-      subject
-
-      expect(response).to have_http_status(:success)
-      expect(wallet.reload.billing_entity_id).to eq(initial_billing_entity.id)
-    end
-  end
-end
-
 RSpec.shared_examples "a wallet show endpoint" do
   let(:wallet) { create(:wallet, customer:) }
 
