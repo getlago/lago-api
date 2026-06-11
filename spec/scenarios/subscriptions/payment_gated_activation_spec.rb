@@ -326,8 +326,6 @@ describe "Payment Gated Subscription Activation Scenarios" do
       create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"})
     end
 
-    # These scenarios produce several invoices, each with its own payment intent —
-    # return a unique id per call, as Stripe does.
     before do
       allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
         .to receive(:create_payment_intent) do
