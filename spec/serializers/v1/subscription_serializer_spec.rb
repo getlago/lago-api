@@ -255,7 +255,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
       create(
         :subscription,
         organization:,
-        cancelation_reason: Subscription::CANCELATION_REASONS[:payment_failed],
+        cancelation_reason: Subscription::CANCELLATION_REASONS[:payment_failed],
         activated_at:
       )
     end
@@ -264,7 +264,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
       result = JSON.parse(serializer.to_json)
 
       expect(result["subscription"]).to include(
-        "cancelation_reason" => Subscription::CANCELATION_REASONS[:payment_failed],
+        "cancelation_reason" => Subscription::CANCELLATION_REASONS[:payment_failed],
         "activated_at" => activated_at.iso8601
       )
     end

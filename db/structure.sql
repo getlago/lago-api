@@ -1173,6 +1173,7 @@ DROP TYPE IF EXISTS public.subscription_on_termination_credit_note;
 DROP TYPE IF EXISTS public.subscription_invoicing_reason;
 DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_anchors;
 DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_adjustments;
+DROP TYPE IF EXISTS public.subscription_cancellation_reasons;
 DROP TYPE IF EXISTS public.subscription_cancelation_reasons;
 DROP TYPE IF EXISTS public.subscription_activation_rule_types;
 DROP TYPE IF EXISTS public.subscription_activation_rule_statuses;
@@ -1498,6 +1499,16 @@ CREATE TYPE public.subscription_activation_rule_types AS ENUM (
 --
 
 CREATE TYPE public.subscription_cancelation_reasons AS ENUM (
+    'payment_failed',
+    'timeout'
+);
+
+
+--
+-- Name: subscription_cancellation_reasons; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_cancellation_reasons AS ENUM (
     'payment_failed',
     'timeout'
 );
@@ -3331,7 +3342,8 @@ CREATE TABLE public.subscriptions (
     activated_at timestamp(6) without time zone,
     billing_entity_id uuid,
     consolidate_invoice boolean DEFAULT true NOT NULL,
-    skip_daily_usage boolean DEFAULT false NOT NULL
+    skip_daily_usage boolean DEFAULT false NOT NULL,
+    cancellation_reason public.subscription_cancellation_reasons
 );
 
 
@@ -12625,6 +12637,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260611162947'),
+('20260611145039'),
 ('20260611122002'),
 ('20260609173731'),
 ('20260609165032'),
