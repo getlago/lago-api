@@ -73,11 +73,9 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
       expect(wallet.reload.credits_balance).to eq(22.0)
     end
 
-    it "updates wallet ongoing balance based on granted and voided credits" do
-      subject
-
-      expect(wallet.reload.ongoing_balance_cents).to eq(2200)
-      expect(wallet.reload.credits_ongoing_balance).to eq(22.0)
+    it "enqueues a RefreshWalletJob to update the ongoing balance" do
+      expect { subject }
+        .to have_enqueued_job_after_commit(Customers::RefreshWalletJob).with(customer)
     end
 
     it "enqueues a SendWebhookJob for each wallet transaction" do
