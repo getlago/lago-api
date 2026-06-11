@@ -58,7 +58,7 @@ RSpec.describe Subscriptions::ChargeCacheService do
       end
     end
 
-    it "loads plan, charges and filters in a constant number of queries", :aggregate_failures do
+    it "loads plan, charges and filters in a constant number of queries" do
       ids = [subscription.id, other_subscription.id]
 
       query_count = 0
