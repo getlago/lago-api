@@ -472,7 +472,6 @@ describe "Payment Gated Subscription Activation Scenarios" do
       periodic_invoice = subscription.invoices.order(:created_at).last
       expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
     end
-
   end
 
   describe "timeout: subscription cancels on activation rule expiry" do
