@@ -97,7 +97,7 @@ module Lago
 
     attr_reader :extra_options
 
-    DEFAULT_SIDEKIQ_RETRY_WINDOW_SECONDS = 5.seconds.freeze
+    DEFAULT_SIDEKIQ_RETRY_WINDOW_SECONDS = 5
     private_constant :DEFAULT_SIDEKIQ_RETRY_WINDOW_SECONDS
 
     def sidekiq_retry_window_seconds
