@@ -27,7 +27,7 @@ module Wallets
 
         unless skip_refresh
           wallet.customer.flag_wallets_for_refresh
-          Customers::RefreshWalletJob.perform_after_commit(wallet.customer, include_generating_invoices: true)
+          Customers::RefreshWalletJob.perform_after_commit(wallet.customer)
         end
 
         SendWebhookJob.perform_after_commit("wallet.updated", wallet)
