@@ -70,9 +70,10 @@ module WalletActions
       render(
         json: ::CollectionSerializer.new(
           result.wallets.includes(
-            :customer,
+            :billing_entity,
             :metadata,
             :billable_metrics,
+            {customer: :billing_entity},
             {applied_invoice_custom_sections: :invoice_custom_section},
             {recurring_transaction_rules: {applied_invoice_custom_sections: :invoice_custom_section}}
           ),
@@ -162,6 +163,7 @@ module WalletActions
       :invoice_requires_successful_payment,
       :paid_top_up_min_amount_cents,
       :paid_top_up_max_amount_cents,
+      :billing_entity_code,
       metadata: {},
       recurring_transaction_rules: [
         :lago_id,
