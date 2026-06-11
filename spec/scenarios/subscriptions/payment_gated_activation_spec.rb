@@ -347,14 +347,13 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription.invoices.count).to eq(1)
 
       # Mid-gap scheduled change: the event is stamped at the next period start (April 1).
-      travel_to(Time.zone.local(2026, 3, 10, 10)) do
-        FixedCharges::UpdateService.call!(
-          fixed_charge:,
-          params: {units: 15, charge_model: "standard", properties: {amount: "10"}},
-          timestamp: Time.current.to_i
-        )
-        perform_all_enqueued_jobs
-      end
+      FixedCharges::UpdateService.call!(
+        fixed_charge:,
+        params: {units: 15, charge_model: "standard", properties: {amount: "10"}},
+        timestamp: Time.zone.local(2026, 3, 10, 10).to_i,
+        trigger_billing: false
+      )
+      perform_all_enqueued_jobs
 
       # Payment succeeds after the period rolled over: the scheduled event is billed
       # by the replayed April periodic invoice.
@@ -367,6 +366,48 @@ describe "Payment Gated Subscription Activation Scenarios" do
       periodic_invoice = subscription.invoices.order(:created_at).last
       expect(periodic_invoice.invoice_subscriptions.sole.invoicing_reason).to eq("subscription_periodic")
       expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
+    end
+
+    it "bills a fixed charge created with units scheduled for the next billing period through the missed-period invoice on cross-period activation" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.invoices.count).to eq(1)
+
+      # Mid-gap scheduled creation: the event is stamped at the next period start (April 1).
+      new_add_on = create(:add_on, organization:)
+      new_fixed_charge = FixedCharges::CreateService.call!(
+        plan:,
+        params: {
+          add_on_id: new_add_on.id,
+          code: FixedCharges::GenerateCodeService.call(plan:, add_on: new_add_on).code,
+          invoice_display_name: "Extra seats",
+          charge_model: "standard",
+          units: 3,
+          properties: {amount: "10"},
+          pay_in_advance: true,
+          apply_units_immediately: false
+        },
+        timestamp: Time.zone.local(2026, 3, 10, 10).to_i
+      ).fixed_charge
+      perform_all_enqueued_jobs
+
+      # Payment succeeds after the period rolled over: the scheduled event is billed
+      # by the replayed April periodic invoice.
+      travel_to(Time.zone.local(2026, 4, 3, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(2)
+
+      periodic_invoice = subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.fees.fixed_charge.find_by(fixed_charge: new_fixed_charge).units).to eq(3)
+      expect(periodic_invoice.fees.fixed_charge.find_by(fixed_charge:).units).to eq(10)
     end
 
     it "replays one periodic invoice per missed period without duplicating on retry" do
