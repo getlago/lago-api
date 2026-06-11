@@ -198,6 +198,36 @@ RSpec.describe Invoice do
       end
     end
 
+    context "when the same customer has invoices across multiple billing entities" do
+      let(:billing_entity_2) { create(:billing_entity, organization:) }
+
+      before do
+        create(:invoice, customer:, organization:, billing_entity:, sequential_id: 1, billing_entity_sequential_id: 1, organization_sequential_id: 0)
+        create(:invoice, customer:, organization:, billing_entity:, sequential_id: 2, billing_entity_sequential_id: 2, organization_sequential_id: 0)
+        create(:invoice, customer:, organization:, billing_entity: billing_entity_2, sequential_id: 1, billing_entity_sequential_id: 1, organization_sequential_id: 0)
+      end
+
+      it "scopes sequential_id per (customer, billing_entity)" do
+        invoice_in_entity_2 = build(
+          :invoice,
+          customer:,
+          organization:,
+          billing_entity: billing_entity_2,
+          billing_entity_sequential_id: nil,
+          organization_sequential_id: 0,
+          status: :generating
+        )
+        invoice_in_entity_2.save!
+        invoice_in_entity_2.finalized!
+
+        invoice.save!
+        invoice.finalized!
+
+        expect(invoice_in_entity_2.sequential_id).to eq(2)
+        expect(invoice.sequential_id).to eq(3)
+      end
+    end
+
     context "with invoices on other organization" do
       before do
         create(:invoice, sequential_id: 1, organization_sequential_id: 0)
