@@ -5,6 +5,7 @@ class WalletTransaction < ApplicationRecord
 
   belongs_to :wallet
   belongs_to :organization
+  belongs_to :billing_entity, optional: true
 
   # these two relationships are populated only for outbound transactions
   belongs_to :invoice, optional: true
@@ -146,6 +147,7 @@ end
 #  transaction_type                    :integer          not null
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null
+#  billing_entity_id                   :uuid
 #  credit_note_id                      :uuid
 #  invoice_id                          :uuid
 #  organization_id                     :uuid             not null
@@ -156,6 +158,7 @@ end
 # Indexes
 #
 #  idx_wallet_transactions_available_inbound       (wallet_id, priority, (\nCASE\n    WHEN (transaction_status = 1) THEN 0\n    ELSE 1\nEND), created_at) WHERE ((remaining_amount_cents > 0) AND (transaction_type = 0) AND (status = 1))
+#  index_wallet_transactions_on_billing_entity_id  (billing_entity_id)
 #  index_wallet_transactions_on_credit_note_id     (credit_note_id)
 #  index_wallet_transactions_on_invoice_id         (invoice_id)
 #  index_wallet_transactions_on_organization_id    (organization_id)
@@ -165,6 +168,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (credit_note_id => credit_notes.id)
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)

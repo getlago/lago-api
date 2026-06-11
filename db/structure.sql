@@ -84,6 +84,7 @@ ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_b
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_bda048a8d9;
+ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_bcb5aecd6c;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_bacde7a063;
 ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS fk_rails_bacb46d2a3;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_ba128983c2;
@@ -361,6 +362,7 @@ DROP INDEX IF EXISTS public.index_wallet_transactions_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_credit_note_id;
+DROP INDEX IF EXISTS public.index_wallet_transactions_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_wallet_transaction_consumptions_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_organization_id;
@@ -4204,6 +4206,7 @@ CREATE TABLE public.wallet_transactions (
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     remaining_amount_cents bigint,
     voided_invoice_id uuid,
+    billing_entity_id uuid,
     CONSTRAINT remaining_amount_cents_non_negative CHECK (((remaining_amount_cents >= 0) OR (remaining_amount_cents IS NULL)))
 );
 
@@ -9913,6 +9916,13 @@ CREATE INDEX index_wallet_transaction_consumptions_on_organization_id ON public.
 
 
 --
+-- Name: index_wallet_transactions_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_transactions_on_billing_entity_id ON public.wallet_transactions USING btree (billing_entity_id);
+
+
+--
 -- Name: index_wallet_transactions_on_credit_note_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11984,6 +11994,14 @@ ALTER TABLE ONLY public.plans_taxes
 
 
 --
+-- Name: wallet_transactions fk_rails_bcb5aecd6c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transactions
+    ADD CONSTRAINT fk_rails_bcb5aecd6c FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
+
+
+--
 -- Name: usage_monitoring_subscription_activities fk_rails_bda048a8d9; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12597,6 +12615,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260608074112'),
 ('20260604153307'),
 ('20260603121349'),
+('20260602175438'),
 ('20260602092156'),
 ('20260601174030'),
 ('20260601120429'),
