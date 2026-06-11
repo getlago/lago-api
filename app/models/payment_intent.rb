@@ -22,15 +22,14 @@ end
 # Table name: payment_intents
 # Database name: primary
 #
-#  id                      :uuid             not null, primary key
-#  expires_at              :datetime         not null
-#  payment_url             :string
-#  status                  :integer          default("active"), not null
-#  created_at              :datetime         not null
-#  updated_at              :datetime         not null
-#  invoice_id              :uuid             not null
-#  organization_id         :uuid             not null
-#  provider_payment_url_id :string
+#  id              :uuid             not null, primary key
+#  expires_at      :datetime         not null
+#  payment_url     :string
+#  status          :integer          default("active"), not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  invoice_id      :uuid             not null
+#  organization_id :uuid             not null
 #
 # Indexes
 #
