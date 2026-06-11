@@ -68,7 +68,7 @@ module Api
       private
 
       def ensure_feature_flag!
-        forbidden_error(code: "feature_not_available") unless current_organization.feature_flag_enabled?(:order_forms)
+        forbidden_error(code: "feature_unavailable") unless current_organization.feature_flag_enabled?(:order_forms)
       end
 
       def index_filters
