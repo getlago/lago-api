@@ -435,6 +435,21 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         it "returns only the distinct event codes matching the provided codes" do
           expect(event_store.distinct_codes(codes: [code, "unknown_code"])).to eq([code])
         end
+
+        context "when an event with a provided code exists outside the period" do
+          before do
+            create_event(
+              timestamp: boundaries[:to_datetime] + 1.day,
+              value: "value",
+              transaction_id: SecureRandom.uuid,
+              code: "out_of_period_code"
+            )
+          end
+
+          it "does not return the code" do
+            expect(event_store.distinct_codes(codes: [code, "out_of_period_code"])).to eq([code])
+          end
+        end
       end
     end
   end
