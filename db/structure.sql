@@ -4728,7 +4728,8 @@ CREATE TABLE public.payment_intents (
     status integer DEFAULT 0 NOT NULL,
     expires_at timestamp(6) without time zone NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    provider_payment_url_id character varying
 );
 
 
@@ -12627,6 +12628,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260611162947'),
 ('20260611122002'),
 ('20260609173731'),
+('20260609165156'),
 ('20260609165032'),
 ('20260609161044'),
 ('20260608111837'),
