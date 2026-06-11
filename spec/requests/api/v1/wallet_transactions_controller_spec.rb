@@ -197,6 +197,7 @@ RSpec.describe Api::V1::WalletTransactionsController do
       expect(response).to have_http_status(:success)
       expect(json[:wallet_transactions].count).to eq(2)
       expect(json[:wallet_transactions].first[:lago_id]).to eq(wallet_transaction_second.id)
+      expect(json[:wallet_transactions].first[:billing_entity_code]).to eq(wallet.billing_entity.code)
       expect(json[:wallet_transactions].last[:lago_id]).to eq(wallet_transaction_first.id)
     end
 
