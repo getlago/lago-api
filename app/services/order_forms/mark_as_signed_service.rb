@@ -42,7 +42,13 @@ module OrderForms
         order_form.signed_document.attach(attachment) if attachment
         order_form.save!
 
-        # TODO: Create the Order here using execution_mode/execute_at
+        result.order = Order.create!(
+          organization: order_form.organization,
+          customer: order_form.customer,
+          order_form:,
+          execution_mode:,
+          execute_at:
+        )
 
         # TODO: Enqueue Orders::ExecuteOrderJob.perform_after_commit(result.order) when execution_mode == "execute_in_lago"
       end
@@ -51,6 +57,8 @@ module OrderForms
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique
+      result.single_validation_failure!(field: :order_form_id, error_code: "value_already_exist")
     end
 
     private
