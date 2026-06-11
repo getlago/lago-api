@@ -39,10 +39,16 @@ module Invoices
       )
       invoice.credits = []
       invoice.subscriptions = subscriptions
+      invoice.fees = []
 
-      add_subscription_fees
-      add_charge_fees
-      add_fixed_charge_fees
+      subscriptions.each do |subscription|
+        sub_boundaries = boundaries(subscription)
+        add_subscription_fee(subscription, sub_boundaries)
+        add_charge_fees(subscription, sub_boundaries)
+        add_fixed_charge_fees(subscription, sub_boundaries)
+        add_commitment_fee(subscription, sub_boundaries)
+      end
+
       compute_tax_and_totals
 
       result.invoice = invoice
@@ -177,79 +183,109 @@ module Invoices
       (issuing_date + customer.applicable_net_payment_term.days).to_date
     end
 
-    def add_subscription_fees
-      invoice.fees = subscriptions
-        .filter { |subscription| should_create_subscription_fee?(subscription) }
-        .map do |subscription|
-          Fees::SubscriptionService.call!(
-            invoice:,
-            subscription:,
-            boundaries: boundaries(subscription),
-            context: :preview
-          ).fee
-      end
+    def add_subscription_fee(subscription, boundaries)
+      return unless should_create_subscription_fee?(subscription)
+
+      fee = Fees::SubscriptionService.call!(
+        invoice:,
+        subscription:,
+        boundaries:,
+        context: :preview
+      ).fee
+      return unless fee
+
+      invoice.fees << fee
     end
 
-    def add_charge_fees
-      subscriptions.select(&:persisted?).map do |subscription|
-        boundaries = boundaries(subscription)
+    def add_charge_fees(subscription, boundaries)
+      return unless subscription.persisted?
 
-        charges = []
-        subscription.plan.charges.joins(:billable_metric)
-          .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
-          .where(invoiceable: true)
-          .where
-          .not(pay_in_advance: true, billable_metric: {recurring: false}).find_each do |c|
-          next if should_not_create_charge_fee?(c, subscription)
-          charges << c
-        end
+      charges = []
+      subscription.plan.charges.joins(:billable_metric)
+        .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
+        .where(invoiceable: true)
+        .where
+        .not(pay_in_advance: true, billable_metric: {recurring: false}).find_each do |c|
+        next if should_not_create_charge_fee?(c, subscription)
+        charges << c
+      end
 
-        context = OpenTelemetry::Context.current
+      context = OpenTelemetry::Context.current
 
-        invoice.fees << Parallel.flat_map(charges, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
-          OpenTelemetry::Context.with_current(context) do
-            ActiveRecord::Base.connection_pool.with_connection do
-              cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
-                subscription:,
-                charge:,
-                to_datetime: boundaries.charges_to_datetime
-              )
+      invoice.fees << Parallel.flat_map(charges, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
+        OpenTelemetry::Context.with_current(context) do
+          ActiveRecord::Base.connection_pool.with_connection do
+            cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
+              subscription:,
+              charge:,
+              to_datetime: boundaries.charges_to_datetime
+            )
 
-              Fees::ChargeService
-                .call!(invoice:, charge:, subscription:, boundaries:, context: :invoice_preview, cache_middleware:)
-                .fees
-            end
+            Fees::ChargeService
+              .call!(invoice:, charge:, subscription:, boundaries:, context: :invoice_preview, cache_middleware:)
+              .fees
           end
         end
       end
     end
 
-    def add_fixed_charge_fees
-      subscriptions.each do |subscription|
-        boundaries = boundaries(subscription)
+    def add_fixed_charge_fees(subscription, boundaries)
+      return unless fixed_charge_boundaries_valid?(boundaries)
 
-        next unless fixed_charge_boundaries_valid?(boundaries)
-
-        fixed_charges = if subscription.persisted?
-          subscription.fixed_charges
-        else
-          subscription.plan.fixed_charges.kept
-        end
-
-        fixed_charges.find_each do |fixed_charge|
-          next unless should_create_fixed_charge_fee?(fixed_charge, subscription)
-
-          fee_result = Fees::FixedChargeService.call(
-            invoice:,
-            fixed_charge:,
-            subscription:,
-            boundaries:,
-            context: :invoice_preview
-          )
-
-          invoice.fees << fee_result.fee if fee_result.success? && fee_result.fee
-        end
+      fixed_charges = if subscription.persisted?
+        subscription.fixed_charges
+      else
+        subscription.plan.fixed_charges.kept
       end
+
+      fixed_charges.find_each do |fixed_charge|
+        next unless should_create_fixed_charge_fee?(fixed_charge, subscription)
+
+        fee_result = Fees::FixedChargeService.call(
+          invoice:,
+          fixed_charge:,
+          subscription:,
+          boundaries:,
+          context: :invoice_preview
+        )
+
+        next unless fee_result.success? && fee_result.fee
+
+        invoice.fees << fee_result.fee
+      end
+    end
+
+    def add_commitment_fee(subscription, boundaries)
+      return unless subscription.plan.minimum_commitment
+
+      virtual_invoice_subscription = InvoiceSubscription.new(
+        subscription:,
+        invoice:,
+        organization_id: subscription.organization_id,
+        from_datetime: boundaries.from_datetime,
+        to_datetime: boundaries.to_datetime,
+        charges_from_datetime: boundaries.charges_from_datetime,
+        charges_to_datetime: boundaries.charges_to_datetime,
+        timestamp: billing_time
+      )
+
+      preview_fee_totals = invoice.fees
+        .each_with_object({amount_cents: 0, precise_amount_cents: 0}) do |fee, totals|
+          next unless fee.subscription_id == subscription.id
+
+          totals[:amount_cents] += fee.amount_cents
+          totals[:precise_amount_cents] += fee.precise_amount_cents
+        end
+
+      fee_result = Fees::Commitments::Minimum::CalculatePreviewFeeService.call(
+        invoice_subscription: virtual_invoice_subscription,
+        preview_fees_amount_cents: preview_fee_totals[:amount_cents],
+        preview_fees_precise_amount_cents: preview_fee_totals[:precise_amount_cents]
+      )
+
+      return unless fee_result.success? && fee_result.fee
+
+      invoice.fees << fee_result.fee
     end
 
     def compute_tax_and_totals
