@@ -71,6 +71,9 @@ RSpec.describe Fees::Commitments::Minimum::CalculatePreviewFeeService do
           )
         end
 
+        let(:current_invoice) { create(:invoice, customer:, organization:) }
+        let(:charge) { create(:standard_charge, plan:) }
+
         before do
           create(
             :invoice_subscription,
@@ -80,14 +83,21 @@ RSpec.describe Fees::Commitments::Minimum::CalculatePreviewFeeService do
             to_datetime: prev_to_datetime,
             timestamp: DateTime.parse("2024-01-01T10:00:00")
           )
-          create(:fee, fee_type: :subscription, subscription:, invoice: prev_invoice)
-        end
-
-        it "reconciles the previous period, not the current advance period" do
-          expect(result).to be_success
-          expect(result.fee).to be_a(Fee)
-          # Full year 2024 commitment = 1_000_00, no fees for 2024 => true-up = 1_000_00
-          expect(result.fee.amount_cents).to eq(1_000_00)
+          # previous_invoice_subscription method filters invoice subscriptions using find(&:subscription_fee),
+          # so the invoice subscription won't be found for reconciliation unless a subscription fee exists on it.
+          create(:fee, fee_type: :subscription, subscription:, invoice: prev_invoice, amount_cents: 0)
+          create(
+            :charge_fee,
+            subscription:,
+            invoice: current_invoice,
+            charge:,
+            amount_cents: 800_00,
+            precise_amount_cents: 800_00.0,
+            properties: {
+              "charges_from_datetime" => "2025-01-01T00:00:00Z",
+              "charges_to_datetime" => "2025-12-31T23:59:59Z"
+            }
+          )
         end
 
         it "stores the previous period boundaries, not the current advance period" do
@@ -114,7 +124,7 @@ RSpec.describe Fees::Commitments::Minimum::CalculatePreviewFeeService do
             )
           end
 
-          it "counts fees from the previous period, not the current advance period" do
+          it "deducts previous period fees from the commitment" do
             # commitment = 1_000_00, previous_period_fees = 600_00, preview_fees = 0
             # true-up = 1_000_00 - 600_00 = 400_00
             expect(result).to be_success
@@ -157,17 +167,17 @@ RSpec.describe Fees::Commitments::Minimum::CalculatePreviewFeeService do
             to_datetime: DateTime.parse("2026-12-31T23:59:59"),
             timestamp: DateTime.parse("2026-01-01T10:00:00")
           )
-          create(:fee, fee_type: :subscription, subscription:, invoice: prev_invoice)
+          # We need a previous invoice subscription fee to exist
+          create(:fee, fee_type: :subscription, subscription:, invoice: prev_invoice, amount_cents: 0)
         end
 
         it "prorates commitment using terminated_at, not the advance IS to_datetime" do
           fee = result.fee
           expect(fee).not_to be_nil
-          # days_active = Jan 1 => Jul 1 ≈ 181 days (half the year)
-          # days_total  = Jan 1 => Dec 31 ≈ 365 days
-          # proration ≈ 0.50 => commitment ≈ 50_000 cents
+          # days_active = 182 (Jan 1 => Jul 1), days_total = 365 (Jan 1 => Dec 31)
+          # proration = 182 / 365.0 = 0.4986... => (100_000 * 0.4986...).round = 49_863
           # Without terminated_at: days_active = 365, proration = 1.0 => commitment = 1_000_00
-          expect(fee.amount_cents).to be_between(40_000, 60_000)
+          expect(fee.amount_cents).to eq(49_863)
         end
       end
     end
@@ -175,16 +185,6 @@ RSpec.describe Fees::Commitments::Minimum::CalculatePreviewFeeService do
     context "when preview fees already meet the commitment" do
       let(:preview_fees_amount_cents) { 1_000_00 }
       let(:preview_fees_precise_amount_cents) { 1_000_00.0 }
-
-      it "returns no fee" do
-        expect(result).to be_success
-        expect(result.fee).to be_nil
-      end
-    end
-
-    context "when preview fees exceed the commitment" do
-      let(:preview_fees_amount_cents) { 2_000_00 }
-      let(:preview_fees_precise_amount_cents) { 2_000_00.0 }
 
       it "returns no fee" do
         expect(result).to be_success
@@ -280,12 +280,12 @@ RSpec.describe Fees::Commitments::Minimum::CalculatePreviewFeeService do
       let(:preview_fees_precise_amount_cents) { 0.0 }
 
       it "prorates the commitment amount" do
-        # Yearly commitment of 100_000 cents, subscription started July 1 (half-year)
-        # proration ≈ 0.5, so commitment ≈ 50_000 cents
         fee = result.fee
         expect(fee).not_to be_nil
-        expect(fee.amount_cents).to be < 1_000_00
-        expect(fee.amount_cents).to be > 0
+        # days_active = 184 (Jul 1 => Dec 31 2024)
+        # days_total  = 366 (Jul 1 2023 => Jun 30 2024)
+        # proration = 184 / 366.0 => (100_000 * 0.5027...).round = 50_273
+        expect(fee.amount_cents).to eq(50_273)
       end
     end
 

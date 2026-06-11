@@ -315,8 +315,10 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
               commitment_fee = commitment_fees.first
               expect(commitment_fee).not_to be_persisted
               expect(commitment_fee.invoiceable_id).to eq(commitment.id)
-              expect(commitment_fee.amount_cents).to be > 0
-              expect(commitment_fee.amount_cents).to be <= 1_000_00
+              # calendar billing: subscription started Mar 30, so days_active starts from Mar 30, not Jan 1
+              # days_active = 277 (Mar 30 => Dec 31), days_total = 366 (Jan 1 => Dec 31, 2024 leap year)
+              # proration = 277 / 366.0 => (100_000 * 0.7568...).round = 75_683
+              expect(commitment_fee.amount_cents).to eq(75_683)
             end
           end
         end
