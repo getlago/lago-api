@@ -72,6 +72,38 @@ RSpec.describe Invoices::Payments::CreateService do
       expect(invoice.payments.count).to eq(1)
     end
 
+    context "when a hosted checkout is being completed by the customer" do
+      before do
+        allow(PaymentIntents::ExpireService).to receive(:call).with(invoice:)
+          .and_return(BaseService::Result.new.tap { |r| r.checkout_paid = true })
+      end
+
+      it "does not create a payment or call the provider" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+        expect(invoice.payments.count).to eq(0)
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
+    context "when the payment succeeds" do
+      let(:result) do
+        BaseService::Result.new.tap do |r|
+          r.payment = instance_double(Payment, payable_payment_status: "succeeded")
+        end
+      end
+
+      before { allow(PaymentIntents::ExpireService).to receive(:call).and_call_original }
+
+      it "expires any lingering hosted checkout session" do
+        create_service.call
+
+        expect(PaymentIntents::ExpireService).to have_received(:call).with(invoice:).at_least(:once)
+      end
+    end
+
     context "when invoice is subscription_gated (payment-gated)" do
       let(:subscription) do
         create(:subscription, :incomplete, :with_activation_rules,

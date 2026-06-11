@@ -42,6 +42,15 @@ RSpec.describe Invoices::Payments::StripeService do
       expect(::Stripe::Checkout::Session).to have_received(:create)
     end
 
+    it "stores the provider checkout session id" do
+      allow(::Stripe::Checkout::Session).to receive(:create)
+        .and_return({"url" => "https://example.com", "id" => "cs_test_42"})
+
+      result = stripe_service.generate_payment_url(payment_intent)
+
+      expect(result.payment_url_id).to eq("cs_test_42")
+    end
+
     describe "#payment_url_payload" do
       let(:payment_url_payload) { stripe_service.__send__(:payment_url_payload, payment_intent) }
 
@@ -438,6 +447,74 @@ RSpec.describe Invoices::Payments::StripeService do
         expect(result.payment).to be_nil
         expect(invoice.reload.payment_status).to eq("pending")
         expect(payment.reload.status).to eq("pending")
+      end
+    end
+  end
+
+  describe "#expire_payment_url" do
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_payment_url_id: session_id) }
+    let(:session_id) { "cs_test_123" }
+
+    before do
+      stripe_payment_provider
+      stripe_customer
+    end
+
+    context "when the session is still open" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:retrieve)
+          .and_return(double(status: "open", payment_status: "unpaid"))
+        allow(::Stripe::Checkout::Session).to receive(:expire)
+      end
+
+      it "expires the session and reports the checkout as unpaid" do
+        result = stripe_service.expire_payment_url(payment_intent)
+
+        expect(::Stripe::Checkout::Session).to have_received(:expire)
+          .with(session_id, {}, {api_key: stripe_payment_provider.secret_key})
+        expect(result.checkout_paid).to be(false)
+      end
+    end
+
+    context "when the customer already completed the session" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:retrieve)
+          .and_return(double(status: "complete", payment_status: "paid"))
+        allow(::Stripe::Checkout::Session).to receive(:expire)
+      end
+
+      it "does not expire the session and reports the checkout as paid" do
+        result = stripe_service.expire_payment_url(payment_intent)
+
+        expect(::Stripe::Checkout::Session).not_to have_received(:expire)
+        expect(result.checkout_paid).to be(true)
+      end
+    end
+
+    context "when the session can no longer be expired" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:retrieve)
+          .and_return(double(status: "open", payment_status: "unpaid"))
+        allow(::Stripe::Checkout::Session).to receive(:expire)
+          .and_raise(::Stripe::InvalidRequestError.new("already completed", nil))
+      end
+
+      it "treats the checkout as being paid by the customer" do
+        result = stripe_service.expire_payment_url(payment_intent)
+
+        expect(result.checkout_paid).to be(true)
+      end
+    end
+
+    context "when no provider session id is stored" do
+      let(:session_id) { nil }
+
+      before { allow(::Stripe::Checkout::Session).to receive(:retrieve) }
+
+      it "returns without calling Stripe" do
+        stripe_service.expire_payment_url(payment_intent)
+
+        expect(::Stripe::Checkout::Session).not_to have_received(:retrieve)
       end
     end
   end

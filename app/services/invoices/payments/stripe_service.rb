@@ -70,10 +70,47 @@ module Invoices
         )
 
         result.payment_url = res["url"]
+        result.payment_url_id = res["id"]
 
         result
       rescue ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, Stripe::PermissionError => e
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.message)
+      end
+
+      # Expires the hosted Checkout Session backing a payment URL so it can no longer
+      # be paid by the customer. Used before an off-session auto-charge to avoid
+      # charging the same invoice twice.
+      #
+      # Sets `result.checkout_paid = true` when the session is already being paid /
+      # has been paid by the customer (so the off-session charge must be skipped).
+      def expire_payment_url(payment_intent)
+        return result if payment_intent.provider_payment_url_id.blank?
+
+        session = ::Stripe::Checkout::Session.retrieve(
+          payment_intent.provider_payment_url_id,
+          {api_key: stripe_api_key}
+        )
+
+        if session.status == "complete" || session.payment_status == "paid"
+          result.checkout_paid = true
+          return result
+        end
+
+        if session.status == "open"
+          ::Stripe::Checkout::Session.expire(
+            payment_intent.provider_payment_url_id,
+            {},
+            {api_key: stripe_api_key}
+          )
+        end
+
+        result.checkout_paid = false
+        result
+      rescue ::Stripe::InvalidRequestError
+        # The session can no longer be expired (already completed or processing):
+        # the customer is paying through the hosted checkout, so don't charge again.
+        result.checkout_paid = true
+        result
       end
 
       private

@@ -29,6 +29,13 @@ module Invoices
           return result
         end
 
+        if checkout_being_paid?
+          # The customer is completing a hosted checkout for this invoice.
+          # Charging off-session now would bill them twice, so we let the
+          # checkout win and skip the automatic payment.
+          return result
+        end
+
         invoice.update!(payment_attempts: invoice.payment_attempts + 1)
 
         payment ||= Payment.create_with(
@@ -65,6 +72,10 @@ module Invoices
 
         payment_status = payment_result.payment.payable_payment_status
         update_invoice_payment_status(payment_status:)
+
+        # Expire any hosted checkout that was generated while this charge was in
+        # flight, so the customer can't pay the same invoice a second time.
+        PaymentIntents::ExpireService.call(invoice:) if payment_status.to_s == "succeeded"
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment.should_sync_payment?
 
@@ -175,6 +186,10 @@ module Invoices
         else
           "#{invoice.billing_entity.name} - Invoice #{invoice.number}"
         end
+      end
+
+      def checkout_being_paid?
+        PaymentIntents::ExpireService.call(invoice:).checkout_paid
       end
 
       def processing_payment

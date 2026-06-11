@@ -77,6 +77,34 @@ RSpec.describe PaymentIntents::FetchService do
           expect(payment_provider_service).to have_received(:generate_payment_url)
         end
       end
+
+      context "when the provider returns a checkout session id" do
+        before do
+          allow(payment_provider_service)
+            .to receive(:generate_payment_url)
+            .and_return(BaseService::Result.new.tap do |r|
+              r.payment_url = payment_url
+              r.payment_url_id = "cs_test_99"
+            end)
+        end
+
+        it "persists the provider session id on the payment intent" do
+          expect(result).to be_success
+          expect(result.payment_intent.provider_payment_url_id).to eq("cs_test_99")
+        end
+      end
+    end
+
+    context "when the customer pays with Stripe and a provider payment is in progress" do
+      let(:customer) { create(:customer, payment_provider: "stripe") }
+      let(:invoice) { create(:invoice, customer:) }
+
+      before { create(:payment, payable: invoice, payable_payment_status: :pending) }
+
+      it "refuses to generate a checkout URL" do
+        expect(result).to be_failure
+        expect(result.error.messages).to eq({base: ["payment_already_processing"]})
+      end
     end
   end
 end
