@@ -29,7 +29,7 @@ module PaymentRequests
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.message)
       end
 
-      def update_payment_status(organization_id:, status:, stripe_payment:)
+      def update_payment_status(organization_id:, status:, stripe_payment:, amount_cents: nil)
         payment = Payment.find_by(provider_payment_id: stripe_payment.id)
         return result if payment&.payable&.organization_id.present? && payment.payable.organization_id != organization_id
 

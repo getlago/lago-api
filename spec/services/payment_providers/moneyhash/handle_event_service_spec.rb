@@ -110,6 +110,44 @@ RSpec.describe PaymentProviders::Moneyhash::HandleEventService do
     end
   end
 
+  describe "amount_cents handling in metadata" do
+    let(:payment_service) { instance_double(Invoices::Payments::MoneyhashService) }
+    let(:service_result) { BaseService::Result.new }
+
+    before do
+      allow(Invoices::Payments::MoneyhashService).to receive(:new).and_return(payment_service)
+      allow(payment_service).to receive(:update_payment_status).and_return(service_result)
+    end
+
+    context "when handling an intent event with a scalar amount in major units" do
+      let(:event_json) { JSON.parse(File.read(Rails.root.join("spec/fixtures/moneyhash/intent.processed.json"))) }
+
+      it "passes amount_cents converted to minor units as a dedicated kwarg" do
+        event_service.call
+
+        expect(payment_service).to have_received(:update_payment_status).with(
+          hash_including(amount_cents: 500)
+        )
+      end
+    end
+
+    context "when handling a transaction event whose amount is a hash with major-unit value" do
+      let(:event_json) { JSON.parse(File.read(Rails.root.join("spec/fixtures/moneyhash/transaction.purchase.successful.json"))) }
+
+      it "extracts the value from the amount hash and converts to cents" do
+        event_service.call
+
+        expect(payment_service).to have_received(:update_payment_status).with(
+          hash_including(amount_cents: 710)
+        )
+      end
+
+      it "does not raise when amount is a hash rather than a scalar" do
+        expect { event_service.call }.not_to raise_error
+      end
+    end
+  end
+
   # Card Token
   # handle event - card_token.created <-
   # handle event - card_token.updated <-

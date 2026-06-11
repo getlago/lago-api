@@ -13,9 +13,9 @@ module Invoices
         super
       end
 
-      def update_payment_status(organization_id:, status:, flutterwave_payment:)
+      def update_payment_status(organization_id:, status:, flutterwave_payment:, amount_cents: nil)
         payment = if flutterwave_payment.metadata[:payment_type] == "one-time"
-          create_payment(flutterwave_payment)
+          create_payment(flutterwave_payment, amount_cents:)
         else
           Payment.find_by(provider_payment_id: flutterwave_payment.id)
         end
@@ -129,7 +129,7 @@ module Invoices
         @http_client ||= LagoHttpClient::Client.new("#{flutterwave_payment_provider.api_url}/payments")
       end
 
-      def create_payment(flutterwave_payment)
+      def create_payment(flutterwave_payment, amount_cents: nil)
         @invoice = Invoice.find_by(id: flutterwave_payment.metadata[:lago_invoice_id])
 
         increment_payment_attempts
@@ -140,7 +140,7 @@ module Invoices
           customer:,
           payment_provider_id: flutterwave_payment_provider.id,
           payment_provider_customer_id: customer.flutterwave_customer.id,
-          amount_cents: @invoice.total_due_amount_cents,
+          amount_cents: amount_cents || @invoice.total_due_amount_cents,
           amount_currency: @invoice.currency,
           provider_payment_id: flutterwave_payment.id
         )

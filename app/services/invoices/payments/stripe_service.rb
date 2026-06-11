@@ -13,12 +13,12 @@ module Invoices
         super
       end
 
-      def update_payment_status(organization_id:, status:, stripe_payment:)
+      def update_payment_status(organization_id:, status:, stripe_payment:, amount_cents: nil)
         payment = Payment.find_by(provider_payment_id: stripe_payment.id)
         return result if payment&.payable&.organization_id.present? && payment.payable.organization_id != organization_id
 
         if !payment && stripe_payment.metadata[:payment_type] == "one-time"
-          payment = create_payment(stripe_payment)
+          payment = create_payment(stripe_payment, amount_cents:)
         end
 
         unless payment
@@ -82,7 +82,7 @@ module Invoices
 
       delegate :organization, :customer, to: :invoice
 
-      def create_payment(stripe_payment, invoice: nil)
+      def create_payment(stripe_payment, invoice: nil, amount_cents: nil)
         @invoice = invoice || Invoice.find_by(id: stripe_payment.metadata[:lago_invoice_id])
         unless @invoice
           result.not_found_failure!(resource: "invoice")
@@ -97,7 +97,7 @@ module Invoices
           customer:,
           payment_provider_id: stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,
-          amount_cents: @invoice.total_due_amount_cents,
+          amount_cents: amount_cents || @invoice.total_due_amount_cents,
           amount_currency: @invoice.currency,
           status: "pending"
         )

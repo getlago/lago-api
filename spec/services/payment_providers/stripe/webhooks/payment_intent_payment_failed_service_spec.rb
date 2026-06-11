@@ -17,6 +17,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
           .with(
             organization_id: organization.id,
             status: "failed",
+            amount_cents: anything,
             stripe_payment: PaymentProviders::StripeProvider::StripePayment
           ).and_call_original
 
@@ -38,6 +39,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
           .with(
             organization_id: organization.id,
             status: "failed",
+            amount_cents: anything,
             stripe_payment: PaymentProviders::StripeProvider::StripePayment
           ).and_call_original
 
@@ -64,6 +66,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
           .with(
             organization_id: organization.id,
             status: "failed",
+            amount_cents: anything,
             stripe_payment: PaymentProviders::StripeProvider::StripePayment
           ).and_call_original
 
@@ -101,6 +104,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
         .with(
           organization_id: organization.id,
           status: "failed",
+          amount_cents: anything,
           stripe_payment: PaymentProviders::StripeProvider::StripePayment
         ).and_call_original
 

@@ -294,6 +294,31 @@ RSpec.describe Invoices::Payments::StripeService do
         )
       end
 
+      context "when amount_cents kwarg is provided" do
+        it "records the Payment with the provider-reported amount, not the invoice due amount" do
+          result = stripe_service.update_payment_status(
+            organization_id: organization.id,
+            status: "succeeded",
+            amount_cents: 4242,
+            stripe_payment:
+          )
+
+          expect(result.payment.amount_cents).to eq(4242)
+        end
+      end
+
+      context "when amount_cents kwarg is not provided" do
+        it "falls back to the invoice's total due amount" do
+          result = stripe_service.update_payment_status(
+            organization_id: organization.id,
+            status: "succeeded",
+            stripe_payment:
+          )
+
+          expect(result.payment.amount_cents).to eq(invoice.total_due_amount_cents)
+        end
+      end
+
       context "when invoice is not found" do
         let(:stripe_payment) do
           PaymentProviders::StripeProvider::StripePayment.new(
