@@ -683,6 +683,7 @@ DROP INDEX IF EXISTS public.index_customers_on_account_type;
 DROP INDEX IF EXISTS public.index_customers_invoice_custom_sections_on_organization_id;
 DROP INDEX IF EXISTS public.index_customers_invoice_custom_sections_on_customer_id;
 DROP INDEX IF EXISTS public.index_customers_invoice_custom_sections_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_customers_by_cursor;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_organization_id;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id_and_key;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id;
@@ -7684,6 +7685,13 @@ CREATE INDEX index_customer_metadata_on_organization_id ON public.customer_metad
 
 
 --
+-- Name: index_customers_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_by_cursor ON public.customers USING btree (organization_id, created_at DESC, id);
+
+
+--
 -- Name: index_customers_invoice_custom_sections_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12616,6 +12624,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260611162947'),
 ('20260611122002'),
 ('20260609173731'),
 ('20260609165032'),
