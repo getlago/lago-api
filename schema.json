@@ -46012,12 +46012,6 @@
               "deprecationReason": null
             },
             {
-              "name": "order_forms_void",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "organization_view",
               "description": null,
               "isDeprecated": false,
@@ -47229,22 +47223,6 @@
             },
             {
               "name": "orderFormsView",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "orderFormsVoid",
               "description": null,
               "args": [],
               "type": {

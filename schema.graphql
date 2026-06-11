@@ -9431,7 +9431,6 @@ enum PermissionEnum {
   invoices_void
   order_forms_sign
   order_forms_view
-  order_forms_void
   organization_emails_update
   organization_emails_view
   organization_integrations_create
@@ -9547,7 +9546,6 @@ type Permissions {
   invoicesVoid: Boolean!
   orderFormsSign: Boolean!
   orderFormsView: Boolean!
-  orderFormsVoid: Boolean!
   organizationEmailsUpdate: Boolean!
   organizationEmailsView: Boolean!
   organizationIntegrationsCreate: Boolean!
