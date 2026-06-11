@@ -13464,7 +13464,6 @@ input VoidQuoteVersionInput {
   """
   clientMutationId: String
   id: ID!
-  reason: VoidReasonEnum!
 }
 
 enum VoidReasonEnum {

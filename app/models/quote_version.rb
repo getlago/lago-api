@@ -16,6 +16,8 @@ class QuoteVersion < ApplicationRecord
     cascade_of_voided: "cascade_of_voided"
   }.freeze
 
+  CASCADE_VOID_REASONS = VOID_REASONS.slice(:cascade_of_expired, :cascade_of_voided).freeze
+
   before_save :ensure_share_token
 
   belongs_to :organization

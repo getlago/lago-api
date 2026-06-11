@@ -9,8 +9,7 @@ RSpec.describe Mutations::QuoteVersions::Void do
 
   let(:input) do
     {
-      id: quote_version.id,
-      reason: "manual"
+      id: quote_version.id
     }
   end
 
@@ -62,7 +61,7 @@ RSpec.describe Mutations::QuoteVersions::Void do
   end
 
   context "when quote version is not found", :premium do
-    let(:input) { {id: "00000000-0000-0000-0000-000000000000", reason: "manual"} }
+    let(:input) { {id: "00000000-0000-0000-0000-000000000000"} }
 
     it "returns a not found error" do
       result = execute_graphql(
