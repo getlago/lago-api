@@ -27,7 +27,7 @@ module PaymentIntents
 
       # When the customer is already paying through the hosted checkout we keep the
       # payment intent active so the checkout webhook can finalize the invoice.
-      payment_intent.expired! unless result.checkout_paid
+      payment_intent.expire! unless result.checkout_paid
 
       result
     rescue BaseService::FailedResult => e

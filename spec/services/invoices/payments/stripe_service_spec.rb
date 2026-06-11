@@ -519,6 +519,62 @@ RSpec.describe Invoices::Payments::StripeService do
     end
   end
 
+  describe "#checkout_completed?" do
+    subject(:checkout_completed?) { stripe_service.checkout_completed?(payment_intent) }
+
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_payment_url_id: session_id) }
+    let(:session_id) { "cs_test_123" }
+
+    before do
+      stripe_payment_provider
+      stripe_customer
+    end
+
+    context "when the session is complete" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:retrieve)
+          .and_return(double(status: "complete", payment_status: "paid"))
+      end
+
+      it { is_expected.to be(true) }
+
+      it "does not expire the session" do
+        allow(::Stripe::Checkout::Session).to receive(:expire)
+        checkout_completed?
+        expect(::Stripe::Checkout::Session).not_to have_received(:expire)
+      end
+    end
+
+    context "when the session is still open" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:retrieve)
+          .and_return(double(status: "open", payment_status: "unpaid"))
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when no provider session id is stored" do
+      let(:session_id) { nil }
+
+      before { allow(::Stripe::Checkout::Session).to receive(:retrieve) }
+
+      it "returns false without calling Stripe" do
+        expect(checkout_completed?).to be(false)
+        expect(::Stripe::Checkout::Session).not_to have_received(:retrieve)
+      end
+    end
+
+    context "when Stripe raises an error" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:retrieve)
+          .and_raise(::Stripe::APIConnectionError.new("boom"))
+      end
+
+      it { is_expected.to be(false) }
+    end
+  end
+
   describe "#payment_already_in_progress?" do
     subject { stripe_service.payment_already_in_progress? }
 

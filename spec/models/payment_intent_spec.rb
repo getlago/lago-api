@@ -103,4 +103,23 @@ RSpec.describe PaymentIntent do
       expect(subject).to contain_exactly scoped
     end
   end
+
+  describe "#expire!" do
+    subject(:expire!) { payment_intent.expire! }
+
+    let(:payment_intent) { create(:payment_intent, expires_at: 1.day.from_now) }
+
+    it "marks the intent expired and brings expires_at into the past" do
+      expire!
+
+      expect(payment_intent.status).to eq("expired")
+      expect(payment_intent.expires_at).to be <= Time.current
+    end
+
+    it "excludes the intent from the non_expired scope" do
+      expire!
+
+      expect(described_class.non_expired).not_to include(payment_intent)
+    end
+  end
 end

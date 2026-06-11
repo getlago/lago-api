@@ -113,6 +113,24 @@ module Invoices
         result
       end
 
+      # Whether the customer has completed (or is finalizing) the hosted checkout.
+      # NON-destructive: it never expires the session — used at the start of an
+      # off-session charge to yield to a checkout the customer is already paying,
+      # without killing the link if the charge ends up failing.
+      def checkout_completed?(payment_intent)
+        return false if payment_intent.provider_payment_url_id.blank?
+
+        session = ::Stripe::Checkout::Session.retrieve(
+          payment_intent.provider_payment_url_id,
+          {api_key: stripe_api_key}
+        )
+
+        session.status == "complete" || session.payment_status == "paid"
+      rescue ::Stripe::StripeError
+        # If we can't determine the session state, don't block collection.
+        false
+      end
+
       # Whether a provider payment is already in flight or settled for this invoice.
       # Used to avoid offering a hosted checkout that would let the customer pay twice.
       # `pending` is intentionally excluded: it's a transient pre-charge state that

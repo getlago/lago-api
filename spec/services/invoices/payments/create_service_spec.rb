@@ -74,8 +74,8 @@ RSpec.describe Invoices::Payments::CreateService do
 
     context "when a hosted checkout is being completed by the customer" do
       before do
-        allow(PaymentIntents::ExpireService).to receive(:call).with(invoice:)
-          .and_return(BaseService::Result.new.tap { |r| r.checkout_paid = true })
+        allow(PaymentIntents::CheckoutCompletedService).to receive(:call).with(invoice:)
+          .and_return(BaseService::Result.new.tap { |r| r.completed = true })
       end
 
       it "does not create a payment or call the provider" do

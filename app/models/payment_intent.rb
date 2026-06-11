@@ -15,6 +15,14 @@ class PaymentIntent < ApplicationRecord
 
   scope :awaiting_expiration, -> { active.where("expires_at <= ?", Time.current) }
   scope :non_expired, -> { where("expires_at > ?", Time.current) }
+
+  # Force-expires the intent, keeping status and expires_at consistent so the
+  # time-based scopes (non_expired / awaiting_expiration) stay correct even when
+  # an intent is expired early (e.g. its checkout session was killed by an
+  # off-session charge).
+  def expire!
+    update!(status: :expired, expires_at: Time.current)
+  end
 end
 
 # == Schema Information

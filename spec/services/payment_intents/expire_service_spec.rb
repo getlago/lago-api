@@ -53,10 +53,12 @@ RSpec.describe PaymentIntents::ExpireService do
         context "when the checkout has not been paid" do
           let(:checkout_paid) { false }
 
-          it "expires the payment intent" do
+          it "expires the payment intent (status and expires_at)" do
             expect(result).to be_success
             expect(result.checkout_paid).to be(false)
             expect(payment_intent.reload.status).to eq("expired")
+            expect(payment_intent.expires_at).to be <= Time.current
+            expect(PaymentIntent.non_expired).not_to include(payment_intent)
           end
         end
 

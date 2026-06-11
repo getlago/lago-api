@@ -189,7 +189,7 @@ module Invoices
       end
 
       def checkout_being_paid?
-        PaymentIntents::ExpireService.call(invoice:).checkout_paid
+        PaymentIntents::CheckoutCompletedService.call(invoice:).completed
       end
 
       def processing_payment

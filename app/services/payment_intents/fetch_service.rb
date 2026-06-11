@@ -22,7 +22,7 @@ module PaymentIntents
         return result.single_validation_failure!(error_code: "payment_already_processing")
       end
 
-      PaymentIntent.awaiting_expiration.find_by(invoice:)&.expired!
+      PaymentIntent.awaiting_expiration.find_by(invoice:)&.expire!
       payment_intent = PaymentIntent.non_expired.find_or_create_by!(invoice:, organization: invoice.organization)
 
       if payment_intent.payment_url.blank?

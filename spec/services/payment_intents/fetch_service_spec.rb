@@ -78,6 +78,18 @@ RSpec.describe PaymentIntents::FetchService do
         end
       end
 
+      context "when only an expired payment intent exists" do
+        let!(:expired_intent) { create(:payment_intent, :expired, invoice:) }
+
+        it "does not reuse the expired intent and creates a fresh active one" do
+          expect(result).to be_success
+          expect(result.payment_intent).not_to eq(expired_intent)
+          expect(result.payment_intent).to be_active
+          expect(result.payment_intent.payment_url).to eq(payment_url)
+          expect(payment_provider_service).to have_received(:generate_payment_url)
+        end
+      end
+
       context "when the provider returns a checkout session id" do
         before do
           allow(payment_provider_service)
