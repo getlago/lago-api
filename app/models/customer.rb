@@ -439,6 +439,7 @@ end
 #
 # Indexes
 #
+#  index_customers_by_cursor                                    (organization_id,created_at DESC,id)
 #  index_customers_on_account_type                              (account_type)
 #  index_customers_on_applied_dunning_campaign_id               (applied_dunning_campaign_id)
 #  index_customers_on_awaiting_wallet_refresh                   (awaiting_wallet_refresh)
