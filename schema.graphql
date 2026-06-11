@@ -7046,6 +7046,20 @@ enum MappingTypeEnum {
   tax
 }
 
+"""
+Mark Order Form as signed input arguments
+"""
+input MarkOrderFormAsSignedInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  executeAt: ISO8601DateTime
+  executionMode: OrderExecutionModeEnum
+  id: ID!
+  signedDocument: String
+}
+
 type Membership {
   createdAt: ISO8601DateTime!
   id: ID!
@@ -8167,6 +8181,16 @@ type Mutation {
   ): Invoice
 
   """
+  Mark an order form as signed
+  """
+  markOrderFormAsSigned(
+    """
+    Parameters for MarkOrderFormAsSigned
+    """
+    input: MarkOrderFormAsSignedInput!
+  ): OrderForm
+
+  """
   Accepts a membership invite with Okta Oauth
   """
   oktaAcceptInvite(
@@ -9070,6 +9094,11 @@ enum OrderByEnum {
   net_revenue_amount_cents
 }
 
+enum OrderExecutionModeEnum {
+  execute_in_lago
+  order_only
+}
+
 type OrderForm {
   billingSnapshot: JSON!
   createdAt: ISO8601DateTime!
@@ -9079,6 +9108,7 @@ type OrderForm {
   number: String!
   quote: Quote!
   signedAt: ISO8601DateTime
+  signedDocumentUrl: String
   status: OrderFormStatusEnum!
   updatedAt: ISO8601DateTime!
   voidReason: OrderFormVoidReasonEnum
@@ -9399,6 +9429,7 @@ enum PermissionEnum {
   invoices_update
   invoices_view
   invoices_void
+  order_forms_sign
   order_forms_view
   organization_emails_update
   organization_emails_view
@@ -9513,6 +9544,7 @@ type Permissions {
   invoicesUpdate: Boolean!
   invoicesView: Boolean!
   invoicesVoid: Boolean!
+  orderFormsSign: Boolean!
   orderFormsView: Boolean!
   organizationEmailsUpdate: Boolean!
   organizationEmailsView: Boolean!
