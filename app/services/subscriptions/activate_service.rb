@@ -81,7 +81,10 @@ module Subscriptions
           (subscription.plan.pay_in_advance? && !subscription.in_trial_period?)
       end
 
-      after_commit { notify_started }
+      after_commit do
+        notify_started
+        enqueue_gating_catch_up_jobs if from_incomplete
+      end
 
       bill_rotation_subscriptions(
         billable_subscriptions,
@@ -118,6 +121,7 @@ module Subscriptions
         end
 
         notify_started
+        enqueue_gating_catch_up_jobs if from_incomplete
       end
 
       bill_rotation_subscriptions(billable_subscriptions, billing_at: timestamp)
@@ -134,6 +138,7 @@ module Subscriptions
       after_commit do
         if from_incomplete
           bill_subscription if subscription.activation_rules.payment.none?
+          enqueue_gating_catch_up_jobs
         else
           bill_subscription(skip_charges: true)
         end
@@ -148,6 +153,14 @@ module Subscriptions
       after_commit do
         BillSubscriptionJob.perform_later(billable_subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
         BillNonInvoiceableFeesJob.perform_later(non_invoiceable_subscriptions, billing_at)
+      end
+    end
+
+    def enqueue_gating_catch_up_jobs
+      return unless subscription.activation_rules.payment.any?
+
+      if subscription.previous_subscription.nil?
+        ActivationRules::BillMissedPeriodsJob.perform_later(subscription)
       end
     end
 

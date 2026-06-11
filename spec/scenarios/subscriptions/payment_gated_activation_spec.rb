@@ -320,6 +320,84 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
   end
 
+  describe "cross-period billing catch-up on activation" do
+    let(:add_on) { create(:add_on, organization:) }
+    let(:fixed_charge) do
+      create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"})
+    end
+
+    # These scenarios produce several invoices, each with its own payment intent —
+    # return a unique id per call, as Stripe does.
+    before do
+      allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
+        .to receive(:create_payment_intent) do
+          Stripe::PaymentIntent.construct_from(
+            id: "pi_#{SecureRandom.hex(12)}", status: "processing", amount: 1000, currency: "eur"
+          )
+        end
+    end
+
+    it "bills a unit change scheduled for the next billing period through the missed-period invoice on cross-period activation" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.invoices.count).to eq(1)
+
+      # Mid-gap scheduled change: the event is stamped at the next period start (April 1).
+      travel_to(Time.zone.local(2026, 3, 10, 10)) do
+        FixedCharges::UpdateService.call!(
+          fixed_charge:,
+          params: {units: 15, charge_model: "standard", properties: {amount: "10"}},
+          timestamp: Time.current.to_i
+        )
+        perform_all_enqueued_jobs
+      end
+
+      # Payment succeeds after the period rolled over: the scheduled event is billed
+      # by the replayed April periodic invoice.
+      travel_to(Time.zone.local(2026, 4, 3, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(2)
+
+      periodic_invoice = subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.invoice_subscriptions.sole.invoicing_reason).to eq("subscription_periodic")
+      expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
+    end
+
+    it "replays one periodic invoice per missed period without duplicating on retry" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription.invoices.count).to eq(1)
+
+      # Payment succeeds two periods later: April and May boundaries are replayed.
+      travel_to(Time.zone.local(2026, 5, 10, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(3)
+
+      # Re-running the catch-up skips the already billed periods.
+      travel_to(Time.zone.local(2026, 5, 10, 11)) do
+        Subscriptions::ActivationRules::BillMissedPeriodsService.call(subscription:)
+        perform_all_enqueued_jobs
+      end
+
+      expect(subscription.invoices.count).to eq(3)
+    end
+  end
+
   describe "timeout: subscription cancels on activation rule expiry" do
     before do
       # Best-effort PSP cancel calls Stripe; mock the SDK to return a canceled intent.

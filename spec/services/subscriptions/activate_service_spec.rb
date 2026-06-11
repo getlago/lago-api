@@ -39,6 +39,12 @@ RSpec.describe Subscriptions::ActivateService do
       expect(Invoices::CreatePayInAdvanceFixedChargesJob).not_to have_been_enqueued
     end
 
+    it "does not enqueue the missed-periods job" do
+      result
+
+      expect(Subscriptions::ActivationRules::BillMissedPeriodsJob).not_to have_been_enqueued
+    end
+
     context "when subscription has fixed charges" do
       let(:add_on) { create(:add_on, organization:) }
 
@@ -312,6 +318,12 @@ RSpec.describe Subscriptions::ActivateService do
       expect { result }.not_to change(FixedChargeEvent, :count)
     end
 
+    it "enqueues the missed-periods job" do
+      result
+
+      expect(Subscriptions::ActivationRules::BillMissedPeriodsJob).to have_been_enqueued.with(subscription)
+    end
+
     context "when subscription should sync with hubspot" do
       let(:customer) { create(:customer, :with_hubspot_integration, organization:) }
 
@@ -381,6 +393,12 @@ RSpec.describe Subscriptions::ActivateService do
 
         expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob)
           .to have_been_enqueued.with(subscription: subscription)
+      end
+
+      it "does not enqueue the missed-periods job" do
+        result
+
+        expect(Subscriptions::ActivationRules::BillMissedPeriodsJob).not_to have_been_enqueued
       end
 
       context "when subscription should not sync with hubspot" do
@@ -473,6 +491,12 @@ RSpec.describe Subscriptions::ActivateService do
           .to have_been_enqueued.with(subscription: previous_subscription)
       end
 
+      it "does not enqueue the missed-periods job" do
+        result
+
+        expect(Subscriptions::ActivationRules::BillMissedPeriodsJob).not_to have_been_enqueued
+      end
+
       it "enqueues Hubspot::CreateJob for the new subscription" do
         result
 
@@ -501,6 +525,12 @@ RSpec.describe Subscriptions::ActivateService do
 
       expect(result.subscription).to be_active
       expect(BillSubscriptionJob).to have_been_enqueued
+    end
+
+    it "does not enqueue the missed-periods job" do
+      result
+
+      expect(Subscriptions::ActivationRules::BillMissedPeriodsJob).not_to have_been_enqueued
     end
   end
 
