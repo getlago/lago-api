@@ -49,7 +49,7 @@ RSpec.describe PaymentsQuery do
   end
 
   context "with search_term" do
-    let(:customer) { create(:customer, firstname: "first", lastname: "last", external_id: "external_c_id", email: "email@example.com", name: "The name") }
+    let(:customer) { create(:customer, organization:, firstname: "first", lastname: "last", external_id: "external_c_id", email: "email@example.com", name: "The name") }
     let(:invoice) { create(:invoice, :finalized, organization:, customer:, number: "number-test-123") }
     let(:invoice3) { create(:invoice, :finalized, organization:, customer:) }
     let(:payment_one) { create(:payment, payable: invoice) }

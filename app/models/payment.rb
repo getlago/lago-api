@@ -161,6 +161,7 @@ end
 # Indexes
 #
 #  idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b  (organization_id,provider_payment_id) USING gin
+#  index_payments_by_cursor                                        (organization_id,created_at DESC,id)
 #  index_payments_on_customer_id                                   (customer_id)
 #  index_payments_on_invoice_id                                    (invoice_id)
 #  index_payments_on_organization_id                               (organization_id)
