@@ -1146,7 +1146,7 @@ RSpec.describe Events::BillingPeriodFilterService do
 
         before { enriched_events }
 
-        it "returns filtered charges" do
+        it "returns empty charges" do
           result = filter_service.call
 
           expect(result).to be_success
