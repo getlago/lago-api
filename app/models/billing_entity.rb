@@ -14,7 +14,7 @@ class BillingEntity < ApplicationRecord
     "payment_receipt.created"
   ]
 
-  EINVOICING_COUNTRIES = %w[FR].map(&:upcase)
+  EINVOICING_COUNTRIES = %w[FR DE].map(&:upcase)
 
   SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS = {
     current_period_end: "current_period_end",
