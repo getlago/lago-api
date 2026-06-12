@@ -456,12 +456,17 @@
             },
             {
               "kind": "OBJECT",
-              "name": "ProductCategory",
+              "name": "ProductItem",
               "ofType": null
             },
             {
               "kind": "OBJECT",
-              "name": "ProductFilter",
+              "name": "ProductItemFilter",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "RateCard",
               "ofType": null
             },
             {
@@ -820,24 +825,6 @@
               "deprecationReason": null
             },
             {
-              "name": "product_category_created",
-              "description": "product_category.created",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_category_updated",
-              "description": "product_category.updated",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_category_deleted",
-              "description": "product_category.deleted",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "product_created",
               "description": "product.created",
               "isDeprecated": false,
@@ -856,20 +843,56 @@
               "deprecationReason": null
             },
             {
-              "name": "product_filter_created",
-              "description": "product_filter.created",
+              "name": "product_item_created",
+              "description": "product_item.created",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "product_filter_updated",
-              "description": "product_filter.updated",
+              "name": "product_item_updated",
+              "description": "product_item.updated",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "product_filter_deleted",
-              "description": "product_filter.deleted",
+              "name": "product_item_deleted",
+              "description": "product_item.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_item_filter_created",
+              "description": "product_item_filter.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_item_filter_updated",
+              "description": "product_item_filter.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_item_filter_deleted",
+              "description": "product_item_filter.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_created",
+              "description": "rate_card.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_updated",
+              "description": "rate_card.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_deleted",
+              "description": "rate_card.deleted",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -15626,8 +15649,8 @@
         },
         {
           "kind": "INPUT_OBJECT",
-          "name": "CreateProductCategoryInput",
-          "description": "Create product_category input arguments",
+          "name": "CreateProductInput",
+          "description": "Create product input arguments",
           "fields": null,
           "inputFields": [
             {
@@ -15705,8 +15728,8 @@
         },
         {
           "kind": "INPUT_OBJECT",
-          "name": "CreateProductFilterInput",
-          "description": "Create product filter input arguments",
+          "name": "CreateProductItemFilterInput",
+          "description": "Create product item filter input arguments",
           "fields": null,
           "inputFields": [
             {
@@ -15766,7 +15789,7 @@
               "deprecationReason": null
             },
             {
-              "name": "productId",
+              "name": "productItemId",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -15795,7 +15818,7 @@
                     "name": null,
                     "ofType": {
                       "kind": "INPUT_OBJECT",
-                      "name": "ProductFilterValueInput",
+                      "name": "ProductItemFilterValueInput",
                       "ofType": null
                     }
                   }
@@ -15824,8 +15847,8 @@
         },
         {
           "kind": "INPUT_OBJECT",
-          "name": "CreateProductInput",
-          "description": "Create product input arguments",
+          "name": "CreateProductItemInput",
+          "description": "Create product item input arguments",
           "fields": null,
           "inputFields": [
             {
@@ -15881,6 +15904,22 @@
               "deprecationReason": null
             },
             {
+              "name": "itemType",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "ProductItemTypeEnum",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "name",
               "description": null,
               "type": {
@@ -15897,28 +15936,12 @@
               "deprecationReason": null
             },
             {
-              "name": "productCategoryId",
+              "name": "productId",
               "description": null,
               "type": {
                 "kind": "SCALAR",
                 "name": "ID",
                 "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "productType",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "ProductTypeEnum",
-                  "ofType": null
-                }
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -16078,6 +16101,209 @@
         },
         {
           "kind": "INPUT_OBJECT",
+          "name": "CreateRateCardInput",
+          "description": "Create rate card input arguments",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "productItemId",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "appliedPricingUnitCode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingTiming",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "RateCardBillingTimingEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "currency",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "description",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "displayOnInvoice",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "productItemFilterId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "proration",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rates",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "RateCardRateInput",
+                    "ofType": null
+                  }
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "regroupPaidFees",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "RateCardRegroupPaidFeesEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "walletTargetable",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
           "name": "CreateRateCardRateInput",
           "description": "Create rate card rate input arguments",
           "fields": null,
@@ -16139,7 +16365,7 @@
               "deprecationReason": null
             },
             {
-              "name": "effectiveFrom",
+              "name": "effectiveDatetime",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -27813,154 +28039,6 @@
         },
         {
           "kind": "INPUT_OBJECT",
-          "name": "DestroyProductCategoryInput",
-          "description": "Autogenerated input type of DestroyProductCategory",
-          "fields": null,
-          "inputFields": [
-            {
-              "name": "clientMutationId",
-              "description": "A unique identifier for the client performing the mutation.",
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "id",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "interfaces": null,
-          "enumValues": null,
-          "possibleTypes": null
-        },
-        {
-          "kind": "OBJECT",
-          "name": "DestroyProductCategoryPayload",
-          "description": "Autogenerated return type of DestroyProductCategory.",
-          "fields": [
-            {
-              "name": "clientMutationId",
-              "description": "A unique identifier for the client performing the mutation.",
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "id",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "ID",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
-        },
-        {
-          "kind": "INPUT_OBJECT",
-          "name": "DestroyProductFilterInput",
-          "description": "Autogenerated input type of DestroyProductFilter",
-          "fields": null,
-          "inputFields": [
-            {
-              "name": "clientMutationId",
-              "description": "A unique identifier for the client performing the mutation.",
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "id",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "interfaces": null,
-          "enumValues": null,
-          "possibleTypes": null
-        },
-        {
-          "kind": "OBJECT",
-          "name": "DestroyProductFilterPayload",
-          "description": "Autogenerated return type of DestroyProductFilter.",
-          "fields": [
-            {
-              "name": "clientMutationId",
-              "description": "A unique identifier for the client performing the mutation.",
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "id",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "ID",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
-        },
-        {
-          "kind": "INPUT_OBJECT",
           "name": "DestroyProductInput",
           "description": "Autogenerated input type of DestroyProduct",
           "fields": null,
@@ -27999,9 +28077,231 @@
           "possibleTypes": null
         },
         {
+          "kind": "INPUT_OBJECT",
+          "name": "DestroyProductItemFilterInput",
+          "description": "Autogenerated input type of DestroyProductItemFilter",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "DestroyProductItemFilterPayload",
+          "description": "Autogenerated return type of DestroyProductItemFilter.",
+          "fields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "DestroyProductItemInput",
+          "description": "Autogenerated input type of DestroyProductItem",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "DestroyProductItemPayload",
+          "description": "Autogenerated return type of DestroyProductItem.",
+          "fields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
           "kind": "OBJECT",
           "name": "DestroyProductPayload",
           "description": "Autogenerated return type of DestroyProduct.",
+          "fields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "DestroyRateCardInput",
+          "description": "Autogenerated input type of DestroyRateCard",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "DestroyRateCardPayload",
+          "description": "Autogenerated return type of DestroyRateCard.",
           "fields": [
             {
               "name": "clientMutationId",
@@ -32237,7 +32537,7 @@
               "deprecationReason": null
             },
             {
-              "name": "product",
+              "name": "product_item",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -41592,18 +41892,18 @@
               "deprecationReason": null
             },
             {
-              "name": "createProductCategory",
-              "description": "Creates a new product_category",
+              "name": "createProductItem",
+              "description": "Creates a new product item",
               "args": [
                 {
                   "name": "input",
-                  "description": "Parameters for CreateProductCategory",
+                  "description": "Parameters for CreateProductItem",
                   "type": {
                     "kind": "NON_NULL",
                     "name": null,
                     "ofType": {
                       "kind": "INPUT_OBJECT",
-                      "name": "CreateProductCategoryInput",
+                      "name": "CreateProductItemInput",
                       "ofType": null
                     }
                   },
@@ -41614,25 +41914,25 @@
               ],
               "type": {
                 "kind": "OBJECT",
-                "name": "ProductCategory",
+                "name": "ProductItem",
                 "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "createProductFilter",
-              "description": "Creates a new product filter",
+              "name": "createProductItemFilter",
+              "description": "Creates a new product item filter",
               "args": [
                 {
                   "name": "input",
-                  "description": "Parameters for CreateProductFilter",
+                  "description": "Parameters for CreateProductItemFilter",
                   "type": {
                     "kind": "NON_NULL",
                     "name": null,
                     "ofType": {
                       "kind": "INPUT_OBJECT",
-                      "name": "CreateProductFilterInput",
+                      "name": "CreateProductItemFilterInput",
                       "ofType": null
                     }
                   },
@@ -41643,7 +41943,7 @@
               ],
               "type": {
                 "kind": "OBJECT",
-                "name": "ProductFilter",
+                "name": "ProductItemFilter",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -41673,6 +41973,35 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "Quote",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "createRateCard",
+              "description": "Creates a new rate card",
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for CreateRateCard",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "CreateRateCardInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "RateCard",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -42636,18 +42965,18 @@
               "deprecationReason": null
             },
             {
-              "name": "destroyProductCategory",
-              "description": "Deletes a product_category",
+              "name": "destroyProductItem",
+              "description": "Deletes a product item",
               "args": [
                 {
                   "name": "input",
-                  "description": "Parameters for DestroyProductCategory",
+                  "description": "Parameters for DestroyProductItem",
                   "type": {
                     "kind": "NON_NULL",
                     "name": null,
                     "ofType": {
                       "kind": "INPUT_OBJECT",
-                      "name": "DestroyProductCategoryInput",
+                      "name": "DestroyProductItemInput",
                       "ofType": null
                     }
                   },
@@ -42658,25 +42987,25 @@
               ],
               "type": {
                 "kind": "OBJECT",
-                "name": "DestroyProductCategoryPayload",
+                "name": "DestroyProductItemPayload",
                 "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "destroyProductFilter",
-              "description": "Deletes a product filter",
+              "name": "destroyProductItemFilter",
+              "description": "Deletes a product item filter",
               "args": [
                 {
                   "name": "input",
-                  "description": "Parameters for DestroyProductFilter",
+                  "description": "Parameters for DestroyProductItemFilter",
                   "type": {
                     "kind": "NON_NULL",
                     "name": null,
                     "ofType": {
                       "kind": "INPUT_OBJECT",
-                      "name": "DestroyProductFilterInput",
+                      "name": "DestroyProductItemFilterInput",
                       "ofType": null
                     }
                   },
@@ -42687,7 +43016,36 @@
               ],
               "type": {
                 "kind": "OBJECT",
-                "name": "DestroyProductFilterPayload",
+                "name": "DestroyProductItemFilterPayload",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "destroyRateCard",
+              "description": "Deletes a rate card",
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for DestroyRateCard",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "DestroyRateCardInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "DestroyRateCardPayload",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -45747,18 +46105,18 @@
               "deprecationReason": null
             },
             {
-              "name": "updateProductCategory",
-              "description": "Updates an existing product_category",
+              "name": "updateProductItem",
+              "description": "Updates an existing product item",
               "args": [
                 {
                   "name": "input",
-                  "description": "Parameters for UpdateProductCategory",
+                  "description": "Parameters for UpdateProductItem",
                   "type": {
                     "kind": "NON_NULL",
                     "name": null,
                     "ofType": {
                       "kind": "INPUT_OBJECT",
-                      "name": "UpdateProductCategoryInput",
+                      "name": "UpdateProductItemInput",
                       "ofType": null
                     }
                   },
@@ -45769,25 +46127,25 @@
               ],
               "type": {
                 "kind": "OBJECT",
-                "name": "ProductCategory",
+                "name": "ProductItem",
                 "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "updateProductFilter",
-              "description": "Updates an existing product filter",
+              "name": "updateProductItemFilter",
+              "description": "Updates an existing product item filter",
               "args": [
                 {
                   "name": "input",
-                  "description": "Parameters for UpdateProductFilter",
+                  "description": "Parameters for UpdateProductItemFilter",
                   "type": {
                     "kind": "NON_NULL",
                     "name": null,
                     "ofType": {
                       "kind": "INPUT_OBJECT",
-                      "name": "UpdateProductFilterInput",
+                      "name": "UpdateProductItemFilterInput",
                       "ofType": null
                     }
                   },
@@ -45798,7 +46156,7 @@
               ],
               "type": {
                 "kind": "OBJECT",
-                "name": "ProductFilter",
+                "name": "ProductItemFilter",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -45857,6 +46215,35 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "QuoteVersion",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "updateRateCard",
+              "description": "Updates an existing rate card",
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for UpdateRateCard",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "UpdateRateCardInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "RateCard",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -50176,25 +50563,49 @@
               "deprecationReason": null
             },
             {
-              "name": "product_filters_view",
+              "name": "product_item_filters_view",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "product_filters_create",
+              "name": "product_item_filters_create",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "product_filters_update",
+              "name": "product_item_filters_update",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "product_filters_delete",
+              "name": "product_item_filters_delete",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_items_view",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_items_create",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_items_update",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_items_delete",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -50219,30 +50630,6 @@
             },
             {
               "name": "products_delete",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_categories_view",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_categories_create",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_categories_update",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_categories_delete",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -51888,7 +52275,7 @@
               "deprecationReason": null
             },
             {
-              "name": "productCategoriesCreate",
+              "name": "productItemFiltersCreate",
               "description": null,
               "args": [],
               "type": {
@@ -51904,7 +52291,7 @@
               "deprecationReason": null
             },
             {
-              "name": "productCategoriesDelete",
+              "name": "productItemFiltersDelete",
               "description": null,
               "args": [],
               "type": {
@@ -51920,7 +52307,7 @@
               "deprecationReason": null
             },
             {
-              "name": "productCategoriesUpdate",
+              "name": "productItemFiltersUpdate",
               "description": null,
               "args": [],
               "type": {
@@ -51936,7 +52323,7 @@
               "deprecationReason": null
             },
             {
-              "name": "productCategoriesView",
+              "name": "productItemFiltersView",
               "description": null,
               "args": [],
               "type": {
@@ -51952,7 +52339,7 @@
               "deprecationReason": null
             },
             {
-              "name": "productFiltersCreate",
+              "name": "productItemsCreate",
               "description": null,
               "args": [],
               "type": {
@@ -51968,7 +52355,7 @@
               "deprecationReason": null
             },
             {
-              "name": "productFiltersDelete",
+              "name": "productItemsDelete",
               "description": null,
               "args": [],
               "type": {
@@ -51984,7 +52371,7 @@
               "deprecationReason": null
             },
             {
-              "name": "productFiltersUpdate",
+              "name": "productItemsUpdate",
               "description": null,
               "args": [],
               "type": {
@@ -52000,7 +52387,7 @@
               "deprecationReason": null
             },
             {
-              "name": "productFiltersView",
+              "name": "productItemsView",
               "description": null,
               "args": [],
               "type": {
@@ -54545,6 +54932,216 @@
               "deprecationReason": null
             },
             {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "createdAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "description",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoiceDisplayName",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "organization",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "Organization",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "productItemsCount",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "updatedAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "ProductCollection",
+          "description": "ProductCollection type",
+          "fields": [
+            {
+              "name": "collection",
+              "description": "A collection of paginated ProductCollection",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "Product",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "metadata",
+              "description": "Pagination Metadata for navigating the Pagination",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CollectionMetadata",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "ProductItem",
+          "description": "Base product item",
+          "fields": [
+            {
+              "name": "attachedToPlanOrSubscription",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "billableMetric",
               "description": null,
               "args": [],
@@ -54645,47 +55242,7 @@
               "deprecationReason": null
             },
             {
-              "name": "name",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "organization",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "OBJECT",
-                "name": "Organization",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "productCategory",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "OBJECT",
-                "name": "ProductCategory",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "productType",
+              "name": "itemType",
               "description": null,
               "args": [],
               "type": {
@@ -54693,385 +55250,9 @@
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "ProductTypeEnum",
+                  "name": "ProductItemTypeEnum",
                   "ofType": null
                 }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "updatedAt",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ISO8601DateTime",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
-        },
-        {
-          "kind": "OBJECT",
-          "name": "ProductCategory",
-          "description": "Base product_category",
-          "fields": [
-            {
-              "name": "attachedToPlanOrSubscription",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "code",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "createdAt",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ISO8601DateTime",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "description",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "id",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "invoiceDisplayName",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "name",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "organization",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "OBJECT",
-                "name": "Organization",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "productsCount",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Int",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "updatedAt",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ISO8601DateTime",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
-        },
-        {
-          "kind": "OBJECT",
-          "name": "ProductCategoryCollection",
-          "description": "ProductCategoryCollection type",
-          "fields": [
-            {
-              "name": "collection",
-              "description": "A collection of paginated ProductCategoryCollection",
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "ProductCategory",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "metadata",
-              "description": "Pagination Metadata for navigating the Pagination",
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "CollectionMetadata",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
-        },
-        {
-          "kind": "OBJECT",
-          "name": "ProductCollection",
-          "description": "ProductCollection type",
-          "fields": [
-            {
-              "name": "collection",
-              "description": "A collection of paginated ProductCollection",
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "Product",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "metadata",
-              "description": "Pagination Metadata for navigating the Pagination",
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "CollectionMetadata",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
-        },
-        {
-          "kind": "OBJECT",
-          "name": "ProductFilter",
-          "description": "Base product filter",
-          "fields": [
-            {
-              "name": "attachedToPlanOrSubscription",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "code",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "createdAt",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ISO8601DateTime",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "description",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "id",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "invoiceDisplayName",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -55109,11 +55290,217 @@
               "description": null,
               "args": [],
               "type": {
+                "kind": "OBJECT",
+                "name": "Product",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "updatedAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "ProductItemCollection",
+          "description": "ProductItemCollection type",
+          "fields": [
+            {
+              "name": "collection",
+              "description": "A collection of paginated ProductItemCollection",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "ProductItem",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "metadata",
+              "description": "Pagination Metadata for navigating the Pagination",
+              "args": [],
+              "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "Product",
+                  "name": "CollectionMetadata",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "ProductItemFilter",
+          "description": "Base product item filter",
+          "fields": [
+            {
+              "name": "attachedToPlanOrSubscription",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "createdAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "description",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoiceDisplayName",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "organization",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "Organization",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "productItem",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "ProductItem",
                   "ofType": null
                 }
               },
@@ -55151,7 +55538,7 @@
                     "name": null,
                     "ofType": {
                       "kind": "OBJECT",
-                      "name": "ProductFilterValue",
+                      "name": "ProductItemFilterValue",
                       "ofType": null
                     }
                   }
@@ -55168,12 +55555,12 @@
         },
         {
           "kind": "OBJECT",
-          "name": "ProductFilterCollection",
-          "description": "ProductFilterCollection type",
+          "name": "ProductItemFilterCollection",
+          "description": "ProductItemFilterCollection type",
           "fields": [
             {
               "name": "collection",
-              "description": "A collection of paginated ProductFilterCollection",
+              "description": "A collection of paginated ProductItemFilterCollection",
               "args": [],
               "type": {
                 "kind": "NON_NULL",
@@ -55186,7 +55573,7 @@
                     "name": null,
                     "ofType": {
                       "kind": "OBJECT",
-                      "name": "ProductFilter",
+                      "name": "ProductItemFilter",
                       "ofType": null
                     }
                   }
@@ -55219,8 +55606,8 @@
         },
         {
           "kind": "OBJECT",
-          "name": "ProductFilterValue",
-          "description": "A key/value pair of a product filter",
+          "name": "ProductItemFilterValue",
+          "description": "A key/value pair of a product item filter",
           "fields": [
             {
               "name": "billableMetricFilter",
@@ -55290,8 +55677,8 @@
         },
         {
           "kind": "INPUT_OBJECT",
-          "name": "ProductFilterValueInput",
-          "description": "Product filter value input arguments",
+          "name": "ProductItemFilterValueInput",
+          "description": "Product item filter value input arguments",
           "fields": null,
           "inputFields": [
             {
@@ -55329,7 +55716,7 @@
         },
         {
           "kind": "ENUM",
-          "name": "ProductTypeEnum",
+          "name": "ProductItemTypeEnum",
           "description": null,
           "fields": null,
           "inputFields": null,
@@ -62982,7 +63369,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "productCategoryId",
+                  "name": "productId",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -63146,8 +63533,66 @@
               "deprecationReason": null
             },
             {
-              "name": "productCategories",
-              "description": "Query product_categories of an organization",
+              "name": "productItem",
+              "description": "Query a single product item of an organization",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the product item",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "ProductItem",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "productItemFilter",
+              "description": "Query a single product item filter of an organization",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the product item filter",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "ProductItemFilter",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "productItemFilters",
+              "description": "Query product item filters of an organization",
               "args": [
                 {
                   "name": "limit",
@@ -63174,118 +63619,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "searchTerm",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "ProductCategoryCollection",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "productCategory",
-              "description": "Query a single product_category of an organization",
-              "args": [
-                {
-                  "name": "id",
-                  "description": "Uniq ID of the product_category",
-                  "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "ID",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "type": {
-                "kind": "OBJECT",
-                "name": "ProductCategory",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "productFilter",
-              "description": "Query a single product filter of an organization",
-              "args": [
-                {
-                  "name": "id",
-                  "description": "Uniq ID of the product filter",
-                  "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "ID",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "type": {
-                "kind": "OBJECT",
-                "name": "ProductFilter",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "productFilters",
-              "description": "Query product filters of an organization",
-              "args": [
-                {
-                  "name": "limit",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "page",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "productCategoryIds",
+                  "name": "productIds",
                   "description": null,
                   "type": {
                     "kind": "LIST",
@@ -63305,7 +63639,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "productId",
+                  "name": "productItemId",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -63329,7 +63663,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "withoutProductCategory",
+                  "name": "withoutProduct",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -63346,7 +63680,104 @@
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "ProductFilterCollection",
+                  "name": "ProductItemFilterCollection",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "productItems",
+              "description": "Query product items of an organization",
+              "args": [
+                {
+                  "name": "itemType",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "ProductItemTypeEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "limit",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "page",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "productIds",
+                  "description": null,
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "ID",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "searchTerm",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "withoutProduct",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Boolean",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "ProductItemCollection",
                   "ofType": null
                 }
               },
@@ -63382,55 +63813,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "productCategoryIds",
-                  "description": null,
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "ID",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "productType",
-                  "description": null,
-                  "type": {
-                    "kind": "ENUM",
-                    "name": "ProductTypeEnum",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "searchTerm",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
                     "name": "String",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "withoutProductCategory",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -63674,8 +64061,37 @@
               "deprecationReason": null
             },
             {
-              "name": "rateCardRates",
-              "description": "Query the rates of a rate card",
+              "name": "rateCard",
+              "description": "Query a single rate card of an organization",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the rate card",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "RateCard",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rateCards",
+              "description": "Query rate cards of an organization",
               "args": [
                 {
                   "name": "limit",
@@ -63702,16 +64118,24 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "rateCardId",
+                  "name": "productItemId",
                   "description": null,
                   "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "ID",
-                      "ofType": null
-                    }
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "searchTerm",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
@@ -63723,7 +64147,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "RateCardRateCollection",
+                  "name": "RateCardCollection",
                   "ofType": null
                 }
               },
@@ -65772,6 +66196,379 @@
         },
         {
           "kind": "OBJECT",
+          "name": "RateCard",
+          "description": "Base rate card",
+          "fields": [
+            {
+              "name": "appliedPricingUnitCode",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "attachedToPlanOrSubscription",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "attachedToSubscriptions",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingTiming",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "RateCardBillingTimingEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "createdAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "currency",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "description",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "displayOnInvoice",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "organization",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "Organization",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "productItem",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "ProductItem",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "productItemFilter",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "ProductItemFilter",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "proration",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rates",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "RateCardRate",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "regroupPaidFees",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "ENUM",
+                "name": "RateCardRegroupPaidFeesEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "updatedAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "walletTargetable",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "RateCardBillingTimingEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "arrears",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "advance",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "RateCardCollection",
+          "description": "RateCardCollection type",
+          "fields": [
+            {
+              "name": "collection",
+              "description": "A collection of paginated RateCardCollection",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "RateCard",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "metadata",
+              "description": "Pagination Metadata for navigating the Pagination",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CollectionMetadata",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
           "name": "RateCardRate",
           "description": "An effective-dated pricing entry of a rate card",
           "fields": [
@@ -65852,7 +66649,7 @@
               "deprecationReason": null
             },
             {
-              "name": "effectiveFrom",
+              "name": "effectiveDatetime",
               "description": null,
               "args": [],
               "type": {
@@ -66005,53 +66802,129 @@
           "possibleTypes": null
         },
         {
-          "kind": "OBJECT",
-          "name": "RateCardRateCollection",
-          "description": "RateCardRateCollection type",
-          "fields": [
+          "kind": "INPUT_OBJECT",
+          "name": "RateCardRateInput",
+          "description": "Rate card rate input arguments",
+          "fields": null,
+          "inputFields": [
             {
-              "name": "collection",
-              "description": "A collection of paginated RateCardRateCollection",
-              "args": [],
+              "name": "appliedPricingUnitConversionRate",
+              "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "RateCardRate",
-                      "ofType": null
-                    }
-                  }
-                }
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
               },
+              "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "metadata",
-              "description": "Pagination Metadata for navigating the Pagination",
-              "args": [],
+              "name": "billingIntervalCount",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Int",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingIntervalUnit",
+              "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "OBJECT",
-                  "name": "CollectionMetadata",
+                  "kind": "ENUM",
+                  "name": "RateCardRateBillingIntervalUnitEnum",
                   "ofType": null
                 }
               },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "effectiveDatetime",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "minAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rateModel",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "RateCardRateModelEnum",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rateProperties",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "JSON",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
             }
           ],
-          "inputFields": null,
-          "interfaces": [],
+          "interfaces": null,
           "enumValues": null,
           "possibleTypes": null
         },
@@ -66136,6 +67009,23 @@
             },
             {
               "name": "terminated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "RateCardRegroupPaidFeesEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "invoice",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -67526,20 +68416,26 @@
               "deprecationReason": null
             },
             {
-              "name": "product_category",
-              "description": "ProductCategory",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "product",
               "description": "Product",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "product_filter",
-              "description": "ProductFilter",
+              "name": "product_item",
+              "description": "ProductItem",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_item_filter",
+              "description": "ProductItemFilter",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card",
+              "description": "RateCard",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -77841,8 +78737,8 @@
         },
         {
           "kind": "INPUT_OBJECT",
-          "name": "UpdateProductCategoryInput",
-          "description": "Update product_category input arguments",
+          "name": "UpdateProductInput",
+          "description": "Update product input arguments",
           "fields": null,
           "inputFields": [
             {
@@ -77928,8 +78824,8 @@
         },
         {
           "kind": "INPUT_OBJECT",
-          "name": "UpdateProductFilterInput",
-          "description": "Update product filter input arguments",
+          "name": "UpdateProductItemFilterInput",
+          "description": "Update product item filter input arguments",
           "fields": null,
           "inputFields": [
             {
@@ -78007,7 +78903,7 @@
                   "name": null,
                   "ofType": {
                     "kind": "INPUT_OBJECT",
-                    "name": "ProductFilterValueInput",
+                    "name": "ProductItemFilterValueInput",
                     "ofType": null
                   }
                 }
@@ -78035,8 +78931,8 @@
         },
         {
           "kind": "INPUT_OBJECT",
-          "name": "UpdateProductInput",
-          "description": "Update product input arguments",
+          "name": "UpdateProductItemInput",
+          "description": "Update product item input arguments",
           "fields": null,
           "inputFields": [
             {
@@ -78104,7 +79000,7 @@
               "deprecationReason": null
             },
             {
-              "name": "productCategoryId",
+              "name": "productId",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -78292,6 +79188,153 @@
         },
         {
           "kind": "INPUT_OBJECT",
+          "name": "UpdateRateCardInput",
+          "description": "Update rate card input arguments",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "appliedPricingUnitCode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingTiming",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "RateCardBillingTimingEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "currency",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "description",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "displayOnInvoice",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "proration",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "regroupPaidFees",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "RateCardRegroupPaidFeesEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "walletTargetable",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
           "name": "UpdateRateCardRateInput",
           "description": "Update rate card rate input arguments",
           "fields": null,
@@ -78349,7 +79392,7 @@
               "deprecationReason": null
             },
             {
-              "name": "effectiveFrom",
+              "name": "effectiveDatetime",
               "description": null,
               "type": {
                 "kind": "SCALAR",
