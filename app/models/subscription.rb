@@ -58,7 +58,7 @@ class Subscription < ApplicationRecord
     :incomplete
   ].freeze
 
-  CANCELATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout"}.freeze
+  CANCELLATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout"}.freeze
 
   BILLING_TIME = %i[
     calendar
@@ -72,7 +72,8 @@ class Subscription < ApplicationRecord
   enum :billing_time, BILLING_TIME
   enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES, prefix: true
   enum :on_termination_invoice, ON_TERMINATION_INVOICES, prefix: true
-  enum :cancelation_reason, CANCELATION_REASONS
+  enum :cancelation_reason, CANCELLATION_REASONS, prefix: true
+  enum :cancellation_reason, CANCELLATION_REASONS
 
   validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
   validates :started_at, presence: true, if: -> { incomplete? }
@@ -335,6 +336,7 @@ end
 #  billing_time                 :integer          default("calendar"), not null
 #  cancelation_reason           :enum
 #  canceled_at                  :datetime
+#  cancellation_reason          :enum
 #  consolidate_invoice          :boolean          default(TRUE), not null
 #  ending_at                    :datetime
 #  last_received_event_on       :date
