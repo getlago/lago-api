@@ -28,7 +28,6 @@ class InvoicesQuery < BaseQuery
     return result unless validate_filters.success?
 
     invoices = base_scope.includes(:customer).preload(file_attachment: :blob, xml_file_attachment: :blob)
-    invoices = with_customers_filter(invoices)
 
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
     invoices = with_currency(invoices) if filters.currency
@@ -70,28 +69,36 @@ class InvoicesQuery < BaseQuery
     scope = organization.invoices
     return scope if search_term.blank?
 
-    by_number = scope.ransack(number_cont: search_term).result
-    search_term.match?(BaseQuery::UUID_REGEX) ? by_number.or(scope.where(id: search_term)) : by_number
+    scope.where(id: matching_ids_by_search)
   end
 
-  def with_customers_filter(scope)
-    return scope if search_term.blank?
-    return scope if filters.customer_id.present?
-    return scope if filters.customer_external_id.present?
+  def matching_ids_by_search
+    escaped_term = "%#{Invoice.sanitize_sql_like(search_term)}%"
+    search_base = organization.invoices
 
-    matching_customer_ids = organization.customers
-      .ransack(
-        m: "or",
-        name_cont: search_term,
-        firstname_cont: search_term,
-        lastname_cont: search_term,
-        external_id_cont: search_term,
-        email_cont: search_term
-      ).result.select(:id)
+    branches = [
+      search_base.where("invoices.number ILIKE ?", escaped_term).select(:id)
+    ]
 
-    scope.or(
-      organization.invoices.where(customer_id: matching_customer_ids)
-    )
+    branches << search_base.where(id: search_term).select(:id) if search_term.match?(BaseQuery::UUID_REGEX)
+
+    if filters.customer_id.blank? && filters.customer_external_id.blank?
+      branches << search_base.where(customer_id: matching_customer_ids).select(:id)
+    end
+
+    union_sql = branches.map(&:to_sql).join(" UNION ")
+    Invoice.unscoped.from("(#{union_sql}) AS invoices").select(:id)
+  end
+
+  def matching_customer_ids
+    escaped_term = "%#{Customer.sanitize_sql_like(search_term)}%"
+
+    branches = %i[name firstname lastname external_id email].map do |field|
+      organization.customers.where("customers.#{field} ILIKE ?", escaped_term).select(:id)
+    end
+
+    union_sql = branches.map(&:to_sql).join(" UNION ")
+    Customer.unscoped.from("(#{union_sql}) AS customers").select(:id)
   end
 
   def with_billing_entity_ids(scope)
