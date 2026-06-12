@@ -4741,7 +4741,8 @@ CREATE TABLE public.payment_intents (
     status integer DEFAULT 0 NOT NULL,
     expires_at timestamp(6) without time zone NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    provider_session_id character varying
 );
 
 
@@ -12645,6 +12646,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260612150749'),
+('20260612113044'),
 ('20260611162947'),
 ('20260611145039'),
 ('20260611122002'),

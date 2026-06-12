@@ -39,7 +39,14 @@ module Invoices
         payment.error_code = stripe_payment.error_code if stripe_payment.error_code
         payment.save!
 
-        deliver_webhook if payable_payment_status.to_sym == :succeeded
+        if payable_payment_status.to_sym == :succeeded
+          deliver_webhook
+
+          # The invoice is paid lets expire/cancel any still-open checkout session
+          if PaymentIntent.active.exists?(invoice: payment.payable)
+            PaymentIntents::ExpireJob.perform_later(payment.payable)
+          end
+        end
 
         if status.to_s == "failed" && result.invoice.payments.excluding(result.payment).where(status: :requires_action).any?
           # We don't update the invoice status because it's likely the webhook of a failed payment
@@ -70,10 +77,31 @@ module Invoices
         )
 
         result.payment_url = res["url"]
+        result.provider_session_id = res["id"]
 
         result
       rescue ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, Stripe::PermissionError => e
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.message)
+      end
+
+      # NOTE: Expires the hosted Stripe Checkout open Session so it can no longer be paid.
+      def expire_payment_url(payment_intent)
+        return result if payment_intent.provider_session_id.blank?
+
+        session = ::Stripe::Checkout::Session.retrieve(
+          payment_intent.provider_session_id,
+          {api_key: stripe_api_key}
+        )
+
+        return result unless session.status == "open"
+
+        ::Stripe::Checkout::Session.expire(
+          payment_intent.provider_session_id,
+          {},
+          {api_key: stripe_api_key}
+        )
+
+        result
       end
 
       private
