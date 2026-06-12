@@ -76,6 +76,14 @@ class RateCard < ApplicationRecord
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
   end
+
+  # The card bills someone once it belongs to a plan that has subscriptions or
+  # is attached directly to a subscription. From that point its pricing is
+  # immutable: any price change goes through a new card and a plan migration.
+  def attached_to_subscriptions?
+    subscription_applied_rate_cards.exists? ||
+      Subscription.where(plan_id: plan_applied_rate_cards.select(:plan_id)).exists?
+  end
 end
 
 # == Schema Information

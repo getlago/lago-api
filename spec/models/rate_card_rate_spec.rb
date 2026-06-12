@@ -37,6 +37,37 @@ RSpec.describe RateCardRate do
     end
   end
 
+  describe "#status" do
+    let(:rate_card) { create(:rate_card) }
+    let(:organization) { rate_card.organization }
+
+    it "derives the status from the card timeline" do
+      terminated = create(:rate_card_rate, organization:, rate_card:, effective_datetime: 2.months.ago)
+      active = create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.ago)
+      pending = create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.from_now)
+
+      expect(terminated.status).to eq("terminated")
+      expect(terminated).to be_terminated
+      expect(active.status).to eq("active")
+      expect(active).to be_active
+      expect(pending.status).to eq("pending")
+      expect(pending).to be_pending
+    end
+  end
+
+  describe "Scopes" do
+    describe ".pending and .effective" do
+      it "splits rates around the current time" do
+        rate_card = create(:rate_card)
+        effective = create(:rate_card_rate, organization: rate_card.organization, rate_card:, effective_datetime: 1.month.ago)
+        pending = create(:rate_card_rate, organization: rate_card.organization, rate_card:, effective_datetime: 1.month.from_now)
+
+        expect(described_class.pending).to eq([pending])
+        expect(described_class.effective).to eq([effective])
+      end
+    end
+  end
+
   describe "validations" do
     describe "effective_from normalization" do
       it "canonicalizes a time component to midnight on an arrears card" do
@@ -92,6 +123,108 @@ RSpec.describe RateCardRate do
         rate = build(:rate_card_rate, effective_from: nil)
         rate.valid?
         expect(rate.errors.where(:effective_from).map(&:type)).to eq([:blank])
+      end
+    end
+
+    describe "rate_model compatibility" do
+      let(:organization) { create(:organization) }
+
+      def rate_for(product_type:, rate_model:, billing_timing: "arrears", proration: false, metric: nil)
+        item = create(:product, organization:, product_type:, billable_metric: metric)
+        rate_card = create(:rate_card, organization:, product: item, billing_timing:, proration:)
+        build(:rate_card_rate, organization:, rate_card:, rate_model:)
+      end
+
+      it "rejects models outside standard/graduated/volume on fixed items" do
+        %w[package percentage graduated_percentage custom dynamic].each do |model|
+          rate = rate_for(product_type: "fixed", rate_model: model)
+          rate.valid?
+          expect(rate.errors.where(:rate_model)).to be_present, "expected #{model} to be rejected"
+          expect(rate.errors.first.type.to_s).to eq("not_allowed_for_product")
+        end
+
+        %w[standard graduated volume].each do |model|
+          rate = rate_for(product_type: "fixed", rate_model: model)
+          rate.valid?
+          expect(rate.errors.where(:rate_model)).to be_empty, "expected #{model} to be allowed"
+        end
+      end
+
+      it "rejects volume on an advance card" do
+        rate = rate_for(product_type: "fixed", billing_timing: "advance", rate_model: "volume")
+        rate.valid?
+        expect(rate.errors.where(:rate_model, :not_allowed_for_billing_timing)).to be_present
+      end
+
+      it "rejects advance rates on a non-payable-in-advance aggregation" do
+        metric = create(:billable_metric, organization:, aggregation_type: "max_agg", field_name: "amount")
+        rate = rate_for(product_type: "usage", billing_timing: "advance", metric:, rate_model: "standard")
+        rate.valid?
+        expect(rate.errors.where(:rate_model, :not_allowed_for_aggregation_type)).to be_present
+      end
+
+      it "applies the v1 proration matrix" do
+        recurring = create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
+        rate = rate_for(product_type: "usage", proration: true, metric: recurring, rate_model: "percentage")
+        rate.valid?
+        expect(rate.errors.where(:rate_model, :not_allowed_with_proration)).to be_present
+
+        allowed = rate_for(product_type: "usage", proration: true, metric: recurring, rate_model: "standard")
+        allowed.valid?
+        expect(allowed.errors.where(:rate_model)).to be_empty
+      end
+
+      it "rejects percentage models on latest aggregation as a compatibility error" do
+        latest = create(:billable_metric, organization:, aggregation_type: "latest_agg", field_name: "amount")
+
+        %w[percentage graduated_percentage].each do |model|
+          rate = rate_for(product_type: "usage", metric: latest, rate_model: model)
+          rate.valid?
+          expect(rate.errors.where(:rate_model, :not_allowed_for_aggregation_type)).to be_present, "expected #{model} rejected"
+          expect(rate.errors.where(:rate_properties)).to be_empty
+        end
+      end
+
+      it "restricts dynamic to sum aggregation" do
+        sum = create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "amount")
+        count = create(:billable_metric, organization:, aggregation_type: "count_agg")
+
+        allowed = rate_for(product_type: "usage", metric: sum, rate_model: "dynamic")
+        allowed.valid?
+        expect(allowed.errors.where(:rate_model)).to be_empty
+
+        rejected = rate_for(product_type: "usage", metric: count, rate_model: "dynamic")
+        rejected.valid?
+        expect(rejected.errors.where(:rate_model, :not_allowed_for_aggregation_type)).to be_present
+      end
+
+      it "applies the proration matrix to fixed items" do
+        allowed = rate_for(product_type: "fixed", proration: true, rate_model: "graduated")
+        allowed.valid?
+        expect(allowed.errors.where(:rate_model)).to be_empty
+
+        rejected = rate_for(product_type: "fixed", proration: true, billing_timing: "advance", rate_model: "graduated")
+        rejected.valid?
+        expect(rejected.errors.where(:rate_model, :not_allowed_with_proration)).to be_present
+      end
+
+      it "rejects a minimum spending on advance cards" do
+        rate = rate_for(product_type: "fixed", billing_timing: "advance", rate_model: "standard")
+        rate.min_amount_cents = 100
+        rate.valid?
+        expect(rate.errors.where(:min_amount_cents, :not_allowed_for_billing_timing)).to be_present
+
+        arrears = rate_for(product_type: "fixed", rate_model: "standard")
+        arrears.min_amount_cents = 100
+        arrears.valid?
+        expect(arrears.errors.where(:min_amount_cents)).to be_empty
+      end
+
+      it "validates percentage properties on usage items without crashing" do
+        metric = create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "amount")
+        rate = rate_for(product_type: "usage", metric:, rate_model: "percentage")
+        rate.rate_properties = {"rate" => "1"}
+        expect(rate).to be_valid
       end
     end
 
