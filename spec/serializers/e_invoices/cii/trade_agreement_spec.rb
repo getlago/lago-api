@@ -17,7 +17,8 @@ RSpec.describe EInvoices::Cii::TradeAgreement do
   let(:customer) do
     create(:customer,
       organization:,
-      name: "Its Mii")
+      name: "Its Mii",
+      legal_name: nil)
   end
   let(:billing_entity) do
     create(:billing_entity,
@@ -93,9 +94,21 @@ RSpec.describe EInvoices::Cii::TradeAgreement do
     context "when buyer information" do
       let(:buyer_root) { "#{root}/ram:BuyerTradeParty" }
 
-      it "have the name" do
-        expect(subject).to contains_xml_node("#{buyer_root}/ram:Name")
-          .with_value(customer.name)
+      context "when customer has no legal_name" do
+        it "falls back to the customer name" do
+          expect(customer.legal_name).to be_nil
+          expect(subject).to contains_xml_node("#{buyer_root}/ram:Name")
+            .with_value(customer.name)
+        end
+      end
+
+      context "when customer has a legal_name" do
+        before { customer.update(legal_name: "Mii Industries SARL") }
+
+        it "uses the legal_name instead of the name" do
+          expect(subject).to contains_xml_node("#{buyer_root}/ram:Name")
+            .with_value(customer.legal_name)
+        end
       end
 
       context "when address info" do
