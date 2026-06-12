@@ -40,7 +40,7 @@ module EInvoices
             end
           end
           xml["ram"].BuyerTradeParty do
-            xml["ram"].Name customer.name
+            xml["ram"].Name customer.legal_name || customer.name
             xml["ram"].PostalTradeAddress do
               xml["ram"].PostcodeCode customer.zipcode
               xml["ram"].LineOne customer.address_line1
