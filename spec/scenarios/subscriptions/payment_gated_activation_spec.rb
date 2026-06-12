@@ -364,8 +364,20 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription.invoices.count).to eq(2)
 
       periodic_invoice = subscription.invoices.order(:created_at).last
-      expect(periodic_invoice.invoice_subscriptions.sole.invoicing_reason).to eq("subscription_periodic")
-      expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
+      expect(periodic_invoice).to be_finalized
+
+      billed_period = periodic_invoice.invoice_subscriptions.sole
+      expect(billed_period.invoicing_reason).to eq("subscription_periodic")
+      expect(billed_period.from_datetime.to_date).to eq(Date.new(2026, 4, 1))
+      expect(billed_period.to_datetime.to_date).to eq(Date.new(2026, 4, 30))
+
+      expect(periodic_invoice.fees.subscription.sole.amount_cents).to eq(1000)
+
+      fixed_charge_fee = periodic_invoice.fees.fixed_charge.sole
+      expect(fixed_charge_fee.units).to eq(15)
+      expect(fixed_charge_fee.amount_cents).to eq(15_000)
+
+      expect(periodic_invoice.total_amount_cents).to eq(16_000)
     end
 
     it "bills a fixed charge created with units scheduled for the next billing period through the missed-period invoice on cross-period activation" do
@@ -406,8 +418,24 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription.invoices.count).to eq(2)
 
       periodic_invoice = subscription.invoices.order(:created_at).last
-      expect(periodic_invoice.fees.fixed_charge.find_by(fixed_charge: new_fixed_charge).units).to eq(3)
-      expect(periodic_invoice.fees.fixed_charge.find_by(fixed_charge:).units).to eq(10)
+      expect(periodic_invoice).to be_finalized
+
+      billed_period = periodic_invoice.invoice_subscriptions.sole
+      expect(billed_period.invoicing_reason).to eq("subscription_periodic")
+      expect(billed_period.from_datetime.to_date).to eq(Date.new(2026, 4, 1))
+      expect(billed_period.to_datetime.to_date).to eq(Date.new(2026, 4, 30))
+
+      expect(periodic_invoice.fees.subscription.sole.amount_cents).to eq(1000)
+
+      new_fixed_charge_fee = periodic_invoice.fees.fixed_charge.find_by(fixed_charge: new_fixed_charge)
+      expect(new_fixed_charge_fee.units).to eq(3)
+      expect(new_fixed_charge_fee.amount_cents).to eq(3000)
+
+      original_fixed_charge_fee = periodic_invoice.fees.fixed_charge.find_by(fixed_charge:)
+      expect(original_fixed_charge_fee.units).to eq(10)
+      expect(original_fixed_charge_fee.amount_cents).to eq(10_000)
+
+      expect(periodic_invoice.total_amount_cents).to eq(14_000)
     end
 
     it "replays one periodic invoice per missed period without duplicating on retry" do
@@ -418,7 +446,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       end
 
       subscription = customer.subscriptions.sole
-      expect(subscription.invoices.count).to eq(1)
+      gated_invoice = subscription.invoices.sole
 
       # Payment succeeds two periods later: April and May boundaries are replayed.
       travel_to(Time.zone.local(2026, 5, 10, 10)) { simulate_stripe_webhook(status: "succeeded") }
@@ -426,6 +454,21 @@ describe "Payment Gated Subscription Activation Scenarios" do
       subscription.reload
       expect(subscription).to be_active
       expect(subscription.invoices.count).to eq(3)
+
+      replayed_invoices = subscription.invoices.where.not(id: gated_invoice.id)
+      replayed_invoices.each do |invoice|
+        expect(invoice).to be_finalized
+        expect(invoice.invoice_subscriptions.sole.invoicing_reason).to eq("subscription_periodic")
+        expect(invoice.fees.subscription.sole.amount_cents).to eq(1000)
+        expect(invoice.fees.fixed_charge.sole.units).to eq(10)
+        expect(invoice.total_amount_cents).to eq(11_000)
+      end
+
+      billed_periods = replayed_invoices.map { |invoice| invoice.invoice_subscriptions.sole }
+      expect(billed_periods.map { |period| period.from_datetime.to_date })
+        .to contain_exactly(Date.new(2026, 4, 1), Date.new(2026, 5, 1))
+      expect(billed_periods.map { |period| period.to_datetime.to_date })
+        .to contain_exactly(Date.new(2026, 4, 30), Date.new(2026, 5, 31))
 
       # Re-running the catch-up skips the already billed periods.
       travel_to(Time.zone.local(2026, 5, 10, 11)) do
