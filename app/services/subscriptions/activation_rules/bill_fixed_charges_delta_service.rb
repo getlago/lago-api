@@ -33,11 +33,11 @@ module Subscriptions
       attr_reader :subscription
 
       def delta_event_timestamps
-        creation_timestamp = subscription.started_at + 1.second
+        window_begin = subscription.started_at + 1.second
 
         subscription.fixed_charge_events
           .where(fixed_charge: subscription.fixed_charges.pay_in_advance)
-          .where("fixed_charge_events.timestamp > ? AND fixed_charge_events.timestamp <= ?", creation_timestamp, window_end)
+          .where("fixed_charge_events.timestamp > ? AND fixed_charge_events.timestamp <= ?", window_begin, window_end)
           .distinct
           .order(:timestamp)
           .pluck(:timestamp)
