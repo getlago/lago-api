@@ -39,10 +39,6 @@ module Events
       event_store.distinct_codes(codes: plan_codes)
     end
 
-    # NOTE: Both event store queries are scoped to the plan's billable metric codes.
-    #       Events with other codes cannot match any of the plan's charges, and the
-    #       code predicate allows the event store to prune data efficiently
-    #       (ClickHouse tables are sorted by organization_id then code).
     def plan_codes
       @plan_codes ||= plan.billable_metrics.distinct.pluck(:code)
     end

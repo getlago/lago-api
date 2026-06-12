@@ -31,11 +31,6 @@ module Events
         if codes.nil?
           scope.pluck("DISTINCT(code)")
         else
-          # NOTE: Deduplicating codes requires scanning all the subscription's events
-          #       in the period, which is slow for high-volume subscriptions. When the
-          #       possible codes are known, probe the index once per code instead
-          #       (loose index scan): the cost scales with the number of codes rather
-          #       than the number of events.
           codes.select { |code| scope.where(code:).exists? }
         end
       end

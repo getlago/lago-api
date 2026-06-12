@@ -165,10 +165,6 @@ module Events
         end
       end
 
-      # NOTE: `codes` should be provided whenever the list of possible codes is known
-      #       (eg: the billable metric codes of a plan). The table is sorted by
-      #       (organization_id, code, external_subscription_id, ...), so without a code
-      #       predicate ClickHouse cannot prune granules and scans the whole organization.
       def distinct_charges_and_filters(codes: nil)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = ::Clickhouse::EventsEnrichedExpanded
