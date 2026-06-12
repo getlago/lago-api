@@ -137,6 +137,37 @@ describe Subscriptions::ActivationRules::BillMissedPeriodsService do
           .with([subscription], Time.zone.parse("2026-05-01 00:00:00").to_i, invoicing_reason: :subscription_periodic)
           .once
       end
+
+      context "when fixed charges are also billed monthly" do
+        let(:plan) do
+          create(:plan, organization:, interval: :yearly, pay_in_advance: true, bill_charges_monthly: true, bill_fixed_charges_monthly: true)
+        end
+
+        it "enqueues one BillSubscriptionJob per missed monthly split boundary" do
+          expect(result).to be_success
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], Time.zone.parse("2026-04-01 00:00:00").to_i, invoicing_reason: :subscription_periodic)
+            .once
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], Time.zone.parse("2026-05-01 00:00:00").to_i, invoicing_reason: :subscription_periodic)
+            .once
+        end
+      end
+    end
+
+    context "when the plan is yearly with monthly billed fixed charges" do
+      let(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: true, bill_fixed_charges_monthly: true) }
+      let(:current_time) { Time.zone.parse("2026-05-10 12:00:00") }
+
+      it "enqueues one BillSubscriptionJob per missed monthly split boundary" do
+        expect(result).to be_success
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([subscription], Time.zone.parse("2026-04-01 00:00:00").to_i, invoicing_reason: :subscription_periodic)
+          .once
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([subscription], Time.zone.parse("2026-05-01 00:00:00").to_i, invoicing_reason: :subscription_periodic)
+          .once
+      end
     end
   end
 end
