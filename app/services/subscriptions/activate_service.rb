@@ -159,7 +159,7 @@ module Subscriptions
     def enqueue_gating_catch_up_jobs
       return unless subscription.activation_rules.payment.any?
 
-      if subscription.previous_subscription.nil?
+      unless subscription.previous_subscription
         ActivationRules::BillMissedPeriodsJob.perform_later(subscription)
       end
     end
