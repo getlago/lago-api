@@ -43,6 +43,7 @@ class RateCard < ApplicationRecord
   validate :validate_filter_belongs_to_item
   validate :validate_display_on_invoice
   validate :validate_proration
+  validate :validate_regroup_paid_fees
 
   default_scope -> { kept }
 
@@ -71,6 +72,15 @@ class RateCard < ApplicationRecord
 
     errors.add(:proration, :requires_recurring_metric) unless metric.recurring?
     errors.add(:proration, :not_allowed_for_aggregation_type) if metric.weighted_sum_agg?
+  end
+
+  # Paid-fee regrouping only exists for advance fees kept off the invoice
+  # (v1: Charge#validate_regroup_paid_fees, invoiceable == display_on_invoice).
+  def validate_regroup_paid_fees
+    return if regroup_paid_fees.nil?
+    return if advance? && !display_on_invoice?
+
+    errors.add(:regroup_paid_fees, :only_compatible_with_pay_in_advance_and_non_invoiceable)
   end
 
   def self.ransackable_attributes(_auth_object = nil)

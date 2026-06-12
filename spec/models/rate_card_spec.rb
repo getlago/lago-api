@@ -100,6 +100,21 @@ RSpec.describe RateCard do
       end
     end
 
+    describe "regroup_paid_fees compatibility" do
+      it "requires advance timing and display_on_invoice false" do
+        invalid = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "arrears")
+        invalid.valid?
+        expect(invalid.errors.where(:regroup_paid_fees, :only_compatible_with_pay_in_advance_and_non_invoiceable)).to be_present
+
+        displayed = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "advance", display_on_invoice: true)
+        displayed.valid?
+        expect(displayed.errors.where(:regroup_paid_fees)).to be_present
+
+        valid = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "advance", display_on_invoice: false)
+        expect(valid).to be_valid
+      end
+    end
+
     describe "currency inclusion" do
       it "is valid with an accepted currency" do
         expect(build(:rate_card, currency: "USD")).to be_valid
