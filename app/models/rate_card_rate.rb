@@ -2,6 +2,7 @@
 
 class RateCardRate < ApplicationRecord
   include PaperTrailTraceable
+  include ChargePropertiesValidation
   include Discard::Model
 
   self.discard_column = :deleted_at
@@ -44,8 +45,43 @@ class RateCardRate < ApplicationRecord
 
   validate :validate_effective_datetime_is_appended
   validate :validate_pricing_unit_conversion_rate
+  validate :validate_properties
 
   default_scope -> { kept }
+
+  scope :pending, -> { where("effective_datetime > ?", Time.current) }
+  scope :effective, -> { where(effective_datetime: ..Time.current) }
+
+  # The charge validators read pricing data from a `properties` attribute.
+  def properties
+    rate_properties
+  end
+
+  # Status is derived from the card's append-only timeline rather than stored:
+  # the latest effective rate is active, future rates are pending, and earlier
+  # effective rates have been superseded and are terminated.
+  def status
+    return STATUSES[:pending] if effective_datetime > Time.current
+
+    superseded = rate_card.rates
+      .where("effective_datetime > ?", effective_datetime)
+      .where(effective_datetime: ..Time.current)
+      .exists?
+
+    superseded ? STATUSES[:terminated] : STATUSES[:active]
+  end
+
+  def pending?
+    status == STATUSES[:pending]
+  end
+
+  def active?
+    status == STATUSES[:active]
+  end
+
+  def terminated?
+    status == STATUSES[:terminated]
+  end
 
   private
 
@@ -54,6 +90,7 @@ class RateCardRate < ApplicationRecord
   def validate_effective_datetime_is_appended
     return if effective_datetime.blank?
     return if rate_card.blank?
+    return unless new_record? || effective_datetime_changed?
 
     latest = rate_card.rates.where.not(id:).maximum(:effective_datetime)
     return if latest.blank?
@@ -67,6 +104,18 @@ class RateCardRate < ApplicationRecord
     return if applied_pricing_unit_conversion_rate.present?
 
     errors.add(:applied_pricing_unit_conversion_rate, :blank)
+  end
+
+  def validate_properties
+    return unless rate_model
+
+    validator = ChargePropertiesValidation::PROPERTIES_VALIDATORS[rate_model.to_sym]
+    validator ||= Charges::Validators::BaseService
+
+    instance = validator.new(charge: self)
+    return if instance.valid?
+
+    instance.result.error.messages.values.flatten.each { errors.add(:rate_properties, it) }
   end
 end
 

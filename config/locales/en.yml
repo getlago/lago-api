@@ -47,6 +47,7 @@ en:
         missing_graduated_ranges: missing_graduated_ranges
         missing_volume_ranges: missing_volume_ranges
         modification_not_allowed: modification_not_allowed
+        must_be_after_latest_rate: must_be_after_latest_rate
         must_be_array: must_be_array
         must_be_greater_than_or_equal_min: must_be_greater_than_or_equal_min
         must_be_true_unless_pay_in_advance: must_be_true_unless_pay_in_advance
