@@ -104,8 +104,8 @@ module Api
 
         return render_error_response(result) unless result.success?
 
-wallet_transaction_direction = (direction == :consumptions) ? :outbound_wallet_transaction : :inbound_wallet_transaction
-        includes = {wallet_transaction_direction => [:billing_entity, {wallet: {customer: :billing_entity}}]}
+        wallet_transaction_direction = (direction == :consumptions) ? :outbound_wallet_transaction : :inbound_wallet_transaction
+        preloads = {wallet_transaction_direction => [:billing_entity, {wallet: [:billing_entity, {customer: :billing_entity}]}]}
         collection_name = (direction == :consumptions) ? "wallet_transaction_consumptions" : "wallet_transaction_fundings"
 
         render(
@@ -114,7 +114,7 @@ wallet_transaction_direction = (direction == :consumptions) ? :outbound_wallet_t
             ::V1::WalletTransactionConsumptionSerializer,
             collection_name:,
             meta: pagination_metadata(result.wallet_transaction_consumptions),
-            includes:
+            includes: [wallet_transaction_direction]
           )
         )
       end
