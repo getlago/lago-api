@@ -39,14 +39,7 @@ module Invoices
         payment.error_code = stripe_payment.error_code if stripe_payment.error_code
         payment.save!
 
-        if payable_payment_status.to_sym == :succeeded
-          deliver_webhook
-
-          # The invoice is paid lets expire/cancel any still-open checkout session
-          if PaymentIntent.active.exists?(invoice: payment.payable)
-            PaymentIntents::ExpireJob.perform_later(payment.payable)
-          end
-        end
+        deliver_webhook if payable_payment_status.to_sym == :succeeded
 
         if status.to_s == "failed" && result.invoice.payments.excluding(result.payment).where(status: :requires_action).any?
           # We don't update the invoice status because it's likely the webhook of a failed payment

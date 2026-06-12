@@ -231,32 +231,6 @@ RSpec.describe Invoices::Payments::StripeService do
       end.to have_enqueued_job(SendWebhookJob).with("payment.succeeded", Payment)
     end
 
-    context "when an active payment intent exists for the invoice" do
-      before { create(:payment_intent, invoice:) }
-
-      it "enqueues a job to expire the open checkout session" do
-        expect do
-          stripe_service.update_payment_status(
-            organization_id: organization.id,
-            status: "succeeded",
-            stripe_payment:
-          )
-        end.to have_enqueued_job(PaymentIntents::ExpireJob).with(invoice)
-      end
-    end
-
-    context "when no active payment intent exists for the invoice" do
-      it "does not enqueue the expire job" do
-        expect do
-          stripe_service.update_payment_status(
-            organization_id: organization.id,
-            status: "succeeded",
-            stripe_payment:
-          )
-        end.not_to have_enqueued_job(PaymentIntents::ExpireJob)
-      end
-    end
-
     context "when status is failed" do
       let(:stripe_payment) do
         PaymentProviders::StripeProvider::StripePayment.new(
