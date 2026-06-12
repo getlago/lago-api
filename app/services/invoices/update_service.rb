@@ -83,11 +83,7 @@ module Invoices
       update_hubspot_invoice if invoice.should_update_hubspot_invoice?
     end
 
-    # NOTE: Once the invoice is settled, cancel any still-open hosted checkout session so the
-    #       customer cannot also pay it and get charged twice. Hooked here because every settle
-    #       path funnels through this service — the synchronous off-session auto-charge as well
-    #       as provider webhooks. Guarded on an active PaymentIntent so billing-day runs over
-    #       millions of link-less invoices don't flood Sidekiq.
+    # when the invoice is settled, cancel any still-open hosted checkout session
     def expire_open_checkout_urls(old_payment_status)
       return unless invoice.payment_succeeded?
       return if old_payment_status.to_s == "succeeded"
