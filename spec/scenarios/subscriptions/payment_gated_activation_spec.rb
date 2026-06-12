@@ -325,6 +325,8 @@ describe "Payment Gated Subscription Activation Scenarios" do
     let(:fixed_charge) do
       create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"})
     end
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "5"}) }
 
     before do
       allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
@@ -333,6 +335,19 @@ describe "Payment Gated Subscription Activation Scenarios" do
             id: "pi_#{SecureRandom.hex(12)}", status: "processing", amount: 1000, currency: "eur"
           )
         end
+    end
+
+    def ingest_usage_event(subscription, timestamp:)
+      travel_to(timestamp) do
+        create_event(
+          {
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            properties: {billable_metric.field_name => 1}
+          }
+        )
+      end
     end
 
     it "bills a unit change scheduled for the next billing period through the missed-period invoice on cross-period activation" do
@@ -477,6 +492,499 @@ describe "Payment Gated Subscription Activation Scenarios" do
       end
 
       expect(subscription.invoices.count).to eq(3)
+    end
+
+    context "when the plan interval is yearly" do
+      let(:plan) do
+        create(:plan, organization:, interval: :yearly, pay_in_advance: true, amount_cents: 12_000)
+      end
+
+      it "bills the full yearly subscription fee with the yearly charges on the missed boundary invoice" do
+        travel_to(Time.zone.local(2026, 11, 10, 10)) do
+          charge
+          create_subscription(subscription_params)
+          perform_all_enqueued_jobs
+        end
+
+        subscription = customer.subscriptions.sole
+        expect(subscription).to be_incomplete
+        expect(subscription.invoices.count).to eq(1)
+
+        ingest_usage_event(subscription, timestamp: Time.zone.local(2026, 11, 15, 10))
+        ingest_usage_event(subscription, timestamp: Time.zone.local(2026, 12, 10, 10))
+
+        # Payment succeeds after the yearly period rolled over on January 1.
+        travel_to(Time.zone.local(2027, 1, 5, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+        subscription.reload
+        expect(subscription).to be_active
+        expect(subscription.invoices.count).to eq(2)
+
+        billed_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2027, 1, 1))
+        expect(billed_period.invoicing_reason).to eq("subscription_periodic")
+        expect(billed_period.from_datetime.to_date).to eq(Date.new(2027, 1, 1))
+        expect(billed_period.to_datetime.to_date).to eq(Date.new(2027, 12, 31))
+        expect(billed_period.charges_from_datetime.to_date).to eq(Date.new(2026, 11, 10))
+        expect(billed_period.charges_to_datetime.to_date).to eq(Date.new(2026, 12, 31))
+
+        boundary_invoice = billed_period.invoice
+        expect(boundary_invoice).to be_finalized
+        expect(boundary_invoice.fees.subscription.sole.amount_cents).to eq(12_000)
+
+        charge_fee = boundary_invoice.fees.charge.sole
+        expect(charge_fee.units).to eq(2)
+        expect(charge_fee.amount_cents).to eq(1000)
+
+        expect(boundary_invoice.total_amount_cents).to eq(13_000)
+      end
+
+      it "bills the full yearly subscription fee with the yearly fixed charges on the missed boundary invoice" do
+        travel_to(Time.zone.local(2026, 11, 10, 10)) do
+          fixed_charge
+          create_subscription(subscription_params)
+          perform_all_enqueued_jobs
+        end
+
+        subscription = customer.subscriptions.sole
+        expect(subscription).to be_incomplete
+        expect(subscription.invoices.count).to eq(1)
+
+        # Payment succeeds after the yearly period rolled over on January 1.
+        travel_to(Time.zone.local(2027, 1, 5, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+        subscription.reload
+        expect(subscription).to be_active
+        expect(subscription.invoices.count).to eq(2)
+
+        billed_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2027, 1, 1))
+        expect(billed_period.invoicing_reason).to eq("subscription_periodic")
+        expect(billed_period.from_datetime.to_date).to eq(Date.new(2027, 1, 1))
+        expect(billed_period.to_datetime.to_date).to eq(Date.new(2027, 12, 31))
+
+        boundary_invoice = billed_period.invoice
+        expect(boundary_invoice).to be_finalized
+        expect(boundary_invoice.fees.subscription.sole.amount_cents).to eq(12_000)
+
+        fixed_charge_fee = boundary_invoice.fees.fixed_charge.sole
+        expect(fixed_charge_fee.units).to eq(10)
+        expect(fixed_charge_fee.amount_cents).to eq(10_000)
+        expect(fixed_charge_fee.properties["fixed_charges_from_datetime"].to_date).to eq(Date.new(2027, 1, 1))
+        expect(fixed_charge_fee.properties["fixed_charges_to_datetime"].to_date).to eq(Date.new(2027, 12, 31))
+
+        expect(boundary_invoice.total_amount_cents).to eq(22_000)
+      end
+
+      context "when charges are billed monthly" do
+        let(:plan) do
+          create(:plan, organization:, interval: :yearly, pay_in_advance: true, amount_cents: 12_000, bill_charges_monthly: true)
+        end
+
+        it "bills the full yearly subscription fee with the last monthly charges on the boundary invoice" do
+          travel_to(Time.zone.local(2026, 11, 10, 10)) do
+            charge
+            create_subscription(subscription_params)
+            perform_all_enqueued_jobs
+          end
+
+          subscription = customer.subscriptions.sole
+          expect(subscription).to be_incomplete
+          expect(subscription.invoices.count).to eq(1)
+
+          ingest_usage_event(subscription, timestamp: Time.zone.local(2026, 11, 15, 10))
+          ingest_usage_event(subscription, timestamp: Time.zone.local(2026, 12, 10, 10))
+
+          # Payment succeeds after the yearly period rolled over: both the December
+          # split tick and the January 1 boundary tick are replayed.
+          travel_to(Time.zone.local(2027, 1, 5, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+          subscription.reload
+          expect(subscription).to be_active
+          expect(subscription.invoices.count).to eq(3)
+
+          intra_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2026, 12, 1))
+          expect(intra_period.invoicing_reason).to eq("subscription_periodic")
+          expect(intra_period.charges_from_datetime.to_date).to eq(Date.new(2026, 11, 10))
+          expect(intra_period.charges_to_datetime.to_date).to eq(Date.new(2026, 11, 30))
+
+          intra_invoice = intra_period.invoice
+          expect(intra_invoice).to be_finalized
+          expect(intra_invoice.fees.subscription).to be_empty
+          intra_charge_fee = intra_invoice.fees.charge.sole
+          expect(intra_charge_fee.units).to eq(1)
+          expect(intra_charge_fee.amount_cents).to eq(500)
+          expect(intra_invoice.total_amount_cents).to eq(500)
+
+          boundary_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2027, 1, 1))
+          expect(boundary_period.invoicing_reason).to eq("subscription_periodic")
+          expect(boundary_period.from_datetime.to_date).to eq(Date.new(2027, 1, 1))
+          expect(boundary_period.to_datetime.to_date).to eq(Date.new(2027, 12, 31))
+          expect(boundary_period.charges_from_datetime.to_date).to eq(Date.new(2026, 12, 1))
+          expect(boundary_period.charges_to_datetime.to_date).to eq(Date.new(2026, 12, 31))
+
+          boundary_invoice = boundary_period.invoice
+          expect(boundary_invoice).to be_finalized
+          expect(boundary_invoice.fees.subscription.sole.amount_cents).to eq(12_000)
+          boundary_charge_fee = boundary_invoice.fees.charge.sole
+          expect(boundary_charge_fee.units).to eq(1)
+          expect(boundary_charge_fee.amount_cents).to eq(500)
+          expect(boundary_invoice.total_amount_cents).to eq(12_500)
+        end
+
+        context "when fixed charges are also billed monthly" do
+          let(:plan) do
+            create(:plan, organization:, interval: :yearly, pay_in_advance: true, amount_cents: 12_000, bill_charges_monthly: true, bill_fixed_charges_monthly: true)
+          end
+
+          it "bills the full yearly subscription fee with both monthly windows on the boundary invoice" do
+            travel_to(Time.zone.local(2026, 11, 10, 10)) do
+              charge
+              fixed_charge
+              create_subscription(subscription_params)
+              perform_all_enqueued_jobs
+            end
+
+            subscription = customer.subscriptions.sole
+            expect(subscription).to be_incomplete
+            expect(subscription.invoices.count).to eq(1)
+
+            ingest_usage_event(subscription, timestamp: Time.zone.local(2026, 11, 15, 10))
+            ingest_usage_event(subscription, timestamp: Time.zone.local(2026, 12, 10, 10))
+
+            # Payment succeeds after the yearly period rolled over: both the December
+            # split tick and the January 1 boundary tick are replayed.
+            travel_to(Time.zone.local(2027, 1, 5, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+            subscription.reload
+            expect(subscription).to be_active
+            expect(subscription.invoices.count).to eq(3)
+
+            intra_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2026, 12, 1))
+            intra_invoice = intra_period.invoice
+            expect(intra_invoice).to be_finalized
+            expect(intra_invoice.fees.subscription).to be_empty
+
+            intra_charge_fee = intra_invoice.fees.charge.sole
+            expect(intra_charge_fee.units).to eq(1)
+            expect(intra_charge_fee.amount_cents).to eq(500)
+
+            intra_fixed_charge_fee = intra_invoice.fees.fixed_charge.sole
+            expect(intra_fixed_charge_fee.units).to eq(10)
+            expect(intra_fixed_charge_fee.amount_cents).to eq(10_000)
+            expect(intra_fixed_charge_fee.properties["fixed_charges_from_datetime"].to_date).to eq(Date.new(2026, 12, 1))
+            expect(intra_fixed_charge_fee.properties["fixed_charges_to_datetime"].to_date).to eq(Date.new(2026, 12, 31))
+
+            expect(intra_invoice.total_amount_cents).to eq(10_500)
+
+            boundary_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2027, 1, 1))
+            boundary_invoice = boundary_period.invoice
+            expect(boundary_invoice).to be_finalized
+            expect(boundary_invoice.fees.subscription.sole.amount_cents).to eq(12_000)
+
+            boundary_charge_fee = boundary_invoice.fees.charge.sole
+            expect(boundary_charge_fee.units).to eq(1)
+            expect(boundary_charge_fee.amount_cents).to eq(500)
+
+            boundary_fixed_charge_fee = boundary_invoice.fees.fixed_charge.sole
+            expect(boundary_fixed_charge_fee.units).to eq(10)
+            expect(boundary_fixed_charge_fee.amount_cents).to eq(10_000)
+            expect(boundary_fixed_charge_fee.properties["fixed_charges_from_datetime"].to_date).to eq(Date.new(2027, 1, 1))
+            expect(boundary_fixed_charge_fee.properties["fixed_charges_to_datetime"].to_date).to eq(Date.new(2027, 1, 31))
+
+            expect(boundary_invoice.total_amount_cents).to eq(22_500)
+          end
+        end
+      end
+
+      context "when fixed charges are billed monthly" do
+        let(:plan) do
+          create(:plan, organization:, interval: :yearly, pay_in_advance: true, amount_cents: 12_000, bill_fixed_charges_monthly: true)
+        end
+
+        it "bills the full yearly subscription fee with the next monthly fixed charges on the boundary invoice" do
+          travel_to(Time.zone.local(2026, 11, 10, 10)) do
+            fixed_charge
+            create_subscription(subscription_params)
+            perform_all_enqueued_jobs
+          end
+
+          subscription = customer.subscriptions.sole
+          expect(subscription).to be_incomplete
+          expect(subscription.invoices.count).to eq(1)
+
+          # Payment succeeds after the yearly period rolled over: both the December
+          # split tick and the January 1 boundary tick are replayed.
+          travel_to(Time.zone.local(2027, 1, 5, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+          subscription.reload
+          expect(subscription).to be_active
+          expect(subscription.invoices.count).to eq(3)
+
+          intra_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2026, 12, 1))
+          expect(intra_period.invoicing_reason).to eq("subscription_periodic")
+
+          intra_invoice = intra_period.invoice
+          expect(intra_invoice).to be_finalized
+          expect(intra_invoice.fees.subscription).to be_empty
+          intra_fixed_charge_fee = intra_invoice.fees.fixed_charge.sole
+          expect(intra_fixed_charge_fee.units).to eq(10)
+          expect(intra_fixed_charge_fee.amount_cents).to eq(10_000)
+          expect(intra_fixed_charge_fee.properties["fixed_charges_from_datetime"].to_date).to eq(Date.new(2026, 12, 1))
+          expect(intra_fixed_charge_fee.properties["fixed_charges_to_datetime"].to_date).to eq(Date.new(2026, 12, 31))
+          expect(intra_invoice.total_amount_cents).to eq(10_000)
+
+          boundary_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2027, 1, 1))
+          expect(boundary_period.invoicing_reason).to eq("subscription_periodic")
+          expect(boundary_period.from_datetime.to_date).to eq(Date.new(2027, 1, 1))
+          expect(boundary_period.to_datetime.to_date).to eq(Date.new(2027, 12, 31))
+
+          boundary_invoice = boundary_period.invoice
+          expect(boundary_invoice).to be_finalized
+          expect(boundary_invoice.fees.subscription.sole.amount_cents).to eq(12_000)
+          boundary_fixed_charge_fee = boundary_invoice.fees.fixed_charge.sole
+          expect(boundary_fixed_charge_fee.units).to eq(10)
+          expect(boundary_fixed_charge_fee.amount_cents).to eq(10_000)
+          expect(boundary_fixed_charge_fee.properties["fixed_charges_from_datetime"].to_date).to eq(Date.new(2027, 1, 1))
+          expect(boundary_fixed_charge_fee.properties["fixed_charges_to_datetime"].to_date).to eq(Date.new(2027, 1, 31))
+          expect(boundary_invoice.total_amount_cents).to eq(22_000)
+        end
+      end
+    end
+
+    context "when the plan interval is semiannual" do
+      let(:plan) do
+        create(:plan, organization:, interval: :semiannual, pay_in_advance: true, amount_cents: 6_000)
+      end
+
+      it "bills the full semiannual subscription fee with the semiannual charges on the missed boundary invoice" do
+        travel_to(Time.zone.local(2026, 5, 10, 10)) do
+          charge
+          create_subscription(subscription_params)
+          perform_all_enqueued_jobs
+        end
+
+        subscription = customer.subscriptions.sole
+        expect(subscription).to be_incomplete
+        expect(subscription.invoices.count).to eq(1)
+
+        ingest_usage_event(subscription, timestamp: Time.zone.local(2026, 5, 15, 10))
+        ingest_usage_event(subscription, timestamp: Time.zone.local(2026, 6, 10, 10))
+
+        # Payment succeeds after the semiannual period rolled over on July 1.
+        travel_to(Time.zone.local(2026, 7, 5, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+        subscription.reload
+        expect(subscription).to be_active
+        expect(subscription.invoices.count).to eq(2)
+
+        billed_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2026, 7, 1))
+        expect(billed_period.invoicing_reason).to eq("subscription_periodic")
+        expect(billed_period.from_datetime.to_date).to eq(Date.new(2026, 7, 1))
+        expect(billed_period.to_datetime.to_date).to eq(Date.new(2026, 12, 31))
+        expect(billed_period.charges_from_datetime.to_date).to eq(Date.new(2026, 5, 10))
+        expect(billed_period.charges_to_datetime.to_date).to eq(Date.new(2026, 6, 30))
+
+        boundary_invoice = billed_period.invoice
+        expect(boundary_invoice).to be_finalized
+        expect(boundary_invoice.fees.subscription.sole.amount_cents).to eq(6_000)
+
+        charge_fee = boundary_invoice.fees.charge.sole
+        expect(charge_fee.units).to eq(2)
+        expect(charge_fee.amount_cents).to eq(1000)
+
+        expect(boundary_invoice.total_amount_cents).to eq(7_000)
+      end
+
+      it "bills the full semiannual subscription fee with the semiannual fixed charges on the missed boundary invoice" do
+        travel_to(Time.zone.local(2026, 5, 10, 10)) do
+          fixed_charge
+          create_subscription(subscription_params)
+          perform_all_enqueued_jobs
+        end
+
+        subscription = customer.subscriptions.sole
+        expect(subscription).to be_incomplete
+        expect(subscription.invoices.count).to eq(1)
+
+        # Payment succeeds after the semiannual period rolled over on July 1.
+        travel_to(Time.zone.local(2026, 7, 5, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+        subscription.reload
+        expect(subscription).to be_active
+        expect(subscription.invoices.count).to eq(2)
+
+        billed_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2026, 7, 1))
+        expect(billed_period.invoicing_reason).to eq("subscription_periodic")
+        expect(billed_period.from_datetime.to_date).to eq(Date.new(2026, 7, 1))
+        expect(billed_period.to_datetime.to_date).to eq(Date.new(2026, 12, 31))
+
+        boundary_invoice = billed_period.invoice
+        expect(boundary_invoice).to be_finalized
+        expect(boundary_invoice.fees.subscription.sole.amount_cents).to eq(6_000)
+
+        fixed_charge_fee = boundary_invoice.fees.fixed_charge.sole
+        expect(fixed_charge_fee.units).to eq(10)
+        expect(fixed_charge_fee.amount_cents).to eq(10_000)
+        expect(fixed_charge_fee.properties["fixed_charges_from_datetime"].to_date).to eq(Date.new(2026, 7, 1))
+        expect(fixed_charge_fee.properties["fixed_charges_to_datetime"].to_date).to eq(Date.new(2026, 12, 31))
+
+        expect(boundary_invoice.total_amount_cents).to eq(16_000)
+      end
+
+      context "when charges are billed monthly" do
+        let(:plan) do
+          create(:plan, organization:, interval: :semiannual, pay_in_advance: true, amount_cents: 6_000, bill_charges_monthly: true)
+        end
+
+        it "bills the full semiannual subscription fee with the last monthly charges on the boundary invoice" do
+          travel_to(Time.zone.local(2026, 5, 10, 10)) do
+            charge
+            create_subscription(subscription_params)
+            perform_all_enqueued_jobs
+          end
+
+          subscription = customer.subscriptions.sole
+          expect(subscription).to be_incomplete
+          expect(subscription.invoices.count).to eq(1)
+
+          ingest_usage_event(subscription, timestamp: Time.zone.local(2026, 5, 15, 10))
+          ingest_usage_event(subscription, timestamp: Time.zone.local(2026, 6, 10, 10))
+
+          # Payment succeeds after the semiannual period rolled over: both the June
+          # split tick and the July 1 boundary tick are replayed.
+          travel_to(Time.zone.local(2026, 7, 5, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+          subscription.reload
+          expect(subscription).to be_active
+          expect(subscription.invoices.count).to eq(3)
+
+          intra_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2026, 6, 1))
+          expect(intra_period.invoicing_reason).to eq("subscription_periodic")
+          expect(intra_period.charges_from_datetime.to_date).to eq(Date.new(2026, 5, 10))
+          expect(intra_period.charges_to_datetime.to_date).to eq(Date.new(2026, 5, 31))
+
+          intra_invoice = intra_period.invoice
+          expect(intra_invoice).to be_finalized
+          expect(intra_invoice.fees.subscription).to be_empty
+          intra_charge_fee = intra_invoice.fees.charge.sole
+          expect(intra_charge_fee.units).to eq(1)
+          expect(intra_charge_fee.amount_cents).to eq(500)
+          expect(intra_invoice.total_amount_cents).to eq(500)
+
+          boundary_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2026, 7, 1))
+          expect(boundary_period.invoicing_reason).to eq("subscription_periodic")
+          expect(boundary_period.from_datetime.to_date).to eq(Date.new(2026, 7, 1))
+          expect(boundary_period.to_datetime.to_date).to eq(Date.new(2026, 12, 31))
+          expect(boundary_period.charges_from_datetime.to_date).to eq(Date.new(2026, 6, 1))
+          expect(boundary_period.charges_to_datetime.to_date).to eq(Date.new(2026, 6, 30))
+
+          boundary_invoice = boundary_period.invoice
+          expect(boundary_invoice).to be_finalized
+          expect(boundary_invoice.fees.subscription.sole.amount_cents).to eq(6_000)
+          boundary_charge_fee = boundary_invoice.fees.charge.sole
+          expect(boundary_charge_fee.units).to eq(1)
+          expect(boundary_charge_fee.amount_cents).to eq(500)
+          expect(boundary_invoice.total_amount_cents).to eq(6_500)
+        end
+      end
+
+      context "when fixed charges are billed monthly" do
+        let(:plan) do
+          create(:plan, organization:, interval: :semiannual, pay_in_advance: true, amount_cents: 6_000, bill_fixed_charges_monthly: true)
+        end
+
+        it "bills the full semiannual subscription fee with the next monthly fixed charges on the boundary invoice" do
+          travel_to(Time.zone.local(2026, 5, 10, 10)) do
+            fixed_charge
+            create_subscription(subscription_params)
+            perform_all_enqueued_jobs
+          end
+
+          subscription = customer.subscriptions.sole
+          expect(subscription).to be_incomplete
+          expect(subscription.invoices.count).to eq(1)
+
+          # Payment succeeds after the semiannual period rolled over: both the June
+          # split tick and the July 1 boundary tick are replayed.
+          travel_to(Time.zone.local(2026, 7, 5, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+          subscription.reload
+          expect(subscription).to be_active
+          expect(subscription.invoices.count).to eq(3)
+
+          intra_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2026, 6, 1))
+          expect(intra_period.invoicing_reason).to eq("subscription_periodic")
+
+          intra_invoice = intra_period.invoice
+          expect(intra_invoice).to be_finalized
+          expect(intra_invoice.fees.subscription).to be_empty
+          intra_fixed_charge_fee = intra_invoice.fees.fixed_charge.sole
+          expect(intra_fixed_charge_fee.units).to eq(10)
+          expect(intra_fixed_charge_fee.amount_cents).to eq(10_000)
+          expect(intra_fixed_charge_fee.properties["fixed_charges_from_datetime"].to_date).to eq(Date.new(2026, 6, 1))
+          expect(intra_fixed_charge_fee.properties["fixed_charges_to_datetime"].to_date).to eq(Date.new(2026, 6, 30))
+          expect(intra_invoice.total_amount_cents).to eq(10_000)
+
+          boundary_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2026, 7, 1))
+          expect(boundary_period.invoicing_reason).to eq("subscription_periodic")
+          expect(boundary_period.from_datetime.to_date).to eq(Date.new(2026, 7, 1))
+          expect(boundary_period.to_datetime.to_date).to eq(Date.new(2026, 12, 31))
+
+          boundary_invoice = boundary_period.invoice
+          expect(boundary_invoice).to be_finalized
+          expect(boundary_invoice.fees.subscription.sole.amount_cents).to eq(6_000)
+          boundary_fixed_charge_fee = boundary_invoice.fees.fixed_charge.sole
+          expect(boundary_fixed_charge_fee.units).to eq(10)
+          expect(boundary_fixed_charge_fee.amount_cents).to eq(10_000)
+          expect(boundary_fixed_charge_fee.properties["fixed_charges_from_datetime"].to_date).to eq(Date.new(2026, 7, 1))
+          expect(boundary_fixed_charge_fee.properties["fixed_charges_to_datetime"].to_date).to eq(Date.new(2026, 7, 31))
+          expect(boundary_invoice.total_amount_cents).to eq(16_000)
+        end
+      end
+    end
+
+    context "when a yearly plan is billed on its anniversary" do
+      let(:plan) do
+        create(:plan, organization:, interval: :yearly, pay_in_advance: true, amount_cents: 12_000)
+      end
+
+      it "bills the full yearly subscription fee with the yearly charges on the anniversary boundary invoice" do
+        travel_to(Time.zone.local(2026, 11, 10, 10)) do
+          charge
+          create_subscription(subscription_params.merge(billing_time: "anniversary"))
+          perform_all_enqueued_jobs
+        end
+
+        subscription = customer.subscriptions.sole
+        expect(subscription).to be_incomplete
+        expect(subscription.invoices.count).to eq(1)
+
+        ingest_usage_event(subscription, timestamp: Time.zone.local(2026, 11, 15, 10))
+        ingest_usage_event(subscription, timestamp: Time.zone.local(2026, 12, 10, 10))
+
+        # Payment succeeds after the anniversary boundary on November 10, 2027.
+        travel_to(Time.zone.local(2027, 11, 15, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+        subscription.reload
+        expect(subscription).to be_active
+        expect(subscription.invoices.count).to eq(2)
+
+        billed_period = subscription.invoice_subscriptions.find_by(timestamp: Time.zone.local(2027, 11, 10))
+        expect(billed_period.invoicing_reason).to eq("subscription_periodic")
+        expect(billed_period.from_datetime.to_date).to eq(Date.new(2027, 11, 10))
+        expect(billed_period.to_datetime.to_date).to eq(Date.new(2028, 11, 9))
+        expect(billed_period.charges_from_datetime.to_date).to eq(Date.new(2026, 11, 10))
+        expect(billed_period.charges_to_datetime.to_date).to eq(Date.new(2027, 11, 9))
+
+        boundary_invoice = billed_period.invoice
+        expect(boundary_invoice).to be_finalized
+        expect(boundary_invoice.fees.subscription.sole.amount_cents).to eq(12_000)
+
+        charge_fee = boundary_invoice.fees.charge.sole
+        expect(charge_fee.units).to eq(2)
+        expect(charge_fee.amount_cents).to eq(1000)
+
+        expect(boundary_invoice.total_amount_cents).to eq(13_000)
+      end
     end
   end
 
