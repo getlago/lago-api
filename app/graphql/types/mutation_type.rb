@@ -243,6 +243,14 @@ module Types
     field :destroy_product_item_filter, mutation: Mutations::ProductItemFilters::Destroy
     field :update_product_item_filter, mutation: Mutations::ProductItemFilters::Update
 
+    field :create_rate_card, mutation: Mutations::RateCards::Create
+    field :destroy_rate_card, mutation: Mutations::RateCards::Destroy
+    field :update_rate_card, mutation: Mutations::RateCards::Update
+
+    field :create_rate_card_rate, mutation: Mutations::RateCardRates::Create
+    field :destroy_rate_card_rate, mutation: Mutations::RateCardRates::Destroy
+    field :update_rate_card_rate, mutation: Mutations::RateCardRates::Update
+
     field :create_role, mutation: Mutations::Roles::Create
     field :destroy_role, mutation: Mutations::Roles::Destroy
     field :update_role, mutation: Mutations::Roles::Update

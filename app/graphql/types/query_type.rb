@@ -100,6 +100,8 @@ module Types
     field :products, resolver: Resolvers::ProductsResolver
     field :quote, resolver: Resolvers::QuoteResolver
     field :quotes, resolver: Resolvers::QuotesResolver
+    field :rate_card, resolver: Resolvers::RateCardResolver
+    field :rate_cards, resolver: Resolvers::RateCardsResolver
     field :role, resolver: Resolvers::RoleResolver
     field :roles, resolver: Resolvers::RolesResolver
     field :security_log, resolver: Resolvers::SecurityLogResolver
