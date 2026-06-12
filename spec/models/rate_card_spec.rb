@@ -82,4 +82,32 @@ RSpec.describe RateCard do
       expect(rate_card.attached_to_plan_or_subscription?).to be(true)
     end
   end
+
+  describe "#attached_to_subscriptions?" do
+    subject(:rate_card) { create(:rate_card) }
+
+    it "is false without any subscription linkage" do
+      expect(rate_card.attached_to_subscriptions?).to be(false)
+    end
+
+    it "is false when on a plan without subscriptions" do
+      create(:plan_rate_card, organization: rate_card.organization, rate_card:)
+
+      expect(rate_card.attached_to_subscriptions?).to be(false)
+    end
+
+    it "is true when on a plan that has subscriptions" do
+      plan = create(:plan, organization: rate_card.organization)
+      create(:plan_rate_card, organization: rate_card.organization, plan:, rate_card:)
+      create(:subscription, plan:, organization: rate_card.organization)
+
+      expect(rate_card.attached_to_subscriptions?).to be(true)
+    end
+
+    it "is true when attached directly to a subscription" do
+      create(:subscription_rate_card, organization: rate_card.organization, rate_card:)
+
+      expect(rate_card.attached_to_subscriptions?).to be(true)
+    end
+  end
 end
