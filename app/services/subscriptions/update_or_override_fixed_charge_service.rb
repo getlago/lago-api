@@ -50,7 +50,13 @@ module Subscriptions
     def find_or_create_fixed_charge_override(parent_fixed_charge, target_plan)
       existing_override = target_plan.fixed_charges.find_by(parent_id: parent_fixed_charge.id)
 
-      return existing_override.reload unless subscription_plan_parent_present
+      unless subscription_plan_parent_present
+        if existing_override
+          return existing_override.reload
+        end
+
+        return create_fixed_charge_override(parent_fixed_charge, target_plan)
+      end
 
       if existing_override
         update_fixed_charge_override(existing_override)

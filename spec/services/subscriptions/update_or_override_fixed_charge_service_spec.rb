@@ -72,6 +72,17 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
         expect(result.fixed_charge.units).to eq(10)
       end
 
+      context "when units is negative" do
+        let(:params) { {units: "-1"} }
+
+        it "returns a validation failure" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+        end
+      end
+
       context "when updating units with apply_units_immediately" do
         let(:params) do
           {
