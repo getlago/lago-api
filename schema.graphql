@@ -1006,7 +1006,7 @@ enum BillingTimeEnum {
   calendar
 }
 
-enum CancelationReasonEnum {
+enum CancellationReasonEnum {
   payment_failed
   timeout
 }
@@ -11513,8 +11513,8 @@ type Subscription {
   activityLogs: [ActivityLog!]
   billingEntityId: ID
   billingTime: BillingTimeEnum
-  cancelationReason: CancelationReasonEnum
   canceledAt: ISO8601DateTime
+  cancellationReason: CancellationReasonEnum
   charges: [Charge!]
   consolidateInvoice: Boolean!
   createdAt: ISO8601DateTime!
