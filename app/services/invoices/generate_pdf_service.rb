@@ -101,7 +101,7 @@ module Invoices
     end
 
     def should_generate_cii_einvoice_xml?
-      invoice.billing_entity.einvoicing && BillingEntity::EINVOICING_COUNTRIES.include?(invoice.billing_entity.country.try(:upcase))
+      invoice.billing_entity.eligible_for_einvoicing?
     end
 
     def charge?

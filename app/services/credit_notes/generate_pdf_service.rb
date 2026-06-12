@@ -72,7 +72,7 @@ module CreditNotes
     end
 
     def should_generate_cii_einvoice_xml?
-      credit_note.billing_entity.einvoicing && BillingEntity::EINVOICING_COUNTRIES.include?(credit_note.billing_entity.country.try(:upcase))
+      credit_note.billing_entity.eligible_for_einvoicing?
     end
 
     def should_generate_pdf?

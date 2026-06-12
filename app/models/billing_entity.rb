@@ -154,6 +154,10 @@ class BillingEntity < ApplicationRecord
       )
   end
 
+  def eligible_for_einvoicing?
+    einvoicing && EINVOICING_COUNTRIES.include?(country.try(:upcase))
+  end
+
   private
 
   def generate_document_number_prefix
