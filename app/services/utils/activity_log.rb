@@ -3,13 +3,14 @@
 module Utils
   class ActivityLog
     IGNORED_FIELDS = %i[updated_at].freeze
-    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity Entitlement::Feature Product ProductItem ProductItemFilter].freeze
+    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity Entitlement::Feature Product ProductItem ProductItemFilter RateCard].freeze
     MAX_SERIALIZED_FEES = 25
     MAX_SERIALIZED_CHARGES = 50
     MAX_SERIALIZED_CHARGE_FILTERS = 100
 
     SERIALIZED_INCLUDED_OBJECTS = {
       billing_entity: %i[taxes],
+      rate_card: %i[rates],
       credit_note: %i[items applied_taxes error_details],
       customer: %i[taxes integration_customers applicable_invoice_custom_sections],
       invoice: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes error_details applied_invoice_custom_sections],

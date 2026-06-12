@@ -37,6 +37,37 @@ RSpec.describe RateCardRate do
     end
   end
 
+  describe "#status" do
+    let(:rate_card) { create(:rate_card) }
+    let(:organization) { rate_card.organization }
+
+    it "derives the status from the card timeline" do
+      terminated = create(:rate_card_rate, organization:, rate_card:, effective_datetime: 2.months.ago)
+      active = create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.ago)
+      pending = create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.from_now)
+
+      expect(terminated.status).to eq("terminated")
+      expect(terminated).to be_terminated
+      expect(active.status).to eq("active")
+      expect(active).to be_active
+      expect(pending.status).to eq("pending")
+      expect(pending).to be_pending
+    end
+  end
+
+  describe "Scopes" do
+    describe ".pending and .effective" do
+      it "splits rates around the current time" do
+        rate_card = create(:rate_card)
+        effective = create(:rate_card_rate, organization: rate_card.organization, rate_card:, effective_datetime: 1.month.ago)
+        pending = create(:rate_card_rate, organization: rate_card.organization, rate_card:, effective_datetime: 1.month.from_now)
+
+        expect(described_class.pending).to eq([pending])
+        expect(described_class.effective).to eq([effective])
+      end
+    end
+  end
+
   describe "validations" do
     it { is_expected.to validate_presence_of(:effective_datetime) }
 
