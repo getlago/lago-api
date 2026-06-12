@@ -669,6 +669,7 @@ DROP INDEX IF EXISTS public.index_customers_on_sequential_id;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_name_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_legal_name_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_lastname_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_customers_on_organization_id_kept;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_firstname_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_external_id_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_email_gin_trgm_ops;
@@ -7802,6 +7803,13 @@ CREATE INDEX index_customers_on_organization_id_firstname_gin_trgm_ops ON public
 
 
 --
+-- Name: index_customers_on_organization_id_kept; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_organization_id_kept ON public.customers USING btree (organization_id) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_customers_on_organization_id_lastname_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12636,6 +12644,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260612150749'),
 ('20260611162947'),
 ('20260611145039'),
 ('20260611122002'),
