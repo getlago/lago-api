@@ -104,8 +104,8 @@ module Api
 
         return render_error_response(result) unless result.success?
 
-        includes = (direction == :consumptions) ? %i[outbound_wallet_transaction] : %i[inbound_wallet_transaction]
-        preloads = {includes.first => [:billing_entity, {wallet: {customer: :billing_entity}}]}
+wallet_transaction_direction = (direction == :consumptions) ? :outbound_wallet_transaction : :inbound_wallet_transaction
+        includes = {wallet_transaction_direction => [:billing_entity, {wallet: {customer: :billing_entity}}]}
         collection_name = (direction == :consumptions) ? "wallet_transaction_consumptions" : "wallet_transaction_fundings"
 
         render(
