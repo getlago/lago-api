@@ -25,6 +25,8 @@ RSpec.describe Organization do
       expect(subject).to have_many(:products)
       expect(subject).to have_many(:product_items)
       expect(subject).to have_many(:product_item_filters)
+      expect(subject).to have_many(:rate_cards)
+      expect(subject).to have_many(:rate_card_rates)
       expect(subject).to have_many(:customers)
       expect(subject).to have_many(:subscriptions)
       expect(subject).to have_many(:activation_rules).class_name("Subscription::ActivationRule")
