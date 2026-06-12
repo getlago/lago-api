@@ -451,6 +451,7 @@ end
 #  index_customers_on_organization_id_email_gin_trgm_ops        (organization_id,email) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_firstname_gin_trgm_ops    (organization_id,firstname) WHERE (deleted_at IS NULL) USING gin
+#  index_customers_on_organization_id_kept                      (organization_id) WHERE (deleted_at IS NULL)
 #  index_customers_on_organization_id_lastname_gin_trgm_ops     (organization_id,lastname) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_legal_name_gin_trgm_ops   (organization_id,legal_name) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_name_gin_trgm_ops         (organization_id,name) WHERE (deleted_at IS NULL) USING gin
