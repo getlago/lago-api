@@ -1320,7 +1320,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       end
 
       it "returns the sum of event properties" do
-        expect(event_store.sum).to eq(15)
+        result = event_store.sum
+
+        expect(result.value).to eq(15)
+        expect(result.events_count).to eq(5)
       end
 
       if with_event_duplication
@@ -1332,8 +1335,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           end
 
           it "takes the event into account" do
-            expect(event_store.sum).to eq(115) # New event value added to the previous one
+            result = event_store.sum
+
+            expect(result.value).to eq(115) # New event value added to the previous one
+            expect(result.events_count).to eq(6)
           end
+        end
+      end
+
+      context "when with_count is set to false" do
+        it "does not include events_count in the result" do
+          result = event_store.sum(with_count: false)
+
+          expect(result.value).to eq(15)
+          expect(result.events_count).to be_nil
         end
       end
 
@@ -1348,14 +1363,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "excludes events before from_datetime by default" do
-          expect(event_store.sum).to eq(15)
+          result = event_store.sum
+
+          expect(result.value).to eq(15)
+          expect(result.events_count).to eq(5)
         end
 
         context "when use_from_boundary is false" do
           before { event_store.use_from_boundary = false }
 
           it "includes events before from_datetime" do
-            expect(event_store.sum).to eq(115)
+            result = event_store.sum
+
+            expect(result.value).to eq(115)
+            expect(result.events_count).to eq(6)
           end
 
           context "when force_from is true" do
@@ -1363,7 +1384,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
               # Note: #sum doesn't use force_from directly, it goes through events_cte_queries
               # which respects use_from_boundary. This test verifies the boundary is applied.
               event_store.use_from_boundary = true
-              expect(event_store.sum).to eq(15)
+
+              result = event_store.sum
+
+              expect(result.value).to eq(15)
+              expect(result.events_count).to eq(5)
             end
           end
         end
@@ -1379,8 +1404,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "excludes events after to_datetime" do
+          result = event_store.sum
+
           # Only events with values 1, 2, 3 are within the boundary
-          expect(event_store.sum).to eq(6)
+          expect(result.value).to eq(6)
+          expect(result.events_count).to eq(3)
         end
       end
 
@@ -1395,8 +1423,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "uses max_timestamp instead of to_datetime" do
+          result = event_store.sum
+
           # Only events with values 1, 2, 3 are within the boundary
-          expect(event_store.sum).to eq(6)
+          expect(result.value).to eq(6)
+          expect(result.events_count).to eq(3)
         end
       end
     end
@@ -2523,8 +2554,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
 
     it "includes events from before subscription.started_at" do
-      expect(event_store.count).to eq(7) # 5 from current period + 2 from before
-      expect(event_store.sum).to eq(165) # 15 from current period + 100 + 50 from before
+      result = event_store.sum
+
+      expect(result.events_count).to eq(7) # 5 from current period + 2 from before
+      expect(result.value).to eq(165) # 15 from current period + 100 + 50 from before
     end
 
     context "with charge filters" do
@@ -2555,8 +2588,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       end
 
       it "includes only filtered events from before subscription.started_at" do
-        expect(event_store.count).to eq(3) # 2 from current period + 1 from before
-        expect(event_store.sum).to eq(204) # 4 from current period + 200 from before (999 (asia/japan) doesn't match)
+        result = event_store.sum
+
+        expect(result.events_count).to eq(3) # 2 from current period + 1 from before
+        expect(result.value).to eq(204) # 4 from current period + 200 from before (999 (asia/japan) doesn't match)
       end
     end
   end

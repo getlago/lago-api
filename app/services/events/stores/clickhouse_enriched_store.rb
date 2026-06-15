@@ -514,14 +514,16 @@ module Events
         end
       end
 
-      def sum
+      def sum(with_count: true)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
-            SELECT sum(events.decimal_value)
+            SELECT
+              sum(events.decimal_value) as value,
+              #{with_count ? "count()" : "null"} as events_count
             FROM events
           SQL
 
-          connection.select_value(sql) || 0
+          build_aggregation_result(connection.select_one(sql))
         end
       end
 

@@ -14,16 +14,16 @@ module BillableMetrics
       def compute_aggregation(options: {})
         return empty_result if should_bypass_aggregation?
 
-        aggregation = event_store.sum
+        sum_result = event_store.sum
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
-          handle_in_advance_current_usage(aggregation)
+          handle_in_advance_current_usage(sum_result.value)
         else
-          result.aggregation = aggregation
+          result.aggregation = sum_result.value
         end
 
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
-        result.count = event_store.count
+        result.count = sum_result.events_count
 
         if presentation_by.present?
           result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by)
