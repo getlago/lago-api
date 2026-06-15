@@ -13,13 +13,17 @@ module FixedCharges
     end
 
     def call
-      result.fixed_charge_events = subscriptions.map do |subscription|
-        ::FixedChargeEvents::CreateService.call!(
-          subscription:,
-          fixed_charge:,
+      events_attributes = subscriptions.map do |subscription|
+        {
+          organization_id: subscription.organization_id,
+          subscription_id: subscription.id,
+          fixed_charge_id: fixed_charge.id,
+          units: units_for(subscription),
           timestamp: apply_units_immediately ? timestamp : next_billing_period(subscription)
-        ).fixed_charge_event
+        }
       end
+
+      result.fixed_charge_events = ::FixedChargeEvents::BulkCreateService.call!(events_attributes:).fixed_charge_events
 
       result
     end
@@ -39,10 +43,22 @@ module FixedCharges
         # Pending subscriptions will have events created when they activate
         (subscription.active? || subscription.incomplete?) ? [subscription] : []
       else
+        # Preload the associations read while computing the billing period
+        # (plan interval, customer timezone) to avoid an N+1 across every subscription.
         fixed_charge.plan.subscriptions
           .where(status: %i[active incomplete])
           .without_fixed_charge_units_override_for(fixed_charge)
+          .includes(:plan, customer: :billing_entity)
       end
+    end
+
+    def units_for(subscription)
+      # In the bulk path, subscriptions carrying a units override are already filtered out by
+      # `without_fixed_charge_units_override_for`, so `effective_units_for` would always fall back
+      # to the plan-level units. Only the explicitly provided subscription can carry an override.
+      return fixed_charge.units unless self.subscription
+
+      fixed_charge.effective_units_for(subscription)
     end
 
     def next_billing_period(subscription)
