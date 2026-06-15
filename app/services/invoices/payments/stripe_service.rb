@@ -70,10 +70,33 @@ module Invoices
         )
 
         result.payment_url = res["url"]
+        result.provider_session_id = res["id"]
 
         result
       rescue ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, Stripe::PermissionError => e
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.message)
+      end
+
+      # NOTE: Expires the hosted Stripe Checkout open Session so it can no longer be paid.
+      def expire_payment_url(payment_intent)
+        return result if payment_intent.provider_session_id.blank?
+
+        session = ::Stripe::Checkout::Session.retrieve(
+          payment_intent.provider_session_id,
+          {api_key: stripe_api_key}
+        )
+
+        return result unless session.status == "open"
+
+        ::Stripe::Checkout::Session.expire(
+          payment_intent.provider_session_id,
+          {},
+          {api_key: stripe_api_key}
+        )
+
+        result
+      rescue ::Stripe::InvalidRequestError # the other ones are on the retry job
+        result
       end
 
       private

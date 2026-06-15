@@ -69,6 +69,11 @@ module Invoices
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment.should_sync_payment?
 
         result
+      rescue Invoices::Payments::AlreadyPaidError
+        # NOTE: The invoice was settled by another payment so we can drop the unused pending payment
+        result.payment&.destroy if result.payment&.provider_payment_id.nil?
+        result.payment = nil
+        result
       rescue BaseService::ServiceFailure => e
         result.payment = e.result.payment
 

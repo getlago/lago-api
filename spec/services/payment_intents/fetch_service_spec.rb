@@ -49,6 +49,17 @@ RSpec.describe PaymentIntents::FetchService do
           expect(result.payment_intent.payment_url).to eq(payment_url)
           expect(payment_provider_service).to have_received(:generate_payment_url)
         end
+
+        it "persists the provider session id returned by the provider" do
+          allow(payment_provider_service)
+            .to receive(:generate_payment_url)
+            .and_return(BaseService::Result.new.tap do |r|
+              r.payment_url = payment_url
+              r.provider_session_id = "cs_123"
+            end)
+
+          expect(result.payment_intent.provider_session_id).to eq("cs_123")
+        end
       end
 
       context "when payment provider fails to generate URL" do
