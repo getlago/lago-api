@@ -183,8 +183,11 @@ module Events
         prepare_grouped_result(select_all(sql).rows)
       end
 
-      def max
-        events.maximum("(#{sanitized_property_name})::numeric")
+      def max(with_count: true)
+        AggregationResult.new(
+          value: events.maximum("(#{sanitized_property_name})::numeric") || 0,
+          events_count: with_count ? events.count : nil
+        )
       end
 
       def grouped_max(columns = grouped_by)

@@ -65,7 +65,7 @@ module Events
         raise NotImplementedError
       end
 
-      def max
+      def max(with_count: true)
         raise NotImplementedError
       end
 
