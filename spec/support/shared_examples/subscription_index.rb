@@ -156,13 +156,13 @@ RSpec.shared_examples "a subscription index endpoint" do
   end
 
   context "with external_id filter" do
-    let(:params) { {external_id:, status: %i[active terminated]} }
-    let(:external_id) { SecureRandom.uuid }
+    let(:params) { {external_id: subscription_external_id, status: %i[active terminated]} }
+    let(:subscription_external_id) { SecureRandom.uuid }
 
     let!(:subscriptions) do
       [
-        create(:subscription, :active, customer:, external_id:),
-        create(:subscription, :terminated, customer:, external_id:)
+        create(:subscription, :active, customer:, external_id: subscription_external_id),
+        create(:subscription, :terminated, customer:, external_id: subscription_external_id)
       ]
     end
 
