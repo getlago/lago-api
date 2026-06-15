@@ -160,7 +160,7 @@ module BillableMetrics
 
       def recurring_value(grouped_by_values: nil)
         store = persisted_event_store_instance
-        raw_sum = store.with_grouped_by_values(grouped_by_values) { store.sum }
+        raw_sum = store.with_grouped_by_values(grouped_by_values) { store.sum(with_count: false).value }
 
         return nil if raw_sum.nil? || raw_sum.zero?
 

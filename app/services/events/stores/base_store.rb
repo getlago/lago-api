@@ -3,6 +3,11 @@
 module Events
   module Stores
     class BaseStore
+      AggregationResult = Data.define(
+        :value,
+        :events_count
+      )
+
       def initialize(subscription:, boundaries:, code: nil, filters: {}, deduplicate: false)
         @code = code
         @subscription = subscription
@@ -76,7 +81,7 @@ module Events
         raise NotImplementedError
       end
 
-      def sum
+      def sum(with_count: true)
         raise NotImplementedError
       end
 
@@ -164,6 +169,13 @@ module Events
           to_datetime + 1.day,
           current_usage: subscription.terminated? && subscription.upgraded?
         ).charges_duration_in_days
+      end
+
+      def build_aggregation_result(row)
+        AggregationResult.new(
+          value: row["value"] || 0,
+          events_count: row["events_count"].presence&.to_i
+        )
       end
     end
   end

@@ -235,8 +235,11 @@ module Events
         prepare_grouped_result(results)
       end
 
-      def sum
-        events.sum("(#{sanitized_property_name})::numeric")
+      def sum(with_count: true)
+        AggregationResult.new(
+          value: events.sum("(#{sanitized_property_name})::numeric"),
+          events_count: with_count ? events.count : nil
+        )
       end
 
       def grouped_sum(columns = grouped_by)

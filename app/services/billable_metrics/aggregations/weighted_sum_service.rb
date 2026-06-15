@@ -14,8 +14,11 @@ module BillableMetrics
         return empty_result if should_bypass_aggregation?
 
         result.aggregation = event_store.weighted_sum(initial_value:).ceil(20)
-        result.count = event_store.count
-        result.variation = event_store.sum || 0
+
+        sum_result = event_store.sum
+
+        result.count = sum_result.events_count
+        result.variation = sum_result.value || 0
         result.total_aggregated_units = result.variation
         result.options = {}
 
@@ -165,7 +168,7 @@ module BillableMetrics
 
         breakdowns = presentation_by.present? ? event_store.grouped_sum(uniq_grouped_by_and_presentation_by) : []
 
-        @latest_value_from_events = [BigDecimal(event_store.sum), breakdowns]
+        @latest_value_from_events = [BigDecimal(event_store.sum(with_count: false).value), breakdowns]
       end
 
       def grouped_latest_values
