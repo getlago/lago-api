@@ -1072,7 +1072,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       end
 
       it "returns the max value" do
-        expect(event_store.max).to eq(5)
+        result = event_store.max
+
+        expect(result.value).to eq(5)
+        expect(result.events_count).to eq(5)
       end
 
       context "with grouped_by_values" do
@@ -1080,14 +1083,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         let(:events_grouped_by) { ["region"] }
 
         it "returns the max value" do
-          expect(event_store.max).to eq(5)
+          result = event_store.max
+
+          expect(result.value).to eq(5)
+          expect(result.events_count).to eq(3)
         end
 
         context "when grouped_by_values value is nil" do
           let(:grouped_by_values) { {"region" => nil} }
 
           it "returns the max value" do
-            expect(event_store.max).to eq(4)
+            result = event_store.max
+
+            expect(result.value).to eq(4)
+            expect(result.events_count).to eq(2)
           end
         end
       end
@@ -1101,6 +1110,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         before { create_events_for_filters }
 
         it "returns the max value filtered" do
+          result = event_store.max
+
           # We include:
           # - europe, france, <nil> -> 3
           # - europe, france, paris -> 1
@@ -1119,7 +1130,17 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           # - europe, france, cambridge -> -2
           # - europe, united kingdom, manchester -> -1
           # Max value is 3
-          expect(event_store.max).to eq(3)
+          expect(result.value).to eq(3)
+          expect(result.events_count).to eq(4)
+        end
+      end
+
+      context "when with_count is set to false" do
+        it "does not include events_count in the result" do
+          result = event_store.max(with_count: false)
+
+          expect(result.value).to eq(5)
+          expect(result.events_count).to be_nil
         end
       end
     end
