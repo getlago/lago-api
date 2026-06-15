@@ -59,7 +59,7 @@ class OrdersQuery < BaseQuery
   end
 
   def with_order_type(scope)
-    scope.where(order_type: filters.order_type)
+    scope.joins(order_form: :quote).where(quotes: {order_type: filters.order_type})
   end
 
   def with_execution_mode(scope)
@@ -83,10 +83,8 @@ class OrdersQuery < BaseQuery
   end
 
   def with_owner_id(scope)
-    scope.where(
-      order_form_id: OrderForm.where(
-        quote_id: QuoteOwner.where(user_id: filters.owner_id).select(:quote_id)
-      ).select(:id)
+    scope.joins(order_form: :quote).where(
+      quotes: {id: QuoteOwner.where(user_id: filters.owner_id).select(:quote_id)}
     )
   end
 

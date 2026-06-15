@@ -30,6 +30,14 @@ class Order < ApplicationRecord
 
   validates :execution_mode, presence: true, if: -> { executed? || execute_at.present? }
 
+  delegate :order_type, to: :quote
+  delegate :currency, to: :quote_version
+
+  # TODO: migrate this to a real column when billing items validation is ready
+  def billing_snapshot
+    quote_version.billing_items
+  end
+
   def self.ransackable_attributes(_ = nil)
     %w[number]
   end

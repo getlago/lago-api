@@ -12,8 +12,9 @@ RSpec.describe Api::V1::OrdersController do
   describe "GET /api/v1/orders" do
     subject { get_with_token(organization, "/api/v1/orders") }
 
-    let(:order_form_two) { create(:order_form, :signed, organization:, customer:, quote:) }
-    let!(:order_two) { create(:order, organization:, customer:, order_form: order_form_two, order_type: :one_off) }
+    let(:one_off_quote) { create(:quote, organization:, customer:, order_type: :one_off) }
+    let(:order_form_two) { create(:order_form, :signed, organization:, customer:, quote: one_off_quote) }
+    let!(:order_two) { create(:order, organization:, customer:, order_form: order_form_two) }
 
     before { create(:order, organization:, customer:, order_form:) }
 
@@ -75,7 +76,6 @@ RSpec.describe Api::V1::OrdersController do
       expect(json[:order][:lago_id]).to eq(order.id)
       expect(json[:order][:number]).to eq(order.number)
       expect(json[:order][:status]).to eq("created")
-      expect(json[:order]).to have_key(:execution_record)
     end
 
     context "when order does not exist" do

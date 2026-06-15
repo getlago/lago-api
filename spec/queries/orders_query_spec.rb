@@ -17,8 +17,9 @@ RSpec.describe OrdersQuery do
   let(:quote) { create(:quote, organization:, customer:) }
   let(:order_form) { create(:order_form, :signed, organization:, customer:, quote:) }
   let(:order_one) { create(:order, organization:, customer:, order_form:) }
-  let(:order_form_two) { create(:order_form, :signed, organization:, customer:, quote:) }
-  let(:order_two) { create(:order, organization:, customer:, order_form: order_form_two, order_type: :one_off) }
+  let(:quote_two) { create(:quote, organization:, customer:) }
+  let(:order_form_two) { create(:order_form, :signed, organization:, customer:, quote: quote_two) }
+  let(:order_two) { create(:order, organization:, customer:, order_form: order_form_two) }
 
   before do
     order_one
@@ -52,6 +53,8 @@ RSpec.describe OrdersQuery do
   end
 
   context "when filtering by order_type" do
+    let(:one_off_quote) { create(:quote, organization:, customer:, order_type: :one_off) }
+    let(:order_form_two) { create(:order_form, :signed, organization:, customer:, quote: one_off_quote) }
     let(:filters) { {order_type: "one_off"} }
 
     it "returns only orders with the specified order type" do
