@@ -45,6 +45,12 @@ module Subscriptions
             Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
             Integrations::Aggregator::Taxes::Invoices::CreateJob.perform_later(invoice:) if invoice.customer.tax_customer
             Utils::SegmentTrack.invoice_created(invoice)
+
+            # The PSP-side payment record carries a placeholder reference set
+            # at activation time (the invoice had no number yet). Now that the
+            # invoice is finalized and numbered, push the real number back to
+            # the PSP so operator dashboards reconcile cleanly. Best-effort.
+            PaymentProviders::UpdatePaymentReferenceJob.perform_later(succeeded_payment)
           end
         end
 
@@ -77,6 +83,13 @@ module Subscriptions
 
         def payment_rule
           @payment_rule ||= subscription.activation_rules.payment.sole
+        end
+
+        def succeeded_payment
+          @succeeded_payment ||= invoice.payments
+            .where(payable_payment_status: :succeeded)
+            .order(created_at: :desc)
+            .first
         end
 
         def should_deliver_email?

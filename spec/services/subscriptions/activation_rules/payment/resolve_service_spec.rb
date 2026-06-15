@@ -131,6 +131,21 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
       expect(Utils::SegmentTrack).to have_received(:invoice_created).with(invoice)
     end
 
+    context "with the succeeded payment for the invoice" do
+      let(:payment) do
+        create(:payment, payable: invoice, organization:, customer:,
+          payable_payment_status: :succeeded, provider_payment_id: "pi_123")
+      end
+
+      before { payment }
+
+      it "enqueues UpdatePaymentReferenceJob so the PSP-side reference matches the finalized invoice" do
+        result
+
+        expect(PaymentProviders::UpdatePaymentReferenceJob).to have_been_enqueued.with(payment)
+      end
+    end
+
     context "when invoice should be synced to accounting integration" do
       before { allow(invoice).to receive(:should_sync_invoice?).and_return(true) }
 
