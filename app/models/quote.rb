@@ -11,6 +11,9 @@ class Quote < ApplicationRecord
 
   QUOTE_NUMBER_REGEX = /\AQT-\d{4}-\d{4,}\z/
 
+  IMAGE_CONTENT_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
+  IMAGE_MAX_SIZE = 5.megabytes
+
   before_save :ensure_number
 
   belongs_to :organization
@@ -24,6 +27,8 @@ class Quote < ApplicationRecord
   has_one :current_version, -> { order(sequential_id: :desc) }, class_name: "QuoteVersion"
   has_many :order_forms, through: :versions
 
+  has_many_attached :images
+
   enum :order_type, ORDER_TYPES,
     instance_methods: false,
     validate: true
@@ -31,6 +36,10 @@ class Quote < ApplicationRecord
   validates :subscription_id,
     presence: true,
     if: -> { order_type == "subscription_amendment" }
+
+  validates :images,
+    content_type: IMAGE_CONTENT_TYPES,
+    size: {less_than: IMAGE_MAX_SIZE}
 
   sequenced(
     scope: ->(quote) { quote.organization.quotes },
