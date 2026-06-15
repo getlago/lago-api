@@ -92,6 +92,19 @@ RSpec.describe OrderForms::MarkAsSignedService do
           expect(result.order_form).to be_signed
           expect(result.order_form.signed_at).to be_present
         end
+
+        it "creates an order" do
+          expect { service.call }.to change(Order, :count).by(1)
+        end
+
+        it "returns the created order" do
+          result = service.call
+
+          expect(result.order).to be_persisted
+          expect(result.order).to be_created
+          expect(result.order.order_form).to eq(order_form)
+          expect(result.order.execution_mode).to be_nil
+        end
       end
 
       context "when a signed_document is provided" do
@@ -166,6 +179,43 @@ RSpec.describe OrderForms::MarkAsSignedService do
           expect { service.call }.not_to change(ActiveStorage::Blob, :count)
         end
 
+        it "rolls back without persisting an order" do
+          expect { service.call }.not_to change(Order, :count)
+        end
+
+        it "returns a validation failure without signing" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(order_form.reload).to be_generated
+        end
+      end
+
+      context "when an order already exists for the order form" do
+        before { create(:order, order_form:, customer:, organization:) }
+
+        it "returns a validation failure without signing" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:order_form_id]).to eq(["value_already_exist"])
+          expect(order_form.reload).to be_generated
+        end
+      end
+
+      context "when order creation fails" do
+        let(:signed_document) { "data:application/pdf;base64,#{Base64.strict_encode64("pdf")}" }
+
+        before do
+          allow(Order).to receive(:create!).and_raise(ActiveRecord::RecordInvalid.new(Order.new))
+        end
+
+        it "rolls back without persisting a blob" do
+          expect { service.call }.not_to change(ActiveStorage::Blob, :count)
+        end
+
         it "returns a validation failure without signing" do
           result = service.call
 
@@ -179,11 +229,13 @@ RSpec.describe OrderForms::MarkAsSignedService do
         let(:execution_mode) { "execute_in_lago" }
         let(:execute_at) { 1.month.from_now.iso8601 }
 
-        it "signs the order form without acting on them" do
+        it "signs the order form and stores them on the created order" do
           result = service.call
 
           expect(result).to be_success
           expect(result.order_form).to be_signed
+          expect(result.order.execution_mode).to eq("execute_in_lago")
+          expect(result.order.execute_at).to eq(Time.zone.parse(execute_at))
         end
       end
 

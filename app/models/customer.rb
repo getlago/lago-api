@@ -65,6 +65,7 @@ class Customer < ApplicationRecord
   has_many :daily_usages
   has_many :quotes
   has_many :order_forms
+  has_many :orders
   has_many :wallets
   has_many :wallet_transactions, through: :wallets
   has_many :payment_provider_customers,
