@@ -42,7 +42,7 @@ class OrdersQuery < BaseQuery
   end
 
   def base_scope
-    organization.orders.ransack(search_params)
+    organization.orders.preload(order_form: {quote_version: :quote}).ransack(search_params)
   end
 
   def search_params
