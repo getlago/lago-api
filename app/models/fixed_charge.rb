@@ -57,6 +57,14 @@ class FixedCharge < ApplicationRecord
     subscription_units_overrides.find_by(subscription:)&.units || units
   end
 
+  def parent_or_self
+    if parent_id
+      parent
+    else
+      self
+    end
+  end
+
   # When upgrading a subscription with fixed_charges paid_in_advance,
   # this exact charge might have already been paid at the beginning of billing period.
   # in case of prorating, we need to deduct the prorated amount (remaining of the billing_period)

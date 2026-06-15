@@ -241,6 +241,25 @@ RSpec.describe FixedCharge do
     end
   end
 
+  describe "#parent_or_self" do
+    context "when the fixed charge has a parent" do
+      let(:parent) { create(:fixed_charge) }
+      let(:fixed_charge) { create(:fixed_charge, parent:) }
+
+      it "returns the parent fixed charge" do
+        expect(fixed_charge.parent_or_self).to eq(parent)
+      end
+    end
+
+    context "when the fixed charge has no parent" do
+      let(:fixed_charge) { create(:fixed_charge) }
+
+      it "returns itself" do
+        expect(fixed_charge.parent_or_self).to eq(fixed_charge)
+      end
+    end
+  end
+
   describe "#validate_pay_in_advance" do
     context "when charge model is standard" do
       it "is valid with pay_in_advance true" do
