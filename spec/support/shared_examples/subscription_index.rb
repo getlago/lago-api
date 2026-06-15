@@ -155,6 +155,26 @@ RSpec.shared_examples "a subscription index endpoint" do
     end
   end
 
+  context "with external_id filter" do
+    let(:params) { {external_id:, status: %i[active terminated]} }
+    let(:external_id) { SecureRandom.uuid }
+
+    let!(:subscriptions) do
+      [
+        create(:subscription, :active, customer:, external_id:),
+        create(:subscription, :terminated, customer:, external_id:)
+      ]
+    end
+
+    it "returns subscriptions matching external_id" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:subscriptions].count).to eq(2)
+      expect(json[:subscriptions].pluck(:lago_id)).to match_array(subscriptions.map(&:id))
+    end
+  end
+
   context "with billing_entity_codes filter" do
     let(:us_entity) { create(:billing_entity, organization:, code: "us") }
     let(:eu_entity) { create(:billing_entity, organization:, code: "eu") }
