@@ -24,12 +24,15 @@ module Mutations
 
         plan = result.plan
 
+        # NOTE: send_webhook is false so we don't emit a spurious plan.updated event on top of
+        #       the plan.created already emitted by Plans::CreateService above.
         unless entitlements.nil?
           result = ::Entitlement::PlanEntitlementsUpdateService.call(
             organization: plan.organization,
             plan:,
             entitlements_params: Utils::Entitlement.convert_gql_input_to_params(entitlements),
-            partial: false
+            partial: false,
+            send_webhook: false
           )
         end
 
