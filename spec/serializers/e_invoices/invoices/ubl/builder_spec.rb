@@ -29,8 +29,24 @@ RSpec.describe EInvoices::Invoices::Ubl::Builder do
         expect(subject).to contains_xml_node("//cbc:UBLVersionID").with_value(2.1)
       end
 
-      it "has CustomizationID tag" do
-        expect(subject).to contains_xml_node("//cbc:CustomizationID").with_value("urn:cen.eu:en16931:2017")
+      context "when CustomizationID tag" do
+        context "with a non-DE billing entity" do
+          before { invoice.billing_entity.update!(country: "FR") }
+
+          it "uses the EN 16931 profile" do
+            expect(subject).to contains_xml_node("//cbc:CustomizationID")
+              .with_value("urn:cen.eu:en16931:2017")
+          end
+        end
+
+        context "with a German billing entity" do
+          before { invoice.billing_entity.update!(country: "DE") }
+
+          it "uses the XRechnung 3.0 profile" do
+            expect(subject).to contains_xml_node("//cbc:CustomizationID")
+              .with_value("urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0")
+          end
+        end
       end
 
       it "has ID tag" do
