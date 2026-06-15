@@ -11,8 +11,9 @@ RSpec.describe Resolvers::OrdersResolver do
   let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:order_form) { create(:order_form, :signed, organization:, customer:, quote:) }
-  let(:order_form_two) { create(:order_form, :signed, organization:, customer:, quote:) }
-  let!(:order_two) { create(:order, organization:, customer:, order_form: order_form_two, order_type: :one_off) }
+  let(:quote_two) { create(:quote, organization:, customer:) }
+  let(:order_form_two) { create(:order_form, :signed, organization:, customer:, quote: quote_two) }
+  let!(:order_two) { create(:order, organization:, customer:, order_form: order_form_two) }
 
   before { create(:order, organization:, customer:, order_form:) }
 
@@ -53,6 +54,8 @@ RSpec.describe Resolvers::OrdersResolver do
   end
 
   context "when filtering by order type" do
+    let(:quote_two) { create(:quote, organization:, customer:, order_type: :one_off) }
+
     let(:query) do
       <<~GQL
         query($orderType: [OrderTypeEnum!]) {
@@ -229,10 +232,6 @@ RSpec.describe Resolvers::OrdersResolver do
   end
 
   context "when filtering by quote_number" do
-    let(:other_customer) { create(:customer, organization:) }
-    let(:other_quote) { create(:quote, organization:, customer: other_customer) }
-    let(:other_order_form) { create(:order_form, :signed, organization:, customer: other_customer, quote: other_quote) }
-
     let(:query) do
       <<~GQL
         query($quoteNumber: [String!]) {
@@ -244,21 +243,19 @@ RSpec.describe Resolvers::OrdersResolver do
       GQL
     end
 
-    before { create(:order, organization:, customer: other_customer, order_form: other_order_form) }
-
     it "returns only matching orders" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: {quoteNumber: [quote.number]}
+        variables: {quoteNumber: [quote_two.number]}
       )
 
       response = result["data"]["orders"]
 
-      expect(response["collection"].count).to eq(2)
-      expect(response["metadata"]["totalCount"]).to eq(2)
+      expect(response["collection"].count).to eq(1)
+      expect(response["collection"].first["id"]).to eq(order_two.id)
     end
   end
 
@@ -274,7 +271,7 @@ RSpec.describe Resolvers::OrdersResolver do
       GQL
     end
 
-    before { QuoteOwner.create!(organization:, quote:, user: membership.user) }
+    before { QuoteOwner.create!(organization:, quote: quote_two, user: membership.user) }
 
     it "returns only matching orders" do
       result = execute_graphql(
@@ -287,8 +284,8 @@ RSpec.describe Resolvers::OrdersResolver do
 
       response = result["data"]["orders"]
 
-      expect(response["collection"].count).to eq(2)
-      expect(response["metadata"]["totalCount"]).to eq(2)
+      expect(response["collection"].count).to eq(1)
+      expect(response["collection"].first["id"]).to eq(order_two.id)
     end
   end
 

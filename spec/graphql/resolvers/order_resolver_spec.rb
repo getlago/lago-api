@@ -13,7 +13,6 @@ RSpec.describe Resolvers::OrderResolver do
           number
           status
           orderType
-          executionRecord
           createdAt
           updatedAt
         }

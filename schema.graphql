@@ -9106,7 +9106,6 @@ type Order {
   customer: Customer!
   executedAt: ISO8601DateTime
   executionMode: OrderExecutionModeEnum
-  executionRecord: JSON
   id: ID!
   number: String!
   orderForm: OrderForm!
@@ -9478,6 +9477,7 @@ enum PermissionEnum {
   order_forms_sign
   order_forms_view
   order_forms_void
+  orders_view
   organization_emails_update
   organization_emails_view
   organization_integrations_create
@@ -9594,6 +9594,7 @@ type Permissions {
   orderFormsSign: Boolean!
   orderFormsView: Boolean!
   orderFormsVoid: Boolean!
+  ordersView: Boolean!
   organizationEmailsUpdate: Boolean!
   organizationEmailsView: Boolean!
   organizationIntegrationsCreate: Boolean!
