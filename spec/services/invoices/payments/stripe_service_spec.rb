@@ -168,6 +168,19 @@ RSpec.describe Invoices::Payments::StripeService do
       end
     end
 
+    context "when the session can no longer be expired" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:expire)
+          .and_raise(::Stripe::InvalidRequestError.new("not open", {}))
+      end
+
+      it "treats it as a no-op success" do
+        result = stripe_service.expire_payment_url(payment_intent)
+
+        expect(result).to be_success
+      end
+    end
+
     context "when the payment intent has no provider session id" do
       let(:provider_session_id) { nil }
 

@@ -95,6 +95,8 @@ module Invoices
         )
 
         result
+      rescue ::Stripe::InvalidRequestError # the other ones are on the retry job
+        result
       end
 
       private
