@@ -17,6 +17,7 @@ module Types
 
       field :customer, Types::Customers::Object, null: false
       field :order_form, Types::OrderForms::Object, null: false
+      field :organization, Types::Organizations::OrganizationType, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

@@ -18,6 +18,7 @@ RSpec.describe Types::Orders::Object do
 
     expect(subject).to have_field(:customer).of_type("Customer!")
     expect(subject).to have_field(:order_form).of_type("OrderForm!")
+    expect(subject).to have_field(:organization).of_type("Organization!")
 
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
