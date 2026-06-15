@@ -104,5 +104,32 @@ RSpec.describe SendEmailJob do
       end
     end
   end
+
+  context "with retryable errors" do
+    [
+      [ActiveJob::DeserializationError.allocate, 6],
+      [LagoHttpClient::HttpError.new(500, "error", "https://example.com"), 6],
+      [Net::ReadTimeout, 6],
+      [Net::OpenTimeout, 6],
+      [Net::SMTPServerBusy.new("busy"), 25],
+      [PaymentReceipts::FilesNotReadyError, 8]
+    ].each do |error, attempts|
+      error_class = error.is_a?(Class) ? error : error.class
+
+      context "when a #{error_class.name} error is raised" do
+        before do
+          allow_any_instance_of(ActionMailer::Parameterized::Mailer).to receive(:public_send).and_raise(error) # rubocop:disable RSpec/AnyInstance
+        end
+
+        it "raises a #{error_class.name} error and retries" do
+          assert_performed_jobs(attempts, only: [described_class]) do
+            expect do
+              described_class.perform_later("InvoiceMailer", "created", "deliver_now", args: [], params:)
+            end.to raise_error(error_class)
+          end
+        end
+      end
+    end
+  end
 end
 # rubocop:enable RSpec/AnyInstance
