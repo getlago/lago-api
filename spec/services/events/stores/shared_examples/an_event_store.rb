@@ -430,6 +430,27 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       it "returns the distinct event codes" do
         expect(event_store.distinct_codes).to match_array([code, "other_code"])
       end
+
+      context "when codes are provided" do
+        it "returns only the distinct event codes matching the provided codes" do
+          expect(event_store.distinct_codes(codes: [code, "unknown_code"])).to eq([code])
+        end
+
+        context "when an event with a provided code exists outside the period" do
+          before do
+            create_event(
+              timestamp: boundaries[:to_datetime] + 1.day,
+              value: "value",
+              transaction_id: SecureRandom.uuid,
+              code: "out_of_period_code"
+            )
+          end
+
+          it "does not return the code" do
+            expect(event_store.distinct_codes(codes: [code, "out_of_period_code"])).to eq([code])
+          end
+        end
+      end
     end
   end
 
@@ -2585,6 +2606,13 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         it "returns the distinct event codes" do
           expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, nil]])
+        end
+      end
+
+      context "when codes are provided" do
+        it "returns only the charges and filters matching the provided codes" do
+          expect(event_store.distinct_charges_and_filters(codes: [code])).to match_array([[charge.id, charge_filter.id]])
+          expect(event_store.distinct_charges_and_filters(codes: ["unknown_code"])).to eq([])
         end
       end
     end
