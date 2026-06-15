@@ -222,6 +222,9 @@ class Subscription < ApplicationRecord
 
   def downgrade_plan_date
     return unless next_subscription
+    if next_subscription.active? && downgraded?
+      return next_subscription.started_at&.to_date
+    end
     return unless next_subscription.pending?
 
     ::Subscriptions::DatesService.new_instance(self, Time.current)
