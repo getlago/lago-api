@@ -27,15 +27,17 @@ module PaymentProviders
           verified_transaction = verify_transaction
           return result unless verified_transaction
 
-          payable = find_payable
+          payable = find_payable(verified_reference: verified_transaction[:reference])
           return result unless payable
+
+          @resolved_payable_id = payable.id
 
           payment_service_class.new(payable:).update_payment_status(
             organization_id:,
             status: verified_transaction[:status],
             amount_cents: verified_amount_cents(verified_transaction),
             flutterwave_payment: PaymentProviders::FlutterwaveProvider::FlutterwavePayment.new(
-              id: provider_payment_id,
+              id: @resolved_payable_id,
               status: verified_transaction[:status],
               metadata: build_metadata(verified_transaction)
             )
@@ -76,12 +78,21 @@ module PaymentProviders
           end
         end
 
-        def find_payable
+        def find_payable(verified_reference: nil)
+          payable = find_payable_by_id(provider_payment_id)
+          return payable if payable.present? || verified_reference.blank?
+
+          find_payable_by_id(verified_reference)
+        end
+
+        def find_payable_by_id(id)
+          return if id.blank?
+
           case payable_type
           when "Invoice"
-            Invoice.find_by(id: provider_payment_id)
+            Invoice.find_by(id: id)
           when "PaymentRequest"
-            PaymentRequest.find_by(id: provider_payment_id)
+            PaymentRequest.find_by(id: id)
           end
         end
 
@@ -124,8 +135,7 @@ module PaymentProviders
         end
 
         def build_metadata(verified_transaction)
-          {
-            lago_invoice_id: provider_payment_id,
+          metadata = {
             lago_payable_type: payable_type,
             flutterwave_transaction_id: verified_transaction[:id],
             flw_ref: verified_transaction[:reference],
@@ -134,6 +144,15 @@ module PaymentProviders
             currency: verified_transaction[:currency],
             payment_type: "one-time"
           }
+
+          case payable_type
+          when "Invoice"
+            metadata[:lago_invoice_id] = @resolved_payable_id
+          when "PaymentRequest"
+            metadata[:lago_payable_id] = @resolved_payable_id
+          end
+
+          metadata
         end
 
         def verified_amount_cents(verified_transaction)
