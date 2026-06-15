@@ -5777,7 +5777,7 @@
         },
         {
           "kind": "ENUM",
-          "name": "CancelationReasonEnum",
+          "name": "CancellationReasonEnum",
           "description": null,
           "fields": null,
           "inputFields": null,
@@ -62439,24 +62439,24 @@
               "deprecationReason": null
             },
             {
-              "name": "cancelationReason",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "ENUM",
-                "name": "CancelationReasonEnum",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "canceledAt",
               "description": null,
               "args": [],
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "cancellationReason",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "ENUM",
+                "name": "CancellationReasonEnum",
                 "ofType": null
               },
               "isDeprecated": false,

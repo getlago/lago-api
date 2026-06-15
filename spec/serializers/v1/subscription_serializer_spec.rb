@@ -255,16 +255,16 @@ RSpec.describe ::V1::SubscriptionSerializer do
       create(
         :subscription,
         organization:,
-        cancelation_reason: Subscription::CANCELLATION_REASONS[:payment_failed],
+        cancellation_reason: Subscription::CANCELLATION_REASONS[:payment_failed],
         activated_at:
       )
     end
 
-    it "serializes cancelation_reason and activated_at" do
+    it "serializes cancellation_reason and activated_at" do
       result = JSON.parse(serializer.to_json)
 
       expect(result["subscription"]).to include(
-        "cancelation_reason" => Subscription::CANCELLATION_REASONS[:payment_failed],
+        "cancellation_reason" => Subscription::CANCELLATION_REASONS[:payment_failed],
         "activated_at" => activated_at.iso8601
       )
     end
@@ -301,7 +301,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
     it "does not serialize feature-flagged fields" do
       result = JSON.parse(serializer.to_json)
 
-      expect(result["subscription"]).not_to have_key("cancelation_reason")
+      expect(result["subscription"]).not_to have_key("cancellation_reason")
       expect(result["subscription"]).not_to have_key("activated_at")
       expect(result["subscription"]).not_to have_key("activation_rules")
     end
