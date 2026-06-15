@@ -57,7 +57,7 @@ RSpec.describe Api::V1::OrdersController do
         subject
 
         expect(response).to have_http_status(:forbidden)
-        expect(json[:code]).to eq("feature_not_available")
+        expect(json[:code]).to eq("feature_unavailable")
       end
     end
   end
@@ -95,7 +95,7 @@ RSpec.describe Api::V1::OrdersController do
         subject
 
         expect(response).to have_http_status(:forbidden)
-        expect(json[:code]).to eq("feature_not_available")
+        expect(json[:code]).to eq("feature_unavailable")
       end
     end
   end
