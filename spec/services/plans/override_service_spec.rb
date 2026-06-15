@@ -224,6 +224,21 @@ RSpec.describe Plans::OverrideService do
       )
     end
 
+    it "passes the overridden plan to charge overrides" do
+      allow(Charges::OverrideService).to receive(:call).and_call_original
+
+      result = override_service.call
+
+      expect(Charges::OverrideService).to have_received(:call).with(
+        charge:,
+        params: {
+          id: charge.id,
+          min_amount_cents: 1000,
+          plan: result.plan
+        }
+      )
+    end
+
     it "creates fixed charges based from the parent plan" do
       expect { override_service.call }.to change(Plan, :count).by(1)
       plan = Plan.order(:created_at).last

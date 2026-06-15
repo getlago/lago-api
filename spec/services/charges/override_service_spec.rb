@@ -65,6 +65,25 @@ RSpec.describe Charges::OverrideService do
         expect(new_charge.taxes).to contain_exactly(tax)
       end
 
+      context "when the plan is passed in params" do
+        let(:params) do
+          {
+            id: charge.id,
+            plan:,
+            min_amount_cents: 1000,
+            properties: {amount: "200"}
+          }
+        end
+
+        it "creates the charge on the given plan" do
+          result = override_service.call
+
+          expect(result).to be_success
+          expect(result.charge.plan).to eq(plan)
+          expect(result.charge.organization).to eq(plan.organization)
+        end
+      end
+
       context "with charge filters" do
         let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
 
