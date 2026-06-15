@@ -69,10 +69,30 @@ class InvoicesQuery < BaseQuery
     scope = organization.invoices
     return scope if search_term.blank?
 
-    scope.where(id: matching_ids_by_search)
+    scope = scope.with(matching_customers: matching_customers) if search_customers?
+    scope
+      .with(matching_invoices: matching_invoices)
+      .where("invoices.id IN (SELECT id FROM matching_invoices)")
   end
 
-  def matching_ids_by_search
+  def search_customers?
+    filters.customer_id.blank? && filters.customer_external_id.blank?
+  end
+
+  def matching_customers
+    escaped_term = "%#{Customer.sanitize_sql_like(search_term)}%"
+
+    organization.customers
+      .where(
+        "customers.name ILIKE :term OR customers.firstname ILIKE :term " \
+        "OR customers.lastname ILIKE :term OR customers.external_id ILIKE :term " \
+        "OR customers.email ILIKE :term",
+        term: escaped_term
+      )
+      .select(:id)
+  end
+
+  def matching_invoices
     escaped_term = "%#{Invoice.sanitize_sql_like(search_term)}%"
     search_base = organization.invoices
 
@@ -82,23 +102,12 @@ class InvoicesQuery < BaseQuery
 
     branches << search_base.where(id: search_term).select(:id) if search_term.match?(BaseQuery::UUID_REGEX)
 
-    if filters.customer_id.blank? && filters.customer_external_id.blank?
-      branches << search_base.where(customer_id: matching_customer_ids).select(:id)
+    if search_customers?
+      branches << search_base.where("invoices.customer_id IN (SELECT id FROM matching_customers)").select(:id)
     end
 
     union_sql = branches.map(&:to_sql).join(" UNION ")
     Invoice.unscoped.from("(#{union_sql}) AS invoices").select(:id)
-  end
-
-  def matching_customer_ids
-    escaped_term = "%#{Customer.sanitize_sql_like(search_term)}%"
-
-    branches = %i[name firstname lastname external_id email].map do |field|
-      organization.customers.where("customers.#{field} ILIKE ?", escaped_term).select(:id)
-    end
-
-    union_sql = branches.map(&:to_sql).join(" UNION ")
-    Customer.unscoped.from("(#{union_sql}) AS customers").select(:id)
   end
 
   def with_billing_entity_ids(scope)
