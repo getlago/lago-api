@@ -73,7 +73,9 @@ RSpec.describe PaymentProviders::Gocardless::Payments::UpdateReferenceService do
   end
 
   context "when the invoice has no number yet" do
-    before { invoice.update_column(:number, "") }
+    before do
+      invoice.update_column(:number, "") # rubocop:disable Rails/SkipsModelValidations
+    end
 
     it "skips the GoCardless call" do
       service_result
