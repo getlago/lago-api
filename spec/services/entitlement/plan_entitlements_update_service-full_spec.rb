@@ -49,6 +49,19 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(plan)
     end
 
+    context "when send_webhook is false" do
+      subject(:result) { described_class.call(organization:, plan:, entitlements_params:, partial: false, send_webhook: false) }
+
+      it "does not send the `plan.updated` webhook" do
+        expect { subject }.not_to have_enqueued_job(SendWebhookJob).with("plan.updated", plan)
+      end
+
+      it "does not produce an activity log" do
+        subject
+        expect(Utils::ActivityLog).not_to have_received(:produce)
+      end
+    end
+
     it "creates the entitlement with correct values" do
       result
       entitlement = plan.entitlements.first

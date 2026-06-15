@@ -551,8 +551,37 @@ RSpec.describe Mutations::Plans::Create, :premium do
         organization: organization,
         plan: Plan.last,
         entitlements_params: {},
-        partial: false
+        partial: false,
+        send_webhook: false
       )
+    end
+  end
+
+  context "with the plan webhooks" do
+    it "emits plan.created but not plan.updated" do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            name: "Plan with entitlements",
+            code: "plan_with_entitlements",
+            interval: "monthly",
+            payInAdvance: false,
+            amountCents: 100,
+            amountCurrency: "USD",
+            charges: [],
+            entitlements: [
+              {featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "22"}]}
+            ]
+          }
+        }
+      )
+
+      expect(SendWebhookJob).to have_been_enqueued.with("plan.created", Plan.last).once
+      expect(SendWebhookJob).not_to have_been_enqueued.with("plan.updated", anything)
     end
   end
 

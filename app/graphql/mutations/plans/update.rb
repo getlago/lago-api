@@ -23,12 +23,15 @@ module Mutations
 
         return result_error(result) unless result.success?
 
+        # NOTE: send_webhook is false so we don't duplicate the plan.updated event
+        #       already emitted by Plans::UpdateService above.
         unless entitlements.nil?
           result = ::Entitlement::PlanEntitlementsUpdateService.call(
             organization: plan.organization,
             plan:,
             entitlements_params: Utils::Entitlement.convert_gql_input_to_params(entitlements),
-            partial: false
+            partial: false,
+            send_webhook: false
           )
         end
 
