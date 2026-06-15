@@ -293,14 +293,7 @@ module Plans
     end
 
     def trigger_pay_in_advance_billing
-      plan.subscriptions.active.find_each do |subscription|
-        after_commit do
-          Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(
-            subscription,
-            timestamp
-          )
-        end
-      end
+      Invoices::CreateAllPayInAdvanceFixedChargesJob.perform_after_commit(plan, timestamp)
     end
 
     def sanitize_fixed_charges(plan, args_fixed_charges, created_fixed_charges_ids)
