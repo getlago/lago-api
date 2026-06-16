@@ -65,7 +65,7 @@ RSpec.describe FixedChargeEvents::BulkCreateService do
     end
 
     context "when the number of rows exceeds the insert batch size" do
-      before { stub_const("FixedChargeEvents::BulkCreateService::INSERT_BATCH_SIZE", 1) }
+      before { stub_const("FixedChargeEvents::BulkCreateService::BATCH_SIZE", 1) }
 
       let(:other_subscription) { create(:subscription, :active, plan:) }
 
