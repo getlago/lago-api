@@ -24,6 +24,7 @@ module EInvoices
 
       EN16931_PROFILE = "urn:cen.eu:en16931:2017"
       XRECHNUNG_3_0_PROFILE = "#{EN16931_PROFILE}#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0".freeze
+      PEPPOL_BIS_BILLING_PROFILE = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
 
       private
 
@@ -33,6 +34,13 @@ module EInvoices
           XRECHNUNG_3_0_PROFILE
         else
           EN16931_PROFILE
+        end
+      end
+
+      def profile_id
+        case resource.billing_entity.country.try(:upcase)
+        when "DE"
+          PEPPOL_BIS_BILLING_PROFILE
         end
       end
     end

@@ -46,6 +46,25 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
         end
       end
 
+      context "when ProfileID tag" do
+        context "with a non-DE billing entity" do
+          before { invoice.billing_entity.update!(country: "FR") }
+
+          it "does not insert ProfileID" do
+            expect(subject).not_to contains_xml_node("//cbc:ProfileID")
+          end
+        end
+
+        context "with a German billing entity" do
+          before { invoice.billing_entity.update!(country: "DE") }
+
+          it "inserts the Peppol BIS Billing 3.0 ProfileID" do
+            expect(subject).to contains_xml_node("//cbc:ProfileID")
+              .with_value("urn:fdc:peppol.eu:2017:poacc:billing:01:1.0")
+          end
+        end
+      end
+
       it "contains header tags" do
         expect(subject).to contains_xml_node("//cbc:ID").with_value(credit_note.number)
         expect(subject).to contains_xml_node("//cbc:IssueDate").with_value(credit_note.issuing_date)

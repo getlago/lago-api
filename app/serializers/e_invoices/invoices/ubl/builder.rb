@@ -16,6 +16,7 @@ module EInvoices
           xml.comment "UBL Version and Customization"
           xml["cbc"].UBLVersionID "2.1"
           xml["cbc"].CustomizationID customization_id
+          xml["cbc"].ProfileID profile_id if profile_id
 
           Ubl::Header.serialize(xml:, resource:, type_code: invoice_type_code)
           Ubl::SupplierParty.serialize(xml:, resource:, options: supplier_party_options)
