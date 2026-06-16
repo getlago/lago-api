@@ -251,7 +251,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
     let(:ts) { subscription.started_at.beginning_of_day + 1.day }
 
-    def insert(transaction_id:, timestamp:, enriched_at:, value: 1)
+    def insert_event(transaction_id:, timestamp:, enriched_at:, value: 1)
       Clickhouse::EventsEnriched.create!(
         transaction_id:,
         organization_id: organization.id,
@@ -277,10 +277,10 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
 
     it "collapses re-enrichment duplicates of the same dedup key into one" do
       txn = SecureRandom.uuid
-      insert(transaction_id: txn, timestamp: ts, enriched_at: 2.minutes.ago)
-      insert(transaction_id: txn, timestamp: ts, enriched_at: 1.minute.ago)
-      insert(transaction_id: txn, timestamp: ts, enriched_at: Time.current)
-      insert(transaction_id: SecureRandom.uuid, timestamp: ts + 1.day, enriched_at: Time.current)
+      insert_event(transaction_id: txn, timestamp: ts, enriched_at: 2.minutes.ago)
+      insert_event(transaction_id: txn, timestamp: ts, enriched_at: 1.minute.ago)
+      insert_event(transaction_id: txn, timestamp: ts, enriched_at: Time.current)
+      insert_event(transaction_id: SecureRandom.uuid, timestamp: ts + 1.day, enriched_at: Time.current)
 
       expect(event_store.count).to eq(2)
       expect(event_store.count).to eq(join_based_count)
@@ -288,16 +288,16 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
 
     it "treats the same transaction_id at different timestamps as distinct events" do
       txn = SecureRandom.uuid
-      insert(transaction_id: txn, timestamp: ts, enriched_at: Time.current)
-      insert(transaction_id: txn, timestamp: ts + 1.hour, enriched_at: Time.current)
+      insert_event(transaction_id: txn, timestamp: ts, enriched_at: Time.current)
+      insert_event(transaction_id: txn, timestamp: ts + 1.hour, enriched_at: Time.current)
 
       expect(event_store.count).to eq(2)
       expect(event_store.count).to eq(join_based_count)
     end
 
     it "excludes events outside the boundaries" do
-      insert(transaction_id: SecureRandom.uuid, timestamp: ts, enriched_at: Time.current)
-      insert(transaction_id: SecureRandom.uuid, timestamp: boundaries[:to_datetime] + 2.days, enriched_at: Time.current)
+      insert_event(transaction_id: SecureRandom.uuid, timestamp: ts, enriched_at: Time.current)
+      insert_event(transaction_id: SecureRandom.uuid, timestamp: boundaries[:to_datetime] + 2.days, enriched_at: Time.current)
 
       expect(event_store.count).to eq(1)
       expect(event_store.count).to eq(join_based_count)
