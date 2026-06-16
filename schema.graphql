@@ -11009,6 +11009,7 @@ type Quote {
   currentVersion: QuoteVersion!
   customer: Customer!
   id: ID!
+  images: JSON!
   number: String!
   orderType: OrderTypeEnum!
   organization: Organization!
