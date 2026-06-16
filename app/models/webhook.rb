@@ -15,17 +15,36 @@ class Webhook < ApplicationRecord
     %w[id object_id]
   end
 
-  # Up until 1.4.0, we stored the payload as a string. This method
-  # ensures that we can still read the old payloads.
-  # Webhooks created after 1.4.0 will have the payload stored as a hash.
-  # Webhooks are deleted after 90 days, so we can remove this method 90 days after every client has updated to 1.4.0.
+  def self.payload_storage
+    ActiveStorage::Blob.service
+  end
+
   def payload
-    attr = super
-    if attr.is_a?(String)
-      JSON.parse(attr)
+    if payload_key.present?
+      stored_payload
     else
-      attr
+      legacy_payload
     end
+  end
+
+  def response
+    if response_key.present?
+      stored_response
+    else
+      super
+    end
+  end
+
+  def store_payload(content)
+    self.payload_key ||= storage_key("payload.json.gz")
+    @stored_payload = upload_json(payload_key, content)
+    payload_key
+  end
+
+  def store_response(content)
+    self.response_key ||= storage_key("response.json.gz")
+    @stored_response = upload_json(response_key, content)
+    response_key
   end
 
   def generate_headers
@@ -62,6 +81,54 @@ class Webhook < ApplicationRecord
   def issuer
     ENV["LAGO_API_URL"]
   end
+
+  private
+
+  def stored_payload
+    @stored_payload ||= download_json(payload_key)
+  end
+
+  def stored_response
+    @stored_response ||= download_json(response_key)
+  end
+
+  def legacy_payload
+    attr = read_attribute(:payload)
+    if attr.is_a?(String)
+      JSON.parse(attr)
+    else
+      attr
+    end
+  end
+
+  def upload_json(key, content)
+    json = content.to_json
+    self.class.payload_storage.upload(
+      key,
+      StringIO.new(ActiveSupport::Gzip.compress(json)),
+      content_type: "application/gzip"
+    )
+    JSON.parse(json)
+  end
+
+  def download_json(key)
+    JSON.parse(ActiveSupport::Gzip.decompress(self.class.payload_storage.download(key)))
+  end
+
+  def storage_key(filename)
+    "#{storage_directory}/#{filename}"
+  end
+
+  def storage_directory
+    @storage_directory ||= begin
+      reference = payload_key || response_key
+      if reference.present?
+        File.dirname(reference)
+      else
+        "webhooks/#{Time.current.utc.strftime("%Y/%m/%d")}/#{SecureRandom.uuid}"
+      end
+    end
+  end
 end
 
 # == Schema Information
@@ -75,7 +142,9 @@ end
 #  last_retried_at     :datetime
 #  object_type         :string
 #  payload             :json
+#  payload_key         :string
 #  response            :json
+#  response_key        :string
 #  retries             :integer          default(0), not null
 #  status              :integer          default("pending"), not null
 #  webhook_type        :string
