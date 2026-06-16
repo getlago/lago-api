@@ -30,7 +30,8 @@ module Quotes
       result
     rescue ActiveRecord::RecordInvalid => e
       blob&.purge_later
-      result.record_validation_failure!(record: e.record)
+      errors = e.record.errors.messages.transform_keys { |key| (key == :images) ? :image : key }
+      result.validation_failure!(errors:)
     end
 
     private

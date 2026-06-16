@@ -72,7 +72,7 @@ RSpec.describe Quotes::AddImageService do
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:images]).to eq(["invalid_content_type"])
+        expect(result.error.messages[:image]).to eq(["invalid_content_type"])
         expect(quote.reload.images).not_to be_attached
       end
     end
@@ -90,7 +90,7 @@ RSpec.describe Quotes::AddImageService do
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:images]).to eq(["file_too_large"])
+        expect(result.error.messages[:image]).to eq(["file_too_large"])
         expect(quote.reload.images).not_to be_attached
       end
     end
