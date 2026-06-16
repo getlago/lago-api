@@ -19,6 +19,7 @@ RSpec.describe Resolvers::CustomersResolver do
         $activeSubscriptionsCountFrom: Int,
         $activeSubscriptionsCountTo: Int,
         $customerType: CustomerTypeEnum,
+        $externalId: String,
         $hasCustomerType: Boolean,
         $hasTaxIdentificationNumber: Boolean,
         $countries: [CountryCode!],
@@ -37,6 +38,7 @@ RSpec.describe Resolvers::CustomersResolver do
           activeSubscriptionsCountFrom: $activeSubscriptionsCountFrom,
           activeSubscriptionsCountTo: $activeSubscriptionsCountTo,
           customerType: $customerType,
+          externalId: $externalId,
           hasCustomerType: $hasCustomerType,
           hasTaxIdentificationNumber: $hasTaxIdentificationNumber,
           countries: $countries,
@@ -84,6 +86,18 @@ RSpec.describe Resolvers::CustomersResolver do
       result = execute_graphql(current_user: membership.user, query:)
 
       expect_graphql_error(result:, message: "Missing organization id")
+    end
+  end
+
+  context "when filtering by external id" do
+    let(:customer) { create(:customer, organization:) }
+
+    before do
+      customer
+    end
+
+    it "returns the customer with matching external_id" do
+      test_customers_resolver(customer, variables: {externalId: customer.external_id})
     end
   end
 

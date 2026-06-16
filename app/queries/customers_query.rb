@@ -4,6 +4,7 @@ class CustomersQuery < BaseQuery
   Result = BaseResult[:customers]
   Filters = BaseFilters[
     :organization_id,
+    :external_id,
     :account_type,
     :billing_entity_ids,
     :with_deleted,
@@ -26,6 +27,7 @@ class CustomersQuery < BaseQuery
 
     customers = base_scope
 
+    customers = with_external_id(customers) if filters.external_id.present?
     customers = with_customer_type(customers) if filters.customer_type.present? || filters.key?(:has_customer_type)
     customers = with_account_type(customers) if filters.account_type.present?
     customers = with_billing_entity_ids(customers) if filters.billing_entity_ids.present?
@@ -54,9 +56,12 @@ class CustomersQuery < BaseQuery
   end
 
   def base_scope
-    return Customer.where(organization:) if search_term.blank?
+    scope = Customer.where(organization:)
 
-    Customer.where(organization:).where(id: matching_ids_by_search)
+    return scope if search_term.blank?
+    return scope if filters.external_id.present?
+
+    scope.where(id: matching_ids_by_search)
   end
 
   def matching_ids_by_search
@@ -71,6 +76,10 @@ class CustomersQuery < BaseQuery
 
     union_sql = branches.map(&:to_sql).join(" UNION ")
     Customer.unscoped.from("(#{union_sql}) AS customers").select(:id)
+  end
+
+  def with_external_id(scope)
+    scope.where(external_id: filters.external_id)
   end
 
   def with_currencies(scope)

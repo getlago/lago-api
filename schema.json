@@ -53898,6 +53898,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "externalId",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "hasCustomerType",
                   "description": null,
                   "type": {
