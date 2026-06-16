@@ -43,8 +43,6 @@ module FixedCharges
         # Pending subscriptions will have events created when they activate
         (subscription.active? || subscription.incomplete?) ? [subscription] : []
       else
-        # Preload the associations read while computing the billing period
-        # (plan interval, customer timezone) to avoid an N+1 across every subscription.
         fixed_charge.plan.subscriptions
           .where(status: %i[active incomplete])
           .without_fixed_charge_units_override_for(fixed_charge)
@@ -53,9 +51,8 @@ module FixedCharges
     end
 
     def units_for(subscription)
-      # In the bulk path, subscriptions carrying a units override are already filtered out by
-      # `without_fixed_charge_units_override_for`, so `effective_units_for` would always fall back
-      # to the plan-level units. Only the explicitly provided subscription can carry an override.
+      # Only an explicitly provided subscription can carry an override; the bulk path filters
+      # overridden subscriptions out, so they always use the plan-level units.
       return fixed_charge.units unless self.subscription
 
       fixed_charge.effective_units_for(subscription)
