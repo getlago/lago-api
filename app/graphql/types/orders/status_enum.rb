@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 module Types
-  module OrderForms
+  module Orders
     class StatusEnum < Types::BaseEnum
-      graphql_name "OrderFormStatusEnum"
+      graphql_name "OrderStatusEnum"
 
-      OrderForm::STATUSES.each_key do |type|
+      Order::STATUSES.each_key do |type|
         value type
       end
     end

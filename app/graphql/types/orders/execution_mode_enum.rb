@@ -5,8 +5,8 @@ module Types
     class ExecutionModeEnum < Types::BaseEnum
       graphql_name "OrderExecutionModeEnum"
 
-      ::OrderForms::MarkAsSignedService::EXECUTION_MODES.each do |mode|
-        value mode
+      Order::EXECUTION_MODES.each_key do |type|
+        value type
       end
     end
   end

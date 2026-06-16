@@ -1,32 +1,30 @@
 # frozen_string_literal: true
 
 module Types
-  module OrderForms
+  module Orders
     class Object < Types::BaseObject
-      graphql_name "OrderForm"
+      graphql_name "Order"
 
+      field :execution_mode, Types::Orders::ExecutionModeEnum, null: true
       field :id, ID, null: false
       field :number, String, null: false
-      field :status, Types::OrderForms::StatusEnum, null: false
-      field :void_reason, Types::OrderForms::VoidReasonEnum, null: true
+      field :order_type, Quotes::OrderTypeEnum, null: false
+      field :status, Types::Orders::StatusEnum, null: false
 
       field :billing_snapshot, GraphQL::Types::JSON, null: false
-      field :expires_at, GraphQL::Types::ISO8601DateTime, null: true
-      field :signed_at, GraphQL::Types::ISO8601DateTime, null: true
-      field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
-
-      field :signed_document_url, String, null: true
+      field :currency, String, null: true
+      field :executed_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :customer, Types::Customers::Object, null: false
+      field :order_form, Types::OrderForms::Object, null: false
       field :organization, Types::Organizations::OrganizationType, null: false
-      field :quote, Types::Quotes::Object, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       dataload_association :customer
+      dataload_association :order_form
       dataload_association :organization
-      dataload_association :quote
     end
   end
 end

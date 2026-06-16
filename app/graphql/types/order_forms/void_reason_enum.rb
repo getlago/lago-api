@@ -5,7 +5,7 @@ module Types
     class VoidReasonEnum < Types::BaseEnum
       graphql_name "OrderFormVoidReasonEnum"
 
-      OrderForm::VOID_REASONS.keys.each do |type|
+      OrderForm::VOID_REASONS.each_key do |type|
         value type
       end
     end

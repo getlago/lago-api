@@ -150,6 +150,10 @@ order_forms:
     - manager
   void:
     - manager
+orders:
+  view:
+    - finance
+    - manager
 organization:
   view:
     - finance
