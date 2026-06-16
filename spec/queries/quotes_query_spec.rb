@@ -71,6 +71,33 @@ RSpec.describe QuotesQuery do
       end
     end
 
+    describe "external_customer_ids" do
+      context "when filtering by an existing external customer id" do
+        let(:other_customer) { create(:customer, organization:) }
+        let(:other_quote) { create(:quote, :with_version, organization:, customer: other_customer) }
+        let(:filters) { {external_customer_ids: [other_customer.external_id]} }
+
+        before do
+          other_quote
+        end
+
+        it "returns only that customer's quotes" do
+          expect(result).to be_success
+          expect(returned_ids.count).to eq(1)
+          expect(returned_ids).to include(other_quote.id)
+        end
+      end
+
+      context "when filtering by an unknown external customer id" do
+        let(:filters) { {external_customer_ids: ["unknown"]} }
+
+        it "returns no quotes" do
+          expect(result).to be_success
+          expect(returned_ids).to be_empty
+        end
+      end
+    end
+
     describe "statuses" do
       context "when filtering by valid status" do
         let(:filters) { {statuses: ["draft"]} }
