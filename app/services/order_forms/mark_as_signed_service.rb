@@ -77,7 +77,7 @@ module OrderForms
         return result.single_validation_failure!(field: :execution_mode, error_code: "value_is_mandatory")
       end
 
-      return if Order::EXECUTION_MODES.values.include?(execution_mode)
+      return if Order::EXECUTION_MODES.value?(execution_mode)
 
       result.single_validation_failure!(field: :execution_mode, error_code: "value_is_invalid")
     end
