@@ -138,4 +138,174 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       end
     end
   end
+
+  # Pins the query shape behind #count. The deduplicated + unfiltered count must
+  # avoid the INNER ANY JOIN (which only fetches the value column and caused
+  # ClickHouse OOM on large subscriptions); filtered and non-deduplicated counts
+  # must keep using the JOIN-based path so the filter is applied to the latest
+  # enriched row per dedup key.
+  describe "#count_query" do
+    subject(:event_store) do
+      described_class.new(code: billable_metric.code, subscription:, boundaries:, filters:, deduplicate:)
+    end
+
+    let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
+    let(:organization) { billable_metric.organization }
+    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+    let(:deduplicate) { true }
+    let(:filters) { {} }
+
+    context "when deduplicated and unfiltered" do
+      it "counts distinct dedup keys without a JOIN" do
+        sql = event_store.count_query
+
+        expect(sql).not_to include("JOIN")
+        expect(sql).to include("GROUP BY #{described_class::DEDUP_KEY_COLUMNS.join(", ")}")
+      end
+    end
+
+    context "when grouped_by_values is set" do
+      let(:filters) { {grouped_by_values: {"region" => "europe"}} }
+
+      it "uses the JOIN-based deduplication path" do
+        expect(event_store.count_query).to include("INNER ANY JOIN")
+      end
+    end
+
+    context "when matching_filters are set" do
+      let(:filters) { {matching_filters: {"region" => ["europe"]}} }
+
+      it "uses the JOIN-based deduplication path" do
+        expect(event_store.count_query).to include("INNER ANY JOIN")
+      end
+    end
+
+    context "when ignored_filters are set" do
+      let(:filters) { {ignored_filters: [{"region" => ["europe"]}]} }
+
+      it "uses the JOIN-based deduplication path" do
+        expect(event_store.count_query).to include("INNER ANY JOIN")
+      end
+    end
+
+    context "when deduplication is disabled" do
+      let(:deduplicate) { false }
+
+      it "does not build the deduplication CTEs" do
+        sql = event_store.count_query
+
+        expect(sql).not_to include("JOIN")
+        expect(sql).not_to include("latest_enriched")
+      end
+    end
+
+    context "when grouped_by is set without grouped_by_values or filters" do
+      let(:filters) { {grouped_by: ["region"]} }
+
+      it "still uses the JOIN-free fast path (grouped_by alone does not filter a count)" do
+        expect(event_store.count_query).not_to include("JOIN")
+      end
+    end
+
+    context "when use_from_boundary is false" do
+      it "omits the lower timestamp bound without injecting NULL" do
+        event_store.use_from_boundary = false
+        sql = event_store.count_query
+
+        expect(sql).not_to include("JOIN")
+        expect(sql.upcase).not_to include("NULL")
+        expect(sql).not_to include("timestamp >=")
+        expect(sql).to include("timestamp <=")
+      end
+    end
+  end
+
+  # Real-data equivalence: the deduplicated + unfiltered #count uses the JOIN-free
+  # fast path. These assert it returns the SAME number as the original JOIN-based
+  # query on identical data, across re-enrichment duplicates and boundary edges.
+  describe "#count fast-path equivalence with the JOIN-based query" do
+    subject(:event_store) do
+      described_class.new(code: billable_metric.code, subscription:, boundaries:, filters: {}, deduplicate: true)
+    end
+
+    let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
+    let(:organization) { billable_metric.organization }
+    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+    let(:ts) { subscription.started_at.beginning_of_day + 1.day }
+
+    def insert_event(transaction_id:, timestamp:, enriched_at:, value: 1)
+      Clickhouse::EventsEnriched.create!(
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:,
+        properties: {"value" => value},
+        value:,
+        decimal_value: value.to_d,
+        precise_total_amount_cents: value,
+        enriched_at:
+      )
+    end
+
+    def join_based_count
+      sql = event_store.send(
+        :with_ctes,
+        event_store.events_cte_queries(deduplicated_columns: %w[value]),
+        "SELECT count()\nFROM events"
+      )
+      Events::Stores::Utils::ClickhouseConnection.connection_with_retry { |c| c.select_value(sql).to_i }
+    end
+
+    it "collapses re-enrichment duplicates of the same dedup key into one" do
+      txn = SecureRandom.uuid
+      insert_event(transaction_id: txn, timestamp: ts, enriched_at: 2.minutes.ago)
+      insert_event(transaction_id: txn, timestamp: ts, enriched_at: 1.minute.ago)
+      insert_event(transaction_id: txn, timestamp: ts, enriched_at: Time.current)
+      insert_event(transaction_id: SecureRandom.uuid, timestamp: ts + 1.day, enriched_at: Time.current)
+
+      expect(event_store.count).to eq(2)
+      expect(event_store.count).to eq(join_based_count)
+    end
+
+    it "treats the same transaction_id at different timestamps as distinct events" do
+      txn = SecureRandom.uuid
+      insert_event(transaction_id: txn, timestamp: ts, enriched_at: Time.current)
+      insert_event(transaction_id: txn, timestamp: ts + 1.hour, enriched_at: Time.current)
+
+      expect(event_store.count).to eq(2)
+      expect(event_store.count).to eq(join_based_count)
+    end
+
+    it "excludes events outside the boundaries" do
+      insert_event(transaction_id: SecureRandom.uuid, timestamp: ts, enriched_at: Time.current)
+      insert_event(transaction_id: SecureRandom.uuid, timestamp: boundaries[:to_datetime] + 2.days, enriched_at: Time.current)
+
+      expect(event_store.count).to eq(1)
+      expect(event_store.count).to eq(join_based_count)
+    end
+
+    it "returns zero when there are no events" do
+      expect(event_store.count).to eq(0)
+      expect(event_store.count).to eq(join_based_count)
+    end
+  end
 end

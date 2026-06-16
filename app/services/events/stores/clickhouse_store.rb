@@ -219,13 +219,41 @@ module Events
 
       def count
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value]), <<-SQL)
+          connection.select_value(count_query).to_i
+        end
+      end
+
+      # Counting deduplicated events only needs the number of distinct dedup keys,
+      # not their latest enriched values. We therefore skip the `INNER ANY JOIN`
+      # performed by `events_cte_queries` (which materializes a column for every
+      # event and roughly doubles the memory of the dedup aggregation) and count
+      # the grouped keys directly. This avoids ClickHouse MEMORY_LIMIT_EXCEEDED on
+      # very large subscriptions.
+      #
+      # When the count is filtered (grouped_by_values or matching/ignored filters)
+      # we keep the JOIN-based path so the filter still applies to the latest
+      # enriched row per dedup key (identical semantics).
+      def count_query
+        filtered = grouped_by_values? || matching_filters.present? || ignored_filters.present?
+
+        if !deduplicate || filtered
+          return with_ctes(events_cte_queries(deduplicated_columns: %w[value]), <<-SQL)
             SELECT count()
             FROM events
           SQL
-
-          connection.select_value(sql).to_i
         end
+
+        events_from = (from_datetime if use_from_boundary)
+
+        <<~SQL.squish
+          SELECT count()
+          FROM (
+            SELECT 1
+            FROM events_enriched
+            WHERE #{deduplicated_events_where_sql(from_datetime: events_from, to_datetime: applicable_to_datetime)}
+            GROUP BY #{DEDUP_KEY_COLUMNS.join(", ")}
+          )
+        SQL
       end
 
       def grouped_count(columns = grouped_by)
