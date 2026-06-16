@@ -28,20 +28,12 @@ module EInvoices
 
       private
 
-      def customization_id
-        case resource.billing_entity.country.try(:upcase)
-        when "DE"
-          XRECHNUNG_3_0_PROFILE
-        else
-          EN16931_PROFILE
-        end
+      def de_billing_entity?
+        resource.billing_entity.country.try(:upcase) == "DE"
       end
 
-      def profile_id
-        case resource.billing_entity.country.try(:upcase)
-        when "DE"
-          PEPPOL_BIS_BILLING_PROFILE
-        end
+      def customization_id
+        de_billing_entity? ? XRECHNUNG_3_0_PROFILE : EN16931_PROFILE
       end
     end
   end
