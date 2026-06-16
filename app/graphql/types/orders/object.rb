@@ -21,6 +21,10 @@ module Types
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      dataload_association :customer
+      dataload_association :order_form
+      dataload_association :organization
     end
   end
 end
