@@ -4,7 +4,7 @@ module Quotes
   class AddImageService < BaseService
     include OrderForms::Premium
 
-    Result = BaseResult[:image_url]
+    Result = BaseResult[:image_url, :image_id]
 
     def initialize(quote:, image:)
       @quote = quote
@@ -23,6 +23,7 @@ module Quotes
       quote.images.attach(blob)
       quote.save!
 
+      result.image_id = blob.id
       result.image_url = Rails.application.routes.url_helpers.rails_blob_url(
         blob,
         host: ENV["LAGO_API_URL"]

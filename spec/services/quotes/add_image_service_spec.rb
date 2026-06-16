@@ -20,6 +20,7 @@ RSpec.describe Quotes::AddImageService do
         expect(result.image_url).to include("/rails/active_storage/blobs")
 
         expect(quote.reload.images.count).to eq(1)
+        expect(result.image_id).to eq(quote.images.first.blob.id)
         expect(quote.images.first.content_type).to eq("image/png")
         expect(quote.images.first.filename.to_s).to end_with(".png")
       end

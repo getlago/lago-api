@@ -21,6 +21,7 @@ RSpec.describe Mutations::Quotes::AddImage do
     <<-GQL
       mutation($input: AddQuoteImageInput!) {
         addQuoteImage(input: $input) {
+          id
           url
         }
       }
@@ -36,6 +37,15 @@ RSpec.describe Mutations::Quotes::AddImage do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "quotes:update"
 
+  describe "payload" do
+    subject { described_class.payload_type }
+
+    it do
+      expect(subject).to have_field(:id).of_type("ID!")
+      expect(subject).to have_field(:url).of_type("String!")
+    end
+  end
+
   context "with valid input", :premium do
     it "attaches the image to the quote and returns its URL" do
       result = execute_graphql(
@@ -47,6 +57,7 @@ RSpec.describe Mutations::Quotes::AddImage do
       )
 
       expect(result["data"]["addQuoteImage"]["url"]).to include("/rails/active_storage/blobs")
+      expect(result["data"]["addQuoteImage"]["id"]).to eq(quote.reload.images.first.blob.id)
       expect(quote.reload.images.count).to eq(1)
     end
   end

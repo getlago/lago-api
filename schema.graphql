@@ -474,6 +474,7 @@ type AddQuoteImagePayload {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  id: ID!
   url: String!
 }
 
@@ -7242,7 +7243,7 @@ type Mutation {
   ): MoneyhashProvider
 
   """
-  Upload an image for a quote and return its URL
+  Upload an image for a quote and return its id and URL
   """
   addQuoteImage(
     """
