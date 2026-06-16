@@ -28,6 +28,10 @@ module Types
 
       # Computed live while the version is editable; the frozen snapshot persisted at approval
       # time is returned once present.
+      #
+      # Intended for single-record fetches: live computation walks quote -> customer ->
+      # billing_entity, which are not dataloaded beyond :quote. Requesting mention_variables across
+      # a `versions` collection would N+1; dataload that chain here if such an access pattern emerges.
       def mention_variables
         object.mention_variables.presence ||
           ::QuoteVersions::ComputeMentionVariablesService.call(quote_version: object).mention_variables

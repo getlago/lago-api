@@ -115,5 +115,23 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
         expect(variables["commercial_terms_term_duration"]).to be_nil
       end
     end
+
+    context "when the term ends on a shorter month-end" do
+      let(:start_date) { Date.new(2026, 1, 31) }
+      let(:end_date) { Date.new(2026, 2, 28) }
+
+      it "rounds down to whole days rather than a month" do
+        expect(variables["commercial_terms_term_duration"]).to eq("28 days")
+      end
+    end
+
+    context "when the term spans more than a year but not a whole multiple" do
+      let(:start_date) { Date.new(2026, 1, 1) }
+      let(:end_date) { Date.new(2027, 2, 1) }
+
+      it "renders the total months rather than years plus months" do
+        expect(variables["commercial_terms_term_duration"]).to eq("13 months")
+      end
+    end
   end
 end
