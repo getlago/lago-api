@@ -455,6 +455,20 @@ type AddOnCollection {
 }
 
 """
+Paystack input arguments
+"""
+input AddPaystackPaymentProviderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String!
+  name: String!
+  secretKey: String!
+  successRedirectUrl: String
+}
+
+"""
 Stripe input arguments
 """
 input AddStripePaymentProviderInput {
@@ -7219,6 +7233,16 @@ type Mutation {
   ): MoneyhashProvider
 
   """
+  Add Paystack payment provider
+  """
+  addPaystackPaymentProvider(
+    """
+    Parameters for AddPaystackPaymentProvider
+    """
+    input: AddPaystackPaymentProviderInput!
+  ): PaystackProvider
+
+  """
   Add Stripe API keys to the organization
   """
   addStripePaymentProvider(
@@ -8819,6 +8843,16 @@ type Mutation {
   ): CurrentOrganization
 
   """
+  Update Paystack payment provider
+  """
+  updatePaystackPaymentProvider(
+    """
+    Parameters for UpdatePaystackPaymentProvider
+    """
+    input: UpdatePaystackPaymentProviderInput!
+  ): PaystackProvider
+
+  """
   Updates an existing Plan
   """
   updatePlan(
@@ -9300,7 +9334,7 @@ enum PaymentMethodTypeEnum {
   provider
 }
 
-union PaymentProvider = AdyenProvider | CashfreeProvider | FlutterwaveProvider | GocardlessProvider | MoneyhashProvider | StripeProvider
+union PaymentProvider = AdyenProvider | CashfreeProvider | FlutterwaveProvider | GocardlessProvider | MoneyhashProvider | PaystackProvider | StripeProvider
 
 """
 PaymentProviderCollection type
@@ -9375,6 +9409,14 @@ input PaymentRequestCreateInput {
 enum PaymentTypeEnum {
   manual
   provider
+}
+
+type PaystackProvider {
+  code: String!
+  id: ID!
+  name: String!
+  secretKey: ObfuscatedString
+  successRedirectUrl: String
 }
 
 """
@@ -9977,6 +10019,7 @@ enum ProviderTypeEnum {
   flutterwave
   gocardless
   moneyhash
+  paystack
   stripe
 }
 
@@ -13193,6 +13236,20 @@ input UpdateOrganizationInput {
   timezone: TimezoneEnum
   webhookUrl: String
   zipcode: String
+}
+
+"""
+Paystack update input arguments
+"""
+input UpdatePaystackPaymentProviderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String
+  id: ID!
+  name: String
+  successRedirectUrl: String
 }
 
 """

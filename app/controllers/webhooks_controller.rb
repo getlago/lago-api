@@ -108,4 +108,21 @@ class WebhooksController < ApplicationController
 
     head(:ok)
   end
+
+  def paystack
+    payload = request.body.read
+
+    result = InboundWebhooks::CreateService.call(
+      organization_id: params[:organization_id],
+      webhook_source: :paystack,
+      code: params[:code].presence,
+      payload:,
+      signature: request.headers["x-paystack-signature"],
+      event_type: "paystack"
+    )
+
+    return head(:bad_request) unless result.success?
+
+    head(:ok)
+  end
 end
