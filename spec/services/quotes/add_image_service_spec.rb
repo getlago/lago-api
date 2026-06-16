@@ -68,7 +68,7 @@ RSpec.describe Quotes::AddImageService do
       let(:image) { "data:application/pdf;base64,#{Base64.strict_encode64("%PDF-1.4")}" }
 
       it "returns a validation failure without attaching" do
-        expect { result }.not_to change(ActiveStorage::Blob, :count)
+        expect { result }.to have_enqueued_job(ActiveStorage::PurgeJob)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
@@ -86,6 +86,8 @@ RSpec.describe Quotes::AddImageService do
       end
 
       it "returns a validation failure without attaching" do
+        expect { result }.to have_enqueued_job(ActiveStorage::PurgeJob)
+
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:images]).to eq(["file_too_large"])

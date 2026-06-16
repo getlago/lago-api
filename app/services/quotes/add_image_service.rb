@@ -17,18 +17,19 @@ module Quotes
       return result.not_found_failure!(resource: "quote") unless quote
       return result.forbidden_failure! unless order_forms_enabled?(quote.organization)
 
-      attachment = image_attachment
+      blob = image_blob
       return result if result.failure?
 
-      quote.images.attach(attachment)
+      quote.images.attach(blob)
       quote.save!
 
       result.image_url = Rails.application.routes.url_helpers.rails_blob_url(
-        quote.images.attachments.last.blob,
+        blob,
         host: ENV["LAGO_API_URL"]
       )
       result
     rescue ActiveRecord::RecordInvalid => e
+      blob&.purge_later
       result.record_validation_failure!(record: e.record)
     end
 
@@ -36,7 +37,7 @@ module Quotes
 
     attr_reader :quote, :image
 
-    def image_attachment
+    def image_blob
       decoded = Utils::Base64File.decode(image)
 
       if decoded.nil?
@@ -44,11 +45,11 @@ module Quotes
         return
       end
 
-      {
+      ActiveStorage::Blob.create_and_upload!(
         io: decoded.io,
         filename: filename(decoded.content_type),
         content_type: decoded.content_type
-      }
+      )
     end
 
     def filename(content_type)
