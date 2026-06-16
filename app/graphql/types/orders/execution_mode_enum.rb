@@ -5,7 +5,7 @@ module Types
     class ExecutionModeEnum < Types::BaseEnum
       graphql_name "OrderExecutionModeEnum"
 
-      Order::EXECUTION_MODES.keys.each do |type|
+      Order::EXECUTION_MODES.each_key do |type|
         value type
       end
     end
