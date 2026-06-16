@@ -12,6 +12,8 @@ namespace :daily_usages do
 
     organization = TaskPrompt.ask_for_organization
 
+    subscription_ids = TaskPrompt.ask_for_subscription_ids
+
     default_from_date = DailyUsage::DEFAULT_HISTORY_DAYS.days.ago.to_date
     from_date = TaskPrompt.ask_for_date("From date (YYYY-MM-DD)", default: default_from_date)
 
@@ -20,6 +22,7 @@ namespace :daily_usages do
       .where.not(started_at: nil)
       .where("terminated_at IS NULL OR terminated_at >= ?", from_date)
       .includes(customer: :organization)
+    subscriptions = subscriptions.where(id: subscription_ids) if subscription_ids.present?
 
     # ----- recon (read-only) -----
     sub_count = subscriptions.count
@@ -34,6 +37,7 @@ namespace :daily_usages do
     puts ""
     puts "----- recon -----"
     puts "organization          : #{organization.name} (#{organization.id})"
+    puts "requested subs        : #{subscription_ids.present? ? subscription_ids.size : "all"}"
     puts "subs in scope         : #{sub_count}"
     puts "existing daily_usages : #{daily_usages_count}"
     puts "days in backfill range: #{days} (#{from_date} .. #{Date.current})"
