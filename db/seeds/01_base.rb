@@ -188,7 +188,7 @@ organizations_data.each do |org_data|
   # == Plans
 
   unless Plan.exists?(organization:, code: "standard_plan")
-    Plans::CreateService.call!(
+    standard_plan_params = {
       organization_id: organization.id,
       name: "Standard Plan",
       code: "standard_plan",
@@ -217,11 +217,12 @@ organizations_data.each do |org_data|
           }
         }
       ]
-    )
+    }
+    Plans::CreateService.call!(standard_plan_params)
   end
 
   unless Plan.exists?(organization:, code: "premium_plan")
-    Plans::CreateService.call!(
+    premium_plan_params = {
       organization_id: organization.id,
       name: "Premium Plan",
       code: "premium_plan",
@@ -250,7 +251,8 @@ organizations_data.each do |org_data|
           }
         }
       ]
-    )
+    }
+    Plans::CreateService.call!(premium_plan_params)
   end
 
   unless PricingUnit.exists?(organization:, code: "xyz")
