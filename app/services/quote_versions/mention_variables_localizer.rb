@@ -30,10 +30,10 @@ module QuoteVersions
 
     def localize(key, value)
       case key
-      when *DATE_KEYS then format_date(value)
       when "commercial_terms_term_duration" then format_term_duration(value)
       when "commercial_terms_payment_terms" then format_payment_terms(value)
       when "billing_entity_address" then format_address(value)
+      when *DATE_KEYS then format_date(value)
       else value
       end
     end
