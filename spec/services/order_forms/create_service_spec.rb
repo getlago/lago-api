@@ -35,10 +35,10 @@ RSpec.describe OrderForms::CreateService do
         expect { result }.not_to change(OrderForm, :count)
       end
 
-      it "returns a method not allowed failure" do
+      it "returns a validation failure" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("quote_version_not_approved")
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({quote_version: ["not_approved"]})
       end
     end
 

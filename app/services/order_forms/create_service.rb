@@ -14,7 +14,7 @@ module OrderForms
     def call
       return result.not_found_failure!(resource: "quote_version") unless quote_version
       return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
-      return result.not_allowed_failure!(code: "quote_version_not_approved") unless quote_version.approved?
+      return result.single_validation_failure!(field: :quote_version, error_code: "not_approved") unless quote_version.approved?
 
       order_form = OrderForm.create!(
         organization: quote_version.organization,

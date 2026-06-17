@@ -44,8 +44,8 @@ RSpec.describe QuoteVersions::UpdateService do
 
       it "returns validation failure" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("inappropriate_state")
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({status: ["not_editable"]})
       end
     end
 
@@ -54,8 +54,8 @@ RSpec.describe QuoteVersions::UpdateService do
 
       it "returns validation failure" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("inappropriate_state")
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({status: ["not_editable"]})
       end
     end
 

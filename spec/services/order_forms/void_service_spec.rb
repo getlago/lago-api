@@ -38,12 +38,12 @@ RSpec.describe OrderForms::VoidService do
       context "when the order form is not generated" do
         let(:order_form) { create(:order_form, :signed, customer:, organization:) }
 
-        it "returns a not allowed failure" do
+        it "returns a validation failure" do
           result = service.call
 
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("not_voidable")
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({status: ["not_voidable"]})
         end
       end
 
