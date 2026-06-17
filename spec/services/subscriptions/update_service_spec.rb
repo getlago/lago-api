@@ -664,6 +664,57 @@ RSpec.describe Subscriptions::UpdateService do
               expect(result.error.result.error.messages).to eq({amount_cents: ["invalid_amount"]})
             end
           end
+
+          context "with a partial fixed_charges payload" do
+            let(:fixed_charge) { create(:fixed_charge, plan:, units: 5) }
+            let(:other_fixed_charge) { create(:fixed_charge, plan:, units: 7) }
+            let(:params) do
+              {
+                plan_overrides: {
+                  fixed_charges: [
+                    {id: fixed_charge.id, units: 20}
+                  ]
+                }
+              }
+            end
+
+            before do
+              fixed_charge
+              other_fixed_charge
+            end
+
+            it "updates only the listed fixed charge and preserves the others" do
+              result = update_service.call
+
+              expect(result).to be_success
+              expect(fixed_charge.reload.units).to eq(20)
+              expect(other_fixed_charge.reload.units).to eq(7)
+              expect(plan.reload.fixed_charges.pluck(:id)).to match_array([fixed_charge.id, other_fixed_charge.id])
+            end
+
+            context "when an entry references a fixed_charge id not on the plan" do
+              let(:foreign_fixed_charge) { create(:fixed_charge, plan: parent_plan) }
+              let(:params) do
+                {
+                  plan_overrides: {
+                    fixed_charges: [
+                      {id: foreign_fixed_charge.id, units: 20}
+                    ]
+                  }
+                }
+              end
+
+              it "fails with a not found error and does not mutate the plan" do
+                result = update_service.call
+
+                expect(result).not_to be_success
+                expect(result.error).to be_a(BaseService::NotFoundFailure)
+                expect(result.error.resource).to eq("fixed_charge")
+                expect(fixed_charge.reload.units).to eq(5)
+                expect(other_fixed_charge.reload.units).to eq(7)
+              end
+            end
+          end
         end
       end
 
