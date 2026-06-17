@@ -84,6 +84,27 @@ RSpec.describe EInvoices::Ubl::CustomerParty do
         end
       end
 
+      context "with Contact" do
+        let(:xpath) { "#{root}/cac:Contact" }
+
+        it "emits the buyer contact (BR-DE-3)" do
+          expect(subject).to contains_xml_node("#{xpath}/cbc:Name")
+            .with_value(customer.name)
+          expect(subject).to contains_xml_node("#{xpath}/cbc:ElectronicMail")
+            .with_value(customer.email)
+        end
+
+        context "when customer has no email" do
+          before { customer.update!(email: nil) }
+
+          it "still emits Name but omits ElectronicMail" do
+            expect(subject).to contains_xml_node("#{xpath}/cbc:Name")
+              .with_value(customer.name)
+            expect(subject).not_to contains_xml_node("#{xpath}/cbc:ElectronicMail")
+          end
+        end
+      end
+
       context "with PartyLegalEntity" do
         let(:xpath) { "#{root}/cac:PartyLegalEntity" }
 

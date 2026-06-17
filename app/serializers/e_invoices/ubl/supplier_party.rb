@@ -43,6 +43,11 @@ module EInvoices
               xml["cbc"].RegistrationName billing_entity.legal_name
               xml["cbc"].CompanyID billing_entity.tax_identification_number
             end
+            xml["cac"].Contact do
+              xml["cbc"].Name billing_entity.name
+              xml["cbc"].Telephone billing_entity.phone if de_billing_entity?
+              xml["cbc"].ElectronicMail billing_entity.email if billing_entity.email.present?
+            end
           end
         end
       end

@@ -108,6 +108,44 @@ RSpec.describe EInvoices::Ubl::SupplierParty do
         end
       end
 
+      context "with Contact" do
+        let(:xpath) { "#{root}/cac:Contact" }
+
+        it "emits the seller Name and ElectronicMail" do
+          expect(subject).to contains_xml_node("#{xpath}/cbc:Name")
+            .with_value(billing_entity.name)
+          expect(subject).to contains_xml_node("#{xpath}/cbc:ElectronicMail")
+            .with_value(billing_entity.email)
+        end
+
+        context "with a German billing entity" do
+          before { billing_entity.update!(country: "DE", phone: "+49 30 1234-5678") }
+
+          it "emits the billing entity's phone as Telephone" do
+            expect(subject).to contains_xml_node("#{xpath}/cbc:Telephone")
+              .with_value("+49 30 1234-5678")
+          end
+        end
+
+        context "with a non-DE billing entity" do
+          before { billing_entity.update!(country: "FR") }
+
+          it "does not emit Telephone" do
+            expect(subject).not_to contains_xml_node("#{xpath}/cbc:Telephone")
+          end
+        end
+
+        context "when billing entity has no email" do
+          before { billing_entity.update!(email: nil) }
+
+          it "still emits Name but omits ElectronicMail" do
+            expect(subject).to contains_xml_node("#{xpath}/cbc:Name")
+              .with_value(billing_entity.name)
+            expect(subject).not_to contains_xml_node("#{xpath}/cbc:ElectronicMail")
+          end
+        end
+      end
+
       context "with PartyLegalEntity" do
         let(:xpath) { "#{root}/cac:PartyLegalEntity" }
 

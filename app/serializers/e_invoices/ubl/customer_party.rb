@@ -22,6 +22,10 @@ module EInvoices
             xml["cac"].PartyLegalEntity do
               xml["cbc"].RegistrationName customer.name
             end
+            xml["cac"].Contact do
+              xml["cbc"].Name customer.name
+              xml["cbc"].ElectronicMail customer.email if customer.email.present?
+            end
           end
         end
       end
