@@ -171,7 +171,7 @@ module Subscriptions
       if current_plan.parent_id
         Plans::UpdateService.call!(
           plan: current_plan,
-          params: params[:plan_overrides].to_h.with_indifferent_access
+          params: plan_update_params_with_full_fixed_charges(current_plan)
         )
       else
         Plans::OverrideService.call!(
@@ -212,6 +212,34 @@ module Subscriptions
           timestamp:
         )
       end
+    end
+
+    def plan_update_params_with_full_fixed_charges(plan)
+      payload = params[:plan_overrides].to_h.with_indifferent_access
+      return payload unless payload.key?(:fixed_charges)
+
+      fixed_charges_by_id = plan.fixed_charges.index_by(&:id)
+
+      overlays_by_id = payload[:fixed_charges].each_with_object({}) do |entry, acc|
+        entry_hash = entry.to_h.with_indifferent_access
+        id = entry_hash[:id]
+        result.not_found_failure!(resource: "fixed_charge") unless fixed_charges_by_id.key?(id)
+        acc[id] = entry_hash.except(:id)
+      end
+
+      payload[:fixed_charges] = fixed_charges_by_id.values.map do |fc|
+        {
+          id: fc.id,
+          charge_model: fc.charge_model,
+          properties: fc.properties,
+          units: fc.units,
+          invoice_display_name: fc.invoice_display_name,
+          pay_in_advance: fc.pay_in_advance,
+          prorated: fc.prorated
+        }.with_indifferent_access.merge(overlays_by_id[fc.id] || {})
+      end
+
+      payload
     end
 
     def valid?(args)
