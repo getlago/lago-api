@@ -115,6 +115,7 @@ module WalletActions
       ],
       recurring_transaction_rules: [
         :granted_credits,
+        :grants_target_top_up,
         :interval,
         :method,
         :paid_credits,
@@ -176,6 +177,7 @@ module WalletActions
         :trigger,
         :paid_credits,
         :granted_credits,
+        :grants_target_top_up,
         :invoice_requires_successful_payment,
         :ignore_paid_top_up_limits,
         :transaction_name,
