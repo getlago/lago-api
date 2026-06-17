@@ -40,7 +40,7 @@ RSpec.describe Webhook do
       end
 
       it "returns the payload read from object storage" do
-        expect(Webhook.find(webhook.id).payload).to eq(original_payload)
+        expect(described_class.find(webhook.id).payload).to eq(original_payload)
       end
     end
   end
@@ -58,7 +58,7 @@ RSpec.describe Webhook do
       end
 
       it "returns the response read from object storage" do
-        expect(Webhook.find(webhook.id).response).to eq(original_response)
+        expect(described_class.find(webhook.id).response).to eq(original_response)
       end
     end
 
