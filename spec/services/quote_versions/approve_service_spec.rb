@@ -7,7 +7,9 @@ RSpec.describe QuoteVersions::ApproveService do
 
   let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
   let(:quote) { create(:quote, organization:) }
-  let(:quote_version) { create(:quote_version, quote:, organization:) }
+  let(:quote_version) do
+    create(:quote_version, quote:, organization:, start_date: Date.new(2026, 1, 1), end_date: Date.new(2027, 1, 1))
+  end
 
   describe ".call" do
     let(:result) { approve_service.call }
@@ -31,11 +33,13 @@ RSpec.describe QuoteVersions::ApproveService do
         )
       end
 
-      it "persists the computed mention variables snapshot" do
+      it "persists the raw computed mention variables snapshot" do
         expect(result).to be_success
         expect(result.quote_version.reload.mention_variables).to include(
           "customer_name" => quote.customer.name,
-          "quote_number" => quote.number
+          "quote_number" => quote.number,
+          "commercial_terms_start_date" => "2026-01-01",
+          "commercial_terms_term_duration" => {"unit" => "years", "count" => 1}
         )
       end
     end
