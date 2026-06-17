@@ -9,6 +9,7 @@ module EInvoices
         xml.comment "Customer Party"
         xml["cac"].AccountingCustomerParty do
           xml["cac"].Party do
+            xml["cbc"].EndpointID customer.email, schemeID: "EM" if customer.email.present?
             xml["cac"].PostalAddress do
               xml["cbc"].StreetName customer.address_line1
               xml["cbc"].AdditionalStreetName customer.address_line2 if customer.address_line2.present?

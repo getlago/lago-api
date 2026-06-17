@@ -21,6 +21,7 @@ module EInvoices
         xml.comment "Supplier Party"
         xml["cac"].AccountingSupplierParty do
           xml["cac"].Party do
+            xml["cbc"].EndpointID billing_entity.email, schemeID: "EM" if billing_entity.email.present?
             xml["cac"].PostalAddress do
               xml["cbc"].StreetName billing_entity.address_line1
               xml["cbc"].AdditionalStreetName billing_entity.address_line2 if billing_entity.address_line2.present?

@@ -36,6 +36,24 @@ RSpec.describe EInvoices::Ubl::CustomerParty do
     end
 
     context "with customer" do
+      context "with EndpointID" do
+        let(:xpath) { "#{root}/cbc:EndpointID" }
+
+        it "emits the buyer email with schemeID EM (BR-CO-25)" do
+          expect(subject).to contains_xml_node(xpath)
+            .with_value(customer.email)
+            .with_attribute("schemeID", "EM")
+        end
+
+        context "when customer has no email" do
+          before { customer.update!(email: nil) }
+
+          it "omits EndpointID" do
+            expect(subject).not_to contains_xml_node(xpath)
+          end
+        end
+      end
+
       context "with PostalAddress" do
         let(:xpath) { "#{root}/cac:PostalAddress" }
 
