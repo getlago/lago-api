@@ -48,6 +48,61 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
     it_behaves_like "an event store", with_event_duplication: true
   end
 
+  # Batched per-filter aggregation: one query sums every charge_filter_id at once,
+  # and must stay equivalent to running #sum once per filter (including the default
+  # filter, stored as charge_filter_id = '').
+  describe "#grouped_sum_by_charge_filter" do
+    subject(:event_store) do
+      described_class.new(code: billable_metric.code, subscription:, boundaries:, filters: {charge_id: charge.id}, deduplicate: true)
+    end
+
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
+    let(:charge_filter_eu) { create(:charge_filter, charge:, organization:) }
+    let(:charge_filter_asia) { create(:charge_filter, charge:, organization:) }
+    let(:events_grouped_by) { nil }
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+
+    before do
+      timestamp = subscription.started_at.beginning_of_day + 1.day
+      create_event(timestamp:, value: 5, charge_filter: charge_filter_eu)
+      create_event(timestamp:, value: 3, charge_filter: charge_filter_eu)
+      create_event(timestamp:, value: 7, charge_filter: charge_filter_asia)
+      create_event(timestamp:, value: 2, charge_filter: nil) # default filter -> charge_filter_id ''
+    end
+
+    it "returns each charge filter's sum (and the default) equivalent to a per-filter #sum" do
+      batched = event_store.grouped_sum_by_charge_filter.index_by { |row| row[:charge_filter_id] }
+
+      [charge_filter_eu, charge_filter_asia, nil].each do |charge_filter|
+        per_filter = described_class.new(
+          code: billable_metric.code,
+          subscription:,
+          boundaries:,
+          filters: {charge_id: charge.id, charge_filter:},
+          deduplicate: true
+        ).sum
+
+        entry = batched[charge_filter&.id.to_s]
+        expect(entry[:value]).to eq(per_filter.value)
+        expect(entry[:events_count]).to eq(per_filter.events_count)
+      end
+
+      expect(batched[charge_filter_eu.id][:value]).to eq(8)
+      expect(batched[charge_filter_asia.id][:value]).to eq(7)
+      expect(batched[""][:value]).to eq(2)
+    end
+  end
+
   describe "#grouped_arel_columns" do
     subject(:event_store) do
       described_class.new(

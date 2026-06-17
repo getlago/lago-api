@@ -520,6 +520,16 @@ module Events
       end
 
       def sum(with_count: true)
+        # When the per-charge_filter_id sums were precomputed in a single grouped query,
+        # serve this filter's value from that map instead of issuing a dedicated query.
+        if precomputed_charge_filter_sums
+          entry = precomputed_charge_filter_sums[charge_filter_id.to_s]
+          return build_aggregation_result(
+            "value" => entry ? entry[:value] : 0,
+            "events_count" => entry ? entry[:events_count] : 0
+          )
+        end
+
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
             SELECT
@@ -529,6 +539,35 @@ module Events
           SQL
 
           build_aggregation_result(connection.select_one(sql))
+        end
+      end
+
+      # Aggregate the sum for every charge_filter_id of the charge in a single query.
+      # Deduplication still happens per (charge_id, charge_filter_id, transaction_id, ...)
+      # so each filter's value matches what an individual `sum` would have returned.
+      # Returns rows: { charge_filter_id:, value:, events_count: } ('' for the default filter).
+      def grouped_sum_by_charge_filter
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          @aggregate_all_charge_filters = true
+
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+            SELECT
+              events.charge_filter_id as charge_filter_id,
+              sum(events.decimal_value) as value,
+              count() as events_count
+            FROM events
+            GROUP BY events.charge_filter_id
+          SQL
+
+          connection.select_all(sql).map do |row|
+            {
+              charge_filter_id: row["charge_filter_id"].to_s,
+              value: row["value"] || 0,
+              events_count: row["events_count"].presence&.to_i
+            }
+          end
+        ensure
+          @aggregate_all_charge_filters = false
         end
       end
 
@@ -836,9 +875,14 @@ module Events
           sql_condition("#{prefix}organization_id = ?", subscription.organization_id),
           sql_condition("#{prefix}code = ?", code),
           sql_condition("#{prefix}external_subscription_id = ?", subscription.external_id),
-          sql_condition("#{prefix}charge_id = ?", charge_id),
-          sql_condition("#{prefix}charge_filter_id = ?", charge_filter_id || "")
+          sql_condition("#{prefix}charge_id = ?", charge_id)
         ]
+
+        # When aggregating every filter at once, do not pin a single charge_filter_id.
+        # Deduplication still keys on charge_filter_id (see DEDUP_KEY_COLUMNS).
+        unless @aggregate_all_charge_filters
+          conditions << sql_condition("#{prefix}charge_filter_id = ?", charge_filter_id || "")
+        end
 
         conditions << sql_condition("#{prefix}timestamp >= ?", from_datetime) if from_datetime
         conditions << sql_condition("#{prefix}timestamp <= ?", to_datetime) if to_datetime

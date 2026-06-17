@@ -512,6 +512,16 @@ module Events
       end
 
       def sum(with_count: true)
+        # When the per-filter sums were precomputed in a single grouped query,
+        # serve this filter's value from that map instead of issuing a dedicated query.
+        if precomputed_charge_filter_sums
+          entry = precomputed_charge_filter_sums[charge_filter_id.to_s]
+          return build_aggregation_result(
+            "value" => entry ? entry[:value] : 0,
+            "events_count" => entry ? entry[:events_count] : 0
+          )
+        end
+
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
             SELECT
@@ -521,6 +531,34 @@ module Events
           SQL
 
           build_aggregation_result(connection.select_one(sql))
+        end
+      end
+
+      # Aggregate the sum for every charge filter of the charge in a single query.
+      # Each filter is a property predicate, so we dedup the charge's events once and
+      # split them with sumIf/countIf per filter. `filter_specs` is an array of
+      # { id:, matching_filters:, ignored_filters: } (id is nil for the default filter).
+      # Returns { charge_filter_id_string => { value:, events_count: } }.
+      def grouped_sum_by_filters(filter_specs)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          selects = filter_specs.each_with_index.map do |spec, i|
+            predicate = filter_predicate_sql(spec[:matching_filters], spec[:ignored_filters])
+            "sumIf(events.decimal_value, #{predicate}) AS value_#{i}, " \
+              "countIf(#{predicate}) AS count_#{i}"
+          end
+
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value properties]), <<-SQL)
+            SELECT #{selects.join(", ")}
+            FROM events
+          SQL
+
+          row = connection.select_one(sql)
+          filter_specs.each_with_index.each_with_object({}) do |(spec, i), map|
+            map[spec[:id].to_s] = {
+              value: row["value_#{i}"] || 0,
+              events_count: row["count_#{i}"].presence&.to_i
+            }
+          end
         end
       end
 
@@ -724,6 +762,37 @@ module Events
             [timestamp, difference, cumul, second_duration.to_i, period_ratio]
           end
         end
+      end
+
+      # Build a ClickHouse boolean expression for a charge filter, matching the semantics of
+      # `filters_scope` but as a standalone predicate over the `events` CTE (for use in sumIf).
+      # Returns "1" when the filter has no matching/ignored constraints (default catch-all with
+      # no other filters).
+      def filter_predicate_sql(matching_filters, ignored_filters)
+        clauses = []
+
+        matching_filters.each do |key, values|
+          clauses << ActiveRecord::Base.sanitize_sql_for_conditions(
+            ["events.properties[?] IN (?)", key.to_s, values.map(&:to_s)]
+          )
+        end
+
+        ignored = ignored_filters.filter_map do |filters|
+          next if filters.empty?
+
+          inner = filters.filter_map do |key, values|
+            next if values.empty?
+
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              ["(coalesce(events.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
+            )
+          end.join(" AND ")
+          inner.presence
+        end
+
+        clauses << "NOT (#{ignored.map { "(#{it})" }.join(" OR ")})" unless ignored.empty?
+
+        clauses.empty? ? "1" : clauses.join(" AND ")
       end
 
       def with_timestamp_boundaries(query, from_datetime, to_datetime)
