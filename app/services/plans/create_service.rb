@@ -4,9 +4,10 @@ module Plans
   class CreateService < BaseService
     Result = BaseResult[:plan]
 
-    def initialize(args)
+    def initialize(args, send_webhook: true)
       @args = args
-      super
+      @send_webhook = send_webhook
+      super()
     end
 
     activity_loggable(
@@ -77,7 +78,7 @@ module Plans
 
       result.plan = plan
       track_plan_created(plan)
-      SendWebhookJob.perform_after_commit("plan.created", plan)
+      SendWebhookJob.perform_after_commit("plan.created", plan) if send_webhook
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -87,7 +88,7 @@ module Plans
 
     private
 
-    attr_reader :args
+    attr_reader :args, :send_webhook
 
     def create_commitment(plan, args, commitment_type)
       Commitment.create!(
