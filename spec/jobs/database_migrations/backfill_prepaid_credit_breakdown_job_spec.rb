@@ -8,12 +8,13 @@ RSpec.describe DatabaseMigrations::BackfillPrepaidCreditBreakdownJob do
 
   # Builds an invoice that consumed prepaid credit, with consumption rows linking
   # its outbound transaction to granted/purchased inbound transactions.
-  def create_consumed_invoice(invoice_organization: organization, invoice_customer: customer, granted_cents: 0, purchased_cents: 0)
+  def create_consumed_invoice(invoice_organization: organization, invoice_customer: customer, granted_cents: 0, purchased_cents: 0, status: :finalized, prepaid_credit_amount_cents: granted_cents + purchased_cents)
     wallet = create(:wallet, customer: invoice_customer, organization: invoice_organization, traceable: true)
     invoice = create(:invoice,
       organization: invoice_organization,
       customer: invoice_customer,
-      prepaid_credit_amount_cents: granted_cents + purchased_cents,
+      status:,
+      prepaid_credit_amount_cents:,
       prepaid_granted_credit_amount_cents: nil,
       prepaid_purchased_credit_amount_cents: nil)
 
@@ -61,6 +62,37 @@ RSpec.describe DatabaseMigrations::BackfillPrepaidCreditBreakdownJob do
     it "skips invoices whose customer is not fully traceable" do
       invoice = create_consumed_invoice(granted_cents: 100, purchased_cents: 200)
       create(:wallet, customer:, organization:, traceable: false)
+
+      described_class.perform_now(organization.id)
+
+      invoice.reload
+      expect(invoice.prepaid_granted_credit_amount_cents).to be_nil
+      expect(invoice.prepaid_purchased_credit_amount_cents).to be_nil
+    end
+
+    it "skips invoices that are not finalized or voided" do
+      invoice = create_consumed_invoice(granted_cents: 100, purchased_cents: 200, status: :draft)
+
+      described_class.perform_now(organization.id)
+
+      invoice.reload
+      expect(invoice.prepaid_granted_credit_amount_cents).to be_nil
+      expect(invoice.prepaid_purchased_credit_amount_cents).to be_nil
+    end
+
+    it "processes voided invoices" do
+      invoice = create_consumed_invoice(granted_cents: 100, purchased_cents: 200, status: :voided)
+
+      described_class.perform_now(organization.id)
+
+      invoice.reload
+      expect(invoice.prepaid_granted_credit_amount_cents).to eq(100)
+      expect(invoice.prepaid_purchased_credit_amount_cents).to eq(200)
+    end
+
+    it "skips invoices whose consumption ledger does not reconcile" do
+      # prepaid_credit_amount_cents (500) != consumed total (300) → inconsistent, skip
+      invoice = create_consumed_invoice(granted_cents: 100, purchased_cents: 200, prepaid_credit_amount_cents: 500)
 
       described_class.perform_now(organization.id)
 

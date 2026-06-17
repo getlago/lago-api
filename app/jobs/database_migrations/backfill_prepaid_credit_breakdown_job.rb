@@ -45,14 +45,21 @@ module DatabaseMigrations
     end
 
     # Invoices the live code would compute a breakdown for, not yet filled:
-    # prepaid credit was applied, breakdown is empty, the customer is fully
-    # traceable, and there are consumption rows to aggregate.
+    #   * the invoice is settled (finalized or voided), not draft/failed/pending/etc.
+    #   * prepaid credit was applied and the breakdown is empty
+    #   * the customer is fully traceable
+    #   * there are consumption rows to aggregate
+    #   * those rows reconcile: total consumed == prepaid_credit_amount_cents.
+    #     A mismatch means the consumption ledger is inconsistent for this invoice,
+    #     so we skip it rather than write a wrong (and unbalanced) breakdown.
     def self.candidates(organization_id = nil)
       scope = Invoice
+        .where(status: %i[finalized voided])
         .where(prepaid_granted_credit_amount_cents: nil, prepaid_purchased_credit_amount_cents: nil)
         .where("prepaid_credit_amount_cents > 0")
         .where.not(customer_id: Wallet.where(traceable: false).select(:customer_id))
         .where(id: consumed_invoice_ids)
+        .where("prepaid_credit_amount_cents = (#{total_consumed_sql})")
       scope = scope.where(organization_id:) if organization_id
       scope
     end
@@ -67,6 +74,17 @@ module DatabaseMigrations
         .where.not(invoice_id: nil)
         .where(id: WalletTransactionConsumption.select(:outbound_wallet_transaction_id))
         .select(:invoice_id)
+    end
+
+    # Total amount consumed across all of an invoice's outbound transactions —
+    # used to verify the consumption ledger reconciles with prepaid_credit_amount_cents.
+    def self.total_consumed_sql
+      <<~SQL.squish
+        SELECT COALESCE(SUM(c.consumed_amount_cents), 0)
+        FROM wallet_transaction_consumptions c
+        JOIN wallet_transactions out_wt ON out_wt.id = c.outbound_wallet_transaction_id
+        WHERE out_wt.invoice_id = invoices.id
+      SQL
     end
 
     # Set-based assignment: each column sums the consumed amount of its bucket for
