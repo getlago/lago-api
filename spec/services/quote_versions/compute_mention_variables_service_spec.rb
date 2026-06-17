@@ -43,11 +43,22 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
     create(:quote_version, quote:, organization:, currency: "EUR", start_date:, end_date:)
   end
 
+  let(:raw_address) do
+    {
+      "address_line1" => "4 rue de la Paix",
+      "address_line2" => nil,
+      "locality" => "Paris",
+      "postal_code" => "75002",
+      "administrative_area" => nil,
+      "country_code" => "FR"
+    }
+  end
+
   describe ".call" do
     let(:result) { service.call }
     let(:variables) { result.mention_variables }
 
-    it "computes the full mention variables dictionary" do
+    it "computes the raw, locale-independent mention variables dictionary" do
       expect(result).to be_success
       expect(variables).to include(
         "customer_name" => "Mistral AI",
@@ -56,36 +67,36 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
         "organization_logo" => organization.logo_url,
         "billing_entity_name" => "Mistral AI SAS",
         "billing_entity_legal_name" => "Mistral AI SAS",
-        "billing_entity_address" => "4 rue de la Paix\n75002 Paris\nFrance",
+        "billing_entity_address" => raw_address,
         "billing_entity_tax_id" => "FR12345678901",
         "billing_entity_email" => "billing@mistral.ai",
         "quote_number" => quote.number,
         "quote_version" => quote_version.version.to_s,
         "quote_currency" => "EUR",
-        "commercial_terms_term_duration" => "1 year",
-        "commercial_terms_start_date" => "Apr 01, 2026",
-        "commercial_terms_payment_terms" => "Net 30"
+        "commercial_terms_term_duration" => {"unit" => "years", "count" => 1},
+        "commercial_terms_start_date" => "2026-04-01",
+        "commercial_terms_payment_terms" => 30
       )
-      expect(variables["quote_date"]).to be_present
+      expect(variables["quote_date"]).to match(/\A\d{4}-\d{2}-\d{2}\z/)
     end
 
     context "when the customer overrides the net payment term" do
       let(:customer_net_payment_term) { 45 }
 
       it "uses the customer's payment term" do
-        expect(variables["commercial_terms_payment_terms"]).to eq("Net 45")
+        expect(variables["commercial_terms_payment_terms"]).to eq(45)
       end
     end
 
     context "when the customer document locale is French" do
       let(:customer_document_locale) { "fr" }
 
-      it "localizes the dates, duration, payment terms and address" do
+      it "still produces locale-independent raw values" do
         expect(variables).to include(
-          "commercial_terms_term_duration" => "un an",
-          "commercial_terms_start_date" => "1 avr. 2026",
-          "commercial_terms_payment_terms" => "Net 30",
-          "billing_entity_address" => "4 rue de la Paix\n75002 Paris\nFrance"
+          "commercial_terms_term_duration" => {"unit" => "years", "count" => 1},
+          "commercial_terms_start_date" => "2026-04-01",
+          "commercial_terms_payment_terms" => 30,
+          "billing_entity_address" => raw_address
         )
       end
     end
@@ -94,8 +105,8 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
       let(:start_date) { Date.new(2026, 1, 1) }
       let(:end_date) { Date.new(2026, 4, 1) }
 
-      it "renders the duration in months" do
-        expect(variables["commercial_terms_term_duration"]).to eq("3 months")
+      it "reports the duration in months" do
+        expect(variables["commercial_terms_term_duration"]).to eq({"unit" => "months", "count" => 3})
       end
     end
 
@@ -103,8 +114,8 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
       let(:start_date) { Date.new(2026, 1, 1) }
       let(:end_date) { Date.new(2026, 1, 15) }
 
-      it "renders the duration in days" do
-        expect(variables["commercial_terms_term_duration"]).to eq("14 days")
+      it "reports the duration in days" do
+        expect(variables["commercial_terms_term_duration"]).to eq({"unit" => "days", "count" => 14})
       end
     end
 
@@ -121,7 +132,7 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
       let(:end_date) { Date.new(2026, 2, 28) }
 
       it "rounds down to whole days rather than a month" do
-        expect(variables["commercial_terms_term_duration"]).to eq("28 days")
+        expect(variables["commercial_terms_term_duration"]).to eq({"unit" => "days", "count" => 28})
       end
     end
 
@@ -129,8 +140,8 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
       let(:start_date) { Date.new(2026, 1, 1) }
       let(:end_date) { Date.new(2027, 2, 1) }
 
-      it "renders the total months rather than years plus months" do
-        expect(variables["commercial_terms_term_duration"]).to eq("13 months")
+      it "reports the total months rather than years plus months" do
+        expect(variables["commercial_terms_term_duration"]).to eq({"unit" => "months", "count" => 13})
       end
     end
   end
