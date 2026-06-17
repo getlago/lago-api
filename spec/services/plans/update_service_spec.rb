@@ -170,6 +170,15 @@ RSpec.describe Plans::UpdateService do
       expect(plan.fixed_charges.order(created_at: :asc).second.invoice_display_name).to eq("fixed_charge2")
     end
 
+    context "when send_webhook is false" do
+      it "does not enqueue the plan.updated webhook but still produces the activity log" do
+        described_class.call(plan:, params: update_args, send_webhook: false)
+
+        expect(SendWebhookJob).not_to have_been_enqueued.with("plan.updated", plan)
+        expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(plan)
+      end
+    end
+
     it "marks invoices as ready to be refreshed" do
       subscription = create(:subscription, organization:, plan:)
       invoice = create(:invoice, :draft)
