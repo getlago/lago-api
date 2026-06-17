@@ -26,15 +26,22 @@ module Types
 
       dataload_association :organization, :quote
 
-      # Computed live while the version is editable; the frozen snapshot persisted at approval
-      # time is returned once present.
+      # The persisted snapshot is a raw, locale-independent dict (or computed live while the
+      # version is editable). It is localized on every read with the customer's current
+      # locale, so an approved quote re-renders in the customer's current language.
       #
       # Intended for single-record fetches: live computation walks quote -> customer ->
-      # billing_entity, which are not dataloaded beyond :quote. Requesting mention_variables across
-      # a `versions` collection would N+1; dataload that chain here if such an access pattern emerges.
+      # billing_entity, which are not dataloaded beyond :quote. Requesting mention_variables
+      # across a `versions` collection would N+1; dataload that chain here if such an access
+      # pattern emerges.
       def mention_variables
-        object.mention_variables.presence ||
+        raw = object.mention_variables.presence ||
           ::QuoteVersions::ComputeMentionVariablesService.call(quote_version: object).mention_variables
+
+        ::QuoteVersions::MentionVariablesLocalizer.call(
+          mention_variables: raw,
+          locale: object.quote.customer.preferred_document_locale
+        )
       end
     end
   end
