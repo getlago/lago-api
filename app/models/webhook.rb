@@ -125,7 +125,8 @@ class Webhook < ApplicationRecord
       if reference.present?
         File.dirname(reference)
       else
-        "webhooks/#{Time.current.utc.strftime("%Y/%m/%d")}/#{SecureRandom.uuid}"
+        self.id ||= SecureRandom.uuid
+        "webhooks/#{Time.current.utc.strftime("%Y/%m/%d")}/#{id}"
       end
     end
   end
