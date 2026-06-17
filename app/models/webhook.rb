@@ -93,7 +93,7 @@ class Webhook < ApplicationRecord
   end
 
   def legacy_payload
-    attr = self[payload]
+    attr = self[:payload]
     if attr.is_a?(String)
       JSON.parse(attr)
     else
