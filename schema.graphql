@@ -903,6 +903,7 @@ type BillingEntity {
   name: String!
   netPaymentTerm: Int!
   organization: Organization!
+  phone: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   state: String
   taxIdentificationNumber: String
@@ -2778,6 +2779,7 @@ input CreateBillingEntityInput {
   logo: String
   name: String!
   netPaymentTerm: Int
+  phone: String
   state: String
   taxIdentificationNumber: String
   timezone: TimezoneEnum
@@ -12780,6 +12782,7 @@ input UpdateBillingEntityInput {
   logo: String
   name: String
   netPaymentTerm: Int
+  phone: String
   state: String
   taxIdentificationNumber: String
   timezone: TimezoneEnum

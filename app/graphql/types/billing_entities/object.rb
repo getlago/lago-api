@@ -23,6 +23,7 @@ module Types
 
       field :address_line1, String
       field :address_line2, String
+      field :phone, String
       field :city, String
       field :country, Types::CountryCodeEnum
       field :net_payment_term, Integer, null: false
