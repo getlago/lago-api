@@ -113,6 +113,7 @@ end
 #  id                                  :uuid             not null, primary key
 #  expiration_at                       :datetime
 #  granted_credits                     :decimal(30, 5)   default(0.0), not null
+#  grants_target_top_up                :boolean
 #  ignore_paid_top_up_limits           :boolean          default(FALSE), not null
 #  interval                            :integer          default("weekly")
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null
