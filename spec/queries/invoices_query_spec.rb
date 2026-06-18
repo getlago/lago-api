@@ -908,4 +908,68 @@ RSpec.describe InvoicesQuery do
       end
     end
   end
+
+  context "when Meilisearch is enabled" do
+    let(:search_term) { "rick" }
+    let(:meilisearch_hits) { [{"id" => invoice_first.id}, {"id" => invoice_third.id}] }
+
+    before do
+      allow(Lago::Meilisearch).to receive(:enabled?).and_return(true)
+      allow(Invoice).to receive(:raw_search).and_return("hits" => meilisearch_hits)
+    end
+
+    it "delegates the text search to Meilisearch scoped to the organization" do
+      expect(returned_ids).to match_array([invoice_first.id, invoice_third.id])
+
+      expect(Invoice).to have_received(:raw_search).with(
+        "rick",
+        filter: ["organization_id = \"#{organization.id}\""],
+        attributes_to_retrieve: ["id"],
+        limit: Lago::Meilisearch::SEARCH_RESULT_LIMIT
+      )
+    end
+
+    context "when other filters are combined with the search term" do
+      let(:filters) { {status: ["finalized"]} }
+
+      it "applies the ActiveRecord filters on top of the Meilisearch results" do
+        expect(returned_ids).to match_array([invoice_first.id, invoice_third.id])
+      end
+    end
+
+    context "when a filter excludes a Meilisearch match" do
+      let(:filters) { {payment_status: ["succeeded"]} }
+
+      it "keeps only the invoices matching both" do
+        expect(returned_ids).to match_array([invoice_first.id])
+      end
+    end
+
+    context "when Meilisearch returns no hit" do
+      let(:meilisearch_hits) { [] }
+
+      it "returns no invoice" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when the search term is blank" do
+      let(:search_term) { "" }
+
+      it "does not query Meilisearch and returns all invoices" do
+        expect(returned_ids.count).to eq(6)
+        expect(Invoice).not_to have_received(:raw_search)
+      end
+    end
+
+    context "when Meilisearch raises an error" do
+      before do
+        allow(Invoice).to receive(:raw_search).and_raise(Meilisearch::CommunicationError.new("boom"))
+      end
+
+      it "falls back to the SQL search" do
+        expect(returned_ids).to match_array([invoice_first.id, invoice_third.id, invoice_fifth.id, invoice_sixth.id])
+      end
+    end
+  end
 end

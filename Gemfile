@@ -56,6 +56,9 @@ gem "money-rails"
 gem "timecop", require: false
 gem "tzinfo-data", platforms: %i[windows jruby]
 
+# Search
+gem "meilisearch-rails"
+
 # GraphQL
 gem "graphql"
 gem "graphql-pagination"

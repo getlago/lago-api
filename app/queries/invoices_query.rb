@@ -27,6 +27,39 @@ class InvoicesQuery < BaseQuery
   def call
     return result unless validate_filters.success?
 
+    result.invoices = search_with_meilisearch? ? meilisearch_invoices : active_record_invoices
+    result
+  rescue BaseService::FailedResult
+    result
+  end
+
+  private
+
+  def filters_contract
+    @filters_contract ||= Queries::InvoicesQueryFiltersContract.new
+  end
+
+  # Meilisearch is authoritative when a search term is provided: it evaluates the
+  # search, every filter, the sort and the pagination, returning the page of
+  # records (hydrated from Postgres) and an exact total count.
+  def search_with_meilisearch?
+    search_term.present? && Lago::Meilisearch.enabled?
+  end
+
+  def meilisearch_invoices
+    Invoice.search(
+      search_term,
+      filter: meilisearch_filters,
+      sort: ["issuing_date:desc", "created_at_timestamp:desc"],
+      page: meilisearch_page,
+      hits_per_page: meilisearch_per_page
+    )
+  rescue Meilisearch::Error => e
+    Rails.logger.error("Meilisearch invoice search failed, falling back to SQL search: #{e.message}")
+    active_record_invoices
+  end
+
+  def active_record_invoices
     invoices = base_scope.includes(:customer).preload(file_attachment: :blob, xml_file_attachment: :blob)
 
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
@@ -48,21 +81,10 @@ class InvoicesQuery < BaseQuery
     invoices = with_settlements(invoices) if valid_settlements.present?
 
     invoices = paginate(invoices)
-    invoices = apply_consistent_ordering(
+    apply_consistent_ordering(
       invoices,
       default_order: {issuing_date: :desc, created_at: :desc}
     )
-
-    result.invoices = invoices
-    result
-  rescue BaseService::FailedResult
-    result
-  end
-
-  private
-
-  def filters_contract
-    @filters_contract ||= Queries::InvoicesQueryFiltersContract.new
   end
 
   def base_scope
@@ -73,6 +95,88 @@ class InvoicesQuery < BaseQuery
     scope
       .with(matching_invoices: matching_invoices)
       .where("invoices.id IN (SELECT id FROM matching_invoices)")
+  end
+
+  def meilisearch_page
+    page = pagination&.page.to_i
+    page.positive? ? page : 1
+  end
+
+  def meilisearch_per_page
+    per = pagination&.limit.to_i
+    per.positive? ? per : Kaminari.config.default_per_page
+  end
+
+  # Translates the query filters into Meilisearch filter expressions, mirroring
+  # the ActiveRecord `with_*` methods so both paths return the same invoices.
+  def meilisearch_filters
+    list = ["organization_id = #{ms_quote(organization.id)}"]
+    list << ms_in("status", meilisearch_statuses)
+    list << ms_in("payment_status", Array(filters.payment_status)) if filters.payment_status.present?
+    list << ms_in("invoice_type", Array(filters.invoice_type)) if filters.invoice_type.present?
+    list << ms_in("billing_entity_id", Array(filters.billing_entity_ids)) if filters.billing_entity_ids.present?
+    list << "currency = #{ms_quote(filters.currency)}" if filters.currency
+    list << "customer_external_id = #{ms_quote(filters.customer_external_id)}" if filters.customer_external_id
+    list << "customer_id = #{ms_quote(filters.customer_id)}" if filters.customer_id.present?
+    list << "issuing_date >= #{issuing_date_from.to_time.to_i}" if filters.issuing_date_from
+    list << "issuing_date <= #{issuing_date_to.to_time.to_i}" if filters.issuing_date_to
+    list << "total_amount_cents >= #{filters.amount_from.to_i}" if filters.amount_from.present?
+    list << "total_amount_cents <= #{filters.amount_to.to_i}" if filters.amount_to.present?
+    list << "payment_dispute_lost = #{ms_bool(filters.payment_dispute_lost)}" unless filters.payment_dispute_lost.nil?
+    list << "payment_overdue = #{ms_bool(filters.payment_overdue)}" unless filters.payment_overdue.nil?
+    list << "self_billed = #{ms_bool(filters.self_billed)}" unless filters.self_billed.nil?
+    list << "partially_paid = #{ms_bool(filters.partially_paid)}" unless filters.partially_paid.nil?
+    list << positive_due_amount_filter unless filters.positive_due_amount.nil?
+    list << "subscription_ids = #{ms_quote(filters.subscription_id)}" if filters.subscription_id.present?
+    list << ms_in("settlement_types", valid_settlements) if valid_settlements.present?
+    list.concat(meilisearch_metadata_filters) if filters.metadata.present?
+    list
+  end
+
+  # Mirrors #with_status: restrict to visible statuses, intersected with the
+  # requested ones when a status filter is provided.
+  def meilisearch_statuses
+    visible_keys = Invoice::VISIBLE_STATUS.keys.map(&:to_s)
+    if filters.status.present?
+      Array(filters.status).map(&:to_s) & visible_keys
+    else
+      visible_keys
+    end
+  end
+
+  def meilisearch_metadata_filters
+    presence_filters = filters.metadata.select { |_k, v| v.present? }
+    absence_filters = filters.metadata.select { |_k, v| v.blank? }
+
+    list = presence_filters.map { |key, value| "metadata_pairs = #{ms_quote("#{key}=#{value}")}" }
+    if absence_filters.any?
+      list << "metadata_keys NOT IN [#{absence_filters.keys.map { |k| ms_quote(k) }.join(", ")}]"
+    end
+    list
+  end
+
+  def positive_due_amount_filter
+    if ActiveModel::Type::Boolean.new.cast(filters.positive_due_amount)
+      "total_due_amount_cents > 0"
+    else
+      "total_due_amount_cents <= 0"
+    end
+  end
+
+  # `status IN []` would match nothing; a sentinel keeps the expression valid.
+  def ms_in(field, values)
+    return "#{field} IN [#{ms_quote("__none__")}]" if values.blank?
+
+    "#{field} IN [#{values.map { |v| ms_quote(v) }.join(", ")}]"
+  end
+
+  def ms_bool(value)
+    ActiveModel::Type::Boolean.new.cast(value) ? "true" : "false"
+  end
+
+  def ms_quote(value)
+    escaped = value.to_s.gsub("\\", "\\\\\\\\").gsub('"', '\\"')
+    "\"#{escaped}\""
   end
 
   def search_customers?

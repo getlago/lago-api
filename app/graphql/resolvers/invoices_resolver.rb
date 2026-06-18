@@ -84,16 +84,23 @@ module Resolvers
 
       return result_error(result) unless result.success?
 
-      Invoice.preload_offset_amounts(
-        result.invoices.preload(
+      # `result.invoices` is either an ActiveRecord relation (SQL path) or a
+      # Meilisearch-backed paginated collection. Preloader works on both and
+      # preserves the pagination metadata the GraphQL collection type reads.
+      invoices = result.invoices
+      ActiveRecord::Associations::Preloader.new(
+        records: invoices.to_a,
+        associations: [
           :fees,
           :regenerated_invoice,
           :error_details,
           :billing_entity,
           :customer_payments,
           {customer: :billing_entity}
-        )
-      )
+        ]
+      ).call
+      Invoice.preload_offset_amounts(invoices)
+      invoices
     end
   end
 end

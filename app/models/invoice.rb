@@ -7,6 +7,7 @@ class Invoice < ApplicationRecord
   include PaperTrailTraceable
   include Sequenced
   include RansackUuidSearch
+  include Meilisearch::Rails
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
@@ -163,6 +164,116 @@ class Invoice < ApplicationRecord
 
   def self.ransackable_associations(_ = nil)
     %w[customer]
+  end
+
+  # Indexing is only performed when Meilisearch is enabled. The `disable_indexing`
+  # guard short-circuits the auto-sync callbacks so a disabled/unavailable
+  # Meilisearch instance never blocks invoice writes.
+  #
+  # Every attribute used by InvoicesQuery is denormalized here so Meilisearch can
+  # evaluate the full query (search + filters + sort + pagination + count) on its
+  # own, with Postgres only hydrating the current page by id.
+  meilisearch(
+    index_uid: "invoices",
+    disable_indexing: -> { !Lago::Meilisearch.enabled? }
+  ) do
+    # Searchable text
+    attribute :number, :organization_id
+
+    attribute :customer_name do
+      customer&.name
+    end
+
+    attribute :customer_firstname do
+      customer&.firstname
+    end
+
+    attribute :customer_lastname do
+      customer&.lastname
+    end
+
+    attribute :customer_external_id do
+      customer&.external_id
+    end
+
+    attribute :customer_email do
+      customer&.email
+    end
+
+    # Scalar filters (enum readers return their string value)
+    attribute :status, :payment_status, :currency, :invoice_type
+    attribute :self_billed, :payment_overdue
+    attribute :billing_entity_id, :customer_id
+    attribute :total_amount_cents, :total_paid_amount_cents
+
+    # Computed / denormalized filters
+    attribute :payment_dispute_lost do
+      payment_dispute_lost_at.present?
+    end
+
+    attribute :partially_paid do
+      total_amount_cents > total_paid_amount_cents && total_paid_amount_cents.positive?
+    end
+
+    attribute :total_due_amount_cents do
+      total_amount_cents - total_paid_amount_cents
+    end
+
+    attribute :issuing_date do
+      issuing_date&.to_time&.to_i
+    end
+
+    attribute :created_at_timestamp do
+      created_at&.to_i
+    end
+
+    attribute :subscription_ids do
+      subscription_ids
+    end
+
+    attribute :settlement_types do
+      invoice_settlements.map(&:settlement_type)
+    end
+
+    attribute :metadata_pairs do
+      metadata.map { |m| "#{m.key}=#{m.value}" }
+    end
+
+    attribute :metadata_keys do
+      metadata.map(&:key)
+    end
+
+    searchable_attributes %i[
+      number
+      customer_name
+      customer_firstname
+      customer_lastname
+      customer_external_id
+      customer_email
+    ]
+    filterable_attributes %i[
+      organization_id
+      status
+      payment_status
+      currency
+      invoice_type
+      self_billed
+      payment_overdue
+      payment_dispute_lost
+      partially_paid
+      billing_entity_id
+      customer_id
+      customer_external_id
+      total_amount_cents
+      total_paid_amount_cents
+      total_due_amount_cents
+      issuing_date
+      subscription_ids
+      settlement_types
+      metadata_pairs
+      metadata_keys
+    ]
+    sortable_attributes %i[issuing_date created_at_timestamp]
   end
 
   # Batch-loads offset_amount_cents for a collection of invoices in a single query,
