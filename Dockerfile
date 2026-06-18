@@ -37,6 +37,10 @@ ARG BUNDLE_WITH
 RUN apt update && apt upgrade -y
 RUN apt install git libpq-dev curl postgresql-client -y
 
+# Replace the net-imap bundled with the Ruby base image (0.6.2, CVE-2026-42257/42258/42245/42246)
+# with the patched version and drop the superseded copy so it no longer ships in the image.
+RUN gem update net-imap && gem cleanup net-imap
+
 ARG SEGMENT_WRITE_KEY
 ARG GOCARDLESS_CLIENT_ID
 ARG GOCARDLESS_CLIENT_SECRET
