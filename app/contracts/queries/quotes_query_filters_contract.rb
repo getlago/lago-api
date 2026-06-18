@@ -6,6 +6,9 @@ module Queries
       optional(:customers).maybe do
         array(:string, format?: Regex::UUID)
       end
+      optional(:external_customer_ids).maybe do
+        array(:string)
+      end
       optional(:statuses).maybe do
         array(:string, included_in?: QuoteVersion::STATUSES.values)
       end
