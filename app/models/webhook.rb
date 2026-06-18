@@ -45,6 +45,13 @@ class Webhook < ApplicationRecord
     self.response_key ||= storage_key("response.json.gz")
     @stored_response = upload_json(response_key, content)
     response_key
+  rescue => e
+    # Fallback to storing the response in the database if the upload fails,
+    # so the webhook keeps an accurate state even when storage is unavailable.
+    Rails.logger.warn("Failed to upload webhook response to storage: #{e.message}")
+    self.response_key = nil
+    @stored_response = nil
+    self.response = content
   end
 
   def generate_headers

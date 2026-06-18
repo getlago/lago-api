@@ -114,6 +114,21 @@ RSpec.describe Webhook do
       expect(webhook.reload.read_attribute(:response)).to be_nil
       expect(webhook.response).to eq(content)
     end
+
+    context "when the upload fails" do
+      before do
+        allow(described_class.payload_storage).to receive(:upload).and_raise(StandardError.new("boom"))
+      end
+
+      it "falls back to storing the response in the database" do
+        webhook.store_response(content)
+        webhook.save!
+
+        expect(webhook.response_key).to be_nil
+        expect(webhook.reload.read_attribute(:response)).to eq(content)
+        expect(webhook.response).to eq(content)
+      end
+    end
   end
 
   describe "#generate_headers" do
