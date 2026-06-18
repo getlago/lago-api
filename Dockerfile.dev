@@ -1,5 +1,5 @@
 ARG PDFCPU_VERSION=0.13.0
-ARG GO_VERSION=1.25.8
+ARG GO_VERSION=1.25.11
 
 FROM golang:${GO_VERSION} AS pdfcpu-build
 
@@ -7,7 +7,7 @@ ARG PDFCPU_VERSION
 
 RUN go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@v${PDFCPU_VERSION}
 
-FROM ruby:4.0.2-slim
+FROM ruby:4.0.5-slim
 
 WORKDIR /app
 ENV POSTGRES_VERSION=15
