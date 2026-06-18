@@ -5376,7 +5376,9 @@ CREATE TABLE public.webhooks (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     webhook_endpoint_id uuid,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    payload_key character varying,
+    response_key character varying
 );
 
 
@@ -12784,6 +12786,8 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260617145515'),
+('20260616160703'),
+('20260616155032'),
 ('20260615181440'),
 ('20260612150749'),
 ('20260612113044'),
@@ -13815,3 +13819,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+

@@ -60,7 +60,7 @@ module Webhooks
 
     def mark_webhook_as_succeeded(response)
       webhook.http_status = response&.code&.to_i
-      webhook.response = response&.body.presence || {}
+      webhook.store_response(response&.body.presence || {})
       webhook.status = :succeeded
       webhook.save!
     end
@@ -68,9 +68,9 @@ module Webhooks
     def mark_webhook_as_unsuccessful(error:, retrying:)
       if error.is_a?(LagoHttpClient::HttpError)
         webhook.http_status = error.error_code
-        webhook.response = error.error_body
+        webhook.store_response(error.error_body)
       else
-        webhook.response = error.message
+        webhook.store_response(error.message)
       end
       webhook.retries += 1
       webhook.last_retried_at = Time.zone.now

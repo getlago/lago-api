@@ -32,6 +32,8 @@ RSpec.describe Webhooks::SendHttpService do
       expect(webhook.status).to eq "succeeded"
       expect(webhook.http_status).to eq 200
       expect(webhook.response).to eq "ok"
+      expect(webhook.response_key).to match(%r{/response\.json\.gz\z})
+      expect(webhook.read_attribute(:response)).to be_nil
     end
   end
 
