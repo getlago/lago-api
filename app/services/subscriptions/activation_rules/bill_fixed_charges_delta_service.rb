@@ -14,11 +14,11 @@ module Subscriptions
         return result unless subscription.fixed_charges.pay_in_advance.any?
 
         delta_event_timestamps.each do |timestamp|
-          next if already_billed?(timestamp)
+          next if billed_timestamps.include?(timestamp)
 
           invoice_result = Invoices::CreatePayInAdvanceFixedChargesService.call(
             subscription:,
-            timestamp: timestamp.to_i
+            timestamp:
           )
           next if invoice_result.success? || tax_error?(invoice_result)
 
@@ -41,6 +41,7 @@ module Subscriptions
           .distinct
           .order(:timestamp)
           .pluck(:timestamp)
+          .map(&:to_i)
       end
 
       def window_end
@@ -51,12 +52,14 @@ module Subscriptions
         [Time.current, first_period_end].min
       end
 
-      def already_billed?(timestamp)
-        subscription.invoice_subscriptions
-          .where(invoicing_reason: :in_advance_charge, timestamp: Time.zone.at(timestamp.to_i))
+      def billed_timestamps
+        @billed_timestamps ||= subscription.invoice_subscriptions
+          .where(invoicing_reason: :in_advance_charge)
           .joins(invoice: :fees)
           .where(fees: {fee_type: :fixed_charge})
-          .exists?
+          .distinct
+          .pluck(:timestamp)
+          .map(&:to_i)
       end
 
       def tax_error?(invoice_result)
