@@ -44,6 +44,25 @@ RSpec.describe QuoteVersions::ApproveService do
       end
     end
 
+    context "with concurrent mutations", :premium do
+      it "wraps the work in a per-quote lock" do
+        allow(Quotes::LockService).to receive(:call).and_call_original
+
+        result
+
+        expect(Quotes::LockService).to have_received(:call).with(quote: quote_version.quote).at_least(:once)
+      end
+
+      it "re-checks the status under the lock and refuses a stale approval" do
+        quote_version
+        QuoteVersion.where(id: quote_version.id).update_all(status: "voided", void_reason: "manual", voided_at: Time.current)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({status: ["not_approvable"]})
+      end
+    end
+
     context "when an expires_at in the future is provided", :premium do
       subject(:approve_service) { described_class.new(quote_version:, expires_at:) }
 
