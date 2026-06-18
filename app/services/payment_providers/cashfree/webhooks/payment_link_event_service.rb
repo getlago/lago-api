@@ -18,6 +18,7 @@ module PaymentProviders
           payment_service_class.new.update_payment_status(
             organization_id: organization.id,
             status: link_status,
+            amount_cents: link_amount_paid_cents,
             cashfree_payment: PaymentProviders::CashfreeProvider::CashfreePayment.new(
               id: provider_payment_id,
               status: link_status,
@@ -44,6 +45,14 @@ module PaymentProviders
 
         def payable_type
           @payable_type ||= event.dig("data", "link_notes", "lago_payable_type")
+        end
+
+        def link_amount_paid_cents
+          raw = event.dig("data", "link_amount_paid")
+          currency = event.dig("data", "link_currency")
+          return nil if raw.nil? || currency.nil?
+
+          Money.from_amount(raw.to_d, currency).cents
         end
       end
     end

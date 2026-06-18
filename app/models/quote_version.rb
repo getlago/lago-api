@@ -16,6 +16,8 @@ class QuoteVersion < ApplicationRecord
     cascade_of_voided: "cascade_of_voided"
   }.freeze
 
+  CASCADE_VOID_REASONS = VOID_REASONS.slice(:cascade_of_expired, :cascade_of_voided).freeze
+
   before_save :ensure_share_token
 
   belongs_to :organization
@@ -63,22 +65,23 @@ end
 # Table name: quote_versions
 # Database name: primary
 #
-#  id              :uuid             not null, primary key
-#  approved_at     :datetime
-#  billing_items   :jsonb
-#  content         :text
-#  currency        :string
-#  end_date        :date
-#  share_token     :string
-#  start_date      :date
-#  status          :enum             default("draft"), not null
-#  void_reason     :enum
-#  voided_at       :datetime
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
-#  organization_id :uuid             not null
-#  quote_id        :uuid             not null
-#  sequential_id   :integer          not null
+#  id                :uuid             not null, primary key
+#  approved_at       :datetime
+#  billing_items     :jsonb
+#  content           :text
+#  currency          :string
+#  end_date          :date
+#  mention_variables :jsonb
+#  share_token       :string
+#  start_date        :date
+#  status            :enum             default("draft"), not null
+#  void_reason       :enum
+#  voided_at         :datetime
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  organization_id   :uuid             not null
+#  quote_id          :uuid             not null
+#  sequential_id     :integer          not null
 #
 # Indexes
 #

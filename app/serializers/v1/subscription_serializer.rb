@@ -41,7 +41,7 @@ module V1
       payload = payload.merge(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
 
       if organization.feature_flag_enabled?(:payment_gated_subscriptions)
-        payload[:cancelation_reason] = model.cancelation_reason
+        payload[:cancellation_reason] = model.cancellation_reason
         payload[:activated_at] = model.activated_at&.iso8601
         payload[:activation_rules] = model.activation_rules.map do |rule|
           ::V1::Subscriptions::ActivationRuleSerializer.new(rule).serialize

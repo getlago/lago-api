@@ -30,7 +30,7 @@ RSpec.describe Subscription do
         .backed_by_column_of_type(:enum)
         .with_values(generate: "generate", skip: "skip")
         .with_prefix(:on_termination_invoice)
-      expect(subject).to define_enum_for(:cancelation_reason)
+      expect(subject).to define_enum_for(:cancellation_reason)
         .backed_by_column_of_type(:enum)
         .with_values(payment_failed: "payment_failed", timeout: "timeout")
     end
@@ -768,6 +768,44 @@ RSpec.describe Subscription do
       it "returns nil" do
         create(:subscription, previous_subscription: subscription, status: :active)
         expect(subscription.downgrade_plan_date).to be_nil
+      end
+    end
+
+    context "with active downgraded next subscription" do
+      let(:plan) { create(:plan, amount_cents: 200) }
+      let(:next_plan) { create(:plan, amount_cents: 100) }
+      let(:subscription) { create(:subscription, :terminated, plan:) }
+
+      it "returns the date when the plan was downgraded" do
+        create(
+          :subscription,
+          previous_subscription: subscription,
+          plan: next_plan,
+          status: :active,
+          started_at: Time.zone.parse("2022-07-01T00:00:00Z")
+        )
+
+        expect(subscription.downgrade_plan_date).to eq(Date.parse("1 Jul 2022"))
+      end
+    end
+
+    context "with anniversary billing before the downgrade date" do
+      let(:started_at) { Time.zone.parse("2022-06-04T00:00:00Z") }
+      let(:subscription) do
+        create(
+          :subscription,
+          :anniversary,
+          started_at:,
+          subscription_at: started_at
+        )
+      end
+
+      it "returns the next anniversary date" do
+        create(:subscription, previous_subscription: subscription, status: :pending)
+
+        travel_to(Time.zone.parse("2022-07-03T00:00:00Z")) do
+          expect(subscription.downgrade_plan_date).to eq(Date.parse("4 Jul 2022"))
+        end
       end
     end
 

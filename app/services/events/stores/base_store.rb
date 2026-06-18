@@ -3,6 +3,23 @@
 module Events
   module Stores
     class BaseStore
+      AggregationResult = Data.define(
+        :value,
+        :events_count
+      )
+
+      # NOTE: result of a grouped aggregation. Mirrors AggregationResult but also
+      #       carries the group it belongs to.
+      GroupedAggregationResult = Data.define(
+        :groups,
+        :value,
+        :events_count
+      ) do
+        def to_grouped_hash
+          {groups:, value:}
+        end
+      end
+
       def initialize(subscription:, boundaries:, code: nil, filters: {}, deduplicate: false)
         @code = code
         @subscription = subscription
@@ -60,7 +77,7 @@ module Events
         raise NotImplementedError
       end
 
-      def max
+      def max(with_count: true)
         raise NotImplementedError
       end
 
@@ -76,11 +93,11 @@ module Events
         raise NotImplementedError
       end
 
-      def sum
+      def sum(with_count: true)
         raise NotImplementedError
       end
 
-      def grouped_sum
+      def grouped_sum(with_count: true)
         raise NotImplementedError
       end
 
@@ -164,6 +181,13 @@ module Events
           to_datetime + 1.day,
           current_usage: subscription.terminated? && subscription.upgraded?
         ).charges_duration_in_days
+      end
+
+      def build_aggregation_result(row)
+        AggregationResult.new(
+          value: row["value"] || 0,
+          events_count: row["events_count"].presence&.to_i
+        )
       end
     end
   end

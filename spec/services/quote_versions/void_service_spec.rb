@@ -30,18 +30,32 @@ RSpec.describe QuoteVersions::VoidService do
 
       it "is not voidable" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("inappropriate_state")
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({status: ["not_voidable"]})
+      end
+    end
+
+    context "when quote version is approved and reason is a cascade", :premium do
+      let(:quote_version) { create(:quote_version, :approved, organization:) }
+      let(:reason) { "cascade_of_expired" }
+
+      it "voids the quote version" do
+        freeze_time do
+          expect(result).to be_success
+          expect(result.quote_version.voided?).to eq(true)
+          expect(result.quote_version.void_reason).to eq("cascade_of_expired")
+          expect(result.quote_version.voided_at).to eq(Time.current)
+        end
       end
     end
 
     context "when quote isn't voidable", :premium do
       let(:quote_version) { create(:quote_version, :voided, organization:) }
 
-      it "returns method not allowed" do
+      it "returns a validation failure" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("inappropriate_state")
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({status: ["not_voidable"]})
       end
     end
 

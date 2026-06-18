@@ -26,6 +26,7 @@ module Events
 
         delete_postgres_events(subscription_ids, external_subscription_ids)
         delete_clickhouse_events(external_subscription_ids) if clickhouse_enabled
+        expire_charge_caches(subscription_ids)
       end
 
       result
@@ -34,6 +35,7 @@ module Events
     private
 
     BATCH_SIZE = 10_000
+    CLICKHOUSE_BATCH_SIZE = BATCH_SIZE / 2
     CLICKHOUSE_TABLES = {
       events_raw: :ingested_at,
       events_enriched: :enriched_at,
@@ -75,10 +77,19 @@ module Events
 
     # Delete clickhouse events using async mutations to avoid blocking or
     # timeouts when the metric is attached to a large number of events.
+    # The id list is sliced into clickhouse_batch_size chunks before being
+    # inlined into the ALTER TABLE … DELETE statement so each query stays
+    # under ClickHouse's max_query_size (default 256 KiB).
     def delete_clickhouse_events(external_subscription_ids)
-      CLICKHOUSE_TABLES.each do |table, date_field|
-        async_delete_clickhouse(table, date_field, external_subscription_ids)
+      external_subscription_ids.each_slice(CLICKHOUSE_BATCH_SIZE) do |slice|
+        CLICKHOUSE_TABLES.each do |table, date_field|
+          async_delete_clickhouse(table, date_field, slice)
+        end
       end
+    end
+
+    def expire_charge_caches(subscription_ids)
+      Subscriptions::ChargeCacheService.expire_for_subscriptions(subscription_ids)
     end
 
     def async_delete_clickhouse(table, date_field, external_subscription_ids)

@@ -58,7 +58,7 @@ RSpec.describe Types::Subscriptions::Object do
 
     expect(subject).to have_field(:activated_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:activation_rules).of_type("[SubscriptionActivationRule!]!")
-    expect(subject).to have_field(:cancelation_reason).of_type("CancelationReasonEnum")
+    expect(subject).to have_field(:cancellation_reason).of_type("CancellationReasonEnum")
   end
 
   context "when the subscription starts in the future" do

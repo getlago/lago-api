@@ -57,7 +57,7 @@ module PaymentRequests
         result
       end
 
-      def update_payment_status(organization_id:, provider_payment_id:, status:, metadata: {})
+      def update_payment_status(organization_id:, provider_payment_id:, status:, amount_cents: nil, metadata: {})
         payment_obj = Payment.find_or_initialize_by(provider_payment_id: provider_payment_id)
         payment = if payment_obj.persisted?
           payment_obj

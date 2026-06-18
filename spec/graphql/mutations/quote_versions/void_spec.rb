@@ -9,8 +9,7 @@ RSpec.describe Mutations::QuoteVersions::Void do
 
   let(:input) do
     {
-      id: quote_version.id,
-      reason: "manual"
+      id: quote_version.id
     }
   end
 
@@ -62,7 +61,7 @@ RSpec.describe Mutations::QuoteVersions::Void do
   end
 
   context "when quote version is not found", :premium do
-    let(:input) { {id: "00000000-0000-0000-0000-000000000000", reason: "manual"} }
+    let(:input) { {id: "00000000-0000-0000-0000-000000000000"} }
 
     it "returns a not found error" do
       result = execute_graphql(
@@ -80,7 +79,7 @@ RSpec.describe Mutations::QuoteVersions::Void do
   context "when quote version is already voided", :premium do
     let(:quote_version) { create(:quote_version, :voided, organization: membership.organization) }
 
-    it "returns a not allowed error" do
+    it "returns a validation error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
@@ -89,7 +88,7 @@ RSpec.describe Mutations::QuoteVersions::Void do
         variables: {input:}
       )
 
-      expect_graphql_error(result:, message: "inappropriate_state")
+      expect_graphql_error(result:, message: "Unprocessable Entity", details: {status: ["not_voidable"]})
     end
   end
 end

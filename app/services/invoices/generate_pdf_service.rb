@@ -34,7 +34,7 @@ module Invoices
     def generate_pdf
       I18n.with_locale(invoice.customer.preferred_document_locale) do
         pdf_file = build_pdf_file
-        xml_file = attach_facturx(pdf_file) if should_generate_facturx_einvoice_xml?
+        xml_file = attach_cii(pdf_file) if should_generate_cii_einvoice_xml?
         attach_pdf_to_invoice(pdf_file)
         invoice.save!
       ensure
@@ -53,9 +53,9 @@ module Invoices
       pdf_file
     end
 
-    def attach_facturx(pdf_file)
+    def attach_cii(pdf_file)
       xml_file = Tempfile.new([invoice.number, ".xml"])
-      xml_file.write(EInvoices::Invoices::FacturX::CreateService.call(invoice:).xml)
+      xml_file.write(EInvoices::Invoices::Cii::CreateService.call(invoice:).xml)
       xml_file.flush
 
       Utils::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)
@@ -100,7 +100,7 @@ module Invoices
       context == "admin" || invoice.file.blank?
     end
 
-    def should_generate_facturx_einvoice_xml?
+    def should_generate_cii_einvoice_xml?
       invoice.billing_entity.einvoicing && BillingEntity::EINVOICING_COUNTRIES.include?(invoice.billing_entity.country.try(:upcase))
     end
 

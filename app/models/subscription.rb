@@ -4,7 +4,7 @@ class Subscription < ApplicationRecord
   include PaperTrailTraceable
   include RansackUuidSearch
 
-  self.ignored_columns += %w[incompleted_at]
+  self.ignored_columns += %w[incompleted_at cancelation_reason]
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :plan, -> { with_discarded }
@@ -58,7 +58,7 @@ class Subscription < ApplicationRecord
     :incomplete
   ].freeze
 
-  CANCELATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout"}.freeze
+  CANCELLATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout"}.freeze
 
   BILLING_TIME = %i[
     calendar
@@ -72,7 +72,7 @@ class Subscription < ApplicationRecord
   enum :billing_time, BILLING_TIME
   enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES, prefix: true
   enum :on_termination_invoice, ON_TERMINATION_INVOICES, prefix: true
-  enum :cancelation_reason, CANCELATION_REASONS
+  enum :cancellation_reason, CANCELLATION_REASONS
 
   validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
   validates :started_at, presence: true, if: -> { incomplete? }
@@ -222,6 +222,9 @@ class Subscription < ApplicationRecord
 
   def downgrade_plan_date
     return unless next_subscription
+    if next_subscription.active? && downgraded?
+      return next_subscription.started_at&.to_date
+    end
     return unless next_subscription.pending?
 
     ::Subscriptions::DatesService.new_instance(self, Time.current)
@@ -333,8 +336,8 @@ end
 #  id                           :uuid             not null, primary key
 #  activated_at                 :datetime
 #  billing_time                 :integer          default("calendar"), not null
-#  cancelation_reason           :enum
 #  canceled_at                  :datetime
+#  cancellation_reason          :enum
 #  consolidate_invoice          :boolean          default(TRUE), not null
 #  ending_at                    :datetime
 #  last_received_event_on       :date

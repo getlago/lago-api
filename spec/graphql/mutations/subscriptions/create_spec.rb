@@ -219,7 +219,7 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
           createSubscription(input: $input) {
             id
             status
-            cancelationReason
+            cancellationReason
             activationRules {
               id
               type
@@ -259,7 +259,7 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
 
       expect(result_data).to include(
         "status" => "pending",
-        "cancelationReason" => nil
+        "cancellationReason" => nil
       )
       expect(result_data["activationRules"].size).to eq(1)
       expect(result_data["activationRules"].first).to include(

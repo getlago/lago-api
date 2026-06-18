@@ -35,7 +35,7 @@ module BillableMetrics
         event_store.use_from_boundary = false
         event_store.aggregation_property = billable_metric.field_name
         event_store.numeric_property = true
-        persisted_sum = event_store.sum
+        persisted_sum = event_store.sum(with_count: false).value
         return [] if persisted_sum.zero?
 
         [

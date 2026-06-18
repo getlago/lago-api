@@ -111,6 +111,7 @@ RSpec.describe Api::V1::BillingEntitiesController do
           tax_identification_number: "Tax-1234",
           address_line1: "Calle de la Princesa 1",
           address_line2: "Apt 1",
+          phone: "+49 30 1234567",
           city: "Barcelona",
           state: "Barcelona",
           zipcode: "08001",
@@ -157,6 +158,7 @@ RSpec.describe Api::V1::BillingEntitiesController do
       expect(json[:billing_entity][:tax_identification_number]).to eq("Tax-1234")
       expect(json[:billing_entity][:address_line1]).to eq("Calle de la Princesa 1")
       expect(json[:billing_entity][:address_line2]).to eq("Apt 1")
+      expect(json[:billing_entity][:phone]).to eq("+49 30 1234567")
       expect(json[:billing_entity][:city]).to eq("Barcelona")
       expect(json[:billing_entity][:state]).to eq("Barcelona")
       expect(json[:billing_entity][:zipcode]).to eq("08001")
@@ -236,6 +238,7 @@ RSpec.describe Api::V1::BillingEntitiesController do
           tax_identification_number: "Tax-1234",
           address_line1: "Calle de la Princesa 1",
           address_line2: "Apt 1",
+          phone: "+49 30 1234567",
           city: "Barcelona",
           state: "Barcelona",
           zipcode: "08001",
@@ -281,6 +284,7 @@ RSpec.describe Api::V1::BillingEntitiesController do
       expect(json[:billing_entity][:tax_identification_number]).to eq("Tax-1234")
       expect(json[:billing_entity][:address_line1]).to eq("Calle de la Princesa 1")
       expect(json[:billing_entity][:address_line2]).to eq("Apt 1")
+      expect(json[:billing_entity][:phone]).to eq("+49 30 1234567")
       expect(json[:billing_entity][:city]).to eq("Barcelona")
       expect(json[:billing_entity][:state]).to eq("Barcelona")
       expect(json[:billing_entity][:zipcode]).to eq("08001")

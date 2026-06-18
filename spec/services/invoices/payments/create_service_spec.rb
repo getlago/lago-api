@@ -439,6 +439,24 @@ RSpec.describe Invoices::Payments::CreateService do
       let(:service_call) { create_service.call }
     end
 
+    context "when the provider raises AlreadyPaidError" do
+      before do
+        allow(provider_service).to receive(:call!).and_raise(Invoices::Payments::AlreadyPaidError)
+      end
+
+      it "skips silently and drops the unused pending payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+        expect(invoice.reload.payments).to be_empty
+      end
+
+      it "does not deliver an error webhook" do
+        expect { create_service.call }.not_to have_enqueued_job(SendWebhookJob)
+      end
+    end
+
     context "when provider service raises a service failure" do
       let(:original_error) { ::Stripe::StripeError.new("card declined") }
       let(:result) do

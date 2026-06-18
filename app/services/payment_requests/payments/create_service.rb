@@ -74,6 +74,11 @@ module PaymentRequests
         PaymentRequestMailer.with(payment_request: payable).requested.deliver_later if payable.payment_failed?
 
         result
+      rescue Invoices::Payments::AlreadyPaidError
+        # The payment request was settled by another payment so we can drop the unused pending payment
+        result.payment&.destroy if result.payment&.provider_payment_id.nil?
+        result.payment = nil
+        result
       rescue BaseService::ServiceFailure => e
         PaymentRequestMailer.with(payment_request: payable).requested.deliver_later
         result.payment = e.result.payment

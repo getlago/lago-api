@@ -5,9 +5,10 @@ module Invoices
     class BuildSubscriptionService < BaseService
       Result = BaseResult[:subscriptions]
 
-      def initialize(customer:, params:)
+      def initialize(customer:, params:, billing_entity: nil)
         @customer = customer
         @params = params.presence || {}
+        @billing_entity = billing_entity
         super
       end
 
@@ -21,7 +22,7 @@ module Invoices
 
       private
 
-      attr_reader :customer, :params
+      attr_reader :customer, :params, :billing_entity
 
       delegate :organization, to: :customer
 
@@ -30,12 +31,20 @@ module Invoices
           organization_id: organization.id,
           customer:,
           plan:,
+          billing_entity: effective_billing_entity,
           subscription_at: params[:subscription_at].presence || Time.current,
           started_at: params[:subscription_at].presence || Time.current,
           billing_time:,
           created_at: params[:subscription_at].presence || Time.current,
           updated_at: Time.current
         )
+      end
+
+      def effective_billing_entity
+        return nil unless organization.feature_flag_enabled?(:multi_entity_billing)
+        return nil if billing_entity.nil? || billing_entity == customer.billing_entity
+
+        billing_entity
       end
 
       def billing_time

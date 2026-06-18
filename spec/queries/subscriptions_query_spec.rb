@@ -167,6 +167,28 @@ RSpec.describe SubscriptionsQuery do
     end
   end
 
+  context "with external_id filter" do
+    let(:filters) { {external_id: subscription.external_id} }
+
+    it "applies the filter" do
+      expect(result).to be_success
+      expect(result.subscriptions).to match_array([subscription])
+    end
+
+    context "when search_term is present" do
+      let(:search_term) { subscription.external_id }
+
+      before do
+        create(:subscription, plan:, name: subscription.external_id)
+      end
+
+      it "ignores the search_term" do
+        expect(result).to be_success
+        expect(result.subscriptions).to match_array([subscription])
+      end
+    end
+  end
+
   context "with customer filter" do
     let(:filters) { {external_customer_id: customer.external_id} }
 

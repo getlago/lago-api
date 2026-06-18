@@ -1141,6 +1141,57 @@ RSpec.describe Api::V1::InvoicesController do
           expect(response).to have_http_status(:not_found)
         end
       end
+
+      context "when previewing a new subscription for an existing customer with multi_entity_billing enabled" do
+        let(:existing_customer) { create(:customer, organization:, currency: "EUR") }
+        let(:preview_params) do
+          {
+            customer: {external_id: existing_customer.external_id},
+            plan_code: plan.code,
+            billing_time: "anniversary",
+            billing_entity_code: billing_entity.code
+          }
+        end
+
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "creates a preview invoice under the requested billing entity" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice]).to include(
+            billing_entity_code: billing_entity.code,
+            invoice_type: "subscription"
+          )
+        end
+      end
+
+      context "when previewing for an anonymous customer with multi_entity_billing enabled" do
+        let(:preview_params) do
+          {
+            customer: {
+              name: "test 1",
+              currency: "EUR",
+              tax_identification_number: "123456789"
+            },
+            plan_code: plan.code,
+            billing_time: "anniversary",
+            billing_entity_code: billing_entity.code
+          }
+        end
+
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "stamps the invoice with the requested billing entity" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice]).to include(
+            billing_entity_code: billing_entity.code,
+            invoice_type: "subscription"
+          )
+        end
+      end
     end
 
     context "when subscriptions are persisted" do
@@ -1482,6 +1533,48 @@ RSpec.describe Api::V1::InvoicesController do
           expect(pending_plan[:current_billing_period_ending_at]).to eq("2026-08-02T23:59:59Z")
           expect(pending_plan[:current_billing_period_started_at])
             .not_to eq(pending_plan[:current_billing_period_ending_at])
+        end
+      end
+    end
+
+    context "when subscription has a minimum commitment and terminated_at is provided" do
+      let(:timestamp) { Time.zone.parse("2026-01-15") }
+      let(:commitment_customer) { create(:customer, organization:, external_id: "commitment_customer") }
+      let(:commitment_plan) do
+        create(:plan, organization:, interval: "yearly", pay_in_advance: false, amount_cents: 100_00)
+      end
+      let(:subscription) do
+        create(
+          :subscription,
+          customer: commitment_customer,
+          plan: commitment_plan,
+          billing_time: "calendar",
+          started_at: Time.zone.parse("2026-01-01"),
+          subscription_at: Time.zone.parse("2026-01-01")
+        )
+      end
+      let(:preview_params) do
+        {
+          customer: {external_id: commitment_customer.external_id},
+          subscriptions: {
+            external_ids: [subscription.external_id],
+            terminated_at: "2026-07-01T00:00:00Z"
+          }
+        }
+      end
+
+      before do
+        create(:commitment, :minimum_commitment, plan: commitment_plan, amount_cents: 1_000_00)
+      end
+
+      it "creates a preview invoice with a commitment true-up fee" do
+        travel_to(timestamp) do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice][:fees]).to include(
+            hash_including(item: hash_including(type: "commitment"))
+          )
         end
       end
     end

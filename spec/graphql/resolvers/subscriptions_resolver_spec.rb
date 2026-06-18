@@ -115,6 +115,35 @@ RSpec.describe Resolvers::SubscriptionsResolver do
     end
   end
 
+  context "with external_id filter" do
+    let(:subscription) { create(:subscription, customer:, plan:) }
+
+    let(:query) do
+      <<~GQL
+        query {
+          subscriptions(limit: 5, externalId: "#{subscription.external_id}") {
+            collection { id }
+            metadata { totalCount }
+          }
+        }
+      GQL
+    end
+
+    it "returns only the subscription with matching external_id" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+      response = result["data"]["subscriptions"]
+
+      expect(response["collection"].count).to eq(1)
+      expect(response["collection"].first["id"]).to eq(subscription.id)
+      expect(response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
+
   context "with currency filter" do
     let(:brl_plan) { create(:plan, organization:, amount_currency: "BRL") }
     let!(:brl_subscription) { create(:subscription, customer:, plan: brl_plan) }

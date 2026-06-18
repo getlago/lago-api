@@ -5,7 +5,7 @@ module Types
     class StatusEnum < Types::BaseEnum
       graphql_name "OrderFormStatusEnum"
 
-      OrderForm::STATUSES.keys.each do |type|
+      OrderForm::STATUSES.each_key do |type|
         value type
       end
     end

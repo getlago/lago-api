@@ -66,6 +66,10 @@ module PaymentProviders
               organization_id: @organization.id,
               provider_payment_id: @event_json.dig("data", "intent_id"),
               status: event_to_payment_status(event_code),
+              amount_cents: intent_amount_cents(
+                @event_json.dig("data", "intent", "amount"),
+                @event_json.dig("data", "intent", "amount_currency")
+              ),
               metadata: @event_json.dig("data", "intent", "custom_fields")
             ).raise_if_error!
         end
@@ -78,9 +82,29 @@ module PaymentProviders
               organization_id: @organization.id,
               provider_payment_id: @event_json.dig("intent", "id"),
               status: event_to_payment_status(event_code),
+              amount_cents: intent_amount_cents(@event_json.dig("intent", "amount"), nil),
               metadata: @event_json.dig("intent", "custom_fields")
             ).raise_if_error!
         end
+      end
+
+      # Intent events expose `data.intent.amount` as a scalar (e.g. 5 or "5.00"),
+      # with `data.intent.amount_currency` as a sibling field.
+      # Transaction events expose `intent.amount` as a hash
+      # `{"value" => 7.1, "currency" => "USD"}` — currency lives inside.
+      def intent_amount_cents(raw, currency_fallback)
+        return nil if raw.nil?
+
+        if raw.is_a?(Hash)
+          value = raw["value"]
+          currency = raw["currency"]
+        else
+          value = raw
+          currency = currency_fallback
+        end
+        return nil if value.nil? || currency.nil?
+
+        Money.from_amount(value.to_d, currency).cents
       end
 
       def handle_card_event

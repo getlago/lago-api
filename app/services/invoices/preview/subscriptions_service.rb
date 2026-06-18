@@ -5,10 +5,11 @@ module Invoices
     class SubscriptionsService < BaseService
       Result = BaseResult[:subscriptions]
 
-      def initialize(organization:, customer:, params:)
+      def initialize(organization:, customer:, params:, billing_entity: nil)
         @organization = organization
         @customer = customer
         @params = params
+        @billing_entity = billing_entity
         super
       end
 
@@ -46,7 +47,8 @@ module Invoices
         when :proposal
           BuildSubscriptionService.call(
             customer:,
-            params:
+            params:,
+            billing_entity:
           )
         when :projection
           FindSubscriptionsService.call(
@@ -57,7 +59,7 @@ module Invoices
 
       private
 
-      attr_reader :params, :organization, :customer
+      attr_reader :params, :organization, :customer, :billing_entity
 
       def context
         return @context if defined?(@context)

@@ -153,24 +153,27 @@ module Events
       # DEPRECATED: This method will be replaced by distinct_charges_and_filters
       #             to filter the charge and filters in a billing period.
       #             See app/services/events/billing_period_filter_service.rb:42
-      def distinct_codes
+      def distinct_codes(codes: nil)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
-          ::Clickhouse::EventsEnrichedExpanded
+          scope = ::Clickhouse::EventsEnrichedExpanded
             .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization_id)
             .where(timestamp: from_datetime..applicable_to_datetime)
-            .pluck("DISTINCT(code)")
+
+          scope = scope.where(code: codes) unless codes.nil?
+          scope.pluck("DISTINCT(code)")
         end
       end
 
-      def distinct_charges_and_filters
+      def distinct_charges_and_filters(codes: nil)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
-          ::Clickhouse::EventsEnrichedExpanded
+          scope = ::Clickhouse::EventsEnrichedExpanded
             .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization_id)
             .where(timestamp: from_datetime..to_datetime)
-            .distinct
-            .pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"))
+
+          scope = scope.where(code: codes) unless codes.nil?
+          scope.distinct.pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"))
         end
       end
 
@@ -424,14 +427,16 @@ module Events
         end
       end
 
-      def max
+      def max(with_count: true)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
-            SELECT max(events.decimal_value)
+            SELECT
+              max(events.decimal_value) as value,
+              #{with_count ? "count()" : "null"} as events_count
             FROM events
           SQL
 
-          connection.select_value(sql)
+          build_aggregation_result(connection.select_one(sql))
         end
       end
 
@@ -514,24 +519,29 @@ module Events
         end
       end
 
-      def sum
+      def sum(with_count: true)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
-            SELECT sum(events.decimal_value)
+            SELECT
+              sum(events.decimal_value) as value,
+              #{with_count ? "count()" : "null"} as events_count
             FROM events
           SQL
 
-          connection.select_value(sql) || 0
+          build_aggregation_result(connection.select_one(sql))
         end
       end
 
-      def grouped_sum(columns = grouped_by)
+      def grouped_sum(columns = grouped_by, with_count: true)
+        count_select = with_count ? "count()" : "null"
+
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           if columns == grouped_by
             sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
               SELECT
                 sorted_grouped_by as groups,
-                sum(events.decimal_value) as value
+                sum(events.decimal_value) as value,
+                #{count_select} as events_count
               FROM events
               GROUP BY sorted_grouped_by
             SQL
@@ -541,13 +551,14 @@ module Events
             sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
               SELECT
                 map(#{map_args.join(", ")}) as groups,
-                sum(events.decimal_value) as value
+                sum(events.decimal_value) as value,
+                #{count_select} as events_count
               FROM events
               GROUP BY #{col_expressions.join(", ")}
             SQL
           end
 
-          prepare_grouped_result(connection.select_all(sql))
+          prepare_grouped_aggregated_values(connection.select_all(sql))
         end
       end
 
@@ -921,6 +932,20 @@ module Events
             r[:value] = decimal ? BigDecimal(r[value_key].presence || 0) : r[value_key]
             r.slice!(:groups, :value, :timestamp)
           end
+        end
+      end
+
+      # NOTE: like prepare_grouped_result but each row also carries an events_count
+      #       column, returned as GroupedAggregationResult.
+      def prepare_grouped_aggregated_values(result, decimal: false)
+        result.to_ary.map do |row|
+          r = row.symbolize_keys
+
+          GroupedAggregationResult.new(
+            groups: r[:groups].transform_values(&:presence),
+            value: decimal ? BigDecimal(r[:value].presence || 0) : r[:value],
+            events_count: r[:events_count].presence&.to_i
+          )
         end
       end
     end

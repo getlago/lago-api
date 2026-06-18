@@ -40,6 +40,7 @@ module Api
           :has_tax_identification_number,
           :has_customer_type,
           :customer_type,
+          :external_id,
           currencies: [],
           countries: [],
           states: [],

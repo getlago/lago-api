@@ -6,7 +6,7 @@ RSpec.describe V1::BillingEntitySerializer do
   subject(:serializer) { described_class.new(billing_entity, root_name: "billing_entity", includes: includes_options) }
 
   let(:organization) { create(:organization) }
-  let(:billing_entity) { create(:billing_entity, organization:) }
+  let(:billing_entity) { create(:billing_entity, organization:, phone: "+49 30 1234567") }
   let(:result) { JSON.parse(serializer.to_json) }
   let(:includes_options) { nil }
   let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
@@ -27,6 +27,7 @@ RSpec.describe V1::BillingEntitySerializer do
     expect(billing_entity_serialized.fetch("country")).to eq(billing_entity.country)
     expect(billing_entity_serialized.fetch("address_line1")).to eq(billing_entity.address_line1)
     expect(billing_entity_serialized.fetch("address_line2")).to eq(billing_entity.address_line2)
+    expect(billing_entity_serialized.fetch("phone")).to eq(billing_entity.phone)
     expect(billing_entity_serialized.fetch("city")).to eq(billing_entity.city)
     expect(billing_entity_serialized.fetch("state")).to eq(billing_entity.state)
     expect(billing_entity_serialized.fetch("zipcode")).to eq(billing_entity.zipcode)

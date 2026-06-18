@@ -16,6 +16,10 @@ FactoryBot.define do
       signed_at { Time.current }
     end
 
+    trait :with_signed_document do
+      signed_document { Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/blank.pdf"), "application/pdf") }
+    end
+
     trait :expired do
       status { :expired }
       expires_at { 1.day.ago }
@@ -27,6 +31,16 @@ FactoryBot.define do
       status { :voided }
       voided_at { Time.current }
       void_reason { :manual }
+    end
+
+    trait :expired_yesterday do
+      status { :generated }
+      expires_at { 1.day.ago }
+    end
+
+    trait :expiring_tomorrow do
+      status { :generated }
+      expires_at { 1.day.from_now }
     end
   end
 end

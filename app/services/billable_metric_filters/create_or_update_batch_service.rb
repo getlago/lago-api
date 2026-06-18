@@ -55,7 +55,7 @@ module BillableMetricFilters
         end
       end
 
-      BillableMetricFilters::RefreshDraftInvoicesJob.perform_later(billable_metric.id)
+      BillableMetricFilters::RefreshDraftInvoicesJob.perform_after_commit(billable_metric.id)
 
       result
     end

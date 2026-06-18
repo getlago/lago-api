@@ -21,6 +21,20 @@ module EInvoices
       }.merge(COMMON_NAMESPACES).freeze
 
       DATEFORMAT = "%Y-%m-%d"
+
+      EN16931_PROFILE = "urn:cen.eu:en16931:2017"
+      XRECHNUNG_3_0_PROFILE = "#{EN16931_PROFILE}#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0".freeze
+      PEPPOL_BIS_BILLING_PROFILE = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
+
+      private
+
+      def de_billing_entity?
+        resource.billing_entity.country.try(:upcase) == "DE"
+      end
+
+      def customization_id
+        de_billing_entity? ? XRECHNUNG_3_0_PROFILE : EN16931_PROFILE
+      end
     end
   end
 end

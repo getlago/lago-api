@@ -65,6 +65,7 @@ class Customer < ApplicationRecord
   has_many :daily_usages
   has_many :quotes
   has_many :order_forms
+  has_many :orders
   has_many :wallets
   has_many :wallet_transactions, through: :wallets
   has_many :payment_provider_customers,
@@ -439,6 +440,7 @@ end
 #
 # Indexes
 #
+#  index_customers_by_cursor                                    (organization_id,created_at DESC,id)
 #  index_customers_on_account_type                              (account_type)
 #  index_customers_on_applied_dunning_campaign_id               (applied_dunning_campaign_id)
 #  index_customers_on_awaiting_wallet_refresh                   (awaiting_wallet_refresh)
@@ -450,6 +452,7 @@ end
 #  index_customers_on_organization_id_email_gin_trgm_ops        (organization_id,email) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_firstname_gin_trgm_ops    (organization_id,firstname) WHERE (deleted_at IS NULL) USING gin
+#  index_customers_on_organization_id_kept                      (organization_id) WHERE (deleted_at IS NULL)
 #  index_customers_on_organization_id_lastname_gin_trgm_ops     (organization_id,lastname) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_legal_name_gin_trgm_ops   (organization_id,legal_name) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_name_gin_trgm_ops         (organization_id,name) WHERE (deleted_at IS NULL) USING gin

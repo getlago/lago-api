@@ -29,6 +29,7 @@ RSpec.describe Quote do
       expect(subject).to have_many(:versions).class_name("QuoteVersion").order(sequential_id: :desc)
       expect(subject).to have_one(:current_version).class_name("QuoteVersion").order(sequential_id: :desc)
       expect(subject).to have_many(:order_forms).through(:versions)
+      expect(subject).to have_many_attached(:images)
     end
   end
 
@@ -52,6 +53,16 @@ RSpec.describe Quote do
         quote = build(:quote, order_type: :one_off, subscription: nil)
         expect(quote).to be_valid
       end
+    end
+
+    describe "images validation" do
+      it do
+        expect(quote).to validate_content_type_of(:images)
+          .allowing("image/png", "image/jpeg", "image/webp", "image/gif")
+          .rejecting("application/pdf", "text/plain")
+      end
+
+      it { is_expected.to validate_size_of(:images).less_than(5.megabytes) }
     end
   end
 

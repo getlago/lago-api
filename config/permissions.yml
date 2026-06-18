@@ -146,6 +146,14 @@ order_forms:
   view:
     - finance
     - manager
+  sign:
+    - manager
+  void:
+    - manager
+orders:
+  view:
+    - finance
+    - manager
 organization:
   view:
     - finance

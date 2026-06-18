@@ -110,6 +110,21 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
       end
     end
 
+    context "when voiding credits on a traceable wallet without trackable inbound balance" do
+      let(:params) { {wallet_id: wallet.id, voided_credits: "3.00"} }
+
+      it "returns a failed result with the underlying validation error" do
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(amount_cents: ["exceeds_available_amount"])
+        expect(result.wallet_transactions).to be_nil
+      end
+
+      it "does not create any wallet transaction" do
+        expect { result }.not_to change(WalletTransaction, :count)
+      end
+    end
+
     context "with metadata parameter" do
       let(:metadata) { [{"key" => "valid_value", "value" => "also_valid"}] }
       let(:params) do

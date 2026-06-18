@@ -29,6 +29,7 @@ RSpec.describe BillingEntities::UpdateService do
       einvoicing:,
       address_line1: "Line 1",
       address_line2: "Line 2",
+      phone: "+49 30 1234567",
       state: "Foobar",
       zipcode: "FOO1234",
       city: "Foobar",
@@ -59,6 +60,7 @@ RSpec.describe BillingEntities::UpdateService do
       expect(result.billing_entity.address_line1).to eq("Line 1")
       expect(result.billing_entity.einvoicing).to eq(true)
       expect(result.billing_entity.address_line2).to eq("Line 2")
+      expect(result.billing_entity.phone).to eq("+49 30 1234567")
       expect(result.billing_entity.state).to eq("Foobar")
       expect(result.billing_entity.zipcode).to eq("FOO1234")
       expect(result.billing_entity.city).to eq("Foobar")

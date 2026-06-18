@@ -24,7 +24,7 @@ module Subscriptions
           invoice.closed!
 
           ResolveSubscriptionStatusService.call!(subscription:)
-          subscription.update!(cancelation_reason: :timeout)
+          subscription.update!(cancellation_reason: :timeout)
 
           enqueue_psp_cancel(invoice)
           enqueue_recredit_jobs(invoice)
