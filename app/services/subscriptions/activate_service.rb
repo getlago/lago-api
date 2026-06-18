@@ -71,8 +71,6 @@ module Subscriptions
 
       billable_subscriptions = [previous_subscription]
 
-      # Fixed-charge events are always emitted during gate_subscription, so re-emit only
-      # when activating straight from pending.
       emit_fixed_charge_events unless from_incomplete
 
       unless billed_during_gating
@@ -80,7 +78,10 @@ module Subscriptions
           (subscription.plan.pay_in_advance? && !subscription.in_trial_period?)
       end
 
-      after_commit { notify_started }
+      after_commit do
+        notify_started
+        enqueue_gating_catch_up_jobs if from_incomplete
+      end
 
       bill_rotation_subscriptions(
         billable_subscriptions,
@@ -100,8 +101,6 @@ module Subscriptions
 
       billable_subscriptions = [previous_subscription]
 
-      # Fixed-charge events are always emitted during gate_subscription, so re-emit only
-      # when activating straight from pending.
       emit_fixed_charge_events unless from_incomplete
 
       unless billed_during_gating
@@ -117,6 +116,7 @@ module Subscriptions
         end
 
         notify_started
+        enqueue_gating_catch_up_jobs if from_incomplete
       end
 
       bill_rotation_subscriptions(billable_subscriptions, billing_at: timestamp)
@@ -127,12 +127,12 @@ module Subscriptions
 
       subscription.mark_as_active!(timestamp)
 
-      # When from_incomplete, fixed-charge events were already emitted during gate_subscription.
       emit_fixed_charge_events unless from_incomplete
 
       after_commit do
         if from_incomplete
           bill_subscription if subscription.activation_rules.payment.none?
+          enqueue_gating_catch_up_jobs
         else
           bill_subscription(skip_charges: true)
         end
@@ -141,13 +141,17 @@ module Subscriptions
       end
     end
 
-    # Downgrades default to billing only the previous subscription for non-invoiceable fees:
-    # the downgrade subscription has no events yet.
     def bill_rotation_subscriptions(billable_subscriptions, billing_at:, non_invoiceable_subscriptions: [subscription.previous_subscription])
       after_commit do
         BillSubscriptionJob.perform_later(billable_subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
         BillNonInvoiceableFeesJob.perform_later(non_invoiceable_subscriptions, billing_at)
       end
+    end
+
+    def enqueue_gating_catch_up_jobs
+      return unless subscription.activation_rules.payment.any?
+
+      ActivationRules::BillFixedChargesDeltaJob.perform_later(subscription)
     end
 
     def notify_started

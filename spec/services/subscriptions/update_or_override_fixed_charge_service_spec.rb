@@ -98,6 +98,16 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
           it "schedules a Invoices::CreatePayInAdvanceFixedChargesJob" do
             expect { service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
           end
+
+          context "when the subscription is payment-gated" do
+            let(:subscription) { create(:subscription, :incomplete, customer:, plan:) }
+
+            before { create(:subscription_activation_rule, subscription:, organization:, status: :pending) }
+
+            it "does not schedule a Invoices::CreatePayInAdvanceFixedChargesJob" do
+              expect { service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+            end
+          end
         end
 
         context "with a pay in arrears fixed charge" do
