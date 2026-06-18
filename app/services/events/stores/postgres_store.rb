@@ -420,21 +420,19 @@ module Events
         ).rows
       end
 
-      # NOTE: When aggregating in the context of a pay-in-advance event, the upper boundary
-      #       (max_timestamp) is the event's own timestamp. Multiple events can share this exact
-      #       timestamp (e.g. ingested in the same second), in which case they are tie-broken by
-      #       ingestion order (created_at, id) so that each one is assigned a distinct position.
-      #       Otherwise, all events sharing the timestamp would count each other and would all be
-      #       priced as the last unit of the batch.
+      # NOTE: For a pay-in-advance event, the upper boundary is the event's own timestamp.
+      #       Events sharing the same timestamp are tie-broken
+      #       by ingestion order (created_at, id) so each gets a distinct position. Otherwise
+      #       they would all count each other and be priced as the last unit of the batch.
       def apply_to_boundary(scope)
-        pay_in_advance_event_id = boundaries[:max_timestamp] && filters[:event]&.id
+        boundary_event = filters[:event] if boundaries[:max_timestamp]
 
-        if pay_in_advance_event_id
+        if boundary_event&.id
           scope.where(
             "events.timestamp < :to OR (events.timestamp = :to AND (events.created_at, events.id) <= " \
-            "(SELECT pia_event.created_at, pia_event.id FROM events pia_event WHERE pia_event.id = :pay_in_advance_event_id))",
+            "(SELECT boundary_event.created_at, boundary_event.id FROM events boundary_event WHERE boundary_event.id = :boundary_event_id))",
             to: applicable_to_datetime,
-            pay_in_advance_event_id:
+            boundary_event_id: boundary_event.id
           )
         else
           scope.to_datetime(applicable_to_datetime)
