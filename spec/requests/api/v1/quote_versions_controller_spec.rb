@@ -81,10 +81,10 @@ RSpec.describe Api::V1::QuoteVersionsController do
     context "when the quote version is not approvable", :premium do
       let(:quote_version) { create(:quote_version, :voided, quote:, organization:) }
 
-      it "returns method not allowed" do
+      it "returns unprocessable entity" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 
@@ -138,10 +138,10 @@ RSpec.describe Api::V1::QuoteVersionsController do
     context "when the quote version is not voidable", :premium do
       let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }
 
-      it "returns method not allowed" do
+      it "returns unprocessable entity" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 
