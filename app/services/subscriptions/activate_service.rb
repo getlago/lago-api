@@ -152,6 +152,10 @@ module Subscriptions
       return unless subscription.activation_rules.payment.any?
 
       ActivationRules::BillFixedChargesDeltaJob.perform_later(subscription)
+
+      unless subscription.previous_subscription
+        ActivationRules::BillMissedPeriodsJob.perform_later(subscription)
+      end
     end
 
     def notify_started
