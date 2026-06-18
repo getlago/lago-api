@@ -188,6 +188,20 @@ RSpec.describe EInvoices::Invoices::Ubl::Builder do
       it "has the STANDARD_PAYMENT" do
         expect(subject).to contains_xml_node("//cac:PaymentMeans//cbc:PaymentMeansCode").with_value(1)
       end
+
+      it "emits exactly one PaymentMeans block" do
+        expect(subject.xpath("//cac:PaymentMeans").length).to eq(1)
+      end
+
+      context "with prepaid credit and credit notes applied" do
+        before do
+          invoice.update(net_payment_term: 2, prepaid_credit_amount: 10, credit_notes_amount: 20)
+        end
+
+        it "still emits exactly one PaymentMeans block" do
+          expect(subject.xpath("//cac:PaymentMeans").length).to eq(1)
+        end
+      end
     end
 
     context "when PaymentTerms tag" do
