@@ -136,6 +136,10 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
         expect(subject).to contains_xml_node("//cac:PaymentMeans/cbc:PaymentMeansCode")
           .with_value(described_class::STANDARD_PAYMENT)
       end
+
+      it "emits exactly one PaymentMeans block" do
+        expect(subject.xpath("//cac:PaymentMeans").length).to eq(1)
+      end
     end
 
     context "when PaymentTerms tag" do
