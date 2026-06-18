@@ -47,6 +47,11 @@ module Quotes
         return
       end
 
+      if decoded.io.size > Quote::IMAGE_MAX_SIZE
+        result.single_validation_failure!(field: :image, error_code: "file_too_large")
+        return
+      end
+
       ActiveStorage::Blob.create_and_upload!(
         io: decoded.io,
         filename: filename(decoded.content_type),

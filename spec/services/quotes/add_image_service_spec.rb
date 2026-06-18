@@ -84,15 +84,15 @@ RSpec.describe Quotes::AddImageService do
         allow(io).to receive(:size).and_return(6.megabytes)
         decoded = Utils::Base64File::Decoded.new(io:, content_type: "image/png")
         allow(Utils::Base64File).to receive(:decode).and_return(decoded)
+        allow(ActiveStorage::Blob).to receive(:create_and_upload!).and_call_original
       end
 
-      it "returns a validation failure without attaching" do
-        expect { result }.to have_enqueued_job(ActiveStorage::PurgeJob)
-
+      it "returns a validation failure without uploading to storage" do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:image]).to eq(["file_too_large"])
         expect(quote.reload.images).not_to be_attached
+        expect(ActiveStorage::Blob).not_to have_received(:create_and_upload!)
       end
     end
   end
