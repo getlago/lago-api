@@ -47,6 +47,27 @@ RSpec.describe OrderForms::ExpireService do
         end
       end
 
+      context "with concurrent mutations" do
+        it "wraps the work in a per-quote lock" do
+          allow(Quotes::LockService).to receive(:call).and_call_original
+
+          service.call
+
+          expect(Quotes::LockService).to have_received(:call).with(quote: order_form.quote_version.quote).at_least(:once)
+        end
+
+        it "re-checks the status under the lock and skips an order form voided concurrently" do
+          order_form
+          OrderForm.where(id: order_form.id).update_all(status: "voided", void_reason: "manual", voided_at: Time.current)
+
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("order_form_is_voided")
+        end
+      end
+
       context "when order_form is already expired" do
         let(:order_form) { create(:order_form, :expired, customer:, organization:) }
 
