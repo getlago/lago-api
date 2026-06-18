@@ -49,6 +49,7 @@ class Webhook < ApplicationRecord
     # Fallback to storing the response in the database if the upload fails,
     # so the webhook keeps an accurate state even when storage is unavailable.
     Rails.logger.warn("Failed to upload webhook response to storage: #{e.message}")
+    Sentry.capture_exception(e) if defined?(Sentry)
     self.response_key = nil
     @stored_response = nil
     self.response = content
