@@ -4,10 +4,9 @@ module Subscriptions
   class ActivateService < BaseService
     Result = BaseResult[:subscription]
 
-    def initialize(subscription:, timestamp: Time.current, during_creation: false)
+    def initialize(subscription:, timestamp: Time.current)
       @subscription = subscription
       @timestamp = timestamp
-      @during_creation = during_creation
       super
     end
 
@@ -31,7 +30,7 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :timestamp, :during_creation
+    attr_reader :subscription, :timestamp
 
     def gate_subscription
       subscription.mark_as_incomplete!(timestamp)
@@ -157,15 +156,7 @@ module Subscriptions
 
       return unless subscription.should_sync_hubspot_subscription?
 
-      if upgrade? || downgrade?
-        # The new upgrade/downgrade subscription has no Hubspot record yet.
-        Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription:)
-      elsif !during_creation
-        # Skip when activating during subscription creation — CreateService
-        # fires Hubspot::CreateJob after this, which captures the active state
-        # and avoids a redundant Update that would race with Create.
-        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
-      end
+      Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription:)
     end
 
     def emit_fixed_charge_events

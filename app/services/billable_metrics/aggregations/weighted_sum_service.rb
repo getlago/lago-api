@@ -48,8 +48,7 @@ module BillableMetrics
         aggregations = event_store.grouped_weighted_sum(initial_values: grouped_latest_values)
         return empty_results if aggregations.blank?
 
-        counts = event_store.grouped_count
-        sums = event_store.grouped_sum
+        sum_results = event_store.grouped_sum
 
         latest_values = []
         last_events = []
@@ -73,8 +72,10 @@ module BillableMetrics
 
           aggregation_value = aggregation[:value]
           group_result.aggregation = aggregation_value
-          group_result.count = counts.find { |c| c[:groups] == aggregation[:groups] }&.[](:value) || 0
-          group_result.variation = sums.find { |c| c[:groups] == aggregation[:groups] }&.[](:value) || 0
+
+          group_sum = sum_results.find { |c| c.groups == aggregation[:groups] }
+          group_result.count = group_sum&.events_count || 0
+          group_result.variation = group_sum&.value || 0
           group_result.total_aggregated_units = group_result.variation
 
           if billable_metric.recurring?
@@ -166,7 +167,7 @@ module BillableMetrics
         event_store.aggregation_property = billable_metric.field_name
         event_store.numeric_property = true
 
-        breakdowns = presentation_by.present? ? event_store.grouped_sum(uniq_grouped_by_and_presentation_by) : []
+        breakdowns = presentation_by.present? ? event_store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
 
         @latest_value_from_events = [BigDecimal(event_store.sum(with_count: false).value), breakdowns]
       end
@@ -228,9 +229,9 @@ module BillableMetrics
         event_store.aggregation_property = billable_metric.field_name
         event_store.numeric_property = true
 
-        breakdowns = presentation_by.present? ? event_store.grouped_sum(uniq_grouped_by_and_presentation_by) : []
+        breakdowns = presentation_by.present? ? event_store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
 
-        [event_store.grouped_sum, breakdowns]
+        [event_store.grouped_sum(with_count: false).map(&:to_grouped_hash), breakdowns]
       end
     end
   end

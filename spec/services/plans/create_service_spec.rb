@@ -143,6 +143,15 @@ RSpec.describe Plans::CreateService do
       expect(plan.invoice_display_name).to eq(plan_invoice_display_name)
     end
 
+    context "when send_webhook is false" do
+      it "does not enqueue the plan.created webhook but still produces the activity log" do
+        result = described_class.call(create_args, send_webhook: false)
+
+        expect(SendWebhookJob).not_to have_been_enqueued.with("plan.created", result.plan)
+        expect(Utils::ActivityLog).to have_produced("plan.created").after_commit.with(result.plan)
+      end
+    end
+
     it "does not create minimum commitment" do
       plans_service.call
 

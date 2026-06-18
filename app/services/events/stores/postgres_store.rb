@@ -245,13 +245,21 @@ module Events
         )
       end
 
-      def grouped_sum(columns = grouped_by)
-        results = events
-          .group(columns.map { sanitized_property_name(it) })
-          .sum("(#{sanitized_property_name})::numeric")
-          .map { |group, value| [group, value].flatten }
+      def grouped_sum(columns = grouped_by, with_count: true)
+        groups = columns.map { sanitized_property_name(it) }
 
-        prepare_grouped_result(results, columns: columns)
+        results = events
+          .group(groups)
+          .pluck(
+            Arel.sql(
+              (groups + [
+                "SUM((#{sanitized_property_name})::numeric)",
+                with_count ? "COUNT(*)" : "NULL"
+              ]).join(", ")
+            )
+          )
+
+        prepare_grouped_aggregated_values(results, columns: columns)
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -481,6 +489,20 @@ module Events
           result[:timestamp] = row[-2] if timestamp
 
           result
+        end
+      end
+
+      # NOTE: Same as prepare_grouped_result but the last two columns of each row are
+      #       the aggregated value and the events count, returned as GroupedAggregationResult.
+      def prepare_grouped_aggregated_values(rows, columns: grouped_by)
+        rows.map do |row|
+          groups = row[...-2].map(&:presence)
+
+          GroupedAggregationResult.new(
+            groups: columns.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            value: row[-2],
+            events_count: row[-1]&.to_i
+          )
         end
       end
 

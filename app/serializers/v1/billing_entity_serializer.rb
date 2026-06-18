@@ -13,6 +13,7 @@ module V1
         country: model.country,
         address_line1: model.address_line1,
         address_line2: model.address_line2,
+        phone: model.phone,
         city: model.city,
         state: model.state,
         zipcode: model.zipcode,

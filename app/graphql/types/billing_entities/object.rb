@@ -26,6 +26,7 @@ module Types
       field :city, String
       field :country, Types::CountryCodeEnum
       field :net_payment_term, Integer, null: false
+      field :phone, String
       field :state, String
       field :zipcode, String
 

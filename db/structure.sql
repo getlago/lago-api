@@ -2054,7 +2054,8 @@ CREATE TABLE public.billing_entities (
     applied_dunning_campaign_id uuid,
     einvoicing boolean DEFAULT false NOT NULL,
     subscription_invoice_issuing_date_anchor public.subscription_invoice_issuing_date_anchors DEFAULT 'next_period_start'::public.subscription_invoice_issuing_date_anchors NOT NULL,
-    subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments DEFAULT 'align_with_finalization_date'::public.subscription_invoice_issuing_date_adjustments NOT NULL
+    subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments DEFAULT 'align_with_finalization_date'::public.subscription_invoice_issuing_date_adjustments NOT NULL,
+    phone character varying
 );
 
 
@@ -5000,6 +5001,7 @@ CREATE TABLE public.quote_versions (
     currency character varying,
     start_date date,
     end_date date,
+    mention_variables jsonb,
     CONSTRAINT quote_versions_constraint_approved_at_matches_status CHECK (((status = 'approved'::public.quote_status) = (approved_at IS NOT NULL))),
     CONSTRAINT quote_versions_constraint_sequential_id_positive CHECK ((sequential_id > 0)),
     CONSTRAINT quote_versions_constraint_void_fields_match_status CHECK (((status = 'voided'::public.quote_status) = ((void_reason IS NOT NULL) AND (voided_at IS NOT NULL))))
@@ -12783,6 +12785,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260617145515'),
 ('20260616160703'),
 ('20260616155032'),
 ('20260615181440'),
@@ -12797,6 +12800,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260609161044'),
 ('20260608111837'),
 ('20260608074112'),
+('20260605170919'),
 ('20260604153307'),
 ('20260603121349'),
 ('20260602175438'),

@@ -524,7 +524,7 @@ module Events
         end
       end
 
-      def grouped_sum(columns = grouped_by)
+      def grouped_sum(columns = grouped_by, with_count: true)
         groups, column_names = grouped_arel_columns(columns)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
@@ -536,12 +536,13 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               #{column_names},
-              sum(events.property)
+              sum(events.property),
+              #{with_count ? "count()" : "null"}
             FROM events
             GROUP BY #{column_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
+          prepare_grouped_aggregated_values(connection.select_all(sql).rows, columns: columns)
         end
       end
 
@@ -834,6 +835,21 @@ module Events
           result[:timestamp] = row[-2] if timestamp
 
           result
+        end
+      end
+
+      # NOTE: Same as prepare_grouped_result but the last two columns of each row are
+      #       the aggregated value and the events count, returned as GroupedAggregationResult.
+      def prepare_grouped_aggregated_values(rows, columns: grouped_by)
+        rows.map do |row|
+          flat = row.flatten
+          groups = flat[...-2].map(&:presence)
+
+          GroupedAggregationResult.new(
+            groups: columns.each_with_object({}).with_index { |(g, res), i| res.merge!(g => groups[i]) },
+            value: flat[-2],
+            events_count: flat[-1].presence&.to_i
+          )
         end
       end
 

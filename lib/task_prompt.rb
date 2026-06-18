@@ -26,6 +26,11 @@ module TaskPrompt
     organization
   end
 
+  def self.ask_for_subscription_ids
+    input = ask("Subscription IDs to refill (comma or space separated, leave blank to fill a whole organization): ")
+    input.split(/[\s,]+/).reject(&:empty?)
+  end
+
   def self.ask_for_timestamp_range
     from_time = ask_for_timestamp("From timestamp (UTC, e.g. 2026-01-01 00:00:00): ")
     to_time = ask_for_timestamp("To timestamp (UTC, e.g. 2026-01-31 23:59:59): ")

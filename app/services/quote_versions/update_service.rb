@@ -17,7 +17,7 @@ module QuoteVersions
     def call
       return result.not_found_failure!(resource: "quote_version") unless quote_version
       return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
-      return result.not_allowed_failure!(code: "inappropriate_state") unless editable?
+      return result.single_validation_failure!(field: :status, error_code: "not_editable") unless editable?
 
       quote_version.update!(
         params.slice(

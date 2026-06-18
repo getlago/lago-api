@@ -37,7 +37,7 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
   end
 
   context "when organization has no subscriptions in scope" do
-    before { stub_stdin(organization.id, "y", "") }
+    before { stub_stdin(organization.id, "y", "", "") }
 
     it "finishes without enqueueing any job" do
       expect { task.invoke }.not_to raise_error
@@ -58,7 +58,7 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
     end
 
     context "when user confirms deletion with the default date" do
-      before { stub_stdin(organization.id, "y", "", "y", "y") }
+      before { stub_stdin(organization.id, "y", "", "", "y", "y") }
 
       it "deletes existing daily_usages in scope" do
         task.invoke
@@ -81,7 +81,7 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
     end
 
     context "when user declines deletion but continues" do
-      before { stub_stdin(organization.id, "y", "", "n", "y") }
+      before { stub_stdin(organization.id, "y", "", "", "n", "y") }
 
       it "keeps existing daily_usages" do
         task.invoke
@@ -96,7 +96,7 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
     end
 
     context "when user enters a custom date" do
-      before { stub_stdin(organization.id, "y", "2026-01-15", "y", "y") }
+      before { stub_stdin(organization.id, "y", "", "2026-01-15", "y", "y") }
 
       it "uses the entered date as from_date" do
         task.invoke
@@ -106,7 +106,7 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
     end
 
     context "when user enters an invalid date" do
-      before { stub_stdin(organization.id, "y", "not-a-date") }
+      before { stub_stdin(organization.id, "y", "", "not-a-date") }
 
       it "aborts" do
         expect { task.invoke }.to raise_error(SystemExit)
@@ -115,12 +115,38 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
     end
 
     context "when user declines the final confirmation" do
-      before { stub_stdin(organization.id, "y", "", "y", "n") }
+      before { stub_stdin(organization.id, "y", "", "", "y", "n") }
 
       it "aborts without deleting or enqueueing" do
         expect { task.invoke }.to raise_error(SystemExit)
         expect(DailyUsage.where(id: existing_usage.id)).to exist
         expect(DailyUsages::FillHistoryJob).not_to have_received(:perform_later)
+      end
+    end
+
+    context "when a subscription list is provided" do
+      before { stub_stdin(organization.id, "y", active_sub.id, "", "y", "y") }
+
+      it "only enqueues a FillHistoryJob for the provided subscriptions" do
+        task.invoke
+        expect(DailyUsages::FillHistoryJob).to have_received(:perform_later)
+          .with(subscription: active_sub, from_date: DailyUsage::DEFAULT_HISTORY_DAYS.days.ago.to_date)
+        expect(DailyUsages::FillHistoryJob).not_to have_received(:perform_later)
+          .with(subscription: terminated_sub, from_date: anything)
+      end
+    end
+
+    context "when multiple subscription ids are provided" do
+      before { stub_stdin(organization.id, "y", "#{active_sub.id}, #{terminated_sub.id}", "", "y", "y") }
+
+      it "enqueues a FillHistoryJob for each provided subscription" do
+        task.invoke
+        expect(DailyUsages::FillHistoryJob).to have_received(:perform_later)
+          .with(subscription: active_sub, from_date: DailyUsage::DEFAULT_HISTORY_DAYS.days.ago.to_date)
+        expect(DailyUsages::FillHistoryJob).to have_received(:perform_later)
+          .with(subscription: terminated_sub, from_date: DailyUsage::DEFAULT_HISTORY_DAYS.days.ago.to_date)
+        expect(DailyUsages::FillHistoryJob).not_to have_received(:perform_later)
+          .with(subscription: pending_sub, from_date: anything)
       end
     end
   end

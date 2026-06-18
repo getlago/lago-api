@@ -98,7 +98,7 @@ RSpec.describe Mutations::OrderForms::MarkAsSigned do
         variables: {input: {id: order_form.id}}
       )
 
-      expect_graphql_error(result:, message: "Method Not Allowed")
+      expect_graphql_error(result:, message: "Unprocessable Entity", details: {status: ["not_signable"]})
     end
   end
 

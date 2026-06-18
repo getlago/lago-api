@@ -51,36 +51,36 @@ RSpec.describe OrderForms::MarkAsSignedService do
       context "when order_form is not generated" do
         let(:order_form) { create(:order_form, :signed, customer:, organization:, quote:) }
 
-        it "returns a not allowed failure" do
+        it "returns a validation failure" do
           result = service.call
 
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("not_signable")
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({status: ["not_signable"]})
         end
       end
 
       context "when order_form is voided" do
         let(:order_form) { create(:order_form, :voided, customer:, organization:, quote:) }
 
-        it "returns a not allowed failure" do
+        it "returns a validation failure" do
           result = service.call
 
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("not_signable")
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({status: ["not_signable"]})
         end
       end
 
       context "when order_form is expired" do
         let(:order_form) { create(:order_form, :expired, customer:, organization:, quote:) }
 
-        it "returns a not allowed failure" do
+        it "returns a validation failure" do
           result = service.call
 
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("not_signable")
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({status: ["not_signable"]})
         end
       end
 

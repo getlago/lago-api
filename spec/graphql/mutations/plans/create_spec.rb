@@ -558,30 +558,46 @@ RSpec.describe Mutations::Plans::Create, :premium do
   end
 
   context "with the plan webhooks" do
+    let(:input_with_entitlements) do
+      {
+        name: "Plan with entitlements",
+        code: "plan_with_entitlements",
+        interval: "monthly",
+        payInAdvance: false,
+        amountCents: 100,
+        amountCurrency: "USD",
+        charges: [],
+        entitlements: [
+          {featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "22"}]}
+        ]
+      }
+    end
+
     it "emits plan.created but not plan.updated" do
       execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
         query: mutation,
-        variables: {
-          input: {
-            name: "Plan with entitlements",
-            code: "plan_with_entitlements",
-            interval: "monthly",
-            payInAdvance: false,
-            amountCents: 100,
-            amountCurrency: "USD",
-            charges: [],
-            entitlements: [
-              {featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "22"}]}
-            ]
-          }
-        }
+        variables: {input: input_with_entitlements}
       )
 
       expect(SendWebhookJob).to have_been_enqueued.with("plan.created", Plan.last).once
       expect(SendWebhookJob).not_to have_been_enqueued.with("plan.updated", anything)
+    end
+
+    it "does not emit the webhook from Plans::CreateService so entitlements are persisted first" do
+      allow(::Plans::CreateService).to receive(:call).and_call_original
+
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input: input_with_entitlements}
+      )
+
+      expect(::Plans::CreateService).to have_received(:call).with(anything, send_webhook: false)
     end
   end
 

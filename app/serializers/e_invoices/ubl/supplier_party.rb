@@ -21,9 +21,10 @@ module EInvoices
         xml.comment "Supplier Party"
         xml["cac"].AccountingSupplierParty do
           xml["cac"].Party do
+            xml["cbc"].EndpointID billing_entity.email, schemeID: "EM" if billing_entity.email.present?
             xml["cac"].PostalAddress do
               xml["cbc"].StreetName billing_entity.address_line1
-              xml["cbc"].AdditionalStreetName billing_entity.address_line2
+              xml["cbc"].AdditionalStreetName billing_entity.address_line2 if billing_entity.address_line2.present?
               xml["cbc"].CityName billing_entity.city
               xml["cbc"].PostalZone billing_entity.zipcode
               xml["cac"].Country do
@@ -41,6 +42,11 @@ module EInvoices
             xml["cac"].PartyLegalEntity do
               xml["cbc"].RegistrationName billing_entity.legal_name
               xml["cbc"].CompanyID billing_entity.tax_identification_number
+            end
+            xml["cac"].Contact do
+              xml["cbc"].Name billing_entity.name
+              xml["cbc"].Telephone billing_entity.phone if de_billing_entity?
+              xml["cbc"].ElectronicMail billing_entity.email if billing_entity.email.present?
             end
           end
         end

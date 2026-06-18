@@ -19,6 +19,7 @@ module EInvoices
           xml["cbc"].Note note
         end
         xml["cbc"].DocumentCurrencyCode resource.currency
+        xml["cbc"].BuyerReference resource.customer.external_id if de_billing_entity?
       end
 
       private

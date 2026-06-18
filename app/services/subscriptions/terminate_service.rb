@@ -99,10 +99,6 @@ module Subscriptions
       return if next_subscription.nil?
 
       next_subscription.mark_as_canceled!
-
-      if next_subscription.should_sync_hubspot_subscription?
-        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription: next_subscription)
-      end
     end
 
     def bill_subscription
