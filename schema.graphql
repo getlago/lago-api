@@ -11007,6 +11007,7 @@ type QuoteVersion {
   currency: String
   endDate: ISO8601Date
   id: ID!
+  mentionVariables: JSON!
   organization: Organization!
   quote: Quote!
   shareToken: String

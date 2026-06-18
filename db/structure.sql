@@ -5000,6 +5000,7 @@ CREATE TABLE public.quote_versions (
     currency character varying,
     start_date date,
     end_date date,
+    mention_variables jsonb,
     CONSTRAINT quote_versions_constraint_approved_at_matches_status CHECK (((status = 'approved'::public.quote_status) = (approved_at IS NOT NULL))),
     CONSTRAINT quote_versions_constraint_sequential_id_positive CHECK ((sequential_id > 0)),
     CONSTRAINT quote_versions_constraint_void_fields_match_status CHECK (((status = 'voided'::public.quote_status) = ((void_reason IS NOT NULL) AND (voided_at IS NOT NULL))))
@@ -12793,6 +12794,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260609161044'),
 ('20260608111837'),
 ('20260608074112'),
+('20260605170919'),
 ('20260604153307'),
 ('20260603121349'),
 ('20260602175438'),

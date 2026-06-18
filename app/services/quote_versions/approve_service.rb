@@ -21,7 +21,8 @@ module QuoteVersions
       QuoteVersion.transaction do
         quote_version.update!(
           status: :approved,
-          approved_at: Time.current
+          approved_at: Time.current,
+          mention_variables: ComputeMentionVariablesService.call!(quote_version:).mention_variables
         )
 
         result.order_form = OrderForms::CreateService.call!(quote_version:).order_form
