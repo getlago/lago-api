@@ -4,12 +4,13 @@ module QuoteVersions
   class ApproveService < BaseService
     include OrderForms::Premium
 
-    attr_reader :quote_version
+    attr_reader :quote_version, :expires_at
 
     Result = BaseResult[:quote_version, :order_form]
 
-    def initialize(quote_version:)
+    def initialize(quote_version:, expires_at: nil)
       @quote_version = quote_version
+      @expires_at = expires_at
       super
     end
 
@@ -25,7 +26,7 @@ module QuoteVersions
           mention_variables: ComputeMentionVariablesService.call!(quote_version:).mention_variables
         )
 
-        result.order_form = OrderForms::CreateService.call!(quote_version:).order_form
+        result.order_form = OrderForms::CreateService.call!(quote_version:, expires_at:).order_form
       end
 
       # TODO: SendWebhookJob.perform_after_commit("quote_version.approved", quote_version)
@@ -34,6 +35,8 @@ module QuoteVersions
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::ValidationFailure => e
+      e.result
     end
 
     private
