@@ -4,11 +4,12 @@ module Plans
   class UpdateService < BaseService
     Result = BaseResult[:plan]
 
-    def initialize(plan:, params:, partial_metadata: false)
+    def initialize(plan:, params:, partial_metadata: false, send_webhook: true)
       @plan = plan
       @params = params
       @timestamp = Time.current.to_i
       @partial_metadata = partial_metadata
+      @send_webhook = send_webhook
       super
     end
 
@@ -75,7 +76,7 @@ module Plans
 
       plan.invoices.draft.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 
-      SendWebhookJob.perform_after_commit("plan.updated", plan)
+      SendWebhookJob.perform_after_commit("plan.updated", plan) if send_webhook
       result.plan = plan.reload
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -86,7 +87,7 @@ module Plans
 
     private
 
-    attr_reader :plan, :params, :timestamp, :partial_metadata
+    attr_reader :plan, :params, :timestamp, :partial_metadata, :send_webhook
 
     delegate :organization, to: :plan
 
@@ -293,14 +294,7 @@ module Plans
     end
 
     def trigger_pay_in_advance_billing
-      plan.subscriptions.active.find_each do |subscription|
-        after_commit do
-          Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(
-            subscription,
-            timestamp
-          )
-        end
-      end
+      Invoices::CreateAllPayInAdvanceFixedChargesJob.perform_after_commit(plan, timestamp)
     end
 
     def sanitize_fixed_charges(plan, args_fixed_charges, created_fixed_charges_ids)

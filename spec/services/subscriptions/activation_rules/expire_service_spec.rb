@@ -45,11 +45,11 @@ RSpec.describe Subscriptions::ActivationRules::ExpireService do
       expect(invoice.reload).to be_closed
     end
 
-    it "cancels the subscription with cancelation_reason: timeout" do
+    it "cancels the subscription with cancellation_reason: timeout" do
       result
 
       expect(subscription.reload).to be_canceled
-      expect(subscription.cancelation_reason).to eq("timeout")
+      expect(subscription.cancellation_reason).to eq("timeout")
     end
 
     it "enqueues a PSP cancel job for the pending payment" do
@@ -142,7 +142,7 @@ RSpec.describe Subscriptions::ActivationRules::ExpireService do
 
       expect(payment_rule.reload).to be_expired
       expect(subscription.reload).to be_canceled
-      expect(subscription.cancelation_reason).to eq("timeout")
+      expect(subscription.cancellation_reason).to eq("timeout")
       expect(invoice.reload).to be_closed
     end
 

@@ -33,6 +33,7 @@ module PaymentProviders
           payment_service_class.new(payable:).update_payment_status(
             organization_id:,
             status: verified_transaction[:status],
+            amount_cents: verified_amount_cents(verified_transaction),
             flutterwave_payment: PaymentProviders::FlutterwaveProvider::FlutterwavePayment.new(
               id: provider_payment_id,
               status: verified_transaction[:status],
@@ -133,6 +134,14 @@ module PaymentProviders
             currency: verified_transaction[:currency],
             payment_type: "one-time"
           }
+        end
+
+        def verified_amount_cents(verified_transaction)
+          amount = verified_transaction[:amount]
+          currency = verified_transaction[:currency]
+          return nil if amount.nil? || currency.nil?
+
+          Money.from_amount(amount.to_d, currency).cents
         end
 
         def headers(payment_provider)

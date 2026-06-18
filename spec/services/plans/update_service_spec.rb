@@ -170,6 +170,15 @@ RSpec.describe Plans::UpdateService do
       expect(plan.fixed_charges.order(created_at: :asc).second.invoice_display_name).to eq("fixed_charge2")
     end
 
+    context "when send_webhook is false" do
+      it "does not enqueue the plan.updated webhook but still produces the activity log" do
+        described_class.call(plan:, params: update_args, send_webhook: false)
+
+        expect(SendWebhookJob).not_to have_been_enqueued.with("plan.updated", plan)
+        expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(plan)
+      end
+    end
+
     it "marks invoices as ready to be refreshed" do
       subscription = create(:subscription, organization:, plan:)
       invoice = create(:invoice, :draft)
@@ -1522,9 +1531,9 @@ RSpec.describe Plans::UpdateService do
 
           before { subscription }
 
-          it "does not enqueue a Invoices::CreatePayInAdvanceFixedChargesJob for active subscriptions" do
+          it "does not enqueue a Invoices::CreateAllPayInAdvanceFixedChargesJob" do
             expect { plans_service.call }
-              .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+              .not_to have_enqueued_job(Invoices::CreateAllPayInAdvanceFixedChargesJob)
           end
         end
 
@@ -1556,10 +1565,22 @@ RSpec.describe Plans::UpdateService do
 
             before { subscription }
 
-            it "enqueues a Invoices::CreatePayInAdvanceFixedChargesJob for active subscriptions" do
+            it "enqueues a single Invoices::CreateAllPayInAdvanceFixedChargesJob for the plan" do
               freeze_time do
                 expect { plans_service.call }
-                  .to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+                  .to have_enqueued_job(Invoices::CreateAllPayInAdvanceFixedChargesJob)
+                  .with(plan, Time.current.to_i)
+              end
+            end
+
+            it "enqueues a Invoices::CreatePayInAdvanceFixedChargesJob for active subscriptions" do
+              freeze_time do
+                perform_enqueued_jobs(only: Invoices::CreateAllPayInAdvanceFixedChargesJob) do
+                  plans_service.call
+                end
+
+                expect(Invoices::CreatePayInAdvanceFixedChargesJob)
+                  .to have_been_enqueued
                   .with(subscription, Time.current.to_i)
               end
             end
@@ -1571,8 +1592,11 @@ RSpec.describe Plans::UpdateService do
             before { subscription }
 
             it "does not enqueue a Invoices::CreatePayInAdvanceFixedChargesJob" do
-              expect { plans_service.call }
-                .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+              perform_enqueued_jobs(only: Invoices::CreateAllPayInAdvanceFixedChargesJob) do
+                plans_service.call
+              end
+
+              expect(Invoices::CreatePayInAdvanceFixedChargesJob).not_to have_been_enqueued
             end
           end
         end

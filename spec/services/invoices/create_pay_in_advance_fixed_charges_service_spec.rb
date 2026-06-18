@@ -75,6 +75,26 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       expect { invoice_service.call }.to change(InvoiceSubscription, :count).by(1)
     end
 
+    context "with billing entity resolution" do
+      it "stamps the customer's billing_entity when subscription has none" do
+        invoice = invoice_service.call.invoice
+
+        expect(invoice.billing_entity).to eq(customer.billing_entity)
+      end
+
+      context "when subscription has its own billing_entity" do
+        let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+        before { subscription.update!(billing_entity: other_billing_entity) }
+
+        it "stamps the subscription's billing_entity on the invoice" do
+          invoice = invoice_service.call.invoice
+
+          expect(invoice.billing_entity).to eq(other_billing_entity)
+        end
+      end
+    end
+
     it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
@@ -329,6 +349,13 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
 
     it_behaves_like "applies invoice_custom_sections" do
       let(:service_call) { invoice_service.call }
+    end
+
+    it_behaves_like "applies invoice_custom_sections from resource" do
+      let(:service_call) { invoice_service.call }
+      let(:resource_with_custom_section) { subscription }
+      let(:applied_section_factory) { :subscription_applied_invoice_custom_section }
+      let(:resource_association_key) { :subscription }
     end
 
     context "when fee build service fails" do

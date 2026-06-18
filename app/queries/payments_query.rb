@@ -7,7 +7,7 @@ class PaymentsQuery < BaseQuery
   def call
     return result unless validate_filters.success?
 
-    payments = base_scope.result
+    payments = base_scope
     payments = apply_filters(payments)
     payments = paginate(payments)
     payments = apply_consistent_ordering(payments)
@@ -23,11 +23,53 @@ class PaymentsQuery < BaseQuery
   end
 
   def base_scope
-    Payment.where.not(customer_id: nil)
+    scope = Payment.where.not(customer_id: nil)
       .where(organization:)
       .where.not(payable_id: nil)
       .where(visible_payable_condition)
-      .ransack(search_params)
+
+    return scope if search_term.blank?
+
+    scope.where(id: matching_ids_by_search)
+  end
+
+  def matching_ids_by_search
+    escaped_term = "%#{Payment.sanitize_sql_like(search_term)}%"
+    search_base = Payment.where(organization:)
+
+    branches = [
+      search_base.where("payments.provider_payment_id ILIKE ?", escaped_term).select(:id),
+      search_base.where("payments.reference ILIKE ?", escaped_term).select(:id)
+    ]
+
+    branches << search_base.where(id: search_term).select(:id) if search_term.match?(BaseQuery::UUID_REGEX)
+
+    if filters.invoice_id.blank?
+      branches << search_base.where(payable_type: "Invoice", payable_id: matching_invoice_ids).select(:id)
+    end
+
+    if filters.external_customer_id.blank?
+      branches << search_base.where(customer_id: matching_customer_ids).select(:id)
+    end
+
+    union_sql = branches.map(&:to_sql).join(" UNION ")
+    Payment.unscoped.from("(#{union_sql}) AS payments").select(:id)
+  end
+
+  def matching_invoice_ids
+    escaped_term = "%#{Invoice.sanitize_sql_like(search_term)}%"
+    organization.invoices.where("invoices.number ILIKE ?", escaped_term).select(:id)
+  end
+
+  def matching_customer_ids
+    escaped_term = "%#{Customer.sanitize_sql_like(search_term)}%"
+
+    branches = %i[name firstname lastname external_id email].map do |field|
+      organization.customers.where("customers.#{field} ILIKE ?", escaped_term).select(:id)
+    end
+
+    union_sql = branches.map(&:to_sql).join(" UNION ")
+    Customer.unscoped.from("(#{union_sql}) AS customers").select(:id)
   end
 
   def visible_payable_condition
@@ -48,35 +90,6 @@ class PaymentsQuery < BaseQuery
         organization_id: organization.id
       }
     ])
-  end
-
-  def search_params
-    return if search_term.blank?
-
-    terms = {
-      m: "or",
-      id_cont: search_term,
-      provider_payment_id_cont: search_term,
-      reference_cont: search_term
-    }
-
-    # Add payable search terms if not filtering by specific invoice
-    if filters.invoice_id.blank?
-      terms[:invoice_number_cont] = search_term
-    end
-
-    # Add customer search terms if not filtering by specific customer
-    if filters.external_customer_id.blank?
-      terms.merge!(
-        customer_name_cont: search_term,
-        customer_firstname_cont: search_term,
-        customer_lastname_cont: search_term,
-        customer_external_id_cont: search_term,
-        customer_email_cont: search_term
-      )
-    end
-
-    terms
   end
 
   def apply_filters(scope)

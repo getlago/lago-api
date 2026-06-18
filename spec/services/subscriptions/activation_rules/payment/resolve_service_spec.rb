@@ -224,7 +224,7 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
       result
 
       expect(subscription.reload).to be_canceled
-      expect(subscription.cancelation_reason).to eq("payment_failed")
+      expect(subscription.cancellation_reason).to eq("payment_failed")
     end
 
     it "sends a subscription.canceled webhook" do

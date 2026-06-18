@@ -27,7 +27,7 @@ module PaymentRequests
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.error_code, error_message: e.error_body)
       end
 
-      def update_payment_status(organization_id:, status:, cashfree_payment:)
+      def update_payment_status(organization_id:, status:, cashfree_payment:, amount_cents: nil)
         payment = if cashfree_payment.metadata[:payment_type] == "one-time"
           create_payment(cashfree_payment)
         else

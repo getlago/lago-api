@@ -71,6 +71,21 @@ RSpec.describe InvoiceSubscription do
     end
   end
 
+  describe ".starting_from" do
+    let(:subscription) { create(:subscription) }
+
+    let!(:invoice_subscription_at_boundary) { create(:invoice_subscription, subscription:, from_datetime: "2022-02-01 00:00:00") }
+    let!(:invoice_subscription_after_boundary) { create(:invoice_subscription, subscription:, from_datetime: "2022-03-01 00:00:00") }
+
+    before { create(:invoice_subscription, subscription:, from_datetime: "2022-01-01 00:00:00") }
+
+    it "returns invoice subscription starting from the given datetime" do
+      result = subscription.invoice_subscriptions.starting_from("2022-02-01 00:00:00")
+
+      expect(result).to eq([invoice_subscription_at_boundary, invoice_subscription_after_boundary])
+    end
+  end
+
   describe ".matching?" do
     subject(:matching?) { described_class.matching?(subscription, boundaries) }
 

@@ -23,6 +23,7 @@ RSpec.describe ::V1::WalletSerializer do
       "lago_id" => wallet.id,
       "lago_customer_id" => wallet.customer_id,
       "external_customer_id" => wallet.customer.external_id,
+      "billing_entity_code" => wallet.billing_entity.code,
       "status" => wallet.status,
       "currency" => wallet.currency,
       "name" => wallet.name,

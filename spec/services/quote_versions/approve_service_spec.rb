@@ -7,7 +7,9 @@ RSpec.describe QuoteVersions::ApproveService do
 
   let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
   let(:quote) { create(:quote, organization:) }
-  let(:quote_version) { create(:quote_version, quote:, organization:) }
+  let(:quote_version) do
+    create(:quote_version, quote:, organization:, start_date: Date.new(2026, 1, 1), end_date: Date.new(2027, 1, 1))
+  end
 
   describe ".call" do
     let(:result) { approve_service.call }
@@ -30,6 +32,47 @@ RSpec.describe QuoteVersions::ApproveService do
           status: "generated"
         )
       end
+
+      it "persists the raw computed mention variables snapshot" do
+        expect(result).to be_success
+        expect(result.quote_version.reload.mention_variables).to include(
+          "customer_name" => quote.customer.name,
+          "quote_number" => quote.number,
+          "commercial_terms_start_date" => "2026-01-01",
+          "commercial_terms_term_duration" => {"unit" => "years", "count" => 1}
+        )
+      end
+    end
+
+    context "when an expires_at in the future is provided", :premium do
+      subject(:approve_service) { described_class.new(quote_version:, expires_at:) }
+
+      let(:expires_at) { 1.month.from_now }
+
+      it "sets expires_at on the created order form" do
+        expect(result).to be_success
+        expect(result.order_form.expires_at).to be_within(1.second).of(expires_at)
+      end
+    end
+
+    context "when an expires_at in the past is provided", :premium do
+      subject(:approve_service) { described_class.new(quote_version:, expires_at:) }
+
+      let(:expires_at) { 1.day.ago }
+
+      it "does not approve the quote version" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(expires_at: ["invalid_date"])
+
+        quote_version.reload
+        expect(quote_version.approved?).to eq(false)
+        expect(quote_version.approved_at).to eq(nil)
+      end
+
+      it "does not create an order form" do
+        expect { result }.not_to change(OrderForm, :count)
+      end
     end
 
     context "when the quote version is voided", :premium do
@@ -37,8 +80,8 @@ RSpec.describe QuoteVersions::ApproveService do
 
       it "does not approve the quote version" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("inappropriate_state")
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({status: ["not_approvable"]})
 
         quote_version.reload
         expect(quote_version.approved?).to eq(false)
@@ -55,8 +98,8 @@ RSpec.describe QuoteVersions::ApproveService do
 
       it "does not approve the quote version" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("inappropriate_state")
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({status: ["not_approvable"]})
       end
     end
 

@@ -41,7 +41,7 @@ module Api
 
         render(
           json: ::CollectionSerializer.new(
-            result.wallet_transactions,
+            result.wallet_transactions.includes(:billing_entity, wallet: {customer: :billing_entity}),
             ::V1::WalletTransactionSerializer,
             collection_name: "wallet_transactions",
             meta: pagination_metadata(result.wallet_transactions)
@@ -104,16 +104,17 @@ module Api
 
         return render_error_response(result) unless result.success?
 
-        includes = (direction == :consumptions) ? %i[outbound_wallet_transaction] : %i[inbound_wallet_transaction]
+        wallet_transaction_direction = (direction == :consumptions) ? :outbound_wallet_transaction : :inbound_wallet_transaction
+        preloads = {wallet_transaction_direction => [:billing_entity, {wallet: [:billing_entity, {customer: :billing_entity}]}]}
         collection_name = (direction == :consumptions) ? "wallet_transaction_consumptions" : "wallet_transaction_fundings"
 
         render(
           json: ::CollectionSerializer.new(
-            result.wallet_transaction_consumptions.includes(includes),
+            result.wallet_transaction_consumptions.includes(preloads),
             ::V1::WalletTransactionConsumptionSerializer,
             collection_name:,
             meta: pagination_metadata(result.wallet_transaction_consumptions),
-            includes:
+            includes: [wallet_transaction_direction]
           )
         )
       end

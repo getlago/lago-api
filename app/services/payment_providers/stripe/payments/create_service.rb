@@ -126,9 +126,13 @@ module PaymentProviders
 
         def create_payment_intent
           update_payment_method_id
+          payload = payment_intent_payload
+
+          # payable have been settled by another payment path
+          raise Invoices::Payments::AlreadyPaidError if invoice.reload.payment_succeeded?
 
           ::Stripe::PaymentIntent.create(
-            payment_intent_payload,
+            payload,
             {
               api_key: payment_provider.secret_key,
               idempotency_key: "payment-#{payment.id}"

@@ -2,13 +2,14 @@
 
 class QuotesQuery < BaseQuery
   Result = BaseResult[:quotes]
-  Filters = BaseFilters[:customers, :numbers, :statuses, :from_date, :to_date, :owners, :order_types]
+  Filters = BaseFilters[:customers, :external_customer_ids, :numbers, :statuses, :from_date, :to_date, :owners, :order_types]
 
   def call
     return result unless validate_filters.success?
 
     quotes = base_scope
     quotes = with_customer(quotes) if filters.customers.present?
+    quotes = with_external_customers(quotes) if filters.external_customer_ids.present?
     quotes = with_number(quotes) if filters.numbers.present?
     quotes = with_status(quotes) if filters.statuses.present?
     quotes = with_date(quotes) if filters.from_date.present? || filters.to_date.present?
@@ -37,6 +38,10 @@ class QuotesQuery < BaseQuery
 
   def with_customer(scope)
     scope.where(customer_id: filters.customers)
+  end
+
+  def with_external_customers(scope)
+    scope.joins(:customer).where(customers: {external_id: filters.external_customer_ids})
   end
 
   def with_number(scope)

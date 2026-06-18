@@ -30,7 +30,7 @@ RSpec.describe Subscription do
         .backed_by_column_of_type(:enum)
         .with_values(generate: "generate", skip: "skip")
         .with_prefix(:on_termination_invoice)
-      expect(subject).to define_enum_for(:cancelation_reason)
+      expect(subject).to define_enum_for(:cancellation_reason)
         .backed_by_column_of_type(:enum)
         .with_values(payment_failed: "payment_failed", timeout: "timeout")
     end
@@ -158,6 +158,38 @@ RSpec.describe Subscription do
 
       it "returns only incomplete subscriptions with expirable activation rules" do
         expect(described_class.expirable).to match_array([expirable_subscription])
+      end
+    end
+
+    describe ".without_fixed_charge_units_override_for" do
+      let(:organization) { create(:organization) }
+      let(:plan) { create(:plan, organization:) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, organization:) }
+      let(:other_fixed_charge) { create(:fixed_charge, plan:, organization:) }
+      let(:overridden_sub) { create(:subscription, plan:) }
+      let(:bare_sub) { create(:subscription, plan:) }
+      let(:other_fc_overridden_sub) { create(:subscription, plan:) }
+
+      before do
+        create(:subscription_fixed_charge_units_override, subscription: overridden_sub, fixed_charge:, organization:)
+        create(:subscription_fixed_charge_units_override, subscription: other_fc_overridden_sub, fixed_charge: other_fixed_charge, organization:)
+      end
+
+      it "excludes subscriptions with a kept override for the given fixed charge" do
+        result = described_class.without_fixed_charge_units_override_for(fixed_charge)
+
+        expect(result).to include(bare_sub, other_fc_overridden_sub)
+        expect(result).not_to include(overridden_sub)
+      end
+
+      context "when the override row was discarded" do
+        before do
+          Subscription::FixedChargeUnitsOverride.unscoped.find_by(subscription: overridden_sub, fixed_charge:).discard!
+        end
+
+        it "stops excluding the subscription" do
+          expect(described_class.without_fixed_charge_units_override_for(fixed_charge)).to include(overridden_sub)
+        end
       end
     end
   end
@@ -736,6 +768,44 @@ RSpec.describe Subscription do
       it "returns nil" do
         create(:subscription, previous_subscription: subscription, status: :active)
         expect(subscription.downgrade_plan_date).to be_nil
+      end
+    end
+
+    context "with active downgraded next subscription" do
+      let(:plan) { create(:plan, amount_cents: 200) }
+      let(:next_plan) { create(:plan, amount_cents: 100) }
+      let(:subscription) { create(:subscription, :terminated, plan:) }
+
+      it "returns the date when the plan was downgraded" do
+        create(
+          :subscription,
+          previous_subscription: subscription,
+          plan: next_plan,
+          status: :active,
+          started_at: Time.zone.parse("2022-07-01T00:00:00Z")
+        )
+
+        expect(subscription.downgrade_plan_date).to eq(Date.parse("1 Jul 2022"))
+      end
+    end
+
+    context "with anniversary billing before the downgrade date" do
+      let(:started_at) { Time.zone.parse("2022-06-04T00:00:00Z") }
+      let(:subscription) do
+        create(
+          :subscription,
+          :anniversary,
+          started_at:,
+          subscription_at: started_at
+        )
+      end
+
+      it "returns the next anniversary date" do
+        create(:subscription, previous_subscription: subscription, status: :pending)
+
+        travel_to(Time.zone.parse("2022-07-03T00:00:00Z")) do
+          expect(subscription.downgrade_plan_date).to eq(Date.parse("4 Jul 2022"))
+        end
       end
     end
 

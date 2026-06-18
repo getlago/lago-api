@@ -12,7 +12,6 @@ module Mutations
       description "Void a quote version"
 
       argument :id, ID, required: true
-      argument :reason, Types::QuoteVersions::VoidReasonEnum, required: true
 
       type Types::QuoteVersions::Object
 
@@ -20,7 +19,7 @@ module Mutations
         quote_version = current_organization.quote_versions.find_by(id: args[:id])
         result = ::QuoteVersions::VoidService.call(
           quote_version:,
-          reason: args[:reason]
+          reason: :manual
         )
 
         result.success? ? result.quote_version : result_error(result)

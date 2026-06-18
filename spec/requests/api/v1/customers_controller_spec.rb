@@ -585,6 +585,19 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
+    context "when filtering by external_id" do
+      let(:params) { {external_id: customer.external_id} }
+      let!(:customer) { create(:customer, organization:) }
+
+      it "returns customers with matching external_id" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(1)
+        expect(json[:customers].pluck(:lago_id)).to eq([customer.id])
+      end
+    end
+
     context "when filtering by countries" do
       let(:params) { {countries: ["US", "FR"]} }
 

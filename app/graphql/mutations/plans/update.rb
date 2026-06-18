@@ -19,7 +19,9 @@ module Mutations
         args[:fixed_charges]&.map!(&:to_h)
         plan = current_organization.plans.find_by(id: args[:id])
 
-        result = ::Plans::UpdateService.call(plan:, params: args)
+        # NOTE: When entitlements are provided, the plan.updated webhook is emitted below, after the
+        #       entitlements are persisted, so its payload includes them. Otherwise UpdateService emits it.
+        result = ::Plans::UpdateService.call(plan:, params: args, send_webhook: entitlements.nil?)
 
         return result_error(result) unless result.success?
 
@@ -28,8 +30,11 @@ module Mutations
             organization: plan.organization,
             plan:,
             entitlements_params: Utils::Entitlement.convert_gql_input_to_params(entitlements),
-            partial: false
+            partial: false,
+            send_webhook: false
           )
+
+          SendWebhookJob.perform_after_commit("plan.updated", plan) if result.success?
         end
 
         result.success? ? plan.reload : result_error(result)

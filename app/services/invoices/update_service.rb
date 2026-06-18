@@ -74,12 +74,22 @@ module Invoices
         handle_prepaid_credits(params[:payment_status])
         handle_payment_gated_activation(params[:payment_status])
         update_fees_payment_status
+        expire_open_checkout_urls(old_payment_status)
         if old_payment_status != params[:payment_status] && invoice.visible?
           deliver_webhook
           log_activity
         end
       end
       update_hubspot_invoice if invoice.should_update_hubspot_invoice?
+    end
+
+    # when the invoice is settled, cancel any still-open hosted checkout session
+    def expire_open_checkout_urls(old_payment_status)
+      return unless invoice.payment_succeeded?
+      return if old_payment_status.to_s == "succeeded"
+      return unless PaymentIntent.active.exists?(invoice:)
+
+      PaymentIntents::ExpireJob.perform_after_commit(invoice)
     end
 
     def update_fees_payment_status

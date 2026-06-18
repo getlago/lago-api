@@ -59,6 +59,10 @@ module ChargeFilters
     def create_child_filter(child_charge)
       return if find_child_filter(child_charge)
 
+      # NOTE: Resolve against the current state of the billable metric filters
+      # to avoid any changes that may have occurred since the job was enqueued
+      return if resolved_filter_values.empty?
+
       ActiveRecord::Base.transaction do
         child_filter = child_charge.filters.new(
           organization_id: child_charge.organization_id,
@@ -70,16 +74,32 @@ module ChargeFilters
         )
         child_filter.save!
 
-        filter_values.each do |key, values|
-          billable_metric_filter = child_charge.billable_metric.filters.find_by(key:)
-
+        resolved_filter_values.each do |billable_metric_filter, values|
           child_filter.values.create!(
-            billable_metric_filter_id: billable_metric_filter&.id,
+            billable_metric_filter_id: billable_metric_filter.id,
             organization_id: child_charge.organization_id,
             values:
           )
         end
       end
+    end
+
+    def resolved_filter_values
+      @resolved_filter_values ||= filter_values.filter_map do |key, values|
+        billable_metric_filter = billable_metric_filters_by_key[key]
+        next if billable_metric_filter.nil?
+
+        valid_values = values & billable_metric_filter.values
+        next if valid_values.empty?
+
+        [billable_metric_filter, valid_values]
+      end
+    end
+
+    def billable_metric_filters_by_key
+      @billable_metric_filters_by_key ||= charge.billable_metric.filters
+        .where(key: filter_values.keys)
+        .index_by(&:key)
     end
 
     def destroy_child_filter(child_charge)

@@ -13,12 +13,12 @@ module Invoices
         super
       end
 
-      def update_payment_status(organization_id:, status:, stripe_payment:)
+      def update_payment_status(organization_id:, status:, stripe_payment:, amount_cents: nil)
         payment = Payment.find_by(provider_payment_id: stripe_payment.id)
         return result if payment&.payable&.organization_id.present? && payment.payable.organization_id != organization_id
 
         if !payment && stripe_payment.metadata[:payment_type] == "one-time"
-          payment = create_payment(stripe_payment)
+          payment = create_payment(stripe_payment, amount_cents:)
         end
 
         unless payment
@@ -70,10 +70,33 @@ module Invoices
         )
 
         result.payment_url = res["url"]
+        result.provider_session_id = res["id"]
 
         result
       rescue ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, Stripe::PermissionError => e
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.message)
+      end
+
+      # NOTE: Expires the hosted Stripe Checkout open Session so it can no longer be paid.
+      def expire_payment_url(payment_intent)
+        return result if payment_intent.provider_session_id.blank?
+
+        session = ::Stripe::Checkout::Session.retrieve(
+          payment_intent.provider_session_id,
+          {api_key: stripe_api_key}
+        )
+
+        return result unless session.status == "open"
+
+        ::Stripe::Checkout::Session.expire(
+          payment_intent.provider_session_id,
+          {},
+          {api_key: stripe_api_key}
+        )
+
+        result
+      rescue ::Stripe::InvalidRequestError # the other ones are on the retry job
+        result
       end
 
       private
@@ -82,7 +105,7 @@ module Invoices
 
       delegate :organization, :customer, to: :invoice
 
-      def create_payment(stripe_payment, invoice: nil)
+      def create_payment(stripe_payment, invoice: nil, amount_cents: nil)
         @invoice = invoice || Invoice.find_by(id: stripe_payment.metadata[:lago_invoice_id])
         unless @invoice
           result.not_found_failure!(resource: "invoice")
@@ -97,7 +120,7 @@ module Invoices
           customer:,
           payment_provider_id: stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,
-          amount_cents: @invoice.total_due_amount_cents,
+          amount_cents: amount_cents || @invoice.total_due_amount_cents,
           amount_currency: @invoice.currency,
           status: "pending"
         )

@@ -54,7 +54,7 @@ module Subscriptions
           EvaluateService.call!(rule: payment_rule, status: :failed)
           invoice.closed!
           ActivationRules::ResolveSubscriptionStatusService.call!(subscription:)
-          subscription.update!(cancelation_reason: :payment_failed)
+          subscription.update!(cancellation_reason: :payment_failed)
 
           after_commit do
             enqueue_recredit_jobs

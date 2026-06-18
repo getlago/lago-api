@@ -11,6 +11,10 @@ module TaskPrompt
     abort "Aborted." unless ask(prompt).downcase == "y"
   end
 
+  def self.confirm?(prompt)
+    ask(prompt).downcase == "y"
+  end
+
   def self.ask_for_organization
     organization_id = ask("Organization ID: ")
     organization = Organization.find_by(id: organization_id)
@@ -20,6 +24,11 @@ module TaskPrompt
     confirm!("Is this the correct organization? (y/n): ")
 
     organization
+  end
+
+  def self.ask_for_subscription_ids
+    input = ask("Subscription IDs to refill (comma or space separated, leave blank to fill a whole organization): ")
+    input.split(/[\s,]+/).reject(&:empty?)
   end
 
   def self.ask_for_timestamp_range
@@ -37,6 +46,20 @@ module TaskPrompt
     abort "Invalid timestamp: #{input}" unless timestamp
 
     timestamp
+  end
+
+  def self.ask_for_date(prompt, default:)
+    input = ask("#{prompt} [#{default}]: ")
+    return default if input.empty?
+
+    date = begin
+      Date.parse(input)
+    rescue ArgumentError
+      nil
+    end
+    abort "Invalid date: #{input}" unless date
+
+    date
   end
 end
 # rubocop:enable Rails/Output,Rails/Exit

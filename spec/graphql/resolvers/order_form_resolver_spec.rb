@@ -12,6 +12,7 @@ RSpec.describe Resolvers::OrderFormResolver do
           id
           number
           status
+          signedDocumentUrl
           createdAt
           updatedAt
           quote {
@@ -52,6 +53,23 @@ RSpec.describe Resolvers::OrderFormResolver do
     expect(data["quote"]["id"]).to eq(order_form.quote.id)
     expect(data["quote"]["number"]).to eq(order_form.quote.number)
     expect(data["quote"]["currentVersion"]["id"]).to eq(order_form.quote_version.id)
+    expect(data["signedDocumentUrl"]).to be_nil
+  end
+
+  context "when a signed document is attached" do
+    let(:order_form) { create(:order_form, :with_signed_document, organization:, customer:) }
+
+    it "exposes the signed document url" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {id: order_form.id}
+      )
+
+      expect(result["data"]["orderForm"]["signedDocumentUrl"]).to be_present
+    end
   end
 
   context "when order form is not found" do

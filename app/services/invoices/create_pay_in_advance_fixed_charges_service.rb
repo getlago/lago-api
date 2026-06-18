@@ -38,7 +38,7 @@ module Invoices
 
         # NOTE: Custom sections are applied before computing taxes so they are persisted even when
         #       tax computation is deferred to a tax provider (the `next` below skips the rest of the block).
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: [subscription])
 
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
         if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
@@ -133,7 +133,8 @@ module Invoices
         invoice_type: :subscription,
         currency: subscription.plan_amount_currency,
         datetime: Time.zone.at(timestamp),
-        charge_in_advance: true
+        charge_in_advance: true,
+        billing_entity: subscription.billing_entity || customer.billing_entity
       ) do |inv|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice: inv, subscriptions: [subscription], timestamp:, invoicing_reason: :in_advance_charge)
@@ -154,7 +155,7 @@ module Invoices
     end
 
     def should_deliver_email?
-      License.premium? && customer.billing_entity.email_settings.include?("invoice.finalized")
+      License.premium? && invoice.billing_entity.email_settings.include?("invoice.finalized")
     end
 
     def wallets

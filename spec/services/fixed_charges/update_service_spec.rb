@@ -287,12 +287,48 @@ RSpec.describe FixedCharges::UpdateService do
 
           let!(:subscription) { create(:subscription, plan:) }
 
-          it "enqueues pay in advance billing job" do
+          it "enqueues a single fan out billing job for the plan" do
             result
+
+            expect(Invoices::CreateAllPayInAdvanceFixedChargesJob)
+              .to have_been_enqueued
+              .with(plan, timestamp, fixed_charge)
+          end
+
+          it "enqueues pay in advance billing job" do
+            perform_enqueued_jobs(only: Invoices::CreateAllPayInAdvanceFixedChargesJob) { result }
 
             expect(Invoices::CreatePayInAdvanceFixedChargesJob)
               .to have_been_enqueued
               .with(subscription, timestamp)
+          end
+
+          context "when the subscription has a per-subscription units override" do
+            let(:other_subscription) { create(:subscription, plan:) }
+
+            before do
+              other_subscription
+              create(:subscription_fixed_charge_units_override,
+                subscription:,
+                fixed_charge:,
+                organization:)
+            end
+
+            it "does not enqueue the billing job for the overridden subscription" do
+              perform_enqueued_jobs(only: Invoices::CreateAllPayInAdvanceFixedChargesJob) { result }
+
+              expect(Invoices::CreatePayInAdvanceFixedChargesJob)
+                .not_to have_been_enqueued
+                .with(subscription, timestamp)
+            end
+
+            it "still enqueues the billing job for other plan subscriptions" do
+              perform_enqueued_jobs(only: Invoices::CreateAllPayInAdvanceFixedChargesJob) { result }
+
+              expect(Invoices::CreatePayInAdvanceFixedChargesJob)
+                .to have_been_enqueued
+                .with(other_subscription, timestamp)
+            end
           end
         end
 
@@ -322,7 +358,7 @@ RSpec.describe FixedCharges::UpdateService do
           it "does not enqueue pay in advance billing job" do
             result
 
-            expect(Invoices::CreatePayInAdvanceFixedChargesJob)
+            expect(Invoices::CreateAllPayInAdvanceFixedChargesJob)
               .not_to have_been_enqueued
           end
         end

@@ -49,11 +49,7 @@ module FixedCharges
           )
 
           if trigger_billing && params[:apply_units_immediately] && fixed_charge.pay_in_advance?
-            plan.subscriptions.active.find_each do |subscription|
-              after_commit do
-                Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
-              end
-            end
+            Invoices::CreateAllPayInAdvanceFixedChargesJob.perform_after_commit(plan, timestamp, fixed_charge)
           end
         end
 

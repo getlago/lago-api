@@ -30,6 +30,23 @@ module Api
         end
       end
 
+      def mark_as_signed
+        order_form = current_organization.order_forms.find_by(id: params[:id])
+
+        result = OrderForms::MarkAsSignedService.call(
+          order_form:,
+          signed_document: mark_as_signed_params[:signed_document],
+          execution_mode: mark_as_signed_params[:execution_mode],
+          execute_at: mark_as_signed_params[:execute_at]
+        )
+
+        if result.success?
+          render_order_form(result.order_form)
+        else
+          render_error_response(result)
+        end
+      end
+
       def show
         order_form = current_organization.order_forms.find_by(id: params[:id])
         return not_found_error(resource: "order_form") unless order_form
@@ -37,10 +54,21 @@ module Api
         render_order_form(order_form)
       end
 
+      def void
+        order_form = current_organization.order_forms.find_by(id: params[:id])
+        result = OrderForms::VoidService.call(order_form:)
+
+        if result.success?
+          render_order_form(result.order_form)
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def ensure_feature_flag!
-        forbidden_error(code: "feature_not_available") unless current_organization.feature_flag_enabled?(:order_forms)
+        forbidden_error(code: "feature_unavailable") unless current_organization.feature_flag_enabled?(:order_forms)
       end
 
       def index_filters
@@ -55,6 +83,10 @@ module Api
           expires_at_from: params[:expires_at_from],
           expires_at_to: params[:expires_at_to]
         }
+      end
+
+      def mark_as_signed_params
+        params.permit(order_form: [:signed_document, :execution_mode, :execute_at]).fetch(:order_form, {})
       end
 
       def render_order_form(order_form)

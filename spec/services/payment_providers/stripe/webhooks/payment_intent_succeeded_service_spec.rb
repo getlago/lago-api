@@ -29,6 +29,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
           .with(
             organization_id: organization.id,
             status: "succeeded",
+            amount_cents: anything,
             stripe_payment: PaymentProviders::StripeProvider::StripePayment
           ).and_call_original
 
@@ -83,6 +84,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
             .with(
               organization_id: organization.id,
               status: "succeeded",
+              amount_cents: anything,
               stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
                 id: "pi_12345",
                 status: "succeeded",
@@ -111,6 +113,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
           .with(
             organization_id: organization.id,
             status: "succeeded",
+            amount_cents: anything,
             stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
               id: "pi_12345",
               status: "succeeded",

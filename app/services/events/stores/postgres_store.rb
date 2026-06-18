@@ -22,20 +22,26 @@ module Events
         filters_scope(scope)
       end
 
-      def distinct_codes
-        Event.where(external_subscription_id: subscription.external_id)
+      def distinct_codes(codes: nil)
+        scope = Event.where(external_subscription_id: subscription.external_id)
           .where(organization_id: subscription.organization.id)
           .from_datetime(from_datetime)
           .to_datetime(applicable_to_datetime)
-          .pluck("DISTINCT(code)")
+
+        if codes.nil?
+          scope.pluck("DISTINCT(code)")
+        else
+          codes.select { |code| scope.where(code:).exists? }
+        end
       end
 
-      def distinct_charges_and_filters
-        EnrichedEvent.where(organization_id: subscription.organization_id)
+      def distinct_charges_and_filters(codes: nil)
+        scope = EnrichedEvent.where(organization_id: subscription.organization_id)
           .where(subscription_id: subscription.id)
           .where(timestamp: from_datetime..to_datetime)
-          .distinct
-          .pluck(:charge_id, :charge_filter_id)
+
+        scope = scope.where(code: codes) unless codes.nil?
+        scope.distinct.pluck(:charge_id, :charge_filter_id)
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)
@@ -177,8 +183,11 @@ module Events
         prepare_grouped_result(select_all(sql).rows)
       end
 
-      def max
-        events.maximum("(#{sanitized_property_name})::numeric")
+      def max(with_count: true)
+        AggregationResult.new(
+          value: events.maximum("(#{sanitized_property_name})::numeric") || 0,
+          events_count: with_count ? events.count : nil
+        )
       end
 
       def grouped_max(columns = grouped_by)
@@ -229,17 +238,28 @@ module Events
         prepare_grouped_result(results)
       end
 
-      def sum
-        events.sum("(#{sanitized_property_name})::numeric")
+      def sum(with_count: true)
+        AggregationResult.new(
+          value: events.sum("(#{sanitized_property_name})::numeric"),
+          events_count: with_count ? events.count : nil
+        )
       end
 
-      def grouped_sum(columns = grouped_by)
-        results = events
-          .group(columns.map { sanitized_property_name(it) })
-          .sum("(#{sanitized_property_name})::numeric")
-          .map { |group, value| [group, value].flatten }
+      def grouped_sum(columns = grouped_by, with_count: true)
+        groups = columns.map { sanitized_property_name(it) }
 
-        prepare_grouped_result(results, columns: columns)
+        results = events
+          .group(groups)
+          .pluck(
+            Arel.sql(
+              (groups + [
+                "SUM((#{sanitized_property_name})::numeric)",
+                with_count ? "COUNT(*)" : "NULL"
+              ]).join(", ")
+            )
+          )
+
+        prepare_grouped_aggregated_values(results, columns: columns)
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -469,6 +489,20 @@ module Events
           result[:timestamp] = row[-2] if timestamp
 
           result
+        end
+      end
+
+      # NOTE: Same as prepare_grouped_result but the last two columns of each row are
+      #       the aggregated value and the events count, returned as GroupedAggregationResult.
+      def prepare_grouped_aggregated_values(rows, columns: grouped_by)
+        rows.map do |row|
+          groups = row[...-2].map(&:presence)
+
+          GroupedAggregationResult.new(
+            groups: columns.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            value: row[-2],
+            events_count: row[-1]&.to_i
+          )
         end
       end
 

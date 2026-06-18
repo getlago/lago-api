@@ -160,17 +160,20 @@ end
 #
 # Indexes
 #
-#  index_payments_on_customer_id                                  (customer_id)
-#  index_payments_on_invoice_id                                   (invoice_id)
-#  index_payments_on_organization_id                              (organization_id)
-#  index_payments_on_payable_id_and_payable_type                  (payable_id,payable_type) UNIQUE WHERE ((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))
-#  index_payments_on_payable_id_and_payable_type_and_error_code   (payable_id,payable_type,error_code)
-#  index_payments_on_payable_type_and_payable_id                  (payable_type,payable_id)
-#  index_payments_on_payment_method_id                            (payment_method_id)
-#  index_payments_on_payment_provider_customer_id                 (payment_provider_customer_id)
-#  index_payments_on_payment_provider_id                          (payment_provider_id)
-#  index_payments_on_payment_type                                 (payment_type)
-#  index_payments_on_provider_payment_id_and_payment_provider_id  (provider_payment_id,payment_provider_id) UNIQUE WHERE (provider_payment_id IS NOT NULL)
+#  idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b  (organization_id,provider_payment_id) USING gin
+#  index_payments_by_cursor                                        (organization_id,created_at DESC,id)
+#  index_payments_on_customer_id                                   (customer_id)
+#  index_payments_on_invoice_id                                    (invoice_id)
+#  index_payments_on_organization_id                               (organization_id)
+#  index_payments_on_organization_id_reference_gin_trgm_ops        (organization_id,reference) USING gin
+#  index_payments_on_payable_id_and_payable_type                   (payable_id,payable_type) UNIQUE WHERE ((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))
+#  index_payments_on_payable_id_and_payable_type_and_error_code    (payable_id,payable_type,error_code)
+#  index_payments_on_payable_type_and_payable_id                   (payable_type,payable_id)
+#  index_payments_on_payment_method_id                             (payment_method_id)
+#  index_payments_on_payment_provider_customer_id                  (payment_provider_customer_id)
+#  index_payments_on_payment_provider_id                           (payment_provider_id)
+#  index_payments_on_payment_type                                  (payment_type)
+#  index_payments_on_provider_payment_id_and_payment_provider_id   (provider_payment_id,payment_provider_id) UNIQUE WHERE (provider_payment_id IS NOT NULL)
 #
 # Foreign Keys
 #

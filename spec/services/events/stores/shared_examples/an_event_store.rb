@@ -430,6 +430,27 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       it "returns the distinct event codes" do
         expect(event_store.distinct_codes).to match_array([code, "other_code"])
       end
+
+      context "when codes are provided" do
+        it "returns only the distinct event codes matching the provided codes" do
+          expect(event_store.distinct_codes(codes: [code, "unknown_code"])).to eq([code])
+        end
+
+        context "when an event with a provided code exists outside the period" do
+          before do
+            create_event(
+              timestamp: boundaries[:to_datetime] + 1.day,
+              value: "value",
+              transaction_id: SecureRandom.uuid,
+              code: "out_of_period_code"
+            )
+          end
+
+          it "does not return the code" do
+            expect(event_store.distinct_codes(codes: [code, "out_of_period_code"])).to eq([code])
+          end
+        end
+      end
     end
   end
 
@@ -1051,7 +1072,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       end
 
       it "returns the max value" do
-        expect(event_store.max).to eq(5)
+        result = event_store.max
+
+        expect(result.value).to eq(5)
+        expect(result.events_count).to eq(5)
       end
 
       context "with grouped_by_values" do
@@ -1059,14 +1083,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         let(:events_grouped_by) { ["region"] }
 
         it "returns the max value" do
-          expect(event_store.max).to eq(5)
+          result = event_store.max
+
+          expect(result.value).to eq(5)
+          expect(result.events_count).to eq(3)
         end
 
         context "when grouped_by_values value is nil" do
           let(:grouped_by_values) { {"region" => nil} }
 
           it "returns the max value" do
-            expect(event_store.max).to eq(4)
+            result = event_store.max
+
+            expect(result.value).to eq(4)
+            expect(result.events_count).to eq(2)
           end
         end
       end
@@ -1080,6 +1110,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         before { create_events_for_filters }
 
         it "returns the max value filtered" do
+          result = event_store.max
+
           # We include:
           # - europe, france, <nil> -> 3
           # - europe, france, paris -> 1
@@ -1098,7 +1130,17 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           # - europe, france, cambridge -> -2
           # - europe, united kingdom, manchester -> -1
           # Max value is 3
-          expect(event_store.max).to eq(3)
+          expect(result.value).to eq(3)
+          expect(result.events_count).to eq(4)
+        end
+      end
+
+      context "when with_count is set to false" do
+        it "does not include events_count in the result" do
+          result = event_store.max(with_count: false)
+
+          expect(result.value).to eq(5)
+          expect(result.events_count).to be_nil
         end
       end
     end
@@ -1320,7 +1362,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       end
 
       it "returns the sum of event properties" do
-        expect(event_store.sum).to eq(15)
+        result = event_store.sum
+
+        expect(result.value).to eq(15)
+        expect(result.events_count).to eq(5)
       end
 
       if with_event_duplication
@@ -1332,8 +1377,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           end
 
           it "takes the event into account" do
-            expect(event_store.sum).to eq(115) # New event value added to the previous one
+            result = event_store.sum
+
+            expect(result.value).to eq(115) # New event value added to the previous one
+            expect(result.events_count).to eq(6)
           end
+        end
+      end
+
+      context "when with_count is set to false" do
+        it "does not include events_count in the result" do
+          result = event_store.sum(with_count: false)
+
+          expect(result.value).to eq(15)
+          expect(result.events_count).to be_nil
         end
       end
 
@@ -1348,14 +1405,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "excludes events before from_datetime by default" do
-          expect(event_store.sum).to eq(15)
+          result = event_store.sum
+
+          expect(result.value).to eq(15)
+          expect(result.events_count).to eq(5)
         end
 
         context "when use_from_boundary is false" do
           before { event_store.use_from_boundary = false }
 
           it "includes events before from_datetime" do
-            expect(event_store.sum).to eq(115)
+            result = event_store.sum
+
+            expect(result.value).to eq(115)
+            expect(result.events_count).to eq(6)
           end
 
           context "when force_from is true" do
@@ -1363,7 +1426,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
               # Note: #sum doesn't use force_from directly, it goes through events_cte_queries
               # which respects use_from_boundary. This test verifies the boundary is applied.
               event_store.use_from_boundary = true
-              expect(event_store.sum).to eq(15)
+
+              result = event_store.sum
+
+              expect(result.value).to eq(15)
+              expect(result.events_count).to eq(5)
             end
           end
         end
@@ -1379,8 +1446,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "excludes events after to_datetime" do
+          result = event_store.sum
+
           # Only events with values 1, 2, 3 are within the boundary
-          expect(event_store.sum).to eq(6)
+          expect(result.value).to eq(6)
+          expect(result.events_count).to eq(3)
         end
       end
 
@@ -1395,8 +1465,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "uses max_timestamp instead of to_datetime" do
+          result = event_store.sum
+
           # Only events with values 1, 2, 3 are within the boundary
-          expect(event_store.sum).to eq(6)
+          expect(result.value).to eq(6)
+          expect(result.events_count).to eq(3)
         end
       end
     end
@@ -1415,9 +1488,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         result = event_store.grouped_sum
 
         expect(result).to match_array([
-          {groups: {"region" => nil}, value: 6},
-          {groups: {"region" => "europe"}, value: 9}
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => nil}, value: 6, events_count: 2),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "europe"}, value: 9, events_count: 3)
         ])
+      end
+
+      context "when with_count is false" do
+        it "returns the sum of values without the events count" do
+          result = event_store.grouped_sum(with_count: false)
+
+          expect(result).to match_array([
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => nil}, value: 6, events_count: nil),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "europe"}, value: 9, events_count: nil)
+          ])
+        end
       end
 
       context "with multiple groups" do
@@ -1427,9 +1511,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_sum
 
           expect(result).to match_array([
-            {groups: {"country" => nil, "region" => nil}, value: 6},
-            {groups: {"country" => "united kingdom", "region" => "europe"}, value: 5},
-            {groups: {"country" => "france", "region" => "europe"}, value: 4}
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"country" => nil, "region" => nil}, value: 6, events_count: 2),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"country" => "united kingdom", "region" => "europe"}, value: 5, events_count: 1),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"country" => "france", "region" => "europe"}, value: 4, events_count: 2)
           ])
         end
       end
@@ -1464,8 +1548,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           # - europe, france, cambridge -> -2
           # - europe, united kingdom, manchester -> -1
           expect(result).to match_array([
-            {groups: {"country" => "united kingdom", "region" => "europe"}, value: -1},
-            {groups: {"country" => "france", "region" => "europe"}, value: 2}
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"country" => "united kingdom", "region" => "europe"}, value: -1, events_count: 1),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"country" => "france", "region" => "europe"}, value: 2, events_count: 3)
           ])
         end
       end
@@ -1509,8 +1593,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_sum(["cloud"])
 
           expect(result).to match_array([
-            {groups: {"cloud" => "aws"}, value: 30},
-            {groups: {"cloud" => "gcp"}, value: 12}
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"cloud" => "aws"}, value: 30, events_count: 3),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"cloud" => "gcp"}, value: 12, events_count: 1)
           ])
         end
       end
@@ -1528,9 +1612,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_sum(["agent_name", "cloud"])
 
           expect(result).to match_array([
-            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
-            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7},
-            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3}
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2, events_count: 1),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7, events_count: 1),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3, events_count: 1)
           ])
         end
       end
@@ -2523,8 +2607,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
 
     it "includes events from before subscription.started_at" do
-      expect(event_store.count).to eq(7) # 5 from current period + 2 from before
-      expect(event_store.sum).to eq(165) # 15 from current period + 100 + 50 from before
+      result = event_store.sum
+
+      expect(result.events_count).to eq(7) # 5 from current period + 2 from before
+      expect(result.value).to eq(165) # 15 from current period + 100 + 50 from before
     end
 
     context "with charge filters" do
@@ -2555,8 +2641,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       end
 
       it "includes only filtered events from before subscription.started_at" do
-        expect(event_store.count).to eq(3) # 2 from current period + 1 from before
-        expect(event_store.sum).to eq(204) # 4 from current period + 200 from before (999 (asia/japan) doesn't match)
+        result = event_store.sum
+
+        expect(result.events_count).to eq(3) # 2 from current period + 1 from before
+        expect(result.value).to eq(204) # 4 from current period + 200 from before (999 (asia/japan) doesn't match)
       end
     end
   end
@@ -2585,6 +2673,13 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         it "returns the distinct event codes" do
           expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, nil]])
+        end
+      end
+
+      context "when codes are provided" do
+        it "returns only the charges and filters matching the provided codes" do
+          expect(event_store.distinct_charges_and_filters(codes: [code])).to match_array([[charge.id, charge_filter.id]])
+          expect(event_store.distinct_charges_and_filters(codes: ["unknown_code"])).to eq([])
         end
       end
     end

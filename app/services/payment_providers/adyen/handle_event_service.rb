@@ -100,8 +100,12 @@ module PaymentProviders
           lago_payable_type: event.dig("additionalData", "metadata.lago_payable_type")
         }
 
-        payment_service_klass(metadata)
-          .new.update_payment_status(provider_payment_id:, status:, metadata:)
+        payment_service_klass(metadata).new.update_payment_status(
+          provider_payment_id:,
+          status:,
+          amount_cents: event.dig("amount", "value"),
+          metadata:
+        )
       end
 
       def payment_service_klass(metadata)

@@ -38,7 +38,7 @@ module Invoices
           recurring:,
           context:
         )
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: subscriptions)
 
         skip_payment_gating_for_zero_amount if subscription_payment_gated? && invoice.total_amount_cents.zero? && !invoice.tax_pending?
 
@@ -186,7 +186,7 @@ module Invoices
 
     def should_deliver_finalized_email?
       License.premium? &&
-        customer.billing_entity.email_settings.include?("invoice.finalized")
+        invoice.billing_entity.email_settings.include?("invoice.finalized")
     end
 
     def flag_lifetime_usage_for_refresh

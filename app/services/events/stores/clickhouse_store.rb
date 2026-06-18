@@ -148,24 +148,26 @@ module Events
         conditions.join(" AND ")
       end
 
-      def distinct_codes
+      def distinct_codes(codes: nil)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
-          ::Clickhouse::EventsEnriched
+          scope = ::Clickhouse::EventsEnriched
             .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization.id)
             .where("events_enriched.timestamp >= ?", from_datetime)
             .where("events_enriched.timestamp <= ?", applicable_to_datetime)
-            .pluck("DISTINCT(code)")
+
+          scope = scope.where(code: codes) unless codes.nil?
+          scope.pluck("DISTINCT(code)")
         end
       end
 
-      def distinct_charges_and_filters
+      def distinct_charges_and_filters(codes: nil)
         # Implementation relies directly on the events_enriched_expanded table,
         # so we delegate the implementation to the ClickhouseEnrichedStore
         Events::Stores::ClickhouseEnrichedStore.new(
           subscription:,
           boundaries:
-        ).distinct_charges_and_filters
+        ).distinct_charges_and_filters(codes:)
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)
@@ -217,13 +219,41 @@ module Events
 
       def count
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value]), <<-SQL)
+          connection.select_value(count_query).to_i
+        end
+      end
+
+      # Counting deduplicated events only needs the number of distinct dedup keys,
+      # not their latest enriched values. We therefore skip the `INNER ANY JOIN`
+      # performed by `events_cte_queries` (which materializes a column for every
+      # event and roughly doubles the memory of the dedup aggregation) and count
+      # the grouped keys directly. This avoids ClickHouse MEMORY_LIMIT_EXCEEDED on
+      # very large subscriptions.
+      #
+      # When the count is filtered (grouped_by_values or matching/ignored filters)
+      # we keep the JOIN-based path so the filter still applies to the latest
+      # enriched row per dedup key (identical semantics).
+      def count_query
+        filtered = grouped_by_values? || matching_filters.present? || ignored_filters.present?
+
+        if !deduplicate || filtered
+          return with_ctes(events_cte_queries(deduplicated_columns: %w[value]), <<-SQL)
             SELECT count()
             FROM events
           SQL
-
-          connection.select_value(sql).to_i
         end
+
+        events_from = (from_datetime if use_from_boundary)
+
+        <<~SQL.squish
+          SELECT count()
+          FROM (
+            SELECT 1
+            FROM events_enriched
+            WHERE #{deduplicated_events_where_sql(from_datetime: events_from, to_datetime: applicable_to_datetime)}
+            GROUP BY #{DEDUP_KEY_COLUMNS.join(", ")}
+          )
+        SQL
       end
 
       def grouped_count(columns = grouped_by)
@@ -372,14 +402,16 @@ module Events
         end
       end
 
-      def max
+      def max(with_count: true)
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
-            SELECT max(events.decimal_value)
+            SELECT
+              max(events.decimal_value) as value,
+              #{with_count ? "count()" : "null"} as events_count
             FROM events
           SQL
 
-          connection.select_value(sql)
+          build_aggregation_result(connection.select_one(sql))
         end
       end
 
@@ -479,18 +511,20 @@ module Events
         end
       end
 
-      def sum
+      def sum(with_count: true)
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
-            SELECT sum(events.decimal_value)
+            SELECT
+              sum(events.decimal_value) as value,
+              #{with_count ? "count()" : "null"} as events_count
             FROM events
           SQL
 
-          connection.select_value(sql) || 0
+          build_aggregation_result(connection.select_one(sql))
         end
       end
 
-      def grouped_sum(columns = grouped_by)
+      def grouped_sum(columns = grouped_by, with_count: true)
         groups, column_names = grouped_arel_columns(columns)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
@@ -502,12 +536,13 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               #{column_names},
-              sum(events.property)
+              sum(events.property),
+              #{with_count ? "count()" : "null"}
             FROM events
             GROUP BY #{column_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
+          prepare_grouped_aggregated_values(connection.select_all(sql).rows, columns: columns)
         end
       end
 
@@ -800,6 +835,21 @@ module Events
           result[:timestamp] = row[-2] if timestamp
 
           result
+        end
+      end
+
+      # NOTE: Same as prepare_grouped_result but the last two columns of each row are
+      #       the aggregated value and the events count, returned as GroupedAggregationResult.
+      def prepare_grouped_aggregated_values(rows, columns: grouped_by)
+        rows.map do |row|
+          flat = row.flatten
+          groups = flat[...-2].map(&:presence)
+
+          GroupedAggregationResult.new(
+            groups: columns.each_with_object({}).with_index { |(g, res), i| res.merge!(g => groups[i]) },
+            value: flat[-2],
+            events_count: flat[-1].presence&.to_i
+          )
         end
       end
 
