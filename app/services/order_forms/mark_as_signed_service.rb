@@ -23,7 +23,7 @@ module OrderForms
     def call
       return result.not_found_failure!(resource: "order_form") unless order_form
       return result.forbidden_failure! unless order_forms_enabled?(order_form.organization)
-      return result.not_allowed_failure!(code: "not_signable") unless order_form.generated?
+      return result.single_validation_failure!(field: :status, error_code: "not_signable") unless order_form.generated?
 
       validate_execution_settings
       return result if result.failure?

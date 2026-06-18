@@ -18,7 +18,7 @@ module QuoteVersions
       return result.not_found_failure!(resource: "quote_version") unless quote_version
       return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
       return result.single_validation_failure!(field: :void_reason, error_code: "invalid") unless valid_reason?
-      return result.not_allowed_failure!(code: "inappropriate_state") unless voidable?
+      return result.single_validation_failure!(field: :status, error_code: "not_voidable") unless voidable?
 
       quote_version.update!(
         status: :voided,

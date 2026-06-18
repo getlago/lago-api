@@ -77,7 +77,7 @@ RSpec.describe Mutations::QuoteVersions::Approve do
   context "when quote version is not in draft state", :premium do
     let(:quote_version) { create(:quote_version, :voided, organization: membership.organization) }
 
-    it "returns a not allowed error" do
+    it "returns a validation error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
@@ -86,7 +86,7 @@ RSpec.describe Mutations::QuoteVersions::Approve do
         variables: {input:}
       )
 
-      expect_graphql_error(result:, message: "inappropriate_state")
+      expect_graphql_error(result:, message: "Unprocessable Entity", details: {status: ["not_approvable"]})
     end
   end
 end

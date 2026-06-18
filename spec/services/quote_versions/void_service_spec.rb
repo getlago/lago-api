@@ -30,8 +30,8 @@ RSpec.describe QuoteVersions::VoidService do
 
       it "is not voidable" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("inappropriate_state")
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({status: ["not_voidable"]})
       end
     end
 
@@ -52,10 +52,10 @@ RSpec.describe QuoteVersions::VoidService do
     context "when quote isn't voidable", :premium do
       let(:quote_version) { create(:quote_version, :voided, organization:) }
 
-      it "returns method not allowed" do
+      it "returns a validation failure" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("inappropriate_state")
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({status: ["not_voidable"]})
       end
     end
 
