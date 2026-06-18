@@ -36,7 +36,7 @@ module BillableMetrics
         result.count = aggregation_without_proration.count
 
         if presentation_by.present?
-          result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by)
+          result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash)
           result.pay_in_advance_breakdowns = build_pay_in_advance_breakdowns(value: event_value)
         end
 
@@ -97,7 +97,7 @@ module BillableMetrics
         end
 
         if presentation_by.present?
-          result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by)
+          result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash)
         end
 
         result

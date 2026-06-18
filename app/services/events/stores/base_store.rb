@@ -8,6 +8,18 @@ module Events
         :events_count
       )
 
+      # NOTE: result of a grouped aggregation. Mirrors AggregationResult but also
+      #       carries the group it belongs to.
+      GroupedAggregationResult = Data.define(
+        :groups,
+        :value,
+        :events_count
+      ) do
+        def to_grouped_hash
+          {groups:, value:}
+        end
+      end
+
       def initialize(subscription:, boundaries:, code: nil, filters: {}, deduplicate: false)
         @code = code
         @subscription = subscription
@@ -85,7 +97,7 @@ module Events
         raise NotImplementedError
       end
 
-      def grouped_sum
+      def grouped_sum(with_count: true)
         raise NotImplementedError
       end
 
