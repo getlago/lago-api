@@ -80,8 +80,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
     FixedCharges::UpdateService.call!(
       fixed_charge:,
       params: {units:, charge_model: "standard", properties: {amount: "10"}, apply_units_immediately:},
-      timestamp: timestamp.to_i,
-      trigger_billing: false
+      timestamp: timestamp.to_i
     )
     perform_all_enqueued_jobs
   end
@@ -629,7 +628,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
         end
     end
 
-    it "bills an override unit increase applied immediately as a delta invoice on activation", skip: "Flaky on CI under resource contention (intermittently bills the delta during the incomplete window) — under investigation" do
+    it "bills an override unit increase applied immediately as a delta invoice on activation" do
       travel_to(Time.zone.local(2026, 3, 1, 10)) do
         fixed_charge
         create_subscription(subscription_params)

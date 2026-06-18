@@ -100,6 +100,7 @@ module Subscriptions
     end
 
     def publish_invoice_pay_in_advance_job(target_fixed_charge)
+      return if subscription.payment_gated?
       return unless params.key?(:units)
       return unless params[:apply_units_immediately]
       return unless target_fixed_charge.pay_in_advance?
