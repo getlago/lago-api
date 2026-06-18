@@ -72,6 +72,7 @@ module BillingEntities
           legal_number
           name
           net_payment_term
+          phone
           state
           tax_identification_number
           vat_rate

@@ -25,6 +25,7 @@ RSpec.describe Mutations::BillingEntities::Update, :premium do
           taxIdentificationNumber
           addressLine1
           addressLine2
+          phone
           city
           country
           netPaymentTerm
@@ -68,6 +69,7 @@ RSpec.describe Mutations::BillingEntities::Update, :premium do
       taxIdentificationNumber: "Tax-1234",
       addressLine1: "Calle de la Princesa 1",
       addressLine2: "Apt 1",
+      phone: "+49 30 1234567",
       city: "Barcelona",
       state: "Barcelona",
       zipcode: "08001",
@@ -119,6 +121,7 @@ RSpec.describe Mutations::BillingEntities::Update, :premium do
       expect(result_data["taxIdentificationNumber"]).to eq("Tax-1234")
       expect(result_data["addressLine1"]).to eq("Calle de la Princesa 1")
       expect(result_data["addressLine2"]).to eq("Apt 1")
+      expect(result_data["phone"]).to eq("+49 30 1234567")
       expect(result_data["state"]).to eq("Barcelona")
       expect(result_data["city"]).to eq("Barcelona")
       expect(result_data["zipcode"]).to eq("08001")
