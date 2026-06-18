@@ -77,10 +77,6 @@ module Subscriptions
       current_subscription.plan = plan
       current_subscription.name = name if name.present?
       current_subscription.save!
-
-      if current_subscription.should_sync_hubspot_subscription?
-        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription: current_subscription)
-      end
     end
 
     def apply_activation_rules(subscription)
