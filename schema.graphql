@@ -792,6 +792,7 @@ input ApproveQuoteVersionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  expiresAt: ISO8601DateTime
   id: ID!
 }
 

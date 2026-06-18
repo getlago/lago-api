@@ -58,6 +58,41 @@ RSpec.describe Mutations::QuoteVersions::Approve do
     end
   end
 
+  context "with an expiresAt in the future", :premium do
+    let(:expires_at) { 1.month.from_now.iso8601 }
+    let(:input) { {id: quote_version.id, expiresAt: expires_at} }
+
+    it "sets expires_at on the created order form" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+
+      expect(result["data"]["approveQuoteVersion"]["status"]).to eq("approved")
+      expect(quote_version.reload.order_form.expires_at).to be_within(1.second).of(Time.zone.parse(expires_at))
+    end
+  end
+
+  context "with an expiresAt in the past", :premium do
+    let(:input) { {id: quote_version.id, expiresAt: 1.day.ago.iso8601} }
+
+    it "returns a validation error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+
+      expect_graphql_error(result:, message: "Unprocessable Entity", details: {expiresAt: ["invalid_date"]})
+      expect(quote_version.reload.status).to eq("draft")
+    end
+  end
+
   context "when quote version is not found", :premium do
     let(:input) { {id: "00000000-0000-0000-0000-000000000000"} }
 

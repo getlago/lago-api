@@ -44,6 +44,37 @@ RSpec.describe QuoteVersions::ApproveService do
       end
     end
 
+    context "when an expires_at in the future is provided", :premium do
+      subject(:approve_service) { described_class.new(quote_version:, expires_at:) }
+
+      let(:expires_at) { 1.month.from_now }
+
+      it "sets expires_at on the created order form" do
+        expect(result).to be_success
+        expect(result.order_form.expires_at).to be_within(1.second).of(expires_at)
+      end
+    end
+
+    context "when an expires_at in the past is provided", :premium do
+      subject(:approve_service) { described_class.new(quote_version:, expires_at:) }
+
+      let(:expires_at) { 1.day.ago }
+
+      it "does not approve the quote version" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(expires_at: ["invalid_date"])
+
+        quote_version.reload
+        expect(quote_version.approved?).to eq(false)
+        expect(quote_version.approved_at).to eq(nil)
+      end
+
+      it "does not create an order form" do
+        expect { result }.not_to change(OrderForm, :count)
+      end
+    end
+
     context "when the quote version is voided", :premium do
       let(:quote_version) { create(:quote_version, :voided, quote:, organization:) }
 

@@ -78,6 +78,36 @@ RSpec.describe Api::V1::QuoteVersionsController do
       expect(json[:quote_version][:status]).to eq("approved")
     end
 
+    context "with an expires_at in the future", :premium do
+      subject do
+        post_with_token(organization, "/api/v1/quote_versions/#{quote_version_id}/approve", {expires_at:})
+      end
+
+      let(:expires_at) { 1.month.from_now.iso8601 }
+
+      it "sets expires_at on the created order form" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(quote_version.reload.order_form.expires_at).to be_within(1.second).of(Time.zone.parse(expires_at))
+      end
+    end
+
+    context "with an expires_at in the past", :premium do
+      subject do
+        post_with_token(organization, "/api/v1/quote_versions/#{quote_version_id}/approve", {expires_at:})
+      end
+
+      let(:expires_at) { 1.day.ago.iso8601 }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(quote_version.reload.status).to eq("draft")
+      end
+    end
+
     context "when the quote version is not approvable", :premium do
       let(:quote_version) { create(:quote_version, :voided, quote:, organization:) }
 

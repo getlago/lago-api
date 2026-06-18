@@ -16,7 +16,7 @@ module Api
         # A nil quote_version is intentional: the service returns a not_found failure.
         quote_version = current_organization.quote_versions.find_by(id: params[:id])
 
-        result = QuoteVersions::ApproveService.call(quote_version:)
+        result = QuoteVersions::ApproveService.call(quote_version:, expires_at: params[:expires_at])
 
         if result.success?
           render_quote_version(result.quote_version)
