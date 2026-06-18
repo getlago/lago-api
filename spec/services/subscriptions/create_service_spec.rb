@@ -125,13 +125,9 @@ RSpec.describe Subscriptions::CreateService do
     context "when subscription should sync with Hubspot" do
       let(:customer) { create(:customer, :with_hubspot_integration, organization:, currency: "EUR") }
 
-      before do
-        allow(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).to receive(:perform_later)
-      end
-
       it "enqueues the Hubspot create job for a new subscription" do
         create_service.call
-        expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).to have_received(:perform_later)
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).to have_been_enqueued
       end
 
       it "does not enqueue Hubspot::UpdateJob (CreateJob captures the active state)" do
@@ -144,7 +140,7 @@ RSpec.describe Subscriptions::CreateService do
 
         it "does not sync to Hubspot while pending" do
           create_service.call
-          expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).not_to have_received(:perform_later)
+          expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).not_to have_been_enqueued
           expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).not_to have_been_enqueued
         end
       end
@@ -154,7 +150,7 @@ RSpec.describe Subscriptions::CreateService do
 
         it "enqueues the Hubspot create job" do
           create_service.call
-          expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).to have_received(:perform_later)
+          expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).to have_been_enqueued
         end
       end
     end
