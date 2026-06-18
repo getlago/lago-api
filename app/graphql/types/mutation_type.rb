@@ -141,6 +141,7 @@ module Types
     field :update_invoice, mutation: Mutations::Invoices::Update
     field :void_invoice, mutation: Mutations::Invoices::Void
 
+    field :add_quote_image, mutation: Mutations::Quotes::AddImage
     field :create_quote, mutation: Mutations::Quotes::Create
     field :update_quote, mutation: Mutations::Quotes::Update
 
