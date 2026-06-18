@@ -139,6 +139,65 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
   end
 
+  # Batched per-filter aggregation: one query computes every filter's sum via sumIf,
+  # and must stay equivalent to running #sum once per filter (including the catch-all
+  # filter, which matches events that fall into none of the defined filters).
+  describe "#grouped_sum_by_filters" do
+    subject(:event_store) do
+      described_class.new(code: billable_metric.code, subscription:, boundaries:, filters: {}, deduplicate: true)
+    end
+
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+
+    let(:filter_specs) do
+      [
+        {id: "europe", matching_filters: {"region" => ["europe"]}, ignored_filters: []},
+        {id: "asia", matching_filters: {"region" => ["asia"]}, ignored_filters: []},
+        {id: nil, matching_filters: {}, ignored_filters: [{"region" => ["europe"]}, {"region" => ["asia"]}]}
+      ]
+    end
+
+    before do
+      timestamp = subscription.started_at.beginning_of_day + 1.day
+      create_event(timestamp:, value: 5, properties: {"region" => "europe"})
+      create_event(timestamp:, value: 3, properties: {"region" => "europe"})
+      create_event(timestamp:, value: 7, properties: {"region" => "asia"})
+      create_event(timestamp:, value: 2, properties: {"region" => "other"}) # matches no filter -> catch-all
+    end
+
+    it "returns each filter's sum (and the catch-all) equivalent to a per-filter #sum" do
+      batched = event_store.grouped_sum_by_filters(filter_specs)
+
+      filter_specs.each do |spec|
+        per_filter = described_class.new(
+          code: billable_metric.code,
+          subscription:,
+          boundaries:,
+          filters: {matching_filters: spec[:matching_filters], ignored_filters: spec[:ignored_filters]},
+          deduplicate: true
+        ).sum
+
+        entry = batched[spec[:id].to_s]
+        expect(entry[:value]).to eq(per_filter.value)
+        expect(entry[:events_count]).to eq(per_filter.events_count)
+      end
+
+      expect(batched["europe"][:value]).to eq(8)
+      expect(batched["asia"][:value]).to eq(7)
+      expect(batched[""][:value]).to eq(2)
+    end
+  end
+
   # Pins the query shape behind #count. The deduplicated + unfiltered count must
   # avoid the INNER ANY JOIN (which only fetches the value column and caused
   # ClickHouse OOM on large subscriptions); filtered and non-deduplicated counts

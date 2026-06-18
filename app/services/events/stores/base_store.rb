@@ -23,6 +23,10 @@ module Events
         @matching_filters = filters[:matching_filters] || {}
         @ignored_filters = filters[:ignored_filters] || []
 
+        # When present, holds a per-charge_filter_id aggregation map precomputed in a
+        # single grouped query so individual filter aggregations avoid hitting the store.
+        @precomputed_charge_filter_sums = filters[:precomputed_charge_filter_sums]
+
         @aggregation_property = nil
         @numeric_property = false
         @use_from_boundary = true
@@ -156,6 +160,8 @@ module Events
       end
 
       attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :charge_id, :charge_filter_id
+
+      attr_reader :precomputed_charge_filter_sums
 
       protected
 

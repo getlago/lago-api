@@ -492,7 +492,82 @@ module Fees
         filters[:matching_filters] = (filters[:matching_filters] || {}).merge(usage_filters.filter_by_group)
       end
 
+      # Serve every filter's sum from a single grouped query instead of one query per filter.
+      filters[:precomputed_charge_filter_sums] = precomputed_charge_filter_sums if precomputed_charge_filter_sums
+
       filters
+    end
+
+    # For sum charges split across many filters, the per-filter aggregation issues one
+    # ClickHouse query each. Instead, run a single query grouped by charge_filter_id and
+    # let every filter read its value from the resulting map. Scoped to the cases where
+    # the value is a plain dedup-then-sum (no proration, grouping, presentation or target
+    # wallet) so it stays equivalent to the per-filter path.
+    def precomputed_charge_filter_sums
+      return @precomputed_charge_filter_sums if defined?(@precomputed_charge_filter_sums)
+
+      @precomputed_charge_filter_sums = batched_filter_sums_enabled? ? compute_batched_filter_sums : nil
+    end
+
+    BATCHABLE_STORES = [
+      Events::Stores::ClickhouseStore,
+      Events::Stores::ClickhouseEnrichedStore
+    ].freeze
+
+    def batched_filter_sums_enabled?
+      current_usage &&
+        charge.filters.any? &&
+        billable_metric.aggregation_type.to_sym == :sum_agg &&
+        !charge.prorated? &&
+        !billable_metric.recurring? &&
+        !charge.accepts_target_wallet &&
+        charge.pricing_group_keys.blank? &&
+        charge.presentation_group_keys_values.blank? &&
+        usage_filters.filter_by_group.blank? &&
+        charge.filters.all? { |f| f.pricing_group_keys.blank? } &&
+        BATCHABLE_STORES.include?(Events::Stores::StoreFactory.store_class(organization:))
+    end
+
+    def compute_batched_filter_sums
+      store = Events::Stores::StoreFactory.new_instance(
+        organization:,
+        code: billable_metric.code,
+        subscription:,
+        boundaries: {
+          from_datetime: boundaries.charges_from_datetime,
+          to_datetime: boundaries.charges_to_datetime,
+          charges_duration: boundaries.charges_duration,
+          max_timestamp: boundaries.max_timestamp
+        },
+        filters: {charge_id: charge.id},
+        deduplicate: organization.clickhouse_events_store? && organization.clickhouse_deduplication_enabled?
+      )
+      store.numeric_property = true
+      store.aggregation_property = billable_metric.field_name
+      store.use_from_boundary = !billable_metric.recurring
+
+      # events_enriched_expanded carries charge_filter_id, so we group by it directly.
+      # events_enriched only has properties, so we split with one sumIf per filter predicate.
+      if store.is_a?(Events::Stores::ClickhouseEnrichedStore)
+        store.grouped_sum_by_charge_filter.index_by { |row| row[:charge_filter_id] }
+      else
+        store.grouped_sum_by_filters(batched_filter_specs)
+      end
+    end
+
+    # One spec per charge filter, plus the default (catch-all) filter, each carrying the
+    # matching/ignored property constraints used to build its sumIf predicate.
+    def batched_filter_specs
+      specs = charge.filters.map do |charge_filter|
+        result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
+        {id: charge_filter.id, matching_filters: result.matching_filters, ignored_filters: result.ignored_filters}
+      end
+
+      default_filter = ChargeFilter.new(charge:, properties: {"pricing_group_keys" => charge.pricing_group_keys})
+      default_result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: default_filter)
+      specs << {id: nil, matching_filters: default_result.matching_filters, ignored_filters: default_result.ignored_filters}
+
+      specs
     end
 
     def calculate_period_ratio
