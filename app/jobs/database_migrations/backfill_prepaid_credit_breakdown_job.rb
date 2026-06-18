@@ -3,7 +3,7 @@
 module DatabaseMigrations
   # Backfills `prepaid_granted_credit_amount_cents` and
   # `prepaid_purchased_credit_amount_cents` on invoices finalized before the
-  # wallet credit breakdown feature shipped (ING-320).
+  # wallet credit breakdown feature shipped (https://github.com/getlago/lago-api/pull/5101).
   #
   # The values are aggregated from the historical `wallet_transaction_consumptions`
   # rows produced by `migrations:wallet_traceability`. No reconstruction happens
@@ -15,12 +15,6 @@ module DatabaseMigrations
   #   * a column is written only when its amount is > 0, otherwise left nil
   #   * only invoices whose customer is fully traceable are touched
   #     (mirrors `customer.wallets.all?(&:traceable?)`)
-  #
-  # Selection uses ActiveRecord (readable gate); the write is a single set-based
-  # `update_all` per batch, so it scales (a few queries per batch instead of a
-  # few per invoice). The job re-enqueues itself until nothing is left. It is
-  # idempotent: filled invoices drop out of `candidates`, and the breakdown is
-  # recomputed deterministically from the same rows every time.
   class BackfillPrepaidCreditBreakdownJob < ApplicationJob
     queue_as :low_priority
     unique :until_executed
@@ -28,7 +22,7 @@ module DatabaseMigrations
     BATCH_SIZE = 5_000
     GRANTED = WalletTransaction.transaction_statuses.fetch("granted")
 
-    def perform(organization_id = nil)
+    def perform(organization_id = nil, batch_number = 1)
       batch_ids = self.class.candidates(organization_id).limit(BATCH_SIZE).pluck(:id)
 
       if batch_ids.empty?
@@ -37,7 +31,7 @@ module DatabaseMigrations
       end
 
       Invoice.where(id: batch_ids).update_all(UPDATE_ASSIGNMENTS) # rubocop:disable Rails/SkipsModelValidations
-      self.class.perform_later(organization_id)
+      self.class.perform_later(organization_id, batch_number + 1)
     end
 
     def lock_key_arguments

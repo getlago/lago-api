@@ -2,7 +2,7 @@
 
 # Backfills `prepaid_granted_credit_amount_cents` and
 # `prepaid_purchased_credit_amount_cents` on invoices finalized before the wallet
-# credit breakdown feature shipped (ING-320).
+# credit breakdown feature shipped (https://github.com/getlago/lago-api/pull/5101).
 #
 # The heavy lifting is done by DatabaseMigrations::BackfillPrepaidCreditBreakdownJob,
 # which processes invoices in batches on the low_priority queue and re-enqueues

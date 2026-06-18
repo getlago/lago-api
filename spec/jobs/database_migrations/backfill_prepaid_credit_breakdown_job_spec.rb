@@ -128,6 +128,19 @@ RSpec.describe DatabaseMigrations::BackfillPrepaidCreditBreakdownJob do
       expect(other_invoice.prepaid_purchased_credit_amount_cents).to be_nil
     end
 
+    it "re-enqueues the next batch with an incremented batch_number" do
+      stub_const("#{described_class}::BATCH_SIZE", 1)
+      create_consumed_invoice(granted_cents: 100, purchased_cents: 200)
+
+      expect { described_class.perform_now(organization.id, 1) }
+        .to have_enqueued_job(described_class).with(organization.id, 2)
+    end
+
+    it "does not re-enqueue when there is no work left" do
+      expect { described_class.perform_now(organization.id) }
+        .not_to have_enqueued_job(described_class)
+    end
+
     it "is idempotent" do
       invoice = create_consumed_invoice(granted_cents: 100, purchased_cents: 200)
 
