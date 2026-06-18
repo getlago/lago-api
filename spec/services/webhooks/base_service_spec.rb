@@ -29,6 +29,15 @@ RSpec.describe Webhooks::BaseService do
       expect(webhook.payload.keys).to eq %w[webhook_type object_type organization_id dummy]
     end
 
+    it "stores the payload on object storage instead of the database" do
+      webhook_service.call
+
+      webhook = Webhook.order(created_at: :desc).first
+
+      expect(webhook.payload_key).to start_with("webhooks/")
+      expect(webhook.read_attribute(:payload)).to be_nil
+    end
+
     context "when organization has one webhook endpoint" do
       it "enqueues one http job" do
         webhook_service.call
