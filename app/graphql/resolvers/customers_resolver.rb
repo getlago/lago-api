@@ -21,6 +21,7 @@ module Resolvers
     argument :countries, [Types::CountryCodeEnum], required: false
     argument :currencies, [Types::CurrencyEnum], required: false
     argument :customer_type, Types::Customers::CustomerTypeEnum, required: false
+    argument :external_id, String, required: false
     argument :has_customer_type, Boolean, required: false
     argument :has_tax_identification_number, Boolean, required: false
     argument :metadata, [Types::Customers::Metadata::Filter], required: false

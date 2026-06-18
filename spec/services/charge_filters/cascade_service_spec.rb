@@ -155,6 +155,59 @@ RSpec.describe ChargeFilters::CascadeService do
           expect { service }.not_to change { child_charge.filters.reload.count }
         end
       end
+
+      context "when the billable metric filter key no longer exists" do
+        subject(:service) do
+          described_class.call(
+            charge: parent_charge,
+            action: "create",
+            filter_values: {"country" => ["fr"]},
+            new_properties: {"amount" => "20"},
+            invoice_display_name: "FR country"
+          )
+        end
+
+        it "does not create a child filter" do
+          expect { service }.not_to change { child_charge.filters.reload.count }
+          expect(service).to be_success
+        end
+      end
+
+      context "when the billable metric filter values were trimmed" do
+        subject(:service) do
+          described_class.call(
+            charge: parent_charge,
+            action: "create",
+            filter_values: {"region" => %w[eu apac]},
+            new_properties: {"amount" => "20"},
+            invoice_display_name: "EU region"
+          )
+        end
+
+        it "creates the filter with only the values still allowed" do
+          expect { service }.to change { child_charge.filters.reload.count }.by(1)
+
+          new_filter = child_charge.filters.find_by(invoice_display_name: "EU region")
+          expect(new_filter.to_h).to eq({"region" => ["eu"]})
+        end
+      end
+
+      context "when none of the snapshot values are still allowed" do
+        subject(:service) do
+          described_class.call(
+            charge: parent_charge,
+            action: "create",
+            filter_values: {"region" => ["apac"]},
+            new_properties: {"amount" => "20"},
+            invoice_display_name: "APAC region"
+          )
+        end
+
+        it "does not create a child filter" do
+          expect { service }.not_to change { child_charge.filters.reload.count }
+          expect(service).to be_success
+        end
+      end
     end
 
     context "with destroy action" do

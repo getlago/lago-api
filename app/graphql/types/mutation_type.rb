@@ -66,6 +66,8 @@ module Types
     field :terminate_coupon, mutation: Mutations::Coupons::Terminate
     field :update_coupon, mutation: Mutations::Coupons::Update
 
+    field :mark_order_form_as_signed, mutation: Mutations::OrderForms::MarkAsSigned
+
     field :create_add_on, mutation: Mutations::AddOns::Create
     field :create_applied_coupon, mutation: Mutations::AppliedCoupons::Create
     field :destroy_add_on, mutation: Mutations::AddOns::Destroy
@@ -139,6 +141,7 @@ module Types
     field :update_invoice, mutation: Mutations::Invoices::Update
     field :void_invoice, mutation: Mutations::Invoices::Void
 
+    field :add_quote_image, mutation: Mutations::Quotes::AddImage
     field :create_quote, mutation: Mutations::Quotes::Create
     field :update_quote, mutation: Mutations::Quotes::Update
 
@@ -146,6 +149,8 @@ module Types
     field :clone_quote_version, mutation: Mutations::QuoteVersions::Clone
     field :update_quote_version, mutation: Mutations::QuoteVersions::Update
     field :void_quote_version, mutation: Mutations::QuoteVersions::Void
+
+    field :void_order_form, mutation: Mutations::OrderForms::Void
 
     field :download_payment_receipt, mutation: Mutations::PaymentReceipts::Download
     field :download_xml_payment_receipt, mutation: Mutations::PaymentReceipts::DownloadXml

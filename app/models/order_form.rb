@@ -25,6 +25,7 @@ class OrderForm < ApplicationRecord
   belongs_to :customer
   belongs_to :quote_version
   has_one :quote, through: :quote_version
+  has_one :order
 
   has_one_attached :signed_document
 

@@ -4,10 +4,9 @@ module Subscriptions
   class ActivateService < BaseService
     Result = BaseResult[:subscription]
 
-    def initialize(subscription:, timestamp: Time.current, during_creation: false)
+    def initialize(subscription:, timestamp: Time.current)
       @subscription = subscription
       @timestamp = timestamp
-      @during_creation = during_creation
       super
     end
 
@@ -31,7 +30,7 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :timestamp, :during_creation
+    attr_reader :subscription, :timestamp
 
     def gate_subscription
       subscription.mark_as_incomplete!(timestamp)
@@ -72,8 +71,6 @@ module Subscriptions
 
       billable_subscriptions = [previous_subscription]
 
-      # Fixed-charge events are always emitted during gate_subscription, so re-emit only
-      # when activating straight from pending.
       emit_fixed_charge_events unless from_incomplete
 
       unless billed_during_gating
@@ -104,8 +101,6 @@ module Subscriptions
 
       billable_subscriptions = [previous_subscription]
 
-      # Fixed-charge events are always emitted during gate_subscription, so re-emit only
-      # when activating straight from pending.
       emit_fixed_charge_events unless from_incomplete
 
       unless billed_during_gating
@@ -132,7 +127,6 @@ module Subscriptions
 
       subscription.mark_as_active!(timestamp)
 
-      # When from_incomplete, fixed-charge events were already emitted during gate_subscription.
       emit_fixed_charge_events unless from_incomplete
 
       after_commit do
@@ -147,8 +141,6 @@ module Subscriptions
       end
     end
 
-    # Downgrades default to billing only the previous subscription for non-invoiceable fees:
-    # the downgrade subscription has no events yet.
     def bill_rotation_subscriptions(billable_subscriptions, billing_at:, non_invoiceable_subscriptions: [subscription.previous_subscription])
       after_commit do
         BillSubscriptionJob.perform_later(billable_subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
@@ -158,6 +150,8 @@ module Subscriptions
 
     def enqueue_gating_catch_up_jobs
       return unless subscription.activation_rules.payment.any?
+
+      ActivationRules::BillFixedChargesDeltaJob.perform_later(subscription)
 
       unless subscription.previous_subscription
         ActivationRules::BillMissedPeriodsJob.perform_later(subscription)
@@ -170,15 +164,7 @@ module Subscriptions
 
       return unless subscription.should_sync_hubspot_subscription?
 
-      if upgrade? || downgrade?
-        # The new upgrade/downgrade subscription has no Hubspot record yet.
-        Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription:)
-      elsif !during_creation
-        # Skip when activating during subscription creation — CreateService
-        # fires Hubspot::CreateJob after this, which captures the active state
-        # and avoids a redundant Update that would race with Create.
-        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
-      end
+      Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription:)
     end
 
     def emit_fixed_charge_events

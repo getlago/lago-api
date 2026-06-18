@@ -3,7 +3,7 @@
 module Types
   module Quotes
     class OrderTypeEnum < Types::BaseEnum
-      Quote::ORDER_TYPES.keys.each do |type|
+      Quote::ORDER_TYPES.each_key do |type|
         value type
       end
     end

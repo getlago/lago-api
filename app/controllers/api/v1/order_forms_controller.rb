@@ -54,10 +54,21 @@ module Api
         render_order_form(order_form)
       end
 
+      def void
+        order_form = current_organization.order_forms.find_by(id: params[:id])
+        result = OrderForms::VoidService.call(order_form:)
+
+        if result.success?
+          render_order_form(result.order_form)
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def ensure_feature_flag!
-        forbidden_error(code: "feature_not_available") unless current_organization.feature_flag_enabled?(:order_forms)
+        forbidden_error(code: "feature_unavailable") unless current_organization.feature_flag_enabled?(:order_forms)
       end
 
       def index_filters

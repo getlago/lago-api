@@ -84,10 +84,6 @@ module Subscriptions
         current_subscription.billing_entity = override_entity if override_entity
       end
       current_subscription.save!
-
-      if current_subscription.should_sync_hubspot_subscription?
-        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: current_subscription)
-      end
     end
 
     def apply_activation_rules(subscription)

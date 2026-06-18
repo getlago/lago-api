@@ -115,11 +115,10 @@ RSpec.describe Subscriptions::ActivateAllPendingService, clickhouse: true do
         )
       end
 
-      it "enqueues Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob" do
-        allow(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to receive(:perform_later)
+      it "enqueues Integrations::Aggregator::Subscriptions::Hubspot::CreateJob" do
         activate_service.call
-        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
-          .to have_received(:perform_later).with(subscription: pending_subscription)
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob)
+          .to have_been_enqueued.with(subscription: pending_subscription)
       end
 
       it "takes timezone into account" do

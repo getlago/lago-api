@@ -159,10 +159,6 @@ module Subscriptions
         handle_future_subscription(new_subscription)
       end
 
-      if new_subscription.should_sync_hubspot_subscription?
-        after_commit { Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription: new_subscription) }
-      end
-
       new_subscription
     end
 
@@ -171,8 +167,7 @@ module Subscriptions
       apply_activation_rules(new_subscription)
       ActivateService.call!(
         subscription: new_subscription,
-        timestamp: new_subscription.subscription_at,
-        during_creation: true
+        timestamp: new_subscription.subscription_at
       )
     end
 
@@ -187,6 +182,10 @@ module Subscriptions
       after_commit do
         SendWebhookJob.perform_later("subscription.started", new_subscription)
         Utils::ActivityLog.produce(new_subscription, "subscription.started")
+
+        if new_subscription.should_sync_hubspot_subscription?
+          Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription: new_subscription)
+        end
       end
     end
 

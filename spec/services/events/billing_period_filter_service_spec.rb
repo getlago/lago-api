@@ -552,6 +552,15 @@ RSpec.describe Events::BillingPeriodFilterService do
           expect(result.charges).to eq({})
         end
       end
+
+      it "scopes the event store query to the plan billable metric codes" do
+        event_store = instance_double(Events::Stores::PostgresStore, distinct_codes: [])
+        allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+        filter_service.call
+
+        expect(event_store).to have_received(:distinct_codes).with(codes: [billable_metric.code])
+      end
     end
 
     context "when relying on clickhouse enriched events", clickhouse: true do
@@ -1107,6 +1116,51 @@ RSpec.describe Events::BillingPeriodFilterService do
           expect(result).to be_success
           expect(result.charges).to eq({})
         end
+      end
+
+      context "with enriched events not matching the plan billable metric codes" do
+        let(:events) do
+          [
+            create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              code: "unknown_code",
+              timestamp: boundaries.charges_from_datetime + 5.days
+            )
+          ]
+        end
+
+        let(:enriched_events) do
+          events.map do |event|
+            create(
+              :enriched_event,
+              event:,
+              subscription:,
+              value: 12,
+              decimal_value: 12.0,
+              charge:
+            )
+          end
+        end
+
+        before { enriched_events }
+
+        it "returns empty charges" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to eq({})
+        end
+      end
+
+      it "scopes the event store query to the plan billable metric codes" do
+        event_store = instance_double(Events::Stores::PostgresStore, distinct_charges_and_filters: [])
+        allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+        filter_service.call
+
+        expect(event_store).to have_received(:distinct_charges_and_filters).with(codes: [billable_metric.code])
       end
     end
   end

@@ -20,6 +20,7 @@ RSpec.describe ::V1::WalletTransactionSerializer do
         "lago_invoice_id" => nil,
         "lago_credit_note_id" => nil,
         "lago_voided_invoice_id" => nil,
+        "billing_entity_code" => wallet_transaction.billing_entity.code,
         "status" => wallet_transaction.status,
         "source" => wallet_transaction.source,
         "transaction_status" => wallet_transaction.transaction_status,
@@ -38,6 +39,28 @@ RSpec.describe ::V1::WalletTransactionSerializer do
       )
       expect(result["wallet_transaction"]["payment_method"]["payment_method_id"]).to eq(nil)
       expect(result["wallet_transaction"]["payment_method"]["payment_method_type"]).to eq("provider")
+    end
+  end
+
+  context "when transaction has no snapshotted billing entity" do
+    let(:wallet_transaction) { create(:wallet_transaction, billing_entity: nil) }
+
+    it "serializes the wallet's billing entity code" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["wallet_transaction"]["billing_entity_code"]).to eq(wallet_transaction.wallet.billing_entity.code)
+    end
+  end
+
+  context "when snapshotted billing entity differs from the wallet's current one" do
+    let(:wallet) { create(:wallet) }
+    let(:snapshot_billing_entity) { create(:billing_entity, organization: wallet.organization) }
+    let(:wallet_transaction) { create(:wallet_transaction, wallet:, billing_entity: snapshot_billing_entity) }
+
+    it "serializes the snapshotted billing entity code" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["wallet_transaction"]["billing_entity_code"]).to eq(snapshot_billing_entity.code)
     end
   end
 

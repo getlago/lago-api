@@ -482,8 +482,74 @@ RSpec.describe Mutations::Plans::Update do
         organization: organization,
         plan:,
         entitlements_params: {},
-        partial: false
+        partial: false,
+        send_webhook: false
       )
+    end
+  end
+
+  context "with the plan.updated webhook" do
+    let(:base_input) do
+      {
+        id: plan.id,
+        name: "Updated plan",
+        code: "updated_plan",
+        interval: "monthly",
+        payInAdvance: false,
+        amountCents: 200,
+        amountCurrency: "EUR",
+        charges: []
+      }
+    end
+
+    context "when entitlements are not provided" do
+      it "enqueues a single plan.updated webhook" do
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {input: base_input}
+        )
+
+        expect(SendWebhookJob).to have_been_enqueued.with("plan.updated", plan).once
+      end
+    end
+
+    context "when entitlements are provided", :premium do
+      let(:input_with_entitlements) do
+        base_input.merge(
+          entitlements: [
+            {featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "22"}]}
+          ]
+        )
+      end
+
+      it "enqueues a single plan.updated webhook" do
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {input: input_with_entitlements}
+        )
+
+        expect(SendWebhookJob).to have_been_enqueued.with("plan.updated", plan).once
+      end
+
+      it "does not emit the webhook from Plans::UpdateService so entitlements are persisted first" do
+        allow(::Plans::UpdateService).to receive(:call).and_call_original
+
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {input: input_with_entitlements}
+        )
+
+        expect(::Plans::UpdateService).to have_received(:call).with(plan:, params: anything, send_webhook: false)
+      end
     end
   end
 

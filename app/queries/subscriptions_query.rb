@@ -3,6 +3,7 @@
 class SubscriptionsQuery < BaseQuery
   Result = BaseResult[:subscriptions]
   Filters = BaseFilters[
+    :external_id,
     :external_customer_id,
     :plan_code,
     :status,
@@ -29,6 +30,7 @@ class SubscriptionsQuery < BaseQuery
     )
 
     subscriptions = with_billing_entity_ids(subscriptions) if filters.billing_entity_ids.present?
+    subscriptions = with_external_id(subscriptions) if filters.external_id
     subscriptions = with_external_customer(subscriptions) if filters.external_customer_id
     subscriptions = with_plan_code(subscriptions) if filters.plan_code
     subscriptions = with_overridden(subscriptions) unless overridden_filter.nil?
@@ -53,6 +55,7 @@ class SubscriptionsQuery < BaseQuery
 
   def search_params
     return if search_term.blank?
+    return if filters.external_id
 
     terms = {
       m: "or",
@@ -72,6 +75,10 @@ class SubscriptionsQuery < BaseQuery
       customer_external_id_cont: search_term,
       customer_email_cont: search_term
     )
+  end
+
+  def with_external_id(scope)
+    scope.where(external_id: filters.external_id)
   end
 
   def with_external_customer(scope)

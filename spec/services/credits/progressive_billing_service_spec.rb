@@ -83,6 +83,16 @@ Rspec.describe Credits::ProgressiveBillingService do
         expect(subscription_fee2.reload.precise_coupons_amount_cents).to eq(0)
       end
 
+      it "applies the credit to the already-loaded fees association without a reload" do
+        invoice.fees.load
+
+        credit_service.call
+
+        cached_fee = invoice.fees.find { |fee| fee.id == subscription_fee1.id }
+        expect(cached_fee.precise_coupons_amount_cents).to eq(20)
+        expect(cached_fee.sub_total_excluding_taxes_amount_cents).to eq(cached_fee.amount_cents - 20)
+      end
+
       context "when progressive billing credits are greater than amount cents" do
         let(:subscription_fee1) { create(:charge_fee, invoice:, subscription:, amount_cents: 19) }
 

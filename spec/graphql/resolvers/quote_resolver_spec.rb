@@ -14,6 +14,7 @@ RSpec.describe Resolvers::QuoteResolver do
           subscription { id }
           number
           orderType
+          images
           currentVersion { id version status billingItems content currency startDate endDate }
           versions { id version status }
           createdAt
@@ -65,6 +66,7 @@ RSpec.describe Resolvers::QuoteResolver do
       expect(response.dig("createdAt")).to eq(quote.created_at.iso8601)
       expect(response.dig("updatedAt")).to eq(quote.updated_at.iso8601)
       expect(response.dig("owners")).to eq([])
+      expect(response.dig("images")).to eq({})
 
       expect(response.dig("currentVersion", "id")).to eq(quote.current_version.id)
       expect(response.dig("currentVersion", "billingItems")).to eq(quote.current_version.billing_items)
@@ -88,6 +90,44 @@ RSpec.describe Resolvers::QuoteResolver do
           }
         ]
       )
+    end
+  end
+
+  context "when the quote has images" do
+    let(:quote) { create(:quote, organization:, customer:) }
+    let(:query) do
+      <<-GQL
+        query($quoteId: ID!) {
+          quote(id: $quoteId) {
+            id
+            images
+          }
+        }
+      GQL
+    end
+
+    before do
+      quote.images.attach(
+        io: File.open(Rails.root.join("spec/factories/images/logo.png")),
+        content_type: "image/png",
+        filename: "logo.png"
+      )
+    end
+
+    it "returns a map of blob id to a fresh url" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {quoteId: quote.id}
+      )
+
+      images = result.dig("data", "quote", "images")
+      blob_id = quote.images.first.blob.id
+
+      expect(images.keys).to eq([blob_id])
+      expect(images[blob_id]).to include("/rails/active_storage/blobs")
     end
   end
 

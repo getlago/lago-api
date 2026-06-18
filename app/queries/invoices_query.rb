@@ -28,7 +28,6 @@ class InvoicesQuery < BaseQuery
     return result unless validate_filters.success?
 
     invoices = base_scope.includes(:customer).preload(file_attachment: :blob, xml_file_attachment: :blob)
-    invoices = with_customers_filter(invoices)
 
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
     invoices = with_currency(invoices) if filters.currency
@@ -70,28 +69,45 @@ class InvoicesQuery < BaseQuery
     scope = organization.invoices
     return scope if search_term.blank?
 
-    by_number = scope.ransack(number_cont: search_term).result
-    search_term.match?(BaseQuery::UUID_REGEX) ? by_number.or(scope.where(id: search_term)) : by_number
+    scope = scope.with(matching_customers: matching_customers) if search_customers?
+    scope
+      .with(matching_invoices: matching_invoices)
+      .where("invoices.id IN (SELECT id FROM matching_invoices)")
   end
 
-  def with_customers_filter(scope)
-    return scope if search_term.blank?
-    return scope if filters.customer_id.present?
-    return scope if filters.customer_external_id.present?
+  def search_customers?
+    filters.customer_id.blank? && filters.customer_external_id.blank?
+  end
 
-    matching_customer_ids = organization.customers
-      .ransack(
-        m: "or",
-        name_cont: search_term,
-        firstname_cont: search_term,
-        lastname_cont: search_term,
-        external_id_cont: search_term,
-        email_cont: search_term
-      ).result.select(:id)
+  def matching_customers
+    escaped_term = "%#{Customer.sanitize_sql_like(search_term)}%"
 
-    scope.or(
-      organization.invoices.where(customer_id: matching_customer_ids)
-    )
+    organization.customers
+      .where(
+        "customers.name ILIKE :term OR customers.firstname ILIKE :term " \
+        "OR customers.lastname ILIKE :term OR customers.external_id ILIKE :term " \
+        "OR customers.email ILIKE :term",
+        term: escaped_term
+      )
+      .select(:id)
+  end
+
+  def matching_invoices
+    escaped_term = "%#{Invoice.sanitize_sql_like(search_term)}%"
+    search_base = organization.invoices
+
+    branches = [
+      search_base.where("invoices.number ILIKE ?", escaped_term).select(:id)
+    ]
+
+    branches << search_base.where(id: search_term).select(:id) if search_term.match?(BaseQuery::UUID_REGEX)
+
+    if search_customers?
+      branches << search_base.where("invoices.customer_id IN (SELECT id FROM matching_customers)").select(:id)
+    end
+
+    union_sql = branches.map(&:to_sql).join(" UNION ")
+    Invoice.unscoped.from("(#{union_sql}) AS invoices").select(:id)
   end
 
   def with_billing_entity_ids(scope)

@@ -39,6 +39,12 @@ RSpec.describe Subscriptions::ActivateService do
       expect(Invoices::CreatePayInAdvanceFixedChargesJob).not_to have_been_enqueued
     end
 
+    it "does not enqueue the fixed-charge delta job" do
+      result
+
+      expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).not_to have_been_enqueued
+    end
+
     it "does not enqueue the missed-periods job" do
       result
 
@@ -58,21 +64,17 @@ RSpec.describe Subscriptions::ActivateService do
     context "when subscription should sync with hubspot" do
       let(:customer) { create(:customer, :with_hubspot_integration, organization:) }
 
-      it "enqueues hubspot sync job" do
+      it "enqueues hubspot create job" do
         result
 
-        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob)
           .to have_been_enqueued.with(subscription:)
       end
 
-      context "when activating during subscription creation" do
-        subject(:result) { described_class.call(subscription:, timestamp:, during_creation: true) }
+      it "does not enqueue hubspot update job" do
+        result
 
-        it "does not enqueue Hubspot::UpdateJob" do
-          result
-
-          expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).not_to have_been_enqueued
-        end
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).not_to have_been_enqueued
       end
     end
 
@@ -202,10 +204,15 @@ RSpec.describe Subscriptions::ActivateService do
       expect(Utils::ActivityLog).to have_produced("subscription.incomplete").with(subscription)
     end
 
-    it "does not sync with hubspot" do
-      result
+    context "when the customer should sync with hubspot" do
+      let(:customer) { create(:customer, :with_hubspot_integration, organization:) }
 
-      expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).not_to have_been_enqueued
+      it "does not sync the incomplete subscription" do
+        result
+
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).not_to have_been_enqueued
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).not_to have_been_enqueued
+      end
     end
 
     it "enqueues BillSubscriptionJob with skip_charges" do
@@ -318,6 +325,12 @@ RSpec.describe Subscriptions::ActivateService do
       expect { result }.not_to change(FixedChargeEvent, :count)
     end
 
+    it "enqueues the fixed-charge delta job" do
+      result
+
+      expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).to have_been_enqueued.with(subscription)
+    end
+
     it "enqueues the missed-periods job" do
       result
 
@@ -327,11 +340,17 @@ RSpec.describe Subscriptions::ActivateService do
     context "when subscription should sync with hubspot" do
       let(:customer) { create(:customer, :with_hubspot_integration, organization:) }
 
-      it "enqueues hubspot sync job" do
+      it "enqueues hubspot create job" do
         result
 
-        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob)
           .to have_been_enqueued.with(subscription:)
+      end
+
+      it "does not enqueue hubspot update job" do
+        result
+
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).not_to have_been_enqueued
       end
     end
 
@@ -393,6 +412,12 @@ RSpec.describe Subscriptions::ActivateService do
 
         expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob)
           .to have_been_enqueued.with(subscription: subscription)
+      end
+
+      it "enqueues the fixed-charge delta job" do
+        result
+
+        expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).to have_been_enqueued.with(subscription)
       end
 
       it "does not enqueue the missed-periods job" do
@@ -504,6 +529,12 @@ RSpec.describe Subscriptions::ActivateService do
           .to have_been_enqueued.with(subscription:)
       end
 
+      it "enqueues the fixed-charge delta job" do
+        result
+
+        expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).to have_been_enqueued.with(subscription)
+      end
+
       context "when subscription should not sync with hubspot" do
         let(:customer) { create(:customer, organization:) }
 
@@ -525,6 +556,12 @@ RSpec.describe Subscriptions::ActivateService do
 
       expect(result.subscription).to be_active
       expect(BillSubscriptionJob).to have_been_enqueued
+    end
+
+    it "does not enqueue the fixed-charge delta job" do
+      result
+
+      expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).not_to have_been_enqueued
     end
 
     it "does not enqueue the missed-periods job" do

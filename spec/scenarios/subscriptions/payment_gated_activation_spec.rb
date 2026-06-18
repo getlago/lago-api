@@ -43,8 +43,8 @@ describe "Payment Gated Subscription Activation Scenarios" do
       )
   end
 
-  def simulate_stripe_webhook(status:)
-    payment = Payment.order(created_at: :desc).first
+  def simulate_stripe_webhook(status:, invoice: nil)
+    payment = (invoice&.payments || Payment).order(created_at: :desc).first
     payment.update!(provider_payment_id: payment_intent_id)
 
     # Stub payment method retrieval triggered by SetPaymentMethodAndCreateReceiptJob
@@ -74,6 +74,36 @@ describe "Payment Gated Subscription Activation Scenarios" do
       }.to_json
     )
     perform_all_enqueued_jobs
+  end
+
+  def update_fixed_charge_units(fixed_charge, units, timestamp:, apply_units_immediately: true)
+    FixedCharges::UpdateService.call!(
+      fixed_charge:,
+      params: {units:, charge_model: "standard", properties: {amount: "10"}, apply_units_immediately:},
+      timestamp: timestamp.to_i
+    )
+    perform_all_enqueued_jobs
+  end
+
+  def create_fixed_charge(plan, units, timestamp:, apply_units_immediately: true)
+    add_on = create(:add_on, organization:)
+
+    result = FixedCharges::CreateService.call!(
+      plan:,
+      params: {
+        add_on_id: add_on.id,
+        code: FixedCharges::GenerateCodeService.call(plan:, add_on:).code,
+        invoice_display_name: "Extra seats",
+        charge_model: "standard",
+        units:,
+        properties: {amount: "10"},
+        pay_in_advance: true,
+        apply_units_immediately:
+      },
+      timestamp: timestamp.to_i
+    )
+    perform_all_enqueued_jobs
+    result.fixed_charge
   end
 
   describe "new subscription with payment successful" do
@@ -122,7 +152,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       subscription.reload
       expect(subscription).to be_canceled
-      expect(subscription.cancelation_reason).to eq("payment_failed")
+      expect(subscription.cancellation_reason).to eq("payment_failed")
       expect(subscription.activated_at).to be_nil
       expect(subscription.activation_rules.sole).to be_failed
 
@@ -320,6 +350,301 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
   end
 
+  describe "fixed-charge delta catch-up on activation" do
+    let(:add_on) { create(:add_on, organization:) }
+    let(:fixed_charge) do
+      create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"})
+    end
+
+    before do
+      allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
+        .to receive(:create_payment_intent) do
+          Stripe::PaymentIntent.construct_from(
+            id: "pi_#{SecureRandom.hex(12)}", status: "processing", amount: 1000, currency: "eur"
+          )
+        end
+    end
+
+    it "bills a mid-incomplete unit increase applied immediately as a delta invoice on activation" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.invoices.count).to eq(1)
+
+      # Mid-gap: units 10 -> 15. The event is emitted for the incomplete sub but not billed yet.
+      update_fixed_charge_units(fixed_charge, 15, timestamp: Time.zone.local(2026, 3, 10, 10))
+      expect(subscription.invoices.count).to eq(1)
+
+      # Payment succeeds within the same period -> activation bills the 5-unit delta.
+      travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(2)
+
+      delta_invoice = subscription.invoices.order(:created_at).last
+      expect(delta_invoice.fees.fixed_charge.count).to eq(1)
+      expect(delta_invoice.fees.fixed_charge.sole.units).to eq(5)
+    end
+
+    it "bills one delta invoice per distinct timestamp of unit increases applied immediately" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+
+      update_fixed_charge_units(fixed_charge, 15, timestamp: Time.zone.local(2026, 3, 10, 10))
+      update_fixed_charge_units(fixed_charge, 20, timestamp: Time.zone.local(2026, 3, 15, 10))
+      expect(subscription.invoices.count).to eq(1)
+
+      travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(3)
+    end
+
+    it "documents a mid-incomplete unit reduction applied immediately with a zero-amount invoice (no refund)" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.invoices.count).to eq(1)
+
+      # Mid-gap: units 10 -> 5. Pay-in-advance is never refunded.
+      update_fixed_charge_units(fixed_charge, 5, timestamp: Time.zone.local(2026, 3, 10, 10))
+      expect(subscription.invoices.count).to eq(1)
+
+      travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(2)
+
+      delta_invoice = subscription.invoices.order(:created_at).last
+      expect(delta_invoice).to be_finalized
+      expect(delta_invoice.total_amount_cents).to eq(0)
+      expect(delta_invoice.fees.fixed_charge.sole.units).to eq(0)
+    end
+
+    it "bills a unit change scheduled for the next billing period through the regular clock when activation happens within the gated period" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+
+      update_fixed_charge_units(fixed_charge, 15, timestamp: Time.zone.local(2026, 3, 10, 10), apply_units_immediately: false)
+
+      # Payment succeeds within the gated period: nothing to catch up.
+      travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(1)
+
+      # The regular billing run at the boundary picks up the scheduled units.
+      travel_to(Time.zone.local(2026, 4, 1, 1)) { perform_billing }
+
+      expect(subscription.invoices.count).to eq(2)
+      periodic_invoice = subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
+    end
+
+    it "bills a fixed charge added mid-incomplete with units applied immediately as a delta invoice on activation" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.invoices.count).to eq(1)
+
+      # Mid-gap: a brand-new pay-in-advance fixed charge is added to the gated plan.
+      new_fixed_charge = create_fixed_charge(plan, 3, timestamp: Time.zone.local(2026, 3, 10, 10))
+      expect(subscription.invoices.count).to eq(1)
+
+      travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(2)
+
+      delta_fee = subscription.invoices.order(:created_at).last.fees.fixed_charge.sole
+      expect(delta_fee.fixed_charge).to eq(new_fixed_charge)
+      expect(delta_fee.units).to eq(3)
+    end
+
+    it "bills a fixed charge added mid-incomplete with units scheduled for the next billing period through the regular clock" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+
+      # Mid-gap: the new charge is scheduled, so its event lands at the next period start (April 1).
+      new_fixed_charge = create_fixed_charge(plan, 3, timestamp: Time.zone.local(2026, 3, 10, 10), apply_units_immediately: false)
+
+      travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(1)
+
+      # The regular billing run at the boundary bills the new charge.
+      travel_to(Time.zone.local(2026, 4, 1, 1)) { perform_billing }
+
+      expect(subscription.invoices.count).to eq(2)
+      periodic_invoice = subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.fees.fixed_charge.find_by(fixed_charge: new_fixed_charge).units).to eq(3)
+    end
+  end
+
+  describe "cascaded plan update with gated subscription on a child plan", :premium do
+    let(:add_on) { create(:add_on, organization:) }
+    let(:plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 1000) do |plan|
+        create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"})
+      end
+    end
+    let(:parent_fixed_charge) { plan.fixed_charges.sole }
+
+    before do
+      allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
+        .to receive(:create_payment_intent) do
+          Stripe::PaymentIntent.construct_from(
+            id: "pi_#{SecureRandom.hex(12)}", status: "processing", amount: 1000, currency: "eur"
+          )
+        end
+    end
+
+    # FixedCharges::CascadePlanUpdateJob only dispatches to child plans with active
+    # or pending subscriptions, so a child plan whose only subscription is incomplete
+    # is skipped entirely: no fixed-charge update, no event, no delta on activation.
+    # This documents the current behavior; the fix is tracked separately.
+    it "does not cascade the unit change to a child plan whose only subscription is incomplete" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        parent_fixed_charge
+        create_subscription(subscription_params.merge(plan_overrides: {name: "Child plan", amount_cents: 1500}))
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.plan.parent).to eq(plan)
+
+      child_fixed_charge = subscription.plan.fixed_charges.sole
+      expect(child_fixed_charge.parent).to eq(parent_fixed_charge)
+
+      # Mid-gap: the parent plan update cascades, but the child plan is skipped.
+      travel_to(Time.zone.local(2026, 3, 10, 10)) do
+        update_plan(
+          plan,
+          {
+            cascade_updates: true,
+            fixed_charges: [
+              {
+                id: parent_fixed_charge.id,
+                units: 15,
+                apply_units_immediately: true,
+                properties: {amount: "10"},
+                charge_model: "standard"
+              }
+            ]
+          }
+        )
+        perform_all_enqueued_jobs
+      end
+
+      expect(child_fixed_charge.reload.units).to eq(10)
+      expect(subscription.fixed_charge_events.count).to eq(1)
+
+      travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(1)
+    end
+  end
+
+  describe "per-subscription fixed-charge override while incomplete", :premium do
+    let(:add_on) { create(:add_on, organization:) }
+    let(:plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 1000) do |plan|
+        create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"})
+      end
+    end
+    let(:fixed_charge) { plan.fixed_charges.sole }
+
+    before do
+      allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
+        .to receive(:create_payment_intent) do
+          Stripe::PaymentIntent.construct_from(
+            id: "pi_#{SecureRandom.hex(12)}", status: "processing", amount: 1000, currency: "eur"
+          )
+        end
+    end
+
+    it "bills an override unit increase applied immediately as a delta invoice on activation" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        fixed_charge
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+      end
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.invoices.count).to eq(1)
+
+      # Mid-gap: the fixed charge is overridden for this subscription only.
+      travel_to(Time.zone.local(2026, 3, 10, 10)) do
+        Subscriptions::UpdateOrOverrideFixedChargeService.call!(
+          subscription:,
+          fixed_charge:,
+          params: {units: 15, apply_units_immediately: true}
+        )
+        perform_all_enqueued_jobs
+      end
+
+      subscription.reload
+      expect(subscription.plan.parent).to eq(plan)
+
+      override_fixed_charge = subscription.plan.fixed_charges.sole
+      expect(override_fixed_charge.parent).to eq(fixed_charge)
+      expect(subscription.invoices.count).to eq(1)
+
+      travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      subscription.reload
+      expect(subscription).to be_active
+      expect(subscription.invoices.count).to eq(2)
+
+      delta_fee = subscription.invoices.order(:created_at).last.fees.fixed_charge.sole
+      expect(delta_fee.fixed_charge).to eq(override_fixed_charge)
+      expect(delta_fee.units).to eq(5)
+    end
+  end
+
   describe "cross-period billing catch-up on activation" do
     let(:add_on) { create(:add_on, organization:) }
     let(:fixed_charge) do
@@ -362,13 +687,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription.invoices.count).to eq(1)
 
       # Mid-gap scheduled change: the event is stamped at the next period start (April 1).
-      FixedCharges::UpdateService.call!(
-        fixed_charge:,
-        params: {units: 15, charge_model: "standard", properties: {amount: "10"}},
-        timestamp: Time.zone.local(2026, 3, 10, 10).to_i,
-        trigger_billing: false
-      )
-      perform_all_enqueued_jobs
+      update_fixed_charge_units(fixed_charge, 15, timestamp: Time.zone.local(2026, 3, 10, 10), apply_units_immediately: false)
 
       # Payment succeeds after the period rolled over: the scheduled event is billed
       # by the replayed April periodic invoice.
@@ -407,22 +726,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription.invoices.count).to eq(1)
 
       # Mid-gap scheduled creation: the event is stamped at the next period start (April 1).
-      new_add_on = create(:add_on, organization:)
-      new_fixed_charge = FixedCharges::CreateService.call!(
-        plan:,
-        params: {
-          add_on_id: new_add_on.id,
-          code: FixedCharges::GenerateCodeService.call(plan:, add_on: new_add_on).code,
-          invoice_display_name: "Extra seats",
-          charge_model: "standard",
-          units: 3,
-          properties: {amount: "10"},
-          pay_in_advance: true,
-          apply_units_immediately: false
-        },
-        timestamp: Time.zone.local(2026, 3, 10, 10).to_i
-      ).fixed_charge
-      perform_all_enqueued_jobs
+      new_fixed_charge = create_fixed_charge(plan, 3, timestamp: Time.zone.local(2026, 3, 10, 10), apply_units_immediately: false)
 
       # Payment succeeds after the period rolled over: the scheduled event is billed
       # by the replayed April periodic invoice.
@@ -1002,7 +1306,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       )
     end
 
-    it "expires the gated subscription with cancelation_reason: timeout" do
+    it "expires the gated subscription with cancellation_reason: timeout" do
       # Stage 1: Create gated subscription
       create_subscription(subscription_params)
       perform_all_enqueued_jobs
@@ -1023,7 +1327,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       subscription.reload
       expect(subscription).to be_canceled
-      expect(subscription.cancelation_reason).to eq("timeout")
+      expect(subscription.cancellation_reason).to eq("timeout")
       expect(subscription.activation_rules.sole).to be_expired
 
       expect(invoice.reload).to be_closed
@@ -1273,6 +1577,25 @@ describe "Payment Gated Subscription Activation Scenarios" do
       create(:plan, organization:, interval: "monthly", pay_in_advance: false, amount_cents: 500)
     end
     let(:upgrade_external_id) { "upgrade-sub-#{SecureRandom.hex(4)}" }
+    let(:add_on) { create(:add_on, organization:) }
+    let(:plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 1000) do |plan|
+        create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"})
+      end
+    end
+    let(:fixed_charge) { plan.fixed_charges.sole }
+
+    # These scenarios can span several days, so the upgrading invoice for the
+    # previous subscription is non-zero and triggers a second payment intent —
+    # return a unique id per call, as Stripe does.
+    before do
+      allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
+        .to receive(:create_payment_intent) do
+          Stripe::PaymentIntent.construct_from(
+            id: "pi_#{SecureRandom.hex(12)}", status: "processing", amount: 1000, currency: "eur"
+          )
+        end
+    end
 
     it "gates the upgrade, then terminates previous and activates new on payment success" do
       # Stage 1: Create initial active subscription on cheaper pay-in-arrears plan (no rules)
@@ -1321,6 +1644,93 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(new_subscription.activation_rules.sole).to be_satisfied
       expect(invoice.reload).to be_finalized
     end
+
+    it "bills a unit increase applied immediately as a delta invoice on activation" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        # Stage 1: initial active subscription on the cheaper pay-in-arrears plan (no rules)
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: upgrade_external_id,
+          plan_code: previous_plan.code,
+          billing_time: "calendar"
+        })
+        perform_all_enqueued_jobs
+
+        # Stage 2: gated upgrade to the pricier pay-in-advance plan with a payment activation rule
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: upgrade_external_id,
+          plan_code: plan.code,
+          billing_time: "calendar",
+          activation_rules: [{type: "payment", timeout_hours: 48}]
+        })
+        perform_all_enqueued_jobs
+      end
+
+      previous_subscription = customer.subscriptions.where(plan: previous_plan).sole
+      new_subscription = customer.subscriptions.where(plan:).sole
+      expect(new_subscription).to be_incomplete
+      expect(new_subscription.invoices.count).to eq(1)
+
+      update_fixed_charge_units(fixed_charge, 15, timestamp: Time.zone.local(2026, 3, 10, 10))
+
+      travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      new_subscription.reload
+      expect(new_subscription).to be_active
+      expect(previous_subscription.reload).to be_terminated
+      expect(new_subscription.invoices.count).to eq(2)
+
+      delta_invoice = new_subscription.invoices.order(:created_at).last
+      expect(delta_invoice.fees.fixed_charge.sole.units).to eq(5)
+    end
+
+    it "defers a unit change scheduled for the next billing period until the following billing run on cross-period activation" do
+      travel_to(Time.zone.local(2026, 3, 1, 10)) do
+        # Stage 1: initial active subscription on the cheaper pay-in-arrears plan (no rules)
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: upgrade_external_id,
+          plan_code: previous_plan.code,
+          billing_time: "calendar"
+        })
+        perform_all_enqueued_jobs
+
+        # Stage 2: gated upgrade to the pricier pay-in-advance plan with a payment activation rule
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: upgrade_external_id,
+          plan_code: plan.code,
+          billing_time: "calendar",
+          activation_rules: [{type: "payment", timeout_hours: 48}]
+        })
+        perform_all_enqueued_jobs
+      end
+
+      previous_subscription = customer.subscriptions.where(plan: previous_plan).sole
+      new_subscription = customer.subscriptions.where(plan:).sole
+      expect(new_subscription).to be_incomplete
+
+      # Scheduled change: the event is stamped at the next period start (April 1).
+      update_fixed_charge_units(fixed_charge, 15, timestamp: Time.zone.local(2026, 3, 10, 10), apply_units_immediately: false)
+
+      travel_to(Time.zone.local(2026, 4, 3, 10)) { simulate_stripe_webhook(status: "succeeded") }
+
+      new_subscription.reload
+      expect(new_subscription).to be_active
+      expect(previous_subscription.reload).to be_terminated
+
+      # No delta invoice and no missed-period invoice for the upgraded subscription:
+      # the previous subscription covered the service until activation.
+      expect(new_subscription.invoices.count).to eq(1)
+
+      # The next regular billing run reflects the scheduled units.
+      travel_to(Time.zone.local(2026, 5, 1, 1)) { perform_billing }
+
+      expect(new_subscription.invoices.count).to eq(2)
+      periodic_invoice = new_subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
+    end
   end
 
   describe "plan upgrade with payment failure" do
@@ -1364,7 +1774,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       previous_subscription.reload
       new_subscription.reload
       expect(new_subscription).to be_canceled
-      expect(new_subscription.cancelation_reason).to eq("payment_failed")
+      expect(new_subscription.cancellation_reason).to eq("payment_failed")
       expect(new_subscription.activation_rules.sole).to be_failed
       expect(previous_subscription).to be_active
       expect(invoice.reload).to be_closed
@@ -1376,6 +1786,13 @@ describe "Payment Gated Subscription Activation Scenarios" do
       create(:plan, organization:, interval: "monthly", pay_in_advance: false, amount_cents: 2000)
     end
     let(:downgrade_external_id) { "downgrade-sub-#{SecureRandom.hex(4)}" }
+    let(:add_on) { create(:add_on, organization:) }
+    let(:plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 1000) do |plan|
+        create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"})
+      end
+    end
+    let(:fixed_charge) { plan.fixed_charges.sole }
 
     # This scenario spans a real billing period, so terminating the previous subscription on
     # activation produces a non-zero invoice and thus a second payment intent.
@@ -1457,6 +1874,113 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(new_subscription.activation_rules.sole).to be_satisfied
       expect(invoice.reload).to be_finalized
     end
+
+    it "bills a unit increase applied immediately as a delta invoice on activation" do
+      # Stage 1: active subscription on the pricier plan (no rules)
+      travel_to(DateTime.new(2026, 1, 10)) do
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: downgrade_external_id,
+          plan_code: previous_plan.code,
+          billing_time: "calendar"
+        })
+        perform_all_enqueued_jobs
+      end
+
+      # Stage 2: downgrade to the cheaper pay-in-advance plan with a payment activation rule.
+      # The downgrade is created pending and only activated at the next billing day.
+      travel_to(DateTime.new(2026, 1, 20)) do
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: downgrade_external_id,
+          plan_code: plan.code,
+          billing_time: "calendar",
+          activation_rules: [{type: "payment", timeout_hours: 48}]
+        })
+        perform_all_enqueued_jobs
+      end
+
+      # Stage 3: next billing day — the rotation gates the pending downgrade.
+      travel_to(DateTime.new(2026, 2, 1)) { perform_billing }
+
+      previous_subscription = customer.subscriptions.where(plan: previous_plan).sole
+      new_subscription = customer.subscriptions.where(plan:).sole
+      expect(new_subscription).to be_incomplete
+
+      gated_invoice = new_subscription.invoices.sole
+      expect(gated_invoice.fees.fixed_charge.sole.units).to eq(10)
+
+      update_fixed_charge_units(fixed_charge, 15, timestamp: DateTime.new(2026, 2, 10))
+
+      travel_to(DateTime.new(2026, 2, 20)) do
+        simulate_stripe_webhook(status: "succeeded", invoice: gated_invoice)
+      end
+
+      new_subscription.reload
+      expect(new_subscription).to be_active
+      expect(previous_subscription.reload).to be_terminated
+      expect(new_subscription.invoices.count).to eq(2)
+
+      delta_invoice = new_subscription.invoices.order(:created_at).last
+      expect(delta_invoice.fees.fixed_charge.sole.units).to eq(5)
+    end
+
+    it "defers a unit change scheduled for the next billing period until the following billing run on cross-period activation" do
+      # Stage 1: active subscription on the pricier plan (no rules)
+      travel_to(DateTime.new(2026, 1, 10)) do
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: downgrade_external_id,
+          plan_code: previous_plan.code,
+          billing_time: "calendar"
+        })
+        perform_all_enqueued_jobs
+      end
+
+      # Stage 2: downgrade to the cheaper pay-in-advance plan with a payment activation rule.
+      # The downgrade is created pending and only activated at the next billing day.
+      travel_to(DateTime.new(2026, 1, 20)) do
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: downgrade_external_id,
+          plan_code: plan.code,
+          billing_time: "calendar",
+          activation_rules: [{type: "payment", timeout_hours: 48}]
+        })
+        perform_all_enqueued_jobs
+      end
+
+      # Stage 3: next billing day — the rotation gates the pending downgrade.
+      travel_to(DateTime.new(2026, 2, 1)) { perform_billing }
+
+      previous_subscription = customer.subscriptions.where(plan: previous_plan).sole
+      new_subscription = customer.subscriptions.where(plan:).sole
+      expect(new_subscription).to be_incomplete
+
+      gated_invoice = new_subscription.invoices.sole
+
+      # Scheduled change: the event is stamped at the next period start (March 1).
+      update_fixed_charge_units(fixed_charge, 15, timestamp: DateTime.new(2026, 2, 10), apply_units_immediately: false)
+
+      travel_to(DateTime.new(2026, 3, 5)) do
+        simulate_stripe_webhook(status: "succeeded", invoice: gated_invoice)
+      end
+
+      new_subscription.reload
+      expect(new_subscription).to be_active
+      expect(previous_subscription.reload).to be_terminated
+
+      # No delta invoice and no missed-period invoice for the downgraded subscription:
+      # the previous subscription covered the service until activation.
+      expect(new_subscription.invoices.count).to eq(1)
+
+      # The next regular billing run reflects the scheduled units.
+      travel_to(DateTime.new(2026, 4, 1)) { perform_billing }
+
+      expect(new_subscription.invoices.count).to eq(2)
+      periodic_invoice = new_subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
+    end
   end
 
   describe "plan downgrade with payment failure", transaction: false do
@@ -1514,7 +2038,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       previous_subscription.reload
       new_subscription.reload
       expect(new_subscription).to be_canceled
-      expect(new_subscription.cancelation_reason).to eq("payment_failed")
+      expect(new_subscription.cancellation_reason).to eq("payment_failed")
       expect(new_subscription.activation_rules.sole).to be_failed
       expect(previous_subscription).to be_active
       expect(invoice.reload).to be_closed

@@ -72,6 +72,73 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
         expect(result.fixed_charge.units).to eq(10)
       end
 
+      context "when units is negative" do
+        let(:params) { {units: "-1"} }
+
+        it "returns a validation failure" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+        end
+      end
+
+      context "when updating units with apply_units_immediately" do
+        let(:params) do
+          {
+            invoice_display_name: "Overridden Fixed Charge",
+            units: "10",
+            apply_units_immediately: true
+          }
+        end
+
+        context "with a pay in advance fixed charge" do
+          let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, pay_in_advance: true) }
+
+          it "schedules a Invoices::CreatePayInAdvanceFixedChargesJob" do
+            expect { service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
+
+          context "when the subscription is payment-gated" do
+            let(:subscription) { create(:subscription, :incomplete, customer:, plan:) }
+
+            before { create(:subscription_activation_rule, subscription:, organization:, status: :pending) }
+
+            it "does not schedule a Invoices::CreatePayInAdvanceFixedChargesJob" do
+              expect { service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+            end
+          end
+        end
+
+        context "with a pay in arrears fixed charge" do
+          it "does not schedule a Invoices::CreatePayInAdvanceFixedChargesJob" do
+            expect { service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
+        end
+      end
+
+      context "when apply_units_immediately is false" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, pay_in_advance: true) }
+
+        it "does not schedule a Invoices::CreatePayInAdvanceFixedChargesJob" do
+          expect { service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+        end
+      end
+
+      context "when units are not updated" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, pay_in_advance: true) }
+        let(:params) do
+          {
+            invoice_display_name: "Overridden Fixed Charge",
+            apply_units_immediately: true
+          }
+        end
+
+        it "does not schedule a Invoices::CreatePayInAdvanceFixedChargesJob" do
+          expect { service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+        end
+      end
+
       context "when subscription is nil" do
         let(:subscription) { nil }
 

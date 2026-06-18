@@ -15,7 +15,8 @@ module EInvoices
         xml.Invoice(INVOICE_NAMESPACES) do
           xml.comment "UBL Version and Customization"
           xml["cbc"].UBLVersionID "2.1"
-          xml["cbc"].CustomizationID "urn:cen.eu:en16931:2017"
+          xml["cbc"].CustomizationID customization_id
+          xml["cbc"].ProfileID PEPPOL_BIS_BILLING_PROFILE if de_billing_entity?
 
           Ubl::Header.serialize(xml:, resource:, type_code: invoice_type_code)
           Ubl::SupplierParty.serialize(xml:, resource:, options: supplier_party_options)

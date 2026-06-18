@@ -150,7 +150,19 @@ Rails.application.routes.draw do
       resources :payment_requests, only: %i[create index show]
       resources :order_forms, only: %i[show index] do
         post :mark_as_signed, on: :member
+        post :void, on: :member
       end
+
+      resources :quotes, only: %i[index show] do
+        resources :versions, only: %i[index], controller: "quotes/versions"
+      end
+      resources :quote_versions, only: %i[show] do
+        post :approve, on: :member
+        post :void, on: :member
+        post :clone, on: :member
+      end
+
+      resources :orders, only: %i[show index]
       resources :payments, only: %i[create index show]
       resources :plans, param: :code, code: /.*/ do
         resources :charges, only: %i[index show create update destroy], param: :code, code: /.*/, controller: "plans/charges" do

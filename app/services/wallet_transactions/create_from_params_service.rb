@@ -73,8 +73,8 @@ module WalletTransactions
 
       result.wallet_transactions = transactions
       result
-    rescue BaseService::FailedResult
-      result
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     rescue ActiveRecord::StaleObjectError
       if @update_attempts <= MAX_WALLET_UPDATE_ATTEMPTS
         sleep(rand(0.1..0.5))

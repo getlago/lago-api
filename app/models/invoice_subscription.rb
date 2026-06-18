@@ -48,6 +48,10 @@ class InvoiceSubscription < ApplicationRecord
   # NOTE: Billed automatically by the recurring billing process
   #       It is used to prevent double billing on billing day
   scope :recurring, -> { where(recurring: true) }
+  scope :starting_from, ->(datetime) {
+    where("from_datetime >= ?", datetime)
+      .order(Arel.sql("COALESCE(to_datetime, timestamp) ASC"))
+  }
 
   def self.matching?(subscription, boundaries, recurring: true)
     base_query = InvoiceSubscription

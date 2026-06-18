@@ -32,6 +32,7 @@ module BillingEntities
       end
       billing_entity.address_line1 = params[:address_line1] if params.key?(:address_line1)
       billing_entity.address_line2 = params[:address_line2] if params.key?(:address_line2)
+      billing_entity.phone = params[:phone] if params.key?(:phone)
       billing_entity.zipcode = params[:zipcode] if params.key?(:zipcode)
       billing_entity.city = params[:city] if params.key?(:city)
       billing_entity.state = params[:state] if params.key?(:state)

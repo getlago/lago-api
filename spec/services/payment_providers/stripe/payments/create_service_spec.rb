@@ -108,6 +108,15 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       expect(Stripe::PaymentIntent).to have_received(:create)
     end
 
+    context "when the invoice has already been paid" do
+      before { invoice.update!(payment_status: :succeeded) }
+
+      it "raises AlreadyPaidError and does not create a payment intent" do
+        expect { create_service.call }.to raise_error(Invoices::Payments::AlreadyPaidError)
+        expect(Stripe::PaymentIntent).not_to have_received(:create)
+      end
+    end
+
     context "when multiple payment methods are enabled" do
       let(:default_payment_method) { create(:payment_method, customer:, provider_method_id: "pm_123456") }
 

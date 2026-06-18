@@ -64,7 +64,8 @@ module Credits
     attr_reader :invoice
 
     def apply_credit_to_fees(progressive_billing_invoice)
-      invoice_fees = invoice.fees.charge.to_a
+      # Use the loaded association so the credit stays visible to the caller's in-memory fees.
+      invoice_fees = invoice.fees.select(&:charge?)
       progressive_billing_invoice.fees.charge.each do |progressive_fee|
         fee = invoice_fees.find { |f|
           f.charge_id == progressive_fee.charge_id &&

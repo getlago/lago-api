@@ -8,6 +8,10 @@ module Clock
     # NOTE: Manual batching is used instead of `in_batches` because the table can contain
     #   millions of rows. `in_batches` adds `ORDER BY id` which prevents PostgreSQL from
     #   using the covering index on `(updated_at) INCLUDE (id)`.
+    #
+    # NOTE: This only removes the database rows. The payload/response blobs stored on object
+    #   storage under `webhooks/<date>/<uuid>/` (see Webhook#store_payload) are NOT deleted
+    #   here. You should configure a bucket lifecycle rule to delete blobs older than `retention_period`.
     def perform
       loop do
         result = Webhook.where(

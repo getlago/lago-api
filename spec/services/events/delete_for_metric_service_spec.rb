@@ -73,6 +73,42 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
       end
     end
 
+    context "with charge-usage cache invalidation" do
+      it "expires the charge-usage cache for each (subscription, charge) of each affected subscription" do
+        allow(Subscriptions::ChargeCacheService).to receive(:expire_for_subscription_charge).and_call_original
+
+        service.call
+
+        expect(Subscriptions::ChargeCacheService)
+          .to have_received(:expire_for_subscription_charge)
+          .with(subscription: having_attributes(id: subscription.id), charge: having_attributes(id: charge.id))
+      end
+
+      context "when a cached usage value has already been written", cache: :memory do
+        let(:cache_key) do
+          [
+            "charge-usage",
+            Subscriptions::ChargeCacheService::CACHE_KEY_VERSION,
+            charge.id,
+            subscription.id,
+            charge.updated_at.iso8601
+          ].join("/")
+        end
+
+        before do
+          Rails.cache.write(cache_key, '[{"amount_cents":3000}]')
+        end
+
+        it "invalidates the cached usage so a subsequent read recomputes without the deleted metric" do
+          expect(Rails.cache.exist?(cache_key)).to be true
+
+          service.call
+
+          expect(Rails.cache.exist?(cache_key)).to be false
+        end
+      end
+    end
+
     context "with clickhouse events" do
       include_context "with clickhouse availability"
 
@@ -171,6 +207,27 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
           .to eq(0)
         expect(Clickhouse::EventsEnrichedExpanded.where(transaction_id: not_impacted_ch_enriched_expanded_event.transaction_id).count)
           .to eq(1)
+      end
+
+      context "when the subscription list exceeds CLICKHOUSE_BATCH_SIZE" do
+        # delete_clickhouse_events slices the id list into CLICKHOUSE_BATCH_SIZE
+        # chunks before inlining it into the ALTER TABLE … DELETE statement,
+        # so a query never blows past ClickHouse's `max_query_size`. Stubbing
+        # the constant to 1 forces two subscriptions to be sliced across two
+        # CH queries per table × three tables = 6 calls.
+        let(:second_subscription) { create(:subscription, customer: subscription.customer, plan: subscription.plan) }
+
+        before do
+          second_subscription
+          stub_const("#{described_class}::CLICKHOUSE_BATCH_SIZE", 1)
+          allow(::Clickhouse::BaseRecord.connection).to receive(:execute).and_call_original
+        end
+
+        it "slices the IN(?) list into CLICKHOUSE_BATCH_SIZE chunks" do
+          service.call
+
+          expect(::Clickhouse::BaseRecord.connection).to have_received(:execute).exactly(6).times
+        end
       end
 
       context "with clickhouse events received after the metric deletion" do
