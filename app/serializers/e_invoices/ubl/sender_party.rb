@@ -20,7 +20,7 @@ module EInvoices
           end
           xml["cac"].PostalAddress do
             xml["cbc"].StreetName billing_entity.address_line1
-            xml["cbc"].AdditionalStreetName billing_entity.address_line2
+            xml["cbc"].AdditionalStreetName billing_entity.address_line2 if billing_entity.address_line2.present?
             xml["cbc"].CityName billing_entity.city
             xml["cbc"].PostalZone billing_entity.zipcode
             xml["cac"].Country do
