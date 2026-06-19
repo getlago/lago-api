@@ -1189,11 +1189,10 @@ describe "Invoice Numbering Scenario", transaction: false do
           }
         )
 
-        invoices = customer.reload.invoices.order(created_at: :asc)
+        invoices = customer.reload.invoices
 
-        expect(invoices.pluck(:billing_entity_id))
-          .to eq([billing_entity_first.id, billing_entity_second.id])
-        expect(invoices.pluck(:sequential_id)).to eq([1, 1])
+        expect(invoices.where(billing_entity: billing_entity_first).pluck(:sequential_id)).to eq([1])
+        expect(invoices.where(billing_entity: billing_entity_second).pluck(:sequential_id)).to eq([1])
         expect(invoices.pluck(:number))
           .to match_array(%w[BENT-1-001-001 BENT-2-001-001])
       end
