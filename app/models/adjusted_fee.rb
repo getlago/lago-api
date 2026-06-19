@@ -32,6 +32,12 @@ class AdjustedFee < ApplicationRecord
 
   enum :fee_type, Fee::FEE_TYPES
 
+  scope :matching_charge_boundaries, ->(boundaries) {
+    where(fee_type: :charge)
+      .where("(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3))
+      .where("(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3))
+  }
+
   def adjusted_display_name?
     adjusted_units.blank? && adjusted_amount.blank?
   end
