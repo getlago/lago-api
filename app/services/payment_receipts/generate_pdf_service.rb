@@ -70,7 +70,7 @@ module PaymentReceipts
     end
 
     def should_generate_cii_einvoice_xml?
-      payment_receipt.billing_entity.einvoicing && BillingEntity::EINVOICING_COUNTRIES.include?(payment_receipt.billing_entity.country.try(:upcase))
+      payment_receipt.billing_entity.eligible_for_einvoicing?
     end
 
     def should_generate_pdf?
