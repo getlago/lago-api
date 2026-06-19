@@ -397,6 +397,8 @@ RSpec.describe Events::BillingPeriodFilterService do
 
   describe "#call" do
     context "when relying on event codes" do
+      before { organization.enable_feature_flag!(:event_property_combinations) }
+
       it "returns the filtered charge_ids" do
         result = filter_service.call
 
@@ -482,11 +484,63 @@ RSpec.describe Events::BillingPeriodFilterService do
 
           before { charge_filter2 }
 
-          it "returns charges and filters for all billable metrics with matching events" do
+          it "returns the filters that the events can match" do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id, charge_filter2.id, nil)})
+            expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id, charge_filter2.id)})
+          end
+        end
+
+        context "when events only match a subset of the charge filters" do
+          let(:charge_filter) { create(:charge_filter, charge:) }
+          let(:billable_metric_filter) do
+            create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
+          end
+          let(:charge_filter_value) do
+            create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+          end
+
+          let(:charge_filter_us) { create(:charge_filter, charge:) }
+          let(:charge_filter_us_value) do
+            create(:charge_filter_value, charge_filter: charge_filter_us, billable_metric_filter:, values: ["us"])
+          end
+
+          before { charge_filter_us_value }
+
+          it "returns only the filters that received matching events" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to eq({charge.id => [charge_filter.id]})
+          end
+        end
+
+        context "when an event matches no charge filter" do
+          let(:charge_filter) { create(:charge_filter, charge:) }
+          let(:billable_metric_filter) do
+            create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
+          end
+          let(:charge_filter_value) do
+            create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+          end
+
+          before do
+            create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              timestamp: boundaries.charges_from_datetime + 6.days,
+              code: billable_metric.code,
+              properties: {"region" => "us"}
+            )
+          end
+
+          it "returns the default filter for the unmatched usage" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id, nil)})
           end
         end
       end
@@ -554,12 +608,51 @@ RSpec.describe Events::BillingPeriodFilterService do
       end
 
       it "scopes the event store query to the plan billable metric codes" do
-        event_store = instance_double(Events::Stores::PostgresStore, distinct_codes: [])
+        event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
         allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
 
         filter_service.call
 
-        expect(event_store).to have_received(:distinct_codes).with(codes: [billable_metric.code])
+        expect(event_store).to have_received(:distinct_codes_and_property_combinations)
+          .with(codes: [billable_metric.code], filter_keys: [])
+      end
+
+      context "when the event_property_combinations feature flag is disabled" do
+        let(:charge_filter) { create(:charge_filter, charge:) }
+        let(:billable_metric_filter) do
+          create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
+        end
+        let(:charge_filter_value) do
+          create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+        end
+
+        let(:charge_filter_us) { create(:charge_filter, charge:) }
+        let(:charge_filter_us_value) do
+          create(:charge_filter_value, charge_filter: charge_filter_us, billable_metric_filter:, values: ["us"])
+        end
+
+        before do
+          organization.disable_feature_flag!(:event_property_combinations)
+
+          charge_filter_value
+          charge_filter_us_value
+
+          create(
+            :event,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            timestamp: boundaries.charges_from_datetime + 5.days,
+            code: billable_metric.code,
+            properties: {"region" => "eu"}
+          )
+        end
+
+        it "falls back to every filter of the charges that received events" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id, charge_filter_us.id, nil)})
+        end
       end
     end
 

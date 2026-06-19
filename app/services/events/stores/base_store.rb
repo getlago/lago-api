@@ -67,6 +67,10 @@ module Events
         raise NotImplementedError
       end
 
+      def distinct_codes_and_property_combinations(codes:, filter_keys:)
+        nil
+      end
+
       def prorated_events_values(total_duration)
         raise NotImplementedError
       end
