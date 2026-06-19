@@ -15,21 +15,30 @@ module ChargeFilters
       super
     end
 
+    BATCH_SIZE = 1_000
+
     def call
-      charge.children
-        .joins(plan: :subscriptions)
-        .where(subscriptions: {status: %w[active pending]})
-        .distinct.find_each do |child_charge|
+      # NOTE: The cascade runs one job per changed filter
+      # Each job has a single target (filter_values), so the matching child filter
+      # is resolved for a whole batch of children in one query rather than loading
+      # every child's full filter set, which keeps each job lightweight.
+      child_ids.each_slice(BATCH_SIZE) do |ids|
+        matches = matching_child_filters(ids)
+
+        Charge.where(id: ids).includes(:billable_metric).find_each do |child_charge|
           Charge.no_touching do
             Plan.no_touching do
+              child_filter = matches[child_charge.id]
+
               case action
-              when "update" then update_child_filter(child_charge)
-              when "create" then create_child_filter(child_charge)
-              when "destroy" then destroy_child_filter(child_charge)
+              when "update" then update_child_filter(child_charge, child_filter)
+              when "create" then create_child_filter(child_charge, child_filter)
+              when "destroy" then destroy_child_filter(child_filter)
               end
             end
           end
         end
+      end
 
       result
     end
@@ -38,8 +47,38 @@ module ChargeFilters
 
     attr_reader :charge, :action, :filter_values, :old_properties, :new_properties, :invoice_display_name
 
-    def update_child_filter(child_charge)
-      child_filter = find_child_filter(child_charge)
+    def child_ids
+      @child_ids ||= charge.children
+        .joins(plan: :subscriptions)
+        .where(subscriptions: {status: %w[active pending]})
+        .distinct.pluck(:id)
+    end
+
+    # Resolve the child filter matching filter_values for an entire batch of
+    # children in two bounded queries: narrow candidates by a shared value via the
+    # database, then confirm the exact match in Ruby. This avoids both loading each
+    # child's full filter set (memory) and querying once per child (N+1).
+    def matching_child_filters(batch_child_ids)
+      _key, values = filter_values.first
+      return {} if values.blank?
+
+      candidate_ids = ChargeFilter
+        .where(charge_id: batch_child_ids)
+        .joins(:values)
+        .where("charge_filter_values.values && ARRAY[?]::varchar[]", values)
+        .unscope(:order)
+        .distinct
+        .pluck(:id)
+      return {} if candidate_ids.empty?
+
+      ChargeFilter
+        .where(id: candidate_ids)
+        .includes(values: :billable_metric_filter)
+        .select { |filter| filter.to_h == filter_values }
+        .index_by(&:charge_id)
+    end
+
+    def update_child_filter(child_charge, child_filter)
       return unless child_filter
 
       if filter_customized?(child_filter)
@@ -56,8 +95,8 @@ module ChargeFilters
       child_filter.save!
     end
 
-    def create_child_filter(child_charge)
-      return if find_child_filter(child_charge)
+    def create_child_filter(child_charge, existing_filter)
+      return if existing_filter
 
       # NOTE: Resolve against the current state of the billable metric filters
       # to avoid any changes that may have occurred since the job was enqueued
@@ -102,18 +141,11 @@ module ChargeFilters
         .index_by(&:key)
     end
 
-    def destroy_child_filter(child_charge)
-      child_filter = find_child_filter(child_charge)
+    def destroy_child_filter(child_filter)
       return unless child_filter
 
       child_filter.values.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       child_filter.discard!
-    end
-
-    def find_child_filter(child_charge)
-      child_charge.filters.includes(values: :billable_metric_filter).find do |f|
-        f.to_h == filter_values
-      end
     end
 
     def filter_customized?(child_filter)

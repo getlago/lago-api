@@ -49,6 +49,36 @@ RSpec.describe ChargeFilters::CascadeService do
         )
       end
 
+      context "with several children" do
+        let(:other_child_plan) { create(:plan, organization:, parent: parent_plan) }
+        let(:other_child_charge) do
+          create(:standard_charge, plan: other_child_plan, billable_metric:, parent: parent_charge, properties: {amount: "0"})
+        end
+
+        let(:other_child_filter) do
+          create(:charge_filter, charge: other_child_charge, invoice_display_name: "US region", properties: {amount: "10"})
+        end
+
+        # A filter on a different value that must not be matched by the cascade
+        let(:unrelated_filter) do
+          create(:charge_filter, charge: child_charge, invoice_display_name: "EU region", properties: {amount: "99"})
+        end
+
+        before do
+          create(:subscription, plan: other_child_plan, status: :active)
+          create(:charge_filter_value, charge_filter: other_child_filter, billable_metric_filter: bm_filter, values: ["us"])
+          create(:charge_filter_value, charge_filter: unrelated_filter, billable_metric_filter: bm_filter, values: ["eu"])
+        end
+
+        it "updates the matching filter on every child and leaves others untouched" do
+          service
+
+          expect(child_filter.reload.properties).to eq({"amount" => "15"})
+          expect(other_child_filter.reload.properties).to eq({"amount" => "15"})
+          expect(unrelated_filter.reload.properties).to eq({"amount" => "99"})
+        end
+      end
+
       context "when child filter was customized" do
         let!(:child_filter) do
           filter = create(:charge_filter, charge: child_charge, invoice_display_name: "Custom", properties: {amount: "99"})
