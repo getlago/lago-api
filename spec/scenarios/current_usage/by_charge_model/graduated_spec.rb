@@ -42,22 +42,22 @@ describe "Charge Models - Graduated Scenarios" do
           # First call exercises the previously-crashing hydrate_non_persistable_fees path
           # for current usage when there are no persistable fees.
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(12_000)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
-          expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(0)
+          expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(10_000)
 
           # Second call proves stability across repeated invocations, matching the
           # daily DailyUsages::ComputeJob invocation pattern.
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(12_000)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
-          expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(0)
+          expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(10_000)
         end
       end
     end
 
     describe "prorated graduated with no events (ING-13 regression)" do
-      it "returns zero customer usage without raising (factory falls back from ProratedGraduatedService to GraduatedService)" do
+      it "returns the first-tier flat fee without raising (factory falls back from ProratedGraduatedService to GraduatedService)" do
         travel_to(DateTime.new(2024, 3, 5)) do
           create_subscription(
             {
@@ -83,14 +83,14 @@ describe "Charge Models - Graduated Scenarios" do
 
         travel_to(DateTime.new(2024, 3, 6)) do
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(12_000)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
-          expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(0)
+          expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(10_000)
 
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:total_amount_cents]).to eq(0)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(12_000)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
-          expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(0)
+          expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(10_000)
         end
       end
     end

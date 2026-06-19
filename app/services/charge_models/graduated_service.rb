@@ -26,6 +26,11 @@ module ChargeModels
     end
 
     def compute_amount
+      # Pay-in-advance fees are computed as a delta: charge_model(after) - charge_model(before).
+      # When before=0, returning the flat fee here would subtract it from the delta, so the
+      # first event would never be charged the flat fee. Return 0 to keep the delta correct.
+      return 0 if units.zero? && properties[:exclude_event]
+
       amount_details.fetch(:graduated_ranges).sum { |e| e[:total_with_flat_amount] }
     end
 
