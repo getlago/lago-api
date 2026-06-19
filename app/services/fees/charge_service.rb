@@ -2,6 +2,8 @@
 
 module Fees
   class ChargeService < BaseService
+    include BuildFastActiveRecord
+
     # optional params:
     # | usage_filters - UsageFilters
     #  - context (:current_usage, :invoice_preview, :recurring) - to be moved in usage_filters
@@ -139,6 +141,7 @@ module Fees
       fees.each do |fee|
         fee.association(:billable_metric).target = billable_metric
         fee.association(:charge_filter).target = charge_filter if charge_filter&.id
+        fee.association(:charge).target = charge
       end
 
       result.fees.concat(fees.compact)
@@ -179,6 +182,27 @@ module Fees
       end.compact
     end
 
+    def build_breakdowns_for_fee(fee:, breakdowns_by_group:)
+      grouped_by = fee.grouped_by
+
+      breakdowns = (breakdowns_by_group[grouped_by] || []).map do |breakdown|
+        presentation_breakdown = build_fast_record(
+          PresentationBreakdown,
+          {
+            "presentation_by" => breakdown[:groups],
+            "units" => breakdown[:value],
+            "organization_id" => charge.organization_id
+          },
+          true
+        )
+
+        presentation_breakdown.association(:organization).target = organization
+        presentation_breakdown
+      end
+
+      fee.presentation_breakdowns = breakdowns
+    end
+
     def applicable_adjusted_fee(amount_result:, charge_filter:)
       return nil if current_usage
       return nil unless invoice&.draft?
@@ -189,30 +213,29 @@ module Fees
       adjusted
     end
 
-    def build_breakdowns_for_fee(fee:, breakdowns_by_group:)
-      grouped_by = fee.grouped_by
-
-      (breakdowns_by_group[grouped_by] || []).map do |breakdown|
-        fee.presentation_breakdowns.build(
-          presentation_by: breakdown[:groups],
-          units: breakdown[:value],
-          organization_id: charge.organization_id
-        )
-      end
-    end
-
     def breakdowns_by_grouped_by(breakdowns, charge_model_result)
-      charge_model_result.grouped_results.each_with_object({}) do |grouped_result, memo|
+      grouped_bys = charge_model_result.grouped_results.each_with_object(Set.new) do |grouped_result, memo|
         grouped_by = grouped_result.grouped_by || {}
-        next if memo.key?(grouped_by)
-
-        grouped_by_keys = grouped_by.keys
-        memo[grouped_by] = Array(breakdowns)
-          .lazy
-          .select { |b| b[:groups].slice(*grouped_by_keys) == grouped_by }
-          .map { |b| {groups: b[:groups].except(*grouped_by_keys), value: b[:value]} }
-          .to_a
+        memo.add(grouped_by)
       end
+
+      result = grouped_bys.index_with { [] }
+
+      grouped_bys.group_by(&:keys).each do |grouped_by_keys, grouped_bys_for_keys|
+        grouped_by_lookup = grouped_bys_for_keys.to_set
+
+        Array(breakdowns).each do |breakdown|
+          grouped_by = breakdown[:groups].slice(*grouped_by_keys)
+          next unless grouped_by_lookup.include?(grouped_by)
+
+          result[grouped_by] << {
+            groups: breakdown[:groups].except(*grouped_by_keys),
+            value: breakdown[:value]
+          }
+        end
+      end
+
+      result
     end
 
     def filter_non_persistable_fees_for_caching(charge_fees)
@@ -246,11 +269,11 @@ module Fees
 
       # NOTE: amount_result should be a BigDecimal, we need to round it
       # to the currency decimals and transform it into currency cents
-      if charge.applied_pricing_unit
+      if (applied_pricing_unit = charge.applied_pricing_unit)
         pricing_unit_usage = PricingUnitUsage.build_from_fiat_amounts(
           amount: amount_result.amount,
           unit_amount: amount_result.unit_amount,
-          applied_pricing_unit: charge.applied_pricing_unit
+          applied_pricing_unit:
         )
 
         amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage
@@ -356,8 +379,8 @@ module Fees
       fee = result.fees.find { |f| f.charge_filter_id.nil? }
 
       if charge.applied_pricing_unit
-        used_amount_cents = result.fees.map(&:pricing_unit_usage).sum(&:amount_cents)
-        used_precise_amount_cents = result.fees.map(&:pricing_unit_usage).sum(&:precise_amount_cents)
+        used_amount_cents = result.fees.sum { |f| f.pricing_unit_usage.amount_cents }
+        used_precise_amount_cents = result.fees.sum { |f| f.pricing_unit_usage.precise_amount_cents }
       else
         used_amount_cents = result.fees.sum(&:amount_cents)
         used_precise_amount_cents = result.fees.sum(&:precise_amount_cents)
