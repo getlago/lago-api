@@ -46,7 +46,7 @@ RSpec.describe OrderForms::VoidService do
 
         it "re-checks the status under the lock and refuses voiding an order form signed concurrently" do
           order_form
-          OrderForm.where(id: order_form.id).update_all(status: "signed", signed_at: Time.current)
+          OrderForm.find(order_form.id).update!(status: :signed, signed_at: Time.current)
 
           result = service.call
 

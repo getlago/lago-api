@@ -36,7 +36,7 @@ RSpec.describe QuoteVersions::VoidService do
 
       it "re-checks the status under the lock and refuses a stale void" do
         quote_version
-        QuoteVersion.where(id: quote_version.id).update_all(status: "approved", approved_at: Time.current)
+        QuoteVersion.find(quote_version.id).update!(status: :approved, approved_at: Time.current)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)

@@ -55,7 +55,7 @@ RSpec.describe QuoteVersions::ApproveService do
 
       it "re-checks the status under the lock and refuses a stale approval" do
         quote_version
-        QuoteVersion.where(id: quote_version.id).update_all(status: "voided", void_reason: "manual", voided_at: Time.current)
+        QuoteVersion.find(quote_version.id).update!(status: :voided, void_reason: :manual, voided_at: Time.current)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)

@@ -59,7 +59,7 @@ RSpec.describe OrderForms::MarkAsSignedService do
 
         it "re-checks the status under the lock and refuses signing an order form voided concurrently" do
           order_form
-          OrderForm.where(id: order_form.id).update_all(status: "voided", void_reason: "manual", voided_at: Time.current)
+          OrderForm.find(order_form.id).update!(status: :voided, void_reason: :manual, voided_at: Time.current)
 
           result = service.call
 
