@@ -31,10 +31,6 @@ module Quotes
       raise Customers::FailedToAcquireLock, "Failed to acquire lock #{lock_key}"
     end
 
-    def locked?
-      ActiveRecord::Base.advisory_lock_exists?(lock_key)
-    end
-
     private
 
     attr_reader :quote, :timeout_seconds, :transaction

@@ -10,13 +10,13 @@ RSpec.describe Quotes::LockService do
   describe "#call" do
     context "when lock can be acquired" do
       it "takes an advisory lock" do
-        expect(lock_service).not_to be_locked
+        expect(ActiveRecord::Base.advisory_lock_exists?("quote-#{quote.id}")).to be false
 
         lock_service.call do
-          expect(lock_service).to be_locked
+          expect(ActiveRecord::Base.advisory_lock_exists?("quote-#{quote.id}")).to be true
         end
 
-        expect(lock_service).not_to be_locked
+        expect(ActiveRecord::Base.advisory_lock_exists?("quote-#{quote.id}")).to be false
       end
 
       it "yields the block return value" do
@@ -66,24 +66,6 @@ RSpec.describe Quotes::LockService do
       end
 
       expect(inner_ran).to be true
-    end
-  end
-
-  describe "#locked?" do
-    subject { lock_service.locked? }
-
-    context "when the lock is taken" do
-      it "returns true" do
-        lock_service.call do
-          expect(subject).to be true
-        end
-      end
-    end
-
-    context "when the lock is not taken" do
-      it "returns false" do
-        expect(subject).to be false
-      end
     end
   end
 end
