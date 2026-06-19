@@ -171,7 +171,7 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         before do
-          allow(AdjustedFee).to receive(:where).and_call_original
+          allow(AdjustedFee).to receive(:matching_charge_boundaries).and_call_original
           allow(Fees::ChargeService).to receive(:call!).and_call_original
         end
 
@@ -184,7 +184,7 @@ RSpec.describe Invoices::CalculateFeesService do
           it "queries AdjustedFee and applies the adjusted fee" do
             invoice_service.call
 
-            expect(AdjustedFee).to have_received(:where).with(hash_including(fee_type: :charge)).at_least(:once)
+            expect(AdjustedFee).to have_received(:matching_charge_boundaries)
             expect(Fees::ChargeService).to have_received(:call!).with(hash_including(skip_adjusted_fees: false))
           end
         end
@@ -195,7 +195,7 @@ RSpec.describe Invoices::CalculateFeesService do
           it "queries AdjustedFee only once and skips the per-charge lookup" do
             invoice_service.call
 
-            expect(AdjustedFee).to have_received(:where).with(hash_including(fee_type: :charge)).once
+            expect(AdjustedFee).to have_received(:matching_charge_boundaries).once
             expect(Fees::ChargeService).to have_received(:call!).with(hash_including(skip_adjusted_fees: true))
           end
         end
@@ -206,7 +206,7 @@ RSpec.describe Invoices::CalculateFeesService do
           it "queries AdjustedFee" do
             invoice_service.call
 
-            expect(AdjustedFee).to have_received(:where).with(hash_including(fee_type: :charge))
+            expect(AdjustedFee).to have_received(:matching_charge_boundaries)
           end
         end
       end

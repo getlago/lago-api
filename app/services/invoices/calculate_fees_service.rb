@@ -118,14 +118,7 @@ module Invoices
       filters = event_filters(subscription, boundaries).charges
       plan = subscription.plan
       customer = subscription.customer
-      adjusted_fee_exists = if invoice.id
-        AdjustedFee
-          .where(invoice:, subscription:, fee_type: :charge)
-          .where("(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3))
-          .where("(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3)).exists?
-      else
-        false
-      end
+      adjusted_fee_exists = AdjustedFee.where(invoice:, subscription:).matching_charge_boundaries(boundaries).exists?
 
       subscription
         .plan
@@ -240,6 +233,8 @@ module Invoices
             subscription:,
             context: :recurring,
             boundaries:,
+            plan: subscription.plan,
+            customer: subscription.customer,
             apply_taxes: invoice.customer.tax_customer.blank?
           )
 

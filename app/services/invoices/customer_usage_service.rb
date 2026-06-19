@@ -118,22 +118,13 @@ module Invoices
     def compute_charge_fees
       fees = []
       filters = event_filters(subscription, boundaries).charges
-      adjusted_fee_exists = if invoice.id
-        AdjustedFee
-          .where(invoice:, subscription:, fee_type: :charge)
-          .where("(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3))
-          .where("(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3)).exists?
-      else
-        false
-      end
-
-      charges.find_each { |c| fees += charge_usage(c, filters[c.id] || [], adjusted_fee_exists) }
+      charges.find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
       return fees if usage_filters.has_charge_filter?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
     end
 
-    def charge_usage(charge, applied_filters, adjusted_fee_exists)
+    def charge_usage(charge, applied_filters)
       cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
         subscription:,
         charge:,
@@ -157,7 +148,8 @@ module Invoices
           cache_middleware:,
           calculate_projected_usage:,
           with_zero_units_filters:,
-          skip_adjusted_fees: !adjusted_fee_exists,
+          # NOTE: current usage is computed on a non-persisted invoice, so adjusted fees never apply
+          skip_adjusted_fees: true,
           filtered_aggregations: applied_filters,
           usage_filters:
         )
