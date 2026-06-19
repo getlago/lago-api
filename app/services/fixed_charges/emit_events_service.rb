@@ -13,13 +13,17 @@ module FixedCharges
     end
 
     def call
-      result.fixed_charge_events = subscriptions.map do |subscription|
-        ::FixedChargeEvents::CreateService.call!(
-          subscription:,
-          fixed_charge:,
+      events_attributes = subscriptions.map do |subscription|
+        {
+          organization_id: subscription.organization_id,
+          subscription_id: subscription.id,
+          fixed_charge_id: fixed_charge.id,
+          units: units_for(subscription),
           timestamp: apply_units_immediately ? timestamp : next_billing_period(subscription)
-        ).fixed_charge_event
+        }
       end
+
+      result.fixed_charge_events = ::FixedChargeEvents::BulkCreateService.call!(events_attributes:).fixed_charge_events
 
       result
     end
@@ -42,7 +46,16 @@ module FixedCharges
         fixed_charge.plan.subscriptions
           .where(status: %i[active incomplete])
           .without_fixed_charge_units_override_for(fixed_charge)
+          .includes(:plan, customer: :billing_entity)
       end
+    end
+
+    def units_for(subscription)
+      # Only an explicitly provided subscription can carry an override; the bulk path filters
+      # overridden subscriptions out, so they always use the plan-level units.
+      return fixed_charge.units unless self.subscription
+
+      fixed_charge.effective_units_for(subscription)
     end
 
     def next_billing_period(subscription)
