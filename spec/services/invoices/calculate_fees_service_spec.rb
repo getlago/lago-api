@@ -155,18 +155,7 @@ RSpec.describe Invoices::CalculateFeesService do
         expect(Credits::ProgressiveBillingService).to have_received(:call).with(invoice:)
       end
 
-      context "when no adjusted fee exists for the boundaries" do
-        before { allow(Fees::ChargeService).to receive(:call!).and_call_original }
-
-        it "calls Fees::ChargeService with skip_adjusted_fees: true" do
-          invoice_service.call
-
-          expect(Fees::ChargeService).to have_received(:call!)
-            .with(hash_including(skip_adjusted_fees: true))
-        end
-      end
-
-      context "when an adjusted fee exists for the boundaries" do
+      context "with adjusted fees existence query" do
         let(:adjusted_fee) do
           create(
             :adjusted_fee,
@@ -182,15 +171,43 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         before do
-          adjusted_fee
+          allow(AdjustedFee).to receive(:where).and_call_original
           allow(Fees::ChargeService).to receive(:call!).and_call_original
         end
 
-        it "calls Fees::ChargeService with skip_adjusted_fees: false" do
-          invoice_service.call
+        context "when the invoice is a draft with an adjusted fee" do
+          before do
+            invoice.draft!
+            adjusted_fee
+          end
 
-          expect(Fees::ChargeService).to have_received(:call!)
-            .with(hash_including(skip_adjusted_fees: false))
+          it "queries AdjustedFee and applies the adjusted fee" do
+            invoice_service.call
+
+            expect(AdjustedFee).to have_received(:where).with(hash_including(fee_type: :charge)).at_least(:once)
+            expect(Fees::ChargeService).to have_received(:call!).with(hash_including(skip_adjusted_fees: false))
+          end
+        end
+
+        context "when the invoice is a draft without an adjusted fee" do
+          before { invoice.draft! }
+
+          it "queries AdjustedFee only once and skips the per-charge lookup" do
+            invoice_service.call
+
+            expect(AdjustedFee).to have_received(:where).with(hash_including(fee_type: :charge)).once
+            expect(Fees::ChargeService).to have_received(:call!).with(hash_including(skip_adjusted_fees: true))
+          end
+        end
+
+        context "when finalizing the invoice" do
+          let(:context) { :finalize }
+
+          it "queries AdjustedFee" do
+            invoice_service.call
+
+            expect(AdjustedFee).to have_received(:where).with(hash_including(fee_type: :charge))
+          end
         end
       end
 

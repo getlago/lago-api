@@ -79,10 +79,12 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end.to change { Rails.cache.exist?(key) }.from(false).to(true)
     end
 
-    it "calls Fees::ChargeService with skip_adjusted_fees: true" do
+    it "does not query AdjustedFee and skips adjusted fees" do
+      allow(AdjustedFee).to receive(:where).and_call_original
       allow(Fees::ChargeService).to receive(:call!).and_call_original
       usage_service.call
 
+      expect(AdjustedFee).not_to have_received(:where).with(hash_including(fee_type: :charge))
       expect(Fees::ChargeService).to have_received(:call!)
         .with(hash_including(skip_adjusted_fees: true))
     end
