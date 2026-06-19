@@ -152,7 +152,6 @@ module Fees
           fee.association(:charge_filter).target = charge_filter
         end
       end
-      end
 
       result.fees.concat(fees.compact)
     end

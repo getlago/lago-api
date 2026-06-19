@@ -119,9 +119,9 @@ module Invoices
       plan = subscription.plan
       customer = subscription.customer
       adjusted_fee_exists = AdjustedFee
-                              .where(invoice:, subscription:,fee_type: :charge)
-                              .where("(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3))
-                              .where("(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3)).exists?
+        .where(invoice:, subscription:, fee_type: :charge)
+        .where("(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3))
+        .where("(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3)).exists?
 
       subscription
         .plan
@@ -142,7 +142,7 @@ module Invoices
             context:,
             plan:,
             customer:,
-            skip_adjusted_fees: !adjusted_fee_exists:,
+            skip_adjusted_fees: !adjusted_fee_exists,
             filtered_aggregations: filters[charge.id] || []
           )
         end
