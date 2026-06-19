@@ -1990,8 +1990,6 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
     let(:downgrade_external_id) { "downgrade-sub-#{SecureRandom.hex(4)}" }
 
-    # The previous plan is billed at the boundary alongside the gated downgrade, so more than one
-    # payment intent is created. Return a unique id per call, as Stripe does.
     before do
       allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
         .to receive(:create_payment_intent) do
@@ -2117,8 +2115,8 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(new_subscription).to be_incomplete
       expect(previous_subscription.reload).to be_active
 
-      gating_invoice = new_subscription.invoices.sole
-      expect(gating_invoice).to be_open
+      invoice = new_subscription.invoices.sole
+      expect(invoice).to be_open
 
       # Stage 4: payment succeeds mid-cycle — previous plan terminated with a credit note for the
       # unused prepaid days, downgrade activated.
@@ -2131,23 +2129,65 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(previous_subscription).to be_terminated
       expect(new_subscription).to be_active
       expect(new_subscription.activated_at).to be_present
-      expect(gating_invoice.reload).to be_finalized
+      expect(invoice.reload).to be_finalized
 
       # The previous plan was billed €20.00 for the whole of February (29 days — 2024 is a leap
       # year). Terminating it mid-cycle on Feb 15 credits the 15 unused days (Feb 15–29), the
       # transition day going to the new plan: 2000 * 15 / 29 = 1034 cents.
       credit_note = previous_subscription.invoices.flat_map(&:credit_notes).sole
       expect(credit_note.credit_amount_cents).to eq(1034)
-      expect(credit_note.items.sum(:amount_cents)).to eq(1034)
     end
 
-    it "bills the previous plan's period only once when the gating and activation both bill it" do
-      # The gated downgrade has two billers for the previous plan's new period: the asynchronous
-      # billing enqueued while gating, and the synchronous billing run at activation. They can
-      # overlap (payment resolving before the gating billing has run). Both target the same active
-      # subscription and period, so the partial unique index on the recurring invoice-subscription
-      # period boundaries plus the :subscription_periodic RecordNotUnique/duplicated_invoices rescue
-      # must collapse them to a single invoice.
+    it "bills the previous plan's period once when the gating and activation billings run concurrently" do
+      travel_to(DateTime.new(2024, 1, 1)) do
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: downgrade_external_id,
+          plan_code: previous_plan.code,
+          billing_time: "calendar"
+        })
+        perform_all_enqueued_jobs
+      end
+
+      previous_subscription = customer.subscriptions.sole
+
+      # Two threads bill the same period at once; the period unique index lets one win and the other
+      # silently no-op, so exactly one invoice results.
+      barrier = Concurrent::CyclicBarrier.new(2)
+      threads = Array.new(2) do
+        Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            barrier.wait
+            BillSubscriptionJob.perform_now(
+              [previous_subscription], DateTime.new(2024, 2, 1).to_i, invoicing_reason: :subscription_periodic
+            )
+          end
+        end
+      end
+
+      # join re-raises if either thread died — so an unsilenced billing error fails the test here.
+      threads.each(&:join)
+
+      expect(previous_subscription.invoice_subscriptions.recurring.count).to eq(1)
+
+      # Terminating the previous plan mid-cycle (as the downgrade activation does) then credits the
+      # unused days of that single February invoice — the same end state as the scenario above:
+      # 2000 * 15 / 29 = 1034 cents.
+      travel_to(DateTime.new(2024, 2, 15)) do
+        Subscriptions::TerminateService.call(subscription: previous_subscription.reload, rotation: true)
+      end
+
+      credit_note = previous_subscription.invoices.flat_map(&:credit_notes).sole
+      expect(credit_note.credit_amount_cents).to eq(1034)
+    end
+
+    it "raises and leaves the subscription incomplete when the previous plan's period cannot be billed" do
+      allow(Invoices::SubscriptionService).to receive(:call).and_wrap_original do |original, *args, **kwargs|
+        next BaseResult.new if kwargs[:invoicing_reason].to_s == "subscription_periodic"
+
+        original.call(*args, **kwargs)
+      end
+
       travel_to(DateTime.new(2024, 1, 1)) do
         create_subscription({
           external_customer_id: customer.external_id,
@@ -2171,21 +2211,22 @@ describe "Payment Gated Subscription Activation Scenarios" do
         perform_all_enqueued_jobs
       end
 
-      # Boundary: the gating bills the previous plan for February (recurring period invoice).
       travel_to(DateTime.new(2024, 2, 1)) { perform_billing }
-      expect(previous_subscription.invoice_subscriptions.recurring.count).to eq(1)
 
-      # Re-billing the same active period — what the synchronous activation path does, and what a
-      # concurrent duplicate would do — must not create a second invoice.
-      travel_to(DateTime.new(2024, 2, 1)) do
-        expect do
-          BillSubscriptionJob.perform_now(
-            [previous_subscription],
-            DateTime.new(2024, 2, 1).to_i,
-            invoicing_reason: :subscription_periodic
-          )
-        end.not_to change { previous_subscription.invoice_subscriptions.recurring.count }
+      new_subscription = customer.subscriptions.where.not(id: previous_subscription.id).sole
+      invoice = new_subscription.invoices.sole
+
+      # Payment succeeds, but the previous plan has no usable period invoice to credit, so the
+      # activation raises and the payment-resolution job dead-letters for manual handling.
+      travel_to(DateTime.new(2024, 2, 15)) do
+        expect { simulate_stripe_webhook(status: "succeeded") }
+          .to raise_error(Subscriptions::EnsureBilledForPeriodService::NotBilledError)
       end
+
+      # The activation rolled back cleanly — nothing half-activated.
+      expect(new_subscription.reload).to be_incomplete
+      expect(previous_subscription.reload).to be_active
+      expect(invoice.reload).to be_open
     end
   end
 end

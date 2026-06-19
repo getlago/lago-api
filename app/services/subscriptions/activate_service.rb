@@ -98,7 +98,7 @@ module Subscriptions
       previous_subscription = subscription.previous_subscription
 
       if from_incomplete
-        ensure_previous_subscription_billed(previous_subscription)
+        EnsureBilledForPeriodService.call!(subscription: previous_subscription, timestamp:)
 
         Subscriptions::TerminateService.call(
           subscription: previous_subscription,
@@ -160,12 +160,6 @@ module Subscriptions
 
       BillSubscriptionJob.perform_later([previous_subscription], timestamp.to_i, invoicing_reason: :subscription_periodic)
       BillNonInvoiceableFeesJob.perform_later([previous_subscription], timestamp)
-    end
-
-    def ensure_previous_subscription_billed(previous_subscription)
-      return unless previous_subscription&.plan&.pay_in_advance?
-
-      BillSubscriptionJob.perform_now([previous_subscription], timestamp.to_i, invoicing_reason: :subscription_periodic)
     end
 
     def bill_rotation_subscriptions(billable_subscriptions, billing_at:, non_invoiceable_subscriptions: [subscription.previous_subscription])

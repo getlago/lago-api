@@ -497,17 +497,13 @@ RSpec.describe Subscriptions::ActivateService do
           .with(subscription: previous_subscription, rotation: true)
       end
 
-      context "when the previous plan is pay in advance" do
-        let(:previous_plan) { create(:plan, organization:, amount_cents: 100, pay_in_advance: true) }
+      it "ensures the previous subscription is billed for the period before terminating it" do
+        allow(Subscriptions::EnsureBilledForPeriodService).to receive(:call!).and_call_original
 
-        it "synchronously bills the previous subscription for the period before terminating it" do
-          allow(BillSubscriptionJob).to receive(:perform_now)
+        result
 
-          result
-
-          expect(BillSubscriptionJob).to have_received(:perform_now)
-            .with([previous_subscription], anything, invoicing_reason: :subscription_periodic)
-        end
+        expect(Subscriptions::EnsureBilledForPeriodService).to have_received(:call!)
+          .with(subscription: previous_subscription, timestamp:)
       end
 
       it "marks the new subscription as active" do
