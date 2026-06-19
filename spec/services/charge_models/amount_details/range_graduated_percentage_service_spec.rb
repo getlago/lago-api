@@ -29,6 +29,32 @@ RSpec.describe ChargeModels::AmountDetails::RangeGraduatedPercentageService do
     )
   end
 
+  context "when total units is 0" do
+    let(:total_units) { 0 }
+    let(:range) do
+      {
+        from_value: 0,
+        to_value: 10,
+        rate: "2.9",
+        flat_amount: "2"
+      }
+    end
+
+    it "applies the flat amount from the range" do
+      expect(service.call).to eq(
+        {
+          from_value: 0,
+          to_value: 10,
+          flat_unit_amount: 2,
+          rate: 2.9,
+          units: "0.0",
+          per_unit_total_amount: "0.0",
+          total_with_flat_amount: 2
+        }
+      )
+    end
+  end
+
   context "when total units <= range to_value" do
     let(:range) do
       {

@@ -74,6 +74,27 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     expect(apply_graduated_service.amount_details).to eq({})
   end
 
+  context "when zero usage" do
+    let(:aggregation) { 0 }
+    let(:per_event_aggregation) do
+      BaseService::Result.new.tap do |r|
+        r.event_aggregation = []
+        r.event_prorated_aggregation = []
+      end
+    end
+
+    before do
+      aggregation_result.aggregation = aggregation
+      aggregation_result.full_units_number = 0
+      aggregation_result.current_usage_units = 0
+    end
+
+    it "applies the flat amount from the first tier" do
+      expect(apply_graduated_service.amount).to eq(100)
+      expect(apply_graduated_service.unit_amount).to eq(0)
+    end
+  end
+
   context "with event that cannot be fully placed into the range" do
     let(:aggregation) { 3.86667 }
     let(:per_event_aggregation) do
