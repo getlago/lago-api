@@ -79,6 +79,14 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end.to change { Rails.cache.exist?(key) }.from(false).to(true)
     end
 
+    it "calls Fees::ChargeService with skip_adjusted_fees: true" do
+      allow(Fees::ChargeService).to receive(:call!).and_call_original
+      usage_service.call
+
+      expect(Fees::ChargeService).to have_received(:call!)
+        .with(hash_including(skip_adjusted_fees: true))
+    end
+
     context "when initializes an invoice" do
       let(:current_date) { DateTime.parse("2025-06-15") }
       let(:timestamp) { current_date }

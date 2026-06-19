@@ -155,6 +155,45 @@ RSpec.describe Invoices::CalculateFeesService do
         expect(Credits::ProgressiveBillingService).to have_received(:call).with(invoice:)
       end
 
+      context "when no adjusted fee exists for the boundaries" do
+        before { allow(Fees::ChargeService).to receive(:call!).and_call_original }
+
+        it "calls Fees::ChargeService with skip_adjusted_fees: true" do
+          invoice_service.call
+
+          expect(Fees::ChargeService).to have_received(:call!)
+            .with(hash_including(skip_adjusted_fees: true))
+        end
+      end
+
+      context "when an adjusted fee exists for the boundaries" do
+        let(:adjusted_fee) do
+          create(
+            :adjusted_fee,
+            invoice:,
+            subscription:,
+            charge:,
+            fee_type: :charge,
+            properties: {
+              charges_from_datetime: date_service.charges_from_datetime,
+              charges_to_datetime: date_service.charges_to_datetime
+            }
+          )
+        end
+
+        before do
+          adjusted_fee
+          allow(Fees::ChargeService).to receive(:call!).and_call_original
+        end
+
+        it "calls Fees::ChargeService with skip_adjusted_fees: false" do
+          invoice_service.call
+
+          expect(Fees::ChargeService).to have_received(:call!)
+            .with(hash_including(skip_adjusted_fees: false))
+        end
+      end
+
       context "when a progressive_billing invoice is present" do
         let(:progressive_invoice) do
           create(

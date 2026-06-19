@@ -146,11 +146,7 @@ module Fees
       fees.each do |fee|
         fee.association(:billable_metric).target = billable_metric
         fee.association(:charge_filter).target = charge_filter if charge_filter&.id
-        # TODO: check it!
         fee.association(:charge).target = charge
-        if charge_filter && fee.charge_filter_id
-          fee.association(:charge_filter).target = charge_filter
-        end
       end
 
       result.fees.concat(fees.compact)
