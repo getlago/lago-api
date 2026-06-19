@@ -405,6 +405,7 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at_and_ending_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_previous_subscription_id_and_status;
+DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id_and_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_organization_id;
@@ -9796,6 +9797,13 @@ CREATE INDEX index_subscriptions_on_plan_id ON public.subscriptions USING btree 
 
 
 --
+-- Name: index_subscriptions_on_plan_id_and_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_on_plan_id_and_status ON public.subscriptions USING btree (plan_id, status);
+
+
+--
 -- Name: index_subscriptions_on_previous_subscription_id_and_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12785,6 +12793,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260619065327'),
 ('20260617145515'),
 ('20260616160703'),
 ('20260616155032'),

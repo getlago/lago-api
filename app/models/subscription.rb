@@ -375,6 +375,7 @@ end
 #  index_subscriptions_on_organization_id                      (organization_id)
 #  index_subscriptions_on_payment_method_id                    (payment_method_id)
 #  index_subscriptions_on_plan_id                              (plan_id)
+#  index_subscriptions_on_plan_id_and_status                   (plan_id,status)
 #  index_subscriptions_on_previous_subscription_id_and_status  (previous_subscription_id,status)
 #  index_subscriptions_on_started_at                           (started_at)
 #  index_subscriptions_on_started_at_and_ending_at             (started_at,ending_at)
