@@ -132,8 +132,8 @@ RSpec.describe Subscriptions::TerminateService do
         expect(next_subscription.reload).to be_canceled
       end
 
-      context "when called with upgrade: true" do
-        subject(:result) { described_class.call(subscription:, on_termination_credit_note:, upgrade: true) }
+      context "when called with rotation: true" do
+        subject(:result) { described_class.call(subscription:, on_termination_credit_note:, rotation: true) }
 
         it "does not cancel the next subscription" do
           subject

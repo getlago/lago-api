@@ -502,7 +502,7 @@ RSpec.describe CreditNotes::CreateFromTermination do
       end
 
       context "when it's an upgrade" do
-        subject(:create_service) { described_class.new(subscription:, on_termination: :refund, upgrade: true, context:) }
+        subject(:create_service) { described_class.new(subscription:, on_termination: :refund, rotation: true, context:) }
 
         it "raises NotImplementedError" do
           expect { create_service.call }.to raise_error(NotImplementedError)
@@ -825,7 +825,7 @@ RSpec.describe CreditNotes::CreateFromTermination do
       end
 
       context "when it's an upgrade" do
-        subject(:create_service) { described_class.new(subscription:, on_termination: :offset, upgrade: true, context:) }
+        subject(:create_service) { described_class.new(subscription:, on_termination: :offset, rotation: true, context:) }
 
         it "raises NotImplementedError" do
           expect { create_service.call }.to raise_error(NotImplementedError)
@@ -987,7 +987,7 @@ RSpec.describe CreditNotes::CreateFromTermination do
     end
 
     context "when plan has been upgraded" do
-      let(:kwargs) { {upgrade: true} }
+      let(:kwargs) { {rotation: true} }
 
       it "calculates credit note correctly" do
         # CREDITABLE AMOUNT CALCULATION

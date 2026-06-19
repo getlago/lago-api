@@ -4,10 +4,10 @@ module Subscriptions
   class TerminateService < BaseService
     Result = BaseResult[:subscription]
 
-    def initialize(subscription:, async: true, upgrade: false, on_termination_credit_note: subscription&.on_termination_credit_note, on_termination_invoice: subscription&.on_termination_invoice)
+    def initialize(subscription:, async: true, rotation: false, on_termination_credit_note: subscription&.on_termination_credit_note, on_termination_invoice: subscription&.on_termination_invoice)
       @subscription = subscription
       @async = async
-      @upgrade = upgrade
+      @rotation = rotation
       @on_termination_credit_note = on_termination_credit_note.blank? ? :credit : on_termination_credit_note.to_sym
       @on_termination_invoice = on_termination_invoice.blank? ? :generate : on_termination_invoice.to_sym
 
@@ -49,15 +49,15 @@ module Subscriptions
             CreditNotes::CreateFromTermination.call!(
               subscription:,
               reason: "order_cancellation",
-              upgrade: upgrade,
+              rotation: rotation,
               on_termination: on_termination_credit_note
             )
           end
 
-          # NOTE: We should bill subscription and generate invoice for all cases except for the upgrade
-          #       For upgrade we will create only one invoice for termination charges and for in advance charges
-          #       It is handled in subscriptions/create_service.rb
-          bill_subscription unless upgrade
+          # NOTE: We should bill subscription and generate invoice for all cases except for a plan rotation
+          #       (upgrade/downgrade). For a rotation we will create only one invoice for termination charges
+          #       and for in advance charges. It is handled in subscriptions/create_service.rb
+          bill_subscription unless rotation
         end
 
         cancel_next_subscription
@@ -89,11 +89,12 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :async, :upgrade, :on_termination_credit_note, :on_termination_invoice
+    attr_reader :subscription, :async, :rotation, :on_termination_credit_note, :on_termination_invoice
 
     def cancel_next_subscription
-      # NOTE: Upgrade path: next_subscription is the new subscription we just persisted, not a stale scheduled change
-      return if upgrade
+      # NOTE: Rotation path (upgrade/downgrade): next_subscription is the new subscription we just
+      #       persisted, not a stale scheduled change
+      return if rotation
 
       next_subscription = subscription.next_subscription
       return if next_subscription.nil?

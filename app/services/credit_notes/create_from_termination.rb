@@ -8,10 +8,10 @@ module CreditNotes
     #   :credit - credits all unused amount back to the customer
     #   :refund - refunds the unused paid amount, credits any updaid unused amount back to the customer
     #   :offset - refunds the unused paid amount, offsets the invoice by the updaid unused amount
-    def initialize(subscription:, reason: "order_change", upgrade: false, context: nil, on_termination: :credit)
+    def initialize(subscription:, reason: "order_change", rotation: false, context: nil, on_termination: :credit)
       @subscription = subscription
       @reason = reason
-      @upgrade = upgrade
+      @rotation = rotation
       @context = context
       @on_termination = on_termination
 
@@ -21,8 +21,8 @@ module CreditNotes
     def call
       return result if (last_subscription_fee&.amount_cents || 0).zero? || last_subscription_fee.invoice.voided?
 
-      raise NotImplementedError, "Upgrade and refund are not supported together" if upgrade && refund?
-      raise NotImplementedError, "Upgrade and offset are not supported together" if upgrade && offset?
+      raise NotImplementedError, "Upgrade/downgrade and refund are not supported together" if rotation && refund?
+      raise NotImplementedError, "Upgrade/downgrade and offset are not supported together" if rotation && offset?
 
       base_creditable_amount = calculate_base_creditable_amount
 
@@ -51,7 +51,7 @@ module CreditNotes
 
     private
 
-    attr_accessor :subscription, :reason, :context, :on_termination, :upgrade
+    attr_accessor :subscription, :reason, :context, :on_termination, :rotation
 
     delegate :plan, :terminated_at, :customer, to: :subscription
 
@@ -113,7 +113,7 @@ module CreditNotes
 
     def remaining_duration
       billed_from = terminated_at_in_timezone.end_of_day.utc.to_date
-      billed_from -= 1.day if upgrade
+      billed_from -= 1.day if rotation
 
       if plan.has_trial? && subscription.trial_end_date >= billed_from
         billed_from = if subscription.trial_end_date > next_end_of_period

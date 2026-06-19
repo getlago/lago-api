@@ -42,6 +42,8 @@ module Subscriptions
 
         SendWebhookJob.perform_later("subscription.incomplete", subscription)
         Utils::ActivityLog.produce(subscription, "subscription.incomplete")
+
+        bill_previous_subscription if subscription.payment_gated? && downgrade?
       end
     end
 
@@ -64,7 +66,7 @@ module Subscriptions
 
       Subscriptions::TerminateService.call(
         subscription: previous_subscription,
-        upgrade: true
+        rotation: true
       )
 
       subscription.mark_as_active!(timestamp)
@@ -95,7 +97,16 @@ module Subscriptions
       billed_during_gating = from_incomplete && subscription.activation_rules.payment.any?
       previous_subscription = subscription.previous_subscription
 
-      previous_subscription.mark_as_terminated!(timestamp)
+      if from_incomplete
+        ensure_previous_subscription_billed(previous_subscription)
+
+        Subscriptions::TerminateService.call(
+          subscription: previous_subscription,
+          rotation: true
+        )
+      else
+        previous_subscription.mark_as_terminated!(timestamp)
+      end
 
       subscription.mark_as_active!(timestamp)
 
@@ -108,11 +119,13 @@ module Subscriptions
       end
 
       after_commit do
-        SendWebhookJob.perform_later("subscription.terminated", previous_subscription)
-        Utils::ActivityLog.produce(previous_subscription, "subscription.terminated")
+        unless from_incomplete
+          SendWebhookJob.perform_later("subscription.terminated", previous_subscription)
+          Utils::ActivityLog.produce(previous_subscription, "subscription.terminated")
 
-        if previous_subscription.should_sync_hubspot_subscription?
-          Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: previous_subscription)
+          if previous_subscription.should_sync_hubspot_subscription?
+            Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: previous_subscription)
+          end
         end
 
         notify_started
@@ -139,6 +152,20 @@ module Subscriptions
 
         notify_started
       end
+    end
+
+    def bill_previous_subscription
+      previous_subscription = subscription.previous_subscription
+      return unless previous_subscription
+
+      BillSubscriptionJob.perform_later([previous_subscription], timestamp.to_i, invoicing_reason: :subscription_periodic)
+      BillNonInvoiceableFeesJob.perform_later([previous_subscription], timestamp)
+    end
+
+    def ensure_previous_subscription_billed(previous_subscription)
+      return unless previous_subscription&.plan&.pay_in_advance?
+
+      BillSubscriptionJob.perform_now([previous_subscription], timestamp.to_i, invoicing_reason: :subscription_periodic)
     end
 
     def bill_rotation_subscriptions(billable_subscriptions, billing_at:, non_invoiceable_subscriptions: [subscription.previous_subscription])

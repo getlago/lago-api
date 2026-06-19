@@ -262,6 +262,36 @@ RSpec.describe Subscriptions::ActivateService do
         end
       end
     end
+
+    context "when the gated subscription is a downgrade" do
+      let(:previous_plan) { create(:plan, organization:, amount_cents: 200) }
+      let(:previous_subscription) do
+        create(:subscription, organization:, customer:, plan: previous_plan,
+          status: :active, started_at: 1.month.ago, subscription_at: 1.month.ago)
+      end
+      let(:subscription) do
+        create(:subscription, :pending, :with_activation_rules,
+          activation_rules_config: [{type: "payment", timeout_hours: 48}],
+          organization:, customer:, plan:, previous_subscription:, subscription_at: Time.current)
+      end
+
+      it "marks the subscription as incomplete" do
+        expect(result.subscription).to be_incomplete
+      end
+
+      it "bills the previous subscription for the new period asynchronously" do
+        result
+
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([previous_subscription], anything, invoicing_reason: :subscription_periodic)
+      end
+
+      it "bills non-invoiceable fees for the previous subscription" do
+        result
+
+        expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([previous_subscription], anything)
+      end
+    end
   end
 
   context "when subscription is pending with activation rules that evaluate to not_applicable" do
@@ -458,6 +488,28 @@ RSpec.describe Subscriptions::ActivateService do
         expect(previous_subscription.reload).to be_terminated
       end
 
+      it "terminates the previous subscription as a plan rotation" do
+        allow(Subscriptions::TerminateService).to receive(:call).and_call_original
+
+        result
+
+        expect(Subscriptions::TerminateService).to have_received(:call)
+          .with(subscription: previous_subscription, rotation: true)
+      end
+
+      context "when the previous plan is pay in advance" do
+        let(:previous_plan) { create(:plan, organization:, amount_cents: 100, pay_in_advance: true) }
+
+        it "synchronously bills the previous subscription for the period before terminating it" do
+          allow(BillSubscriptionJob).to receive(:perform_now)
+
+          result
+
+          expect(BillSubscriptionJob).to have_received(:perform_now)
+            .with([previous_subscription], anything, invoicing_reason: :subscription_periodic)
+        end
+      end
+
       it "marks the new subscription as active" do
         freeze_time do
           expect(result.subscription).to be_active
@@ -465,16 +517,17 @@ RSpec.describe Subscriptions::ActivateService do
         end
       end
 
-      it "sends a subscription.terminated webhook for the previous subscription" do
+      it "sends a single subscription.terminated webhook for the previous subscription" do
         result
 
-        expect(SendWebhookJob).to have_been_enqueued.with("subscription.terminated", previous_subscription)
+        expect(SendWebhookJob).to have_been_enqueued
+          .with("subscription.terminated", previous_subscription).once
       end
 
       it "produces a subscription.terminated activity log for the previous subscription" do
         result
 
-        expect(Utils::ActivityLog).to have_produced("subscription.terminated").with(previous_subscription)
+        expect(Utils::ActivityLog).to have_produced("subscription.terminated").with(previous_subscription).after_commit
       end
 
       it "sends a subscription.started webhook for the new subscription" do
@@ -513,7 +566,7 @@ RSpec.describe Subscriptions::ActivateService do
         result
 
         expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
-          .to have_been_enqueued.with(subscription: previous_subscription)
+          .to have_been_enqueued.with(subscription: previous_subscription).at_least(:once)
       end
 
       it "does not enqueue the missed-periods job" do
