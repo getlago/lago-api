@@ -72,7 +72,7 @@ module Api
           filters: {
             product_ids: index_products.map(&:id).presence,
             without_product: ActiveModel::Type::Boolean.new.cast(params[:without_product]),
-            item_types: params[:item_type].presence&.then { [it] }
+            item_type: params[:item_type]
           }
         )
 
