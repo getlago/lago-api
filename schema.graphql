@@ -11126,7 +11126,7 @@ type Query {
   """
   Query plans of an organization
   """
-  plans(limit: Int, page: Int, searchTerm: String, withDeleted: Boolean): PlanCollection!
+  plans(limit: Int, page: Int, productId: ID, searchTerm: String, withDeleted: Boolean): PlanCollection!
 
   """
   Query the pricing unit
