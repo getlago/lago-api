@@ -38,13 +38,13 @@ RSpec.describe DatabaseMigrations::BackfillWalletTransactionsBillingEntityJob do
       let(:invoice) { create(:invoice, customer:, organization:, billing_entity: invoice_billing_entity) }
       let(:wallet_transaction) { create(:wallet_transaction, wallet:, organization:, invoice:, billing_entity: nil) }
 
-      it "prefers the invoice billing entity over the wallet and customer ones" do
+      it "ignores the invoice billing entity and uses the customer one" do
         expect(invoice_billing_entity.id).not_to eq(customer.billing_entity_id)
         wallet_transaction
 
         perform_job
 
-        expect(wallet_transaction.reload.billing_entity_id).to eq(invoice_billing_entity.id)
+        expect(wallet_transaction.reload.billing_entity_id).to eq(customer.billing_entity_id)
       end
     end
   end
