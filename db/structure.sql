@@ -405,7 +405,6 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at_and_ending_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_previous_subscription_id_and_status;
-DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id_and_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_organization_id;
@@ -469,6 +468,7 @@ DROP INDEX IF EXISTS public.index_plans_on_bill_fixed_charges_monthly;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_organization_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_customer_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_pending_active_subscriptions_on_plan_id_and_status;
 DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_id;
@@ -9356,6 +9356,13 @@ CREATE UNIQUE INDEX index_payments_on_provider_payment_id_and_payment_provider_i
 
 
 --
+-- Name: index_pending_active_subscriptions_on_plan_id_and_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_active_subscriptions_on_plan_id_and_status ON public.subscriptions USING btree (plan_id, status) WHERE (status = ANY (ARRAY[0, 1]));
+
+
+--
 -- Name: index_pending_vies_checks_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9794,13 +9801,6 @@ CREATE INDEX index_subscriptions_on_payment_method_id ON public.subscriptions US
 --
 
 CREATE INDEX index_subscriptions_on_plan_id ON public.subscriptions USING btree (plan_id);
-
-
---
--- Name: index_subscriptions_on_plan_id_and_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_subscriptions_on_plan_id_and_status ON public.subscriptions USING btree (plan_id, status) WHERE (status = ANY (ARRAY[0, 1]));
 
 
 --
