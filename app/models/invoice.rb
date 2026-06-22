@@ -154,6 +154,7 @@ class Invoice < ApplicationRecord
   validates :timezone, timezone: true, allow_nil: true
   validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :payment_dispute_lost_at, absence: true, unless: :payment_dispute_losable?
+  validates :purchase_order_number, length: {maximum: 255}, allow_nil: true
 
   attr_writer :precalculated_offset_amount_cents
 
@@ -705,6 +706,7 @@ end
 #  prepaid_granted_credit_amount_cents     :bigint
 #  prepaid_purchased_credit_amount_cents   :bigint
 #  progressive_billing_credit_amount_cents :bigint           default(0), not null
+#  purchase_order_number                   :string
 #  ready_for_payment_processing            :boolean          default(TRUE), not null
 #  ready_to_be_refreshed                   :boolean          default(FALSE), not null
 #  self_billed                             :boolean          default(FALSE), not null

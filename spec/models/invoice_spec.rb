@@ -87,6 +87,12 @@ RSpec.describe Invoice do
         end
       end
     end
+
+    describe "of purchase order number length" do
+      subject { build(:invoice) }
+
+      it { is_expected.to validate_length_of(:purchase_order_number).is_at_most(255) }
+    end
   end
 
   describe "finalized_at" do

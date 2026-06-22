@@ -73,6 +73,17 @@ RSpec.describe Invoices::CreateOneOffService do
       end
     end
 
+    context "when purchase_order_number is passed" do
+      let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, purchase_order_number: "PO-123"} }
+
+      it "stamps the purchase order number on the invoice" do
+        result = described_class.call(**args)
+
+        expect(result).to be_success
+        expect(result.invoice.purchase_order_number).to eq("PO-123")
+      end
+    end
+
     context "with custom sections" do
       let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
       let(:args) do

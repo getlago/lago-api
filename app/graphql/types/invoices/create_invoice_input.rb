@@ -11,6 +11,7 @@ module Types
       argument :fees, [Types::Invoices::FeeInput], required: true
       argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
       argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
+      argument :purchase_order_number, String, required: false
       argument :voided_invoice_id, ID, required: false
     end
   end
