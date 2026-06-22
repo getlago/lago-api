@@ -12,8 +12,8 @@ module ChargeModels
       {
         graduated_percentage_ranges: ranges.each_with_object([]) do |range, amounts|
           detail = ChargeModels::AmountDetails::RangeGraduatedPercentageService.call(range:, total_units: units)
-          # Pay-in-advance fees are computed as a delta: charge_model(after) - charge_model(before).
-          # Zeroing the flat amount when before=0 prevents it from being subtracted from the delta.
+          # First pay-in-advance event: delta = cost(1 unit) - cost(0 units, exclude_event: true).
+          # Avoid including the flat fee here so it does not get subtracted from the delta.
           detail = detail.merge(flat_unit_amount: 0, total_with_flat_amount: 0) if units.zero? && properties[:exclude_event]
           amounts << detail
           break amounts if range[:to_value].nil? || range[:to_value] >= units
