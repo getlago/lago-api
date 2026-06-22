@@ -56,7 +56,7 @@ module Api
           },
           filters: {
             product_id: params[:product_id],
-            item_types: params[:item_type].presence&.then { [it] }
+            item_type: params[:item_type]
           }
         )
 
