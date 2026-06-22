@@ -20,8 +20,8 @@ RSpec.describe Resolvers::ProductsResolver do
 
   let(:query) do
     <<~GQL
-      query($searchTerm: String, $productTypes: [ProductTypeEnum!], $productCategoryIds: [ID!], $withoutProductCategory: Boolean) {
-        products(limit: 5, searchTerm: $searchTerm, productTypes: $productTypes, productCategoryIds: $productCategoryIds, withoutProductCategory: $withoutProductCategory) {
+      query($searchTerm: String, $productType: ProductTypeEnum, $productCategoryIds: [ID!], $withoutProductCategory: Boolean) {
+        products(limit: 5, searchTerm: $searchTerm, productType: $productType, productCategoryIds: $productCategoryIds, withoutProductCategory: $withoutProductCategory) {
           collection { id name code productType }
           metadata { currentPage totalCount }
         }
@@ -45,7 +45,7 @@ RSpec.describe Resolvers::ProductsResolver do
   end
 
   context "with an item type filter" do
-    let(:variables) { {productTypes: %w[fixed]} }
+    let(:variables) { {productType: "fixed"} }
 
     it "returns only matching items" do
       expect(execution["data"]["products"]["collection"].map { it["id"] }).to eq([fixed_item.id])
