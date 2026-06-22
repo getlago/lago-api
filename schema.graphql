@@ -10366,7 +10366,6 @@ type ProductItem {
   code: String!
   createdAt: ISO8601DateTime!
   description: String
-  filters: [ProductItemFilter!]!
   filtersCount: Int!
   id: ID!
   invoiceDisplayName: String
