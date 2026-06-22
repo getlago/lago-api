@@ -101,6 +101,7 @@ module Api
         def update_params
           params.require(:filter).permit(
             :name,
+            :code,
             :description,
             :invoice_display_name,
             values: %i[billable_metric_filter_id value]

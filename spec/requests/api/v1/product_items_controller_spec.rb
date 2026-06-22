@@ -75,6 +75,18 @@ RSpec.describe Api::V1::ProductItemsController do
       expect(json[:product_item][:code]).to eq(product_item.code)
     end
 
+    context "with a code change" do
+      let(:update_params) { {code: "after"} }
+
+      it "updates the code when the item is not in a plan or subscription" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:product_item][:code]).to eq("after")
+        expect(json[:product_item][:attached_to_plan_or_subscription]).to be(false)
+      end
+    end
+
     context "when the product item does not exist" do
       subject { put_with_token(organization, "/api/v1/product_items/#{SecureRandom.uuid}", {product_item: update_params}) }
 

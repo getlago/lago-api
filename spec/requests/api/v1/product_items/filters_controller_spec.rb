@@ -79,6 +79,18 @@ RSpec.describe Api::V1::ProductItems::FiltersController do
       expect(json[:filter][:values].map { [it[:key], it[:value]] }).to eq([%w[region eu]])
     end
 
+    context "with a code change" do
+      let(:update_params) { {code: "after"} }
+
+      it "updates the code when the item is not in a plan or subscription" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:filter][:code]).to eq("after")
+        expect(json[:filter][:attached_to_plan_or_subscription]).to be(false)
+      end
+    end
+
     context "when the filter does not exist" do
       subject { put_with_token(organization, "/api/v1/product_items/#{product_item.id}/filters/#{SecureRandom.uuid}", {filter: update_params}) }
 

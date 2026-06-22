@@ -10,6 +10,7 @@ module V1
         description: model.description,
         invoice_display_name: model.invoice_display_name,
         values: values,
+        attached_to_plan_or_subscription: model.attached_to_plan_or_subscription?,
         created_at: model.created_at.iso8601
       }
     end
