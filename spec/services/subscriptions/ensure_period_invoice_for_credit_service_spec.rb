@@ -36,17 +36,36 @@ describe Subscriptions::EnsurePeriodInvoiceForCreditService do
       end
     end
 
-    context "when the period invoice is still generating" do
-      before { bill_period_invoice(status: :generating) }
+    context "when the period invoice is voided" do
+      before { bill_period_invoice(status: :voided) }
 
       it "raises MissingCreditableInvoiceError" do
         expect { result }.to raise_error(described_class::MissingCreditableInvoiceError)
+      end
+    end
+
+    context "when the period invoice is still generating" do
+      before { bill_period_invoice(status: :generating) }
+
+      it "returns success" do
+        expect(result).to be_success
       end
     end
   end
 
   context "when the plan is pay in arrears" do
     let(:plan) { create(:plan, organization:, pay_in_advance: false) }
+
+    it "returns success without verifying the period" do
+      expect(result).to be_success
+    end
+  end
+
+  context "when the subscription opts out of the termination credit note" do
+    let(:subscription) do
+      create(:subscription, organization:, customer:, plan:, status: :active,
+        started_at: 1.month.ago, subscription_at: 1.month.ago, on_termination_credit_note: :skip)
+    end
 
     it "returns success without verifying the period" do
       expect(result).to be_success

@@ -14,6 +14,7 @@ module Subscriptions
 
     def call
       return result unless subscription.plan.pay_in_advance?
+      return result if subscription.on_termination_credit_note_skip?
       return result if period_billed?
 
       raise MissingCreditableInvoiceError,
@@ -31,7 +32,7 @@ module Subscriptions
         .recurring
         .joins(:invoice)
         .where("invoice_subscriptions.from_datetime <= :ts AND invoice_subscriptions.to_datetime > :ts", ts: timestamp)
-        .where.not(invoices: {status: [Invoice.statuses[:generating], Invoice.statuses[:failed]]})
+        .where.not(invoices: {status: Invoice.statuses[:voided]})
         .exists?
     end
   end
