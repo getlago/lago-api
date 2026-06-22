@@ -76,11 +76,14 @@ RSpec.describe Api::V1::ProductsController do
     include_examples "requires API permission", "product", "read"
 
     it "returns the product" do
+      create(:product_item, organization:, product:)
+
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:product][:lago_id]).to eq(product.id)
       expect(json[:product][:code]).to eq(product.code)
+      expect(json[:product][:product_items_count]).to eq(1)
     end
 
     context "when the product does not exist" do
@@ -128,6 +131,26 @@ RSpec.describe Api::V1::ProductsController do
       subject
 
       expect(json[:products].map { it[:lago_id] }).not_to include(other.id)
+    end
+
+    context "with a search term" do
+      subject { get_with_token(organization, "/api/v1/products?search_term=#{search_term}") }
+
+      let(:search_term) { "matching" }
+      let(:matching) { create(:product, organization:, name: "matching product") }
+      let(:other) { create(:product, organization:, name: "other product") }
+
+      before do
+        matching
+        other
+      end
+
+      it "returns only the products matching the search term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:products].map { it[:lago_id] }).to eq([matching.id])
+      end
     end
   end
 
