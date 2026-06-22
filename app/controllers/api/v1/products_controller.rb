@@ -64,6 +64,7 @@ module Api
 
         result = ::ProductsQuery.call(
           organization: current_organization,
+          search_term: params[:search_term],
           pagination: {
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
