@@ -17,8 +17,29 @@ RSpec.describe ProductItems::UpdateService do
     expect(result.product_item.invoice_display_name).to eq("Display")
   end
 
-  it "does not change the code" do
-    expect { result }.not_to change { product_item.reload.code }
+  describe "code and product editability" do
+    let(:other_product) { create(:product, organization:) }
+    let(:params) { {code: "after", product_id: other_product.id} }
+
+    it "updates the code and product attachment when not in a plan or subscription" do
+      expect(result).to be_success
+      expect(result.product_item.code).to eq("after")
+      expect(result.product_item.product).to eq(other_product)
+    end
+
+    it "returns a not found failure when the product does not exist" do
+      result = described_class.call(product_item:, params: {product_id: "unknown"})
+      expect(result).not_to be_success
+      expect(result.error.resource).to eq("product")
+    end
+
+    context "when the item is attached to a plan" do
+      before { create(:plan_product_item, organization:, product_item:) }
+
+      it "changes neither the code nor the product attachment" do
+        expect { result }.not_to change { product_item.reload.attributes.values_at("code", "product_id") }
+      end
+    end
   end
 
   it "produces an activity log" do
