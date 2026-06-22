@@ -57,6 +57,28 @@ RSpec.describe Api::V1::ProductCategoriesController do
       expect(json[:product_category][:code]).to eq(product_category.code)
     end
 
+    context "with a code change" do
+      let(:update_params) { {code: "after"} }
+
+      it "updates the code when the product_category is not in a plan or subscription" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:product_category][:code]).to eq("after")
+      end
+
+      context "when the product_category is attached to a plan" do
+        before { create(:plan_product_category, organization:, product_category:) }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:code]).to eq(%w[attached_to_plan_or_subscription])
+        end
+      end
+    end
+
     context "when the product_category does not exist" do
       subject { put_with_token(organization, "/api/v1/product_categories/unknown", {product_category: update_params}) }
 

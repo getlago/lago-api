@@ -86,6 +86,67 @@ RSpec.describe Api::V1::ProductsController do
       expect(json[:product][:code]).to eq(product.code)
     end
 
+    context "with a code change" do
+      let(:update_params) { {code: "after"} }
+
+      it "updates the code when the item is not in a plan or subscription" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:product][:code]).to eq("after")
+      end
+
+      context "when the item is attached to a plan" do
+        before do
+          rate_card = create(:rate_card, organization:, product:)
+          create(:plan_rate_card, organization:, rate_card:)
+        end
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:code]).to eq(%w[attached_to_plan_or_subscription])
+        end
+      end
+    end
+
+    context "with a product_category_code change" do
+      let(:other_product_category) { create(:product_category, organization:) }
+      let(:update_params) { {product_category_code: other_product_category.code} }
+
+      it "moves the item to the other product_category" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:product][:product_category_code]).to eq(other_product_category.code)
+      end
+
+      context "when the product_category does not exist" do
+        let(:update_params) { {product_category_code: "unknown"} }
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to be_not_found_error("product_category")
+        end
+      end
+
+      context "when the item is attached to a plan" do
+        before do
+          rate_card = create(:rate_card, organization:, product:)
+          create(:plan_rate_card, organization:, rate_card:)
+        end
+
+        it "returns a validation error naming product_category_code" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:product_category_code]).to eq(%w[attached_to_plan_or_subscription])
+        end
+      end
+    end
+
     context "when the product does not exist" do
       subject { put_with_token(organization, "/api/v1/products/#{SecureRandom.uuid}", {product: update_params}) }
 
