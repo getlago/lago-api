@@ -11,6 +11,7 @@ class Product < ApplicationRecord
   has_many :product_items
   has_many :plan_products
   has_many :plans, through: :plan_products
+  has_many :subscription_rate_cards, through: :product_items
 
   validates :name, presence: true
   validates :code,
@@ -25,6 +26,10 @@ class Product < ApplicationRecord
 
   def invoice_name
     invoice_display_name.presence || name
+  end
+
+  def attached_to_plan_or_subscription?
+    plan_products.exists? || subscription_rate_cards.exists?
   end
 end
 

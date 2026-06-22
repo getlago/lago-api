@@ -11,6 +11,7 @@ RSpec.describe Product do
     it do
       expect(product).to belong_to(:organization)
       expect(product).to have_many(:product_items)
+      expect(product).to have_many(:subscription_rate_cards).through(:product_items)
     end
   end
 
@@ -49,6 +50,30 @@ RSpec.describe Product do
     it "falls back to name when invoice_display_name is blank" do
       product = build_stubbed(:product, invoice_display_name: nil, name: "Name")
       expect(product.invoice_name).to eq("Name")
+    end
+  end
+
+  describe "#attached_to_plan_or_subscription?" do
+    let(:product) { create(:product) }
+
+    it "is false when the product is not in a plan and none of its items has a subscription" do
+      create(:product_item, organization: product.organization, product:)
+
+      expect(product.attached_to_plan_or_subscription?).to be(false)
+    end
+
+    it "is true when the product is attached to a plan" do
+      create(:plan_product, organization: product.organization, product:)
+
+      expect(product.attached_to_plan_or_subscription?).to be(true)
+    end
+
+    it "is true when one of its items has a subscription product item" do
+      item = create(:product_item, organization: product.organization, product:)
+      rate_card = create(:rate_card, organization: product.organization, product_item: item)
+      create(:subscription_rate_card, organization: product.organization, rate_card:)
+
+      expect(product.attached_to_plan_or_subscription?).to be(true)
     end
   end
 end

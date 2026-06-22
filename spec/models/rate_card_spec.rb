@@ -62,4 +62,24 @@ RSpec.describe RateCard do
       end
     end
   end
+
+  describe "#attached_to_plan_or_subscription?" do
+    let(:rate_card) { create(:rate_card) }
+
+    it "is false when no plan or subscription references the card" do
+      expect(rate_card.attached_to_plan_or_subscription?).to be(false)
+    end
+
+    it "is true when a plan references the card" do
+      create(:plan_rate_card, organization: rate_card.organization, rate_card:)
+
+      expect(rate_card.attached_to_plan_or_subscription?).to be(true)
+    end
+
+    it "is true when a subscription references the card" do
+      create(:subscription_rate_card, organization: rate_card.organization, rate_card:)
+
+      expect(rate_card.attached_to_plan_or_subscription?).to be(true)
+    end
+  end
 end

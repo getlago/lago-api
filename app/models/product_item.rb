@@ -42,6 +42,10 @@ class ProductItem < ApplicationRecord
     invoice_display_name.presence || name
   end
 
+  def attached_to_plan_or_subscription?
+    plan_rate_cards.exists? || subscription_rate_cards.exists?
+  end
+
   private
 
   def validate_billable_metric_presence
