@@ -498,11 +498,11 @@ RSpec.describe Subscriptions::ActivateService do
       end
 
       it "ensures the previous subscription is billed for the period before terminating it" do
-        allow(Subscriptions::EnsureBilledForPeriodService).to receive(:call!).and_call_original
+        allow(Subscriptions::EnsurePeriodInvoiceForCreditService).to receive(:call!).and_call_original
 
         result
 
-        expect(Subscriptions::EnsureBilledForPeriodService).to have_received(:call!)
+        expect(Subscriptions::EnsurePeriodInvoiceForCreditService).to have_received(:call!)
           .with(subscription: previous_subscription, timestamp:)
       end
 

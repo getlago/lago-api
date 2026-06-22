@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  class EnsureBilledForPeriodService < BaseService
-    class NotBilledError < StandardError; end
+  class EnsurePeriodInvoiceForCreditService < BaseService
+    class MissingCreditableInvoiceError < StandardError; end
 
     Result = BaseResult
 
@@ -13,15 +13,13 @@ module Subscriptions
     end
 
     def call
-      return result unless subscription.active?
       return result unless subscription.plan.pay_in_advance?
-
-      BillSubscriptionJob.perform_now([subscription], timestamp.to_i, invoicing_reason: :subscription_periodic)
-
       return result if period_billed?
 
-      raise NotBilledError,
-        "subscription #{subscription.id} has no usable invoice for the period at #{timestamp.iso8601}"
+      raise MissingCreditableInvoiceError,
+        "subscription #{subscription.id} has no usable invoice for the period at #{timestamp.iso8601}: " \
+        "BillSubscriptionJob must finish successfully and produce the period invoice before " \
+        "Subscriptions::ActivationRules::Payment::ResolveJob is re-executed"
     end
 
     private

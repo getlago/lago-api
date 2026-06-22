@@ -2058,13 +2058,17 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
   end
 
-  describe "plan downgrade from a pay-in-advance plan resolving mid-cycle" do
+  describe "plan downgrade from a pay-in-advance plan with fixed charges resolving mid-cycle" do
+    let(:add_on) { create(:add_on, organization:) }
     let(:previous_plan) do
       create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 2000)
     end
     let(:downgrade_external_id) { "downgrade-sub-#{SecureRandom.hex(4)}" }
 
     before do
+      create(:fixed_charge, :pay_in_advance, plan: previous_plan, add_on:, units: 1, properties: {amount: "10"})
+      create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 1, properties: {amount: "10"})
+
       allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
         .to receive(:create_payment_intent) do
           Stripe::PaymentIntent.construct_from(
@@ -2117,6 +2121,8 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       invoice = new_subscription.invoices.sole
       expect(invoice).to be_open
+      # The downgrade's pay-in-advance fixed charge is collected in the gating invoice.
+      expect(invoice.fees.fixed_charge.pluck(:amount_cents)).to eq([1000])
 
       # Stage 4: payment succeeds mid-cycle — previous plan terminated with a credit note for the
       # unused prepaid days, downgrade activated.
@@ -2133,53 +2139,24 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       # The previous plan was billed €20.00 for the whole of February (29 days — 2024 is a leap
       # year). Terminating it mid-cycle on Feb 15 credits the 15 unused days (Feb 15–29), the
-      # transition day going to the new plan: 2000 * 15 / 29 = 1034 cents.
+      # transition day going to the new plan: 2000 * 15 / 29 = 1034 cents. The fixed charge is not
+      # credited — only the unused subscription-fee days are.
       credit_note = previous_subscription.invoices.flat_map(&:credit_notes).sole
       expect(credit_note.credit_amount_cents).to eq(1034)
-    end
 
-    it "bills the previous plan's period once when the gating and activation billings run concurrently", transaction: false do
-      travel_to(DateTime.new(2024, 1, 1)) do
-        create_subscription({
-          external_customer_id: customer.external_id,
-          external_id: downgrade_external_id,
-          plan_code: previous_plan.code,
-          billing_time: "calendar"
-        })
-        perform_all_enqueued_jobs
-      end
-
-      previous_subscription = customer.subscriptions.sole
-
-      # Two threads bill the same period at once; the period unique index lets one win and the other
-      # silently no-op, so exactly one invoice results.
-      barrier = Concurrent::CyclicBarrier.new(2)
-      threads = Array.new(2) do
-        Thread.new do
-          Thread.current.report_on_exception = false
-
-          ActiveRecord::Base.connection_pool.with_connection do
-            barrier.wait
-            BillSubscriptionJob.perform_now(
-              [previous_subscription], DateTime.new(2024, 2, 1).to_i, invoicing_reason: :subscription_periodic
-            )
-          end
-        end
-      end
-
-      threads.each(&:join)
-
+      # The previous plan's period is billed exactly once across the gating (:subscription_periodic)
+      # and rotation (:upgrading, stored as :subscription_terminating) billings: one recurring
+      # period, one subscription fee per month, and its pay-in-advance fixed charge billed once for
+      # January and once for February — never re-billed on termination.
       expect(previous_subscription.invoice_subscriptions.recurring.count).to eq(1)
+      expect(previous_subscription.invoice_subscriptions.pluck(:invoicing_reason).sort)
+        .to eq(%w[subscription_periodic subscription_starting subscription_terminating])
+      expect(previous_subscription.fees.subscription.pluck(:amount_cents)).to eq([2000, 2000])
+      expect(previous_subscription.fees.fixed_charge.pluck(:amount_cents)).to eq([1000, 1000])
 
-      # Terminating the previous plan mid-cycle (as the downgrade activation does) then credits the
-      # unused days of that single February invoice — the same end state as the scenario above:
-      # 2000 * 15 / 29 = 1034 cents.
-      travel_to(DateTime.new(2024, 2, 15)) do
-        Subscriptions::TerminateService.call(subscription: previous_subscription.reload, rotation: true)
-      end
-
-      credit_note = previous_subscription.invoices.flat_map(&:credit_notes).sole
-      expect(credit_note.credit_amount_cents).to eq(1034)
+      # The downgrade's own fixed charge was billed once (in the gating invoice) and not again on
+      # activation — billed_during_gating short-circuits the new-sub billing.
+      expect(new_subscription.fees.fixed_charge.pluck(:amount_cents)).to eq([1000])
     end
 
     it "raises and leaves the subscription incomplete when the previous plan's period cannot be billed" do
@@ -2221,7 +2198,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       # activation raises and the payment-resolution job dead-letters for manual handling.
       travel_to(DateTime.new(2024, 2, 15)) do
         expect { simulate_stripe_webhook(status: "succeeded") }
-          .to raise_error(Subscriptions::EnsureBilledForPeriodService::NotBilledError)
+          .to raise_error(Subscriptions::EnsurePeriodInvoiceForCreditService::MissingCreditableInvoiceError)
       end
 
       # The activation rolled back cleanly — nothing half-activated.

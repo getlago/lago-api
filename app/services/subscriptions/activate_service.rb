@@ -98,7 +98,7 @@ module Subscriptions
       previous_subscription = subscription.previous_subscription
 
       if from_incomplete
-        EnsureBilledForPeriodService.call!(subscription: previous_subscription, timestamp:)
+        EnsurePeriodInvoiceForCreditService.call!(subscription: previous_subscription, timestamp:)
 
         Subscriptions::TerminateService.call(
           subscription: previous_subscription,
