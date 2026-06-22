@@ -60387,20 +60387,12 @@
               "description": "Query product items of an organization",
               "args": [
                 {
-                  "name": "itemTypes",
+                  "name": "itemType",
                   "description": null,
                   "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "ENUM",
-                        "name": "ProductItemTypeEnum",
-                        "ofType": null
-                      }
-                    }
+                    "kind": "ENUM",
+                    "name": "ProductItemTypeEnum",
+                    "ofType": null
                   },
                   "defaultValue": null,
                   "isDeprecated": false,

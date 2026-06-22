@@ -2,7 +2,7 @@
 
 class ProductItemsQuery < BaseQuery
   Result = BaseResult[:product_items]
-  Filters = BaseFilters[:product_id, :item_types]
+  Filters = BaseFilters[:product_id, :item_type]
 
   def call
     product_items = base_scope.result
@@ -10,7 +10,7 @@ class ProductItemsQuery < BaseQuery
     product_items = apply_consistent_ordering(product_items)
 
     product_items = with_product(product_items) if filters.product_id.present?
-    product_items = with_item_types(product_items) if filters.item_types.present?
+    product_items = with_item_type(product_items) if filters.item_type.present?
 
     result.product_items = product_items
     result
@@ -36,7 +36,7 @@ class ProductItemsQuery < BaseQuery
     scope.where(product_id: filters.product_id)
   end
 
-  def with_item_types(scope)
-    scope.where(item_type: filters.item_types)
+  def with_item_type(scope)
+    scope.where(item_type: filters.item_type)
   end
 end
