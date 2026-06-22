@@ -11,17 +11,19 @@ module Resolvers
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
+    argument :product_id, ID, required: false
     argument :search_term, String, required: false
     argument :with_deleted, Boolean, required: false
 
     type Types::Plans::Object.collection_type, null: false
 
-    def resolve(page: nil, limit: nil, search_term: nil, with_deleted: nil)
+    def resolve(page: nil, limit: nil, search_term: nil, with_deleted: nil, product_id: nil)
       result = PlansQuery.call(
         organization: current_organization,
         search_term:,
         filters: {
-          with_deleted:
+          with_deleted:,
+          product_id:
         },
         pagination: {
           page:,

@@ -77,4 +77,38 @@ RSpec.describe Resolvers::PlansResolver do
       expect(plans_response["metadata"]["totalCount"]).to eq(2)
     end
   end
+
+  context "when filtering by product_id" do
+    let(:product) { create(:product, organization:) }
+    let(:other_plan) { create(:plan, organization:) }
+    let(:query) do
+      <<~GQL
+        query($productId: ID!) {
+          plans(limit: 5, productId: $productId) {
+            collection { id }
+            metadata { totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      other_plan
+      create(:plan_product, organization:, plan:, product:)
+    end
+
+    it "returns only the plans linked to the product" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {productId: product.id}
+      )
+
+      plans_response = result["data"]["plans"]
+      expect(plans_response["collection"].map { |p| p["id"] }).to eq([plan.id])
+      expect(plans_response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
 end
