@@ -14,6 +14,7 @@ module Types
       field :invoice_display_name, String, null: true
       field :name, String, null: false
 
+      field :attached_to_plan_or_subscription, Boolean, null: false, method: :attached_to_plan_or_subscription?
       field :product_items_count, Integer, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false

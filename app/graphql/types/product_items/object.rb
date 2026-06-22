@@ -11,6 +11,7 @@ module Types
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType
 
+      field :attached_to_plan_or_subscription, Boolean, null: false, method: :attached_to_plan_or_subscription?
       field :code, String, null: false
       field :description, String, null: true
       field :invoice_display_name, String, null: true

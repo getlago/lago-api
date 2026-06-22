@@ -21,6 +21,25 @@ module ProductItems
       product_item.name = params[:name] if params.key?(:name)
       product_item.description = params[:description] if params.key?(:description)
       product_item.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
+
+      # NOTE: code and product attachment can only be edited while the item is
+      #       not yet in a plan or subscription; changing them once attached is
+      #       a validation error.
+      if product_item.attached_to_plan_or_subscription?
+        if params.key?(:code) && params[:code] != product_item.code
+          return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
+        end
+
+        if params.key?(:product_id) && params[:product_id] != product_item.product_id
+          return result.single_validation_failure!(field: :product, error_code: "attached_to_plan_or_subscription")
+        end
+      else
+        product_item.code = params[:code] if params.key?(:code)
+        assign_product if params.key?(:product_id)
+      end
+
+      return result if result.failure?
+
       product_item.save!
 
       result.product_item = product_item
@@ -32,5 +51,17 @@ module ProductItems
     private
 
     attr_reader :product_item, :params
+
+    def assign_product
+      if params[:product_id].blank?
+        product_item.product = nil
+        return
+      end
+
+      product = product_item.organization.products.find_by(id: params[:product_id])
+      return result.not_found_failure!(resource: "product") unless product
+
+      product_item.product = product
+    end
   end
 end

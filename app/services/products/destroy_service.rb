@@ -17,6 +17,10 @@ module Products
     def call
       return result.not_found_failure!(resource: "product") unless product
 
+      if product.attached_to_plan_or_subscription?
+        return result.single_validation_failure!(field: :product, error_code: "attached_to_plan_or_subscription")
+      end
+
       ActiveRecord::Base.transaction do
         product.product_items.find_each do |product_item|
           ProductItems::DestroyService.call!(product_item:)

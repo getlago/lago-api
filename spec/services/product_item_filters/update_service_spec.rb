@@ -29,6 +29,86 @@ RSpec.describe ProductItemFilters::UpdateService do
     expect { result }.not_to change { product_item_filter.reload.values.count }
   end
 
+  describe "code editability" do
+    let(:params) { {code: "after"} }
+
+    it "updates the code when the item is not in a plan or subscription" do
+      expect { result }.to change { product_item_filter.reload.code }.to("after")
+    end
+  end
+
+  context "when the item is attached to a plan" do
+    before do
+      rate_card = create(:rate_card, organization:, product_item:)
+      create(:plan_rate_card, organization:, rate_card:)
+    end
+
+    let(:params) { {code: "after", values: [{billable_metric_filter_id: region_filter.id, value: "eu"}]} }
+
+    it "rejects the structural change" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:code]).to eq(["attached_to_plan_or_subscription"])
+      expect(product_item_filter.reload.to_h).to eq("region" => %w[us])
+    end
+
+    it "still updates the display fields without structural params" do
+      update_result = described_class.call(product_item_filter:, params: {name: "renamed"})
+
+      expect(update_result).to be_success
+      expect(product_item_filter.reload.name).to eq("renamed")
+    end
+
+    context "when the payload resends the current code and values unchanged" do
+      let(:params) do
+        {
+          name: "renamed",
+          code: product_item_filter.code,
+          values: [{billable_metric_filter_id: region_filter.id, value: "us"}]
+        }
+      end
+
+      it "succeeds without touching the values" do
+        expect { result }.not_to change { product_item_filter.values.order(:id).pluck(:id) }
+
+        expect(result).to be_success
+        expect(product_item_filter.reload.name).to eq("renamed")
+      end
+    end
+
+    context "when only the values actually change" do
+      let(:params) { {values: [{billable_metric_filter_id: region_filter.id, value: "eu"}]} }
+
+      it "replaces the values while no subscription bills through the filter" do
+        expect(result).to be_success
+        expect(product_item_filter.reload.to_h).to eq("region" => %w[eu])
+      end
+    end
+  end
+
+  context "when a subscription bills through a card scoped to the filter" do
+    before do
+      rate_card = create(:rate_card, organization:, product_item:, product_item_filter:)
+      create(:subscription_rate_card, organization:, rate_card:)
+    end
+
+    let(:params) { {values: [{billable_metric_filter_id: region_filter.id, value: "eu"}]} }
+
+    it "rejects the values change" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:values]).to eq(["attached_to_subscriptions"])
+    end
+
+    it "still accepts a payload resending the current values" do
+      update_result = described_class.call(
+        product_item_filter:,
+        params: {name: "renamed", values: [{billable_metric_filter_id: region_filter.id, value: "us"}]}
+      )
+
+      expect(update_result).to be_success
+      expect(product_item_filter.reload.name).to eq("renamed")
+    end
+  end
+
   it "produces an activity log" do
     result
     expect(Utils::ActivityLog).to have_produced("product_item_filter.updated").after_commit.with(product_item_filter)

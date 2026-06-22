@@ -20,7 +20,23 @@ module ProductItemFilters
 
       if params.key?(:values)
         return resolved_values unless resolved_values.success?
+      end
 
+      # NOTE: the code freezes as soon as the item is in a plan or subscription
+      #       (it is the filter's identity); the values only freeze once a
+      #       subscription bills through a card scoped to this filter. Clients
+      #       typically resend the whole payload on edit, so only an actual
+      #       change counts as a structural edit.
+      if product_item_filter.attached_to_plan_or_subscription? &&
+          params.key?(:code) && params[:code] != product_item_filter.code
+        return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
+      end
+
+      if product_item_filter.attached_to_subscriptions? && params.key?(:values) && values_changed?
+        return result.single_validation_failure!(field: :values, error_code: "attached_to_subscriptions")
+      end
+
+      if params.key?(:values)
         values_validation = ProductItemFilters::ValidateValuesService.call(
           product_item: product_item_filter.product_item,
           values_params: resolved_values.values_params
@@ -32,9 +48,10 @@ module ProductItemFilters
         product_item_filter.name = params[:name] if params.key?(:name)
         product_item_filter.description = params[:description] if params.key?(:description)
         product_item_filter.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
+        product_item_filter.code = params[:code] if params.key?(:code)
         product_item_filter.save!
 
-        replace_values if params.key?(:values)
+        replace_values if params.key?(:values) && values_changed?
 
         result.product_item_filter = product_item_filter
       end
@@ -52,6 +69,13 @@ module ProductItemFilters
     private
 
     attr_reader :product_item_filter, :params
+
+    def values_changed?
+      current = product_item_filter.values.map { |value| [value.billable_metric_filter_id, value.value] }.sort
+      submitted = resolved_values.values_params.map { |value| [value[:billable_metric_filter_id], value[:value]] }.sort
+
+      current != submitted
+    end
 
     def resolved_values
       @resolved_values ||= ProductItemFilters::ResolveValuesService.call(

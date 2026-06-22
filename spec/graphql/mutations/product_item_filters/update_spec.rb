@@ -56,6 +56,29 @@ RSpec.describe Mutations::ProductItemFilters::Update do
     expect(result_data["values"].map { [it["key"], it["value"]] }).to eq([%w[region eu]])
   end
 
+  context "when the item is attached and the payload resends code and values unchanged" do
+    before do
+      rate_card = create(:rate_card, organization:, product_item:)
+      create(:plan_rate_card, organization:, rate_card:)
+    end
+
+    let(:input) do
+      {
+        id: product_item_filter.id,
+        name: "After",
+        code: product_item_filter.code,
+        values: [{billableMetricFilterId: region_filter.id, value: "us"}]
+      }
+    end
+
+    it "succeeds" do
+      result_data = execution["data"]["updateProductItemFilter"]
+
+      expect(result_data["name"]).to eq("After")
+      expect(result_data["values"].map { [it["key"], it["value"]] }).to eq([%w[region us]])
+    end
+  end
+
   context "when the filter belongs to another organization" do
     let(:input) { {id: create(:product_item_filter).id, name: "After"} }
 
