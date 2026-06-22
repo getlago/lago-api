@@ -18,7 +18,6 @@ module Types
       field :name, String, null: false
 
       field :billable_metric, Types::BillableMetrics::Object, null: true
-      field :filters, [Types::ProductItemFilters::Object], null: false
       field :product, Types::Products::Object, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
