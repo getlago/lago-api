@@ -111,6 +111,7 @@ RSpec.describe SendEmailJob do
       [LagoHttpClient::HttpError.new(500, "error", "https://example.com"), 6],
       [Net::ReadTimeout, 6],
       [Net::OpenTimeout, 6],
+      [EOFError, 6],
       [Net::SMTPServerBusy.new("busy"), 25],
       [PaymentReceipts::FilesNotReadyError, 8]
     ].each do |error, attempts|
