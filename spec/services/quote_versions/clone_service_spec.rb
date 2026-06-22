@@ -68,6 +68,16 @@ RSpec.describe QuoteVersions::CloneService do
       end
     end
 
+    context "with concurrent mutations", :premium do
+      it "wraps the work in a per-quote lock" do
+        allow(Quotes::LockService).to receive(:call).and_call_original
+
+        result
+
+        expect(Quotes::LockService).to have_received(:call).with(quote: quote_version.quote).at_least(:once)
+      end
+    end
+
     context "when any quote version is already approved", :premium do
       let!(:versions) do
         [create(:quote_version, :approved, quote:, organization:)]

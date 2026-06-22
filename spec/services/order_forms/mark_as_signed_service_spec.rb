@@ -48,6 +48,27 @@ RSpec.describe OrderForms::MarkAsSignedService do
         end
       end
 
+      context "with concurrent mutations" do
+        it "wraps the work in a per-quote lock" do
+          allow(Quotes::LockService).to receive(:call).and_call_original
+
+          service.call
+
+          expect(Quotes::LockService).to have_received(:call).with(quote: order_form.quote_version.quote).at_least(:once)
+        end
+
+        it "re-checks the status under the lock and refuses signing an order form voided concurrently" do
+          order_form
+          OrderForm.find(order_form.id).update!(status: :voided, void_reason: :manual, voided_at: Time.current)
+
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({status: ["not_signable"]})
+        end
+      end
+
       context "when order_form is not generated" do
         let(:order_form) { create(:order_form, :signed, customer:, organization:, quote:) }
 

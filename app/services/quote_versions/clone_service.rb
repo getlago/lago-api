@@ -25,16 +25,19 @@ module QuoteVersions
     def call
       return result.not_found_failure!(resource: "quote_version") unless quote_version
       return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
-      return result.single_validation_failure!(field: :status, error_code: "not_clonable") unless clonable?
 
-      cloned = QuoteVersion.transaction do
-        void_active_version!
-        create_next_version(quote_version:)
+      QuoteVersion.transaction do
+        Quotes::LockService.call(quote: quote_version.quote) do
+          quote_version.reload
+          next result.single_validation_failure!(field: :status, error_code: "not_clonable") unless clonable?
+
+          void_active_version!
+          result.quote_version = create_next_version(quote_version:)
+        end
       end
 
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.cloned", cloned)
+      # TODO: SendWebhookJob.perform_after_commit("quote_version.cloned", result.quote_version)
 
-      result.quote_version = cloned
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

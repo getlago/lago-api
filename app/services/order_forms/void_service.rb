@@ -20,21 +20,24 @@ module OrderForms
     def call
       return result.not_found_failure!(resource: "order_form") unless order_form
       return result.forbidden_failure! unless order_forms_enabled?(order_form.organization)
-      return result.single_validation_failure!(field: :status, error_code: "not_voidable") unless order_form.generated?
 
-      order_form.assign_attributes(
-        status: :voided,
-        voided_at: Time.current,
-        void_reason: :manual
-      )
+      OrderForm.transaction do
+        Quotes::LockService.call(quote: order_form.quote_version.quote) do
+          order_form.reload
+          next result.single_validation_failure!(field: :status, error_code: "not_voidable") unless order_form.generated?
 
-      ActiveRecord::Base.transaction do
-        order_form.save!
+          order_form.update!(
+            status: :voided,
+            voided_at: Time.current,
+            void_reason: :manual
+          )
 
-        QuoteVersions::VoidService.call!(quote_version: order_form.quote_version, reason: :cascade_of_voided)
+          QuoteVersions::VoidService.call!(quote_version: order_form.quote_version, reason: :cascade_of_voided)
+
+          result.order_form = order_form
+        end
       end
 
-      result.order_form = order_form
       result
     end
 

@@ -25,6 +25,25 @@ RSpec.describe QuoteVersions::VoidService do
       end
     end
 
+    context "with concurrent mutations", :premium do
+      it "wraps the work in a per-quote lock" do
+        allow(Quotes::LockService).to receive(:call).and_call_original
+
+        result
+
+        expect(Quotes::LockService).to have_received(:call).with(quote: quote_version.quote).at_least(:once)
+      end
+
+      it "re-checks the status under the lock and refuses a stale void" do
+        quote_version
+        QuoteVersion.find(quote_version.id).update!(status: :approved, approved_at: Time.current)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({status: ["not_voidable"]})
+      end
+    end
+
     context "when quote version is approved", :premium do
       let(:quote_version) { create(:quote_version, :approved, organization:) }
 

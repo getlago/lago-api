@@ -18,19 +18,26 @@ module QuoteVersions
       return result.not_found_failure!(resource: "quote_version") unless quote_version
       return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
       return result.single_validation_failure!(field: :void_reason, error_code: "invalid") unless valid_reason?
-      return result.single_validation_failure!(field: :status, error_code: "not_voidable") unless voidable?
 
-      quote_version.update!(
-        status: :voided,
-        void_reason: reason,
-        voided_at: Time.current,
-        share_token: nil,
-        approved_at: nil
-      )
+      QuoteVersion.transaction do
+        Quotes::LockService.call(quote: quote_version.quote) do
+          quote_version.reload
+          next result.single_validation_failure!(field: :status, error_code: "not_voidable") unless voidable?
+
+          quote_version.update!(
+            status: :voided,
+            void_reason: reason,
+            voided_at: Time.current,
+            share_token: nil,
+            approved_at: nil
+          )
+
+          result.quote_version = quote_version
+        end
+      end
 
       # TODO: SendWebhookJob.perform_after_commit("quote_version.voided", quote_version)
 
-      result.quote_version = quote_version
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
