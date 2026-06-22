@@ -14,7 +14,6 @@ module Types
       field :invoice_display_name, String, null: true
       field :name, String, null: false
 
-      field :products, [Types::Products::Object], null: false
       field :products_count, Integer, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
