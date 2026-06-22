@@ -26,6 +26,12 @@ class Product < ApplicationRecord
   def invoice_name
     invoice_display_name.presence || name
   end
+
+  def attached_to_plan_or_subscription?
+    return true if plan_products.exists?
+
+    SubscriptionProductItem.where(product_item_id: product_items.select(:id)).exists?
+  end
 end
 
 # == Schema Information

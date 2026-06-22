@@ -51,4 +51,27 @@ RSpec.describe Product do
       expect(product.invoice_name).to eq("Name")
     end
   end
+
+  describe "#attached_to_plan_or_subscription?" do
+    let(:product) { create(:product) }
+
+    it "is false when the product is not in a plan and none of its items has a subscription" do
+      create(:product_item, organization: product.organization, product:)
+
+      expect(product.attached_to_plan_or_subscription?).to be(false)
+    end
+
+    it "is true when the product is attached to a plan" do
+      create(:plan_product, organization: product.organization, product:)
+
+      expect(product.attached_to_plan_or_subscription?).to be(true)
+    end
+
+    it "is true when one of its items has a subscription product item" do
+      item = create(:product_item, organization: product.organization, product:)
+      create(:subscription_product_item, organization: product.organization, product_item: item)
+
+      expect(product.attached_to_plan_or_subscription?).to be(true)
+    end
+  end
 end
