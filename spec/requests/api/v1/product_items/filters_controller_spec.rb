@@ -123,6 +123,19 @@ RSpec.describe Api::V1::ProductItems::FiltersController do
       expect(json[:filters].count).to eq(1)
       expect(json[:meta][:total_count]).to eq(1)
     end
+
+    context "with a search term" do
+      subject { get_with_token(organization, "/api/v1/product_items/#{product_item.id}/filters?search_term=findme") }
+
+      let!(:matching) { create(:product_item_filter, organization:, product_item:, name: "findme filter") }
+
+      it "returns only the filters matching the search term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:filters].map { it[:lago_id] }).to eq([matching.id])
+      end
+    end
   end
 
   describe "DELETE /api/v1/product_items/:product_item_id/filters/:id" do
