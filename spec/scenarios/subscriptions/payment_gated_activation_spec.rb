@@ -2058,7 +2058,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
   end
 
-  describe "plan downgrade from a pay-in-advance plan resolving mid-cycle", transaction: false do
+  describe "plan downgrade from a pay-in-advance plan resolving mid-cycle" do
     let(:previous_plan) do
       create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 2000)
     end
@@ -2138,7 +2138,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(credit_note.credit_amount_cents).to eq(1034)
     end
 
-    it "bills the previous plan's period once when the gating and activation billings run concurrently" do
+    it "bills the previous plan's period once when the gating and activation billings run concurrently", transaction: false do
       travel_to(DateTime.new(2024, 1, 1)) do
         create_subscription({
           external_customer_id: customer.external_id,
@@ -2156,6 +2156,8 @@ describe "Payment Gated Subscription Activation Scenarios" do
       barrier = Concurrent::CyclicBarrier.new(2)
       threads = Array.new(2) do
         Thread.new do
+          Thread.current.report_on_exception = false
+
           ActiveRecord::Base.connection_pool.with_connection do
             barrier.wait
             BillSubscriptionJob.perform_now(
@@ -2165,7 +2167,6 @@ describe "Payment Gated Subscription Activation Scenarios" do
         end
       end
 
-      # join re-raises if either thread died — so an unsilenced billing error fails the test here.
       threads.each(&:join)
 
       expect(previous_subscription.invoice_subscriptions.recurring.count).to eq(1)
