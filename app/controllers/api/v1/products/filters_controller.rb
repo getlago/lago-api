@@ -8,19 +8,28 @@ module Api
         before_action :find_product_filter, only: %i[show update destroy]
 
         def index
-          filters = product.filters
-            .includes(values: :billable_metric_filter)
-            .page(params[:page])
-            .per(params[:per_page] || PER_PAGE)
-
-          render(
-            json: ::CollectionSerializer.new(
-              filters,
-              ::V1::ProductFilterSerializer,
-              collection_name: "filters",
-              meta: pagination_metadata(filters)
-            )
+          result = ::ProductFiltersQuery.call(
+            organization: current_organization,
+            search_term: params[:search_term],
+            pagination: {
+              page: params[:page],
+              limit: params[:per_page] || PER_PAGE
+            },
+            filters: {product_id: product.id}
           )
+
+          if result.success?
+            render(
+              json: ::CollectionSerializer.new(
+                result.product_filters,
+                ::V1::ProductFilterSerializer,
+                collection_name: "filters",
+                meta: pagination_metadata(result.product_filters)
+              )
+            )
+          else
+            render_error_response(result)
+          end
         end
 
         def show
