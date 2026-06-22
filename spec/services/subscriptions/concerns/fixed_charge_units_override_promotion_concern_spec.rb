@@ -6,6 +6,7 @@ RSpec.describe Subscriptions::Concerns::FixedChargeUnitsOverridePromotionConcern
   subject(:host) do
     Class.new do
       include Subscriptions::Concerns::FixedChargeUnitsOverridePromotionConcern
+
       public :promote_units_overrides_to_fixed_charges_params
 
       attr_accessor :subscription
