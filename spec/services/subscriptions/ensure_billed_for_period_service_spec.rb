@@ -69,4 +69,42 @@ describe Subscriptions::EnsureBilledForPeriodService do
       expect(result).to be_success
     end
   end
+
+  context "when the subscription opts out of the termination credit note" do
+    let(:subscription) do
+      create(:subscription, organization:, customer:, plan:, status: :active,
+        started_at: 1.month.ago, subscription_at: 1.month.ago, on_termination_credit_note: :skip)
+    end
+
+    before { allow(BillSubscriptionJob).to receive(:perform_now) }
+
+    it "does not bill the subscription" do
+      result
+
+      expect(BillSubscriptionJob).not_to have_received(:perform_now)
+    end
+
+    it "returns success" do
+      expect(result).to be_success
+    end
+  end
+
+  context "when the subscription is no longer active" do
+    let(:subscription) do
+      create(:subscription, organization:, customer:, plan:, status: :terminated,
+        started_at: 1.month.ago, subscription_at: 1.month.ago, terminated_at: 1.day.ago)
+    end
+
+    before { allow(BillSubscriptionJob).to receive(:perform_now) }
+
+    it "does not bill the subscription" do
+      result
+
+      expect(BillSubscriptionJob).not_to have_received(:perform_now)
+    end
+
+    it "returns success" do
+      expect(result).to be_success
+    end
+  end
 end
