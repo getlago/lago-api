@@ -10262,7 +10262,6 @@ type ProductItem {
   code: String!
   createdAt: ISO8601DateTime!
   description: String
-  filters: [ProductItemFilter!]!
   id: ID!
   invoiceDisplayName: String
   itemType: ProductItemTypeEnum!
