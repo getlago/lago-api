@@ -18,7 +18,11 @@ module ProductItemFilters
     def call
       return result.not_found_failure!(resource: "product_item_filter") unless product_item_filter
 
-      if params.key?(:values)
+      # NOTE: code and values can only be edited while the filter's item is not
+      #       yet in a plan or subscription
+      editable = !product_item_filter.attached_to_plan_or_subscription?
+
+      if editable && params.key?(:values)
         values_validation = ProductItemFilters::ValidateValuesService.call(
           product_item: product_item_filter.product_item,
           values_params: params[:values],
@@ -31,9 +35,10 @@ module ProductItemFilters
         product_item_filter.name = params[:name] if params.key?(:name)
         product_item_filter.description = params[:description] if params.key?(:description)
         product_item_filter.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
+        product_item_filter.code = params[:code] if editable && params.key?(:code)
         product_item_filter.save!
 
-        replace_values if params.key?(:values)
+        replace_values if editable && params.key?(:values)
 
         result.product_item_filter = product_item_filter
       end
