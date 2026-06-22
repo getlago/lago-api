@@ -10339,7 +10339,6 @@ type Product {
   invoiceDisplayName: String
   name: String!
   organization: Organization
-  productItems: [ProductItem!]!
   productItemsCount: Int!
   updatedAt: ISO8601DateTime!
 }
