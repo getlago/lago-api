@@ -46,4 +46,17 @@ RSpec.describe Products::DestroyService do
       expect(result.error.resource).to eq("product")
     end
   end
+
+  context "when the item is attached to a subscription" do
+    before do
+      rate_card = create(:rate_card, organization:, product:)
+      create(:subscription_rate_card, organization:, rate_card:)
+    end
+
+    it "returns a validation failure and discards nothing" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:product]).to eq(["attached_to_plan_or_subscription"])
+      expect(product.reload).not_to be_discarded
+    end
+  end
 end

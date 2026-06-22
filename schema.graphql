@@ -10656,6 +10656,7 @@ enum PrivilegeValueTypeEnum {
 Base product
 """
 type Product {
+  attachedToPlanOrSubscription: Boolean!
   billableMetric: BillableMetric
   code: String!
   createdAt: ISO8601DateTime!
@@ -10674,6 +10675,7 @@ type Product {
 Base product_category
 """
 type ProductCategory {
+  attachedToPlanOrSubscription: Boolean!
   code: String!
   createdAt: ISO8601DateTime!
   description: String
@@ -10719,6 +10721,7 @@ type ProductCollection {
 Base product filter
 """
 type ProductFilter {
+  attachedToPlanOrSubscription: Boolean!
   code: String!
   createdAt: ISO8601DateTime!
   description: String
@@ -14410,6 +14413,7 @@ input UpdateProductCategoryInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String
   description: String
   id: ID!
   invoiceDisplayName: String
@@ -14424,6 +14428,7 @@ input UpdateProductFilterInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String
   description: String
   id: ID!
   invoiceDisplayName: String
@@ -14439,10 +14444,12 @@ input UpdateProductInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String
   description: String
   id: ID!
   invoiceDisplayName: String
   name: String
+  productCategoryId: ID
 }
 
 """
