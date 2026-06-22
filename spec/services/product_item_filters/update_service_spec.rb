@@ -29,6 +29,26 @@ RSpec.describe ProductItemFilters::UpdateService do
     expect { result }.not_to change { product_item_filter.reload.values.count }
   end
 
+  describe "code editability" do
+    let(:params) { {code: "after"} }
+
+    it "updates the code when the item is not in a plan or subscription" do
+      expect { result }.to change { product_item_filter.reload.code }.to("after")
+    end
+  end
+
+  context "when the item is attached to a plan" do
+    before { create(:plan_product_item, organization:, product_item:) }
+
+    let(:params) { {code: "after", values: [{billable_metric_filter_id: region_filter.id, value: "eu"}]} }
+
+    it "changes neither the code nor the values" do
+      expect(result).to be_success
+      expect(result.product_item_filter.reload.code).not_to eq("after")
+      expect(result.product_item_filter.to_h).to eq("region" => %w[us])
+    end
+  end
+
   it "produces an activity log" do
     result
     expect(Utils::ActivityLog).to have_produced("product_item_filter.updated").after_commit.with(product_item_filter)
