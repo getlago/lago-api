@@ -11301,7 +11301,7 @@ type Query {
   """
   Query product items of an organization
   """
-  productItems(itemTypes: [ProductItemTypeEnum!], limit: Int, page: Int, productIds: [ID!], searchTerm: String, withoutProduct: Boolean): ProductItemCollection!
+  productItems(itemType: ProductItemTypeEnum, limit: Int, page: Int, productIds: [ID!], searchTerm: String, withoutProduct: Boolean): ProductItemCollection!
 
   """
   Query products of an organization
