@@ -29,7 +29,17 @@ module Api
 
       def update
         product_item = current_organization.product_items.find_by(code: params[:code])
-        result = ::ProductItems::UpdateService.call(product_item:, params: update_params.to_h.symbolize_keys)
+
+        if update_params.key?(:product_code) && updated_product.nil?
+          return not_found_error(resource: "product")
+        end
+
+        service_params = update_params.except(:product_code).to_h.symbolize_keys
+        if update_params.key?(:product_code)
+          service_params[:product_id] = updated_product.id
+        end
+
+        result = ::ProductItems::UpdateService.call(product_item:, params: service_params)
 
         if result.success?
           render_product_item(result.product_item)
@@ -108,6 +118,10 @@ module Api
         @index_products ||= current_organization.products.where(code: index_product_codes).to_a
       end
 
+      def updated_product
+        @updated_product ||= current_organization.products.find_by(code: update_params[:product_code])
+      end
+
       def input_params
         params.require(:product_item).permit(
           :name,
@@ -123,8 +137,10 @@ module Api
       def update_params
         params.require(:product_item).permit(
           :name,
+          :code,
           :description,
-          :invoice_display_name
+          :invoice_display_name,
+          :product_code
         )
       end
 
