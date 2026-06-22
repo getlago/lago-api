@@ -149,6 +149,17 @@ RSpec.describe Api::V1::ProductItemsController do
         expect(json[:product_items].map { it[:lago_id] }).to eq([usage_item.id])
       end
     end
+
+    context "with a search term" do
+      let(:query_params) { "?search_term=findme" }
+      let!(:matching_item) { create(:product_item, organization:, product:, name: "findme item") }
+
+      it "returns only the items matching the search term" do
+        subject
+
+        expect(json[:product_items].map { it[:lago_id] }).to eq([matching_item.id])
+      end
+    end
   end
 
   describe "DELETE /api/v1/product_items/:id" do
