@@ -1445,33 +1445,27 @@ describe "Pay in advance fixed charge units change mid-period", :premium do
         end
       end
 
-      it "creates a plan override with the new units" do
-        child_plan = subscription.reload.plan
-        expect(child_plan.parent_id).to eq(plan.id)
+      it "writes a per-subscription units override row without cloning the plan" do
+        subscription.reload
+        expect(subscription.plan).to eq(plan)
+        expect(plan.fixed_charges.reload).to contain_exactly(fixed_charge)
 
-        child_fixed_charge = child_plan.fixed_charges.first
-        expect(child_fixed_charge.parent_id).to eq(fixed_charge.id)
-        expect(child_fixed_charge.units).to eq(15)
+        override = Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)
+        expect(override).to be_present
+        expect(override.units).to eq(15)
       end
 
-      it "creates a single FixedChargeEvent on the override with units=15 at the update time" do
-        child_fixed_charge = subscription.reload.plan.fixed_charges.first
-        events = FixedChargeEvent.where(subscription:, fixed_charge: child_fixed_charge).order(:created_at)
+      it "appends a FixedChargeEvent on the parent fixed_charge with units=15 at the update time" do
+        events = FixedChargeEvent.where(subscription:, fixed_charge:).order(:created_at)
 
-        # Expectation: one event on the child fixed_charge with the new
-        # 15 units, anchored at "now" (apply_units_immediately: true).
-        #
-        # Observed on main: TWO events on the child fixed_charge:
-        #   1. units=10 anchored at the next-period boundary, created by
-        #      Plans::OverrideService cloning fixed_charges with
-        #      apply_units_immediately defaulting to false.
-        #   2. units=15 anchored at "now", created by the subsequent
-        #      update_fixed_charge_override step.
-        # The stale units=10 event at the next-period boundary is what
-        # the aggregation reads for the next billing cycle.
-        expect(events.count).to eq(1)
-        expect(events.first.units).to eq(15)
-        expect(events.first.timestamp).to be_within(5.seconds).of(subscription_date + 1.hour)
+        # Two events on the parent fixed_charge:
+        #   1. units=10 from subscription creation.
+        #   2. units=15 at the update time, emitted by the units-only fast
+        #      path on UpdateOrOverrideFixedChargeService.
+        expect(events.count).to eq(2)
+        update_event = events.last
+        expect(update_event.units).to eq(15)
+        expect(update_event.timestamp).to be_within(5.seconds).of(subscription_date + 1.hour)
       end
 
       it "generates a mid-period delta invoice for 5 units (15 - 10)" do
