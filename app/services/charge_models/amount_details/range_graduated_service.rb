@@ -39,7 +39,7 @@ module ChargeModels
       end
 
       def per_unit_amount
-        @per_unit_amount ||= BigDecimal(range[:per_unit_amount])
+        @per_unit_amount ||= units.zero? ? BigDecimal(0) : BigDecimal(range[:per_unit_amount])
       end
 
       def per_unit_total_amount

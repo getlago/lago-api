@@ -61,7 +61,7 @@ RSpec.describe ChargeModels::GraduatedService do
               to_value: 10,
               per_unit_total_amount: 0,
               total_with_flat_amount: 2,
-              per_unit_amount: 10,
+              per_unit_amount: 0,
               units: "0.0"
             }
           ]
