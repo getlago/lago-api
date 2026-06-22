@@ -66,4 +66,17 @@ RSpec.describe ProductItemFilter do
       expect(filter.reload.to_h).to eq("region" => %w[us eu], "scheme" => %w[visa])
     end
   end
+
+  describe "#attached_to_plan_or_subscription?" do
+    let(:product_item) { create(:product_item) }
+    let(:filter) { create(:product_item_filter, organization: product_item.organization, product_item:) }
+
+    it "delegates to the product item" do
+      expect(filter.attached_to_plan_or_subscription?).to be(false)
+
+      create(:subscription_product_item, organization: product_item.organization, product_item:)
+
+      expect(filter.attached_to_plan_or_subscription?).to be(true)
+    end
+  end
 end
