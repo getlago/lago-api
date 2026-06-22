@@ -75,4 +75,26 @@ RSpec.describe Product do
       end
     end
   end
+
+  describe "#attached_to_plan_or_subscription?" do
+    let(:product) { create(:product) }
+
+    it "is false when no plan or subscription references it" do
+      expect(product.attached_to_plan_or_subscription?).to be(false)
+    end
+
+    it "is true when a plan product references it" do
+      rate_card = create(:rate_card, organization: product.organization, product:)
+      create(:plan_rate_card, organization: product.organization, rate_card:)
+
+      expect(product.attached_to_plan_or_subscription?).to be(true)
+    end
+
+    it "is true when a subscription product references it" do
+      rate_card = create(:rate_card, organization: product.organization, product:)
+      create(:subscription_rate_card, organization: product.organization, rate_card:)
+
+      expect(product.attached_to_plan_or_subscription?).to be(true)
+    end
+  end
 end

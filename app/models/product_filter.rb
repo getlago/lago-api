@@ -12,6 +12,8 @@ class ProductFilter < ApplicationRecord
   has_many :values, class_name: "ProductFilterValue"
   has_many :billable_metric_filters, through: :values
 
+  delegate :attached_to_plan_or_subscription?, to: :product
+
   validates :name, presence: true
   validates :code,
     presence: true,

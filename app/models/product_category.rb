@@ -9,6 +9,8 @@ class ProductCategory < ApplicationRecord
   belongs_to :organization
 
   has_many :products
+  has_many :plan_applied_rate_cards, through: :products
+  has_many :subscription_applied_rate_cards, through: :products
 
   validates :name, presence: true
   validates :code,
@@ -23,6 +25,10 @@ class ProductCategory < ApplicationRecord
 
   def invoice_name
     invoice_display_name.presence || name
+  end
+
+  def attached_to_plan_or_subscription?
+    plan_applied_rate_cards.exists? || subscription_applied_rate_cards.exists?
   end
 end
 
