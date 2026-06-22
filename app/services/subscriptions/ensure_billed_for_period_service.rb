@@ -15,7 +15,6 @@ module Subscriptions
     def call
       return result unless subscription.active?
       return result unless subscription.plan.pay_in_advance?
-      return result if subscription.on_termination_credit_note_skip?
 
       BillSubscriptionJob.perform_now([subscription], timestamp.to_i, invoicing_reason: :subscription_periodic)
 
