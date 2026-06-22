@@ -13,6 +13,7 @@ RSpec.describe ProductItemFilter do
       expect(product_item_filter).to belong_to(:product_item)
       expect(product_item_filter).to have_many(:values).class_name("ProductItemFilterValue")
       expect(product_item_filter).to have_many(:billable_metric_filters).through(:values)
+      expect(product_item_filter).to have_many(:rate_cards)
     end
   end
 

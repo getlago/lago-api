@@ -17,8 +17,29 @@ RSpec.describe Products::UpdateService do
     expect(result.product.invoice_display_name).to eq("Display")
   end
 
-  it "does not change the code" do
-    expect { result }.not_to change { product.reload.code }
+  describe "code editability" do
+    let(:params) { {code: "after"} }
+
+    it "updates the code when the product is not in a plan or subscription" do
+      expect { result }.to change { product.reload.code }.to("after")
+    end
+
+    context "when the product is attached to a plan" do
+      before { create(:plan_product, organization:, product:) }
+
+      it "rejects the code change" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:code]).to eq(["attached_to_plan_or_subscription"])
+        expect(product.reload.code).to eq("before")
+      end
+
+      it "accepts an unchanged code alongside other updates" do
+        update_result = described_class.call(product:, params: {code: "before", name: "renamed"})
+
+        expect(update_result).to be_success
+        expect(product.reload.name).to eq("renamed")
+      end
+    end
   end
 
   it "produces an activity log" do
