@@ -86,6 +86,67 @@ RSpec.describe Api::V1::ProductItemsController do
       expect(json[:product_item][:code]).to eq(product_item.code)
     end
 
+    context "with a code change" do
+      let(:update_params) { {code: "after"} }
+
+      it "updates the code when the item is not in a plan or subscription" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:product_item][:code]).to eq("after")
+      end
+
+      context "when the item is attached to a plan" do
+        before do
+          rate_card = create(:rate_card, organization:, product_item:)
+          create(:plan_rate_card, organization:, rate_card:)
+        end
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:code]).to eq(%w[attached_to_plan_or_subscription])
+        end
+      end
+    end
+
+    context "with a product_code change" do
+      let(:other_product) { create(:product, organization:) }
+      let(:update_params) { {product_code: other_product.code} }
+
+      it "moves the item to the other product" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:product_item][:product_code]).to eq(other_product.code)
+      end
+
+      context "when the product does not exist" do
+        let(:update_params) { {product_code: "unknown"} }
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to be_not_found_error("product")
+        end
+      end
+
+      context "when the item is attached to a plan" do
+        before do
+          rate_card = create(:rate_card, organization:, product_item:)
+          create(:plan_rate_card, organization:, rate_card:)
+        end
+
+        it "returns a validation error naming product_code" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:product_code]).to eq(%w[attached_to_plan_or_subscription])
+        end
+      end
+    end
+
     context "when the product item does not exist" do
       subject { put_with_token(organization, "/api/v1/product_items/#{SecureRandom.uuid}", {product_item: update_params}) }
 

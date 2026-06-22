@@ -102,6 +102,7 @@ module Api
         def update_params
           params.require(:filter).permit(
             :name,
+            :code,
             :description,
             :invoice_display_name,
             values: %i[key value]

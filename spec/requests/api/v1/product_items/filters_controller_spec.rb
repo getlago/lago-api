@@ -118,6 +118,31 @@ RSpec.describe Api::V1::ProductItems::FiltersController do
       expect(json[:filter][:values].map { [it[:key], it[:value]] }).to eq([%w[region eu]])
     end
 
+    context "with a code change" do
+      let(:update_params) { {code: "after"} }
+
+      it "updates the code when the item is not in a plan or subscription" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:filter][:code]).to eq("after")
+      end
+
+      context "when the item is attached to a plan" do
+        before do
+          rate_card = create(:rate_card, organization:, product_item:)
+          create(:plan_rate_card, organization:, rate_card:)
+        end
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:code]).to eq(%w[attached_to_plan_or_subscription])
+        end
+      end
+    end
+
     context "when the filter does not exist" do
       subject { put_with_token(organization, "/api/v1/product_items/#{product_item.code}/filters/#{SecureRandom.uuid}", {filter: update_params}) }
 
