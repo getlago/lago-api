@@ -9800,7 +9800,7 @@ CREATE INDEX index_subscriptions_on_plan_id ON public.subscriptions USING btree 
 -- Name: index_subscriptions_on_plan_id_and_status; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_subscriptions_on_plan_id_and_status ON public.subscriptions USING btree (plan_id, status);
+CREATE INDEX index_subscriptions_on_plan_id_and_status ON public.subscriptions USING btree (plan_id, status) WHERE (status = ANY (ARRAY[0, 1]));
 
 
 --
