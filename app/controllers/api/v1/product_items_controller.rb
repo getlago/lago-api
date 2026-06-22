@@ -91,8 +91,10 @@ module Api
       def update_params
         params.require(:product_item).permit(
           :name,
+          :code,
           :description,
-          :invoice_display_name
+          :invoice_display_name,
+          :product_id
         )
       end
 
