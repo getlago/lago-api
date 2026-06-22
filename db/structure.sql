@@ -3717,6 +3717,7 @@ CREATE TABLE public.invoices (
     prepaid_purchased_credit_amount_cents bigint,
     payment_method_id uuid,
     skip_automatic_payment boolean,
+    purchase_order_number character varying,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -12795,6 +12796,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260625095837'),
+('20260622113747'),
 ('20260619065327'),
 ('20260617145515'),
 ('20260617072554'),

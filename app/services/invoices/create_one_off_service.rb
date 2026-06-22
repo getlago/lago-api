@@ -2,7 +2,7 @@
 
 module Invoices
   class CreateOneOffService < BaseService
-    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil, payment_method_params: nil, invoice_custom_section: {}, billing_entity_id: nil, billing_entity_code: nil)
+    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil, payment_method_params: nil, invoice_custom_section: {}, billing_entity_id: nil, billing_entity_code: nil, purchase_order_number: nil)
       @customer = customer
       @currency = currency || customer&.currency
       @fees = fees
@@ -13,6 +13,7 @@ module Invoices
       @invoice_custom_section = invoice_custom_section
       @billing_entity_id = billing_entity_id
       @billing_entity_code = billing_entity_code
+      @purchase_order_number = purchase_order_number
 
       super(nil)
     end
@@ -95,7 +96,7 @@ module Invoices
     private
 
     attr_accessor :timestamp, :currency, :customer, :fees, :invoice, :skip_psp, :voided_invoice_id, :payment_method_params, :invoice_custom_section
-    attr_reader :billing_entity_id, :billing_entity_code, :billing_entity
+    attr_reader :billing_entity_id, :billing_entity_code, :billing_entity, :purchase_order_number
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
@@ -108,6 +109,9 @@ module Invoices
       invoice_result.raise_if_error!
 
       @invoice = invoice_result.invoice
+      # NOTE: Persisted immediately so the value survives the tax-deferred path,
+      #       which skips the later `invoice.save!`.
+      @invoice.update!(purchase_order_number:) unless purchase_order_number.nil?
     end
 
     def resolve_billing_entity
