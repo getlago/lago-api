@@ -38,6 +38,10 @@ class RateCard < ApplicationRecord
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
   end
+
+  def attached_to_plan_or_subscription?
+    plan_rate_cards.exists? || subscription_rate_cards.exists?
+  end
 end
 
 # == Schema Information
