@@ -131,40 +131,7 @@ module Subscriptions
     #       be called before invoice for the period has been generated.
     #       In that case we do not want to issue a credit note.
     def pay_in_advance_invoice_issued?
-      # Subscription duplicate is used in this logic so that special cases used for terminated subscription
-      # can be avoided in boundaries calculation
-      duplicate = subscription.dup.tap { |s| s.status = :active }
-      beginning_of_period = beginning_of_period(duplicate)
-
-      # If this is first period, pay in advance invoice is issued with creating subscription
-      return true if beginning_of_period < duplicate.started_at
-
-      dates_service = Subscriptions::DatesService.new_instance(
-        duplicate,
-        beginning_of_period,
-        current_usage: false
-      )
-
-      boundaries = BillingPeriodBoundaries.new(
-        from_datetime: dates_service.from_datetime,
-        to_datetime: dates_service.to_datetime,
-        charges_from_datetime: dates_service.charges_from_datetime,
-        charges_to_datetime: dates_service.charges_to_datetime,
-        charges_duration: dates_service.charges_duration_in_days,
-        timestamp: beginning_of_period
-      )
-
-      InvoiceSubscription.matching?(subscription, boundaries, recurring: false)
-    end
-
-    def beginning_of_period(subscription_dup)
-      dates_service = Subscriptions::DatesService.new_instance(
-        subscription_dup,
-        subscription.terminated_at,
-        current_usage: false
-      )
-
-      dates_service.previous_beginning_of_period(current_period: true).to_datetime
+      PayInAdvanceInvoiceIssuedService.call(subscription:, timestamp: subscription.terminated_at).issued
     end
 
     def generate_credit_note_for_unconsumed_subscription?

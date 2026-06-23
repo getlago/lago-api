@@ -15,7 +15,7 @@ module Subscriptions
     def call
       return result unless subscription.plan.pay_in_advance?
       return result if subscription.on_termination_credit_note_skip?
-      return result if period_billed?
+      return result if creditable_invoice_issued?
 
       raise MissingCreditableInvoiceError,
         "subscription #{subscription.id} has no usable invoice for the period at #{timestamp.iso8601}: " \
@@ -27,13 +27,13 @@ module Subscriptions
 
     attr_reader :subscription, :timestamp
 
-    def period_billed?
-      subscription.invoice_subscriptions
-        .recurring
-        .joins(:invoice)
-        .where("invoice_subscriptions.from_datetime <= :ts AND invoice_subscriptions.to_datetime > :ts", ts: timestamp)
-        .where.not(invoices: {status: Invoice.statuses[:voided]})
-        .exists?
+    def creditable_invoice_issued?
+      PayInAdvanceInvoiceIssuedService.call(subscription:, timestamp:).issued &&
+        !period_invoice_voided?
+    end
+
+    def period_invoice_voided?
+      subscription.last_subscription_fee&.invoice&.voided? || false
     end
   end
 end
