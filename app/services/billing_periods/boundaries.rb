@@ -1,20 +1,13 @@
 # frozen_string_literal: true
 
 module BillingPeriods
-  # The sequence of billing-period boundaries derived from an anchor and interval.
+  # Calculator for the evenly-spaced billing "fenceposts" that start at an anchor.
+  # Given an anchor + interval it answers two questions: "where is boundary N?" and
+  # "which boundary is a given time in?" — in the customer timezone, and always
+  # re-derived from the anchor so month-ends don't drift (Jan 31 -> Feb 28 -> Mar 31).
   #
-  # Picture evenly spaced fenceposts on a timeline, starting at the anchor:
-  #
-  #   at(-1)      at(0)=anchor   at(1)         at(2)
-  #     |------------|-------------|-------------|
-  #              one interval  one interval
-  #
-  # Boundaries are `anchor + index * interval`, always re-derived from the anchor
-  # (never incremented from the previous one) so month/year anchoring never drifts
-  # (Jan 31 -> Feb 28 -> Mar 31, not Mar 28). Everything is computed in the customer
-  # timezone. Plain value object shared by the billing-time and creation-time services.
-  #
-  # Running example used below: anchor 2022-02-01, monthly (interval_count: 1), UTC.
+  # Running example below: anchor 2022-02-01, monthly (interval_count: 1), UTC.
+  # The fenceposts are: ... Jan 1 | Feb 1 | Mar 1 | Apr 1 ...
   class Boundaries
     def initialize(billing_anchor_date:, interval_count:, interval_unit:, timezone:)
       @billing_anchor_date = billing_anchor_date
@@ -23,15 +16,11 @@ module BillingPeriods
       @timezone = timezone
     end
 
-    # The boundary at the given index (may be negative), in the customer timezone.
-    # Index 0 is the anchor, 1 is one interval later, -1 is one interval earlier.
+    # The boundary at position `index` = anchor + index * interval. `step` turns a
+    # boundary count into a unit count, so it works for any interval_count.
     #
-    #   at(0)  => 2022-02-01   (the anchor)
-    #   at(1)  => 2022-03-01
-    #   at(-1) => 2022-01-01
-    #
-    # `step` converts a boundary index into a count of units: for quarterly
-    # (interval_count: 3) anchored at Jan 1, at(2) => Jan 1 + 6.months => Jul 1.
+    #   at(0)  => 2022-02-01 (the anchor)   at(1) => 2022-03-01   at(-1) => 2022-01-01
+    #   quarterly (interval_count: 3), anchor Jan 1: at(2) => Jan 1 + 6.months => Jul 1
     def at(index)
       step = index * interval_count
 
@@ -43,19 +32,17 @@ module BillingPeriods
       end
     end
 
-    # Index of the period that contains `time`: the largest index whose boundary is
-    # on or before it. This is the value you feed back into `at`.
+    # Which period `time` falls in: the largest index whose boundary is on or before
+    # it (the value you pass back into `at`).
     #
-    #   index_on_or_before(2022-03-15) => 1   (Mar 1 <= Mar 15 < Apr 1)
-    #   index_on_or_before(2022-02-01) => 0   (exactly on the anchor)
+    # `estimated_index` returns a value that is either exact or one too high (never
+    # too low). The `if` is what catches the "one too high" case and steps back:
+    #   - at(estimate) > time  => the guessed boundary is AFTER time, so it overshot
+    #   - estimate.positive?   => guard so we never step below 0 (the first period)
     #
-    # `estimated_index` is a cheap guess that counts whole calendar months and so is
-    # exact when `time`'s day is on or after the anchor's, and exactly one too high
-    # otherwise (that month's boundary -- e.g. the 31st -- hasn't been reached yet).
-    # It can never be too low, because at(estimate + 1) is always a later month than
-    # `time`. So we only ever step down by one. Example (anchor on Jan 31):
-    #
-    #   index_on_or_before(Feb 15): estimate=1, but at(1)=Feb 28 > Feb 15 -> step to 0
+    # Example, anchor on the 31st, index_on_or_before(Feb 15):
+    #   estimate = 1, but at(1) = Feb 28, which is > Feb 15  => overshot => return 0
+    #   (Feb 15 is really in period 0: [Jan 31, Feb 28))
     def index_on_or_before(time)
       estimate = estimated_index(time)
       return estimate - 1 if estimate.positive? && at(estimate) > time
@@ -63,11 +50,8 @@ module BillingPeriods
       estimate
     end
 
-    # The reference point -- boundary 0 -- as the start of the anchor day in the
-    # customer timezone.
-    #
-    #   billing_anchor_date 2022-02-01, "America/New_York"
-    #     => 2022-02-01 00:00 New York (== 2022-02-01 05:00 UTC)
+    # The reference point (boundary 0): the start of the anchor day in the customer tz.
+    #   anchor for 2022-02-01 in "America/New_York" => 2022-02-01 00:00 NY (05:00 UTC)
     def anchor
       @anchor ||= billing_anchor_date.in_time_zone(timezone).beginning_of_day
     end
@@ -76,16 +60,13 @@ module BillingPeriods
 
     attr_reader :billing_anchor_date, :interval_count, :interval_unit, :timezone
 
-    # A cheap estimate of the boundary index for `time`, used as the starting point
-    # for `index_on_or_before`. Counts whole calendar units between the anchor and
-    # `time`, then divides by interval_count to turn a unit count into a boundary
-    # index.
+    # A cheap guess of the index: count whole calendar units from the anchor, then
+    # divide by interval_count to turn that unit count into a boundary index.
     #
-    #   time 2022-03-15: whole_intervals = 1 month  -> index 1
-    #   quarterly (count 3), time 7 months past anchor: 7 / 3 -> index 2
+    #   2022-03-15 => 1 month past => index 1
+    #   quarterly, 7 months past   => 7 / 3 => index 2
     #
-    # Floored at 0 so a `time` before the anchor never produces a negative index
-    # (we never resolve a period earlier than the first one).
+    # Floored at 0 so a `time` before the anchor never yields a negative index.
     def estimated_index(time)
       whole_intervals = case interval_unit
       when :day then (time.to_date - anchor.to_date).to_i
