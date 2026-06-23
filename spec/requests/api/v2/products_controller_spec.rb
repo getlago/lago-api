@@ -2,11 +2,11 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::ProductsController do
+RSpec.describe Api::V2::ProductsController do
   let(:organization) { create(:organization) }
 
-  describe "POST /api/v1/products" do
-    subject { post_with_token(organization, "/api/v1/products", {product: create_params}) }
+  describe "POST /api/v2/products" do
+    subject { post_with_token(organization, "/api/v2/products", {product: create_params}) }
 
     let(:create_params) do
       {
@@ -41,8 +41,8 @@ RSpec.describe Api::V1::ProductsController do
     end
   end
 
-  describe "PUT /api/v1/products/:code" do
-    subject { put_with_token(organization, "/api/v1/products/#{product.code}", {product: update_params}) }
+  describe "PUT /api/v2/products/:code" do
+    subject { put_with_token(organization, "/api/v2/products/#{product.code}", {product: update_params}) }
 
     let(:product) { create(:product, organization:, name: "Before") }
     let(:update_params) { {name: "After"} }
@@ -80,7 +80,7 @@ RSpec.describe Api::V1::ProductsController do
     end
 
     context "when the product does not exist" do
-      subject { put_with_token(organization, "/api/v1/products/unknown", {product: update_params}) }
+      subject { put_with_token(organization, "/api/v2/products/unknown", {product: update_params}) }
 
       it "returns a not found error" do
         subject
@@ -90,8 +90,8 @@ RSpec.describe Api::V1::ProductsController do
     end
   end
 
-  describe "GET /api/v1/products/:code" do
-    subject { get_with_token(organization, "/api/v1/products/#{product.code}") }
+  describe "GET /api/v2/products/:code" do
+    subject { get_with_token(organization, "/api/v2/products/#{product.code}") }
 
     let(:product) { create(:product, organization:) }
 
@@ -109,7 +109,7 @@ RSpec.describe Api::V1::ProductsController do
     end
 
     context "when the product does not exist" do
-      subject { get_with_token(organization, "/api/v1/products/unknown") }
+      subject { get_with_token(organization, "/api/v2/products/unknown") }
 
       it "returns a not found error" do
         subject
@@ -129,8 +129,8 @@ RSpec.describe Api::V1::ProductsController do
     end
   end
 
-  describe "GET /api/v1/products" do
-    subject { get_with_token(organization, "/api/v1/products?page=1&per_page=1") }
+  describe "GET /api/v2/products" do
+    subject { get_with_token(organization, "/api/v2/products?page=1&per_page=1") }
 
     before { create(:product, organization:) }
 
@@ -156,7 +156,7 @@ RSpec.describe Api::V1::ProductsController do
     end
 
     context "with a search term" do
-      subject { get_with_token(organization, "/api/v1/products?search_term=#{search_term}") }
+      subject { get_with_token(organization, "/api/v2/products?search_term=#{search_term}") }
 
       let(:search_term) { "matching" }
       let(:matching) { create(:product, organization:, name: "matching product") }
@@ -176,8 +176,8 @@ RSpec.describe Api::V1::ProductsController do
     end
   end
 
-  describe "DELETE /api/v1/products/:code" do
-    subject { delete_with_token(organization, "/api/v1/products/#{product.code}") }
+  describe "DELETE /api/v2/products/:code" do
+    subject { delete_with_token(organization, "/api/v2/products/#{product.code}") }
 
     let(:product) { create(:product, organization:) }
 
@@ -192,7 +192,7 @@ RSpec.describe Api::V1::ProductsController do
     end
 
     context "when the product does not exist" do
-      subject { delete_with_token(organization, "/api/v1/products/unknown") }
+      subject { delete_with_token(organization, "/api/v2/products/unknown") }
 
       it "returns a not found error" do
         subject

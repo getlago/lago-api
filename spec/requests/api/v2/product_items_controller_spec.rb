@@ -2,11 +2,11 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::ProductItemsController do
+RSpec.describe Api::V2::ProductItemsController do
   let(:organization) { create(:organization) }
 
-  describe "POST /api/v1/product_items" do
-    subject { post_with_token(organization, "/api/v1/product_items", {product_item: create_params}) }
+  describe "POST /api/v2/product_items" do
+    subject { post_with_token(organization, "/api/v2/product_items", {product_item: create_params}) }
 
     let(:product) { create(:product, organization:) }
     let(:billable_metric) { create(:billable_metric, organization:) }
@@ -70,8 +70,8 @@ RSpec.describe Api::V1::ProductItemsController do
     end
   end
 
-  describe "PUT /api/v1/product_items/:id" do
-    subject { put_with_token(organization, "/api/v1/product_items/#{product_item.code}", {product_item: update_params}) }
+  describe "PUT /api/v2/product_items/:id" do
+    subject { put_with_token(organization, "/api/v2/product_items/#{product_item.code}", {product_item: update_params}) }
 
     let(:product_item) { create(:product_item, organization:, name: "Before") }
     let(:update_params) { {name: "After"} }
@@ -148,7 +148,7 @@ RSpec.describe Api::V1::ProductItemsController do
     end
 
     context "when the product item does not exist" do
-      subject { put_with_token(organization, "/api/v1/product_items/#{SecureRandom.uuid}", {product_item: update_params}) }
+      subject { put_with_token(organization, "/api/v2/product_items/#{SecureRandom.uuid}", {product_item: update_params}) }
 
       it "returns a not found error" do
         subject
@@ -158,8 +158,8 @@ RSpec.describe Api::V1::ProductItemsController do
     end
   end
 
-  describe "GET /api/v1/product_items/:id" do
-    subject { get_with_token(organization, "/api/v1/product_items/#{product_item.code}") }
+  describe "GET /api/v2/product_items/:id" do
+    subject { get_with_token(organization, "/api/v2/product_items/#{product_item.code}") }
 
     let(:product_item) { create(:product_item, organization:) }
 
@@ -187,8 +187,8 @@ RSpec.describe Api::V1::ProductItemsController do
     end
   end
 
-  describe "GET /api/v1/product_items" do
-    subject { get_with_token(organization, "/api/v1/product_items#{query_params}") }
+  describe "GET /api/v2/product_items" do
+    subject { get_with_token(organization, "/api/v2/product_items#{query_params}") }
 
     let(:query_params) { "" }
     let(:product) { create(:product, organization:) }
@@ -279,8 +279,8 @@ RSpec.describe Api::V1::ProductItemsController do
     end
   end
 
-  describe "DELETE /api/v1/product_items/:id" do
-    subject { delete_with_token(organization, "/api/v1/product_items/#{product_item.code}") }
+  describe "DELETE /api/v2/product_items/:id" do
+    subject { delete_with_token(organization, "/api/v2/product_items/#{product_item.code}") }
 
     let(:product_item) { create(:product_item, organization:) }
 
@@ -295,7 +295,7 @@ RSpec.describe Api::V1::ProductItemsController do
     end
 
     context "when the product item does not exist" do
-      subject { delete_with_token(organization, "/api/v1/product_items/#{SecureRandom.uuid}") }
+      subject { delete_with_token(organization, "/api/v2/product_items/#{SecureRandom.uuid}") }
 
       it "returns a not found error" do
         subject

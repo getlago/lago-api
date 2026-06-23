@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Api
-  module V1
+  module V2
     module ProductItems
       class FiltersController < Api::BaseController
         before_action :find_product_item
