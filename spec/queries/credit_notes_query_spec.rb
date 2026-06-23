@@ -483,6 +483,97 @@ RSpec.describe CreditNotesQuery do
     end
   end
 
+  context "when metadata filters applied" do
+    let(:filters) { {metadata:} }
+
+    context "when single filter provided" do
+      context "when value is present" do
+        let(:metadata) { {"Integrated in SAP" => "Yes"} }
+        let(:matching_credit_note) { create(:credit_note, customer:) }
+
+        before do
+          create(:item_metadata, owner: matching_credit_note, organization:, value: {"Integrated in SAP" => "Yes"})
+
+          other_credit_note = create(:credit_note, customer:)
+          create(:item_metadata, owner: other_credit_note, organization:, value: {"Integrated in SAP" => "No"})
+
+          create(:credit_note, customer:)
+        end
+
+        it "returns credit notes with matching metadata filters" do
+          expect(result).to be_success
+          expect(returned_ids).to contain_exactly matching_credit_note.id
+        end
+      end
+
+      context "when value is absent" do
+        let(:metadata) { {"Integrated in SAP" => ""} }
+
+        let!(:matching_credit_notes) do
+          [
+            create(:credit_note, customer:),
+            create(:credit_note, customer:).tap do |credit_note|
+              create(:item_metadata, owner: credit_note, organization:, value: {"Other key" => "value"})
+            end
+          ]
+        end
+
+        before do
+          excluded = create(:credit_note, customer:)
+          create(:item_metadata, owner: excluded, organization:, value: {"Integrated in SAP" => "Yes"})
+        end
+
+        it "returns credit notes without the provided key or without metadata at all" do
+          expect(result).to be_success
+          expect(returned_ids).to match_array matching_credit_notes.pluck(:id)
+        end
+      end
+    end
+
+    context "when multiple filters provided" do
+      let(:metadata) do
+        {
+          "Integrated in SAP" => "Yes",
+          "SAP Document Number" => "9DZNZXLXZZZZ",
+          "Archived" => ""
+        }
+      end
+
+      let!(:matching_credit_note) do
+        create(:credit_note, customer:).tap do |credit_note|
+          create(
+            :item_metadata,
+            owner: credit_note,
+            organization:,
+            value: {"Integrated in SAP" => "Yes", "SAP Document Number" => "9DZNZXLXZZZZ"}
+          )
+        end
+      end
+
+      before do
+        # Matches presence filters but carries the excluded "Archived" key.
+        archived = create(:credit_note, customer:)
+        create(
+          :item_metadata,
+          owner: archived,
+          organization:,
+          value: {"Integrated in SAP" => "Yes", "SAP Document Number" => "9DZNZXLXZZZZ", "Archived" => "true"}
+        )
+
+        # Matches only one of the presence filters.
+        partial = create(:credit_note, customer:)
+        create(:item_metadata, owner: partial, organization:, value: {"Integrated in SAP" => "Yes"})
+
+        create(:credit_note, customer:)
+      end
+
+      it "returns credit notes matching all presence filters and none of the absence filters" do
+        expect(result).to be_success
+        expect(returned_ids).to contain_exactly matching_credit_note.id
+      end
+    end
+  end
+
   context "when search term filter applied" do
     context "with term matching credit note by id" do
       let(:search_term) { matching_credit_note.id.first(10) }

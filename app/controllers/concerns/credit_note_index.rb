@@ -48,6 +48,7 @@ module CreditNoteIndex
         invoice_number: params[:invoice_number],
         issuing_date_from: (Date.iso8601(params[:issuing_date_from]) if valid_date?(params[:issuing_date_from])),
         issuing_date_to: (Date.iso8601(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to])),
+        metadata: params[:metadata]&.permit!.to_h,
         reason: params[:reason],
         refund_status: params[:refund_status],
         self_billed: params[:self_billed],

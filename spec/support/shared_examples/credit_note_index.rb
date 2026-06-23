@@ -455,4 +455,25 @@ RSpec.shared_examples "a credit note index endpoint" do
       end
     end
   end
+
+  context "with metadata filters" do
+    let(:params) { {metadata: {"Integrated in SAP" => "Yes"}} }
+
+    let(:invoice) { create(:invoice, organization:, customer:) }
+    let(:matching_credit_note) { create(:credit_note, invoice:, customer:) }
+
+    before do
+      create(:item_metadata, owner: matching_credit_note, organization:, value: {"Integrated in SAP" => "Yes"})
+
+      other_credit_note = create(:credit_note, invoice: create(:invoice, organization:, customer:), customer:)
+      create(:item_metadata, owner: other_credit_note, organization:, value: {"Integrated in SAP" => "No"})
+    end
+
+    it "returns credit notes with matching metadata filters" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:credit_notes].pluck(:lago_id)).to contain_exactly matching_credit_note.id
+    end
+  end
 end

@@ -16,7 +16,8 @@ class CreditNotesQuery < BaseQuery
     :credit_status,
     :reason,
     :refund_status,
-    :types
+    :types,
+    :metadata
   ]
 
   def initialize(includes: [], **args)
@@ -39,6 +40,7 @@ class CreditNotesQuery < BaseQuery
     credit_notes = with_issuing_date_range(credit_notes) if filters.issuing_date_from || filters.issuing_date_to
     credit_notes = with_amount_range(credit_notes) if filters.amount_from.present? || filters.amount_to.present?
     credit_notes = with_self_billed_invoice(credit_notes) unless filters.self_billed.nil?
+    credit_notes = with_metadata(credit_notes) if filters.metadata.present?
 
     credit_notes = paginate(credit_notes)
     credit_notes = apply_consistent_ordering(credit_notes)
@@ -150,6 +152,25 @@ class CreditNotesQuery < BaseQuery
 
   def with_billing_entity_ids(scope)
     scope.joins(:invoice).where(invoices: {billing_entity_id: filters.billing_entity_ids})
+  end
+
+  # Filters credit notes by their metadata JSONB. A key with a present value keeps
+  # credit notes whose metadata contains that exact key/value pair (all present
+  # filters must match). A key with a blank value keeps credit notes that do not
+  # carry that key at all (including those with no metadata).
+  def with_metadata(scope)
+    scope = scope.left_joins(:metadata)
+
+    presence_filters = filters.metadata.select { |_key, value| value.present? }
+    absence_filters = filters.metadata.select { |_key, value| value.blank? }
+
+    scope = scope.where("item_metadata.value @> ?", presence_filters.to_json) if presence_filters.present?
+
+    absence_filters.each_key do |key|
+      scope = scope.where("item_metadata.value IS NULL OR NOT jsonb_exists(item_metadata.value, ?)", key)
+    end
+
+    scope
   end
 
   def issuing_date_from
