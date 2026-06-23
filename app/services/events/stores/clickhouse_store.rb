@@ -170,6 +170,41 @@ module Events
         ).distinct_charges_and_filters(codes:)
       end
 
+      # Returns the distinct [code, properties] combinations present in the events of the
+      # period. Only properties present in the filter_keys are considered, so the result holds
+      # only the dimensions that can be matched against charge filters.
+      # An empty hash represents the default (no filter) bucket.
+      #
+      # ClickHouse stores properties as a Map(String, String); a missing key reads back as an
+      # empty string, so blank values are dropped to mirror the Postgres jsonb behaviour.
+      def distinct_codes_and_property_combinations(codes:, filter_keys:)
+        return [] if codes.empty?
+
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
+          scope = ::Clickhouse::EventsEnriched
+            .where(external_subscription_id: subscription.external_id)
+            .where(organization_id: subscription.organization_id)
+            .where(code: codes)
+            .where("events_enriched.timestamp >= ?", from_datetime)
+            .where("events_enriched.timestamp <= ?", applicable_to_datetime)
+
+          selects = ["DISTINCT code AS code"]
+          filter_keys.each_with_index do |key, index|
+            selects << ActiveRecord::Base.sanitize_sql_array(["properties[?] AS prop_#{index}", key.to_s])
+          end
+
+          scope.select(selects.join(", ")).map do |row|
+            combination = {}
+            filter_keys.each_with_index do |key, index|
+              value = row.read_attribute("prop_#{index}")
+              combination[key] = value if value.present?
+            end
+
+            [row.code, combination]
+          end
+        end
+      end
+
       def events_values(limit: nil, force_from: false, exclude_event: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = events(force_from:, ordered: true)
