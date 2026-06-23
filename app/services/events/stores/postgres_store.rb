@@ -11,7 +11,7 @@ module Events
         scope = scope.order(timestamp: :asc) if ordered
 
         scope = scope.from_datetime(from_datetime) if force_from || use_from_boundary
-        scope = scope.to_datetime(applicable_to_datetime) if applicable_to_datetime
+        scope = apply_to_boundary(scope) if applicable_to_datetime
 
         if numeric_property
           scope = scope.where(presence_condition)
@@ -418,6 +418,25 @@ module Events
             ]
           )
         ).rows
+      end
+
+      # NOTE: For a pay-in-advance event, the upper boundary is the event's own timestamp.
+      #       Events sharing the same timestamp are tie-broken
+      #       by ingestion order (created_at, id) so each gets a distinct position. Otherwise
+      #       they would all count each other and be priced as the last unit of the batch.
+      def apply_to_boundary(scope)
+        boundary_event = filters[:event] if boundaries[:max_timestamp]
+
+        if boundary_event&.id
+          scope.where(
+            "events.timestamp < :to OR (events.timestamp = :to AND (events.created_at, events.id) <= " \
+            "(SELECT boundary_event.created_at, boundary_event.id FROM events boundary_event WHERE boundary_event.id = :boundary_event_id))",
+            to: applicable_to_datetime,
+            boundary_event_id: boundary_event.id
+          )
+        else
+          scope.to_datetime(applicable_to_datetime)
+        end
       end
 
       def filters_scope(scope)
