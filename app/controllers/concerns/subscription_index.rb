@@ -23,7 +23,7 @@ module SubscriptionIndex
 
     if result.success?
       subscriptions = result.subscriptions
-        .includes(:plan, previous_subscription: :plan, next_subscriptions: :plan, customer: :billing_entity)
+        .includes(:plan, :activation_rules, previous_subscription: :plan, next_subscriptions: :plan, customer: :billing_entity)
 
       render(
         json: ::CollectionSerializer.new(

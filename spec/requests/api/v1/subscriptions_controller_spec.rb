@@ -794,21 +794,6 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         end
       end
 
-      context "when feature flag is disabled" do
-        it "persists rules but does not include them in response" do
-          subject
-
-          expect(response).to have_http_status(:ok)
-
-          subscription = Subscription.find(json[:subscription][:lago_id])
-          expect(subscription.activation_rules.count).to eq(1)
-
-          expect(json[:subscription]).not_to have_key(:activation_rules)
-          expect(json[:subscription]).not_to have_key(:cancellation_reason)
-          expect(json[:subscription]).not_to have_key(:activated_at)
-        end
-      end
-
       context "with invalid rule type" do
         let(:params) do
           {
@@ -1800,21 +1785,6 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
             expect(response).to have_http_status(:success)
             expect(json[:subscription][:activation_rules].first[:timeout_hours]).to eq(0)
           end
-        end
-      end
-
-      context "when feature flag is disabled" do
-        it "persists rules but does not include them in response" do
-          subject
-
-          expect(response).to have_http_status(:success)
-
-          subscription.reload
-          expect(subscription.activation_rules.count).to eq(1)
-
-          expect(json[:subscription]).not_to have_key(:activation_rules)
-          expect(json[:subscription]).not_to have_key(:cancellation_reason)
-          expect(json[:subscription]).not_to have_key(:activated_at)
         end
       end
 
