@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Api
-  module V1
+  module V2
     class ProductsController < Api::BaseController
       def create
         if input_params.key?(:product_category_code) && product_category.nil?
@@ -82,7 +82,7 @@ module Api
           filters: {
             product_category_ids: index_product_categories.map(&:id).presence,
             without_product_category: ActiveModel::Type::Boolean.new.cast(params[:without_product_category]),
-            item_type: params[:item_type]
+            product_type: params[:product_type]
           }
         )
 
@@ -128,7 +128,7 @@ module Api
           :code,
           :description,
           :invoice_display_name,
-          :item_type,
+          :product_type,
           :product_category_code,
           :billable_metric_code
         )
