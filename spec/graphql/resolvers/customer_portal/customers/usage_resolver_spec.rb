@@ -85,7 +85,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver do
   end
 
   let(:billable_metric_filter) do
-    create(:billable_metric_filter, billable_metric: metric, key: "cloud", values: %w[aws gcp])
+    create(:billable_metric_filter, billable_metric: sum_metric, key: "cloud", values: %w[aws gcp])
   end
 
   let(:charge_filter) { create(:charge_filter, charge: standard_charge, invoice_display_name: nil) }

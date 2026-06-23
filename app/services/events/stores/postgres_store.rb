@@ -44,6 +44,29 @@ module Events
         scope.distinct.pluck(:charge_id, :charge_filter_id)
       end
 
+      # Returns the distinct [code, properties] combinations present in the events of the
+      # period. Only properties present in the filter_keys are considered, so the result holds
+      # only the dimensions that can be matched against charge filters.
+      # An empty hash represents the default (no filter) bucket.
+      def distinct_codes_and_property_combinations(codes:, filter_keys:)
+        scope = Event.where(external_subscription_id: subscription.external_id)
+          .where(organization_id: subscription.organization_id)
+          .where(code: codes)
+          .from_datetime(from_datetime)
+          .to_datetime(applicable_to_datetime)
+
+        scope
+          .select(Arel.sql(<<~SQL.squish))
+            DISTINCT events.code AS code,
+            coalesce((
+              SELECT jsonb_object_agg(props.key, props.value)
+              FROM jsonb_each_text(events.properties) AS props(key, value)
+              WHERE props.key = ANY(#{filter_keys_array_sql(filter_keys)})
+            ), '{}'::jsonb) AS combination
+          SQL
+          .map { |row| [row.code, parse_combination(row)] }
+      end
+
       def events_values(limit: nil, force_from: false, exclude_event: false)
         field_name = sanitized_property_name
         field_name = "(#{field_name})::numeric" if numeric_property
@@ -512,6 +535,20 @@ module Events
 
       def created_at_ordering_column
         "events.created_at"
+      end
+
+      def filter_keys_array_sql(filter_keys)
+        return "ARRAY[]::text[]" if filter_keys.empty?
+
+        quoted = filter_keys.map { ActiveRecord::Base.connection.quote(it) }.join(", ")
+        "ARRAY[#{quoted}]::text[]"
+      end
+
+      def parse_combination(row)
+        combination = row.read_attribute(:combination)
+        return combination if combination.is_a?(Hash)
+
+        combination.present? ? JSON.parse(combination) : {}
       end
     end
   end
