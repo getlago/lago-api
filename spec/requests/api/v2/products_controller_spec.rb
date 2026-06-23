@@ -2,11 +2,11 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::ProductsController do
+RSpec.describe Api::V2::ProductsController do
   let(:organization) { create(:organization) }
 
-  describe "POST /api/v1/products" do
-    subject { post_with_token(organization, "/api/v1/products", {product: create_params}) }
+  describe "POST /api/v2/products" do
+    subject { post_with_token(organization, "/api/v2/products", {product: create_params}) }
 
     let(:product_category) { create(:product_category, organization:) }
     let(:billable_metric) { create(:billable_metric, organization:) }
@@ -15,7 +15,7 @@ RSpec.describe Api::V1::ProductsController do
       {
         name: "Storage",
         code: "storage",
-        item_type: "usage",
+        product_type: "usage",
         product_category_code: product_category.code,
         billable_metric_code: billable_metric.code
       }
@@ -30,19 +30,19 @@ RSpec.describe Api::V1::ProductsController do
       expect(json[:product][:lago_id]).to be_present
       expect(json[:product][:name]).to eq("Storage")
       expect(json[:product][:code]).to eq("storage")
-      expect(json[:product][:item_type]).to eq("usage")
+      expect(json[:product][:product_type]).to eq("usage")
       expect(json[:product][:product_category_code]).to eq(product_category.code)
       expect(json[:product][:billable_metric_code]).to eq(billable_metric.code)
     end
 
     context "with a standalone fixed item" do
-      let(:create_params) { {name: "Seats", code: "seats", item_type: "fixed"} }
+      let(:create_params) { {name: "Seats", code: "seats", product_type: "fixed"} }
 
       it "creates the item without product_category nor metric" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:product][:item_type]).to eq("fixed")
+        expect(json[:product][:product_type]).to eq("fixed")
         expect(json[:product][:product_category_code]).to be_nil
         expect(json[:product][:billable_metric_code]).to be_nil
       end
@@ -59,7 +59,7 @@ RSpec.describe Api::V1::ProductsController do
     end
 
     context "when a usage item has no billable metric" do
-      let(:create_params) { {name: "Orphan", code: "orphan", item_type: "usage"} }
+      let(:create_params) { {name: "Orphan", code: "orphan", product_type: "usage"} }
 
       it "returns a validation error naming billable_metric_code" do
         subject
@@ -70,8 +70,8 @@ RSpec.describe Api::V1::ProductsController do
     end
   end
 
-  describe "PUT /api/v1/products/:id" do
-    subject { put_with_token(organization, "/api/v1/products/#{product.code}", {product: update_params}) }
+  describe "PUT /api/v2/products/:id" do
+    subject { put_with_token(organization, "/api/v2/products/#{product.code}", {product: update_params}) }
 
     let(:product) { create(:product, organization:, name: "Before") }
     let(:update_params) { {name: "After"} }
@@ -148,7 +148,7 @@ RSpec.describe Api::V1::ProductsController do
     end
 
     context "when the product does not exist" do
-      subject { put_with_token(organization, "/api/v1/products/#{SecureRandom.uuid}", {product: update_params}) }
+      subject { put_with_token(organization, "/api/v2/products/#{SecureRandom.uuid}", {product: update_params}) }
 
       it "returns a not found error" do
         subject
@@ -158,8 +158,8 @@ RSpec.describe Api::V1::ProductsController do
     end
   end
 
-  describe "GET /api/v1/products/:id" do
-    subject { get_with_token(organization, "/api/v1/products/#{product.code}") }
+  describe "GET /api/v2/products/:id" do
+    subject { get_with_token(organization, "/api/v2/products/#{product.code}") }
 
     let(:product) { create(:product, organization:) }
 
@@ -187,8 +187,8 @@ RSpec.describe Api::V1::ProductsController do
     end
   end
 
-  describe "GET /api/v1/products" do
-    subject { get_with_token(organization, "/api/v1/products#{query_params}") }
+  describe "GET /api/v2/products" do
+    subject { get_with_token(organization, "/api/v2/products#{query_params}") }
 
     let(:query_params) { "" }
     let(:product_category) { create(:product_category, organization:) }
@@ -205,8 +205,8 @@ RSpec.describe Api::V1::ProductsController do
       expect(json[:meta][:total_count]).to eq(2)
     end
 
-    context "with an item_type filter" do
-      let(:query_params) { "?item_type=fixed" }
+    context "with an product_type filter" do
+      let(:query_params) { "?product_type=fixed" }
 
       it "returns only matching items" do
         subject
@@ -279,8 +279,8 @@ RSpec.describe Api::V1::ProductsController do
     end
   end
 
-  describe "DELETE /api/v1/products/:id" do
-    subject { delete_with_token(organization, "/api/v1/products/#{product.code}") }
+  describe "DELETE /api/v2/products/:id" do
+    subject { delete_with_token(organization, "/api/v2/products/#{product.code}") }
 
     let(:product) { create(:product, organization:) }
 
@@ -295,7 +295,7 @@ RSpec.describe Api::V1::ProductsController do
     end
 
     context "when the product does not exist" do
-      subject { delete_with_token(organization, "/api/v1/products/#{SecureRandom.uuid}") }
+      subject { delete_with_token(organization, "/api/v2/products/#{SecureRandom.uuid}") }
 
       it "returns a not found error" do
         subject

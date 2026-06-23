@@ -2,11 +2,11 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::ProductCategoriesController do
+RSpec.describe Api::V2::ProductCategoriesController do
   let(:organization) { create(:organization) }
 
-  describe "POST /api/v1/product_categories" do
-    subject { post_with_token(organization, "/api/v1/product_categories", {product_category: create_params}) }
+  describe "POST /api/v2/product_categories" do
+    subject { post_with_token(organization, "/api/v2/product_categories", {product_category: create_params}) }
 
     let(:create_params) do
       {
@@ -41,8 +41,8 @@ RSpec.describe Api::V1::ProductCategoriesController do
     end
   end
 
-  describe "PUT /api/v1/product_categories/:code" do
-    subject { put_with_token(organization, "/api/v1/product_categories/#{product_category.code}", {product_category: update_params}) }
+  describe "PUT /api/v2/product_categories/:code" do
+    subject { put_with_token(organization, "/api/v2/product_categories/#{product_category.code}", {product_category: update_params}) }
 
     let(:product_category) { create(:product_category, organization:, name: "Before") }
     let(:update_params) { {name: "After"} }
@@ -68,7 +68,11 @@ RSpec.describe Api::V1::ProductCategoriesController do
       end
 
       context "when the product_category is attached to a plan" do
-        before { create(:plan_product_category, organization:, product_category:) }
+        before do
+          item = create(:product, organization:, product_category:)
+          rate_card = create(:rate_card, organization:, product: item)
+          create(:plan_rate_card, organization:, rate_card:)
+        end
 
         it "returns a validation error" do
           subject
@@ -80,7 +84,7 @@ RSpec.describe Api::V1::ProductCategoriesController do
     end
 
     context "when the product_category does not exist" do
-      subject { put_with_token(organization, "/api/v1/product_categories/unknown", {product_category: update_params}) }
+      subject { put_with_token(organization, "/api/v2/product_categories/unknown", {product_category: update_params}) }
 
       it "returns a not found error" do
         subject
@@ -90,8 +94,8 @@ RSpec.describe Api::V1::ProductCategoriesController do
     end
   end
 
-  describe "GET /api/v1/product_categories/:code" do
-    subject { get_with_token(organization, "/api/v1/product_categories/#{product_category.code}") }
+  describe "GET /api/v2/product_categories/:code" do
+    subject { get_with_token(organization, "/api/v2/product_categories/#{product_category.code}") }
 
     let(:product_category) { create(:product_category, organization:) }
 
@@ -109,7 +113,7 @@ RSpec.describe Api::V1::ProductCategoriesController do
     end
 
     context "when the product_category does not exist" do
-      subject { get_with_token(organization, "/api/v1/product_categories/unknown") }
+      subject { get_with_token(organization, "/api/v2/product_categories/unknown") }
 
       it "returns a not found error" do
         subject
@@ -129,8 +133,8 @@ RSpec.describe Api::V1::ProductCategoriesController do
     end
   end
 
-  describe "GET /api/v1/product_categories" do
-    subject { get_with_token(organization, "/api/v1/product_categories?page=1&per_page=1") }
+  describe "GET /api/v2/product_categories" do
+    subject { get_with_token(organization, "/api/v2/product_categories?page=1&per_page=1") }
 
     before { create(:product_category, organization:) }
 
@@ -156,7 +160,7 @@ RSpec.describe Api::V1::ProductCategoriesController do
     end
 
     context "with a search term" do
-      subject { get_with_token(organization, "/api/v1/product_categories?search_term=#{search_term}") }
+      subject { get_with_token(organization, "/api/v2/product_categories?search_term=#{search_term}") }
 
       let(:search_term) { "matching" }
       let(:matching) { create(:product_category, organization:, name: "matching product_category") }
@@ -176,8 +180,8 @@ RSpec.describe Api::V1::ProductCategoriesController do
     end
   end
 
-  describe "DELETE /api/v1/product_categories/:code" do
-    subject { delete_with_token(organization, "/api/v1/product_categories/#{product_category.code}") }
+  describe "DELETE /api/v2/product_categories/:code" do
+    subject { delete_with_token(organization, "/api/v2/product_categories/#{product_category.code}") }
 
     let(:product_category) { create(:product_category, organization:) }
 
@@ -192,7 +196,7 @@ RSpec.describe Api::V1::ProductCategoriesController do
     end
 
     context "when the product_category does not exist" do
-      subject { delete_with_token(organization, "/api/v1/product_categories/unknown") }
+      subject { delete_with_token(organization, "/api/v2/product_categories/unknown") }
 
       it "returns a not found error" do
         subject
