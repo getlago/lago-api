@@ -51,18 +51,10 @@ RSpec.describe PaymentProviders::UpdatePaymentReferenceService do
       create(:payment, payable: invoice, payment_provider:, payment_provider_customer: adyen_customer,
         organization:, customer:, provider_payment_id: "psp_ref_123", payable_payment_status: :succeeded)
     end
-    let(:adyen_service_result) do
-      PaymentProviders::Adyen::Payments::UpdateReferenceService::Result.new.tap { |r| r.payment = payment }
-    end
 
-    before do
-      allow(PaymentProviders::Adyen::Payments::UpdateReferenceService).to receive(:call!).and_return(adyen_service_result)
-    end
-
-    it "delegates to the Adyen update-reference service" do
-      service_result
-
-      expect(PaymentProviders::Adyen::Payments::UpdateReferenceService).to have_received(:call!).with(payment:)
+    it "does not dispatch — Adyen references are immutable post-authorization" do
+      expect(service_result).to be_success
+      expect(PaymentProviders::Stripe::Payments::UpdateReferenceService).not_to have_received(:call!)
     end
   end
 
@@ -73,18 +65,10 @@ RSpec.describe PaymentProviders::UpdatePaymentReferenceService do
       create(:payment, payable: invoice, payment_provider:, payment_provider_customer: gocardless_customer,
         organization:, customer:, provider_payment_id: "PM_abc", payable_payment_status: :succeeded)
     end
-    let(:gocardless_service_result) do
-      PaymentProviders::Gocardless::Payments::UpdateReferenceService::Result.new.tap { |r| r.payment = payment }
-    end
 
-    before do
-      allow(PaymentProviders::Gocardless::Payments::UpdateReferenceService).to receive(:call!).and_return(gocardless_service_result)
-    end
-
-    it "delegates to the GoCardless update-reference service" do
-      service_result
-
-      expect(PaymentProviders::Gocardless::Payments::UpdateReferenceService).to have_received(:call!).with(payment:)
+    it "does not dispatch — GoCardless never carries the invoice number" do
+      expect(service_result).to be_success
+      expect(PaymentProviders::Stripe::Payments::UpdateReferenceService).not_to have_received(:call!)
     end
   end
 
@@ -121,13 +105,13 @@ RSpec.describe PaymentProviders::UpdatePaymentReferenceService do
       expect(PaymentProviders::Stripe::Payments::UpdateReferenceService).not_to have_received(:call!)
     end
 
-    it "logs that the provider is unsupported" do
+    it "logs that the provider is skipped" do
       allow(Rails.logger).to receive(:info)
 
       service_result
 
       expect(Rails.logger).to have_received(:info)
-        .with(a_string_matching(/PSP reference update not supported.*CashfreeProvider/))
+        .with(a_string_matching(/no PSP reference update for.*CashfreeProvider/))
     end
   end
 end

@@ -18,18 +18,22 @@ module PaymentProviders
       case payment.payment_provider.type
       when "PaymentProviders::StripeProvider"
         delegate_to(PaymentProviders::Stripe::Payments::UpdateReferenceService)
-      when "PaymentProviders::AdyenProvider"
-        delegate_to(PaymentProviders::Adyen::Payments::UpdateReferenceService)
-      when "PaymentProviders::GocardlessProvider"
-        delegate_to(PaymentProviders::Gocardless::Payments::UpdateReferenceService)
       else
-        # Cashfree, Flutterwave, and Moneyhash don't expose a metadata-update
-        # API surface in their integrations. Reconciliation on those providers
-        # continues to rely on the payment id and the customer-side dashboard;
-        # the gap is documented and accepted.
+        # Stripe is the only provider whose payment reference can be corrected
+        # after the gated invoice is finalized. The rest are intentionally
+        # skipped:
+        # - Adyen sets a placeholder merchantReference at creation, but it is
+        #   immutable post-authorization and the SDK exposes no surface to
+        #   update a captured payment's reference or metadata.
+        # - GoCardless never carries the invoice number at creation (no
+        #   reference field, not in metadata), so there is no placeholder to
+        #   correct.
+        # - Cashfree, Flutterwave, and Moneyhash expose no metadata-update API.
+        # Reconciliation on these providers relies on the lago payment/invoice
+        # id; the gap is documented and accepted.
         Rails.logger.info(
-          "PaymentProviders::UpdatePaymentReferenceService: PSP reference update " \
-          "not supported for #{payment.payment_provider.type} (payment #{payment.id}); skipping"
+          "PaymentProviders::UpdatePaymentReferenceService: no PSP reference update " \
+          "for #{payment.payment_provider.type} (payment #{payment.id}); skipping"
         )
       end
 
@@ -42,7 +46,6 @@ module PaymentProviders
 
     def delegate_to(service)
       service.call!(payment:)
-      result
     end
   end
 end
