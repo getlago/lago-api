@@ -2,14 +2,14 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::ProductItems::FiltersController do
+RSpec.describe Api::V2::ProductItems::FiltersController do
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:product_item) { create(:product_item, organization:, billable_metric:) }
   let(:region_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[us eu]) }
 
-  describe "POST /api/v1/product_items/:product_item_id/filters" do
-    subject { post_with_token(organization, "/api/v1/product_items/#{product_item.id}/filters", {filter: create_params}) }
+  describe "POST /api/v2/product_items/:product_item_id/filters" do
+    subject { post_with_token(organization, "/api/v2/product_items/#{product_item.id}/filters", {filter: create_params}) }
 
     let(:create_params) do
       {
@@ -42,7 +42,7 @@ RSpec.describe Api::V1::ProductItems::FiltersController do
     end
 
     context "when the product item does not exist" do
-      subject { post_with_token(organization, "/api/v1/product_items/#{SecureRandom.uuid}/filters", {filter: create_params}) }
+      subject { post_with_token(organization, "/api/v2/product_items/#{SecureRandom.uuid}/filters", {filter: create_params}) }
 
       it "returns a not found error" do
         subject
@@ -52,11 +52,11 @@ RSpec.describe Api::V1::ProductItems::FiltersController do
     end
   end
 
-  describe "PUT /api/v1/product_items/:product_item_id/filters/:id" do
+  describe "PUT /api/v2/product_items/:product_item_id/filters/:id" do
     subject do
       put_with_token(
         organization,
-        "/api/v1/product_items/#{product_item.id}/filters/#{filter.id}",
+        "/api/v2/product_items/#{product_item.id}/filters/#{filter.id}",
         {filter: update_params}
       )
     end
@@ -92,7 +92,7 @@ RSpec.describe Api::V1::ProductItems::FiltersController do
     end
 
     context "when the filter does not exist" do
-      subject { put_with_token(organization, "/api/v1/product_items/#{product_item.id}/filters/#{SecureRandom.uuid}", {filter: update_params}) }
+      subject { put_with_token(organization, "/api/v2/product_items/#{product_item.id}/filters/#{SecureRandom.uuid}", {filter: update_params}) }
 
       it "returns a not found error" do
         subject
@@ -102,8 +102,8 @@ RSpec.describe Api::V1::ProductItems::FiltersController do
     end
   end
 
-  describe "GET /api/v1/product_items/:product_item_id/filters/:id" do
-    subject { get_with_token(organization, "/api/v1/product_items/#{product_item.id}/filters/#{filter.id}") }
+  describe "GET /api/v2/product_items/:product_item_id/filters/:id" do
+    subject { get_with_token(organization, "/api/v2/product_items/#{product_item.id}/filters/#{filter.id}") }
 
     let(:filter) { create(:product_item_filter, :with_values, organization:, product_item:) }
 
@@ -118,8 +118,8 @@ RSpec.describe Api::V1::ProductItems::FiltersController do
     end
   end
 
-  describe "GET /api/v1/product_items/:product_item_id/filters" do
-    subject { get_with_token(organization, "/api/v1/product_items/#{product_item.id}/filters") }
+  describe "GET /api/v2/product_items/:product_item_id/filters" do
+    subject { get_with_token(organization, "/api/v2/product_items/#{product_item.id}/filters") }
 
     before do
       create(:product_item_filter, organization:, product_item:)
@@ -137,7 +137,7 @@ RSpec.describe Api::V1::ProductItems::FiltersController do
     end
 
     context "with a search term" do
-      subject { get_with_token(organization, "/api/v1/product_items/#{product_item.id}/filters?search_term=findme") }
+      subject { get_with_token(organization, "/api/v2/product_items/#{product_item.id}/filters?search_term=findme") }
 
       let!(:matching) { create(:product_item_filter, organization:, product_item:, name: "findme filter") }
 
@@ -150,8 +150,8 @@ RSpec.describe Api::V1::ProductItems::FiltersController do
     end
   end
 
-  describe "DELETE /api/v1/product_items/:product_item_id/filters/:id" do
-    subject { delete_with_token(organization, "/api/v1/product_items/#{product_item.id}/filters/#{filter.id}") }
+  describe "DELETE /api/v2/product_items/:product_item_id/filters/:id" do
+    subject { delete_with_token(organization, "/api/v2/product_items/#{product_item.id}/filters/#{filter.id}") }
 
     let(:filter) { create(:product_item_filter, :with_values, organization:, product_item:) }
 
