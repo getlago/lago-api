@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Api
-  module V1
+  module V2
     class ProductItemsController < Api::BaseController
       def create
         if input_params.key?(:product_code) && product.nil?

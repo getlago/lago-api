@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Api
-  module V1
+  module V2
     class ProductsController < Api::BaseController
       def create
         result = ::Products::CreateService.call(

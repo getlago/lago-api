@@ -179,10 +179,6 @@ Rails.application.routes.draw do
           end
         end
       end
-      resources :product_items, param: :code, code: /.*/, only: %i[index show create update destroy] do
-        resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "product_items/filters"
-      end
-      resources :products, param: :code, code: /.*/, only: %i[index show create update destroy]
       resources :taxes, param: :code, code: /.*/
       resources :wallet_transactions, only: %i[create show] do
         post :payment_url, on: :member
@@ -209,6 +205,13 @@ Rails.application.routes.draw do
         get :public_key, on: :collection
         get :json_public_key, on: :collection
       end
+    end
+
+    namespace :v2 do
+      resources :product_items, param: :code, code: /.*/, only: %i[index show create update destroy] do
+        resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "product_items/filters"
+      end
+      resources :products, param: :code, code: /.*/, only: %i[index show create update destroy]
     end
   end
   resources :webhooks, only: [] do
