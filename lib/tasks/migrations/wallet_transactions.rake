@@ -27,7 +27,7 @@ namespace :migrations do
     stalled_checks = 0
 
     while count > 0
-      sleep 30
+      Kernel.sleep 5
       puts "\n#### Checking status ####"
 
       previous_count = count
