@@ -3,6 +3,7 @@
 module Subscriptions
   class CreateService < BaseService
     include Subscriptions::Concerns::BillingEntityResolutionConcern
+    include Subscriptions::Concerns::FixedChargeUnitsOverrideDetectionConcern
 
     Result = BaseResult[:subscription, :payment_method]
 
@@ -131,7 +132,7 @@ module Subscriptions
       new_subscription = Subscription.new(
         organization_id: customer.organization_id,
         customer:,
-        plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
+        plan: target_plan_for_new_subscription,
         subscription_at:,
         name:,
         external_id:,
@@ -145,6 +146,12 @@ module Subscriptions
       if params.key?(:payment_method)
         new_subscription.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
         new_subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
+      end
+
+      if units_only_plan_overrides_change?
+        new_subscription.status = :pending
+        new_subscription.save!
+        create_fixed_charge_units_overrides(new_subscription)
       end
 
       timezone = customer.applicable_timezone
@@ -234,6 +241,34 @@ module Subscriptions
 
     def override_plan(plan)
       Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
+    end
+
+    def target_plan_for_new_subscription
+      return plan if units_only_plan_overrides_change?
+      return override_plan(plan) if params.key?(:plan_overrides)
+
+      plan
+    end
+
+    def units_only_plan_overrides_change?
+      return @units_only_plan_overrides_change if defined?(@units_only_plan_overrides_change)
+
+      @units_only_plan_overrides_change = !plan.parent_id &&
+        params.key?(:plan_overrides) &&
+        units_only_fixed_charges_plan_overrides?(params[:plan_overrides])
+    end
+
+    def create_fixed_charge_units_overrides(subscription)
+      params[:plan_overrides][:fixed_charges].each do |entry|
+        entry = entry.to_h.symbolize_keys
+
+        ::Subscription::FixedChargeUnitsOverride.create!(
+          subscription:,
+          fixed_charge: plan.fixed_charges.find(entry[:id]),
+          organization: subscription.organization,
+          units: entry[:units]
+        )
+      end
     end
 
     def payment_method
