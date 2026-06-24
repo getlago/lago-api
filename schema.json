@@ -34922,6 +34922,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "product_catalog",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -52011,6 +52017,12 @@
             },
             {
               "name": "revenue_recognition",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_catalog",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

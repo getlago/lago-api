@@ -34,6 +34,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       granular_lifetime_usage
       order_forms
       revenue_recognition
+      product_catalog
     ]
   end
 
