@@ -14,10 +14,11 @@ RSpec.describe Lago::RedisLoadingRetryMiddleware do
   let(:config) { RedisClient::Config.new(custom: {loading_retry_attempts: retry_attempts}) }
   let(:command) { ["LPUSH", "queue", "job"] }
   let(:loading_error) { RedisClient::CommandError.parse("LOADING Redis is loading the dataset in memory") }
+  let(:logger) { instance_double(Logger, warn: nil) }
 
   before do
     allow(middleware).to receive(:sleep)
-    allow(Rails.logger).to receive(:warn)
+    allow(described_class).to receive(:logger).and_return(logger)
   end
 
   describe "#call" do
@@ -55,8 +56,12 @@ RSpec.describe Lago::RedisLoadingRetryMiddleware do
           "OK"
         end
 
-        expect(Rails.logger).to have_received(:warn).with(/retrying in 0.1s \(attempt 1\/3\)/)
-        expect(Rails.logger).to have_received(:warn).with(/retrying in 0.2s \(attempt 2\/3\)/)
+        expect(logger).to have_received(:warn).with(
+          hash_including(interval_seconds: 0.1, attempt: 1, attempts: 3)
+        )
+        expect(logger).to have_received(:warn).with(
+          hash_including(interval_seconds: 0.2, attempt: 2, attempts: 3)
+        )
       end
     end
 
@@ -131,6 +136,30 @@ RSpec.describe Lago::RedisLoadingRetryMiddleware do
 
       expect(result).to eq(["OK"])
       expect(middleware).to have_received(:sleep).with(0.1)
+    end
+  end
+
+  describe ".logger" do
+    around do |example|
+      original = described_class.instance_variable_get(:@logger)
+      example.run
+      described_class.instance_variable_set(:@logger, original)
+    end
+
+    before { allow(described_class).to receive(:logger).and_call_original }
+
+    it "defaults to Rails.logger" do
+      described_class.instance_variable_set(:@logger, nil)
+
+      expect(described_class.logger).to eq(Rails.logger)
+    end
+
+    it "can be overridden through the writer" do
+      custom_logger = instance_double(Logger)
+
+      described_class.logger = custom_logger
+
+      expect(described_class.logger).to eq(custom_logger)
     end
   end
 end
