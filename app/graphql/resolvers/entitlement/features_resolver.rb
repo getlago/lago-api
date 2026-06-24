@@ -26,7 +26,10 @@ module Resolvers
           }
         )
 
-        result.features.includes(:privileges)
+        ::Entitlement::Feature.preload_subscriptions_count(
+          current_organization,
+          result.features.includes(:privileges)
+        )
       end
     end
   end
