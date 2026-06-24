@@ -6185,6 +6185,7 @@ enum FeatureFlagEnum {
   order_forms
   payment_gated_subscriptions
   postgres_enriched_events
+  product_catalog
   stripe_shared_payment_token
   wallet_traceability
 }
