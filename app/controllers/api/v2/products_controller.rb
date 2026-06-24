@@ -3,6 +3,8 @@
 module Api
   module V2
     class ProductsController < Api::BaseController
+      include Api::RequiresProductCatalog
+
       def create
         if input_params.key?(:product_category_code) && product_category.nil?
           return not_found_error(resource: "product_category")

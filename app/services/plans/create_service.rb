@@ -16,13 +16,17 @@ module Plans
     )
 
     def call
+      organization = Organization.find_by(id: args[:organization_id])
+
       plan = Plan.new(
         organization_id: args[:organization_id],
         name: args[:name],
         invoice_display_name: args[:invoice_display_name],
         code: args[:code],
         description: args[:description],
-        pricing_type: args[:pricing_type] || "legacy",
+        # The pricing engine is an organization-level property, never a payload
+        # choice: catalog organizations author catalog plans, others legacy.
+        pricing_type: organization&.product_catalog_enabled? ? "product_catalog" : "legacy",
         interval: args[:interval]&.to_sym,
         pay_in_advance: args[:pay_in_advance],
         amount_cents: args[:amount_cents],
