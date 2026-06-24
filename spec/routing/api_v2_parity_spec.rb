@@ -18,6 +18,13 @@ RSpec.describe "API v2 routing parity" do
     expect(missing).to be_empty
   end
 
+  it "routes plan-nested legacy paths to v1 controllers despite the greedy v2 plan code" do
+    recognized = Rails.application.routes.recognize_path("/api/v2/plans/foo/charges", method: :get)
+
+    expect(recognized[:controller]).to eq("api/v1/plans/charges")
+    expect(recognized[:plan_code]).to eq("foo")
+  end
+
   it "falls back to v1 controllers for shared resources" do
     customers = Rails.application.routes.routes.find do |route|
       route.path.spec.to_s.start_with?("/api/v2/customers(") && route.verb == "GET"

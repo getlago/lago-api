@@ -140,19 +140,7 @@ resources :orders, only: %i[show index] do
 end
 resources :payments, only: %i[create index show]
 resources :plans, param: :code, code: /.*/ do
-  resources :charges, only: %i[index show create update destroy], param: :code, code: /.*/, controller: "plans/charges" do
-    resources :filters, only: %i[index show create update destroy], controller: "plans/charges/filters"
-  end
-  resources :fixed_charges, only: %i[index show create update destroy], param: :code, code: /.*/, controller: "plans/fixed_charges"
-  resources :entitlements, only: %i[index show create destroy], param: :code, code: /.*/, controller: "plans/entitlements" do
-    resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "plans/entitlements/privileges"
-  end
-  patch :entitlements, to: "plans/entitlements#update"
-  scope module: :plans do
-    resource :metadata, only: %i[create update destroy] do
-      delete ":key", action: :destroy_key, on: :member
-    end
-  end
+  draw(:plan_nested_api)
 end
 resources :taxes, param: :code, code: /.*/
 resources :wallet_transactions, only: %i[create show] do

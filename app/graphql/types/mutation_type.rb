@@ -22,6 +22,9 @@ module Types
     field :destroy_adjusted_fee, mutation: Mutations::AdjustedFees::Destroy
     field :preview_adjusted_fee, mutation: Mutations::AdjustedFees::Preview
 
+    field :create_catalog_plan, mutation: Mutations::CatalogPlans::Create
+    field :update_catalog_plan, mutation: Mutations::CatalogPlans::Update
+
     field :create_plan, mutation: Mutations::Plans::Create
     field :destroy_plan, mutation: Mutations::Plans::Destroy
     field :update_plan, mutation: Mutations::Plans::Update

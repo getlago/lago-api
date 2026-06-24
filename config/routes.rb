@@ -30,8 +30,8 @@ Rails.application.routes.draw do
       draw(:shared_api)
     end
 
-    # The catalog namespace is drawn first so its routes win recognition for
-    # the paths it defines; everything else on /api/v2 falls through to v1.
+    # Drawn first so catalog routes win recognition; everything else on /api/v2
+    # falls through to v1.
     namespace :v2 do
       resources :products, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
@@ -40,8 +40,9 @@ Rails.application.routes.draw do
       resources :rate_cards, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :rates, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "rate_cards/rates"
       end
-      resources :plans, param: :code, code: /.*/, only: [] do
+      resources :plans, param: :code, code: /.*/, only: %i[show create update] do
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_rate_cards"
+        draw(:plan_nested_api)
       end
     end
 

@@ -6,7 +6,7 @@ RSpec.describe PlanRateCards::CreateService do
   subject(:result) { described_class.call(plan:, params:) }
 
   let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let(:plan) { create(:plan, :product_catalog, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
 
   let(:params) { {rate_card_code: rate_card.code, units: "10"} }
@@ -71,6 +71,15 @@ RSpec.describe PlanRateCards::CreateService do
 
       expect(result).not_to be_success
       expect(result.error.messages[:currency]).to eq(["currency_does_not_match"])
+    end
+  end
+
+  context "when the plan is a legacy plan" do
+    let(:plan) { create(:plan, organization:) }
+
+    it "rejects the attachment" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:plan]).to eq(["legacy_plan"])
     end
   end
 

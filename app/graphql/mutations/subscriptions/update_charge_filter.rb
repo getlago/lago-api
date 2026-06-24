@@ -3,6 +3,7 @@
 module Mutations
   module Subscriptions
     class UpdateChargeFilter < BaseMutation
+      include ForbidsLegacyBilling
       include AuthenticableApiUser
       include RequiredOrganization
 
