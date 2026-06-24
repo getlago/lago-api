@@ -40,7 +40,7 @@ Rails.application.routes.draw do
       resources :rate_cards, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :rates, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "rate_cards/rates"
       end
-      resources :plans, param: :code, code: /.*/, only: [] do
+      resources :plans, param: :code, code: /.*/, only: %i[show create update] do
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_rate_cards"
       end
     end
