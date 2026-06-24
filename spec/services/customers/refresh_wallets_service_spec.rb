@@ -137,6 +137,9 @@ RSpec.describe Customers::RefreshWalletsService do
           create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) do |invoice_subscription|
             create(
               :charge_fee,
+              # Progressively-billed usage must net against the same metric it bills,
+              # so reuse the in-arrears charge that produces the ongoing usage.
+              charge: subscription.plan.charges.find { |c| c.billable_metric_id == billable_metric.id },
               subscription:,
               precise_coupons_amount_cents: 0,
               invoice: invoice_subscription.invoice,
@@ -204,10 +207,8 @@ RSpec.describe Customers::RefreshWalletsService do
       end
     end
 
-    context "when target_wallet_ids is provided" do
-      subject(:result) { described_class.call(customer:, include_generating_invoices:, target_wallet_ids: [target_wallet.id]) }
-
-      let!(:target_wallet) do
+    context "when the customer has multiple wallets" do
+      let!(:first_wallet) do
         create(
           :wallet,
           customer:,
@@ -220,7 +221,7 @@ RSpec.describe Customers::RefreshWalletsService do
         )
       end
 
-      let!(:other_wallet) do
+      let!(:second_wallet) do
         create(
           :wallet,
           customer:,
@@ -233,22 +234,22 @@ RSpec.describe Customers::RefreshWalletsService do
         )
       end
 
-      it "only calls RefreshOngoingUsageService for targeted wallets" do
+      it "refreshes every wallet together" do
         allow(Wallets::Balance::RefreshOngoingUsageService).to receive(:call!).and_call_original
 
         subject
 
         expect(Wallets::Balance::RefreshOngoingUsageService)
-          .to have_received(:call!).once
+          .to have_received(:call!).with(hash_including(wallet: first_wallet))
         expect(Wallets::Balance::RefreshOngoingUsageService)
-          .to have_received(:call!).with(hash_including(wallet: target_wallet))
+          .to have_received(:call!).with(hash_including(wallet: second_wallet))
       end
 
-      it "only updates last_ongoing_balance_sync_at for targeted wallets" do
+      it "updates last_ongoing_balance_sync_at on every wallet" do
         subject
 
-        expect(target_wallet.reload.last_ongoing_balance_sync_at).not_to be_nil
-        expect(other_wallet.reload.last_ongoing_balance_sync_at).to be_nil
+        expect(first_wallet.reload.last_ongoing_balance_sync_at).not_to be_nil
+        expect(second_wallet.reload.last_ongoing_balance_sync_at).not_to be_nil
       end
 
       it "returns all active wallets in the result" do
@@ -442,6 +443,55 @@ RSpec.describe Customers::RefreshWalletsService do
         # EUR: in-arrears 1500 + PIA 400 = 1900 total usage, minus 400 PIA billed = 1500 ongoing usage
         expect(eur_wallet.reload.ongoing_usage_balance_cents).to eq(1500)
         expect(eur_wallet.ongoing_balance_cents).to eq(8500)
+      end
+    end
+
+    context "when ongoing usage cascades across multiple wallets" do
+      subject(:result) { described_class.call(customer: cascade_customer, include_generating_invoices: false) }
+
+      let(:cascade_org) { create(:organization) }
+      let(:cascade_customer) { create(:customer, organization: cascade_org, awaiting_wallet_refresh: true) }
+      let(:cascade_bm) { create(:billable_metric, organization: cascade_org, aggregation_type: "count_agg") }
+      let(:cascade_subscription) { create(:subscription, organization: cascade_org, customer: cascade_customer, started_at: Time.zone.now - 1.year) }
+
+      # Wallet B (free, consumed first) and Wallet A (paid), as in the ticket worked example.
+      let(:wallet_b) do
+        create(:wallet, customer: cascade_customer, organization: cascade_org, balance_cents: 50, priority: 1,
+          ongoing_balance_cents: 50, credits_balance: 0.5, credits_ongoing_balance: 0.5)
+      end
+      let(:wallet_a) do
+        create(:wallet, customer: cascade_customer, organization: cascade_org, balance_cents: 150, priority: 2,
+          ongoing_balance_cents: 150, credits_balance: 1.5, credits_ongoing_balance: 1.5)
+      end
+
+      before do
+        create(:standard_charge, plan: cascade_subscription.plan, billable_metric: cascade_bm, properties: {amount: "0.8"})
+        wallet_b
+        wallet_a
+        # 1 event * $0.80 = 80 cents of ongoing usage
+        create(:event, organization: cascade_org, subscription: cascade_subscription, customer: cascade_customer, code: cascade_bm.code)
+      end
+
+      it "fills the priority wallet then spills the overflow onto the next" do
+        expect(result).to be_success
+
+        expect(wallet_b.reload.ongoing_balance_cents).to eq(0)
+        expect(wallet_b.ongoing_usage_balance_cents).to eq(50)
+        expect(wallet_a.reload.ongoing_balance_cents).to eq(120)
+        expect(wallet_a.ongoing_usage_balance_cents).to eq(30)
+      end
+
+      context "when the priority wallet has an active threshold-based recurring rule" do
+        before { create(:recurring_transaction_rule, wallet: wallet_b, organization: cascade_org, trigger: :threshold) }
+
+        it "keeps the legacy behavior: the threshold wallet goes negative and does not cascade" do
+          expect(result).to be_success
+
+          expect(wallet_b.reload.ongoing_balance_cents).to eq(-30)
+          expect(wallet_b.ongoing_usage_balance_cents).to eq(80)
+          expect(wallet_a.reload.ongoing_balance_cents).to eq(150)
+          expect(wallet_a.ongoing_usage_balance_cents).to eq(0)
+        end
       end
     end
   end
