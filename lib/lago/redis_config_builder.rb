@@ -28,12 +28,11 @@ module Lago
   #
   # @example Sidekiq initializer
   #   Lago::RedisConfigBuilder.new
-  #     .with_options(pool_timeout: 5, timeout: 5)
+  #     .with_options(pool_timeout: 5)
   #     .sidekiq
   #
   # @example ActiveJob uniqueness initializer
   #   Lago::RedisConfigBuilder.new
-  #     .with_options(reconnect_attempts: 4)
   #     .sidekiq
   #
   # @example Cache initializer
@@ -85,6 +84,9 @@ module Lago
         master_name: ENV.fetch("LAGO_REDIS_CACHE_MASTER_NAME", "master").presence
       )
       add_password(redis_config, password: ENV["LAGO_REDIS_CACHE_PASSWORD"].presence)
+      # The cache deliberately skips retry wiring (no `reconnect_attempts` or
+      # `RedisLoadingRetryMiddleware`): cache reads/writes fail fast so callers degrade
+      # gracefully, rather than blocking on retries while a node fails over or reloads.
 
       redis_config.merge(extra_options)
     end
