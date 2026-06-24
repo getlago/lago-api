@@ -30,6 +30,8 @@ module Plans
         bill_charges_monthly: bill_charges_monthly(args),
         bill_fixed_charges_monthly: bill_fixed_charges_monthly(args)
       )
+      # The pricing type is an organization-level choice, not a per-plan one.
+      plan.pricing_type = "product_catalog" if plan.organization&.product_catalog_enabled?
 
       chargeables_validation_result = Plans::ChargeablesValidationService.call(
         organization: plan.organization,
