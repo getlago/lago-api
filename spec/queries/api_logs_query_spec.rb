@@ -99,6 +99,20 @@ RSpec.describe ApiLogsQuery, clickhouse: true do
       filters = {http_methods: ["other"]}
       expect(described_class.call(organization:, pagination:, filters:).api_logs).to be_empty
     end
+
+    context "with a PATCH api log" do
+      let(:patch_api_log) { create(:clickhouse_api_log, organization:, http_method: "patch") }
+
+      before { patch_api_log }
+
+      it "persists patch into the ClickHouse enum and filters by it" do
+        filters = {http_methods: ["patch"]}
+        api_logs = described_class.call(organization:, pagination:, filters:).api_logs
+
+        expect(api_logs.map(&:request_id)).to contain_exactly(patch_api_log.request_id)
+        expect(api_logs.first.http_method).to eq("patch")
+      end
+    end
   end
 
   context "with http_statuses filter" do
