@@ -58426,6 +58426,35 @@
               "deprecationReason": null
             },
             {
+              "name": "quoteVersion",
+              "description": "Query a single quote version",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Lago ID of the quote version",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "QuoteVersion",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "quotes",
               "description": "Query quotes of an organization",
               "args": [
