@@ -5,12 +5,14 @@ module BillingPeriods
   # creation (forward-looking), as opposed to DatesService which resolves the period
   # being billed at a given moment (backward-looking).
   #
-  # The first period starts when the subscription starts. If the subscription starts
-  # mid-cycle (started_at later than the anchor boundary), the first period is the
-  # partial remainder [started_at, next boundary).
+  # The first period is anchored to whichever is later — the subscription start or
+  # `now`. Clamping to `now` is what stops a backdated start (started_at far in the
+  # past) from back-billing the missed periods: it bills the *current* period forward,
+  # matching the legacy engine. A subscription that genuinely starts mid-cycle still
+  # gets a partial first period [started_at, next boundary).
   #
   #   arrears -> first bill at the end of the first period (the next boundary)
-  #   advance -> first bill immediately, at the start of the first period
+  #   advance -> first bill at the start of the first period
   class FirstPeriodService < BaseService
     Result = BaseResult[:period_from, :period_to, :next_billing_at]
 
@@ -48,16 +50,21 @@ module BillingPeriods
       billing_timing == :arrears
     end
 
-    # The first period starts the day the subscription starts (partial when the
-    # subscription starts mid-cycle).
+    # The first period starts at the subscription start, but never before the start of
+    # the current period — so a backdated start bills the current period, not the gap.
     def period_from
-      @period_from ||= started_at.in_time_zone(timezone).beginning_of_day.utc
+      @period_from ||= [boundaries.at(current_index), started_at.in_time_zone(timezone).beginning_of_day].max.utc
     end
 
-    # The first boundary strictly after the subscription start: the end of the first
-    # period and, for arrears, the first billing instant.
     def next_boundary
-      @next_boundary ||= boundaries.at(boundaries.index_on_or_before(started_at.in_time_zone(timezone)) + 1)
+      @next_boundary ||= boundaries.at(current_index + 1)
+    end
+
+    # Anchor the first period to whichever is later, the subscription start or now.
+    # Clamping to now is what prevents a backdated start from back-billing past periods.
+    # TODO Time.current needs to be an argyment to be ease to manipulate if we need to run somehing in the past
+    def current_index
+      @current_index ||= boundaries.index_on_or_before([started_at, Time.current].max.in_time_zone(timezone))
     end
   end
 end

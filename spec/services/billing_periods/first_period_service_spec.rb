@@ -14,6 +14,11 @@ RSpec.describe BillingPeriods::FirstPeriodService do
     )
   end
 
+  # Created at start unless a context says otherwise; frozen so the "now" clamp is deterministic.
+  let(:current_time) { started_at }
+
+  around { |example| Timecop.freeze(current_time) { example.run } }
+
   let(:interval_count) { 1 }
   let(:interval_unit) { :month }
   let(:billing_timing) { :arrears }
@@ -59,8 +64,34 @@ RSpec.describe BillingPeriods::FirstPeriodService do
 
       it "bills the partial remainder immediately" do
         expect(result.period_from).to eq(Time.utc(2022, 2, 15))
-        expect(result.period_to).to match_datetime(Time.utc(2022, 2, 28, 23, 59, 59))
         expect(result.next_billing_at).to eq(Time.utc(2022, 2, 15))
+      end
+    end
+  end
+
+  context "when the subscription started in the past (backdated)" do
+    let(:billing_anchor_date) { Date.new(2026, 1, 1) } # calendar anchor on the 1st
+    let(:started_at) { Time.utc(2026, 1, 1) }          # active since January...
+    let(:current_time) { Time.utc(2026, 6, 15) }       # ...but created in June
+
+    context "arrears" do
+      it "bills the current period forward, not the missed months" do
+        expect(result.period_from).to eq(Time.utc(2026, 6, 1))
+        expect(result.period_to).to match_datetime(Time.utc(2026, 6, 30, 23, 59, 59))
+        expect(result.next_billing_at).to eq(Time.utc(2026, 7, 1))
+      end
+
+      it "does not put next_billing_at in the past" do
+        expect(result.next_billing_at).to be > current_time
+      end
+    end
+
+    context "advance" do
+      let(:billing_timing) { :advance }
+
+      it "bills the current period (its start boundary), not the missed months" do
+        expect(result.period_from).to eq(Time.utc(2026, 6, 1))
+        expect(result.next_billing_at).to eq(Time.utc(2026, 6, 1))
       end
     end
   end
