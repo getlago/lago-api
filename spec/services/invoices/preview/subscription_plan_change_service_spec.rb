@@ -108,7 +108,7 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService do
 
               expect(subscriptions.second)
                 .to be_new_record
-                .and have_attributes(status: "active", started_at: start_of_next_billing_period, name: target_plan.name, plan: target_plan)
+                .and have_attributes(status: "active", started_at: start_of_next_billing_period.beginning_of_day, name: target_plan.name, plan: target_plan)
             end
 
             it "does not persist any changes to the current subscription" do
