@@ -5,6 +5,7 @@ module V1
     def serialize
       {
         lago_id: model.id,
+        code: model.code,
         effective_from: model.effective_from.iso8601,
         status: model.status,
         rate_model: model.rate_model,
