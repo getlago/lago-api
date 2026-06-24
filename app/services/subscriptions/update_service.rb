@@ -175,10 +175,18 @@ module Subscriptions
       else
         Plans::OverrideService.call!(
           plan: current_plan,
-          params: params[:plan_overrides].to_h.with_indifferent_access,
+          params: plan_override_params_with_promoted_units,
           subscription:
         )
       end
+    end
+
+    def plan_override_params_with_promoted_units
+      override_params = params[:plan_overrides].to_h.with_indifferent_access
+      override_params[:fixed_charges] = promote_units_overrides_to_fixed_charges_params(
+        override_params[:fixed_charges] || []
+      )
+      override_params
     end
 
     def units_only_plan_overrides_change?
