@@ -101,6 +101,18 @@ RSpec.describe Api::V1::TaxesController do
       expect(response).to have_http_status(:success)
       expect(json[:tax][:lago_id]).to eq(tax.id)
       expect(json[:tax][:code]).to eq(tax.code)
+      expect(json[:tax][:applied_to_organization]).to be(false)
+    end
+
+    context "when the tax is applied to the default billing entity" do
+      let(:tax) { create(:tax, :applied_to_billing_entity, organization:) }
+
+      it "returns applied_to_organization as true" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:tax][:applied_to_organization]).to be(true)
+      end
     end
 
     context "when tax does not exist" do
@@ -157,6 +169,18 @@ RSpec.describe Api::V1::TaxesController do
       expect(json[:taxes].count).to eq(1)
       expect(json[:taxes].first[:lago_id]).to eq(tax.id)
       expect(json[:taxes].first[:code]).to eq(tax.code)
+      expect(json[:taxes].first[:applied_to_organization]).to be(false)
+    end
+
+    context "when the tax is applied to the default billing entity" do
+      let!(:tax) { create(:tax, :applied_to_billing_entity, organization:) }
+
+      it "returns applied_to_organization as true" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:taxes].first[:applied_to_organization]).to be(true)
+      end
     end
 
     context "with pagination" do

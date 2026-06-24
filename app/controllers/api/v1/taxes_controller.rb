@@ -54,10 +54,11 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.taxes,
+              result.taxes.preload(:billing_entities_taxes),
               ::V1::TaxSerializer,
               collection_name: "taxes",
-              meta: pagination_metadata(result.taxes)
+              meta: pagination_metadata(result.taxes),
+              default_billing_entity_id: default_billing_entity_id
             )
           )
         else
@@ -72,7 +73,11 @@ module Api
       end
 
       def render_tax(tax)
-        render(json: ::V1::TaxSerializer.new(tax, root_name: "tax"))
+        render(json: ::V1::TaxSerializer.new(tax, root_name: "tax", default_billing_entity_id: default_billing_entity_id))
+      end
+
+      def default_billing_entity_id
+        @default_billing_entity_id ||= current_organization.default_billing_entity&.id
       end
 
       def resource_name
