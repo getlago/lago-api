@@ -7,6 +7,7 @@ class Invoice < ApplicationRecord
   include PaperTrailTraceable
   include Sequenced
   include RansackUuidSearch
+  include HasPurchaseOrderNumber
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
@@ -154,7 +155,6 @@ class Invoice < ApplicationRecord
   validates :timezone, timezone: true, allow_nil: true
   validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :payment_dispute_lost_at, absence: true, unless: :payment_dispute_losable?
-  validates :purchase_order_number, length: {maximum: 255}, allow_nil: true
 
   attr_writer :precalculated_offset_amount_cents
 
