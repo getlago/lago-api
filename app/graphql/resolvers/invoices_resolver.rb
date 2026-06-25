@@ -86,8 +86,7 @@ module Resolvers
       return result_error(result) unless result.success?
 
       invoices = result.invoices
-      # The Meilisearch path returns an already-loaded paginated array; only the
-      # Postgres relation supports further eager-loading.
+
       if invoices.respond_to?(:preload)
         invoices = invoices.preload(
           :fees,

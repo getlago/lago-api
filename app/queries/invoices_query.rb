@@ -80,18 +80,13 @@ class InvoicesQuery < BaseQuery
       sort: ["issuing_date:desc", "created_at:desc", "id:asc"],
       page: current_page,
       hits_per_page: per_page,
-      # Require every typed term to match, so the result set stays close to the
-      # Postgres substring search instead of Meilisearch's default "drop terms
-      # until enough results" behavior.
       matching_strategy: "all"
     }
-    # When a customer filter is set, only match the invoice number (not customer
-    # fields) — mirrors `search_customers?` in the Postgres path.
+
     search_params[:attributes_to_search_on] = ["number"] unless search_customers?
 
     invoices = Invoice.search(search_term.to_s, search_params)
 
-    # meilisearch-rails loads bare records; eager-load what serialization needs.
     ActiveRecord::Associations::Preloader.new(
       records: invoices.to_a,
       associations: [:customer, {file_attachment: :blob}, {xml_file_attachment: :blob}]
@@ -99,7 +94,7 @@ class InvoicesQuery < BaseQuery
 
     invoices
   rescue Meilisearch::Error => e
-    Rails.logger.warn("Meilisearch invoice search failed (#{e.class}: #{e.message}); falling back to Postgres")
+    Sentry.capture_exception(e) if defined?(Sentry)
     postgres_invoices
   end
 
@@ -129,28 +124,29 @@ class InvoicesQuery < BaseQuery
   end
 
   def meilisearch_filter
+    ms = Lago::Meilisearch::Filter
     conditions = [
-      ms_eq("organization_id", organization.id),
-      ms_in("status", meilisearch_statuses)
+      ms.eq("organization_id", organization.id),
+      ms.in_list("status", meilisearch_statuses)
     ]
 
-    conditions << ms_in("billing_entity_id", filters.billing_entity_ids) if filters.billing_entity_ids.present?
-    conditions << ms_eq("currency", filters.currency) if filters.currency
-    conditions << ms_eq("customer_external_id", filters.customer_external_id) if filters.customer_external_id
-    conditions << ms_eq("customer_id", filters.customer_id) if filters.customer_id.present?
-    conditions << ms_in("invoice_type", Array(filters.invoice_type)) if filters.invoice_type.present?
-    conditions << "issuing_date >= #{issuing_date_from.to_time.to_i}" if filters.issuing_date_from
-    conditions << "issuing_date <= #{issuing_date_to.to_time.to_i}" if filters.issuing_date_to
-    conditions << "total_amount_cents >= #{filters.amount_from.to_i}" if filters.amount_from.present?
-    conditions << "total_amount_cents <= #{filters.amount_to.to_i}" if filters.amount_to.present?
-    conditions << ms_in("payment_status", Array(filters.payment_status)) if filters.payment_status.present?
-    conditions << ms_eq("payment_dispute_lost", ms_bool(filters.payment_dispute_lost)) unless filters.payment_dispute_lost.nil?
-    conditions << ms_eq("payment_overdue", ms_bool(filters.payment_overdue)) unless filters.payment_overdue.nil?
-    conditions << ms_eq("self_billed", ms_bool(filters.self_billed)) unless filters.self_billed.nil?
+    conditions << ms.in_list("billing_entity_id", filters.billing_entity_ids) if filters.billing_entity_ids.present?
+    conditions << ms.eq("currency", filters.currency) if filters.currency
+    conditions << ms.eq("customer_external_id", filters.customer_external_id) if filters.customer_external_id
+    conditions << ms.eq("customer_id", filters.customer_id) if filters.customer_id.present?
+    conditions << ms.in_list("invoice_type", Array(filters.invoice_type)) if filters.invoice_type.present?
+    conditions << ms.gte("issuing_date", issuing_date_from.to_time.to_i) if filters.issuing_date_from
+    conditions << ms.lte("issuing_date", issuing_date_to.to_time.to_i) if filters.issuing_date_to
+    conditions << ms.gte("total_amount_cents", filters.amount_from.to_i) if filters.amount_from.present?
+    conditions << ms.lte("total_amount_cents", filters.amount_to.to_i) if filters.amount_to.present?
+    conditions << ms.in_list("payment_status", Array(filters.payment_status)) if filters.payment_status.present?
+    conditions << ms.eq("payment_dispute_lost", ms.boolean(filters.payment_dispute_lost)) unless filters.payment_dispute_lost.nil?
+    conditions << ms.eq("payment_overdue", ms.boolean(filters.payment_overdue)) unless filters.payment_overdue.nil?
+    conditions << ms.eq("self_billed", ms.boolean(filters.self_billed)) unless filters.self_billed.nil?
     conditions << positive_due_amount_filter unless filters.positive_due_amount.nil?
-    conditions << ms_eq("partially_paid", ms_bool(filters.partially_paid)) unless filters.partially_paid.nil?
-    conditions << ms_eq("subscription_ids", filters.subscription_id) if filters.subscription_id.present?
-    conditions << ms_in("settlement_types", valid_settlements) if valid_settlements.present?
+    conditions << ms.eq("partially_paid", ms.boolean(filters.partially_paid)) unless filters.partially_paid.nil?
+    conditions << ms.eq("subscription_ids", filters.subscription_id) if filters.subscription_id.present?
+    conditions << ms.in_list("settlement_types", valid_settlements) if valid_settlements.present?
     conditions.concat(metadata_filters) if filters.metadata.present?
 
     conditions
@@ -166,44 +162,24 @@ class InvoicesQuery < BaseQuery
   end
 
   def positive_due_amount_filter
-    if ms_bool(filters.positive_due_amount)
-      "due_amount_cents > 0"
+    ms = Lago::Meilisearch::Filter
+    if ms.boolean(filters.positive_due_amount)
+      ms.gt("due_amount_cents", 0)
     else
-      "due_amount_cents <= 0"
+      ms.lte("due_amount_cents", 0)
     end
   end
 
   def metadata_filters
+    ms = Lago::Meilisearch::Filter
     conditions = []
     presence_filters = filters.metadata.select { |_k, v| v.present? }
     absence_filters = filters.metadata.select { |_k, v| v.blank? }
 
-    presence_filters.each { |key, value| conditions << ms_eq("metadata", "#{key}::#{value}") }
-    conditions << ms_not_in("metadata_keys", absence_filters.keys) if absence_filters.any?
+    presence_filters.each { |key, value| conditions << ms.eq("metadata", "#{key}::#{value}") }
+    conditions << ms.not_in("metadata_keys", absence_filters.keys) if absence_filters.any?
 
     conditions
-  end
-
-  def ms_eq(field, value)
-    "#{field} = #{ms_value(value)}"
-  end
-
-  def ms_in(field, values)
-    "#{field} IN [#{Array(values).map { |v| ms_value(v) }.join(", ")}]"
-  end
-
-  def ms_not_in(field, values)
-    "#{field} NOT IN [#{Array(values).map { |v| ms_value(v) }.join(", ")}]"
-  end
-
-  def ms_value(value)
-    return value.to_s if value == true || value == false
-
-    %("#{value.to_s.gsub('"', '\\"')}")
-  end
-
-  def ms_bool(value)
-    ActiveModel::Type::Boolean.new.cast(value)
   end
 
   def filters_contract

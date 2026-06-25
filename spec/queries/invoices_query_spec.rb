@@ -988,12 +988,12 @@ RSpec.describe InvoicesQuery do
 
       before do
         allow(Invoice).to receive(:search).and_raise(Meilisearch::CommunicationError.new("boom"))
-        allow(Rails.logger).to receive(:warn)
+        allow(Sentry).to receive(:capture_exception)
       end
 
-      it "falls back to the Postgres path" do
+      it "falls back to the Postgres path and reports the error" do
         expect(meili_result.invoices.map(&:id)).to include(ms_invoice_first.id, ms_invoice_second.id)
-        expect(Rails.logger).to have_received(:warn).with(/falling back to Postgres/)
+        expect(Sentry).to have_received(:capture_exception)
       end
     end
   end

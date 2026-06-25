@@ -37,8 +37,6 @@ class Invoice < ApplicationRecord
       payment_overdue self_billed issuing_date total_amount_cents due_amount_cents
       partially_paid subscription_ids settlement_types metadata metadata_keys]
     sortable_attributes %i[issuing_date created_at id]
-    # Codes/numbers must match exactly — typo tolerance would make e.g. "2024"
-    # fuzzy-match "2023"/"2025" and massively inflate results.
     typo_tolerance disable_on_attributes: %w[number customer_external_id customer_email]
     pagination max_total_hits: 100_000
   end
@@ -47,7 +45,6 @@ class Invoice < ApplicationRecord
   COUPON_BEFORE_VAT_VERSION = 3
   TAX_INVOICE_LABEL_COUNTRIES = %w[AU AE NZ ID SG].freeze
 
-  # before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
   before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
   before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
