@@ -596,7 +596,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         event_store.aggregation_property = billable_metric.field_name
 
-        expect(event_store.unique_count).to eq(4) # 5 events added / 1 removed
+        result = event_store.unique_count
+
+        expect(result.value).to eq(4) # 5 events added / 1 removed
+        expect(result.events_count).to eq(4)
       end
     end
   end
@@ -629,7 +632,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         # 3 => added on 2 day, never removed => 14/31
         # 4 => added on 3 day, never removed => 13/31
         # 5 => added on 4 day, never removed => 12/31
-        expect(event_store.prorated_unique_count.round(3)).to eq(2.29)
+        expect(event_store.prorated_unique_count.value.round(3)).to eq(2.29)
       end
 
       context "with multiple events at the same day" do
@@ -661,7 +664,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           # 3 => added on 2 day, never removed => 14/31
           # 4 => added on 3 day, never removed => 13/31
           # 5 => added on 4 day, never removed => 12/31
-          expect(event_store.prorated_unique_count.round(3)).to eq(1.871) # 16/31 + 3/31 + 14/31 + 13/31 + 12/31
+          expect(event_store.prorated_unique_count.value.round(3)).to eq(1.871) # 16/31 + 3/31 + 14/31 + 13/31 + 12/31
         end
       end
     end
@@ -746,10 +749,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         result = event_store.grouped_unique_count
 
         expect(result).to match_array([
-          {groups: {"city" => nil, "country" => "france", "region" => "europe"}, value: 1},
-          {groups: {"city" => "paris", "country" => "france", "region" => "europe"}, value: 1},
-          {groups: {"city" => "london", "country" => "united kingdom", "region" => "europe"}, value: 1},
-          {groups: {"city" => nil, "country" => nil, "region" => nil}, value: 2}
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"city" => nil, "country" => "france", "region" => "europe"}, value: 1, events_count: 1),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"city" => "paris", "country" => "france", "region" => "europe"}, value: 1, events_count: 1),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"city" => "london", "country" => "united kingdom", "region" => "europe"}, value: 1, events_count: 1),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"city" => nil, "country" => nil, "region" => nil}, value: 2, events_count: 2)
         ])
       end
 
@@ -810,12 +813,12 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         expect(result.count).to eq(3)
 
-        null_group = result.find { |v| v[:groups]["agent_name"].nil? }
-        expect(null_group[:groups]["other"]).to be_nil
-        expect(null_group[:value].round(3)).to eq(0.935) # 29/31
+        null_group = result.find { |v| v.groups["agent_name"].nil? }
+        expect(null_group.groups["other"]).to be_nil
+        expect(null_group.value.round(3)).to eq(0.935) # 29/31
 
         # NOTE: Events calculation: [1/31, 30/31]
-        expect((result - [null_group]).map { |r| r[:value].round(3) }).to contain_exactly(0.032, 0.968)
+        expect((result - [null_group]).map { |r| r.value.round(3) }).to contain_exactly(0.032, 0.968)
       end
 
       context "with no events" do
@@ -1881,8 +1884,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_unique_count(["cloud"])
 
           expect(result).to match_array([
-            {groups: {"cloud" => "aws"}, value: 3},
-            {groups: {"cloud" => "gcp"}, value: 1}
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"cloud" => "aws"}, value: 3, events_count: 3),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"cloud" => "gcp"}, value: 1, events_count: 1)
           ])
         end
       end
@@ -1901,9 +1904,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_unique_count(["agent_name", "cloud"])
 
           expect(result).to match_array([
-            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
-            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 1},
-            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 1}
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2, events_count: 2),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 1, events_count: 1),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 1, events_count: 1)
           ])
         end
       end

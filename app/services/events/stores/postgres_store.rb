@@ -134,7 +134,7 @@ module Events
         sql = sanitize_sql_for_conditions([query.query])
         result = select_one(sql)
 
-        result["aggregation"]
+        build_aggregation_result_from_value(result["aggregation"])
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
@@ -159,7 +159,7 @@ module Events
         )
         result = select_one(sql)
 
-        result["aggregation"]
+        build_aggregation_result_from_value(result["aggregation"])
       end
 
       def prorated_unique_count_breakdown(with_remove: false)
@@ -188,7 +188,9 @@ module Events
           [query.grouped_query]
         )
 
-        prepare_grouped_result(select_all(sql).rows, columns: columns)
+        grouped_results_with_value_as_count(
+          prepare_grouped_result(select_all(sql).rows, columns: columns)
+        )
       end
 
       def grouped_prorated_unique_count
@@ -203,7 +205,7 @@ module Events
             }
           ]
         )
-        prepare_grouped_result(select_all(sql).rows)
+        grouped_results_with_value_as_count(prepare_grouped_result(select_all(sql).rows))
       end
 
       def max(with_count: true)
