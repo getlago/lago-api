@@ -17,29 +17,30 @@ RSpec.describe Resolvers::RateCardResolver do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:rate_card) { create(:rate_card, organization:) }
+  let!(:rate) { create(:rate_card_rate, organization:, rate_card:) }
 
   let(:query) do
     <<~GQL
       query($rateCardId: ID!) {
         rateCard(id: $rateCardId) {
           id name code currency
-          rates { id status }
+          ratesCount
+          activeRate { id }
         }
       }
     GQL
   end
 
-  before { create(:rate_card_rate, organization:, rate_card:) }
-
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "rate_cards:view"
 
-  it "returns a single rate card with its rates" do
+  it "returns a single rate card with its rates count and active rate" do
     response = execution["data"]["rateCard"]
 
     expect(response["id"]).to eq(rate_card.id)
-    expect(response["rates"].count).to eq(1)
+    expect(response["ratesCount"]).to eq(1)
+    expect(response["activeRate"]["id"]).to eq(rate.id)
   end
 
   context "when the rate card belongs to another organization" do
