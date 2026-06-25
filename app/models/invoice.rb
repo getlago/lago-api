@@ -9,9 +9,7 @@ class Invoice < ApplicationRecord
   include RansackUuidSearch
   include MeiliSearch::Rails
 
-  # Indexing is orchestrated by services/jobs (see Invoices::SearchIndexService),
-  # not by model callbacks, hence auto_index/auto_remove are disabled.
-  meilisearch(index_uid: "invoices", auto_index: false, auto_remove: false) do
+  meilisearch(index_uid: "invoices", auto_index: false, auto_remove: true) do
     attribute :number, :organization_id, :billing_entity_id, :currency, :customer_id,
       :invoice_type, :status, :payment_status, :payment_overdue, :self_billed,
       :total_amount_cents, :total_paid_amount_cents
@@ -21,12 +19,12 @@ class Invoice < ApplicationRecord
     attribute(:due_amount_cents) { total_amount_cents - total_paid_amount_cents }
     attribute(:partially_paid) { total_amount_cents > total_paid_amount_cents && total_paid_amount_cents.positive? }
     attribute(:payment_dispute_lost) { payment_dispute_lost_at.present? }
-    attribute(:customer_name) { customer&.name }
-    attribute(:customer_firstname) { customer&.firstname }
-    attribute(:customer_lastname) { customer&.lastname }
-    attribute(:customer_legal_name) { customer&.legal_name }
-    attribute(:customer_external_id) { customer&.external_id }
-    attribute(:customer_email) { customer&.email }
+    attribute(:customer_name) { customer.name if customer&.kept? }
+    attribute(:customer_firstname) { customer.firstname if customer&.kept? }
+    attribute(:customer_lastname) { customer.lastname if customer&.kept? }
+    attribute(:customer_legal_name) { customer.legal_name if customer&.kept? }
+    attribute(:customer_external_id) { customer.external_id if customer&.kept? }
+    attribute(:customer_email) { customer.email if customer&.kept? }
     attribute(:subscription_ids) { invoice_subscriptions.pluck(:subscription_id).uniq }
     attribute(:settlement_types) { invoice_settlements.distinct.pluck(:settlement_type) }
     attribute(:metadata) { metadata.map { |meta| "#{meta.key}::#{meta.value}" } }

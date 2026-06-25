@@ -2521,5 +2521,18 @@ RSpec.describe Invoice do
         )
       end
     end
+
+    context "when the customer is discarded" do
+      before { customer.discard! }
+
+      it "omits the descriptive customer fields but keeps customer_id" do
+        expect(document).to include(
+          "customer_id" => customer.id,
+          "customer_name" => nil,
+          "customer_external_id" => nil,
+          "customer_email" => nil
+        )
+      end
+    end
   end
 end

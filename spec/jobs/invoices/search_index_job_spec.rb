@@ -12,6 +12,10 @@ RSpec.describe Invoices::SearchIndexJob do
     allow(Invoices::RemoveFromSearchIndexService).to receive(:call!)
   end
 
+  it "runs on the meilisearch queue" do
+    expect(described_class.new.queue_name).to eq("meilisearch")
+  end
+
   context "when the invoice exists" do
     let(:invoice_id) { invoice.id }
 

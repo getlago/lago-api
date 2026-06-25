@@ -4,7 +4,7 @@ module Customers
   # Re-indexes every invoice of a customer in Meilisearch. Used when denormalized
   # customer fields (name, email, external_id, ...) change.
   class ReindexInvoicesJob < ApplicationJob
-    queue_as :invoices
+    queue_as :meilisearch
 
     def perform(customer)
       customer.invoices.find_each do |invoice|

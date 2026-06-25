@@ -2,7 +2,7 @@
 
 module Invoices
   class SearchIndexJob < ApplicationJob
-    queue_as :invoices
+    queue_as :meilisearch
 
     def perform(invoice_id)
       invoice = Invoice.find_by(id: invoice_id)

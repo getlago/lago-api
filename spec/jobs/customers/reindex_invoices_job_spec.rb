@@ -16,6 +16,10 @@ RSpec.describe Customers::ReindexInvoicesJob do
     allow(Invoices::SearchIndexJob).to receive(:perform_later)
   end
 
+  it "runs on the meilisearch queue" do
+    expect(described_class.new.queue_name).to eq("meilisearch")
+  end
+
   it "enqueues a reindex job for each of the customer's invoices" do
     perform
 
