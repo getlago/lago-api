@@ -43,6 +43,12 @@ class RateCard < ApplicationRecord
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
   end
+
+  # The active rate is the latest effective rate; later rates are pending and
+  # earlier ones have been superseded (terminated).
+  def active_rate
+    rates.effective.order(effective_datetime: :desc).first
+  end
 end
 
 # == Schema Information

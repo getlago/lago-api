@@ -3434,7 +3434,6 @@ input CreateRateCardInput {
   productItemFilterId: ID
   productItemId: ID!
   proration: RateCardProrationEnum
-  rates: [RateCardRateInput!]
   regroupPaidFees: RateCardRegroupPaidFeesEnum
   walletTargetable: Boolean
 }
@@ -11407,9 +11406,14 @@ type Query {
   ): RateCard
 
   """
+  Query the rates of a rate card
+  """
+  rateCardRates(limit: Int, page: Int, rateCardId: ID!): RateCardRateCollection!
+
+  """
   Query rate cards of an organization
   """
-  rateCards(limit: Int, page: Int, productItemId: ID, searchTerm: String): RateCardCollection!
+  rateCards(code: String, limit: Int, page: Int, productItemCode: String, productItemFilterCode: String, productItemFilterId: ID, productItemId: ID, searchTerm: String): RateCardCollection!
 
   """
   Query a single role
@@ -11704,6 +11708,7 @@ type QuoteVersion {
 Base rate card
 """
 type RateCard {
+  activeRate: RateCardRate
   appliedPricingUnitCode: String
   billingTiming: RateCardBillingTimingEnum!
   code: String!
@@ -11717,7 +11722,7 @@ type RateCard {
   productItem: ProductItem!
   productItemFilter: ProductItemFilter
   proration: RateCardProrationEnum!
-  rates: [RateCardRate!]!
+  ratesCount: Int!
   regroupPaidFees: RateCardRegroupPaidFeesEnum
   updatedAt: ISO8601DateTime!
   walletTargetable: Boolean
@@ -11773,16 +11778,18 @@ enum RateCardRateBillingIntervalUnitEnum {
 }
 
 """
-Rate card rate input arguments
+RateCardRateCollection type
 """
-input RateCardRateInput {
-  appliedPricingUnitConversionRate: Float
-  billingIntervalCount: Int
-  billingIntervalUnit: RateCardRateBillingIntervalUnitEnum!
-  effectiveDatetime: ISO8601DateTime!
-  minAmountCents: BigInt
-  rateModel: RateCardRateModelEnum!
-  rateProperties: JSON!
+type RateCardRateCollection {
+  """
+  A collection of paginated RateCardRateCollection
+  """
+  collection: [RateCardRate!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
 }
 
 enum RateCardRateModelEnum {
