@@ -39,6 +39,32 @@ RSpec.describe RateCardsQuery do
     end
   end
 
+  context "with a code filter" do
+    let(:filters) { {code: "growth_usd"} }
+
+    it "returns only the card with that code" do
+      expect(result.rate_cards).to eq([card_one])
+    end
+  end
+
+  context "with a product_item_code filter" do
+    let(:filters) { {product_item_code: product_item.code} }
+
+    it "returns only the cards of that product item" do
+      expect(result.rate_cards).to eq([card_one])
+    end
+  end
+
+  context "with a product_item_filter_code filter" do
+    let(:item_filter) { create(:product_item_filter, organization:, product_item:) }
+    let!(:filtered_card) { create(:rate_card, organization:, product_item:, product_item_filter: item_filter) }
+    let(:filters) { {product_item_filter_code: item_filter.code} }
+
+    it "returns only the cards of that product item filter" do
+      expect(result.rate_cards).to eq([filtered_card])
+    end
+  end
+
   context "with pagination" do
     let(:pagination) { {page: 1, limit: 1} }
 

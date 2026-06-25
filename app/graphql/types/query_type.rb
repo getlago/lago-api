@@ -102,6 +102,7 @@ module Types
     field :quote_version, resolver: Resolvers::QuoteVersionResolver
     field :quotes, resolver: Resolvers::QuotesResolver
     field :rate_card, resolver: Resolvers::RateCardResolver
+    field :rate_card_rates, resolver: Resolvers::RateCardRatesResolver
     field :rate_cards, resolver: Resolvers::RateCardsResolver
     field :role, resolver: Resolvers::RoleResolver
     field :roles, resolver: Resolvers::RolesResolver

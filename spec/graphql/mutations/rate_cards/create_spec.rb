@@ -24,15 +24,7 @@ RSpec.describe Mutations::RateCards::Create do
       name: "Growth USD",
       code: "growth_usd",
       currency: "USD",
-      billingTiming: "arrears",
-      rates: [
-        {
-          effectiveDatetime: 1.minute.ago.iso8601,
-          rateModel: "standard",
-          rateProperties: {amount: "10"},
-          billingIntervalUnit: "month"
-        }
-      ]
+      billingTiming: "arrears"
     }
   end
 
@@ -42,7 +34,8 @@ RSpec.describe Mutations::RateCards::Create do
         createRateCard(input: $input) {
           id name code currency billingTiming proration
           productItem { id }
-          rates { id status rateModel rateProperties }
+          ratesCount
+          activeRate { id }
         }
       }
     GQL
@@ -52,15 +45,41 @@ RSpec.describe Mutations::RateCards::Create do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "rate_cards:create"
 
-  it "creates a rate card with its rates" do
+  it "creates a rate card without rates" do
     result_data = execution["data"]["createRateCard"]
 
     expect(result_data["id"]).to be_present
     expect(result_data["name"]).to eq("Growth USD")
     expect(result_data["currency"]).to eq("USD")
-    expect(result_data["proration"]).to eq(true)
+    expect(result_data["proration"]).to eq(false) # omitted -> column default
     expect(result_data["productItem"]["id"]).to eq(product_item.id)
-    expect(result_data["rates"].count).to eq(1)
-    expect(result_data["rates"].first["status"]).to eq("active")
+    expect(result_data["ratesCount"]).to eq(0)
+    expect(result_data["activeRate"]).to be_nil
+  end
+
+  context "with nested rates" do
+    let(:input) do
+      {
+        productItemId: product_item.id,
+        name: "Growth USD",
+        code: "growth_usd",
+        currency: "USD",
+        rates: [
+          {
+            effectiveDatetime: 1.minute.ago.iso8601,
+            rateModel: "standard",
+            rateProperties: {amount: "10"},
+            billingIntervalUnit: "month"
+          }
+        ]
+      }
+    end
+
+    it "creates the rate card with its rates in one call" do
+      result_data = execution["data"]["createRateCard"]
+
+      expect(result_data["ratesCount"]).to eq(1)
+      expect(result_data["activeRate"]["id"]).to be_present
+    end
   end
 end
