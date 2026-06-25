@@ -177,11 +177,15 @@ RSpec.describe Api::V2::RateCardsController do
 
     include_examples "requires API permission", "rate_card", "read"
 
-    it "returns the rate card" do
+    it "returns the rate card with its rates count and active rate" do
+      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.day.ago)
+
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:rate_card][:lago_id]).to eq(rate_card.id)
+      expect(json[:rate_card][:rates_count]).to eq(1)
+      expect(json[:rate_card][:active_rate][:status]).to eq("active")
     end
 
     context "when the rate card belongs to another organization" do
@@ -213,6 +217,16 @@ RSpec.describe Api::V2::RateCardsController do
 
     context "with a product_item_id filter" do
       let(:query_params) { "?product_item_id=#{product_item.id}" }
+
+      it "returns only the rate cards of that product item" do
+        subject
+
+        expect(json[:rate_cards].map { it[:lago_id] }).to eq([rate_card.id])
+      end
+    end
+
+    context "with a product_item_code filter" do
+      let(:query_params) { "?product_item_code=#{product_item.code}" }
 
       it "returns only the rate cards of that product item" do
         subject
