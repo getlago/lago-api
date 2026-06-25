@@ -17,10 +17,7 @@ module Mutations
       def resolve(**args)
         product_item = current_organization.product_items.find_by(id: args[:product_item_id])
 
-        params = args.except(:product_item_id)
-        params[:rates] = params[:rates].map(&:to_h) if params[:rates]
-
-        result = ::RateCards::CreateService.call(product_item:, params:)
+        result = ::RateCards::CreateService.call(product_item:, params: args.except(:product_item_id))
 
         result.success? ? result.rate_card : result_error(result)
       end
