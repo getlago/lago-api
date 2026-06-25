@@ -106,6 +106,7 @@ module Entitlement
 
         if plan_val && value_is_the_same?(privilege.value_type, value, plan_val.value)
           sub_val&.discard!
+          subscription.entitlement_removals.where(privilege:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
         elsif sub_val.nil?
           subscription.entitlement_removals.where(privilege:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
 
