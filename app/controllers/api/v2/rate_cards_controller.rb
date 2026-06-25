@@ -66,7 +66,10 @@ module Api
           },
           filters: {
             product_id: params[:product_id],
-            product_filter_id: params[:product_filter_id]
+            product_filter_id: params[:product_filter_id],
+            code: params[:code],
+            product_code: params[:product_code],
+            product_filter_code: params[:product_filter_code]
           }
         )
 
@@ -138,7 +141,7 @@ module Api
       end
 
       def render_rate_card(rate_card)
-        render(json: ::V1::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: %i[rates]))
+        render(json: ::V1::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: %i[active_rate]))
       end
 
       def resource_name
