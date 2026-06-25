@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 namespace :meilisearch do
-  desc "Reindex all invoices in Meilisearch (also applies the index settings)"
+  desc "Reindex all invoices in Meilisearch"
   task reindex_invoices: :environment do
     Invoice.reindex!
     puts "Reindexed invoices into #{Invoice.index_uid}"
