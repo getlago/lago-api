@@ -48,22 +48,12 @@ module RateCards
           wallet_targetable: params[:wallet_targetable]
         )
 
-        create_rates(rate_card)
-
         result.rate_card = rate_card
       end
 
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue BaseService::FailedResult => e
-      # Only the nested rate creations are called with call! here.
-      if e.result.error.is_a?(BaseService::ValidationFailure)
-        errors = e.result.error.messages.transform_keys { |key| :"rates.#{key}" }
-        result.validation_failure!(errors:)
-      else
-        e.result
-      end
     end
 
     private
@@ -72,12 +62,6 @@ module RateCards
 
     def organization
       product_item.organization
-    end
-
-    def create_rates(rate_card)
-      (params[:rates] || []).each do |rate_params|
-        RateCardRates::CreateService.call!(rate_card:, params: rate_params, emit_activity_log: false)
-      end
     end
   end
 end

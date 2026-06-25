@@ -17,21 +17,21 @@ module V1
         regroup_paid_fees: model.regroup_paid_fees,
         applied_pricing_unit_code: model.applied_pricing_unit_code,
         wallet_targetable: model.wallet_targetable,
+        rates_count: model.rates.count,
         created_at: model.created_at.iso8601
       }
 
-      payload.merge!(rates) if include?(:rates)
+      payload[:active_rate] = active_rate if include?(:active_rate)
       payload
     end
 
     private
 
-    def rates
-      ::CollectionSerializer.new(
-        model.rates,
-        ::V1::RateCardRateSerializer,
-        collection_name: "rates"
-      ).serialize
+    def active_rate
+      rate = model.active_rate
+      return if rate.nil?
+
+      ::V1::RateCardRateSerializer.new(rate).serialize
     end
   end
 end

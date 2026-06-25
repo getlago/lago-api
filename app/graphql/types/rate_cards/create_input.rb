@@ -16,7 +16,6 @@ module Types
       argument :display_on_invoice, Boolean, required: false
       argument :product_item_filter_id, ID, required: false
       argument :proration, Types::RateCards::ProrationEnum, required: false
-      argument :rates, [Types::RateCardRates::Input], required: false
       argument :regroup_paid_fees, Types::RateCards::RegroupPaidFeesEnum, required: false
       argument :wallet_targetable, Boolean, required: false
     end

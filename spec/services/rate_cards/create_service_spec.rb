@@ -36,48 +36,6 @@ RSpec.describe RateCards::CreateService do
     expect(Utils::ActivityLog).to have_produced("rate_card.created").after_commit.with(rate_card)
   end
 
-  context "with nested rates" do
-    before do
-      params[:rates] = [
-        {
-          effective_datetime: 1.minute.ago.iso8601,
-          rate_model: "standard",
-          rate_properties: {"amount" => "10"},
-          billing_interval_unit: "month"
-        },
-        {
-          effective_datetime: 1.month.from_now.iso8601,
-          rate_model: "standard",
-          rate_properties: {"amount" => "12"},
-          billing_interval_unit: "month"
-        }
-      ]
-    end
-
-    it "creates the card with its rates in one call" do
-      expect { result }.to change(RateCardRate, :count).by(2)
-
-      rates = result.rate_card.rates.order(:effective_datetime)
-      expect(rates.first.status).to eq("active")
-      expect(rates.last.status).to eq("pending")
-    end
-
-    it "does not produce per-rate activity logs" do
-      result
-      expect(Utils::ActivityLog).not_to have_produced("rate_card.updated")
-    end
-
-    context "when a nested rate is invalid" do
-      before { params[:rates] = [{rate_model: "standard", rate_properties: {}, billing_interval_unit: "month", effective_datetime: Time.current.iso8601}] }
-
-      it "returns a validation failure with prefixed keys and creates nothing" do
-        expect { result }.not_to change(RateCard, :count)
-        expect(result).not_to be_success
-        expect(result.error.messages[:"rates.rate_properties"]).to be_present
-      end
-    end
-  end
-
   context "with a product item filter" do
     let(:filter) { create(:product_item_filter, organization:, product_item:) }
 
