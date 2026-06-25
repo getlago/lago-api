@@ -79,6 +79,7 @@ es:
     prepaid_credits: Créditos prepagados
     prepaid_credits_with_value: Créditos prepagados - %{wallet_name}
     progressive_billing_credit: Uso ya facturado
+    purchase_order_number: Número de orden de compra
     quarter: trimestre
     quarterly: Trimestral
     reached_usage_threshold: Esta facturación progresiva se genera porque su uso acumulado ha alcanzado los %{usage_amount}, superando el umbral de %{threshold_amount}.

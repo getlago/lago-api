@@ -80,6 +80,7 @@ pt-BR:
     prepaid_credits: Créditos pré-pagos
     prepaid_credits_with_value: Créditos pré-pagos - %{wallet_name}
     progressive_billing_credit: Uso já faturado
+    purchase_order_number: Número do pedido de compra
     quarter: trimestre
     quarterly: Trimestral
     reached_usage_threshold: Esta cobrança progressiva é gerada porque seu uso cumulativo atingiu %{usage_amount}, excedendo o limite de %{threshold_amount}.
