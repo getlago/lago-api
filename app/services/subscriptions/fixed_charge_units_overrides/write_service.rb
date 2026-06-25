@@ -2,20 +2,6 @@
 
 module Subscriptions
   module FixedChargeUnitsOverrides
-    # Writes (or updates) one Subscription::FixedChargeUnitsOverride row for
-    # the given (subscription, fixed_charge) pair, emits a FixedChargeEvent
-    # for the subscription, and — when `apply_units_immediately` is set on a
-    # pay-in-advance fixed charge — dispatches the mid-period delta billing
-    # job after the surrounding transaction commits.
-    #
-    # The service is the shared building block for the two write surfaces
-    # that record units-only overrides mid-cycle: the dedicated subscription
-    # fixed_charge endpoint (`UpdateOrOverrideFixedChargeService`) and the
-    # subscription update endpoint (`UpdateService`). Subscription creation
-    # has different lifecycle constraints (events emit through the
-    # activation path) and writes override rows directly without this
-    # service.
-    #
     class WriteService < BaseService
       Result = BaseResult[:units_override]
 
