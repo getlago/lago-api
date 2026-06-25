@@ -161,6 +161,8 @@ module Wallets
     end
 
     def validate_wallet_initial_amount!(wallet)
+      reject_credits_rounding_to_zero!(wallet)
+
       return unless positive_paid_credit_amount?
 
       Validators::WalletTransactionAmountLimitsValidator.new(
@@ -169,6 +171,15 @@ module Wallets
         credits_amount: paid_credits,
         ignore_validation: params[:ignore_paid_top_up_limits_on_creation]
       ).raise_if_invalid!
+    end
+
+    def reject_credits_rounding_to_zero!(wallet)
+      {paid_credits:, granted_credits:}.each do |field, credits|
+        next unless WalletCredit.rounds_to_zero?(wallet:, credit_amount: credits)
+
+        result.single_validation_failure!(error_code: "amount_rounds_to_zero", field:)
+        result.raise_if_error!
+      end
     end
 
     def positive_paid_credit_amount?
