@@ -194,7 +194,8 @@ module Subscriptions
 
       params[:plan_overrides][:fixed_charges].each do |entry|
         entry = entry.to_h.symbolize_keys
-        fixed_charge = subscription.plan.fixed_charges.find(entry[:id])
+        fixed_charge = subscription.plan.fixed_charges.find_by(id: entry[:id])
+        result.not_found_failure!(resource: "fixed_charge").raise_if_error! unless fixed_charge
         apply_units_immediately = !!entry[:apply_units_immediately]
 
         override = ::Subscription::FixedChargeUnitsOverride.find_or_initialize_by(

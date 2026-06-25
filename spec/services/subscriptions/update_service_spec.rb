@@ -1014,6 +1014,35 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
+      context "when a units-only entry references a fixed_charge id not on the plan", :premium do
+        let(:organization) { membership.organization }
+        let(:plan) { create(:plan, organization:) }
+        let(:fixed_charge) { create(:fixed_charge, plan:, units: 5) }
+        let(:other_plan) { create(:plan, organization:) }
+        let(:foreign_fixed_charge) { create(:fixed_charge, plan: other_plan) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) { create(:subscription, plan:, customer:) }
+        let(:params) do
+          {plan_overrides: {fixed_charges: [{id: foreign_fixed_charge.id, units: 25}]}}
+        end
+
+        before do
+          fixed_charge
+          foreign_fixed_charge
+          subscription
+        end
+
+        it "fails with a not found error without writing an override row" do
+          result = nil
+          expect { result = update_service.call }
+            .not_to change(::Subscription::FixedChargeUnitsOverride, :count)
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("fixed_charge")
+        end
+      end
+
       context "when the subscription is already on an overridden plan", :premium do
         let(:organization) { membership.organization }
         let(:parent_plan) { create(:plan, organization:) }
