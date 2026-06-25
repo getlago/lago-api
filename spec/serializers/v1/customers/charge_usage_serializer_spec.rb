@@ -36,6 +36,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       "amount_currency" => "EUR",
       "charge" => {
         "lago_id" => charge.id,
+        "code" => charge.code,
         "charge_model" => charge.charge_model,
         "invoice_display_name" => charge.invoice_display_name
       },
@@ -206,6 +207,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         "amount_currency" => "EUR",
         "charge" => {
           "lago_id" => charge.id,
+          "code" => charge.code,
           "charge_model" => charge.charge_model,
           "invoice_display_name" => charge.invoice_display_name
         },
