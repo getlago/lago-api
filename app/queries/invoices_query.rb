@@ -71,34 +71,33 @@ class InvoicesQuery < BaseQuery
   end
 
   # Meilisearch resolves the text search AND every filter, returning the page of
-  # ids + the exact total count. Postgres only hydrates the page. Falls back to
-  # the Postgres path on any Meilisearch error so search never hard-fails.
+  # records (in relevance/sort order) plus the exact total count via kaminari.
+  # Falls back to the Postgres path on any Meilisearch error so search never
+  # hard-fails.
   def meilisearch_invoices
-    response = MeilisearchClient.invoices_index.search(
-      search_term.to_s,
-      {
-        filter: meilisearch_filter,
-        sort: ["issuing_date:desc", "created_at:desc", "id:asc"],
-        page: current_page,
-        hits_per_page: per_page,
-        # Require every typed term to match, so the result set stays close to the
-        # Postgres substring search instead of Meilisearch's default "drop terms
-        # until enough results" behavior.
-        matching_strategy: "all",
-        attributes_to_retrieve: ["id"],
-        attributes_to_search_on: meilisearch_search_attributes
-      }.compact
-    )
+    search_params = {
+      filter: meilisearch_filter,
+      sort: ["issuing_date:desc", "created_at:desc", "id:asc"],
+      page: current_page,
+      hits_per_page: per_page,
+      # Require every typed term to match, so the result set stays close to the
+      # Postgres substring search instead of Meilisearch's default "drop terms
+      # until enough results" behavior.
+      matching_strategy: "all"
+    }
+    # When a customer filter is set, only match the invoice number (not customer
+    # fields) — mirrors `search_customers?` in the Postgres path.
+    search_params[:attributes_to_search_on] = ["number"] unless search_customers?
 
-    ordered_ids = response["hits"].map { |hit| hit["id"] }
-    records = hydrate_invoices(ordered_ids)
+    invoices = Invoice.search(search_term.to_s, search_params)
 
-    Kaminari::PaginatableArray.new(
-      records,
-      limit: per_page,
-      offset: (current_page - 1) * per_page,
-      total_count: response["totalHits"]
-    )
+    # meilisearch-rails loads bare records; eager-load what serialization needs.
+    ActiveRecord::Associations::Preloader.new(
+      records: invoices.to_a,
+      associations: [:customer, {file_attachment: :blob}, {xml_file_attachment: :blob}]
+    ).call
+
+    invoices
   rescue Meilisearch::Error => e
     Rails.logger.warn("Meilisearch invoice search failed (#{e.class}: #{e.message}); falling back to Postgres")
     postgres_invoices
@@ -127,26 +126,6 @@ class InvoicesQuery < BaseQuery
   def per_page
     limit = pagination&.limit.to_i
     limit.positive? ? limit : Kaminari.config.default_per_page
-  end
-
-  # When a customer filter is set, the term must only match the invoice number
-  # (not customer fields) — mirrors `search_customers?` in the Postgres path.
-  def meilisearch_search_attributes
-    return ["number"] unless search_customers?
-
-    nil
-  end
-
-  def hydrate_invoices(ordered_ids)
-    return [] if ordered_ids.empty?
-
-    by_id = organization.invoices
-      .where(id: ordered_ids)
-      .includes(:customer)
-      .preload(file_attachment: :blob, xml_file_attachment: :blob)
-      .index_by(&:id)
-
-    ordered_ids.filter_map { |id| by_id[id] }
   end
 
   def meilisearch_filter

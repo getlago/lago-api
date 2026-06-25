@@ -920,31 +920,24 @@ RSpec.describe InvoicesQuery do
     let(:ms_customer) { create(:customer, organization:, name: "Acme Corp") }
     let(:ms_invoice_first) { create(:invoice, organization:, customer: ms_customer, status: "finalized", number: "INV-001", issuing_date: 1.day.ago) }
     let(:ms_invoice_second) { create(:invoice, organization:, customer: ms_customer, status: "finalized", number: "INV-002", issuing_date: 2.days.ago) }
-    let(:index) { instance_double(Meilisearch::Index) }
-    let(:search_response) do
-      {
-        "hits" => [{"id" => ms_invoice_second.id}, {"id" => ms_invoice_first.id}],
-        "totalHits" => 42,
-        "totalPages" => 5,
-        "page" => 1,
-        "hitsPerPage" => 10
-      }
+    # Mimics the kaminari-paginated collection meilisearch-rails returns.
+    let(:search_results) do
+      Kaminari.paginate_array([ms_invoice_second, ms_invoice_first], total_count: 42).page(1).per(10)
     end
 
     before do
       ms_invoice_first
       ms_invoice_second
       allow(MeilisearchClient).to receive(:enabled?).and_return(true)
-      allow(MeilisearchClient).to receive(:invoices_index).and_return(index)
-      allow(index).to receive(:search).and_return(search_response)
+      allow(Invoice).to receive(:search).and_return(search_results)
     end
 
     context "when a search term is present" do
       let(:search_term) { "Acme" }
 
-      it "queries Meilisearch and hydrates the page in the returned order" do
+      it "queries Meilisearch and returns the page in the returned order" do
         expect(meili_result.invoices.map(&:id)).to eq([ms_invoice_second.id, ms_invoice_first.id])
-        expect(index).to have_received(:search).with("Acme", hash_including(page: 1, hits_per_page: 10))
+        expect(Invoice).to have_received(:search).with("Acme", hash_including(page: 1, hits_per_page: 10, matching_strategy: "all"))
       end
 
       it "reports the Meilisearch total count and pagination" do
@@ -957,7 +950,7 @@ RSpec.describe InvoicesQuery do
       it "scopes the filter to the organization and visible statuses" do
         meili_result
 
-        expect(index).to have_received(:search) do |_query, options|
+        expect(Invoice).to have_received(:search) do |_query, options|
           expect(options[:filter]).to include(%(organization_id = "#{organization.id}"))
           expect(options[:filter]).to include(%(status IN ["draft", "finalized", "voided", "failed", "pending"]))
         end
@@ -970,14 +963,14 @@ RSpec.describe InvoicesQuery do
       it "still queries Meilisearch with an empty query" do
         meili_result
 
-        expect(index).to have_received(:search).with("", hash_including(:filter))
+        expect(Invoice).to have_received(:search).with("", hash_including(:filter))
       end
     end
 
     context "when neither a search term nor filters are present" do
       it "uses the Postgres path" do
         expect(meili_result.invoices.map(&:id)).to include(ms_invoice_first.id, ms_invoice_second.id)
-        expect(index).not_to have_received(:search)
+        expect(Invoice).not_to have_received(:search)
       end
     end
 
@@ -986,7 +979,7 @@ RSpec.describe InvoicesQuery do
       let(:search_term) { "Acme" }
 
       it "uses the Postgres path even with a search term" do
-        expect(index).not_to have_received(:search)
+        expect(Invoice).not_to have_received(:search)
       end
     end
 
@@ -994,7 +987,7 @@ RSpec.describe InvoicesQuery do
       let(:search_term) { "Acme" }
 
       before do
-        allow(index).to receive(:search).and_raise(Meilisearch::CommunicationError.new("boom"))
+        allow(Invoice).to receive(:search).and_raise(Meilisearch::CommunicationError.new("boom"))
         allow(Rails.logger).to receive(:warn)
       end
 

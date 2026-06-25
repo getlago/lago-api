@@ -1,19 +1,15 @@
 # frozen_string_literal: true
 
 namespace :meilisearch do
-  desc "Create and configure the Meilisearch invoices index"
-  task setup_invoices: :environment do
-    MeilisearchClient.setup_invoices_index!
-    puts "Meilisearch invoices index configured (#{MeilisearchClient.index_name(MeilisearchClient::INVOICES_INDEX)})"
+  desc "Reindex all invoices in Meilisearch (also applies the index settings)"
+  task reindex_invoices: :environment do
+    Invoice.reindex!
+    puts "Reindexed invoices into #{Invoice.index_uid}"
   end
 
-  desc "Reindex all invoices in Meilisearch"
-  task reindex_invoices: :environment do
-    count = 0
-    Invoice.find_each do |invoice|
-      Invoices::SearchIndexJob.perform_later(invoice.id)
-      count += 1
-    end
-    puts "Enqueued reindexing for #{count} invoices"
+  desc "Clear the Meilisearch invoices index"
+  task clear_invoices: :environment do
+    Invoice.clear_index!
+    puts "Cleared #{Invoice.index_uid}"
   end
 end

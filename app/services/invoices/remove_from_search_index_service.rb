@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Invoices
-  # Removes an invoice document from the Meilisearch index.
-  # No-op when Meilisearch is not configured.
+  # Removes an invoice document from the Meilisearch index by id (used when the
+  # record no longer exists). No-op when Meilisearch is off.
   class RemoveFromSearchIndexService < BaseService
     Result = BaseResult
 
@@ -14,7 +14,7 @@ module Invoices
     def call
       return result unless MeilisearchClient.enabled?
 
-      MeilisearchClient.invoices_index.delete_document(invoice_id)
+      Invoice.index.delete_document(invoice_id)
       result
     end
 

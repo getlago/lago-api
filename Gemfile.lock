@@ -470,6 +470,8 @@ GEM
     marcel (1.1.0)
     meilisearch (0.33.0)
       httparty (~> 0.24)
+    meilisearch-rails (0.14.1)
+      meilisearch (~> 0.28)
     method_source (1.1.0)
     mini_mime (1.1.5)
     mini_portile2 (2.8.9)
@@ -1119,7 +1121,7 @@ DEPENDENCIES
   lago-expression!
   lograge
   logstash-event
-  meilisearch
+  meilisearch-rails
   money-rails
   multipart-post
   mutex_m
