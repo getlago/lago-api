@@ -69,6 +69,29 @@ RSpec.describe Customers::UpdateService do
       expect(Utils::ActivityLog).to have_produced("customer.updated").after_commit.with(customer)
     end
 
+    context "when Meilisearch is enabled" do
+      before do
+        allow(MeilisearchClient).to receive(:enabled?).and_return(true)
+        allow(Customers::ReindexInvoicesJob).to receive(:perform_after_commit)
+      end
+
+      it "reindexes the customer's invoices when a searchable field changes" do
+        customers_service.call
+
+        expect(Customers::ReindexInvoicesJob).to have_received(:perform_after_commit).with(customer)
+      end
+
+      context "when no searchable field changes" do
+        let(:update_args) { {id: customer.id, net_payment_term: 8} }
+
+        it "does not reindex" do
+          customers_service.call
+
+          expect(Customers::ReindexInvoicesJob).not_to have_received(:perform_after_commit)
+        end
+      end
+    end
+
     context "with email containing unicode lookalike characters" do
       let(:update_args) do
         {

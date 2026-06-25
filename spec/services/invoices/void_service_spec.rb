@@ -59,6 +59,19 @@ RSpec.describe Invoices::VoidService do
           expect(result.invoice).to be_voided
           expect(result.invoice.voided_at).to be_present
         end
+
+        context "when Meilisearch is enabled" do
+          before do
+            allow(MeilisearchClient).to receive(:enabled?).and_return(true)
+            allow(Invoices::SearchIndexJob).to receive(:perform_after_commit)
+          end
+
+          it "enqueues a search reindex for the invoice" do
+            void_service.call
+
+            expect(Invoices::SearchIndexJob).to have_received(:perform_after_commit).with(invoice.id)
+          end
+        end
       end
 
       context "when the payment status is not succeeded" do

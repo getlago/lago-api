@@ -17,6 +17,8 @@ module Invoices
 
       invoice.finalized!
 
+      Invoices::SearchIndexJob.perform_after_commit(invoice.id) if MeilisearchClient.enabled?
+
       result.invoice = invoice
       result
     rescue ActiveRecord::RecordInvalid => e

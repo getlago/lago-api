@@ -342,6 +342,10 @@ GEM
     highline (3.1.2)
       reline
     htmlbeautifier (1.4.3)
+    httparty (0.24.2)
+      csv
+      mini_mime (>= 1.0.0)
+      multi_xml (>= 0.5.2)
     httpclient (2.9.0)
       mutex_m
     httplog (1.8.0)
@@ -464,6 +468,8 @@ GEM
       net-pop
       net-smtp
     marcel (1.1.0)
+    meilisearch (0.33.0)
+      httparty (~> 0.24)
     method_source (1.1.0)
     mini_mime (1.1.5)
     mini_portile2 (2.8.9)
@@ -1113,6 +1119,7 @@ DEPENDENCIES
   lago-expression!
   lograge
   logstash-event
+  meilisearch
   money-rails
   multipart-post
   mutex_m

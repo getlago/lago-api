@@ -191,6 +191,7 @@ module Customers
         new_customer: false
       )
       SendWebhookJob.perform_later("customer.updated", customer)
+      reindex_invoices_in_search(customer)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -204,6 +205,17 @@ module Customers
 
     attr_reader :customer, :args
     def_delegators :customer, :organization
+
+    SEARCHABLE_CUSTOMER_FIELDS = %w[name firstname lastname legal_name external_id email].freeze
+
+    # Customer fields are denormalized into the invoice search index, so an update
+    # touching any of them requires re-indexing the customer's invoices.
+    def reindex_invoices_in_search(customer)
+      return unless MeilisearchClient.enabled?
+      return if (args.keys.map(&:to_s) & SEARCHABLE_CUSTOMER_FIELDS).empty?
+
+      Customers::ReindexInvoicesJob.perform_after_commit(customer)
+    end
 
     def billing_entity
       @billing_entity ||= organization.billing_entities.find_by!(code: args[:billing_entity_code])

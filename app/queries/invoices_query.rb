@@ -24,9 +24,25 @@ class InvoicesQuery < BaseQuery
     :settlements
   ]
 
+  def initialize(meilisearch: false, **kwargs)
+    @use_meilisearch_flag = meilisearch
+    super(**kwargs)
+  end
+
   def call
     return result unless validate_filters.success?
 
+    result.invoices = use_meilisearch? ? meilisearch_invoices : postgres_invoices
+    result
+  rescue BaseService::FailedResult
+    result
+  end
+
+  private
+
+  attr_reader :use_meilisearch_flag
+
+  def postgres_invoices
     invoices = base_scope.includes(:customer).preload(file_attachment: :blob, xml_file_attachment: :blob)
 
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
@@ -48,18 +64,168 @@ class InvoicesQuery < BaseQuery
     invoices = with_settlements(invoices) if valid_settlements.present?
 
     invoices = paginate(invoices)
-    invoices = apply_consistent_ordering(
+    apply_consistent_ordering(
       invoices,
       default_order: {issuing_date: :desc, created_at: :desc}
     )
-
-    result.invoices = invoices
-    result
-  rescue BaseService::FailedResult
-    result
   end
 
-  private
+  # Meilisearch resolves the text search AND every filter, returning the page of
+  # ids + the exact total count. Postgres only hydrates the page. Falls back to
+  # the Postgres path on any Meilisearch error so search never hard-fails.
+  def meilisearch_invoices
+    response = MeilisearchClient.invoices_index.search(
+      search_term.to_s,
+      {
+        filter: meilisearch_filter,
+        sort: ["issuing_date:desc", "created_at:desc", "id:asc"],
+        page: current_page,
+        hits_per_page: per_page,
+        # Require every typed term to match, so the result set stays close to the
+        # Postgres substring search instead of Meilisearch's default "drop terms
+        # until enough results" behavior.
+        matching_strategy: "all",
+        attributes_to_retrieve: ["id"],
+        attributes_to_search_on: meilisearch_search_attributes
+      }.compact
+    )
+
+    ordered_ids = response["hits"].map { |hit| hit["id"] }
+    records = hydrate_invoices(ordered_ids)
+
+    Kaminari::PaginatableArray.new(
+      records,
+      limit: per_page,
+      offset: (current_page - 1) * per_page,
+      total_count: response["totalHits"]
+    )
+  rescue Meilisearch::Error => e
+    Rails.logger.warn("Meilisearch invoice search failed (#{e.class}: #{e.message}); falling back to Postgres")
+    postgres_invoices
+  end
+
+  def use_meilisearch?
+    use_meilisearch_flag && MeilisearchClient.enabled? && (search_term.present? || filters_present?)
+  end
+
+  def filters_present?
+    filters.to_h.values.any? { |value| filter_value_present?(value) }
+  end
+
+  def filter_value_present?(value)
+    return false if value.nil?
+    return !value.empty? if value.respond_to?(:empty?)
+
+    true
+  end
+
+  def current_page
+    page = pagination&.page.to_i
+    page.positive? ? page : 1
+  end
+
+  def per_page
+    limit = pagination&.limit.to_i
+    limit.positive? ? limit : Kaminari.config.default_per_page
+  end
+
+  # When a customer filter is set, the term must only match the invoice number
+  # (not customer fields) — mirrors `search_customers?` in the Postgres path.
+  def meilisearch_search_attributes
+    return ["number"] unless search_customers?
+
+    nil
+  end
+
+  def hydrate_invoices(ordered_ids)
+    return [] if ordered_ids.empty?
+
+    by_id = organization.invoices
+      .where(id: ordered_ids)
+      .includes(:customer)
+      .preload(file_attachment: :blob, xml_file_attachment: :blob)
+      .index_by(&:id)
+
+    ordered_ids.filter_map { |id| by_id[id] }
+  end
+
+  def meilisearch_filter
+    conditions = [
+      ms_eq("organization_id", organization.id),
+      ms_in("status", meilisearch_statuses)
+    ]
+
+    conditions << ms_in("billing_entity_id", filters.billing_entity_ids) if filters.billing_entity_ids.present?
+    conditions << ms_eq("currency", filters.currency) if filters.currency
+    conditions << ms_eq("customer_external_id", filters.customer_external_id) if filters.customer_external_id
+    conditions << ms_eq("customer_id", filters.customer_id) if filters.customer_id.present?
+    conditions << ms_in("invoice_type", Array(filters.invoice_type)) if filters.invoice_type.present?
+    conditions << "issuing_date >= #{issuing_date_from.to_time.to_i}" if filters.issuing_date_from
+    conditions << "issuing_date <= #{issuing_date_to.to_time.to_i}" if filters.issuing_date_to
+    conditions << "total_amount_cents >= #{filters.amount_from.to_i}" if filters.amount_from.present?
+    conditions << "total_amount_cents <= #{filters.amount_to.to_i}" if filters.amount_to.present?
+    conditions << ms_in("payment_status", Array(filters.payment_status)) if filters.payment_status.present?
+    conditions << ms_eq("payment_dispute_lost", ms_bool(filters.payment_dispute_lost)) unless filters.payment_dispute_lost.nil?
+    conditions << ms_eq("payment_overdue", ms_bool(filters.payment_overdue)) unless filters.payment_overdue.nil?
+    conditions << ms_eq("self_billed", ms_bool(filters.self_billed)) unless filters.self_billed.nil?
+    conditions << positive_due_amount_filter unless filters.positive_due_amount.nil?
+    conditions << ms_eq("partially_paid", ms_bool(filters.partially_paid)) unless filters.partially_paid.nil?
+    conditions << ms_eq("subscription_ids", filters.subscription_id) if filters.subscription_id.present?
+    conditions << ms_in("settlement_types", valid_settlements) if valid_settlements.present?
+    conditions.concat(metadata_filters) if filters.metadata.present?
+
+    conditions
+  end
+
+  def meilisearch_statuses
+    visible_keys = Invoice::VISIBLE_STATUS.keys.map(&:to_s)
+    if filters.status.present?
+      Array(filters.status).map(&:to_s) & visible_keys
+    else
+      visible_keys
+    end
+  end
+
+  def positive_due_amount_filter
+    if ms_bool(filters.positive_due_amount)
+      "due_amount_cents > 0"
+    else
+      "due_amount_cents <= 0"
+    end
+  end
+
+  def metadata_filters
+    conditions = []
+    presence_filters = filters.metadata.select { |_k, v| v.present? }
+    absence_filters = filters.metadata.select { |_k, v| v.blank? }
+
+    presence_filters.each { |key, value| conditions << ms_eq("metadata", "#{key}::#{value}") }
+    conditions << ms_not_in("metadata_keys", absence_filters.keys) if absence_filters.any?
+
+    conditions
+  end
+
+  def ms_eq(field, value)
+    "#{field} = #{ms_value(value)}"
+  end
+
+  def ms_in(field, values)
+    "#{field} IN [#{Array(values).map { |v| ms_value(v) }.join(", ")}]"
+  end
+
+  def ms_not_in(field, values)
+    "#{field} NOT IN [#{Array(values).map { |v| ms_value(v) }.join(", ")}]"
+  end
+
+  def ms_value(value)
+    return value.to_s if value == true || value == false
+
+    %("#{value.to_s.gsub('"', '\\"')}")
+  end
+
+  def ms_bool(value)
+    ActiveModel::Type::Boolean.new.cast(value)
+  end
 
   def filters_contract
     @filters_contract ||= Queries::InvoicesQueryFiltersContract.new
