@@ -97,9 +97,9 @@ RSpec.describe Subscriptions::TerminateService do
     context "when subscription is incomplete" do
       let(:subscription) { create(:subscription, :incomplete) }
 
-      it "returns a not allowed error" do
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("subscription_incomplete")
+      it "returns a validation error" do
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({base: ["subscription_incomplete"]})
       end
     end
 
@@ -156,12 +156,12 @@ RSpec.describe Subscriptions::TerminateService do
 
       before { next_subscription }
 
-      it "returns a not allowed error" do
+      it "returns a validation error" do
         subject
 
         expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("next_subscription_incomplete")
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({base: ["next_subscription_incomplete"]})
       end
 
       context "when called with upgrade: true" do

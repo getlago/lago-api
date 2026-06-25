@@ -16,8 +16,8 @@ module Subscriptions
 
     def call
       return result.not_found_failure!(resource: "subscription") if subscription.blank?
-      return result.not_allowed_failure!(code: "subscription_incomplete") if subscription.incomplete?
-      return result.not_allowed_failure!(code: "next_subscription_incomplete") if !upgrade && subscription.next_subscription&.incomplete?
+      return result.single_validation_failure!(error_code: "subscription_incomplete") if subscription.incomplete?
+      return result.single_validation_failure!(error_code: "next_subscription_incomplete") if !upgrade && subscription.next_subscription&.incomplete?
 
       ActiveRecord::Base.transaction do
         if subscription.pending?
