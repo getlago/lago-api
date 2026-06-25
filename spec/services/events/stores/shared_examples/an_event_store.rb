@@ -2684,4 +2684,68 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       end
     end
   end
+
+  if include_feature?(:distinct_codes_and_property_combinations)
+    describe "#distinct_codes_and_property_combinations" do
+      let(:events) { nil }
+
+      before do
+        create_event(timestamp: subscription_started_at + 1.day, value: 1, properties: {"region" => "eu", "provider" => "aws"})
+        create_event(timestamp: subscription_started_at + 2.days, value: 1, properties: {"region" => "eu", "provider" => "aws"})
+        create_event(timestamp: subscription_started_at + 3.days, value: 1, properties: {"region" => "us", "provider" => "gcp"})
+        create_event(timestamp: subscription_started_at + 4.days, value: 1, properties: {"region" => "eu", "extra" => "ignored"})
+      end
+
+      it "returns the distinct property combinations sliced to the filter keys" do
+        result = event_store.distinct_codes_and_property_combinations(codes: [code], filter_keys: %w[region provider])
+
+        expect(result).to match_array([
+          [code, {"region" => "eu", "provider" => "aws"}],
+          [code, {"region" => "us", "provider" => "gcp"}],
+          [code, {"region" => "eu"}]
+        ])
+      end
+
+      it "ignores property keys that are not filter keys" do
+        result = event_store.distinct_codes_and_property_combinations(codes: [code], filter_keys: ["region"])
+
+        expect(result).to match_array([
+          [code, {"region" => "eu"}],
+          [code, {"region" => "us"}]
+        ])
+      end
+
+      context "when no filter keys are given" do
+        it "returns the default bucket combination" do
+          result = event_store.distinct_codes_and_property_combinations(codes: [code], filter_keys: [])
+
+          expect(result).to eq([[code, {}]])
+        end
+      end
+
+      context "when no codes are given" do
+        it "returns an empty array" do
+          result = event_store.distinct_codes_and_property_combinations(codes: [], filter_keys: %w[region provider])
+
+          expect(result).to eq([])
+        end
+      end
+
+      context "with events outside the boundaries" do
+        before do
+          create_event(
+            timestamp: boundaries[:to_datetime] + 1.day,
+            value: 1,
+            properties: {"region" => "apac", "provider" => "azure"}
+          )
+        end
+
+        it "excludes them from the combinations" do
+          result = event_store.distinct_codes_and_property_combinations(codes: [code], filter_keys: %w[region provider])
+
+          expect(result).not_to include([code, {"region" => "apac", "provider" => "azure"}])
+        end
+      end
+    end
+  end
 end

@@ -41,11 +41,11 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
   end
 
   context "without deduplication" do
-    it_behaves_like "an event store", with_event_duplication: false
+    it_behaves_like "an event store", with_event_duplication: false, excluding_features: [:distinct_codes_and_property_combinations]
   end
 
   context "with deduplication" do
-    it_behaves_like "an event store", with_event_duplication: true
+    it_behaves_like "an event store", with_event_duplication: true, excluding_features: [:distinct_codes_and_property_combinations]
   end
 
   describe "#grouped_arel_columns" do
