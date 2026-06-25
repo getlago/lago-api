@@ -142,6 +142,34 @@ RSpec.describe Api::V1::Subscriptions::FixedChargesController do
       end
     end
 
+    context "when the requested code matches the add-on code of a suffixed charge" do
+      subject { get_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/fixed_charges/developer_seats") }
+
+      let(:add_on) { create(:add_on, organization:, code: "developer_seats") }
+      let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, code: "developer_seats_2") }
+
+      it "resolves the fixed charge by add-on code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:fixed_charge][:lago_id]).to eq(fixed_charge.id)
+        expect(json[:fixed_charge][:code]).to eq("developer_seats_2")
+        expect(json[:fixed_charge][:add_on_code]).to eq("developer_seats")
+      end
+
+      context "when several charges share that add-on code" do
+        let(:other_fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, code: "developer_seats_3") }
+
+        before { other_fixed_charge }
+
+        it "returns not found error to avoid an ambiguous match" do
+          subject
+
+          expect(response).to be_not_found_error("fixed_charge")
+        end
+      end
+    end
+
     context "when subscription has plan override with fixed charge override" do
       let(:overridden_plan) { create(:plan, organization:, parent: plan) }
       let(:subscription) { create(:subscription, customer:, plan: overridden_plan, external_id:) }
@@ -220,6 +248,24 @@ RSpec.describe Api::V1::Subscriptions::FixedChargesController do
           subject
 
           expect(response).to be_not_found_error("fixed_charge")
+        end
+      end
+
+      context "when the requested code matches the add-on code of a suffixed charge" do
+        subject do
+          put_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/fixed_charges/developer_seats", {fixed_charge: update_params})
+        end
+
+        let(:add_on) { create(:add_on, organization:, code: "developer_seats") }
+        let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, code: "developer_seats_2") }
+
+        it "resolves and updates the fixed charge by add-on code" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:fixed_charge][:invoice_display_name]).to eq("Updated Fixed Charge Name")
+          expect(json[:fixed_charge][:units]).to eq("15.0")
+          expect(json[:fixed_charge][:lago_parent_id]).to eq(fixed_charge.id)
         end
       end
 

@@ -80,8 +80,23 @@ module Api
         end
 
         def find_fixed_charge
-          @fixed_charge = subscription.plan.fixed_charges.find_by(code: params[:code])
+          fixed_charges = subscription.plan.fixed_charges
+          @fixed_charge = fixed_charges.find_by(code: params[:code]) ||
+            find_by_add_on_code(fixed_charges)
           not_found_error(resource: "fixed_charge") unless @fixed_charge
+        end
+
+        # Fixed charge codes are auto-suffixed (e.g. `developer_seats_2`) when
+        # several charges share an add-on, so a caller using the stable add-on
+        # code would get a 404 once the unsuffixed charge is removed. Fall back
+        # to resolving by add-on code, but only when it points to a single
+        # charge to avoid silently picking the wrong one.
+        def find_by_add_on_code(fixed_charges)
+          matches = fixed_charges.joins(:add_on)
+            .where(add_ons: {code: params[:code]})
+            .limit(2)
+            .to_a
+          matches.first if matches.size == 1
         end
       end
     end
