@@ -564,6 +564,40 @@ RSpec.describe Subscriptions::CreateService do
         end
       end
 
+      context "when an entry references a fixed_charge id not on the plan" do
+        let(:other_plan) { create(:plan, organization:) }
+        let(:foreign_fixed_charge) { create(:fixed_charge, plan: other_plan) }
+        let(:params) do
+          {
+            external_customer_id:,
+            plan_code:,
+            name:,
+            external_id:,
+            billing_time:,
+            subscription_at:,
+            subscription_id:,
+            started_at:,
+            plan_overrides: {fixed_charges: [{id: foreign_fixed_charge.id, units: 100}]}
+          }
+        end
+
+        before { foreign_fixed_charge }
+
+        it "fails with a not found error for the fixed charge" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("fixed_charge")
+        end
+
+        it "rolls back without creating a subscription or override row" do
+          expect { create_service.call }
+            .to not_change(Subscription, :count)
+            .and not_change(::Subscription::FixedChargeUnitsOverride, :count)
+        end
+      end
+
       context "with invoice custom sections" do
         let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
 
