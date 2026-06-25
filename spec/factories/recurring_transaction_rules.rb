@@ -9,5 +9,9 @@ FactoryBot.define do
     interval { "monthly" }
     trigger { "interval" }
     transaction_name { "Recurring Transaction Rule" }
+
+    after(:build) do |rule|
+      rule.grants_target_top_up = false if rule.method.to_s == "target" && rule.grants_target_top_up.nil?
+    end
   end
 end
