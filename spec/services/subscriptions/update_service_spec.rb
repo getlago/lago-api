@@ -1012,6 +1012,15 @@ RSpec.describe Subscriptions::UpdateService do
             .to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
             .with(subscription, kind_of(Integer))
         end
+
+        context "when the subscription is not active" do
+          let(:subscription) { create(:subscription, :pending, plan:, customer:, subscription_at: 7.days.from_now) }
+
+          it "does not enqueue the pay-in-advance billing job" do
+            expect { update_service.call }
+              .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
+        end
       end
 
       context "when a units-only entry references a fixed_charge id not on the plan", :premium do

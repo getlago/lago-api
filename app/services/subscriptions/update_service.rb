@@ -213,7 +213,7 @@ module Subscriptions
           timestamp:
         )
 
-        if apply_units_immediately && fixed_charge.pay_in_advance?
+        if apply_units_immediately && fixed_charge.pay_in_advance? && subscription.active?
           after_commit do
             Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
           end
