@@ -230,7 +230,7 @@ module Subscriptions
       overlays_by_id = payload[:fixed_charges].each_with_object({}) do |entry, acc|
         entry_hash = entry.to_h.with_indifferent_access
         id = entry_hash[:id]
-        result.not_found_failure!(resource: "fixed_charge") unless fixed_charges_by_id.key?(id)
+        result.not_found_failure!(resource: "fixed_charge").raise_if_error! unless fixed_charges_by_id.key?(id)
         acc[id] = entry_hash.except(:id)
       end
 

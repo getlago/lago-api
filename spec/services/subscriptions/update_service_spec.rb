@@ -714,6 +714,30 @@ RSpec.describe Subscriptions::UpdateService do
                 expect(other_fixed_charge.reload.units).to eq(7)
               end
             end
+
+            context "when a valid entry is mixed with an unknown fixed_charge id" do
+              let(:foreign_fixed_charge) { create(:fixed_charge, plan: parent_plan) }
+              let(:params) do
+                {
+                  plan_overrides: {
+                    fixed_charges: [
+                      {id: fixed_charge.id, units: 20},
+                      {id: foreign_fixed_charge.id, units: 99}
+                    ]
+                  }
+                }
+              end
+
+              it "fails with a not found error and rolls back the valid override" do
+                result = update_service.call
+
+                expect(result).not_to be_success
+                expect(result.error).to be_a(BaseService::NotFoundFailure)
+                expect(result.error.resource).to eq("fixed_charge")
+                expect(fixed_charge.reload.units).to eq(5)
+                expect(other_fixed_charge.reload.units).to eq(7)
+              end
+            end
           end
         end
       end
