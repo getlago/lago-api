@@ -471,17 +471,27 @@ module Events
         end
       end
 
-      def last
-        value = Events::Stores::Utils::ClickhouseConnection.with_retry do
-          events(ordered: true).last&.properties&.[](aggregation_property)
+      def last(with_count: true)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = events_cte_queries(
+            select: [arel_table[:decimal_value].as("property"), arel_table[:timestamp]],
+            deduplicated_columns: %w[decimal_value properties]
+          )
+
+          sql = with_ctes(ctes_sql, <<-SQL)
+            SELECT
+              property as value,
+              #{with_count ? "count() OVER ()" : "null"} as events_count
+            FROM events
+            ORDER BY events.timestamp DESC
+            LIMIT 1
+          SQL
+
+          build_last_aggregation_result(connection.select_one(sql), with_count:)
         end
-
-        return value unless value
-
-        BigDecimal(value)
       end
 
-      def grouped_last(columns = grouped_by)
+      def grouped_last(columns = grouped_by, with_count: true)
         groups, column_names = grouped_arel_columns(columns)
         distinct_on_names = grouped_by.present? ? grouped_arel_columns.last : nil
 
@@ -492,25 +502,29 @@ module Events
           )
 
           sql = if distinct_on_names
+            count_select = with_count ? "count() OVER (PARTITION BY #{distinct_on_names})" : "null"
             with_ctes(ctes_sql, <<-SQL)
               SELECT
                 DISTINCT ON (#{distinct_on_names}) #{column_names},
-                property
+                property,
+                #{count_select} as events_count
               FROM events
               ORDER BY #{distinct_on_names}, events.timestamp DESC
             SQL
           else
+            count_select = with_count ? "count() OVER ()" : "null"
             with_ctes(ctes_sql, <<-SQL)
               SELECT
                 #{column_names},
-                property
+                property,
+                #{count_select} as events_count
               FROM events
               ORDER BY events.timestamp DESC
               LIMIT 1
             SQL
           end
 
-          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
+          prepare_grouped_aggregated_values(connection.select_all(sql).rows, columns: columns)
         end
       end
 

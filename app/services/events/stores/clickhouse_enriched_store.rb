@@ -469,26 +469,30 @@ module Events
         end
       end
 
-      def last
+      def last(with_count: true)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
-            SELECT decimal_value
+            SELECT
+              decimal_value as value,
+              #{with_count ? "count() OVER ()" : "null"} as events_count
             FROM events
             ORDER BY timestamp DESC
             LIMIT 1
           SQL
 
-          connection.select_value(sql)
+          build_last_aggregation_result(connection.select_one(sql), with_count:)
         end
       end
 
-      def grouped_last(columns = grouped_by)
+      def grouped_last(columns = grouped_by, with_count: true)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           if columns == grouped_by
+            count_select = with_count ? "count() OVER (PARTITION BY sorted_grouped_by)" : "null"
             sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
               SELECT
                 DISTINCT ON (sorted_grouped_by) sorted_grouped_by as groups,
-                events.decimal_value as value
+                events.decimal_value as value,
+                #{count_select} as events_count
               FROM events
               ORDER BY sorted_grouped_by, timestamp DESC
             SQL
@@ -496,26 +500,30 @@ module Events
             map_args, = sorted_properties_map_args(columns)
 
             sql = if grouped_by.blank?
+              count_select = with_count ? "count() OVER ()" : "null"
               with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
                 SELECT
                   map(#{map_args.join(", ")}) as groups,
-                  events.decimal_value as value
+                  events.decimal_value as value,
+                  #{count_select} as events_count
                 FROM events
                 ORDER BY timestamp DESC
                 LIMIT 1
               SQL
             else
+              count_select = with_count ? "count() OVER (PARTITION BY sorted_grouped_by)" : "null"
               with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
                 SELECT
                   DISTINCT ON (sorted_grouped_by) map(#{map_args.join(", ")}) as groups,
-                  events.decimal_value as value
+                  events.decimal_value as value,
+                  #{count_select} as events_count
                 FROM events
                 ORDER BY sorted_grouped_by, timestamp DESC
               SQL
             end
           end
 
-          prepare_grouped_result(connection.select_all(sql))
+          prepare_grouped_aggregated_values(connection.select_all(sql))
         end
       end
 

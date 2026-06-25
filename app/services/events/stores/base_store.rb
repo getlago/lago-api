@@ -89,11 +89,11 @@ module Events
         raise NotImplementedError
       end
 
-      def last
+      def last(with_count: true)
         raise NotImplementedError
       end
 
-      def grouped_last
+      def grouped_last(with_count: true)
         raise NotImplementedError
       end
 
@@ -191,6 +191,19 @@ module Events
         AggregationResult.new(
           value: row["value"] || 0,
           events_count: row["events_count"].presence&.to_i
+        )
+      end
+
+      # NOTE: Build an AggregationResult for the `last` aggregation. Unlike
+      #       build_aggregation_result it preserves a nil value (no event or no
+      #       value on the last event) instead of defaulting to 0, and tolerates
+      #       an empty row (when LIMIT 1 returns no row, events_count is 0).
+      #       The value is returned as-is from the driver (numeric), consistent
+      #       with sum/max/grouped_* which also don't cast.
+      def build_last_aggregation_result(row, with_count: true)
+        AggregationResult.new(
+          value: row && row["value"],
+          events_count: with_count ? (row && row["events_count"]).to_i : nil
         )
       end
     end

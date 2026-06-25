@@ -222,30 +222,35 @@ module Events
         prepare_grouped_result(results, columns: columns)
       end
 
-      def last
-        events.order(timestamp: :desc, created_at: :desc).first&.properties&.[](aggregation_property)
+      def last(with_count: true)
+        AggregationResult.new(
+          value: events.order(timestamp: :desc, created_at: :desc).first&.properties&.[](aggregation_property),
+          events_count: with_count ? events.count : nil
+        )
       end
 
-      def grouped_last(columns = grouped_by)
+      def grouped_last(columns = grouped_by, with_count: true)
         sanitized_columns = columns.map { sanitized_property_name(it) }
         distinct_on_columns = grouped_by.present? ? grouped_by.map { sanitized_property_name(it) } : []
 
         sql = if distinct_on_columns.empty?
+          count_select = with_count ? "COUNT(*) OVER ()" : "NULL"
           events
             .order(Arel.sql("events.timestamp DESC, created_at DESC"))
-            .select("#{sanitized_columns.join(", ")}, (#{sanitized_property_name})::numeric AS value")
+            .select("#{sanitized_columns.join(", ")}, (#{sanitized_property_name})::numeric AS value, #{count_select} AS events_count")
             .limit(1)
             .to_sql
         else
+          count_select = with_count ? "COUNT(*) OVER (PARTITION BY #{distinct_on_columns.join(", ")})" : "NULL"
           events
             .order(Arel.sql((distinct_on_columns + ["events.timestamp DESC, created_at DESC"]).join(", ")))
             .select(
-              "DISTINCT ON (#{distinct_on_columns.join(", ")}) #{sanitized_columns.join(", ")}, (#{sanitized_property_name})::numeric AS value"
+              "DISTINCT ON (#{distinct_on_columns.join(", ")}) #{sanitized_columns.join(", ")}, (#{sanitized_property_name})::numeric AS value, #{count_select} AS events_count"
             )
             .to_sql
         end
 
-        prepare_grouped_result(select_all(sql).rows, columns: columns)
+        prepare_grouped_aggregated_values(select_all(sql).rows, columns: columns)
       end
 
       def sum_precise_total_amount_cents
