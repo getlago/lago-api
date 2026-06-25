@@ -37,7 +37,7 @@ module Subscriptions
     attr_reader :subscription, :fixed_charge, :params, :subscription_plan_parent_present
 
     def units_only_change?
-      return false if subscription.plan.parent_id
+      return false if subscription_plan_parent_present
 
       units_only_fixed_charge_params?(params)
     end
