@@ -35,7 +35,9 @@ FROM ruby:4.0.2-slim
 ARG BUNDLE_WITH
 
 RUN apt update && apt upgrade -y
-RUN apt install git libpq-dev curl postgresql-client -y
+RUN apt install git libpq-dev curl postgresql-client libjemalloc2 -y
+
+ENV LD_PRELOAD=libjemalloc.so.2
 
 ARG SEGMENT_WRITE_KEY
 ARG GOCARDLESS_CLIENT_ID
