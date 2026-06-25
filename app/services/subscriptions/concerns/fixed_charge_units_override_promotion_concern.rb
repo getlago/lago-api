@@ -2,31 +2,11 @@
 
 module Subscriptions
   module Concerns
-    # Promotes a subscription's existing units override rows into the
-    # `fixed_charges` params passed to `Plans::OverrideService` so a
-    # subsequent change that requires a plan override (any non-units field)
-    # builds the override plan with the customer's actual seat counts
-    # already in place.
-    #
-    # Without this promotion the override rows would be orphaned by the
-    # plan override — they reference the parent fixed_charges, not the
-    # newly created override fixed_charges — and the customer would
-    # silently snap back to the plan-level units on the next billing
-    # cycle.
-    #
-    # The host service is expected to expose a `subscription` reader.
     module FixedChargeUnitsOverridePromotionConcern
       extend ActiveSupport::Concern
 
       private
 
-      # Discards the subscription's override rows and returns a
-      # fixed_charges params array combining the caller's existing entries
-      # with a synthetic entry per discarded override (units carried
-      # forward). The caller's explicit entry wins when both an existing
-      # entry and an override row exist for the same fixed_charge.
-      # When the subscription has no override rows, returns the input
-      # unchanged.
       def promote_units_overrides_to_fixed_charges_params(existing_params = [])
         overrides = subscription.fixed_charge_units_overrides.to_a
         return existing_params if overrides.empty?
