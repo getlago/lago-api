@@ -298,6 +298,11 @@ RSpec.describe "templates/invoices/v4/fixed_charge.slim" do
     it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
+
+    it "displays the proration caption without referring to usage" do
+      expect(rendered_template).to include("The fee is prorated for the period; the displayed unit price is an average")
+      expect(rendered_template).not_to include("prorated on days of usage")
+    end
   end
 
   context "with zero amount fee" do
