@@ -26,10 +26,16 @@ module Types
 
       field :product_item, Types::ProductItems::Object, null: false
       field :product_item_filter, Types::ProductItemFilters::Object, null: true
-      field :rates, [Types::RateCardRates::Object], null: false
+
+      field :active_rate, Types::RateCardRates::Object, null: true
+      field :rates_count, Integer, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      def rates_count
+        object.rates.count
+      end
     end
   end
 end

@@ -50,6 +50,12 @@ class RateCard < ApplicationRecord
     subscription_rate_cards.exists? ||
       Subscription.where(plan_id: plan_rate_cards.select(:plan_id)).exists?
   end
+
+  # The active rate is the latest effective rate; later rates are pending and
+  # earlier ones have been superseded (terminated).
+  def active_rate
+    rates.effective.order(effective_datetime: :desc).first
+  end
 end
 
 # == Schema Information
