@@ -4,6 +4,7 @@ module Subscriptions
   class UpdateService < BaseService
     include Subscriptions::Concerns::BillingEntityResolutionConcern
     include Subscriptions::Concerns::FixedChargeUnitsOverrideDetectionConcern
+    include Subscriptions::Concerns::FixedChargeUnitsOverridePromotionConcern
 
     Result = BaseResult[:subscription, :payment_method]
 
@@ -204,28 +205,14 @@ module Subscriptions
         entry = entry.to_h.symbolize_keys
         fixed_charge = subscription.plan.fixed_charges.find_by(id: entry[:id])
         result.not_found_failure!(resource: "fixed_charge").raise_if_error! unless fixed_charge
-        apply_units_immediately = !!entry[:apply_units_immediately]
 
-        override = ::Subscription::FixedChargeUnitsOverride.find_or_initialize_by(
+        Subscriptions::FixedChargeUnitsOverrides::WriteService.call!(
           subscription:,
-          fixed_charge:
-        )
-        override.organization = subscription.organization
-        override.units = entry[:units]
-        override.save!
-
-        FixedCharges::EmitEventsService.call!(
           fixed_charge:,
-          subscription:,
-          apply_units_immediately:,
+          units: entry[:units],
+          apply_units_immediately: entry[:apply_units_immediately],
           timestamp:
         )
-
-        if apply_units_immediately && fixed_charge.pay_in_advance? && subscription.active?
-          after_commit do
-            Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
-          end
-        end
       end
     end
 
