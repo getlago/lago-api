@@ -616,7 +616,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription).to be_incomplete
       expect(subscription.invoices.count).to eq(1)
 
-      # Mid-gap: the fixed charge is overridden for this subscription only.
+      # Mid-gap: the fixed charge units are overridden for this subscription only.
       travel_to(Time.zone.local(2026, 3, 10, 10)) do
         Subscriptions::UpdateOrOverrideFixedChargeService.call!(
           subscription:,
@@ -627,10 +627,10 @@ describe "Payment Gated Subscription Activation Scenarios" do
       end
 
       subscription.reload
-      expect(subscription.plan.parent).to eq(plan)
+      expect(subscription.plan).to eq(plan)
 
-      override_fixed_charge = subscription.plan.fixed_charges.sole
-      expect(override_fixed_charge.parent).to eq(fixed_charge)
+      override = Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)
+      expect(override.units).to eq(15)
       expect(subscription.invoices.count).to eq(1)
 
       travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
@@ -640,7 +640,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription.invoices.count).to eq(2)
 
       delta_fee = subscription.invoices.order(:created_at).last.fees.fixed_charge.sole
-      expect(delta_fee.fixed_charge).to eq(override_fixed_charge)
+      expect(delta_fee.fixed_charge).to eq(fixed_charge)
       expect(delta_fee.units).to eq(5)
     end
   end
