@@ -307,7 +307,7 @@ module Events
           connection.select_one(sql)
         end
 
-        result["aggregation"]
+        build_aggregation_result_from_value(result["aggregation"])
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
@@ -343,7 +343,7 @@ module Events
           connection.select_one(sql)
         end
 
-        result["aggregation"]
+        build_aggregation_result_from_value(result["aggregation"])
       end
 
       def prorated_unique_count_breakdown(with_remove: false)
@@ -381,7 +381,9 @@ module Events
             ]
           )
 
-          prepare_grouped_result(connection.select_all(sql), groups_key: :grouped_by, value_key: :aggregation)
+          grouped_results_with_value_as_count(
+            prepare_grouped_result(connection.select_all(sql), groups_key: :grouped_by, value_key: :aggregation)
+          )
         end
       end
 
@@ -399,7 +401,9 @@ module Events
               }
             ]
           )
-          prepare_grouped_result(connection.select_all(sql), groups_key: :grouped_by, value_key: :aggregation)
+          grouped_results_with_value_as_count(
+            prepare_grouped_result(connection.select_all(sql), groups_key: :grouped_by, value_key: :aggregation)
+          )
         end
       end
 

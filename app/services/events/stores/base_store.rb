@@ -206,6 +206,23 @@ module Events
           events_count: with_count ? (row && row["events_count"]).to_i : nil
         )
       end
+
+      # NOTE: Build an AggregationResult for aggregations whose value already
+      #       represents the number of aggregated events (count, unique_count).
+      #       The value is reused as the events_count, avoiding a second count query.
+      def build_aggregation_result_from_value(value)
+        value ||= 0
+        AggregationResult.new(value:, events_count: value)
+      end
+
+      # NOTE: same as build_aggregation_result_from_value but for grouped results:
+      #       wraps {groups:, value:} hashes into GroupedAggregationResult,
+      #       reusing each value as its events_count.
+      def grouped_results_with_value_as_count(rows)
+        rows.map do |row|
+          GroupedAggregationResult.new(groups: row[:groups], value: row[:value], events_count: row[:value])
+        end
+      end
     end
   end
 end
