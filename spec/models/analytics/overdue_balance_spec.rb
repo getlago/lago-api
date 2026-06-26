@@ -357,6 +357,19 @@ RSpec.describe Analytics::OverdueBalance do
     end
   end
 
+  describe ".cache_version", cache: :redis do
+    let(:organization_id) { SecureRandom.uuid }
+    let(:external_customer_id) { "customer_01" }
+
+    it "seeds the token once and keeps it stable across reads" do
+      first = described_class.cache_version(organization_id, external_customer_id)
+
+      travel 1.second do
+        expect(described_class.cache_version(organization_id, external_customer_id)).to eq(first)
+      end
+    end
+  end
+
   describe "cache invalidation through .find_all_by", cache: :redis do
     let(:organization) { create(:organization, created_at: 3.months.ago) }
     let(:customer) { create(:customer, organization:) }
@@ -383,6 +396,11 @@ RSpec.describe Analytics::OverdueBalance do
 
       travel 1.second do
         expect(overdue_amounts(expire_cache: true)).to eq(350)
+
+        # The expiring read seeded a fresh token and recomputed. A subsequent
+        # plain read must neither reseed the token nor bust the cache: it still
+        # hits the cache written against the new token and returns 350.
+        expect(overdue_amounts).to eq(350)
       end
     end
   end
