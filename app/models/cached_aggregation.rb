@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class CachedAggregation < ApplicationRecord
   self.ignored_columns += %w[event_id]

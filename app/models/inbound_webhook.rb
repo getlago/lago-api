@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class InboundWebhook < ApplicationRecord
   WEBHOOK_PROCESSING_WINDOW = 2.hours

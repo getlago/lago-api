@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class CreditNoteItem < ApplicationRecord
   belongs_to :credit_note

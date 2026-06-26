@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class Invoice < ApplicationRecord
   self.ignored_columns += [:negative_amount_cents] # TODO: remove when negative_amount_cents is removed from the database
