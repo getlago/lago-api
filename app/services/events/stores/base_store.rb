@@ -20,6 +20,26 @@ module Events
         end
       end
 
+      # NOTE: result of a weighted_sum aggregation. Unlike AggregationResult it also
+      #       carries the variation (sum of the real events) alongside the weighted value.
+      WeightedAggregationResult = Data.define(
+        :value,       # weighted aggregation (units per second)
+        :variation,   # sum of real events (initial_value already subtracted)
+        :events_count
+      )
+
+      # NOTE: grouped variant of WeightedAggregationResult.
+      GroupedWeightedAggregationResult = Data.define(
+        :groups,
+        :value,
+        :variation,
+        :events_count
+      ) do
+        def to_grouped_hash
+          {groups:, value:}
+        end
+      end
+
       def initialize(subscription:, boundaries:, code: nil, filters: {}, deduplicate: false)
         @code = code
         @subscription = subscription
@@ -222,6 +242,39 @@ module Events
         rows.map do |row|
           GroupedAggregationResult.new(groups: row[:groups], value: row[:value], events_count: row[:value])
         end
+      end
+
+      # NOTE: builds a WeightedAggregationResult from the raw query columns.
+      def build_weighted_aggregation_result(value:, variation_with_initial:, rows_count:, initial_value:)
+        WeightedAggregationResult.new(
+          value:,
+          variation: variation_with_initial - (initial_value || 0).to_d, # Subtract initial value from variation
+          events_count: [rows_count - 2, 0].max # Handle zero duration case
+        )
+      end
+
+      # NOTE: Build the { column => value } groups hash used by grouped aggregation results.
+      def build_groups(values, columns: grouped_by)
+        columns.zip(values.map(&:presence)).to_h
+      end
+
+      # NOTE: grouped variant of build_weighted_aggregation_result.
+      def build_grouped_weighted_result(groups:, value:, variation_with_initial:, rows_count:, initial_values:)
+        initial_value = initial_values.find { |iv| iv[:groups] == groups }&.fetch(:value, 0)
+
+        weighted = build_weighted_aggregation_result(
+          value:,
+          variation_with_initial:,
+          rows_count:,
+          initial_value:
+        )
+
+        GroupedWeightedAggregationResult.new(
+          groups:,
+          value: weighted.value,
+          variation: weighted.variation,
+          events_count: weighted.events_count
+        )
       end
     end
   end

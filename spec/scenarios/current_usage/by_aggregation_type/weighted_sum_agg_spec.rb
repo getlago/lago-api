@@ -88,7 +88,7 @@ describe "Aggregation - Weighted Sum Scenarios", transaction: false do
           expect(json[:customer_usage][:total_amount_cents]).to eq(53_333)
 
           # TODO: make sure Clickhouse has the same precision as Postgres
-          expected_units = (store == :clickhouse) ? "533.33333333333338308117" : "533.3333333333333333"
+          expected_units = (store == :clickhouse) ? "533.33333333333333333334" : "533.3333333333333333"
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq(expected_units)
         end
 

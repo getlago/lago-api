@@ -707,7 +707,7 @@ module Events
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
                 decimal_scale: DECIMAL_SCALE,
-                initial_value: initial_value || 0
+                initial_value: decimal_literal(initial_value || 0)
               }
             ]
           )
@@ -715,7 +715,12 @@ module Events
           connection.select_one(sql)
         end
 
-        BigDecimal(result["aggregation"].presence || 0)
+        build_weighted_aggregation_result(
+          value: BigDecimal(result["aggregation"].presence || 0),
+          variation_with_initial: BigDecimal(result["variation_with_initial"].presence || 0),
+          rows_count: result["rows_count"].to_i,
+          initial_value:
+        )
       end
 
       def grouped_weighted_sum(columns = grouped_by, initial_values: [])
@@ -753,7 +758,7 @@ module Events
             ]
           )
 
-          prepare_grouped_result(connection.select_all(sql), decimal: true, groups_key: :grouped_by, value_key: :aggregation)
+          prepare_grouped_weighted_values(connection.select_all(sql), formatted_initial_values)
         end
       end
 
@@ -770,7 +775,7 @@ module Events
                   from_datetime:,
                   to_datetime: to_datetime.ceil,
                   decimal_scale: DECIMAL_SCALE,
-                  initial_value: initial_value || 0
+                  initial_value: decimal_literal(initial_value || 0)
                 }
               ]
             )
@@ -961,6 +966,23 @@ module Events
             groups: r[:groups].transform_values(&:presence),
             value: decimal ? BigDecimal(r[:value].presence || 0) : r[:value],
             events_count: r[:events_count].presence&.to_i
+          )
+        end
+      end
+
+      # NOTE: parses the grouped weighted_sum rows. Each row carries the weighted aggregation, the
+      #       sum of the differences (including the initial value) and the rows count (including the
+      #       2 boundary rows). Correction is delegated to build_grouped_weighted_result.
+      def prepare_grouped_weighted_values(result, initial_values)
+        result.to_ary.map do |row|
+          r = row.symbolize_keys
+
+          build_grouped_weighted_result(
+            groups: r[:grouped_by].transform_values(&:presence),
+            value: BigDecimal(r[:aggregation].presence || 0),
+            variation_with_initial: BigDecimal(r[:variation_with_initial].presence || 0),
+            rows_count: r[:rows_count].to_i,
+            initial_values:
           )
         end
       end

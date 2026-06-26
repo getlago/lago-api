@@ -704,7 +704,7 @@ module Events
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
                 decimal_scale: DECIMAL_SCALE,
-                initial_value: initial_value || 0
+                initial_value: decimal_literal(initial_value || 0)
               }
             ]
           )
@@ -712,7 +712,12 @@ module Events
           connection.select_one(sql)
         end
 
-        BigDecimal(result["aggregation"].presence || 0)
+        build_weighted_aggregation_result(
+          value: BigDecimal(result["aggregation"].presence || 0),
+          variation_with_initial: BigDecimal(result["variation_with_initial"].presence || 0),
+          rows_count: result["rows_count"].to_i,
+          initial_value:
+        )
       end
 
       def grouped_weighted_sum(columns = grouped_by, initial_value: 0, initial_values: [])
@@ -744,7 +749,7 @@ module Events
             ]
           )
 
-          prepare_grouped_result(connection.select_all(sql).rows, decimal: true, columns: columns)
+          prepare_grouped_weighted_values(connection.select_all(sql).rows, formatted_initial_values, columns: columns)
         end
       end
 
@@ -761,7 +766,7 @@ module Events
                   from_datetime:,
                   to_datetime: to_datetime.ceil,
                   decimal_scale: DECIMAL_SCALE,
-                  initial_value: initial_value || 0
+                  initial_value: decimal_literal(initial_value || 0)
                 }
               ]
             )
@@ -879,10 +884,9 @@ module Events
       def prepare_grouped_result(rows, timestamp: false, decimal: false, columns: grouped_by)
         rows.map do |row|
           last_group = timestamp ? -2 : -1
-          groups = row.flatten[...last_group].map(&:presence)
 
           result = {
-            groups: columns.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            groups: build_groups(row.flatten[...last_group], columns:),
             value: decimal ? BigDecimal(row.last.presence || 0) : row.last
           }
 
@@ -897,12 +901,28 @@ module Events
       def prepare_grouped_aggregated_values(rows, columns: grouped_by)
         rows.map do |row|
           flat = row.flatten
-          groups = flat[...-2].map(&:presence)
 
           GroupedAggregationResult.new(
-            groups: columns.each_with_object({}).with_index { |(g, res), i| res.merge!(g => groups[i]) },
+            groups: build_groups(flat[...-2], columns:),
             value: flat[-2],
             events_count: flat[-1].presence&.to_i
+          )
+        end
+      end
+
+      # NOTE: parses the grouped weighted_sum rows. The last three columns of each row are the weighted
+      #       aggregation, the sum of the differences (including the initial value) and the rows count
+      #       (including the 2 boundary rows). Correction is delegated to build_grouped_weighted_result.
+      def prepare_grouped_weighted_values(rows, initial_values, columns: grouped_by)
+        rows.map do |row|
+          flat = row.flatten
+
+          build_grouped_weighted_result(
+            groups: build_groups(flat[...-3], columns:),
+            value: BigDecimal(flat[-3].presence || 0),
+            variation_with_initial: BigDecimal(flat[-2].presence || 0),
+            rows_count: flat[-1].to_i,
+            initial_values:
           )
         end
       end

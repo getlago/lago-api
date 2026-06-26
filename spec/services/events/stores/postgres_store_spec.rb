@@ -6,9 +6,8 @@ require_relative "shared_examples/an_event_store"
 
 RSpec.describe Events::Stores::PostgresStore do
   it_behaves_like "an event store", with_event_duplication: false do
-    def create_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil, event_charge: nil)
-      create(
-        :event,
+    def create_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil, event_charge: nil, created_at: nil)
+      attributes = {
         transaction_id: transaction_id,
         organization_id: organization.id,
         external_subscription_id: subscription.external_id,
@@ -17,7 +16,10 @@ RSpec.describe Events::Stores::PostgresStore do
         timestamp: timestamp,
         properties: properties.merge(billable_metric.field_name => value),
         precise_total_amount_cents: value
-      )
+      }
+      attributes[:created_at] = created_at if created_at
+
+      create(:event, **attributes)
     end
 
     def create_enriched_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
@@ -116,6 +118,36 @@ RSpec.describe Events::Stores::PostgresStore do
         )
 
         expect(event_store.count).to eq(3)
+      end
+    end
+  end
+
+  describe "#weighted_sum" do
+    context "when the period is zero-length and holds no event" do
+      let(:billable_metric) { create(:weighted_sum_billable_metric) }
+      let(:organization) { billable_metric.organization }
+      let(:customer) { create(:customer, organization:) }
+      let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+      let(:datetime) { subscription.started_at.beginning_of_day }
+
+      let(:event_store) do
+        described_class.new(
+          code: billable_metric.code,
+          subscription:,
+          boundaries: {
+            from_datetime: datetime,
+            to_datetime: datetime,
+            charges_duration: 31
+          }
+        )
+      end
+
+      # NOTE: from_datetime == to_datetime makes both boundary rows identical, so the UNION in the
+      #       events CTE dedups them into one. events_count must not go negative.
+      it "returns a zero events count" do
+        result = event_store.weighted_sum
+
+        expect(result.events_count).to eq(0)
       end
     end
   end

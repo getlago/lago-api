@@ -13,12 +13,11 @@ module BillableMetrics
       def compute_aggregation(*)
         return empty_result if should_bypass_aggregation?
 
-        result.aggregation = event_store.weighted_sum(initial_value:).ceil(20)
+        weighted_result = event_store.weighted_sum(initial_value:)
 
-        sum_result = event_store.sum
-
-        result.count = sum_result.events_count
-        result.variation = sum_result.value || 0
+        result.aggregation = weighted_result.value.ceil(20)
+        result.count = weighted_result.events_count
+        result.variation = weighted_result.variation
         result.total_aggregated_units = result.variation
         result.options = {}
 
@@ -27,7 +26,7 @@ module BillableMetrics
           result.breakdowns = event_store.grouped_weighted_sum(
             uniq_grouped_by_and_presentation_by,
             initial_values: initial_breakdowns.map(&:with_indifferent_access)
-          )
+          ).map(&:to_grouped_hash)
         end
 
         if billable_metric.recurring?
@@ -48,8 +47,6 @@ module BillableMetrics
         aggregations = event_store.grouped_weighted_sum(initial_values: grouped_latest_values)
         return empty_results if aggregations.blank?
 
-        sum_results = event_store.grouped_sum
-
         latest_values = []
         last_events = []
         if billable_metric.recurring?
@@ -62,25 +59,22 @@ module BillableMetrics
           result.breakdowns = event_store.grouped_weighted_sum(
             uniq_grouped_by_and_presentation_by,
             initial_values: initial_breakdowns.map(&:with_indifferent_access)
-          )
+          ).map(&:to_grouped_hash)
           result.breakdowns = grouped_latest_breakdowns if result.breakdowns.empty?
         end
 
         result.aggregations = aggregations.map do |aggregation|
           group_result = BaseService::Result.new
-          group_result.grouped_by = aggregation[:groups]
+          group_result.grouped_by = aggregation.groups
 
-          aggregation_value = aggregation[:value]
-          group_result.aggregation = aggregation_value
-
-          group_sum = sum_results.find { |c| c.groups == aggregation[:groups] }
-          group_result.count = group_sum&.events_count || 0
-          group_result.variation = group_sum&.value || 0
+          group_result.aggregation = aggregation.value
+          group_result.count = aggregation.events_count
+          group_result.variation = aggregation.variation
           group_result.total_aggregated_units = group_result.variation
 
           if billable_metric.recurring?
-            latest_value = latest_values.find { |c| c[:groups] == aggregation[:groups] }&.[](:value) || 0
-            last_event = last_events.find { |c| c[:groups] == aggregation[:groups] }
+            latest_value = latest_values.find { |c| c[:groups] == aggregation.groups }&.[](:value) || 0
+            last_event = last_events.find { |c| c[:groups] == aggregation.groups }
 
             group_result.total_aggregated_units = latest_value + group_result.variation
             group_result.recurring_updated_at = last_event&.[](:timestamp) || from_datetime

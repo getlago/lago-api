@@ -1975,8 +1975,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_weighted_sum(["cloud"])
 
           expect(result.size).to eq(2)
-          expect(result.map { |r| r[:groups] }).to match_array([{"cloud" => "aws"}, {"cloud" => "gcp"}])
-          result.each { |r| expect(r[:value].round(5)).to eq(0.02218) }
+          expect(result.map { |r| r.groups }).to match_array([{"cloud" => "aws"}, {"cloud" => "gcp"}])
+          result.each { |r| expect(r.value.round(5)).to eq(0.02218) }
         end
       end
 
@@ -2004,11 +2004,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         it "returns the weighted sum breakdown per group" do
           result = event_store.grouped_weighted_sum(["agent_name", "cloud"])
 
-          expect(result.map { |r| r[:groups] }).to match_array([
+          expect(result.map { |r| r.groups }).to match_array([
             {"agent_name" => "frodo", "cloud" => "aws"},
             {"agent_name" => "aragorn", "cloud" => "gcp"}
           ])
-          result.each { |r| expect(r[:value].round(5)).to eq(0.02218) }
+          result.each { |r| expect(r.value.round(5)).to eq(0.02218) }
         end
       end
 
@@ -2049,8 +2049,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         it "uses the initial values in the aggregation" do
           result = event_store.grouped_weighted_sum(["cloud"], initial_values:)
 
-          expect(result.map { |r| r[:groups] }).to match_array([{"cloud" => "aws"}, {"cloud" => "gcp"}])
-          result.each { |r| expect(r[:value].round(5)).to eq(1000.02218) }
+          expect(result.map { |r| r.groups }).to match_array([{"cloud" => "aws"}, {"cloud" => "gcp"}])
+          result.each { |r| expect(r.value.round(5)).to eq(1000.02218) }
         end
       end
     end
@@ -2226,7 +2226,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             value: values[:value],
             timestamp: values[:timestamp],
             properties:,
-            charge_filter: values[:charge_filter]
+            charge_filter: values[:charge_filter],
+            created_at: values[:created_at]
           )
         end
       end
@@ -2237,7 +2238,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       end
 
       it "returns the weighted sum of event properties" do
-        expect(event_store.weighted_sum.round(5)).to eq(0.02218)
+        result = event_store.weighted_sum
+
+        expect(result.value.round(5)).to eq(0.02218)
+        expect(result.variation).to eq(0)
+        expect(result.events_count).to eq(7)
       end
 
       context "with a single event" do
@@ -2248,7 +2253,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "returns the weighted sum of event properties" do
-          expect(event_store.weighted_sum.round(5)).to eq(870.96774) # 4 / 31 * 0 + 27 / 31 * 1000
+          result = event_store.weighted_sum
+
+          expect(result.value.round(5)).to eq(870.96774) # 4 / 31 * 0 + 27 / 31 * 1000
+          expect(result.variation).to eq(1000)
+          expect(result.events_count).to eq(1)
         end
       end
 
@@ -2256,20 +2265,26 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         let(:events_values) { [] }
 
         it "returns the weighted sum of event properties" do
-          expect(event_store.weighted_sum.round(5)).to eq(0.0)
+          result = event_store.weighted_sum
+
+          expect(result.value.round(5)).to eq(0.0)
+          expect(result.variation).to eq(0)
+          expect(result.events_count).to eq(0)
         end
       end
 
       context "with events with the same timestamp" do
+        # NOTE: created_at is also identical to cover batch-ingested events that share
+        #       timestamp, value and created_at. They must be summed, not deduplicated.
         let(:events_values) do
           [
-            {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 3},
-            {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 3}
+            {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 3, created_at: Time.zone.parse("2023-03-05 12:00:00.000")},
+            {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 3, created_at: Time.zone.parse("2023-03-05 12:00:00.000")}
           ]
         end
 
         it "returns the weighted sum of event properties" do
-          expect(event_store.weighted_sum.round(5)).to eq(5.22581) # 4 / 31 * 0 + 27 / 31 * 6
+          expect(event_store.weighted_sum.value.round(5)).to eq(5.22581) # 4 / 31 * 0 + 27 / 31 * 6
         end
       end
 
@@ -2277,14 +2292,22 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         let(:initial_value) { 1000 }
 
         it "uses the initial value in the aggregation" do
-          expect(event_store.weighted_sum(initial_value:).round(5)).to eq(1000.02218)
+          result = event_store.weighted_sum(initial_value:)
+
+          expect(result.value.round(5)).to eq(1000.02218)
+          expect(result.variation).to eq(0)
+          expect(result.events_count).to eq(7)
         end
 
         context "without events" do
           let(:events_values) { [] }
 
           it "uses only the initial value in the aggregation" do
-            expect(event_store.weighted_sum(initial_value:).round(5)).to eq(1000.0)
+            result = event_store.weighted_sum(initial_value:)
+
+            expect(result.value.round(5)).to eq(1000.0)
+            expect(result.variation).to eq(0)
+            expect(result.events_count).to eq(0)
           end
         end
       end
@@ -2302,7 +2325,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
 
         it "returns the weighted sum of event properties scoped to the group" do
-          expect(event_store.weighted_sum.round(5)).to eq(870.96774) # 4 / 31 * 0 + 27 / 31 * 1000
+          expect(event_store.weighted_sum.value.round(5)).to eq(870.96774) # 4 / 31 * 0 + 27 / 31 * 1000
         end
       end
 
@@ -2323,7 +2346,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         it "includes the event in the weighted sum" do
           result = event_store.weighted_sum
-          expect(result.round(5)).to eq(5.0)
+          expect(result.value.round(5)).to eq(5.0)
         end
       end
     end
@@ -2354,7 +2377,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             value: values[:value],
             timestamp: values[:timestamp],
             properties:,
-            charge_filter: values[:charge_filter]
+            charge_filter: values[:charge_filter],
+            created_at: values[:created_at]
           )
         end
       end
@@ -2539,15 +2563,19 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         expect(result.count).to eq(3)
 
-        null_group = result.find { |v| v[:groups]["agent_name"].nil? }
-        expect(null_group[:groups]["agent_name"]).to be_nil
-        expect(null_group[:groups]["other"]).to be_nil
-        expect(null_group[:value].round(5)).to eq(0.02218)
+        null_group = result.find { |v| v.groups["agent_name"].nil? }
+        expect(null_group.groups["agent_name"]).to be_nil
+        expect(null_group.groups["other"]).to be_nil
+        expect(null_group.value.round(5)).to eq(0.02218)
+        expect(null_group.variation).to eq(0)
+        expect(null_group.events_count).to eq(7)
 
         (result - [null_group]).each do |row|
-          expect(row[:groups]["agent_name"]).not_to be_nil
-          expect(row[:groups]["other"]).to be_nil
-          expect(row[:value].round(5)).to eq(0.02218)
+          expect(row.groups["agent_name"]).not_to be_nil
+          expect(row.groups["other"]).to be_nil
+          expect(row.value.round(5)).to eq(0.02218)
+          expect(row.variation).to eq(0)
+          expect(row.events_count).to eq(7)
         end
       end
 
@@ -2575,15 +2603,19 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
           expect(result.count).to eq(3)
 
-          null_group = result.find { |v| v[:groups]["agent_name"].nil? }
-          expect(null_group[:groups]["agent_name"]).to be_nil
-          expect(null_group[:groups]["other"]).to be_nil
-          expect(null_group[:value].round(5)).to eq(1000.02218)
+          null_group = result.find { |v| v.groups["agent_name"].nil? }
+          expect(null_group.groups["agent_name"]).to be_nil
+          expect(null_group.groups["other"]).to be_nil
+          expect(null_group.value.round(5)).to eq(1000.02218)
+          expect(null_group.variation).to eq(0)
+          expect(null_group.events_count).to eq(7)
 
           (result - [null_group]).each do |row|
-            expect(row[:groups]["agent_name"]).not_to be_nil
-            expect(row[:groups]["other"]).to be_nil
-            expect(row[:value].round(5)).to eq(1000.02218)
+            expect(row.groups["agent_name"]).not_to be_nil
+            expect(row.groups["other"]).to be_nil
+            expect(row.value.round(5)).to eq(1000.02218)
+            expect(row.variation).to eq(0)
+            expect(row.events_count).to eq(7)
           end
         end
 
@@ -2595,15 +2627,19 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
             expect(result.count).to eq(3)
 
-            null_group = result.find { |v| v[:groups]["agent_name"].nil? }
-            expect(null_group[:groups]["agent_name"]).to be_nil
-            expect(null_group[:groups]["other"]).to be_nil
-            expect(null_group[:value].round(5)).to eq(1000)
+            null_group = result.find { |v| v.groups["agent_name"].nil? }
+            expect(null_group.groups["agent_name"]).to be_nil
+            expect(null_group.groups["other"]).to be_nil
+            expect(null_group.value.round(5)).to eq(1000)
+            expect(null_group.variation).to eq(0)
+            expect(null_group.events_count).to eq(0)
 
             (result - [null_group]).each do |row|
-              expect(row[:groups]["agent_name"]).not_to be_nil
-              expect(row[:groups]["other"]).to be_nil
-              expect(row[:value].round(5)).to eq(1000)
+              expect(row.groups["agent_name"]).not_to be_nil
+              expect(row.groups["other"]).to be_nil
+              expect(row.value.round(5)).to eq(1000)
+              expect(row.variation).to eq(0)
+              expect(row.events_count).to eq(0)
             end
           end
         end
