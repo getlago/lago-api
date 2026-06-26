@@ -179,7 +179,6 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
         end
       end
     end
-
   end
 
   describe "#update_payment_status" do
