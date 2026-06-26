@@ -70,9 +70,7 @@ module PaymentProviderCustomers
       if event["success"] == "true"
         adyen_customer.update!(payment_method_id:, provider_customer_id: shopper_reference)
 
-        if organization.feature_flag_enabled?(:multiple_payment_methods)
-          handle_payment_methods(payment_method_id)
-        end
+        handle_payment_methods(payment_method_id)
 
         SendWebhookJob.perform_later("customer.payment_provider_created", customer)
       else

@@ -48,12 +48,15 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:response) { instance_double(Net::HTTPOK) }
   let(:endpoint) { "#{PaymentProviders::MoneyhashProvider.api_base_url}/api/v1.1/payments/intent/" }
+  let(:default_payment_method) do
+    create(:payment_method, customer:, payment_provider_customer: moneyhash_customer, provider_method_id: "test_payment_method")
+  end
 
   describe "#create" do
     before do
       moneyhash_provider
       moneyhash_customer
-      moneyhash_customer.update!(payment_method_id: "test_payment_method")
+      default_payment_method
       allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
     end
 
@@ -70,7 +73,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
     end
 
     context "when payment method is missing" do
-      before { moneyhash_customer.update!(payment_method_id: nil) }
+      before { default_payment_method.update!(is_default: false) }
 
       it "returns not found failure" do
         result = moneyhash_service.create
@@ -155,8 +158,8 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       end
     end
 
-    context "when multiple_payment_methods feature flag is enabled" do
-      let(:payment_method) do
+    context "when customer has a default payment method" do
+      let(:default_payment_method) do
         create(:payment_method,
           customer:,
           payment_provider_customer: moneyhash_customer,
@@ -164,8 +167,6 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       end
 
       before do
-        organization.update!(feature_flags: ["multiple_payment_methods"])
-        payment_method
         allow(lago_client).to receive(:post_with_response).and_return(response)
         allow(response).to receive(:body).and_return(payment_response_json.to_json)
       end
@@ -177,35 +178,8 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
           expect(params[:card_token]).to eq("pm_test_123")
         end
       end
-
-      context "when customer has no default payment method" do
-        before { payment_method.update!(is_default: false) }
-
-        it "returns not found failure" do
-          result = moneyhash_service.create
-
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.resource).to eq("payment_method")
-        end
-      end
     end
 
-    context "when multiple_payment_methods feature flag is disabled" do
-      before do
-        moneyhash_customer.update!(payment_method_id: "legacy_pm_456")
-        allow(lago_client).to receive(:post_with_response).and_return(response)
-        allow(response).to receive(:body).and_return(payment_response_json.to_json)
-      end
-
-      it "uses provider_customer payment_method_id as card_token" do
-        moneyhash_service.create
-
-        expect(lago_client).to have_received(:post_with_response) do |params, _headers|
-          expect(params[:card_token]).to eq("legacy_pm_456")
-        end
-      end
-    end
   end
 
   describe "#update_payment_status" do

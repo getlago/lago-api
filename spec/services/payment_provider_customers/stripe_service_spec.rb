@@ -436,15 +436,12 @@ RSpec.describe PaymentProviderCustomers::StripeService do
       end
     end
 
-    context "when multiple_payment_methods feature flag is enabled" do
+    context "when the customer has a payment method" do
       let(:payment_method) do
         create(:payment_method, customer:, provider_method_id: payment_method_id)
       end
 
-      before do
-        organization.enable_feature_flag!(:multiple_payment_methods)
-        payment_method
-      end
+      before { payment_method }
 
       it "discards the payment method" do
         result = stripe_service.delete_payment_method(
