@@ -730,7 +730,6 @@ RSpec.describe Subscriptions::OrganizationBillingService do
           expect(BillNonInvoiceableFeesJob).to have_been_enqueued
             .with([subscription2], current_date)
         end
-
       end
 
       context "when subscriptions have different explicit payment_method_ids" do
