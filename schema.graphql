@@ -10766,6 +10766,16 @@ type Query {
   quote(id: ID!): Quote
 
   """
+  Query a single quote version
+  """
+  quoteVersion(
+    """
+    Lago ID of the quote version
+    """
+    id: ID!
+  ): QuoteVersion
+
+  """
   Query quotes of an organization
   """
   quotes(customers: [ID!], fromDate: ISO8601Date, limit: Int, numbers: [String!], orderTypes: [OrderTypeEnum!], owners: [ID!], page: Int, statuses: [StatusEnum!], toDate: ISO8601Date): QuoteCollection!
