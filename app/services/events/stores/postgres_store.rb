@@ -215,13 +215,21 @@ module Events
         )
       end
 
-      def grouped_max(columns = grouped_by)
-        results = events
-          .group(columns.map { sanitized_property_name(it) })
-          .maximum("(#{sanitized_property_name})::numeric")
-          .map { |group, value| [group, value].flatten }
+      def grouped_max(columns = grouped_by, with_count: true)
+        groups = columns.map { sanitized_property_name(it) }
 
-        prepare_grouped_result(results, columns: columns)
+        results = events
+          .group(groups)
+          .pluck(
+            Arel.sql(
+              (groups + [
+                "MAX((#{sanitized_property_name})::numeric)",
+                with_count ? "COUNT(*)" : "NULL"
+              ]).join(", ")
+            )
+          )
+
+        prepare_grouped_aggregated_values(results, columns: columns)
       end
 
       def last(with_count: true)

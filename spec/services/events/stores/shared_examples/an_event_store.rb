@@ -1158,13 +1158,24 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         event_store.numeric_property = true
       end
 
-      it "returns the max values grouped by the provided group" do
+      it "returns the max values and the events count grouped by the provided group" do
         result = event_store.grouped_max
 
         expect(result).to match_array([
-          {groups: {"region" => nil}, value: 4},
-          {groups: {"region" => "europe"}, value: 5}
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => nil}, value: 4, events_count: 2),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "europe"}, value: 5, events_count: 3)
         ])
+      end
+
+      context "when with_count is false" do
+        it "returns the max values without the events count" do
+          result = event_store.grouped_max(with_count: false)
+
+          expect(result).to match_array([
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => nil}, value: 4, events_count: nil),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "europe"}, value: 5, events_count: nil)
+          ])
+        end
       end
 
       context "with multiple groups" do
@@ -1174,9 +1185,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_max
 
           expect(result).to match_array([
-            {groups: {"country" => "france", "region" => "europe"}, value: 3},
-            {groups: {"country" => nil, "region" => nil}, value: 4},
-            {groups: {"country" => "united kingdom", "region" => "europe"}, value: 5}
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"country" => "france", "region" => "europe"}, value: 3, events_count: 2),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"country" => nil, "region" => nil}, value: 4, events_count: 2),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"country" => "united kingdom", "region" => "europe"}, value: 5, events_count: 1)
           ])
         end
       end
@@ -1214,8 +1225,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           # - europe, france, <nil>
           # - europe, united kingdom, manchester
           expect(result).to match_array([
-            {groups: {"country" => "united kingdom", "region" => "europe"}, value: -1},
-            {groups: {"country" => "france", "region" => "europe"}, value: 3}
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"country" => "united kingdom", "region" => "europe"}, value: -1, events_count: 1),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"country" => "france", "region" => "europe"}, value: 3, events_count: 3)
           ])
         end
       end
@@ -1818,8 +1829,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_max(["cloud"])
 
           expect(result).to match_array([
-            {groups: {"cloud" => "aws"}, value: 10},
-            {groups: {"cloud" => "gcp"}, value: 12}
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"cloud" => "aws"}, value: 10, events_count: 3),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"cloud" => "gcp"}, value: 12, events_count: 1)
           ])
         end
       end
@@ -1837,9 +1848,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.grouped_max(["agent_name", "cloud"])
 
           expect(result).to match_array([
-            {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
-            {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7},
-            {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3}
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2, events_count: 1),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7, events_count: 1),
+            Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3, events_count: 1)
           ])
         end
       end
