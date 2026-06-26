@@ -73,6 +73,10 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
       expect(wallet.reload.credits_balance).to eq(22.0)
     end
 
+    it "flags the customer wallets for refresh" do
+      expect { subject }.to change { customer.reload.awaiting_wallet_refresh }.from(false).to(true)
+    end
+
     it "enqueues a RefreshWalletJob to update the ongoing balance" do
       expect { subject }
         .to have_enqueued_job_after_commit(Customers::RefreshWalletJob).with(customer)
