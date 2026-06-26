@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 require Rails.root.join("lib/lago_http_client/lago_http_client")
 

@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class UsageFilters
   # filter_by_charge - when set, allows to calculate usage only for a specific charge and not all charges of a plan

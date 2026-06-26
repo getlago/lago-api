@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class ApplicationJob < ActiveJob::Base
   sidekiq_options retry: 0

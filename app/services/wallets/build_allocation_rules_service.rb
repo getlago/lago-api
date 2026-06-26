@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 # app/services/wallets/build_allocation_rules_service.rb
 module Wallets

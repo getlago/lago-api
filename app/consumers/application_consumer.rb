@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 # Application consumer from which all Karafka consumers should inherit
 # You can rename it if it would conflict with your current code base (in case you're integrating

@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class Customer::AppliedInvoiceCustomSection < ApplicationRecord
   self.table_name = "customers_invoice_custom_sections"

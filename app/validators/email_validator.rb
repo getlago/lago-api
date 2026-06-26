@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class EmailValidator < ActiveModel::EachValidator
   def validate_each(record, attribute, value)

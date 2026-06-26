@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class WebhookEndpointsQuery < BaseQuery
   Result = BaseResult[:webhook_endpoints]

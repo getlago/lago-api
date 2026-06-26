@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 # app/graphql/mutations/invoices/regenerate_from_voided.rb
 module Mutations

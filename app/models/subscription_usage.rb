@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 SubscriptionUsage = Struct.new(
   :from_datetime,

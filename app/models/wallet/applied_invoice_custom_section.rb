@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class Wallet::AppliedInvoiceCustomSection < ApplicationRecord
   self.table_name = "wallets_invoice_custom_sections"

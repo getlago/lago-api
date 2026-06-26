@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 module Quotes
   # Acquires a PostgreSQL advisory lock scoped to a quote to serialize mutations across the

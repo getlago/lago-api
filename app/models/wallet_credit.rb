@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 # This class represents a wallet credit and can be represented in credits or in an amount_cents
 # Use this class when constructing wallet credits to make sure conversion between monetary amounts and credit amounts remains consistent

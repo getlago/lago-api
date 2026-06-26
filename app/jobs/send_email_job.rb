@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 # Custom mail delivery job to support activity logging for email events in ClickHouse.
 #

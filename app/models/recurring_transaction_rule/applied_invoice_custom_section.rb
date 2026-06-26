@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class RecurringTransactionRule::AppliedInvoiceCustomSection < ApplicationRecord
   self.table_name = "recurring_transaction_rules_invoice_custom_sections"

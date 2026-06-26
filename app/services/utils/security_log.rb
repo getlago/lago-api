@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 module Utils
   # Produces security log events to Kafka for ClickHouse consumption.

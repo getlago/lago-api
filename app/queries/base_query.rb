@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class BaseQuery < BaseService
   # nil values force Kaminari to apply its default values for page and limit.

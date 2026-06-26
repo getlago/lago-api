@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 module Subscriptions
   # Filters a subscriptions scope down to the ones whose billing period rolls over (i.e. is billed)

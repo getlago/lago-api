@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 module Metadata
   # Updates the metadata of the record with new content, creates it if absent, or deletes it.

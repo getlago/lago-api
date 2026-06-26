@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 class PastUsageQuery < BaseQuery
   Result = BaseResult[:usage_periods, :current_page, :next_page, :prev_page, :total_pages, :total_count]

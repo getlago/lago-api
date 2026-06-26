@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 module BillingEntityTimezone
   BILLING_ENTITY_SUFFIX = "_in_billing_entity_timezone"

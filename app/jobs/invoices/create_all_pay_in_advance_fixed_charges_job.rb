@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# Reviewed-by: code-review-experiment (see PR description)
 
 module Invoices
   # NOTE: A plan can have tens of thousands of active subscriptions; iterating
