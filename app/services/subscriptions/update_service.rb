@@ -210,7 +210,7 @@ module Subscriptions
           subscription:,
           fixed_charge:,
           units: entry[:units],
-          apply_units_immediately: entry[:apply_units_immediately],
+          apply_units_immediately: !!entry[:apply_units_immediately],
           timestamp:
         )
       end
