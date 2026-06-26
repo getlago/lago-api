@@ -44,10 +44,8 @@ module Invoices
           payable_payment_status: "pending"
         )
 
-        if multiple_payment_methods_enabled?
-          payment.payment_method_id = determine_payment_method&.id
-          payment.save!
-        end
+        payment.payment_method_id = determine_payment_method&.id
+        payment.save!
 
         result.payment = payment
 
@@ -108,20 +106,12 @@ module Invoices
         @provider ||= invoice.customer.payment_provider&.to_sym
       end
 
-      def multiple_payment_methods_enabled?
-        customer.organization.feature_flag_enabled?(:multiple_payment_methods)
-      end
-
       def should_process_payment?
         return false if invoice.self_billed?
         return false if invoice.payment_succeeded? || invoice.voided?
         return false if current_payment_provider.blank?
 
-        if multiple_payment_methods_enabled?
-          current_payment_provider_customer&.provider_customer_id && determine_payment_method.present?
-        else
-          current_payment_provider_customer&.provider_customer_id
-        end
+        current_payment_provider_customer&.provider_customer_id && determine_payment_method.present?
       end
 
       def current_payment_provider

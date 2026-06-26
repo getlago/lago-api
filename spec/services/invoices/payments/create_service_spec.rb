@@ -6,7 +6,7 @@ RSpec.describe Invoices::Payments::CreateService do
   subject(:create_service) { described_class.new(invoice:, payment_provider: provider, payment_method_params:) }
 
   let(:organization) { create(:organization) }
-  let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100) }
+  let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100, invoice_type: :one_off) }
   let(:customer) { create(:customer, organization:, payment_provider: provider, payment_provider_code:) }
   let(:provider) { "stripe" }
   let(:payment_provider_code) { "stripe_1" }
@@ -134,7 +134,7 @@ RSpec.describe Invoices::Payments::CreateService do
     end
 
     context "with subscription invoice" do
-      let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
+      let(:organization) { create(:organization) }
       let(:subscription_payment_method) { create(:payment_method, customer:, is_default: false) }
       let(:plan) { create(:plan, organization:) }
       let(:subscription) do
@@ -199,7 +199,7 @@ RSpec.describe Invoices::Payments::CreateService do
     end
 
     context "with credit invoice" do
-      let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
+      let(:organization) { create(:organization) }
       let(:wallet) { create(:wallet, customer:, organization:) }
       let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, source: :manual) }
       let(:invoice) do
@@ -308,7 +308,7 @@ RSpec.describe Invoices::Payments::CreateService do
     end
 
     context "with one-off invoice" do
-      let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
+      let(:organization) { create(:organization) }
       let(:invoice) do
         create(:invoice, customer:, organization:, total_amount_cents: 100, invoice_type: :one_off)
       end
@@ -394,7 +394,8 @@ RSpec.describe Invoices::Payments::CreateService do
           organization:,
           customer:,
           total_amount_cents: 0,
-          currency: "EUR"
+          currency: "EUR",
+          invoice_type: :one_off
         )
       end
 
@@ -529,7 +530,8 @@ RSpec.describe Invoices::Payments::CreateService do
 
       context "when invoice is credit? and open?" do
         let(:invoice) { create(:invoice, :credit, :open, customer:, organization:, total_amount_cents: 100) }
-        let(:wallet_transaction) { create(:wallet_transaction) }
+        let(:wallet) { create(:wallet, customer:, organization:) }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, source: :manual) }
         let(:fee) { create(:fee, fee_type: :credit, invoice: invoice, invoiceable: wallet_transaction) }
 
         before do

@@ -98,7 +98,6 @@ module PaymentProviders
 
         def should_fetch_payment_method?
           !should_create_provider_customer? &&
-            customer.organization.feature_flag_enabled?(:multiple_payment_methods) &&
             customer.payment_methods.empty? &&
             result.provider_customer.provider_customer_id?
         end
