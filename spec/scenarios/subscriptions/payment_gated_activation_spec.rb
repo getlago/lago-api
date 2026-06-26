@@ -41,6 +41,19 @@ describe "Payment Gated Subscription Activation Scenarios" do
           currency: "eur"
         )
       )
+
+    # On activation the finalized invoice number is pushed back to the PSP via
+    # UpdatePaymentReferenceJob. The service ignores the return value; this stub
+    # only prevents a real Stripe API call in the success scenarios.
+    allow(::Stripe::PaymentIntent).to receive(:update).and_return(
+      Stripe::PaymentIntent.construct_from(
+        id: payment_intent_id,
+        object: "payment_intent",
+        status: "succeeded",
+        amount: 1000,
+        currency: "eur"
+      )
+    )
   end
 
   def simulate_stripe_webhook(status:, invoice: nil)
