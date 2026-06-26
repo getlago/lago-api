@@ -7,7 +7,8 @@ RSpec.describe Subscriptions::Concerns::FixedChargeUnitsOverrideDetectionConcern
     Class.new do
       include Subscriptions::Concerns::FixedChargeUnitsOverrideDetectionConcern
 
-      public :units_only_fixed_charges_plan_overrides?, :units_only_fixed_charge_params?
+      public :units_only_fixed_charges_plan_overrides?,
+        :units_only_fixed_charge_params?
     end.new
   end
 
