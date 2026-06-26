@@ -334,7 +334,7 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
           end
         end
 
-        context "when the subscription is already on a cloned plan" do
+        context "when the subscription is already on an overridden plan" do
           let(:overridden_plan) { create(:plan, organization:, parent: plan) }
           let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
 
@@ -343,6 +343,36 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
               .to not_change(::Subscription::FixedChargeUnitsOverride, :count)
               .and change(FixedCharge, :count).by(1)
           end
+        end
+      end
+
+      context "when the subscription has existing units overrides and params trigger plan override" do
+        let(:other_fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, units: 8) }
+        let(:params) { {units: "15", tax_codes: [create(:tax, organization:).code]} }
+
+        before do
+          other_fixed_charge
+          create(:subscription_fixed_charge_units_override, subscription:, fixed_charge:, organization:, units: 11)
+          create(:subscription_fixed_charge_units_override, subscription:, fixed_charge: other_fixed_charge, organization:, units: 22)
+        end
+
+        it "discards the override rows and promotes their units onto the new fixed_charge overrides" do
+          expect { service.call }
+            .to change(Plan, :count).by(1)
+            .and change(FixedCharge, :count).by(2)
+            .and change { ::Subscription::FixedChargeUnitsOverride.kept.where(subscription:).count }.from(2).to(0)
+
+          subscription.reload
+          overridden_plan = subscription.plan
+          expect(overridden_plan.parent_id).to eq(plan.id)
+
+          # The fixed_charge the user updated reflects the user's units (15) plus its tax_codes
+          fc_being_updated = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge.id)
+          expect(fc_being_updated.units).to eq(15)
+
+          # The other fixed_charge that had an override row now carries those units on its plan-override clone
+          other_fc_overridden = overridden_plan.fixed_charges.find_sole_by(parent_id: other_fixed_charge.id)
+          expect(other_fc_overridden.units).to eq(22)
         end
       end
     end
