@@ -725,4 +725,50 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
       expect(rendered_template).to match_html_snapshot("with_only_charges")
     end
   end
+
+  context "with the inherited purchase order number" do
+    let(:credit_note) do
+      build_stubbed(
+        :credit_note,
+        organization:,
+        customer:,
+        invoice:,
+        number: "CN-202510-099",
+        issuing_date: Date.parse("2025-10-05"),
+        total_amount_currency: "USD",
+        total_amount_cents: 1000,
+        taxes_amount_cents: 0,
+        credit_amount_currency: "USD",
+        credit_amount_cents: 1000,
+        items: []
+      )
+    end
+
+    before do
+      allow(credit_note).to receive(:subscription_ids).and_return([])
+      allow(credit_note).to receive(:add_on_items).and_return(CreditNoteItem.none)
+      allow(credit_note).to receive(:sub_total_excluding_taxes_amount).and_return(Money.new(1000, "USD"))
+
+      applied_taxes_relation = instance_double(ActiveRecord::Relation)
+      allow(applied_taxes_relation).to receive(:order).with(tax_rate: :desc).and_return([])
+      allow(credit_note).to receive(:applied_taxes).and_return(applied_taxes_relation)
+    end
+
+    context "when the invoice has a purchase order number" do
+      let(:invoice) do
+        build_stubbed(:invoice, organization:, billing_entity:, customer:, number: "LAGO-202509-001", purchase_order_number: "PO-12345")
+      end
+
+      it "renders the purchase order number from the invoice" do
+        expect(rendered_template).to include(I18n.t("invoice.purchase_order_number"))
+        expect(rendered_template).to include("PO-12345")
+      end
+    end
+
+    context "when the invoice has no purchase order number" do
+      it "does not render the purchase order number row" do
+        expect(rendered_template).not_to include(I18n.t("invoice.purchase_order_number"))
+      end
+    end
+  end
 end
