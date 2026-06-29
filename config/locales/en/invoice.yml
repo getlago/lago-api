@@ -81,6 +81,7 @@ en:
     prepaid_credits: Prepaid credits
     prepaid_credits_with_value: Prepaid credits - %{wallet_name}
     progressive_billing_credit: Usage already billed
+    purchase_order_number: Purchase Order Number
     quarter: quarter
     quarterly: Quarterly
     reached_usage_threshold: This progressive billing is generated because your cumulative usage has reached %{usage_amount}, exceeding the %{threshold_amount} threshold.
