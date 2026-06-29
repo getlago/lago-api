@@ -444,7 +444,9 @@ module Events
         end
       end
 
-      def grouped_max(columns = grouped_by)
+      def grouped_max(columns = grouped_by, with_count: true)
+        count_select = with_count ? "count()" : "null"
+
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           if columns == grouped_by
             sql = with_ctes(events_cte_queries(
@@ -453,7 +455,8 @@ module Events
             ), <<-SQL)
               SELECT
                 sorted_grouped_by as groups,
-                MAX(events.decimal_value) as value
+                MAX(events.decimal_value) as value,
+                #{count_select} as events_count
               FROM events
               GROUP BY sorted_grouped_by
             SQL
@@ -463,13 +466,14 @@ module Events
             sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
               SELECT
                 map(#{map_args.join(", ")}) as groups,
-                MAX(events.decimal_value) as value
+                MAX(events.decimal_value) as value,
+                #{count_select} as events_count
               FROM events
               GROUP BY #{col_expressions.join(", ")}
             SQL
           end
 
-          prepare_grouped_result(connection.select_all(sql))
+          prepare_grouped_aggregated_values(connection.select_all(sql))
         end
       end
 

@@ -85,7 +85,7 @@ module Events
         raise NotImplementedError
       end
 
-      def grouped_max
+      def grouped_max(columns = grouped_by, with_count: true)
         raise NotImplementedError
       end
 

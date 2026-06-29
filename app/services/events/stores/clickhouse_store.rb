@@ -454,7 +454,7 @@ module Events
         end
       end
 
-      def grouped_max(columns = grouped_by)
+      def grouped_max(columns = grouped_by, with_count: true)
         groups, column_names = grouped_arel_columns(columns)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
@@ -466,12 +466,13 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               #{column_names},
-              MAX(property)
+              MAX(property),
+              #{with_count ? "count()" : "null"}
             FROM events
             GROUP BY #{column_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
+          prepare_grouped_aggregated_values(connection.select_all(sql).rows, columns: columns)
         end
       end
 
