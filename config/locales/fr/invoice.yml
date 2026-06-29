@@ -38,7 +38,7 @@ fr:
       discount_reason: Remise %{tax_rate} part
       payment_information: "%{payment_label} de %{currency} %{amount} appliqué"
       standard_payment: Paiement standard
-    fee_prorated: Les frais sont calculés au prorata des jours d'utilisation, le prix unitaire affiché est une moyenne
+    fee_prorated: Les frais sont calculés au prorata de la période ; le prix unitaire affiché est une moyenne
     fees_from_to_date: Frais de conso. du %{from_date} au %{to_date}
     free_credits: Crédits gratuits
     from_to_date: Du %{from_date} au %{to_date}

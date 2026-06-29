@@ -38,7 +38,7 @@ de:
       discount_reason: Rabatt %{tax_rate} Anteil
       payment_information: "%{payment_label} von %{currency} %{amount} angewendet"
       standard_payment: Standardzahlung
-    fee_prorated: Die Gebühr wird anteilig nach Nutzungstagen berechnet, der angezeigte Stückpreis ist ein Durchschnitt
+    fee_prorated: Die Gebühr wird anteilig für den Zeitraum berechnet; der angezeigte Stückpreis ist ein Durchschnitt
     fees_from_to_date: Gebühren vom %{from_date} bis %{to_date}
     free_credits: Kostenloses Guthaben
     from_to_date: Vom %{from_date} bis %{to_date}
