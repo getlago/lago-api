@@ -58,9 +58,12 @@ RSpec.describe DataExports::Csv::CreditNotes do
     end
 
     it "adds serialized credit notes to csv" do
+      credit_notes.each { |credit_note| credit_note.invoice.update!(purchase_order_number: "PO-12345") }
+
       expect(result).to be_success
       parsed_rows = CSV.parse(result.csv_file, nil_value: "")
       expect(parsed_rows).to eq(expected_rows)
+      expect(parsed_rows.first).to include("PO-12345")
     end
 
     context "when organization has multiple billing_entities" do
