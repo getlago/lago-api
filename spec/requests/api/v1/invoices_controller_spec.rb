@@ -118,6 +118,30 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "with a purchase_order_number" do
+      let(:create_params) do
+        {
+          external_customer_id: customer_external_id,
+          currency: "EUR",
+          purchase_order_number: "  PO-12345  ",
+          fees: [
+            {
+              add_on_code: add_on_first.code,
+              unit_amount_cents: 1200,
+              units: 2
+            }
+          ]
+        }
+      end
+
+      it "creates an invoice with the normalized purchase order number" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:purchase_order_number]).to eq("PO-12345")
+      end
+    end
+
     context "when multi_entity_billing feature flag is enabled" do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 
