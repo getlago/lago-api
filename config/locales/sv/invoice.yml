@@ -79,6 +79,7 @@ sv:
     prepaid_credits: Förbetald kontobalans
     prepaid_credits_with_value: Förbetald kontobalans - %{wallet_name}
     progressive_billing_credit: Redan fakturerad användning
+    purchase_order_number: Inköpsordernummer
     quarter: kvartal
     quarterly: Kvartalsvis
     reached_usage_threshold: Denna progressiva fakturering skapas eftersom din ackumulerade användning har nått %{usage_amount} och överstiger %{threshold_amount} tröskeln.
