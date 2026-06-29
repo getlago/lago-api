@@ -7,6 +7,8 @@ module Events
         MAX_RETRIES = 3
         MEMORY_ERROR_CODE = "MEMORY_LIMIT_EXCEEDED"
 
+        RETRYABLE_ERRORS = [Errno::ECONNRESET, ActiveRecord::ActiveRecordError, NoMethodError, Net::ReadTimeout]
+
         def self.with_retry(&)
           attempts = 0
 
@@ -14,7 +16,7 @@ module Events
             attempts += 1
 
             yield
-          rescue Errno::ECONNRESET, ActiveRecord::ActiveRecordError, NoMethodError => e
+          rescue *RETRYABLE_ERRORS => e
             raise Events::Stores::Clickhouse::MemoryLimitError, e.message if memory_limit_error?(e)
 
             if attempts < MAX_RETRIES
@@ -32,7 +34,7 @@ module Events
           begin
             attempts += 1
             ::Clickhouse::BaseRecord.with_connection(&)
-          rescue Errno::ECONNRESET, ActiveRecord::ActiveRecordError, NoMethodError => e
+          rescue *RETRYABLE_ERRORS => e
             raise Events::Stores::Clickhouse::MemoryLimitError, e.message if memory_limit_error?(e)
 
             if attempts < MAX_RETRIES

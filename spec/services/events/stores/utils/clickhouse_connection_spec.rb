@@ -14,18 +14,34 @@ RSpec.describe Events::Stores::Utils::ClickhouseConnection do
       expect(described_class.with_retry { "value" }).to eq("value")
     end
 
-    it "retries up to MAX_RETRIES on a transient error then raises it" do
+    described_class::RETRYABLE_ERRORS.each do |error_class|
+      it "retries up to MAX_RETRIES on #{error_class} then raises it" do
+        attempts = 0
+
+        expect do
+          described_class.with_retry do
+            attempts += 1
+            raise error_class, "boom"
+          end
+        end.to raise_error(error_class)
+
+        expect(attempts).to eq(described_class::MAX_RETRIES)
+        expect(described_class).to have_received(:sleep).with(0.05).twice
+      end
+    end
+
+    it "does not retry a non-retryable error" do
       attempts = 0
 
       expect do
         described_class.with_retry do
           attempts += 1
-          raise ActiveRecord::ActiveRecordError, "boom"
+          raise StandardError, "boom"
         end
-      end.to raise_error(ActiveRecord::ActiveRecordError, "boom")
+      end.to raise_error(StandardError, "boom")
 
-      expect(attempts).to eq(described_class::MAX_RETRIES)
-      expect(described_class).to have_received(:sleep).with(0.05).twice
+      expect(attempts).to eq(1)
+      expect(described_class).not_to have_received(:sleep)
     end
 
     it "re-raises a memory limit error as MemoryLimitError without retrying" do
@@ -54,18 +70,34 @@ RSpec.describe Events::Stores::Utils::ClickhouseConnection do
       expect(described_class.connection_with_retry { |conn| conn }).to eq(connection)
     end
 
-    it "retries up to MAX_RETRIES on a transient error then raises it" do
+    described_class::RETRYABLE_ERRORS.each do |error_class|
+      it "retries up to MAX_RETRIES on #{error_class} then raises it" do
+        attempts = 0
+
+        expect do
+          described_class.connection_with_retry do |_conn|
+            attempts += 1
+            raise error_class, "boom"
+          end
+        end.to raise_error(error_class)
+
+        expect(attempts).to eq(described_class::MAX_RETRIES)
+        expect(described_class).to have_received(:sleep).with(0.05).twice
+      end
+    end
+
+    it "does not retry a non-retryable error" do
       attempts = 0
 
       expect do
         described_class.connection_with_retry do |_conn|
           attempts += 1
-          raise ActiveRecord::ActiveRecordError, "boom"
+          raise StandardError, "boom"
         end
-      end.to raise_error(ActiveRecord::ActiveRecordError, "boom")
+      end.to raise_error(StandardError, "boom")
 
-      expect(attempts).to eq(described_class::MAX_RETRIES)
-      expect(described_class).to have_received(:sleep).with(0.05).twice
+      expect(attempts).to eq(1)
+      expect(described_class).not_to have_received(:sleep)
     end
 
     it "re-raises a memory limit error as MemoryLimitError without retrying" do
