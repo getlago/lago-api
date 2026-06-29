@@ -14,7 +14,8 @@ module Api
           skip_psp: create_params[:skip_psp],
           invoice_custom_section: create_params[:invoice_custom_section] || {},
           payment_method_params: create_params[:payment_method],
-          billing_entity_code: create_params[:billing_entity_code]
+          billing_entity_code: create_params[:billing_entity_code],
+          purchase_order_number: create_params[:purchase_order_number]
         )
 
         if result.success?
@@ -277,6 +278,7 @@ module Api
               :currency,
               :skip_psp,
               :billing_entity_code,
+              :purchase_order_number,
               fees: [
                 :add_on_code,
                 :invoice_display_name,

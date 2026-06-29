@@ -58,6 +58,7 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
         tax_identification_number: "123456789"
       },
       number: "INV123",
+      purchase_order_number: "PO-12345",
       invoice_type: "credit",
       payment_status: "pending",
       status: "finalized",
@@ -96,7 +97,7 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
 
     it "generates the correct CSV output" do
       expected_csv = <<~CSV
-        invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,27511,50000,334,999
+        invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,PO-12345,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,27511,50000,334,999
       CSV
 
       expect(result).to be_success
@@ -115,7 +116,7 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
 
       it "adds billing_entity_code to the csv" do
         expected_csv = <<~CSV
-          invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,27511,50000,334,999,the-test-bil-ent
+          invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,PO-12345,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,27511,50000,334,999,the-test-bil-ent
         CSV
 
         expect(result).to be_success
