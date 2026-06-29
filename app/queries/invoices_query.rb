@@ -99,7 +99,7 @@ class InvoicesQuery < BaseQuery
   end
 
   def use_meilisearch?
-    use_meilisearch_flag && MeilisearchClient.enabled? && (search_term.present? || filters_present?)
+    use_meilisearch_flag && MeilisearchClient.search_enabled? && (search_term.present? || filters_present?)
   end
 
   def filters_present?
