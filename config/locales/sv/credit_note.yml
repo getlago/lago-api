@@ -17,6 +17,7 @@ sv:
     offset_invoice_notice: Faktura %{invoice_number} kvittad den %{issuing_date}
     powered_by: Genererad av
     prepaid_credits_for_wallet: Förbetald kontobalans - %{wallet_name}
+    purchase_order_number: Inköpsordernummer
     refunded: Återbetald
     refunded_notice: Återbetald den %{issuing_date}
     self_billed:

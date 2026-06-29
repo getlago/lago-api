@@ -760,14 +760,14 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
       end
 
       it "renders the purchase order number from the invoice" do
-        expect(rendered_template).to include(I18n.t("invoice.purchase_order_number"))
+        expect(rendered_template).to include(I18n.t("credit_note.purchase_order_number"))
         expect(rendered_template).to include("PO-12345")
       end
     end
 
     context "when the invoice has no purchase order number" do
       it "does not render the purchase order number row" do
-        expect(rendered_template).not_to include(I18n.t("invoice.purchase_order_number"))
+        expect(rendered_template).not_to include(I18n.t("credit_note.purchase_order_number"))
       end
     end
   end
