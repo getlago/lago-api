@@ -36,7 +36,7 @@ RSpec.describe QuoteVersions::ApproveService do
       it "persists the raw computed mention variables snapshot" do
         expect(result).to be_success
         expect(result.quote_version.reload.mention_variables).to include(
-          "customer_name" => quote.customer.name,
+          "customer_name" => quote.customer.display_name,
           "quote_number" => quote.number,
           "commercial_terms_start_date" => "2026-01-01",
           "commercial_terms_term_duration" => {"unit" => "years", "count" => 1}

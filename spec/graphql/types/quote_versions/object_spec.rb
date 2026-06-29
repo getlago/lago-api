@@ -29,7 +29,9 @@ RSpec.describe Types::QuoteVersions::Object do
     let(:required_permission) { "quotes:view" }
     let(:membership) { create(:membership) }
     let(:organization) { membership.organization }
-    let(:customer) { create(:customer, organization:, name: "Mistral AI") }
+    let(:customer) do
+      create(:customer, organization:, name: "Hooli", legal_name: "Hooli Inc", firstname: "Gavin", lastname: "Belson")
+    end
     let(:quote) { create(:quote, organization:, customer:) }
 
     let(:query) do
@@ -56,24 +58,24 @@ RSpec.describe Types::QuoteVersions::Object do
       before { create(:quote_version, quote:, organization:) }
 
       it "computes the variables live" do
-        expect(execute).to include("customer_name" => "Mistral AI")
+        expect(execute).to include("customer_name" => "Hooli Inc - Gavin Belson")
       end
     end
 
     context "when the version is approved" do
       before do
-        create(:quote_version, :approved, quote:, organization:, mention_variables: {"customer_name" => "Snapshot AI"})
+        create(:quote_version, :approved, quote:, organization:, mention_variables: {"customer_name" => "Pied Piper"})
       end
 
       it "returns the persisted snapshot, ignoring later changes" do
-        customer.update!(name: "Renamed AI")
+        customer.update!(name: "Aviato")
 
-        expect(execute).to eq("customer_name" => "Snapshot AI")
+        expect(execute).to eq("customer_name" => "Pied Piper")
       end
     end
 
     context "when the approved snapshot holds locale-sensitive variables" do
-      let(:customer) { create(:customer, organization:, name: "Mistral AI", document_locale: "en") }
+      let(:customer) { create(:customer, organization:, name: "Hooli", document_locale: "en") }
 
       before do
         create(
