@@ -35,10 +35,15 @@ RSpec.describe PaymentProviders::DestroyService do
           .to change { payment_provider_customer.reload.discarded? }.from(false).to(true)
       end
 
-      it "detaches the payment provider customers from the payment provider" do
+      it "keeps the payment provider association on the customers" do
         destroy_service.call
 
-        expect(payment_provider_customer.reload.payment_provider_id).to be_nil
+        expect(payment_provider_customer.reload.payment_provider_id).to eq(payment_provider.id)
+      end
+
+      it "bumps updated_at on the payment provider customers" do
+        expect { destroy_service.call }
+          .to change { payment_provider_customer.reload.updated_at }
       end
     end
 
