@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 module DatabaseMigrations
+  # Post-release backfill: reads still fall back to the wallet/customer billing entity
+  # (Wallet#billing_entity), so this is safe to run whenever and is not an upgrade blocker today.
+  # When that fallback is removed, running this becomes mandatory and must be documented as a
+  # pre-upgrade step in the bridge-version migration guide.
   class BackfillWalletTransactionsBillingEntityJob < ApplicationJob
     queue_as :low_priority
     unique :until_executed
