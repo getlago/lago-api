@@ -44,6 +44,7 @@ RSpec.describe Mutations::Invoices::Create do
           taxesRate,
           invoiceType,
           issuingDate,
+          purchaseOrderNumber,
           appliedTaxes { id taxCode taxRate },
           fees {
             units
@@ -112,6 +113,25 @@ RSpec.describe Mutations::Invoices::Create do
       }
     )
     expect(Invoice.one_off.order(created_at: :desc).first.applied_invoice_custom_sections.pluck(:code)).to eq([section_1.code])
+  end
+
+  it "creates a one-off invoice with a purchase order number" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: mutation,
+      variables: {
+        input: {
+          customerId: customer.id,
+          currency:,
+          fees:,
+          purchaseOrderNumber: "PO-123"
+        }
+      }
+    )
+
+    expect(result["data"]["createInvoice"]["purchaseOrderNumber"]).to eq("PO-123")
   end
 
   context "when multi_entity_billing feature flag is enabled" do

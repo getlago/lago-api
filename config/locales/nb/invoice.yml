@@ -80,6 +80,7 @@ nb:
     prepaid_credits: Forskuddsbetalte kreditter
     prepaid_credits_with_value: Forhåndsbetalte kreditter - %{wallet_name}
     progressive_billing_credit: Bruk allerede fakturert
+    purchase_order_number: Bestillingsnummer
     quarter: kvartal
     quarterly: Kvartalsvis
     reached_usage_threshold: Denne progressive faktureringen er generert fordi din akkumulerte bruk har nådd %{usage_amount}, og overskredet terskelen på %{threshold_amount}.

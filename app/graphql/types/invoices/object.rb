@@ -20,6 +20,7 @@ module Types
       field :payment_dispute_losable, Boolean, null: false, method: :payment_dispute_losable?
       field :payment_dispute_lost_at, GraphQL::Types::ISO8601DateTime
       field :payment_status, Types::Invoices::PaymentStatusTypeEnum, null: false
+      field :purchase_order_number, String, null: true
       field :status, Types::Invoices::StatusTypeEnum, null: false
       field :tax_status, Types::Invoices::TaxStatusTypeEnum, null: true
       field :voidable, Boolean, null: false, method: :voidable?
