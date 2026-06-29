@@ -13,7 +13,7 @@ gem "active_storage_validations"
 gem "bootsnap", require: false
 gem "clockwork", require: false
 gem "parallel"
-gem "puma", "~> 6.5"
+gem "puma", "~> 7.2"
 gem "rails", "~> 8.0"
 gem "redis"
 gem "sidekiq"
