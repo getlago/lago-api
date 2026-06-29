@@ -149,6 +149,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
         expect(result).to be_success
         expect(customer.stripe_customer.reload).to be_present
         expect(customer.stripe_customer.provider_customer_id).to eq(stripe_customer.provider_customer_id)
+        expect(customer.stripe_customer.payment_method_id).to eq("pm_123456")
 
         expect(Stripe::Customer).to have_received(:list_payment_methods).with(stripe_customer.provider_customer_id, {}, anything)
         expect(Stripe::PaymentIntent).to have_received(:create)

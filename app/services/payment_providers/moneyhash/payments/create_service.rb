@@ -87,7 +87,7 @@ module PaymentProviders
         end
 
         def moneyhash_payment_method_id
-          payment.payment_method&.provider_method_id
+          payment.payment_method&.provider_method_id || provider_customer.payment_method_id
         end
 
         def prepare_failed_result(error, reraise: false)
