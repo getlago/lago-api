@@ -84,9 +84,6 @@ module PaymentProviders
           # NOTE: Retrieve list of existing payment_methods
           payment_method = customer_payment_methods.first
 
-          # TODO: Double check
-          # payment.payment_method.update!(provider_method_id: payment_method&.id) if payment.payment_method
-
           payment_method&.id
         end
 
