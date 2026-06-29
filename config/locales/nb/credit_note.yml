@@ -17,6 +17,7 @@ nb:
     offset_invoice_notice: Faktura %{invoice_number} utlignet den %{issuing_date}
     powered_by: Fakturering drevet av
     prepaid_credits_for_wallet: Forhåndsbetalte kreditter - %{wallet_name}
+    purchase_order_number: Bestillingsnummer
     refunded: Refundert
     refunded_notice: Refundert %{issuing_date}
     self_billed:
