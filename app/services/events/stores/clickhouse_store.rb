@@ -253,9 +253,11 @@ module Events
       end
 
       def count
-        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+        value = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           connection.select_value(count_query).to_i
         end
+
+        build_aggregation_result_from_value(value)
       end
 
       # Counting deduplicated events only needs the number of distinct dedup keys,
@@ -308,7 +310,7 @@ module Events
             GROUP BY #{column_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows, columns: columns)
+          grouped_results_with_value_as_count(prepare_grouped_result(connection.select_all(sql).rows, columns: columns))
         end
       end
 
@@ -952,9 +954,9 @@ module Events
       def formatted_weighted_sum_initial_values(initial_values)
         formatted_initial_values = grouped_count.map do |group|
           value = 0
-          previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
+          previous_group = initial_values.find { |g| g[:groups] == group.groups }
           value = previous_group[:value] if previous_group
-          {groups: group[:groups], value:}
+          {groups: group.groups, value:}
         end
 
         initial_values.each do |initial_value|

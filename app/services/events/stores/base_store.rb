@@ -95,7 +95,9 @@ module Events
         raise NotImplementedError
       end
 
-      delegate :count, to: :events
+      def count
+        raise NotImplementedError
+      end
 
       def grouped_count
         raise NotImplementedError

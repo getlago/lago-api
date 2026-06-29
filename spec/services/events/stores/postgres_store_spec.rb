@@ -93,13 +93,13 @@ RSpec.describe Events::Stores::PostgresStore do
       it "assigns a distinct position to each event sharing the boundary timestamp" do
         tied_events = (1..3).map { |i| create_event(timestamp:, created_at: timestamp + i.seconds) }
 
-        expect(tied_events.map { |event| store_for(event).count }).to eq([2, 3, 4])
+        expect(tied_events.map { |event| store_for(event).count.value }).to eq([2, 3, 4])
       end
 
       it "assigns distinct positions when created_at is also tied" do
         tied_events = (1..3).map { create_event(timestamp:, created_at: timestamp) }
 
-        expect(tied_events.map { |event| store_for(event).count }).to match_array([2, 3, 4])
+        expect(tied_events.map { |event| store_for(event).count.value }).to match_array([2, 3, 4])
       end
 
       it "counts all events sharing the timestamp when no event filter is given" do
@@ -117,7 +117,7 @@ RSpec.describe Events::Stores::PostgresStore do
           filters: {}
         )
 
-        expect(event_store.count).to eq(3)
+        expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 3, events_count: 3))
       end
     end
   end
