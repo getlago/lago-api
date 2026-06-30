@@ -40,6 +40,14 @@ RSpec.describe Utils::Datetime do
       end
     end
 
+    context "when the value is a malformed string" do
+      let(:value) { "not-a-date" }
+
+      it "returns nil" do
+        expect(datetime.parse_iso8601(value)).to be_nil
+      end
+    end
+
     context "when the value raises a bare ArgumentError" do
       let(:value) { "1" * 129 }
 
@@ -69,6 +77,14 @@ RSpec.describe Utils::Datetime do
         [Time.current.to_time, Time.current, Date.current, DateTime.now].each do |value|
           expect(datetime.parse_iso8601_date(value)).to eq(value.to_date)
         end
+      end
+    end
+
+    context "when the value is a malformed string" do
+      let(:value) { "not-a-date" }
+
+      it "returns nil" do
+        expect(datetime.parse_iso8601_date(value)).to be_nil
       end
     end
 
