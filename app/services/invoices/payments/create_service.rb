@@ -123,7 +123,7 @@ module Invoices
       def provider_payment_method_pending_backfill?
         legacy_id = current_payment_provider_customer&.legacy_provider_method_id
         legacy_id.present? &&
-          current_payment_provider_customer.payment_methods.where(provider_method_id: legacy_id).none?
+          current_payment_provider_customer.payment_methods.with_discarded.where(provider_method_id: legacy_id).none?
       end
 
       def current_payment_provider
