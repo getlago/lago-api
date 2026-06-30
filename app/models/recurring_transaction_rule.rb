@@ -17,7 +17,8 @@ class RecurringTransactionRule < ApplicationRecord
   validates :transaction_name, length: {minimum: 1, maximum: 255}, allow_nil: true
   validates :grants_target_top_up, inclusion: {in: [true, false]}, allow_nil: true, if: :target?
   validates :grants_target_top_up, exclusion: {in: [true, false]}, unless: :target?
-  validate :target_ongoing_balance_not_below_threshold
+  validate :target_ongoing_balance_not_below_threshold,
+    if: -> { target_ongoing_balance_changed? || threshold_credits_changed? || method_changed? || trigger_changed? }
 
   STATUSES = [
     :active,
