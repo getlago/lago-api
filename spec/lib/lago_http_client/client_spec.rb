@@ -644,7 +644,7 @@ RSpec.describe LagoHttpClient::Client do
         end
 
         # Exception-path exhaustion goes through the `is_a?` branch of
-        # `retry_on_error?`, distinct from the `retries_on.include?` branch.
+        # `transient_exception?`, distinct from the `retries_on.include?` branch.
         it "re-raises the original error after exhausting retries" do
           expect { client.post({}, []) }.to raise_error(Errno::ECONNRESET)
         end
