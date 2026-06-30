@@ -1,0 +1,29 @@
+# frozen_string_literal: true
+
+module V1
+  class ProductItemFilterSerializer < ModelSerializer
+    def serialize
+      {
+        lago_id: model.id,
+        name: model.name,
+        code: model.code,
+        description: model.description,
+        invoice_display_name: model.invoice_display_name,
+        values: values,
+        created_at: model.created_at.iso8601
+      }
+    end
+
+    private
+
+    def values
+      model.values.map do |value|
+        {
+          billable_metric_filter_id: value.billable_metric_filter_id,
+          key: value.key,
+          value: value.value
+        }
+      end
+    end
+  end
+end

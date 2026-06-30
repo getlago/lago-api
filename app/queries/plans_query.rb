@@ -2,7 +2,7 @@
 
 class PlansQuery < BaseQuery
   Result = BaseResult[:plans]
-  Filters = BaseFilters[:with_deleted, :include_pending_deletion]
+  Filters = BaseFilters[:with_deleted, :include_pending_deletion, :product_id]
 
   def call
     plans = base_scope.result
@@ -19,7 +19,15 @@ class PlansQuery < BaseQuery
   private
 
   def base_scope
-    Plan.parents.where(organization:).ransack(search_params)
+    scope = Plan.parents.where(organization:)
+    scope = with_product(scope)
+    scope.ransack(search_params)
+  end
+
+  def with_product(scope)
+    return scope if filters.product_id.blank?
+
+    scope.where(id: PlanProduct.where(product_id: filters.product_id).select(:plan_id))
   end
 
   def search_params

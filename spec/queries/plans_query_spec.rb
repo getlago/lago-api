@@ -89,4 +89,16 @@ RSpec.describe PlansQuery do
       expect(returned_ids).not_to include(plan_third.id)
     end
   end
+
+  context "when filtering by product_id" do
+    let(:product) { create(:product, organization:) }
+    let(:filters) { {product_id: product.id} }
+
+    before { create(:plan_product, organization:, plan: plan_first, product:) }
+
+    it "returns only the plans linked to the product" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([plan_first.id])
+    end
+  end
 end
