@@ -1821,4 +1821,32 @@ RSpec.describe Plans::UpdateService do
       end
     end
   end
+
+  context "when the plan has applied rate cards" do
+    let(:plan) { create(:plan, organization:, amount_currency: "EUR") }
+
+    before { create(:plan_rate_card, organization:, plan:) }
+
+    context "when changing the amount_currency" do
+      let(:update_args) { {amount_currency: "USD"} }
+
+      it "returns a validation failure" do
+        result = plans_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:amount_currency]).to eq(["not_editable_with_applied_rate_cards"])
+      end
+    end
+
+    context "when resending the unchanged amount_currency" do
+      let(:update_args) { {amount_currency: "EUR", name: "After"} }
+
+      it "is allowed" do
+        result = plans_service.call
+
+        expect(result).to be_success
+        expect(result.plan.name).to eq("After")
+      end
+    end
+  end
 end
