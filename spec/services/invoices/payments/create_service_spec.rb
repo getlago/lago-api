@@ -196,6 +196,26 @@ RSpec.describe Invoices::Payments::CreateService do
           expect(result.payment).to be_nil
         end
       end
+
+      context "when no payment method is determined but the provider customer is pending backfill" do
+        let(:subscription) do
+          create(:subscription, customer:, plan:, organization:, payment_method: nil)
+        end
+        let(:default_payment_method) { nil }
+        let(:provider_customer) do
+          create(:stripe_customer, payment_provider:, customer:).tap do |pc|
+            pc.update!(settings: pc.settings.merge("payment_method_id" => "pm_legacy"))
+          end
+        end
+
+        it "creates a payment relying on the provider fallback method" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_present
+          expect(result.payment.payment_method_id).to be_nil
+        end
+      end
     end
 
     context "with credit invoice" do
