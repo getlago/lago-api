@@ -10,6 +10,15 @@ class WalletCredit
     new(wallet:, credit_amount: amount.fdiv(wallet.rate_amount), amount_cents:)
   end
 
+  def self.rounds_to_zero?(wallet:, credit_amount:)
+    return false if credit_amount.blank?
+
+    credit_amount = BigDecimal(credit_amount.to_s).floor(5)
+    return false unless credit_amount.positive?
+
+    new(wallet:, credit_amount:).amount_cents.zero?
+  end
+
   # we'll assume you construct this normally for a wallet and a credit amount
   def initialize(wallet:, credit_amount:, invoiceable: true, amount_cents: nil)
     @wallet = wallet
