@@ -26,6 +26,25 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
       end
+
+      context "when the payload is a units-only override" do
+        let(:params) { {units: 10} }
+
+        before do
+          fixed_charge
+          subscription
+        end
+
+        it "writes the units override without requiring premium" do
+          expect { service.call }
+            .to change { Subscription::FixedChargeUnitsOverride.where(subscription:, fixed_charge:).count }.by(1)
+            .and change(Plan, :count).by(0)
+
+          expect(service.call).to be_success
+          override = Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)
+          expect(override.units).to eq(10)
+        end
+      end
     end
 
     context "with premium license", :premium do
