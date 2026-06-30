@@ -40,6 +40,26 @@ module Events
         end
       end
 
+      # NOTE: result of a prorated_sum aggregation. Unlike AggregationResult it also
+      #       carries the raw, non-prorated value alongside the events count
+      ProratedAggregationResult = Data.define(
+        :value,           # non-prorated sum
+        :prorated_value,  # prorated sum (value * ratio)
+        :events_count
+      )
+
+      # NOTE: grouped variant of ProratedAggregationResult.
+      GroupedProratedAggregationResult = Data.define(
+        :groups,
+        :value,
+        :prorated_value,
+        :events_count
+      ) do
+        def to_grouped_hash
+          {groups:, value:}
+        end
+      end
+
       def initialize(subscription:, boundaries:, code: nil, filters: {}, deduplicate: false)
         @code = code
         @subscription = subscription
@@ -226,6 +246,26 @@ module Events
         AggregationResult.new(
           value: row && row["value"],
           events_count: with_count ? (row && row["events_count"]).to_i : nil
+        )
+      end
+
+      # NOTE: Build a ProratedAggregationResult from the raw query columns. Mirrors
+      #       build_aggregation_result but also carries the prorated value.
+      def build_prorated_aggregation_result(row)
+        ProratedAggregationResult.new(
+          value: row["value"] || 0,
+          prorated_value: row["prorated_value"] || 0,
+          events_count: row["events_count"].presence&.to_i
+        )
+      end
+
+      # NOTE: grouped variant of build_prorated_aggregation_result.
+      def build_grouped_prorated_aggregation_result(groups:, value:, prorated_value:, events_count:)
+        GroupedProratedAggregationResult.new(
+          groups:,
+          value: value || 0,
+          prorated_value: prorated_value || 0,
+          events_count: events_count.presence&.to_i
         )
       end
 

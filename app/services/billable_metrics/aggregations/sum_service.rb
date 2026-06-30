@@ -3,6 +3,11 @@
 module BillableMetrics
   module Aggregations
     class SumService < BillableMetrics::Aggregations::BaseService
+      # NOTE: when set, the aggregation reuses these precomputed results instead of
+      #       querying the event store. Used by the prorated aggregation service which
+      #       already sums the (non-prorated) value and count while computing proration.
+      attr_accessor :injected_sum_result, :injected_grouped_sum_result
+
       def initialize(...)
         super
 
@@ -14,7 +19,7 @@ module BillableMetrics
       def compute_aggregation(options: {})
         return empty_result if should_bypass_aggregation?
 
-        sum_result = event_store.sum
+        sum_result = injected_sum_result || event_store.sum
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
           handle_in_advance_current_usage(sum_result.value)
@@ -47,7 +52,7 @@ module BillableMetrics
       def compute_grouped_by_aggregation(options: {})
         return empty_results if should_bypass_aggregation?
 
-        aggregations = event_store.grouped_sum
+        aggregations = injected_grouped_sum_result || event_store.grouped_sum
         return empty_results if aggregations.blank?
 
         if presentation_by.present?

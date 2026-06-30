@@ -13,6 +13,8 @@ module BillableMetrics
       end
 
       def compute_aggregation(options: {})
+        # NOTE: Inject the result in the non-prorated aggregator to avoid duplicated queries
+        base_aggregator.injected_sum_result = non_prorated_sum_result
         aggregation_without_proration = base_aggregator.aggregate(options:)
 
         # For charges that are pay in advance on billing date we always bill full amount
@@ -55,6 +57,8 @@ module BillableMetrics
       #       as pay in advance aggregation will be computed on a single group
       #       with the grouped_by_values filter
       def compute_grouped_by_aggregation(options: {})
+        # NOTE: Inject the result in the non-prorated aggregator to avoid duplicated queries
+        base_aggregator.injected_grouped_sum_result = non_prorated_grouped_sum_result
         aggregation_without_proration = base_aggregator.aggregate(options:)
 
         # For charges that are pay in advance on billing date we always bill full amount
@@ -128,33 +132,54 @@ module BillableMetrics
       protected
 
       def persisted_event_store_instance
-        event_store = event_store_class.new(
-          code: billable_metric.code,
-          subscription:,
-          boundaries: {to_datetime: from_datetime},
-          filters:
-        )
+        @persisted_event_store_instance ||= begin
+          event_store = event_store_class.new(
+            code: billable_metric.code,
+            subscription:,
+            boundaries: {to_datetime: from_datetime - 0.001.seconds}, # Note: Avoid counting events exactly on `from_datetime` twice
+            filters:
+          )
 
-        event_store.use_from_boundary = false
-        event_store.aggregation_property = billable_metric.field_name
-        event_store.numeric_property = true
-        event_store
+          event_store.use_from_boundary = false
+          event_store.aggregation_property = billable_metric.field_name
+          event_store.numeric_property = true
+          event_store
+        end
       end
 
       def compute_event_aggregation
-        result = 0.0
-
-        # NOTE: Billed on the full period
-        result += persisted_sum || 0
-
-        # NOTE: Added during the period
-        result + (event_store.prorated_sum(period_duration:) || 0)
+        # NOTE: persisted value is billed on the full period, current value is added during the period
+        (persisted_prorated_result.prorated_value || 0) + (current_prorated_result.prorated_value || 0)
       end
 
-      def persisted_sum
-        persisted_event_store_instance.prorated_sum(
+      # NOTE: prorated sum of the events added during the current period.
+      def current_prorated_result
+        @current_prorated_result ||= event_store.prorated_sum(period_duration:)
+      end
+
+      # NOTE: prorated sum of the events persisted before the current period.
+      def persisted_prorated_result
+        @persisted_prorated_result ||= persisted_event_store_instance.prorated_sum(
           period_duration:,
           persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime)
+        )
+      end
+
+      # NOTE: rebuilds the non-prorated AggregationResult for the base aggregator
+      def non_prorated_sum_result
+        current = current_prorated_result
+
+        unless billable_metric.recurring
+          return Events::Stores::BaseStore::AggregationResult.new(
+            value: current.value || 0,
+            events_count: current.events_count
+          )
+        end
+
+        persisted = persisted_prorated_result
+        Events::Stores::BaseStore::AggregationResult.new(
+          value: (persisted.value || 0) + (current.value || 0), # TODO: Refactor to inject persisted value
+          events_count: (persisted.events_count || 0) + (current.events_count || 0)
         )
       end
 
@@ -168,28 +193,34 @@ module BillableMetrics
       end
 
       def compute_grouped_event_aggregation
-        result = grouped_persisted_sums
-        current_results = event_store.grouped_prorated_sum(period_duration:)
+        # NOTE: persisted values are billed on the full period, current values are added during the period
+        results = persisted_grouped_prorated_results + current_grouped_prorated_results
 
-        current_results.each do |group_result|
-          group = group_result[:groups]
-
-          if (persisted_group = result.find { |r| r[:groups] == group })
-            # NOTE: A persisted value already exists for this group
-            #       We just append the value to the persisted one
-            persisted_group[:value] += group_result[:value]
-            next
-          end
-
-          # NOTE: Add the new group to the result
-          result << group_result
+        results.group_by(&:groups).map do |groups, group_results|
+          {groups:, value: group_results.sum { |r| r.prorated_value || 0 }}
         end
-
-        result
       end
 
-      def grouped_persisted_sums
-        persisted_event_store_instance.grouped_prorated_sum(
+      # NOTE: rebuilds the per-group non-prorated AggregationResult for the base aggregator
+      def non_prorated_grouped_sum_result
+        results = current_grouped_prorated_results
+        results += persisted_grouped_prorated_results if billable_metric.recurring
+
+        results.group_by(&:groups).map do |groups, group_results|
+          Events::Stores::BaseStore::GroupedAggregationResult.new(
+            groups:,
+            value: group_results.sum { |r| r.value || 0 },
+            events_count: group_results.sum { |r| r.events_count || 0 }
+          )
+        end
+      end
+
+      def current_grouped_prorated_results
+        @current_grouped_prorated_results ||= event_store.grouped_prorated_sum(period_duration:)
+      end
+
+      def persisted_grouped_prorated_results
+        @persisted_grouped_prorated_results ||= persisted_event_store_instance.grouped_prorated_sum(
           period_duration:,
           persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime)
         )

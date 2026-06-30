@@ -92,6 +92,30 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
     expect(result.count).to eq(4)
   end
 
+  context "with an event exactly on the period boundary" do
+    let(:boundary_event) do
+      create(
+        :event,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        customer:,
+        subscription:,
+        timestamp: from_datetime,
+        properties: {total_count: 10}
+      )
+    end
+
+    before { boundary_event }
+
+    it "counts the boundary event once, not in both the persisted and current windows" do
+      result = sum_service.aggregate(options:)
+
+      # The event sits on `from_datetime`: it belongs to the current period only.
+      # 4 base events + 1 boundary event, counted once (a double-count would report 6).
+      expect(result.count).to eq(5)
+    end
+  end
+
   context "with presentation group keys" do
     let(:presentation_by) { ["cloud"] }
 
