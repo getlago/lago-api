@@ -89,6 +89,7 @@ module Types
     field :payment_requests, resolver: Resolvers::PaymentRequestsResolver
     field :payments, resolver: Resolvers::PaymentsResolver
     field :plan, resolver: Resolvers::PlanResolver
+    field :plan_product_items, resolver: Resolvers::PlanProductItemsResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :pricing_unit, resolver: Resolvers::PricingUnitResolver
     field :pricing_units, resolver: Resolvers::PricingUnitsResolver
