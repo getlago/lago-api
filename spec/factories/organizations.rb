@@ -14,13 +14,14 @@ FactoryBot.define do
     email { Faker::Internet.email }
     email_settings { ["invoice.finalized", "credit_note.created"] }
 
-    api_keys { [association(:api_key, organization: instance)] }
+    api_keys { [association(:api_key, organization: instance, strategy: :build)] }
     billing_entities do
       [
         association(
           :billing_entity,
           *(with_static_values ? [:with_static_values] : []),
-          organization: instance
+          organization: instance,
+          strategy: :build
         )
       ]
     end
