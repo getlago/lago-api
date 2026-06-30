@@ -6816,6 +6816,7 @@ enum IntegrationTypeEnum {
   okta
   order_forms
   preview
+  product_catalog
   progressive_billing
   projected_usage
   remove_branding_watermark
@@ -10317,6 +10318,7 @@ enum PremiumIntegrationTypeEnum {
   okta
   order_forms
   preview
+  product_catalog
   progressive_billing
   projected_usage
   remove_branding_watermark
