@@ -26,6 +26,8 @@ module Types
     field :destroy_plan, mutation: Mutations::Plans::Destroy
     field :update_plan, mutation: Mutations::Plans::Update
 
+    field :create_plan_product_item, mutation: Mutations::PlanProductItems::Create
+
     field :create_charge, mutation: Mutations::Charges::Create
     field :destroy_charge, mutation: Mutations::Charges::Destroy
     field :update_charge, mutation: Mutations::Charges::Update
