@@ -15,6 +15,9 @@ module WalletTransactions
 
       return result.not_allowed_failure!(code: "wallet_not_active") unless wallet.active?
 
+      # Only relevant for historical data: zero-rounding amounts are now blocked at creation,
+      # so this guards transactions created before that change. We return a success result so
+      # that voiding an invoice never fails because of such old transactions.
       return result if WalletCredit.rounds_to_zero?(wallet:, credit_amount: wallet_transaction.credit_amount)
 
       transaction_result = WalletTransactions::CreateFromParamsService.call(
