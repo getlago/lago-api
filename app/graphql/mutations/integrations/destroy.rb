@@ -28,6 +28,8 @@ module Mutations
         case integration
         when ::Integrations::OktaIntegration
           ::Integrations::Okta::DestroyService
+        when ::Integrations::EntraIdIntegration
+          ::Integrations::EntraId::DestroyService
         else
           ::Integrations::DestroyService
         end
