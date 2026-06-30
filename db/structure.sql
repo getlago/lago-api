@@ -5369,6 +5369,7 @@ CREATE TABLE public.rate_phases (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    name character varying,
     CONSTRAINT rate_phases_exactly_one_parent CHECK (((plan_product_item_id IS NULL) <> (subscription_product_item_id IS NULL)))
 );
 
@@ -13837,6 +13838,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260630122927'),
 ('20260625095837'),
 ('20260622113747'),
 ('20260619065327'),
