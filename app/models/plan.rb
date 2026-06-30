@@ -51,13 +51,22 @@ class Plan < ApplicationRecord
     semiannual
   ].freeze
 
-  enum :interval, INTERVALS, validate: true
+  PRICING_TYPES = {legacy: "legacy", product_catalog: "product_catalog"}.freeze
 
-  monetize :amount_cents
+  enum :pricing_type, PRICING_TYPES, validate: true
+  enum :interval, INTERVALS, validate: {allow_nil: true}
+
+  monetize :amount_cents, allow_nil: true
 
   validates :name, :code, presence: true
   validates :amount_currency, inclusion: {in: currency_list}
-  validates :pay_in_advance, inclusion: {in: [true, false]}
+  # Legacy plans price at the plan level; product-catalog plans price through
+  # their product items, so the plan-level billing fields are optional for them.
+  # A blank interval keeps the historical "value_is_invalid" error (the enum used
+  # to reject nil as an out-of-range value) rather than a "value_is_mandatory" one.
+  validates :interval, presence: {message: "value_is_invalid"}, unless: :product_catalog?
+  validates :amount_cents, presence: true, unless: :product_catalog?
+  validates :pay_in_advance, inclusion: {in: [true, false]}, unless: :product_catalog?
   validate :validate_code_unique
 
   default_scope -> { kept }
@@ -157,18 +166,19 @@ end
 # Database name: primary
 #
 #  id                         :uuid             not null, primary key
-#  amount_cents               :bigint           not null
+#  amount_cents               :bigint
 #  amount_currency            :string           not null
 #  bill_charges_monthly       :boolean
 #  bill_fixed_charges_monthly :boolean          default(FALSE)
 #  code                       :string           not null
 #  deleted_at                 :datetime
 #  description                :string
-#  interval                   :integer          not null
+#  interval                   :integer
 #  invoice_display_name       :string
 #  name                       :string           not null
-#  pay_in_advance             :boolean          default(FALSE), not null
+#  pay_in_advance             :boolean          default(FALSE)
 #  pending_deletion           :boolean          default(FALSE), not null
+#  pricing_type               :enum             default("legacy"), not null
 #  trial_period               :float
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
