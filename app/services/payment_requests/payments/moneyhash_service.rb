@@ -122,7 +122,7 @@ module PaymentRequests
       end
 
       def moneyhash_payment_method_id
-        customer.default_payment_method&.provider_method_id
+        customer.default_payment_method&.provider_method_id || customer.moneyhash_customer.payment_method_id
       end
 
       def should_process_payment?

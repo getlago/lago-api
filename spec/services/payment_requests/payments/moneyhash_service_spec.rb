@@ -84,6 +84,24 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       end
     end
 
+    context "when there is no default payment method but the moneyhash customer has a legacy payment method id" do
+      before do
+        default_payment_method.update!(is_default: false)
+        moneyhash_customer.update!(settings: moneyhash_customer.settings.merge("payment_method_id" => "legacy_mh_pm"))
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(payment_response_json.to_json)
+      end
+
+      it "processes the payment using the provider customer payment method id" do
+        result = moneyhash_service.create
+
+        expect(result).to be_success
+        expect(result.payment).to be_present
+        expect(lago_client).to have_received(:post_with_response)
+          .with(hash_including(card_token: "legacy_mh_pm"), anything)
+      end
+    end
+
     context "when payment should not be processed" do
       context "when payment already succeeded" do
         before { payable.update!(payment_status: :succeeded) }
