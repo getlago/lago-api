@@ -215,6 +215,24 @@ RSpec.describe Invoices::Payments::CreateService do
           expect(result.payment).to be_present
           expect(result.payment.payment_method_id).to be_nil
         end
+
+        context "when the backfilled payment method has since been discarded" do
+          before do
+            create(
+              :payment_method,
+              customer:,
+              payment_provider_customer: provider_customer,
+              provider_method_id: "pm_legacy"
+            ).discard!
+          end
+
+          it "does not create a payment" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.payment).to be_nil
+          end
+        end
       end
     end
 
