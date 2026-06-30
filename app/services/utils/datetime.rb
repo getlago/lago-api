@@ -28,7 +28,7 @@ module Utils
       when :any
         Time.zone.parse(datetime).present?
       else
-        parse_iso8601(datetime).present?
+        Time.zone.iso8601(datetime).present?
       end
     rescue ArgumentError
       false

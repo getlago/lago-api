@@ -40,7 +40,7 @@ module Subscriptions
     end
 
     def valid_subscription_at?
-      return true if subscription_at
+      return true if Utils::Datetime.valid_format?(args[:subscription_at])
 
       add_error(field: :subscription_at, error_code: "invalid_date")
 
@@ -50,8 +50,8 @@ module Subscriptions
     def valid_ending_at?
       return true if args[:ending_at].blank?
 
-      if ending_at &&
-          subscription_at &&
+      if Utils::Datetime.valid_format?(args[:ending_at]) &&
+          Utils::Datetime.valid_format?(args[:subscription_at]) &&
           ending_at.to_date > Time.current.to_date &&
           ending_at.to_date > subscription_at.to_date
         return true

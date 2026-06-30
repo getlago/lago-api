@@ -98,11 +98,10 @@ module Fees
       return true if fee[:from_datetime].nil? && fee[:to_datetime].nil?
 
       return false unless fee[:from_datetime] && fee[:to_datetime]
+      return false unless Utils::Datetime.valid_format?(fee[:from_datetime])
+      return false unless Utils::Datetime.valid_format?(fee[:to_datetime])
 
-      from = from_datetime(fee)
-      to = to_datetime(fee)
-
-      from && to && from <= to
+      from_datetime(fee) <= to_datetime(fee)
     end
 
     def from_datetime(fee)

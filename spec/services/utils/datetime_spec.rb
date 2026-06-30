@@ -80,6 +80,18 @@ RSpec.describe Utils::Datetime do
           expect(datetime).not_to be_valid_format("1" * 129)
         end
       end
+
+      context "when the date is in ISO8601 week-date format" do
+        it "returns false" do
+          expect(datetime).not_to be_valid_format("2022-W50-2")
+        end
+      end
+    end
+
+    context "when the parameter is neither a string nor a datetime object" do
+      it "returns false" do
+        expect(datetime).not_to be_valid_format(123)
+      end
     end
 
     context "when the parameter is a datetime object" do
