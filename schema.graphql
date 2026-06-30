@@ -5869,7 +5869,6 @@ enum FeatureFlagEnum {
   multi_entity_billing
   multiple_payment_methods
   order_forms
-  payment_gated_subscriptions
   postgres_enriched_events
   stripe_shared_payment_token
   wallet_traceability
