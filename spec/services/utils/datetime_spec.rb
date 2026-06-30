@@ -15,10 +15,10 @@ RSpec.describe Utils::Datetime do
     end
 
     context "when the value is already date-like" do
-      let(:value) { Time.current }
-
-      it "returns the value" do
-        expect(datetime.parse_iso8601(value)).to eq(value)
+      it "returns the value unchanged for every datetime-like class" do
+        [Time.current.to_time, Time.current, Date.current, DateTime.now].each do |value|
+          expect(datetime.parse_iso8601(value)).to eq(value)
+        end
       end
     end
 
@@ -43,6 +43,14 @@ RSpec.describe Utils::Datetime do
 
       it "returns the parsed date" do
         expect(datetime.parse_iso8601_date(value)).to eq(Date.iso8601(value))
+      end
+    end
+
+    context "when the value is already date-like" do
+      it "returns the value unchanged for every datetime-like class" do
+        [Time.current.to_time, Time.current, Date.current, DateTime.now].each do |value|
+          expect(datetime.parse_iso8601_date(value)).to eq(value)
+        end
       end
     end
 
@@ -95,8 +103,10 @@ RSpec.describe Utils::Datetime do
     end
 
     context "when the parameter is a datetime object" do
-      it "returns true" do
-        expect(datetime).to be_valid_format(Time.current)
+      it "returns true for every datetime-like class" do
+        [Time.current.to_time, Time.current, Date.current, DateTime.now].each do |value|
+          expect(datetime).to be_valid_format(value)
+        end
       end
     end
 
