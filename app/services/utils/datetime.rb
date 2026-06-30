@@ -12,7 +12,7 @@ module Utils
     end
 
     def self.parse_iso8601_date(date)
-      return date if date.respond_to?(:strftime)
+      return date.to_date if date.respond_to?(:strftime)
       return unless date.is_a?(String)
 
       Date.iso8601(date)

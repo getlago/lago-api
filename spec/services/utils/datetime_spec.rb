@@ -47,9 +47,9 @@ RSpec.describe Utils::Datetime do
     end
 
     context "when the value is already date-like" do
-      it "returns the value unchanged for every datetime-like class" do
+      it "returns it as a date for every datetime-like class" do
         [Time.current.to_time, Time.current, Date.current, DateTime.now].each do |value|
-          expect(datetime.parse_iso8601_date(value)).to eq(value)
+          expect(datetime.parse_iso8601_date(value)).to eq(value.to_date)
         end
       end
     end
