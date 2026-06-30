@@ -24,8 +24,8 @@ module V1
         previous_plan_code: model.previous_subscription&.plan&.code,
         next_plan_code: model.next_subscription&.plan&.code,
         downgrade_plan_date: model.downgrade_plan_date&.iso8601,
-        current_billing_period_started_at: dates_service.charges_from_datetime&.iso8601,
-        current_billing_period_ending_at: dates_service.charges_to_datetime&.iso8601,
+        current_billing_period_started_at: dates_service&.charges_from_datetime&.iso8601,
+        current_billing_period_ending_at: dates_service&.charges_to_datetime&.iso8601,
         on_termination_credit_note: model.on_termination_credit_note,
         on_termination_invoice: model.on_termination_invoice,
         progressive_billing_disabled: model.progressive_billing_disabled,
@@ -86,7 +86,11 @@ module V1
       ::V1::UsageThresholdSerializer.new(options[:usage_threshold]).serialize
     end
 
+    # Billing periods derive from the plan interval, which product-catalog
+    # plans don't have: their rate cards each carry their own billing cycle.
     def dates_service
+      return if model.plan.product_catalog?
+
       @dates_service ||= ::Subscriptions::DatesService.new_instance(model, model.billing_reference_time, current_usage: true)
     end
 

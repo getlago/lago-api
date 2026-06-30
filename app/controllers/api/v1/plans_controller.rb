@@ -108,6 +108,7 @@ module Api
           :amount_currency,
           :trial_period,
           :pay_in_advance,
+          :pricing_type,
           :bill_charges_monthly,
           :bill_fixed_charges_monthly,
           :cascade_updates,

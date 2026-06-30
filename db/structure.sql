@@ -1323,6 +1323,7 @@ DROP TYPE IF EXISTS public.quote_void_reason;
 DROP TYPE IF EXISTS public.quote_status;
 DROP TYPE IF EXISTS public.quote_order_type;
 DROP TYPE IF EXISTS public.product_item_type;
+DROP TYPE IF EXISTS public.plan_pricing_type;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
@@ -1612,6 +1613,16 @@ CREATE TYPE public.payment_payable_payment_status AS ENUM (
 CREATE TYPE public.payment_type AS ENUM (
     'provider',
     'manual'
+);
+
+
+--
+-- Name: plan_pricing_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.plan_pricing_type AS ENUM (
+    'legacy',
+    'product_catalog'
 );
 
 
@@ -3595,18 +3606,19 @@ CREATE TABLE public.plans (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     code character varying NOT NULL,
-    "interval" integer NOT NULL,
+    "interval" integer,
     description character varying,
-    amount_cents bigint NOT NULL,
+    amount_cents bigint,
     amount_currency character varying NOT NULL,
     trial_period double precision,
-    pay_in_advance boolean DEFAULT false NOT NULL,
+    pay_in_advance boolean DEFAULT false,
     bill_charges_monthly boolean,
     parent_id uuid,
     deleted_at timestamp(6) without time zone,
     pending_deletion boolean DEFAULT false NOT NULL,
     invoice_display_name character varying,
-    bill_fixed_charges_monthly boolean DEFAULT false
+    bill_fixed_charges_monthly boolean DEFAULT false,
+    pricing_type public.plan_pricing_type DEFAULT 'legacy'::public.plan_pricing_type NOT NULL
 );
 
 
@@ -14109,6 +14121,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260701083109'),
 ('20260701083108'),
 ('20260701083107'),
+('20260630161816'),
 ('20260630122927'),
 ('20260625095837'),
 ('20260622113747'),
