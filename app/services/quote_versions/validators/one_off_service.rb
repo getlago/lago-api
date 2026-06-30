@@ -2,56 +2,18 @@
 
 module QuoteVersions
   module Validators
-    class OneOffService < BaseValidator
+    class OneOffService < OrderTypeService
       ADD_ONS_KEY = "add_ons"
-
-      def initialize(result, quote_version:, scope: :approve)
-        @quote_version = quote_version
-        @scope = scope.to_sym
-        super(result)
-      end
-
-      def valid?
-        validate_currency_format
-        validate_billing_items_shape
-        validate_add_ons
-        validate_completeness if scope == :approve
-
-        return true unless errors?
-
-        result.validation_failure!(errors:)
-        false
-      end
 
       private
 
-      attr_reader :quote_version, :scope
-
-      def validate_currency_format
-        currency = quote_version.currency
-        return if currency.blank?
-        return if Currencies::ACCEPTED_CURRENCIES.key?(currency.to_sym)
-
-        add_error(field: :currency, error_code: "value_is_invalid")
+      def allowed_billing_item_keys
+        [ADD_ONS_KEY]
       end
 
-      def validate_billing_items_shape
-        raw = quote_version.billing_items
-        return if raw.nil?
-
-        unless raw.is_a?(Hash)
-          add_error(field: :billing_items, error_code: "value_is_invalid")
-          return
-        end
-
-        add_error(field: :billing_items, error_code: "value_is_invalid") unless valid_billing_items_hash?(raw)
-      end
-
-      def valid_billing_items_hash?(raw)
-        return false if (raw.keys.map(&:to_s) - [ADD_ONS_KEY]).any?
-
-        items = raw.with_indifferent_access[ADD_ONS_KEY]
-        items.nil? || (items.is_a?(Array) && items.all? { |item| item.is_a?(Hash) })
+      def validate_billing_items
+        validate_collection_shape(ADD_ONS_KEY)
+        validate_add_ons
       end
 
       def validate_add_ons
@@ -80,13 +42,8 @@ module QuoteVersions
       end
 
       def validate_nested_objects(item, index)
-        if item.key?(:payload) && !item[:payload].nil? && !item[:payload].is_a?(Hash)
-          add_error(field: add_on_field(item, index, :payload), error_code: "value_is_invalid")
-        end
-
-        if item.key?(:overrides) && !item[:overrides].nil? && !item[:overrides].is_a?(Hash)
-          add_error(field: add_on_field(item, index, :overrides), error_code: "value_is_invalid")
-        end
+        validate_nested_hash(item, index, collection_key: ADD_ONS_KEY, nested_key: :payload)
+        validate_nested_hash(item, index, collection_key: ADD_ONS_KEY, nested_key: :overrides)
       end
 
       def validate_units(item, index)
@@ -154,18 +111,8 @@ module QuoteVersions
         add_error(field: ADD_ONS_KEY.to_sym, error_code: "add_ons_required") if add_on_items.empty?
       end
 
-      def billing_items
-        @billing_items ||= begin
-          raw = quote_version.billing_items
-          raw.is_a?(Hash) ? raw.with_indifferent_access : {}.with_indifferent_access
-        end
-      end
-
       def add_on_array
-        @add_on_array ||= begin
-          items = billing_items[ADD_ONS_KEY]
-          items.is_a?(Array) ? items : []
-        end
+        @add_on_array ||= billing_item_array(ADD_ONS_KEY)
       end
 
       def add_on_items
@@ -173,13 +120,11 @@ module QuoteVersions
       end
 
       def payload(item)
-        value = item[:payload]
-        value.is_a?(Hash) ? value : {}
+        safe_hash(item[:payload])
       end
 
       def overrides(item)
-        value = item[:overrides]
-        value.is_a?(Hash) ? value : {}
+        safe_hash(item[:overrides])
       end
 
       def add_ons_by_id
@@ -204,8 +149,7 @@ module QuoteVersions
       end
 
       def add_on_field(item, index, attribute)
-        ref = item[:localId].presence || index
-        :"#{ADD_ONS_KEY}/#{ref}/#{attribute}"
+        billing_item_field(ADD_ONS_KEY, item, index, attribute)
       end
 
       def parse_datetime(value)

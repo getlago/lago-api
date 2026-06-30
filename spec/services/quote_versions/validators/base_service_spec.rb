@@ -27,4 +27,16 @@ RSpec.describe QuoteVersions::Validators::BaseService do
       expect(result.error).to be_nil
     end
   end
+
+  context "when the order type is subscription_amendment" do
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, organization:, customer:) }
+    let(:quote) { create(:quote, organization:, customer:, subscription:, order_type: :subscription_amendment) }
+    let(:quote_version) { build(:quote_version, quote:, organization:) }
+
+    it "is a no-op and returns true" do
+      expect(validator).to be_valid
+      expect(result.error).to be_nil
+    end
+  end
 end
