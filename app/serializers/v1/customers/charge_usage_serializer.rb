@@ -63,6 +63,7 @@ module V1
       def charge_data(fee)
         {
           lago_id: fee.charge_id,
+          code: fee.charge.code,
           charge_model: fee.charge.charge_model,
           invoice_display_name: fee.charge.invoice_display_name
         }
