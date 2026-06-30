@@ -51,6 +51,8 @@ class BaseQuery < BaseService
 
   def parse_datetime_filter(field_name)
     value = filters[field_name]
+    return value if Utils::Datetime.datetime_like?(value)
+
     parsed_value = Utils::Datetime.parse_iso8601(value)
     return parsed_value if parsed_value
 

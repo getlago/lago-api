@@ -5,6 +5,24 @@ require "rails_helper"
 RSpec.describe Utils::Datetime do
   subject(:datetime) { described_class }
 
+  describe ".datetime_like?" do
+    context "when the value is a datetime-like object" do
+      it "returns true for every datetime-like class" do
+        [Time.current.to_time, Time.current, Date.current, DateTime.now].each do |value|
+          expect(datetime.datetime_like?(value)).to be true
+        end
+      end
+    end
+
+    context "when the value is not datetime-like" do
+      it "returns false" do
+        expect(datetime.datetime_like?("2022-12-13")).to be false
+        expect(datetime.datetime_like?(123)).to be false
+        expect(datetime.datetime_like?(nil)).to be false
+      end
+    end
+  end
+
   describe ".parse_iso8601" do
     context "when the value is an ISO8601 string" do
       let(:value) { "2022-12-13T12:00:00Z" }
