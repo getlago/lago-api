@@ -48,6 +48,7 @@ end
 #  billing_interval_cycle_count :integer
 #  code                         :string           not null
 #  deleted_at                   :datetime
+#  name                         :string
 #  position                     :integer          not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
