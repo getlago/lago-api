@@ -6,11 +6,6 @@ module Common
   private
 
   def valid_date?(date)
-    return false unless date
-
-    Date.iso8601(date)
-    true
-  rescue Date::Error
-    false
+    Utils::Datetime.parse_iso8601_date(date).present?
   end
 end
