@@ -744,16 +744,6 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
       )
     end
 
-    before do
-      allow(credit_note).to receive(:subscription_ids).and_return([])
-      allow(credit_note).to receive(:add_on_items).and_return(CreditNoteItem.none)
-      allow(credit_note).to receive(:sub_total_excluding_taxes_amount).and_return(Money.new(1000, "USD"))
-
-      applied_taxes_relation = instance_double(ActiveRecord::Relation)
-      allow(applied_taxes_relation).to receive(:order).with(tax_rate: :desc).and_return([])
-      allow(credit_note).to receive(:applied_taxes).and_return(applied_taxes_relation)
-    end
-
     context "when the invoice has a purchase order number" do
       let(:invoice) do
         build_stubbed(:invoice, organization:, billing_entity:, customer:, number: "LAGO-202509-001", purchase_order_number: "PO-12345")
