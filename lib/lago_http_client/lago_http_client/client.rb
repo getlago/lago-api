@@ -2,15 +2,28 @@
 
 require "net/http/post/multipart"
 require "event_stream_parser"
+require "openssl"
 
 module LagoHttpClient
   class Client
     RESPONSE_SUCCESS_CODES = [200, 201, 202, 204].freeze
     MAX_RETRIES_ATTEMPTS = 3
+    RETRYABLE_HTTP_STATUSES = [500, 502, 503, 504].freeze
+    TRANSIENT_ERROR_CLASSES = [
+      OpenSSL::SSL::SSLError,
+      Net::OpenTimeout,
+      Net::ReadTimeout,
+      EOFError,
+      Errno::ECONNRESET,
+      Errno::ECONNREFUSED,
+      Errno::ETIMEDOUT,
+      Errno::EHOSTUNREACH
+    ].freeze
+    RETRY_BACKOFF_RANGE = (0.25..0.5)
 
-    attr_reader :uri, :retries_on
+    attr_reader :uri, :retries_on, :retry_on_transient_errors
 
-    def initialize(url, open_timeout: nil, read_timeout: nil, write_timeout: nil, retries_on: [])
+    def initialize(url, open_timeout: nil, read_timeout: nil, write_timeout: nil, retries_on: [], retry_on_transient_errors: false)
       @uri = URI(url)
       @http_client = Net::HTTP.new(uri.host, uri.port)
       @http_client.open_timeout = open_timeout if open_timeout.present?
@@ -18,6 +31,7 @@ module LagoHttpClient
       @http_client.write_timeout = write_timeout if write_timeout.present?
       @http_client.use_ssl = true if uri.scheme == "https"
       @retries_on = retries_on
+      @retry_on_transient_errors = retry_on_transient_errors
     end
 
     def post(body, headers)
@@ -133,19 +147,40 @@ module LagoHttpClient
     def request(req, params = nil)
       attempt = 0
 
-      response = begin
+      loop do
         attempt += 1
-        http_client.request(req, params)
-      rescue => e
-        if retries_on.include?(e.class)
-          retry if attempt < MAX_RETRIES_ATTEMPTS
-        else
-          raise
-        end
-      end
 
-      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
-      response
+        begin
+          response = http_client.request(req, params)
+        rescue => e
+          raise unless retry_on_error?(e) && attempt < MAX_RETRIES_ATTEMPTS
+
+          backoff
+          next
+        end
+
+        if retry_on_status?(response.code.to_i) && attempt < MAX_RETRIES_ATTEMPTS
+          backoff
+          next
+        end
+
+        raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
+
+        return response
+      end
+    end
+
+    def retry_on_error?(error)
+      retries_on.include?(error.class) ||
+        (retry_on_transient_errors && TRANSIENT_ERROR_CLASSES.any? { |klass| error.is_a?(klass) })
+    end
+
+    def retry_on_status?(code)
+      retry_on_transient_errors && RETRYABLE_HTTP_STATUSES.include?(code)
+    end
+
+    def backoff
+      sleep(rand(RETRY_BACKOFF_RANGE))
     end
   end
 end
