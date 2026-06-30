@@ -95,4 +95,18 @@ unless Product.exists?(organization:, code: "cloud_platform")
       billing_interval_unit: "month"
     }
   )
+
+  # Assign the rate card to a plan so the catalog is wired into an offer.
+  plan = Plans::CreateService.call!({
+    organization_id: organization.id,
+    name: "Growth",
+    code: "growth",
+    amount_currency: "USD",
+    pricing_type: "product_catalog"
+  }).plan
+
+  PlanProductItems::CreateService.call!(
+    plan:,
+    params: {rate_card_code: rate_card.code}
+  )
 end
