@@ -617,6 +617,7 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
             select: [
+              arel_table[:decimal_value],
               Arel::Nodes::InfixOperation.new(
                 "*",
                 arel_table[:decimal_value],
@@ -627,11 +628,14 @@ module Events
           )
 
           sql = with_ctes(ctes_sql, <<-SQL)
-            SELECT sum(events.prorated_value)
+            SELECT
+              sum(events.prorated_value) as prorated_value,
+              sum(events.decimal_value) as value,
+              count() as events_count
             FROM events
           SQL
 
-          connection.select_value(sql)
+          build_prorated_aggregation_result(connection.select_one(sql))
         end
       end
 
@@ -647,6 +651,7 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
             select: [arel_table[:sorted_grouped_by]] + [
+              arel_table[:decimal_value],
               Arel::Nodes::InfixOperation.new(
                 "*",
                 arel_table[:decimal_value],
@@ -659,12 +664,14 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               sorted_grouped_by as groups,
-              sum(events.prorated_value) as value
+              sum(events.prorated_value) as prorated_value,
+              sum(events.decimal_value) as value,
+              count() as events_count
             FROM events
             GROUP BY sorted_grouped_by
           SQL
 
-          prepare_grouped_result(connection.select_all(sql))
+          prepare_grouped_prorated_values(connection.select_all(sql))
         end
       end
 
@@ -968,6 +975,21 @@ module Events
             groups: r[:groups].transform_values(&:presence),
             value: decimal ? BigDecimal(r[:value].presence || 0) : r[:value],
             events_count: r[:events_count].presence&.to_i
+          )
+        end
+      end
+
+      # NOTE: like prepare_grouped_aggregated_values but each row also carries a prorated
+      #       value column, returned as GroupedProratedAggregationResult.
+      def prepare_grouped_prorated_values(result)
+        result.to_ary.map do |row|
+          r = row.symbolize_keys
+
+          build_grouped_prorated_aggregation_result(
+            groups: r[:groups].transform_values(&:presence),
+            prorated_value: r[:prorated_value],
+            value: r[:value],
+            events_count: r[:events_count]
           )
         end
       end
