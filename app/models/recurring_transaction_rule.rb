@@ -17,6 +17,8 @@ class RecurringTransactionRule < ApplicationRecord
   validates :transaction_name, length: {minimum: 1, maximum: 255}, allow_nil: true
   validates :grants_target_top_up, inclusion: {in: [true, false]}, allow_nil: true, if: :target?
   validates :grants_target_top_up, exclusion: {in: [true, false]}, unless: :target?
+  validate :target_ongoing_balance_not_below_threshold,
+    if: -> { target_ongoing_balance_changed? || threshold_credits_changed? || method_changed? || trigger_changed? }
 
   STATUSES = [
     :active,
@@ -98,6 +100,15 @@ class RecurringTransactionRule < ApplicationRecord
   end
 
   private
+
+  def target_ongoing_balance_not_below_threshold
+    return unless target? && threshold?
+    return if target_ongoing_balance.nil? || threshold_credits.nil?
+
+    if target_ongoing_balance < threshold_credits
+      errors.add(:target_ongoing_balance, :must_be_greater_than_or_equal_threshold)
+    end
+  end
 
   def compute_target_top_up_amount(ongoing_balance:)
     if ongoing_balance >= target_ongoing_balance

@@ -62,6 +62,41 @@ RSpec.describe RecurringTransactionRule do
         end
       end
     end
+
+    describe "target_ongoing_balance validation" do
+      context "when method is target and trigger is threshold" do
+        it "rejects a target below the threshold" do
+          rule = build(:recurring_transaction_rule, method: :target, trigger: :threshold, target_ongoing_balance: 50, threshold_credits: 100)
+          expect(rule).not_to be_valid
+          expect(rule.errors[:target_ongoing_balance]).to be_present
+        end
+
+        it "accepts a target equal to the threshold" do
+          rule = build(:recurring_transaction_rule, method: :target, trigger: :threshold, target_ongoing_balance: 100, threshold_credits: 100)
+          expect(rule).to be_valid
+        end
+
+        it "accepts a target above the threshold" do
+          rule = build(:recurring_transaction_rule, method: :target, trigger: :threshold, target_ongoing_balance: 150, threshold_credits: 100)
+          expect(rule).to be_valid
+        end
+
+        it "does not block saving a legacy invalid record when the relevant fields are unchanged" do
+          rule = build(:recurring_transaction_rule, method: :target, trigger: :threshold, target_ongoing_balance: 50, threshold_credits: 100)
+          rule.save!(validate: false)
+
+          expect { rule.mark_as_terminated! }.not_to raise_error
+          expect(rule.reload).to be_terminated
+        end
+      end
+
+      context "when trigger is interval" do
+        it "ignores the threshold comparison" do
+          rule = build(:recurring_transaction_rule, method: :target, trigger: :interval, target_ongoing_balance: 50, threshold_credits: 100)
+          expect(rule).to be_valid
+        end
+      end
+    end
   end
 
   describe "scopes" do
