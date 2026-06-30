@@ -105,13 +105,17 @@ module Events
         events(ordered: true).pluck(Arel.sql("(#{sanitized_property_name})::numeric * (#{ratio_sql})::numeric"))
       end
 
+      def count
+        build_aggregation_result_from_value(events.count)
+      end
+
       def grouped_count(columns = grouped_by)
         results = events
           .group(columns.map { sanitized_property_name(it) })
           .count
           .map { |group, value| [group, value].flatten }
 
-        prepare_grouped_result(results, columns: columns)
+        grouped_results_with_value_as_count(prepare_grouped_result(results, columns: columns))
       end
 
       # NOTE: check if an event created before the current on belongs to an active (as in present and not removed)
@@ -409,9 +413,9 @@ module Events
         #       from the events in the period
         formatted_initial_values = grouped_count.map do |group|
           value = 0
-          previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
+          previous_group = initial_values.find { |g| g[:groups] == group.groups }
           value = previous_group[:value] if previous_group
-          {groups: group[:groups], value:}
+          {groups: group.groups, value:}
         end
 
         # NOTE: add the initial values for groups that are not in the events

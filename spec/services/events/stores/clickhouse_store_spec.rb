@@ -125,7 +125,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
         let(:matching_filters) { {"region" => ["europe"]} }
 
         it "does not count the event (latest enrichment is asia, filter excludes it)" do
-          expect(event_store.count).to eq(0)
+          expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 0, events_count: 0))
         end
       end
 
@@ -133,7 +133,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
         let(:matching_filters) { {"region" => ["asia"]} }
 
         it "counts the deduplicated event exactly once" do
-          expect(event_store.count).to eq(1)
+          expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
         end
       end
     end
@@ -282,8 +282,8 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       insert_event(transaction_id: txn, timestamp: ts, enriched_at: Time.current)
       insert_event(transaction_id: SecureRandom.uuid, timestamp: ts + 1.day, enriched_at: Time.current)
 
-      expect(event_store.count).to eq(2)
-      expect(event_store.count).to eq(join_based_count)
+      expect(event_store.count.value).to eq(2)
+      expect(event_store.count.value).to eq(join_based_count)
     end
 
     it "treats the same transaction_id at different timestamps as distinct events" do
@@ -291,21 +291,21 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       insert_event(transaction_id: txn, timestamp: ts, enriched_at: Time.current)
       insert_event(transaction_id: txn, timestamp: ts + 1.hour, enriched_at: Time.current)
 
-      expect(event_store.count).to eq(2)
-      expect(event_store.count).to eq(join_based_count)
+      expect(event_store.count.value).to eq(2)
+      expect(event_store.count.value).to eq(join_based_count)
     end
 
     it "excludes events outside the boundaries" do
       insert_event(transaction_id: SecureRandom.uuid, timestamp: ts, enriched_at: Time.current)
       insert_event(transaction_id: SecureRandom.uuid, timestamp: boundaries[:to_datetime] + 2.days, enriched_at: Time.current)
 
-      expect(event_store.count).to eq(1)
-      expect(event_store.count).to eq(join_based_count)
+      expect(event_store.count.value).to eq(1)
+      expect(event_store.count.value).to eq(join_based_count)
     end
 
     it "returns zero when there are no events" do
-      expect(event_store.count).to eq(0)
-      expect(event_store.count).to eq(join_based_count)
+      expect(event_store.count.value).to eq(0)
+      expect(event_store.count.value).to eq(join_based_count)
     end
   end
 end

@@ -259,7 +259,7 @@ module Events
       end
 
       def count
-        Utils::ClickhouseConnection.connection_with_retry do |connection|
+        value = Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value]), <<-SQL)
             SELECT count()
             FROM events
@@ -267,6 +267,8 @@ module Events
 
           connection.select_value(sql).to_i
         end
+
+        build_aggregation_result_from_value(value)
       end
 
       def grouped_count(columns = grouped_by)
@@ -291,7 +293,7 @@ module Events
             SQL
           end
 
-          prepare_grouped_result(connection.select_all(sql))
+          grouped_results_with_value_as_count(prepare_grouped_result(connection.select_all(sql)))
         end
       end
 
@@ -734,9 +736,9 @@ module Events
           #       from the events in the period
           formatted_initial_values = grouped_count(columns).map do |group|
             value = 0
-            previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
+            previous_group = initial_values.find { |g| g[:groups] == group.groups }
             value = previous_group[:value] if previous_group
-            {groups: group[:groups], value:}
+            {groups: group.groups, value:}
           end
 
           # NOTE: add the initial values for groups that are not in the events
