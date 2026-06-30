@@ -206,6 +206,13 @@ Rails.application.routes.draw do
         get :json_public_key, on: :collection
       end
     end
+
+    namespace :v2 do
+      resources :product_items, only: %i[index show create update destroy] do
+        resources :filters, only: %i[index show create update destroy], controller: "product_items/filters"
+      end
+      resources :products, param: :code, code: /.*/, only: %i[index show create update destroy]
+    end
   end
   resources :webhooks, only: [] do
     post "stripe/:organization_id", to: "webhooks#stripe", on: :collection, as: :stripe
