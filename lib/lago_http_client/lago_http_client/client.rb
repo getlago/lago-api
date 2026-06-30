@@ -147,36 +147,38 @@ module LagoHttpClient
     def request(req, params = nil)
       attempt = 0
 
-      loop do
+      begin
         attempt += 1
-
-        begin
-          response = http_client.request(req, params)
-        rescue => e
-          raise unless retry_on_error?(e) && attempt < MAX_RETRIES_ATTEMPTS
-
-          backoff
-          next
-        end
-
-        if retry_on_status?(response.code.to_i) && attempt < MAX_RETRIES_ATTEMPTS
-          backoff
-          next
-        end
-
+        response = http_client.request(req, params)
         raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
+        response
+      rescue => e
+        if retryable?(e) && attempt < MAX_RETRIES_ATTEMPTS
+          backoff
+          retry
+        end
 
-        return response
+        raise
       end
     end
 
-    def retry_on_error?(error)
-      retries_on.include?(error.class) ||
-        (retry_on_transient_errors && TRANSIENT_ERROR_CLASSES.any? { |klass| error.is_a?(klass) })
+    # An error is retryable when its class was explicitly opted in through
+    # `retries_on:`, or when `retry_on_transient_errors` is enabled and the error
+    # is a known transient failure (a connection-level exception or a transient
+    # HTTP status such as 502/503).
+    def retryable?(error)
+      return true if retries_on.include?(error.class)
+      return false unless retry_on_transient_errors
+
+      transient_exception?(error) || transient_http_error?(error)
     end
 
-    def retry_on_status?(code)
-      retry_on_transient_errors && RETRYABLE_HTTP_STATUSES.include?(code)
+    def transient_exception?(error)
+      TRANSIENT_ERROR_CLASSES.any? { |klass| error.is_a?(klass) }
+    end
+
+    def transient_http_error?(error)
+      error.is_a?(::LagoHttpClient::HttpError) && RETRYABLE_HTTP_STATUSES.include?(error.error_code.to_i)
     end
 
     def backoff
