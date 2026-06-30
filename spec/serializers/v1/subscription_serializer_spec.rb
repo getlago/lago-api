@@ -285,4 +285,19 @@ RSpec.describe ::V1::SubscriptionSerializer do
       )
     end
   end
+
+  context "when the plan uses the product catalog" do
+    let(:plan) { create(:plan, pricing_type: "product_catalog") }
+    let(:subscription) { create(:subscription, plan:, created_at: started_at, started_at:, ending_at:) }
+
+    it "serializes without plan-level billing period dates" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["subscription"]).to include(
+        "plan_code" => plan.code,
+        "current_billing_period_started_at" => nil,
+        "current_billing_period_ending_at" => nil
+      )
+    end
+  end
 end
