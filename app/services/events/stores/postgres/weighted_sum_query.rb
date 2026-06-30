@@ -12,9 +12,12 @@ module Events
           <<-SQL
             #{events_cte_sql}
 
-            SELECT SUM(period_ratio) as aggregation
+            SELECT
+              SUM(period_ratio) as aggregation,
+              SUM(difference) as variation_with_initial,
+              COUNT(*) as rows_count
             FROM (
-              SELECT (#{period_ratio_sql}) AS period_ratio
+              SELECT (#{period_ratio_sql}) AS period_ratio, difference
               FROM events_data
             ) cumulated_ratios
           SQL
@@ -26,11 +29,14 @@ module Events
 
             SELECT
               #{group_names},
-              SUM(period_ratio) as aggregation
+              SUM(period_ratio) as aggregation,
+              SUM(difference) as variation_with_initial,
+              COUNT(*) as rows_count
             FROM (
               SELECT
                 #{group_names},
-                (#{grouped_period_ratio_sql}) AS period_ratio
+                (#{grouped_period_ratio_sql}) AS period_ratio,
+                difference
               FROM events_data
             ) cumulated_ratios
             GROUP BY #{group_names}
@@ -63,13 +69,13 @@ module Events
           <<-SQL
             WITH events_data AS (
               (#{initial_value_sql})
-              UNION
+              UNION ALL
               (#{
                 events(ordered: true)
                   .select("timestamp, (#{sanitized_property_name})::numeric AS difference, #{created_at_ordering_column}")
                   .to_sql
               })
-              UNION
+              UNION ALL
               (#{end_of_period_value_sql})
             )
           SQL
@@ -120,13 +126,13 @@ module Events
           <<-SQL
             WITH events_data AS (
               (#{grouped_initial_value_sql(initial_values)})
-              UNION
+              UNION ALL
               (#{
                 events(ordered: true)
                   .select("#{groups.join(", ")}, timestamp, (#{sanitized_property_name})::numeric AS difference, #{created_at_ordering_column}")
                   .to_sql
               })
-              UNION
+              UNION ALL
               (#{grouped_end_of_period_value_sql(initial_values)})
             )
           SQL
@@ -170,9 +176,9 @@ module Events
 
             [
               groups,
-              "timestamp without time zone :from_datetime",
+              "timestamp without time zone :to_datetime",
               0,
-              "timestamp without time zone :from_datetime"
+              "timestamp without time zone :to_datetime"
             ].flatten.join(", ")
           end
 

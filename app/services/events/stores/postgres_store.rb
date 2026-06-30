@@ -364,7 +364,13 @@ module Events
         )
 
         result = select_one(sql)
-        result["aggregation"]
+
+        build_weighted_aggregation_result(
+          value: result["aggregation"] || 0,
+          variation_with_initial: result["variation_with_initial"] || 0,
+          rows_count: result["rows_count"].to_i,
+          initial_value:
+        )
       end
 
       def grouped_weighted_sum(columns = grouped_by, initial_value: 0, initial_values: [])
@@ -395,7 +401,7 @@ module Events
           ]
         )
 
-        prepare_grouped_result(select_all(sql).rows, columns: columns)
+        prepare_grouped_weighted_values(select_all(sql).rows, formatted_initial_values, columns: columns)
       end
 
       def formatted_weighted_sum_initial_values(initial_values)
@@ -536,10 +542,9 @@ module Events
       def prepare_grouped_result(rows, timestamp: false, columns: grouped_by)
         rows.map do |row|
           last_group = timestamp ? -2 : -1
-          groups = row[...last_group].map(&:presence)
 
           result = {
-            groups: columns.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            groups: build_groups(row[...last_group], columns:),
             value: row.last
           }
 
@@ -553,12 +558,25 @@ module Events
       #       the aggregated value and the events count, returned as GroupedAggregationResult.
       def prepare_grouped_aggregated_values(rows, columns: grouped_by)
         rows.map do |row|
-          groups = row[...-2].map(&:presence)
-
           GroupedAggregationResult.new(
-            groups: columns.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            groups: build_groups(row[...-2], columns:),
             value: row[-2],
             events_count: row[-1]&.to_i
+          )
+        end
+      end
+
+      # NOTE: parses the grouped weighted_sum rows. The last three columns of each row are the weighted
+      #       aggregation, the sum of the differences (including the initial value) and the rows count
+      #       (including the 2 boundary rows). Correction is delegated to build_grouped_weighted_result.
+      def prepare_grouped_weighted_values(rows, initial_values, columns: grouped_by)
+        rows.map do |row|
+          build_grouped_weighted_result(
+            groups: build_groups(row[...-3], columns:),
+            value: row[-3],
+            variation_with_initial: row[-2] || 0,
+            rows_count: row[-1].to_i,
+            initial_values:
           )
         end
       end
