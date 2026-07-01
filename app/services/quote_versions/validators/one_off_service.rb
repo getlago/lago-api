@@ -67,6 +67,8 @@ module QuoteVersions
       end
 
       def validate_unit_amount(item, index)
+        return if unresolved_add_on_id?(item)
+
         amount = effective_unit_amount_cents(item, add_ons_by_id[item[:id].to_s])
         if amount.nil?
           add_error(field: add_on_field(item, index, :unit_amount_cents), error_code: "value_is_mandatory") if approve?
@@ -76,6 +78,13 @@ module QuoteVersions
         return if amount.is_a?(Numeric) && amount >= 0
 
         add_error(field: add_on_field(item, index, :unit_amount_cents), error_code: "value_is_invalid")
+      end
+
+      def unresolved_add_on_id?(item)
+        id = item[:id]
+        return false if id.blank?
+
+        !add_ons_by_id.key?(id.to_s)
       end
 
       def validate_dates(item, index)
