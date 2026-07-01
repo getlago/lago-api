@@ -23,6 +23,8 @@ module QuoteVersions
           quote_version.reload
           next result.single_validation_failure!(field: :status, error_code: "not_approvable") unless approvable?
 
+          next result unless Validators::DispatcherService.new(result, quote_version:, scope: :approve).valid?
+
           quote_version.update!(
             status: :approved,
             approved_at: Time.current,

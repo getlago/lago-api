@@ -132,6 +132,75 @@ RSpec.describe QuoteVersions::ApproveService do
       end
     end
 
+    context "when the one-off payload is incomplete", :premium do
+      let(:quote) { create(:quote, organization:, order_type: :one_off) }
+
+      it "returns a validation failure and does not approve" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:add_ons]).to eq(["add_ons_required"])
+
+        quote_version.reload
+        expect(quote_version.approved?).to eq(false)
+      end
+
+      it "does not create an order form" do
+        expect { result }.not_to change(OrderForm, :count)
+      end
+    end
+
+    context "when the one-off payload is valid", :premium do
+      let(:quote) { create(:quote, organization:, order_type: :one_off) }
+      let(:add_on) { create(:add_on, organization:, amount_cents: 1_000) }
+      let(:quote_version) do
+        create(
+          :quote_version,
+          quote:,
+          organization:,
+          currency: "EUR",
+          start_date: Date.new(2026, 1, 1),
+          end_date: Date.new(2027, 1, 1),
+          billing_items: {
+            "add_ons" => [
+              {"id" => add_on.id, "local_id" => "row-1", "payload" => {"units" => 1, "unit_amount_cents" => 1_000}}
+            ]
+          }
+        )
+      end
+
+      it "approves and creates an order form" do
+        expect(result).to be_success
+        expect(result.quote_version.approved?).to eq(true)
+        expect(result.order_form).to be_present
+      end
+
+      context "when quote-level dates are absent" do
+        let(:quote_version) do
+          create(
+            :quote_version,
+            quote:,
+            organization:,
+            currency: "EUR",
+            start_date: nil,
+            end_date: nil,
+            billing_items: {
+              "add_ons" => [
+                {"id" => add_on.id, "local_id" => "row-1", "payload" => {"units" => 1, "unit_amount_cents" => 1_000}}
+              ]
+            }
+          )
+        end
+
+        it "approves and leaves commercial term mention variables blank" do
+          expect(result).to be_success
+          expect(result.quote_version.approved?).to eq(true)
+          expect(result.order_form).to be_present
+          expect(result.quote_version.mention_variables["commercial_terms_start_date"]).to be_nil
+          expect(result.quote_version.mention_variables["commercial_terms_term_duration"]).to be_nil
+        end
+      end
+    end
+
     context "when license is not premium" do
       it "returns forbidden status" do
         expect(result).not_to be_success
