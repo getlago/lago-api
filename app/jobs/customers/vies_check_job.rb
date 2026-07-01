@@ -12,6 +12,9 @@ module Customers
     # perform runs and holds a separate runtime lock during execution. Releasing the
     # enqueue lock before perform is what lets schedule_retry re-enqueue this job for
     # the same customer from inside perform without being dropped.
+    # The retry is scheduled with a delay (RETRY_DELAYS starts at 5 minutes), so by
+    # the time it runs the current job has finished and released the runtime lock,
+    # and the retry is not dropped by the runtime guard either.
     unique :until_and_while_executing, on_conflict: :log
 
     def perform(customer)
