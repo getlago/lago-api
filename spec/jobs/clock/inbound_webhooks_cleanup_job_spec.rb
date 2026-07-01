@@ -5,6 +5,10 @@ require "rails_helper"
 describe Clock::InboundWebhooksCleanupJob, job: true do
   subject(:inbound_webhooks_cleanup_job) { described_class }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [] }
+  end
+
   describe ".perform" do
     it "removes all old inbound webhooks" do
       create(:inbound_webhook, updated_at: 90.days.ago)
