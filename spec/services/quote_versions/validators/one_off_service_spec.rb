@@ -306,9 +306,9 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
     context "when currency is lowercase" do
       let(:currency) { "eur" }
 
-      it "is invalid (codes are matched case-sensitively)" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages[:currency]).to eq(["value_is_invalid"])
+      it "normalizes it" do
+        expect(validator).to be_valid
+        expect(quote_version.currency).to eq("EUR")
       end
     end
 

@@ -85,6 +85,17 @@ RSpec.describe QuoteVersions::UpdateService do
       end
     end
 
+    context "when one-off currency is lowercase", :premium do
+      let(:quote) { create(:quote, organization:, order_type: :one_off) }
+      let(:update_params) { {currency: "usd"} }
+
+      it "normalizes and persists the currency" do
+        expect(result).to be_success
+        expect(result.quote_version.currency).to eq("USD")
+        expect(quote_version.reload.currency).to eq("USD")
+      end
+    end
+
     context "when the one-off billing items value is not an object", :premium do
       let(:quote) { create(:quote, organization:, order_type: :one_off) }
       let(:update_params) { {billing_items: []} }

@@ -94,7 +94,12 @@ module QuoteVersions
       def validate_currency_format
         currency = quote_version.currency
         return if currency.blank?
-        return if Currencies::ACCEPTED_CURRENCIES.key?(currency.to_sym)
+
+        normalized_currency = currency.to_s.upcase
+        if Currencies::ACCEPTED_CURRENCIES.key?(normalized_currency.to_sym)
+          quote_version.currency = normalized_currency
+          return
+        end
 
         add_error(field: :currency, error_code: "value_is_invalid")
       end
