@@ -78,6 +78,8 @@ RSpec.describe SubscriptionsQuery do
   context "with search_term" do
     let(:subscription) { create(:subscription, customer:, plan:, name: "Test Subscription") }
     let(:subscription_2) { create(:subscription, customer:, plan:, name: "Test Subscription 2") }
+    let(:other_plan) { create(:plan, organization:) }
+    let(:other_subscription) { create(:subscription, customer:, plan: other_plan, name: "Other Subscription") }
 
     before { subscription_2 }
 
@@ -114,6 +116,8 @@ RSpec.describe SubscriptionsQuery do
     context "when search_term is a plan name" do
       let(:search_term) { plan.name }
 
+      before { other_subscription }
+
       it "returns only subscriptions for the specified plan name" do
         expect(result).to be_success
         expect(result.subscriptions.count).to eq(2)
@@ -123,6 +127,8 @@ RSpec.describe SubscriptionsQuery do
 
     context "when search_term is a plan code" do
       let(:search_term) { plan.code }
+
+      before { other_subscription }
 
       it "returns only subscriptions for the specified plan code" do
         expect(result).to be_success

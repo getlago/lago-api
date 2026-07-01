@@ -72,6 +72,9 @@ class SubscriptionsQuery < BaseQuery
     Subscription.unscoped.from("(#{union_sql}) AS subscriptions").select(:id)
   end
 
+  # Columns of a single table are combined with OR (not UNION): Postgres can still hit each column's
+  # trigram index through a bitmap OR. Only the cross-table search in #matching_ids_by_search needs a
+  # UNION, since an OR spanning several tables would require joins that defeat those indexes.
   def matching_plan_ids
     escaped_term = "%#{Plan.sanitize_sql_like(search_term)}%"
 
