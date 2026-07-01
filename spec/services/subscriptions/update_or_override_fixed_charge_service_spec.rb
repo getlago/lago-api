@@ -38,7 +38,7 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
         it "writes the units override without requiring premium" do
           expect { service.call }
             .to change { Subscription::FixedChargeUnitsOverride.where(subscription:, fixed_charge:).count }.by(1)
-            .and change(Plan, :count).by(0)
+            .and not_change(Plan, :count)
 
           expect(service.call).to be_success
           override = Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)
