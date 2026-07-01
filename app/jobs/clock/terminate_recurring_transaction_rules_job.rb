@@ -2,7 +2,7 @@
 
 module Clock
   class TerminateRecurringTransactionRulesJob < ClockJob
-    unique :until_executed, on_conflict: :log
+    unique :until_executed, on_conflict: :log, lock_ttl: 4.hours
 
     def perform
       RecurringTransactionRule.eligible_for_termination.find_each do |recurring_transaction_rule|
