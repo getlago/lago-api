@@ -18,6 +18,7 @@ RSpec.describe Mutations::FinanceAssistant::Ask do
       mutation($input: AskFinanceAssistantInput!) {
         askFinanceAssistant(input: $input) {
           explanation
+          messageId
           results
           sessionId
           sessionExpired
@@ -32,10 +33,12 @@ RSpec.describe Mutations::FinanceAssistant::Ask do
   let(:organization) { membership.organization }
   let(:question) { "Show MRR for the past 3 months" }
   let(:session_id) { SecureRandom.uuid }
+  let(:message_id) { SecureRandom.uuid }
   let(:service_result) do
     BaseResult[:answer].new.tap do |result|
       result.answer = {
         "explanation" => "Here is the result.",
+        "message_id" => message_id,
         "results" => "| Month | MRR |",
         "sql_query" => "select * from invoices",
         "session_id" => session_id,
@@ -64,6 +67,7 @@ RSpec.describe Mutations::FinanceAssistant::Ask do
 
       expect(data).to eq(
         "explanation" => "Here is the result.",
+        "messageId" => message_id,
         "results" => "| Month | MRR |",
         "sessionId" => session_id,
         "sessionExpired" => false,

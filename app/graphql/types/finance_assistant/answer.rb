@@ -6,6 +6,7 @@ module Types
       graphql_name "FinanceAssistantAnswer"
 
       field :explanation, String, null: false
+      field :message_id, ID, null: false
       field :results, String, null: false
       field :session_expired, Boolean, null: false
       field :session_id, ID, null: false

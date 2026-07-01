@@ -1,16 +1,15 @@
 # frozen_string_literal: true
 
 module FinanceAssistant
-  class AskService < BaseService
-    Result = BaseResult[:answer]
+  class ExportService < BaseService
+    Result = BaseResult[:export]
 
-    # Keys the GraphQL FinanceAssistantAnswer type exposes as non-nullable
-    REQUIRED_ANSWER_KEYS = %w[explanation results session_id session_expired message_id].freeze
+    # Keys the GraphQL FinanceAssistantExport type exposes as non-nullable
+    REQUIRED_EXPORT_KEYS = %w[content filename row_count truncated].freeze
 
-    def initialize(organization:, question:, session_id: nil)
+    def initialize(organization:, message_id:)
       @organization = organization
-      @question = question
-      @session_id = session_id
+      @message_id = message_id
 
       super()
     end
@@ -21,21 +20,21 @@ module FinanceAssistant
       response = http_client.post_with_response(request_body, headers)
       body = JSON.parse(response.body.presence || "{}")
 
-      unless valid_answer?(body)
+      unless valid_export?(body)
         return result.service_failure!(
           code: "finance_assistant_invalid_response",
           message: "Malformed response from the finance assistant"
         )
       end
 
-      result.answer = body
+      result.export = body
       result
     rescue LagoHttpClient::HttpError => e
-      result.service_failure!(
-        code: "finance_assistant_error",
-        message: e.json_message["detail"].presence || e.message,
-        error: e
-      )
+      # Surface the agent's typed errors (result aged out of its in-memory store,
+      # or the query can't be re-run) so the client can react appropriately.
+      detail = e.json_message["detail"].presence
+      code = %w[export_expired export_unavailable].include?(detail) ? detail : "finance_assistant_error"
+      result.service_failure!(code:, message: detail || e.message, error: e)
     rescue JSON::ParserError => e
       result.service_failure!(code: "finance_assistant_invalid_response", message: e.message, error: e)
     rescue => e
@@ -44,16 +43,14 @@ module FinanceAssistant
 
     private
 
-    attr_reader :organization, :question, :session_id
+    attr_reader :organization, :message_id
 
-    def valid_answer?(body)
-      body.is_a?(Hash) && REQUIRED_ANSWER_KEYS.all? { |key| !body[key].nil? }
+    def valid_export?(body)
+      body.is_a?(Hash) && REQUIRED_EXPORT_KEYS.all? { |key| !body[key].nil? }
     end
 
     def request_body
-      payload = {question:}
-      payload[:session_id] = session_id if session_id.present?
-      payload
+      {message_id:}
     end
 
     def headers
@@ -64,10 +61,12 @@ module FinanceAssistant
     end
 
     def http_client
+      # Export re-runs the full query, so it needs a much longer read timeout than
+      # the interactive /ask path.
       LagoHttpClient::Client.new(
-        "#{finance_assistant_url.chomp("/")}/ask",
+        "#{finance_assistant_url.chomp("/")}/export",
         open_timeout: 5,
-        read_timeout: 60
+        read_timeout: 300
       )
     end
 
