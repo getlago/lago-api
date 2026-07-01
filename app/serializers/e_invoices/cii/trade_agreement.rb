@@ -14,9 +14,10 @@ module EInvoices
       delegate :billing_entity, to: :resource
       delegate :customer, to: :resource
 
-      def initialize(xml:, resource:, options: Options.new)
+      def initialize(xml:, resource:, purchase_order_number: nil, options: Options.new)
         super(xml:, resource:)
 
+        @purchase_order_number = purchase_order_number
         @options = options
       end
 
@@ -49,12 +50,18 @@ module EInvoices
               xml["ram"].CountryID customer.country
             end
           end
+          if purchase_order_number.present?
+            xml["ram"].BuyerOrderReferencedDocument do
+              xml["ram"].IssuerAssignedID purchase_order_number
+            end
+          end
         end
       end
 
       private
 
       attr_accessor :options
+      attr_reader :purchase_order_number
 
       def render_tax_registration?
         options && !!options.tax_registration
