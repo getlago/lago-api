@@ -307,6 +307,9 @@ module Customers
         params: billing_configuration,
         async: !(billing_configuration || {})[:sync]
       ).call.raise_if_error!
+
+      # NOTE: Create service is modifying an other instance of the provider customer
+      customer.reload
     end
 
     def discard_payment_methods(payment_methods)

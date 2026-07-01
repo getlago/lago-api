@@ -1262,14 +1262,6 @@ RSpec.describe Customers::UpsertFromApiService do
             }
           end
 
-          # NOTE: This bypasses an issue with the check:
-          #
-          #       if customer.provider_customer&.provider_customer_id
-          #         PaymentProviderCustomers::UpdateService.call(customer)
-          #       end
-          #
-          #       Since customer is not reloaded, it still checks the previous provider_customer state,
-          #       which has a provider_customer_id
           before do
             allow(Stripe::Customer).to receive(:update).and_return(BaseService::Result.new)
           end
@@ -1280,6 +1272,16 @@ RSpec.describe Customers::UpsertFromApiService do
             expect(result.customer.payment_provider).to eq("stripe")
             expect(result.customer.payment_provider_code).to eq("stripe_2")
             expect(result.customer.provider_customer.provider_customer_id).to be_nil
+          end
+
+          # NOTE: the customer is reloaded after create_or_update_provider_customer,
+          #       so the provider_customer_id check reflects the cleared id and the
+          #       provider update service is not triggered on a stale object.
+          it "does not call the payment provider update service" do
+            allow(PaymentProviderCustomers::UpdateService).to receive(:call)
+
+            expect(result).to be_success
+            expect(PaymentProviderCustomers::UpdateService).not_to have_received(:call)
           end
 
           it "does not discard the provider customer" do
