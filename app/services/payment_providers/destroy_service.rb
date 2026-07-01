@@ -14,7 +14,8 @@ module PaymentProviders
       customer_ids = payment_provider.customer_ids
 
       ActiveRecord::Base.transaction do
-        payment_provider.payment_provider_customers.update_all(payment_provider_id: nil) # rubocop:disable Rails/SkipsModelValidations
+        now = Time.current
+        payment_provider.payment_provider_customers.update_all(updated_at: now, deleted_at: now) # rubocop:disable Rails/SkipsModelValidations
         payment_provider.discard!
 
         Customer.where(id: customer_ids).update_all(payment_provider: nil, payment_provider_code: nil) # rubocop:disable Rails/SkipsModelValidations
