@@ -3,11 +3,9 @@
 require "rails_helper"
 
 RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
-  subject(:validator) { validator_class&.new(result, quote_version:, scope:) }
+  subject(:validator) { validator_class.new(result, quote_version:, scope:) }
 
   let(:validator_class) do
-    next unless QuoteVersions::Validators.const_defined?(:OrderTypeService, false)
-
     Class.new(QuoteVersions::Validators::OrderTypeService) do
       private
 
@@ -38,8 +36,6 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
   let(:billing_items) { {"items" => []} }
 
   it "is valid for an empty allowed collection" do
-    expect(validator_class).not_to be_nil
-
     expect(validator).to be_valid
     expect(result.error).to be_nil
   end
@@ -48,8 +44,6 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
     let(:currency) { "ABC" }
 
     it "adds a currency validation failure" do
-      expect(validator_class).not_to be_nil
-
       expect(validator).not_to be_valid
       expect(result.error.messages[:currency]).to eq(["value_is_invalid"])
     end
@@ -59,8 +53,6 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
     let(:billing_items) { [] }
 
     it "adds a billing_items validation failure" do
-      expect(validator_class).not_to be_nil
-
       expect(validator).not_to be_valid
       expect(result.error.messages[:billing_items]).to eq(["value_is_invalid"])
     end
@@ -70,8 +62,6 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
     let(:billing_items) { {"unexpected" => []} }
 
     it "adds a billing_items validation failure" do
-      expect(validator_class).not_to be_nil
-
       expect(validator).not_to be_valid
       expect(result.error.messages[:billing_items]).to eq(["value_is_invalid"])
     end
@@ -81,8 +71,6 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
     let(:billing_items) { {"items" => "bad"} }
 
     it "adds a billing_items validation failure" do
-      expect(validator_class).not_to be_nil
-
       expect(validator).not_to be_valid
       expect(result.error.messages[:billing_items]).to eq(["value_is_invalid"])
     end
@@ -92,8 +80,6 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
     let(:billing_items) { {"items" => "bad", "unexpected" => []} }
 
     it "reports the shape error once" do
-      expect(validator_class).not_to be_nil
-
       expect(validator).not_to be_valid
       expect(result.error.messages[:billing_items]).to eq(["value_is_invalid"])
     end
@@ -103,8 +89,6 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
     let(:billing_items) { {"items" => [{"local_id" => "row-1", "payload" => "bad"}]} }
 
     it "adds a nested validation failure without raising" do
-      expect(validator_class).not_to be_nil
-
       valid = nil
 
       expect { valid = validator.valid? }.not_to raise_error
@@ -117,8 +101,6 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
     let(:billing_items) { {"items" => [{"local_id" => "row-1", "payload" => {"units" => 1}}]} }
 
     it "uses local_id in field paths" do
-      expect(validator_class).not_to be_nil
-
       expect(validator).not_to be_valid
       expect(result.error.messages[:"items/row-1/units"]).to eq(["unexpected_units"])
     end
@@ -128,8 +110,6 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
     let(:billing_items) { {"items" => [{"payload" => {"units" => 1}}]} }
 
     it "uses the original array index in field paths" do
-      expect(validator_class).not_to be_nil
-
       expect(validator).not_to be_valid
       expect(result.error.messages[:"items/0/units"]).to eq(["unexpected_units"])
     end

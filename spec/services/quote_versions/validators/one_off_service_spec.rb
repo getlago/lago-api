@@ -122,6 +122,20 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
       end
     end
 
+    context "when the add-on id and units are absent" do
+      let(:add_on_item) do
+        {
+          "local_id" => "row-1",
+          "payload" => {},
+          "overrides" => {}
+        }
+      end
+
+      it "is valid (incomplete draft rows are allowed)" do
+        expect(validator).to be_valid
+      end
+    end
+
     context "when the override unit amount is negative" do
       let(:add_on_item) { super().merge("overrides" => {"unit_amount_cents" => -1}) }
 
@@ -266,6 +280,22 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
 
       it "falls back to the catalog amount and is valid" do
         expect(validator).to be_valid
+      end
+    end
+
+    context "when the add-on id is invalid and unit amount cannot be resolved" do
+      let(:add_on_item) do
+        {
+          "id" => SecureRandom.uuid,
+          "local_id" => "row-1",
+          "payload" => {"units" => 1},
+          "overrides" => {}
+        }
+      end
+
+      it "only reports the unresolved add-on id" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(:"add_ons/row-1/id" => ["add_on_not_found"])
       end
     end
   end
