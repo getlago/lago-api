@@ -7,13 +7,45 @@ class Invoice < ApplicationRecord
   include PaperTrailTraceable
   include Sequenced
   include RansackUuidSearch
+  include MeiliSearch::Rails
+
+  meilisearch(index_uid: "invoices", auto_index: false, auto_remove: true) do
+    attribute :number, :organization_id, :billing_entity_id, :currency, :customer_id,
+      :invoice_type, :status, :payment_status, :payment_overdue, :self_billed,
+      :total_amount_cents, :total_paid_amount_cents
+
+    attribute(:created_at) { created_at.to_i }
+    attribute(:issuing_date) { issuing_date&.to_time(:utc)&.to_i }
+    attribute(:due_amount_cents) { total_amount_cents - total_paid_amount_cents }
+    attribute(:partially_paid) { total_amount_cents > total_paid_amount_cents && total_paid_amount_cents.positive? }
+    attribute(:payment_dispute_lost) { payment_dispute_lost_at.present? }
+    attribute(:customer_name) { customer.name if customer&.kept? }
+    attribute(:customer_firstname) { customer.firstname if customer&.kept? }
+    attribute(:customer_lastname) { customer.lastname if customer&.kept? }
+    attribute(:customer_legal_name) { customer.legal_name if customer&.kept? }
+    attribute(:customer_external_id) { customer.external_id if customer&.kept? }
+    attribute(:customer_email) { customer.email if customer&.kept? }
+    attribute(:subscription_ids) { invoice_subscriptions.pluck(:subscription_id).uniq }
+    attribute(:settlement_types) { invoice_settlements.distinct.pluck(:settlement_type) }
+    attribute(:metadata) { metadata.map { |meta| "#{meta.key}::#{meta.value}" } }
+    attribute(:metadata_keys) { metadata.map(&:key) }
+
+    searchable_attributes %i[number customer_name customer_firstname customer_lastname
+      customer_legal_name customer_external_id customer_email]
+    filterable_attributes %i[organization_id billing_entity_id currency customer_id
+      customer_external_id invoice_type status payment_status payment_dispute_lost
+      payment_overdue self_billed issuing_date total_amount_cents due_amount_cents
+      partially_paid subscription_ids settlement_types metadata metadata_keys]
+    sortable_attributes %i[issuing_date created_at id]
+    typo_tolerance disable_on_attributes: %w[number customer_external_id customer_email]
+    pagination max_total_hits: 100_000
+  end
   include HasPurchaseOrderNumber
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
   TAX_INVOICE_LABEL_COUNTRIES = %w[AU AE NZ ID SG].freeze
 
-  # before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
   before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
   before_save :set_finalized_at, if: -> { status_changed_to_finalized? }

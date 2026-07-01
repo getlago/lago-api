@@ -19,6 +19,19 @@ RSpec.describe Invoices::FinalizeService do
         expect(result.invoice.reload).to be_finalized
         expect(result.invoice.finalized_at).to be_within(1.second).of(Time.current)
       end
+
+      context "when Meilisearch is enabled" do
+        before do
+          allow(MeilisearchClient).to receive(:enabled?).and_return(true)
+          allow(Invoices::SearchIndexJob).to receive(:perform_after_commit)
+        end
+
+        it "enqueues a search reindex for the invoice" do
+          service.call
+
+          expect(Invoices::SearchIndexJob).to have_received(:perform_after_commit).with(invoice.id)
+        end
+      end
     end
 
     context "when invoice is already finalized" do

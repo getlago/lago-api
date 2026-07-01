@@ -45,6 +45,10 @@ module Invoices
         set_invoice_generated_status unless invoice.pending?
         invoice.save!
 
+        # Index newly-created draft invoices; finalized ones are indexed by
+        # Invoices::FinalizeService via TransitionToFinalStatusService.
+        Invoices::SearchIndexJob.perform_after_commit(invoice.id) if MeilisearchClient.enabled? && invoice.draft?
+
         # NOTE: We don't want to raise error and corrupt DB commit if there is tax error.
         #       In that case we want fees to stay attached to the invoice. There is retry action that will enable users
         #       to finalize invoice

@@ -908,4 +908,104 @@ RSpec.describe InvoicesQuery do
       end
     end
   end
+
+  describe "Meilisearch path" do
+    subject(:meili_result) do
+      described_class.call(organization:, meilisearch:, pagination: {page: 1, limit: 10}, search_term:, filters:)
+    end
+
+    let(:meilisearch) { true }
+    let(:search_term) { nil }
+    let(:filters) { {} }
+    let(:ms_customer) { create(:customer, organization:, name: "Acme Corp") }
+    let(:ms_invoice_first) { create(:invoice, organization:, customer: ms_customer, status: "finalized", number: "INV-001", issuing_date: 1.day.ago) }
+    let(:ms_invoice_second) { create(:invoice, organization:, customer: ms_customer, status: "finalized", number: "INV-002", issuing_date: 2.days.ago) }
+    # Mimics the kaminari-paginated collection meilisearch-rails returns.
+    let(:search_results) do
+      Kaminari.paginate_array([ms_invoice_second, ms_invoice_first], total_count: 42).page(1).per(10)
+    end
+
+    before do
+      ms_invoice_first
+      ms_invoice_second
+      allow(MeilisearchClient).to receive(:search_enabled?).and_return(true)
+      allow(Invoice).to receive(:search).and_return(search_results)
+    end
+
+    context "when a search term is present" do
+      let(:search_term) { "Acme" }
+
+      it "queries Meilisearch and returns the page in the returned order" do
+        expect(meili_result.invoices.map(&:id)).to eq([ms_invoice_second.id, ms_invoice_first.id])
+        expect(Invoice).to have_received(:search).with("Acme", hash_including(page: 1, hits_per_page: 10, matching_strategy: "all"))
+      end
+
+      it "reports the Meilisearch total count and pagination" do
+        expect(meili_result.invoices.total_count).to eq(42)
+        expect(meili_result.invoices.current_page).to eq(1)
+        expect(meili_result.invoices.limit_value).to eq(10)
+        expect(meili_result.invoices.total_pages).to eq(5)
+      end
+
+      it "scopes the filter to the organization and visible statuses" do
+        meili_result
+
+        expect(Invoice).to have_received(:search) do |_query, options|
+          expect(options[:filter]).to include(%(organization_id = "#{organization.id}"))
+          expect(options[:filter]).to include(%(status IN ["draft", "finalized", "voided", "failed", "pending"]))
+        end
+      end
+    end
+
+    context "when only filters are present (no search term)" do
+      let(:filters) { {status: ["finalized"]} }
+
+      it "still queries Meilisearch with an empty query" do
+        meili_result
+
+        expect(Invoice).to have_received(:search).with("", hash_including(:filter))
+      end
+    end
+
+    context "when neither a search term nor filters are present" do
+      it "uses the Postgres path" do
+        expect(meili_result.invoices.map(&:id)).to include(ms_invoice_first.id, ms_invoice_second.id)
+        expect(Invoice).not_to have_received(:search)
+      end
+    end
+
+    context "when the meilisearch flag is off" do
+      let(:meilisearch) { false }
+      let(:search_term) { "Acme" }
+
+      it "uses the Postgres path even with a search term" do
+        expect(Invoice).not_to have_received(:search)
+      end
+    end
+
+    context "when search is disabled (LAGO_USE_MEILISEARCH off)" do
+      let(:search_term) { "Acme" }
+
+      before { allow(MeilisearchClient).to receive(:search_enabled?).and_return(false) }
+
+      it "uses the Postgres path even with a search term" do
+        expect(meili_result.invoices.map(&:id)).to include(ms_invoice_first.id, ms_invoice_second.id)
+        expect(Invoice).not_to have_received(:search)
+      end
+    end
+
+    context "when Meilisearch raises an error" do
+      let(:search_term) { "Acme" }
+
+      before do
+        allow(Invoice).to receive(:search).and_raise(Meilisearch::CommunicationError.new("boom"))
+        allow(Sentry).to receive(:capture_exception)
+      end
+
+      it "falls back to the Postgres path and reports the error" do
+        expect(meili_result.invoices.map(&:id)).to include(ms_invoice_first.id, ms_invoice_second.id)
+        expect(Sentry).to have_received(:capture_exception)
+      end
+    end
+  end
 end

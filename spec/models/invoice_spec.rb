@@ -2470,4 +2470,73 @@ RSpec.describe Invoice do
       end
     end
   end
+
+  describe "meilisearch document" do
+    subject(:document) { described_class.meilisearch_settings.get_attributes(invoice) }
+
+    let(:customer) do
+      create(:customer, organization:, name: "Acme Corp", external_id: "ext-123", email: "john@acme.test")
+    end
+    let(:invoice) do
+      create(
+        :invoice,
+        organization:,
+        customer:,
+        number: "INV-001",
+        status: "finalized",
+        payment_status: "pending",
+        total_amount_cents: 1000,
+        total_paid_amount_cents: 400,
+        issuing_date: Date.new(2026, 1, 15)
+      )
+    end
+
+    it "exposes the searchable, filterable and denormalized attributes" do
+      expect(document).to include(
+        "number" => "INV-001",
+        "organization_id" => organization.id,
+        "status" => "finalized",
+        "payment_status" => "pending",
+        "due_amount_cents" => 600,
+        "partially_paid" => true,
+        "payment_dispute_lost" => false,
+        "customer_name" => "Acme Corp",
+        "customer_external_id" => "ext-123",
+        "customer_email" => "john@acme.test",
+        "issuing_date" => Date.new(2026, 1, 15).to_time(:utc).to_i
+      )
+    end
+
+    context "with metadata, subscriptions and settlements" do
+      let(:subscription) { create(:subscription, organization:, customer:) }
+
+      before do
+        create(:invoice_metadata, invoice:, key: "po", value: "123")
+        create(:invoice_subscription, invoice:, subscription:)
+        create(:invoice_settlement, :with_payment, organization:, billing_entity: organization.default_billing_entity, target_invoice: invoice)
+      end
+
+      it "denormalizes the associated values" do
+        expect(document).to include(
+          "metadata" => ["po::123"],
+          "metadata_keys" => ["po"],
+          "subscription_ids" => [subscription.id],
+          "settlement_types" => ["payment"]
+        )
+      end
+    end
+
+    context "when the customer is discarded" do
+      before { customer.discard! }
+
+      it "omits the descriptive customer fields but keeps customer_id" do
+        expect(document).to include(
+          "customer_id" => customer.id,
+          "customer_name" => nil,
+          "customer_external_id" => nil,
+          "customer_email" => nil
+        )
+      end
+    end
+  end
 end
