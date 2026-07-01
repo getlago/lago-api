@@ -49,7 +49,7 @@ module SubscriptionProductItems
         subscription_product_item:,
         billing_at: terminated_at,
         period_from: period_start,
-        period_to: terminated_at.in_time_zone(timezone).end_of_day.utc
+        period_to: terminated_at.utc
       )
     end
 
