@@ -44,10 +44,8 @@ module Invoices
           payable_payment_status: "pending"
         )
 
-        if multiple_payment_methods_enabled?
-          payment.payment_method_id = determine_payment_method&.id
-          payment.save!
-        end
+        payment.payment_method_id = determine_payment_method&.id
+        payment.save!
 
         result.payment = payment
 
@@ -108,20 +106,24 @@ module Invoices
         @provider ||= invoice.customer.payment_provider&.to_sym
       end
 
-      def multiple_payment_methods_enabled?
-        customer.organization.feature_flag_enabled?(:multiple_payment_methods)
-      end
-
       def should_process_payment?
         return false if invoice.self_billed?
         return false if invoice.payment_succeeded? || invoice.voided?
         return false if current_payment_provider.blank?
 
-        if multiple_payment_methods_enabled?
-          current_payment_provider_customer&.provider_customer_id && determine_payment_method.present?
-        else
-          current_payment_provider_customer&.provider_customer_id
-        end
+        current_payment_provider_customer&.provider_customer_id &&
+          (determine_payment_method.present? || provider_payment_method_pending_backfill?)
+      end
+
+      # NOTE: While the OSS payment methods backfill is still running
+      #       (rake migrations:backfill_*_payment_methods), a provider customer can have a
+      #       provider-side payment method/mandate with no matching PaymentMethod record yet.
+      #       In that window determine_payment_method is nil, but the payment can still be
+      #       processed since the provider service falls back to the provider-side method.
+      def provider_payment_method_pending_backfill?
+        legacy_id = current_payment_provider_customer&.legacy_provider_method_id
+        legacy_id.present? &&
+          current_payment_provider_customer.payment_methods.with_discarded.where(provider_method_id: legacy_id).none?
       end
 
       def current_payment_provider

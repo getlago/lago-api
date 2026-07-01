@@ -47,10 +47,8 @@ module PaymentRequests
           payable_payment_status: "pending"
         )
 
-        if organization.feature_flag_enabled?(:multiple_payment_methods)
-          payment.payment_method_id = determine_payment_method&.id
-          payment.save!
-        end
+        payment.payment_method_id = determine_payment_method&.id
+        payment.save!
 
         result.payment = payment
 

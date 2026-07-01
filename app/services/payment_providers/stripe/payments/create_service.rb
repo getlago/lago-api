@@ -70,11 +70,7 @@ module PaymentProviders
         end
 
         def stripe_payment_method
-          payment_method_id = if invoice.organization.feature_flag_enabled?(:multiple_payment_methods)
-            payment&.payment_method&.provider_method_id
-          else
-            provider_customer.payment_method_id
-          end
+          payment_method_id = payment&.payment_method&.provider_method_id
 
           if payment_method_id
             # NOTE: Check if payment method still exists
@@ -87,13 +83,6 @@ module PaymentProviders
 
           # NOTE: Retrieve list of existing payment_methods
           payment_method = customer_payment_methods.first
-
-          if invoice.organization.feature_flag_enabled?(:multiple_payment_methods)
-            # TODO: Double check
-            # payment.payment_method.update!(provider_method_id: payment_method&.id) if payment.payment_method
-          else
-            provider_customer.update!(payment_method_id: payment_method&.id)
-          end
 
           payment_method&.id
         end
