@@ -14,7 +14,8 @@ module Clickhouse
       get: 1,
       post: 2,
       put: 3,
-      delete: 4
+      delete: 4,
+      patch: 5
     }.freeze
 
     private
