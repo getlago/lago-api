@@ -76,18 +76,18 @@ RSpec.describe QuoteVersions::MentionVariablesLocalizer do
     end
 
     context "with locale-independent values" do
-      let(:mention_variables) { {"customer_name" => "Mistral AI", "quote_currency" => "EUR"} }
+      let(:mention_variables) { {"customer_name" => "Hooli Inc - Gavin Belson", "quote_currency" => "EUR"} }
 
       it "passes them through unchanged" do
-        expect(localized).to eq("customer_name" => "Mistral AI", "quote_currency" => "EUR")
+        expect(localized).to eq("customer_name" => "Hooli Inc - Gavin Belson", "quote_currency" => "EUR")
       end
     end
 
     context "with a partial dictionary" do
-      let(:mention_variables) { {"customer_name" => "Mistral AI"} }
+      let(:mention_variables) { {"customer_name" => "Hooli Inc - Gavin Belson"} }
 
       it "only returns the keys present" do
-        expect(localized).to eq("customer_name" => "Mistral AI")
+        expect(localized).to eq("customer_name" => "Hooli Inc - Gavin Belson")
       end
     end
 

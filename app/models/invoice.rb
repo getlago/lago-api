@@ -40,6 +40,7 @@ class Invoice < ApplicationRecord
     typo_tolerance disable_on_attributes: %w[number customer_external_id customer_email]
     pagination max_total_hits: 100_000
   end
+  include HasPurchaseOrderNumber
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
@@ -737,6 +738,7 @@ end
 #  prepaid_granted_credit_amount_cents     :bigint
 #  prepaid_purchased_credit_amount_cents   :bigint
 #  progressive_billing_credit_amount_cents :bigint           default(0), not null
+#  purchase_order_number                   :string
 #  ready_for_payment_processing            :boolean          default(TRUE), not null
 #  ready_to_be_refreshed                   :boolean          default(FALSE), not null
 #  self_billed                             :boolean          default(FALSE), not null

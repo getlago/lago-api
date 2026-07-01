@@ -73,11 +73,13 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
       expect(wallet.reload.credits_balance).to eq(22.0)
     end
 
-    it "updates wallet ongoing balance based on granted and voided credits" do
-      subject
+    it "flags the customer wallets for refresh" do
+      expect { subject }.to change { customer.reload.awaiting_wallet_refresh }.from(false).to(true)
+    end
 
-      expect(wallet.reload.ongoing_balance_cents).to eq(2200)
-      expect(wallet.reload.credits_ongoing_balance).to eq(22.0)
+    it "enqueues a RefreshWalletJob to update the ongoing balance" do
+      expect { subject }
+        .to have_enqueued_job_after_commit(Customers::RefreshWalletJob).with(customer)
     end
 
     it "enqueues a SendWebhookJob for each wallet transaction" do
@@ -329,6 +331,23 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
             expect(result).to be_success
             expect(result.wallet_transactions.first.credit_amount).to eq(5)
           end
+        end
+      end
+
+      context "when granted_credits round to zero monetary value" do
+        let(:rate_amount) { 0.01 }
+        let(:params) do
+          {
+            wallet_id: wallet.id,
+            granted_credits: "0.4"
+          }
+        end
+
+        it "fails and persists no wallet transaction" do
+          expect { result }.not_to change(WalletTransaction, :count)
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:granted_credits]).to eq(["amount_rounds_to_zero"])
         end
       end
 

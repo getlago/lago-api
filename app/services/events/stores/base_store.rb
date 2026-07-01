@@ -20,6 +20,26 @@ module Events
         end
       end
 
+      # NOTE: result of a weighted_sum aggregation. Unlike AggregationResult it also
+      #       carries the variation (sum of the real events) alongside the weighted value.
+      WeightedAggregationResult = Data.define(
+        :value,       # weighted aggregation (units per second)
+        :variation,   # sum of real events (initial_value already subtracted)
+        :events_count
+      )
+
+      # NOTE: grouped variant of WeightedAggregationResult.
+      GroupedWeightedAggregationResult = Data.define(
+        :groups,
+        :value,
+        :variation,
+        :events_count
+      ) do
+        def to_grouped_hash
+          {groups:, value:}
+        end
+      end
+
       def initialize(subscription:, boundaries:, code: nil, filters: {}, deduplicate: false)
         @code = code
         @subscription = subscription
@@ -75,7 +95,9 @@ module Events
         raise NotImplementedError
       end
 
-      delegate :count, to: :events
+      def count
+        raise NotImplementedError
+      end
 
       def grouped_count
         raise NotImplementedError
@@ -85,15 +107,15 @@ module Events
         raise NotImplementedError
       end
 
-      def grouped_max
+      def grouped_max(columns = grouped_by, with_count: true)
         raise NotImplementedError
       end
 
-      def last
+      def last(with_count: true)
         raise NotImplementedError
       end
 
-      def grouped_last
+      def grouped_last(with_count: true)
         raise NotImplementedError
       end
 
@@ -191,6 +213,69 @@ module Events
         AggregationResult.new(
           value: row["value"] || 0,
           events_count: row["events_count"].presence&.to_i
+        )
+      end
+
+      # NOTE: Build an AggregationResult for the `last` aggregation. Unlike
+      #       build_aggregation_result it preserves a nil value (no event or no
+      #       value on the last event) instead of defaulting to 0, and tolerates
+      #       an empty row (when LIMIT 1 returns no row, events_count is 0).
+      #       The value is returned as-is from the driver (numeric), consistent
+      #       with sum/max/grouped_* which also don't cast.
+      def build_last_aggregation_result(row, with_count: true)
+        AggregationResult.new(
+          value: row && row["value"],
+          events_count: with_count ? (row && row["events_count"]).to_i : nil
+        )
+      end
+
+      # NOTE: Build an AggregationResult for aggregations whose value already
+      #       represents the number of aggregated events (count, unique_count).
+      #       The value is reused as the events_count, avoiding a second count query.
+      def build_aggregation_result_from_value(value)
+        value ||= 0
+        AggregationResult.new(value:, events_count: value)
+      end
+
+      # NOTE: same as build_aggregation_result_from_value but for grouped results:
+      #       wraps {groups:, value:} hashes into GroupedAggregationResult,
+      #       reusing each value as its events_count.
+      def grouped_results_with_value_as_count(rows)
+        rows.map do |row|
+          GroupedAggregationResult.new(groups: row[:groups], value: row[:value], events_count: row[:value])
+        end
+      end
+
+      # NOTE: builds a WeightedAggregationResult from the raw query columns.
+      def build_weighted_aggregation_result(value:, variation_with_initial:, rows_count:, initial_value:)
+        WeightedAggregationResult.new(
+          value:,
+          variation: variation_with_initial - (initial_value || 0).to_d, # Subtract initial value from variation
+          events_count: [rows_count - 2, 0].max # Handle zero duration case
+        )
+      end
+
+      # NOTE: Build the { column => value } groups hash used by grouped aggregation results.
+      def build_groups(values, columns: grouped_by)
+        columns.zip(values.map(&:presence)).to_h
+      end
+
+      # NOTE: grouped variant of build_weighted_aggregation_result.
+      def build_grouped_weighted_result(groups:, value:, variation_with_initial:, rows_count:, initial_values:)
+        initial_value = initial_values.find { |iv| iv[:groups] == groups }&.fetch(:value, 0)
+
+        weighted = build_weighted_aggregation_result(
+          value:,
+          variation_with_initial:,
+          rows_count:,
+          initial_value:
+        )
+
+        GroupedWeightedAggregationResult.new(
+          groups:,
+          value: weighted.value,
+          variation: weighted.variation,
+          events_count: weighted.events_count
         )
       end
     end

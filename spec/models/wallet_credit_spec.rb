@@ -96,6 +96,40 @@ RSpec.describe WalletCredit do
     end
   end
 
+  describe ".rounds_to_zero?" do
+    subject { described_class.rounds_to_zero?(wallet:, credit_amount:) }
+
+    let(:rate_amount) { 0.01 }
+
+    context "when the credit amount produces a zero monetary value" do
+      let(:credit_amount) { "0.4" }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when the credit amount produces a non-zero monetary value" do
+      let(:credit_amount) { "1.0" }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when the credit amount is strictly zero" do
+      let(:credit_amount) { "0.0" }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when the wallet uses a three-decimal currency" do
+      let(:currency) { "KWD" }
+      let(:rate_amount) { 0.001 }
+      let(:credit_amount) { "1.0" }
+
+      it "keeps a sub-cent but non-zero value as not rounding to zero" do
+        expect(subject).to be(false)
+      end
+    end
+  end
+
   context "when invoiceable is false" do
     let(:invoiceable) { false }
 

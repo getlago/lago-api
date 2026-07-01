@@ -164,6 +164,26 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "when the initial credits round to zero monetary value" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "0.01",
+          granted_credits: "0.4"
+        }
+      end
+
+      it "does not create the wallet and returns a validation error" do
+        expect { service_result }.not_to change(Wallet, :count)
+        expect(service_result).not_to be_success
+        expect(service_result.error).to be_a(BaseService::ValidationFailure)
+        expect(service_result.error.messages[:granted_credits]).to eq(["amount_rounds_to_zero"])
+      end
+    end
+
     context "when customer has reached the wallet limit" do
       before do
         create_list(:wallet, Wallets::ValidateService::MAXIMUM_WALLETS_PER_CUSTOMER, customer:, organization:, status: :active)

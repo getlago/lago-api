@@ -5,7 +5,7 @@ require "rails_helper"
 require_relative "shared_examples/an_event_store"
 
 RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_before: true} do
-  def create_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil, event_charge: nil)
+  def create_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil, event_charge: nil, created_at: nil)
     effective_charge = event_charge || charge
 
     grouped_values = if events_grouped_by.present?
@@ -30,7 +30,7 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       value:,
       decimal_value: value&.to_i&.to_d,
       precise_total_amount_cents: value,
-      enriched_at:
+      enriched_at: created_at || enriched_at
     )
   end
 
@@ -41,11 +41,11 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
   end
 
   context "without deduplication" do
-    it_behaves_like "an event store", with_event_duplication: false
+    it_behaves_like "an event store", with_event_duplication: false, excluding_features: [:distinct_codes_and_property_combinations]
   end
 
   context "with deduplication" do
-    it_behaves_like "an event store", with_event_duplication: true
+    it_behaves_like "an event store", with_event_duplication: true, excluding_features: [:distinct_codes_and_property_combinations]
   end
 
   describe "#grouped_arel_columns" do

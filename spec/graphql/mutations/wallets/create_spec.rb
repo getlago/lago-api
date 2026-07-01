@@ -36,6 +36,7 @@ RSpec.describe Mutations::Wallets::Create, :premium do
             thresholdCredits
             paidCredits
             grantedCredits
+            grantsTargetTopUp
             targetOngoingBalance
             invoiceRequiresSuccessfulPayment
             expirationAt
@@ -90,6 +91,7 @@ RSpec.describe Mutations::Wallets::Create, :premium do
               invoiceRequiresSuccessfulPayment: true,
               expirationAt: expiration_at.iso8601,
               ignorePaidTopUpLimits: true,
+              grantsTargetTopUp: true,
               transactionMetadata: [
                 {key: "example_key", value: "example_value"},
                 {key: "another_key", value: "another_value"}
@@ -124,6 +126,7 @@ RSpec.describe Mutations::Wallets::Create, :premium do
     expect(result_data["recurringTransactionRules"][0]["grantedCredits"]).to eq("0.0")
     expect(result_data["recurringTransactionRules"][0]["invoiceRequiresSuccessfulPayment"]).to eq(true)
     expect(result_data["recurringTransactionRules"][0]["ignorePaidTopUpLimits"]).to eq(true)
+    expect(result_data["recurringTransactionRules"][0]["grantsTargetTopUp"]).to eq(true)
     expect(result_data["recurringTransactionRules"][0]["transactionMetadata"]).to contain_exactly(
       {"key" => "example_key", "value" => "example_value"},
       {"key" => "another_key", "value" => "another_value"}
@@ -146,6 +149,42 @@ RSpec.describe Mutations::Wallets::Create, :premium do
       }
     )
     expect(SendWebhookJob).to have_been_enqueued.with("wallet.created", Wallet)
+  end
+
+  context "when grants_target_top_up is omitted on a target rule" do
+    it "defaults grants_target_top_up to false" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            name: "Default Wallet",
+            priority: 9,
+            rateAmount: "1",
+            paidCredits: "0.00",
+            grantedCredits: "0.00",
+            expirationAt: expiration_at.iso8601,
+            currency: "EUR",
+            recurringTransactionRules: [
+              {
+                method: "target",
+                trigger: "interval",
+                interval: "monthly",
+                targetOngoingBalance: "0.0"
+              }
+            ]
+          }
+        }
+      )
+
+      result_data = result["data"]["createCustomerWallet"]
+
+      expect(result_data["recurringTransactionRules"].count).to eq(1)
+      expect(result_data["recurringTransactionRules"][0]).to include("grantsTargetTopUp" => false)
+    end
   end
 
   context "when name is not present" do

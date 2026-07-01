@@ -3152,6 +3152,7 @@ input CreateInvoiceInput {
   fees: [FeeInput!]!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   paymentMethod: PaymentMethodReferenceInput
+  purchaseOrderNumber: String
   voidedInvoiceId: ID
 }
 
@@ -3309,6 +3310,7 @@ input CreateQuoteInput {
 input CreateRecurringTransactionRuleInput {
   expirationAt: ISO8601DateTime
   grantedCredits: String
+  grantsTargetTopUp: Boolean
   ignorePaidTopUpLimits: Boolean
   interval: RecurringTransactionIntervalEnum
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
@@ -6042,6 +6044,7 @@ input FetchDraftInvoiceTaxesInput {
   fees: [FeeInput!]!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   paymentMethod: PaymentMethodReferenceInput
+  purchaseOrderNumber: String
   voidedInvoiceId: ID
 }
 
@@ -6630,6 +6633,7 @@ type Invoice {
   prepaidGrantedCreditAmountCents: BigInt
   prepaidPurchasedCreditAmountCents: BigInt
   progressiveBillingCreditAmountCents: BigInt!
+  purchaseOrderNumber: String
   readyForPaymentProcessing: Boolean!
   refundableAmountCents: BigInt!
   regeneratedInvoiceId: String
@@ -8847,6 +8851,16 @@ type Mutation {
   ): OktaIntegration
 
   """
+  Update an order's execution settings
+  """
+  updateOrder(
+    """
+    Parameters for UpdateOrder
+    """
+    input: UpdateOrderInput!
+  ): Order
+
+  """
   Updates an Organization
   """
   updateOrganization(
@@ -9142,6 +9156,7 @@ type Order {
   createdAt: ISO8601DateTime!
   currency: String
   customer: Customer!
+  executeAt: ISO8601DateTime
   executedAt: ISO8601DateTime
   executionMode: OrderExecutionModeEnum
   id: ID!
@@ -9517,6 +9532,7 @@ enum PermissionEnum {
   order_forms_sign
   order_forms_view
   order_forms_void
+  orders_update
   orders_view
   organization_emails_update
   organization_emails_view
@@ -9634,6 +9650,7 @@ type Permissions {
   orderFormsSign: Boolean!
   orderFormsView: Boolean!
   orderFormsVoid: Boolean!
+  ordersUpdate: Boolean!
   ordersView: Boolean!
   organizationEmailsUpdate: Boolean!
   organizationEmailsView: Boolean!
@@ -10765,6 +10782,16 @@ type Query {
   quote(id: ID!): Quote
 
   """
+  Query a single quote version
+  """
+  quoteVersion(
+    """
+    Lago ID of the quote version
+    """
+    id: ID!
+  ): QuoteVersion
+
+  """
   Query quotes of an organization
   """
   quotes(customers: [ID!], fromDate: ISO8601Date, limit: Int, numbers: [String!], orderTypes: [OrderTypeEnum!], owners: [ID!], page: Int, statuses: [StatusEnum!], toDate: ISO8601Date): QuoteCollection!
@@ -11075,6 +11102,7 @@ type RecurringTransactionRule {
   createdAt: ISO8601DateTime!
   expirationAt: ISO8601DateTime
   grantedCredits: String!
+  grantsTargetTopUp: Boolean
   ignorePaidTopUpLimits: Boolean!
   interval: RecurringTransactionIntervalEnum
   invoiceRequiresSuccessfulPayment: Boolean!
@@ -13257,6 +13285,19 @@ input UpdateOktaIntegrationInput {
 }
 
 """
+Update Order input arguments
+"""
+input UpdateOrderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  executeAt: ISO8601DateTime
+  executionMode: OrderExecutionModeEnum
+  id: ID!
+}
+
+"""
 Update Organization input arguments
 """
 input UpdateOrganizationInput {
@@ -13377,6 +13418,7 @@ input UpdateQuoteVersionInput {
 input UpdateRecurringTransactionRuleInput {
   expirationAt: ISO8601DateTime
   grantedCredits: String
+  grantsTargetTopUp: Boolean
   ignorePaidTopUpLimits: Boolean
   interval: RecurringTransactionIntervalEnum
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput

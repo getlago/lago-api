@@ -11,6 +11,7 @@ module Types
         field :created_at, GraphQL::Types::ISO8601DateTime, null: false
         field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true
         field :granted_credits, String, null: false
+        field :grants_target_top_up, Boolean, null: true
         field :ignore_paid_top_up_limits, Boolean, null: false
         field :interval, Types::Wallets::RecurringTransactionRules::IntervalEnum, null: true
         field :invoice_requires_successful_payment, Boolean, null: false

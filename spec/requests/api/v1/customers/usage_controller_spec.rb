@@ -83,6 +83,7 @@ RSpec.describe Api::V1::Customers::UsageController do
       expect(charge_usage[:billable_metric][:name]).to eq(metric.name)
       expect(charge_usage[:billable_metric][:code]).to eq(metric.code)
       expect(charge_usage[:billable_metric][:aggregation_type]).to eq("count_agg")
+      expect(charge_usage[:charge][:code]).to eq(charge.code)
       expect(charge_usage[:charge][:charge_model]).to eq("graduated")
       expect(charge_usage[:units]).to eq("4.0")
       expect(charge_usage[:amount_cents]).to eq(5)

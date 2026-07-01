@@ -3,6 +3,8 @@
 module Subscriptions
   class UpdateOrOverrideFixedChargeService < BaseService
     include Concerns::PlanOverrideConcern
+    include Concerns::FixedChargeUnitsOverrideDetectionConcern
+    include Concerns::FixedChargeUnitsOverridePromotionConcern
 
     Result = BaseResult[:fixed_charge]
 
@@ -21,13 +23,7 @@ module Subscriptions
       return result.not_found_failure!(resource: "fixed_charge") unless fixed_charge
 
       ActiveRecord::Base.transaction do
-        parent_fixed_charge = fixed_charge.parent_or_self
-        target_plan = ensure_plan_override(params: plan_override_params(parent_fixed_charge))
-        target_fixed_charge = find_or_create_fixed_charge_override(parent_fixed_charge, target_plan)
-
-        publish_invoice_pay_in_advance_job(target_fixed_charge)
-
-        result.fixed_charge = target_fixed_charge
+        result.fixed_charge = units_only_change? ? override_units_only : override_via_plan
       end
 
       result
@@ -41,10 +37,49 @@ module Subscriptions
 
     attr_reader :subscription, :fixed_charge, :params, :subscription_plan_parent_present
 
+    def units_only_change?
+      return false if subscription_plan_parent_present
+
+      units_only_fixed_charge_params?(params)
+    end
+
+    def override_units_only
+      parent_fixed_charge = fixed_charge.parent_or_self
+
+      Subscriptions::FixedChargeUnitsOverrides::WriteService.call!(
+        subscription:,
+        fixed_charge: parent_fixed_charge,
+        units: params[:units],
+        apply_units_immediately: params[:apply_units_immediately]
+      )
+
+      parent_fixed_charge
+    end
+
+    def override_via_plan
+      parent_fixed_charge = fixed_charge.parent_or_self
+      target_plan = ensure_plan_override(params: promoted_plan_override_params(parent_fixed_charge))
+      target_fixed_charge = find_or_create_fixed_charge_override(parent_fixed_charge, target_plan)
+
+      publish_invoice_pay_in_advance_job(target_fixed_charge)
+
+      target_fixed_charge
+    end
+
     def plan_override_params(parent_fixed_charge)
       return {} if subscription_plan_parent_present
 
       {fixed_charges: [params.merge(id: parent_fixed_charge.id)]}
+    end
+
+    # Seed the override plan with the customer's existing units override rows so
+    # they survive the clone, while the user's current change wins for the
+    # fixed_charge being edited. The seeded units are applied during clone
+    # creation; find_or_create_fixed_charge_override reloads (no second event).
+    def promoted_plan_override_params(parent_fixed_charge)
+      base_entries = plan_override_params(parent_fixed_charge)[:fixed_charges] || []
+      promoted_fixed_charges = promote_units_overrides_to_fixed_charges_params(base_entries)
+      promoted_fixed_charges.any? ? {fixed_charges: promoted_fixed_charges} : {}
     end
 
     def find_or_create_fixed_charge_override(parent_fixed_charge, target_plan)

@@ -259,7 +259,7 @@ module Events
       end
 
       def count
-        Utils::ClickhouseConnection.connection_with_retry do |connection|
+        value = Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value]), <<-SQL)
             SELECT count()
             FROM events
@@ -267,6 +267,8 @@ module Events
 
           connection.select_value(sql).to_i
         end
+
+        build_aggregation_result_from_value(value)
       end
 
       def grouped_count(columns = grouped_by)
@@ -291,7 +293,7 @@ module Events
             SQL
           end
 
-          prepare_grouped_result(connection.select_all(sql))
+          grouped_results_with_value_as_count(prepare_grouped_result(connection.select_all(sql)))
         end
       end
 
@@ -307,7 +309,7 @@ module Events
           connection.select_one(sql)
         end
 
-        result["aggregation"]
+        build_aggregation_result_from_value(result["aggregation"])
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
@@ -343,7 +345,7 @@ module Events
           connection.select_one(sql)
         end
 
-        result["aggregation"]
+        build_aggregation_result_from_value(result["aggregation"])
       end
 
       def prorated_unique_count_breakdown(with_remove: false)
@@ -381,7 +383,9 @@ module Events
             ]
           )
 
-          prepare_grouped_result(connection.select_all(sql), groups_key: :grouped_by, value_key: :aggregation)
+          grouped_results_with_value_as_count(
+            prepare_grouped_result(connection.select_all(sql), groups_key: :grouped_by, value_key: :aggregation)
+          )
         end
       end
 
@@ -399,7 +403,9 @@ module Events
               }
             ]
           )
-          prepare_grouped_result(connection.select_all(sql), groups_key: :grouped_by, value_key: :aggregation)
+          grouped_results_with_value_as_count(
+            prepare_grouped_result(connection.select_all(sql), groups_key: :grouped_by, value_key: :aggregation)
+          )
         end
       end
 
@@ -440,7 +446,9 @@ module Events
         end
       end
 
-      def grouped_max(columns = grouped_by)
+      def grouped_max(columns = grouped_by, with_count: true)
+        count_select = with_count ? "count()" : "null"
+
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           if columns == grouped_by
             sql = with_ctes(events_cte_queries(
@@ -449,7 +457,8 @@ module Events
             ), <<-SQL)
               SELECT
                 sorted_grouped_by as groups,
-                MAX(events.decimal_value) as value
+                MAX(events.decimal_value) as value,
+                #{count_select} as events_count
               FROM events
               GROUP BY sorted_grouped_by
             SQL
@@ -459,36 +468,41 @@ module Events
             sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
               SELECT
                 map(#{map_args.join(", ")}) as groups,
-                MAX(events.decimal_value) as value
+                MAX(events.decimal_value) as value,
+                #{count_select} as events_count
               FROM events
               GROUP BY #{col_expressions.join(", ")}
             SQL
           end
 
-          prepare_grouped_result(connection.select_all(sql))
+          prepare_grouped_aggregated_values(connection.select_all(sql))
         end
       end
 
-      def last
+      def last(with_count: true)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
-            SELECT decimal_value
+            SELECT
+              decimal_value as value,
+              #{with_count ? "count() OVER ()" : "null"} as events_count
             FROM events
             ORDER BY timestamp DESC
             LIMIT 1
           SQL
 
-          connection.select_value(sql)
+          build_last_aggregation_result(connection.select_one(sql), with_count:)
         end
       end
 
-      def grouped_last(columns = grouped_by)
+      def grouped_last(columns = grouped_by, with_count: true)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           if columns == grouped_by
+            count_select = with_count ? "count() OVER (PARTITION BY sorted_grouped_by)" : "null"
             sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
               SELECT
                 DISTINCT ON (sorted_grouped_by) sorted_grouped_by as groups,
-                events.decimal_value as value
+                events.decimal_value as value,
+                #{count_select} as events_count
               FROM events
               ORDER BY sorted_grouped_by, timestamp DESC
             SQL
@@ -496,26 +510,30 @@ module Events
             map_args, = sorted_properties_map_args(columns)
 
             sql = if grouped_by.blank?
+              count_select = with_count ? "count() OVER ()" : "null"
               with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
                 SELECT
                   map(#{map_args.join(", ")}) as groups,
-                  events.decimal_value as value
+                  events.decimal_value as value,
+                  #{count_select} as events_count
                 FROM events
                 ORDER BY timestamp DESC
                 LIMIT 1
               SQL
             else
+              count_select = with_count ? "count() OVER (PARTITION BY sorted_grouped_by)" : "null"
               with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value sorted_properties]), <<-SQL)
                 SELECT
                   DISTINCT ON (sorted_grouped_by) map(#{map_args.join(", ")}) as groups,
-                  events.decimal_value as value
+                  events.decimal_value as value,
+                  #{count_select} as events_count
                 FROM events
                 ORDER BY sorted_grouped_by, timestamp DESC
               SQL
             end
           end
 
-          prepare_grouped_result(connection.select_all(sql))
+          prepare_grouped_aggregated_values(connection.select_all(sql))
         end
       end
 
@@ -691,7 +709,7 @@ module Events
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
                 decimal_scale: DECIMAL_SCALE,
-                initial_value: initial_value || 0
+                initial_value: decimal_literal(initial_value || 0)
               }
             ]
           )
@@ -699,7 +717,12 @@ module Events
           connection.select_one(sql)
         end
 
-        BigDecimal(result["aggregation"].presence || 0)
+        build_weighted_aggregation_result(
+          value: BigDecimal(result["aggregation"].presence || 0),
+          variation_with_initial: BigDecimal(result["variation_with_initial"].presence || 0),
+          rows_count: result["rows_count"].to_i,
+          initial_value:
+        )
       end
 
       def grouped_weighted_sum(columns = grouped_by, initial_values: [])
@@ -713,9 +736,9 @@ module Events
           #       from the events in the period
           formatted_initial_values = grouped_count(columns).map do |group|
             value = 0
-            previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
+            previous_group = initial_values.find { |g| g[:groups] == group.groups }
             value = previous_group[:value] if previous_group
-            {groups: group[:groups], value:}
+            {groups: group.groups, value:}
           end
 
           # NOTE: add the initial values for groups that are not in the events
@@ -737,7 +760,7 @@ module Events
             ]
           )
 
-          prepare_grouped_result(connection.select_all(sql), decimal: true, groups_key: :grouped_by, value_key: :aggregation)
+          prepare_grouped_weighted_values(connection.select_all(sql), formatted_initial_values)
         end
       end
 
@@ -754,7 +777,7 @@ module Events
                   from_datetime:,
                   to_datetime: to_datetime.ceil,
                   decimal_scale: DECIMAL_SCALE,
-                  initial_value: initial_value || 0
+                  initial_value: decimal_literal(initial_value || 0)
                 }
               ]
             )
@@ -945,6 +968,23 @@ module Events
             groups: r[:groups].transform_values(&:presence),
             value: decimal ? BigDecimal(r[:value].presence || 0) : r[:value],
             events_count: r[:events_count].presence&.to_i
+          )
+        end
+      end
+
+      # NOTE: parses the grouped weighted_sum rows. Each row carries the weighted aggregation, the
+      #       sum of the differences (including the initial value) and the rows count (including the
+      #       2 boundary rows). Correction is delegated to build_grouped_weighted_result.
+      def prepare_grouped_weighted_values(result, initial_values)
+        result.to_ary.map do |row|
+          r = row.symbolize_keys
+
+          build_grouped_weighted_result(
+            groups: r[:grouped_by].transform_values(&:presence),
+            value: BigDecimal(r[:aggregation].presence || 0),
+            variation_with_initial: BigDecimal(r[:variation_with_initial].presence || 0),
+            rows_count: r[:rows_count].to_i,
+            initial_values:
           )
         end
       end

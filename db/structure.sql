@@ -3193,7 +3193,7 @@ CREATE VIEW public.exports_customers AS
     '[]'::json AS lago_taxes_ids
    FROM ((public.customers c
      LEFT JOIN public.organizations o ON ((o.id = c.organization_id)))
-     LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL))));
+     LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL) AND (ppc.payment_provider_id IS NOT NULL))));
 
 
 --
@@ -3717,6 +3717,7 @@ CREATE TABLE public.invoices (
     prepaid_purchased_credit_amount_cents bigint,
     payment_method_id uuid,
     skip_automatic_payment boolean,
+    purchase_order_number character varying,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -5054,7 +5055,8 @@ CREATE TABLE public.recurring_transaction_rules (
     transaction_name character varying(255),
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
-    skip_invoice_custom_sections boolean DEFAULT false NOT NULL
+    skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
+    grants_target_top_up boolean
 );
 
 
@@ -12793,8 +12795,11 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260625095837'),
+('20260622113747'),
 ('20260619065327'),
 ('20260617145515'),
+('20260617072554'),
 ('20260616160703'),
 ('20260616155032'),
 ('20260615181440'),

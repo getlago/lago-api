@@ -89,6 +89,10 @@ RSpec.describe Invoice do
     end
   end
 
+  it_behaves_like "a model with a purchase order number" do
+    subject { build(:invoice) }
+  end
+
   describe "finalized_at" do
     let(:invoice) { create(:invoice, :draft) }
 

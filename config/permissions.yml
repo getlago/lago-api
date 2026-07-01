@@ -154,6 +154,8 @@ orders:
   view:
     - finance
     - manager
+  update:
+    - manager
 organization:
   view:
     - finance

@@ -33,6 +33,13 @@ module Events
           ::Clickhouse::BaseRecord.connection.quote(value)
         end
 
+        # NOTE: A numeric literal containing a decimal point (e.g. 2500.0) is parsed as a Float64 by
+        #       ClickHouse and loses precision when cast to Decimal. Rendering the value as a
+        #       fixed-point string makes toDecimalXX read an exact decimal literal instead.
+        def decimal_literal(value)
+          BigDecimal(value.to_s).to_s("F")
+        end
+
         def sql_condition(template, *values)
           ActiveRecord::Base.sanitize_sql_for_conditions([template, *values])
         end

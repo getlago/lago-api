@@ -11,7 +11,7 @@ module BillableMetrics
       def compute_aggregation(options: {})
         return empty_result if should_bypass_aggregation?
 
-        result.count = event_store.count
+        result.count = event_store.count.value
 
         aggregation_result = perform_custom_aggregation(grouped_by_values:)
         in_advance_aggregation_result = compute_pay_in_advance_aggregation
@@ -47,12 +47,12 @@ module BillableMetrics
 
         result.aggregations = counts.map do |aggregation|
           group_result = BaseService::Result.new
-          group_result.grouped_by = aggregation[:groups]
-          group_result.count = aggregation[:value]
+          group_result.grouped_by = aggregation.groups
+          group_result.count = aggregation.events_count
 
           aggregation_result = perform_custom_aggregation(
             target_result: group_result,
-            grouped_by_values: aggregation[:groups]
+            grouped_by_values: aggregation.groups
           )
 
           group_result.aggregation = aggregation_result[:total_units]
@@ -61,7 +61,7 @@ module BillableMetrics
           group_result.options = options
 
           if billable_metric.recurring?
-            last_event = last_events.find { |c| c[:groups] == aggregation[:groups] }
+            last_event = last_events.find { |c| c[:groups] == aggregation.groups }
 
             group_result.recurring_updated_at = last_event&.[](:timestamp) || from_datetime
           end

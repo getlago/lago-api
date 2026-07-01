@@ -167,7 +167,7 @@ GEM
       coffee-script-source
       execjs
     coffee-script-source (1.12.2)
-    concurrent-ruby (1.3.6)
+    concurrent-ruby (1.3.7)
     connection_pool (2.5.5)
     countries (8.1.0)
       unaccent (~> 0.3)
@@ -738,7 +738,7 @@ GEM
       date
       stringio
     public_suffix (7.0.5)
-    puma (6.6.1)
+    puma (7.2.1)
       nio4r (~> 2.0)
     racc (1.8.1)
     rack (3.2.6)
@@ -1136,7 +1136,7 @@ DEPENDENCIES
   parallel_tests (~> 5.3)
   pg
   pry-byebug
-  puma (~> 6.5)
+  puma (~> 7.2)
   rack-cors
   rails (~> 8.0)
   ransack

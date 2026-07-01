@@ -13,7 +13,7 @@ WORKDIR /app
 ENV POSTGRES_VERSION=15
 
 RUN apt update -qq && \
-  apt-get install nodejs build-essential curl git pkg-config libpq-dev libclang-dev postgresql-common libyaml-dev -y && \
+  apt-get install nodejs build-essential curl git pkg-config libpq-dev libclang-dev postgresql-common libyaml-dev libjemalloc2 -y && \
   curl https://sh.rustup.rs -sSf | bash -s -- -y && \
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -i -v $POSTGRES_VERSION
 
@@ -21,6 +21,8 @@ COPY --from=pdfcpu-build /go/bin/pdfcpu /usr/local/bin/pdfcpu
 
 ENV BUNDLER_VERSION='4.0.4'
 ENV PATH="$PATH:/root/.cargo/bin/"
+
+ENV LD_PRELOAD=libjemalloc.so.2
 
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock

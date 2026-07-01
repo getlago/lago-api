@@ -5,13 +5,13 @@ require "lago/redis_config_builder"
 ActiveJob::Uniqueness.configure do |config|
   config.lock_ttl = 1.hour
 
+  # Retries are handled by the Redis client's `reconnect_attempts` option, so
+  # Redlock's own retry mechanism is disabled to avoid compounding retries.
   config.redlock_options = {
-    retry_count: 0,
-    redis_timeout: 5
+    retry_count: 0
   }
 
   redis_config = Lago::RedisConfigBuilder.new
-    .with_options(reconnect_attempts: 4)
     .sidekiq
 
   client = if redis_config.key?(:sentinels)

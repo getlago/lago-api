@@ -10,9 +10,12 @@ module Events
 
         def query
           with_ctes(events_cte_sql, <<-SQL)
-            SELECT sum(period_ratio) as aggregation
+            SELECT
+              sum(period_ratio) as aggregation,
+              sum(difference) as variation_with_initial,
+              count() as rows_count
             FROM (
-              SELECT (#{period_ratio_sql}) as period_ratio
+              SELECT (#{period_ratio_sql}) as period_ratio, difference
               FROM events_data
             ) cumulated_ratios
           SQL
@@ -22,11 +25,14 @@ module Events
           with_ctes(grouped_events_cte_sql(initial_values), <<-SQL)
             SELECT
               #{joined_group_names},
-              SUM(period_ratio) as aggregation
+              SUM(period_ratio) as aggregation,
+              sum(difference) as variation_with_initial,
+              count() as rows_count
             FROM (
               SELECT
                 #{joined_group_names},
-                (#{grouped_period_ratio_sql}) AS period_ratio
+                (#{grouped_period_ratio_sql}) AS period_ratio,
+                difference
               FROM events_data
             ) cumulated_ratios
             GROUP BY #{joined_group_names}
@@ -54,6 +60,7 @@ module Events
         delegate :arel_table,
           :with_ctes,
           :charges_duration,
+          :decimal_literal,
           :events_cte_queries,
           :grouped_by_columns,
           :grouped_arel_columns,
@@ -160,7 +167,7 @@ module Events
             [
               groups,
               "toDateTime64(:from_datetime, 5, 'UTC')",
-              "toDecimal128(#{initial_value[:value]}, :decimal_scale)"
+              "toDecimal128('#{decimal_literal(initial_value[:value])}', :decimal_scale)"
             ].flatten.join(", ")
           end
 

@@ -6,13 +6,14 @@ module BillableMetrics
       def compute_aggregation(options: {})
         return empty_result if should_bypass_aggregation?
 
-        result.aggregation = event_store.count
-        result.current_usage_units = result.aggregation
-        result.count = result.aggregation
+        count_result = event_store.count
+        result.aggregation = count_result.value
+        result.current_usage_units = count_result.value
+        result.count = count_result.events_count
         result.pay_in_advance_aggregation = BigDecimal(1)
 
         if presentation_by.present?
-          result.breakdowns = event_store.grouped_count(uniq_grouped_by_and_presentation_by)
+          result.breakdowns = event_store.grouped_count(uniq_grouped_by_and_presentation_by).map(&:to_grouped_hash)
           result.pay_in_advance_breakdowns = build_pay_in_advance_breakdowns(value: 1)
         end
 
@@ -36,16 +37,16 @@ module BillableMetrics
 
         result.aggregations = aggregations.map do |aggregation|
           group_result = BaseService::Result.new
-          group_result.grouped_by = aggregation[:groups]
-          group_result.aggregation = aggregation[:value]
-          group_result.count = aggregation[:value]
-          group_result.current_usage_units = aggregation[:value]
+          group_result.grouped_by = aggregation.groups
+          group_result.aggregation = aggregation.value
+          group_result.count = aggregation.events_count
+          group_result.current_usage_units = aggregation.value
           group_result.options = {running_total: running_total(options, aggregation: group_result.aggregation)}
           group_result
         end
 
         if presentation_by.present?
-          result.breakdowns = event_store.grouped_count(uniq_grouped_by_and_presentation_by)
+          result.breakdowns = event_store.grouped_count(uniq_grouped_by_and_presentation_by).map(&:to_grouped_hash)
         end
 
         result
@@ -63,7 +64,7 @@ module BillableMetrics
       end
 
       def compute_per_event_aggregation(exclude_event:, include_event_value:)
-        values = (0...event_store.count).map { |_| 1 }
+        values = (0...event_store.count.value).map { |_| 1 }
         values << 1 if include_event_value
         values
       end

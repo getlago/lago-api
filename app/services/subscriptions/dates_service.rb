@@ -168,6 +168,13 @@ module Subscriptions
       customer_timezone_shift(end_utc, end_of_day: true)
     end
 
+    # Start of the billing period that follows the current one, at the beginning of the day in the
+    # customer timezone. `end_of_period` lands at the end of the day, so the next period starts the
+    # following day at 00:00.
+    def next_period_started_at
+      (end_of_period + 1.day).in_time_zone(customer.applicable_timezone).beginning_of_day
+    end
+
     # NOTE: Retrieve the beginning of the previous period based on the billing date
     def previous_beginning_of_period(current_period: false)
       date = base_date

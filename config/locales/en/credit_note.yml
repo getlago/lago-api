@@ -17,6 +17,7 @@ en:
     offset_invoice_notice: Offset invoice %{invoice_number} on %{issuing_date}
     powered_by: Powered by
     prepaid_credits_for_wallet: Prepaid credits - %{wallet_name}
+    purchase_order_number: Purchase order number
     refunded: Refunded
     refunded_notice: Refunded on %{issuing_date}
     self_billed:
