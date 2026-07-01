@@ -1126,14 +1126,12 @@ RSpec.describe Customers::UpsertFromApiService do
             }
           end
 
-          # NOTE: This describes a scenario with incorrect behavior that currently exists.
-          #       The new provider customer does not get created and the previous one is not discarded
-          it "does not create the gocardless provider customer" do
+          it "creates the gocardless provider customer" do
             expect(result).to be_success
 
             expect(result.customer.payment_provider).to eq("gocardless")
             expect(result.customer.payment_provider_code).to eq("gocardless_1")
-            expect(result.customer.provider_customer).to be_nil
+            expect(result.customer.provider_customer).to be_present
           end
 
           it "does not discard the provider customer" do
@@ -1142,10 +1140,10 @@ RSpec.describe Customers::UpsertFromApiService do
             expect(stripe_customer.reload).not_to be_discarded
           end
 
-          it "does not discard the old provider customer's payment methods" do
+          it "discards the old provider customer's payment methods" do
             expect(result).to be_success
 
-            expect(payment_method.reload).not_to be_discarded
+            expect(payment_method.reload).to be_discarded
           end
         end
       end
