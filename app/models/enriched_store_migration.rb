@@ -56,6 +56,11 @@ class EnrichedStoreMigration < ApplicationRecord
   def all_subscriptions_completed?
     subscription_migrations.exists? && subscription_migrations.where.not(status: :completed).none?
   end
+
+  def mark_as_completed!(timestamp: Time.current)
+    self.completed_at = timestamp
+    complete!
+  end
 end
 
 # == Schema Information
