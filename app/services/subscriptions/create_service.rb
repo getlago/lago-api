@@ -71,6 +71,13 @@ module Subscriptions
 
           subscription = handle_subscription
 
+          # New engine: materialize the plan's product items onto the subscription,
+          # seeding each one's billing clock. Additive + gated — no-op for legacy
+          # (non product_catalog) orgs, so the legacy flow is unchanged.
+          if subscription.active? && customer.organization.product_catalog_enabled?
+            SubscriptionProductItems::MaterializeService.call!(subscription:)
+          end
+
           if params[:usage_thresholds].present?
             UpdateUsageThresholdsService.call!(subscription:, usage_thresholds_params: params[:usage_thresholds], partial: false)
           end
