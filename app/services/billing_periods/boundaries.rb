@@ -56,9 +56,33 @@ module BillingPeriods
       @anchor ||= billing_anchor_date.in_time_zone(timezone).beginning_of_day
     end
 
+    # Days in the boundary-to-boundary period that `time` falls in (the legacy engine's
+    # compute_duration equivalent).
+    #   monthly, anchor Jun 1: full_period_days(Jun 10) => 30 (Jun 1 -> Jul 1)
+    def full_period_days(time)
+      index = index_on_or_before(time.in_time_zone(timezone))
+      (at(index + 1).to_date - at(index).to_date).to_i
+    end
+
+    # Fraction the window [period_from, period_to] represents of its full period, capped
+    # at 1. Billed days use the shared, timezone-aware date diff (same util the legacy
+    # engine prorates with), so a partial window (clamped start or termination) prorates
+    # and a full period is 1.
+    #   [Jun 1, Jun 30] in a 30-day period => 1.0    [Jun 29, Jul 1] => 3/30 => 0.1
+    def proration_ratio(period_from, period_to)
+      full = full_period_days(period_from)
+      return 1 if full.zero?
+
+      [billed_days(period_from, period_to).fdiv(full), 1].min
+    end
+
     private
 
     attr_reader :billing_anchor_date, :interval_count, :interval_unit, :timezone
+
+    def billed_days(from, to)
+      Utils::Datetime.date_diff_with_timezone(from, to, timezone)
+    end
 
     # A cheap guess of the index: count whole calendar units from the anchor, then
     # divide by interval_count to turn that unit count into a boundary index.

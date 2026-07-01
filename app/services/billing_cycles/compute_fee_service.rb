@@ -77,27 +77,12 @@ module BillingCycles
       subscription_product_item.units || plan_product_item&.units || 0
     end
 
-    # 1 for a full period; cycle_days / full_period_days for a partial period when
-    # the rate prorates.
+    # 1 for a full period; the prorated fraction for a partial period. The day math
+    # lives on Boundaries (the billing calendar), matching the legacy engine.
     def proration_ratio
       return 1 unless rate.rate_card.proration_full?
-      return 1 if cycle_days >= full_period_days
 
-      cycle_days.fdiv(full_period_days)
-    end
-
-    def cycle_days
-      (billing_cycle.period_to.to_date - billing_cycle.period_from.to_date).to_i + 1
-    end
-
-    # Length of the full boundary-to-boundary period this cycle belongs to, anchored on
-    # the period START (period_from) — matching the legacy engine, which derives the
-    # proration denominator from `from_datetime`. Anchoring on period_to broke
-    # termination, where period_to is the (partial) termination instant, not the
-    # period end.
-    def full_period_days
-      index = boundaries.index_on_or_before(billing_cycle.period_from.in_time_zone(timezone))
-      (boundaries.at(index + 1).to_date - boundaries.at(index).to_date).to_i
+      boundaries.proration_ratio(billing_cycle.period_from, billing_cycle.period_to)
     end
 
     def boundaries
@@ -105,12 +90,8 @@ module BillingCycles
         billing_anchor_date: subscription_product_item.billing_anchor_date,
         interval_count: rate.billing_interval_count,
         interval_unit: rate.billing_interval_unit,
-        timezone:
+        timezone: subscription.customer.applicable_timezone
       )
-    end
-
-    def timezone
-      @timezone ||= subscription.customer.applicable_timezone
     end
 
     def subunit
