@@ -111,7 +111,8 @@ module Analytics
           args[:billing_entity_id],
           args[:external_customer_id],
           args[:currency],
-          args[:months]
+          args[:months],
+          args[:billing_entity_code]
         ].join("/")
       end
 
