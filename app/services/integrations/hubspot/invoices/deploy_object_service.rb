@@ -84,6 +84,13 @@ module Integrations
                 searchableInGlobalSearch: true
               },
               {
+                name: "lago_invoice_purchase_order_number",
+                label: "Lago Purchase Order Number",
+                type: "string",
+                fieldType: "text",
+                searchableInGlobalSearch: true
+              },
+              {
                 name: "lago_invoice_issuing_date",
                 label: "Lago Invoice Issuing Date",
                 type: "date",
