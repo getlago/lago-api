@@ -2,6 +2,8 @@
 
 module Clock
   class RetryFailedInvoicesJob < ClockJob
+    unique :until_executed, on_conflict: :log
+
     def perform
       Invoice
         .failed

@@ -7,6 +7,21 @@ describe Clock::ExpireIncompleteSubscriptionsJob, job: true do
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, pay_in_advance: true) }
 
+  describe "unique job behavior" do
+    around do |example|
+      ActiveJob::Uniqueness.reset_manager!
+      example.run
+      ActiveJob::Uniqueness.test_mode!
+    end
+
+    it "does not enqueue duplicate jobs" do
+      expect do
+        described_class.perform_later
+        described_class.perform_later
+      end.to change { enqueued_jobs.count }.by(1) # rubocop:disable RSpec/ExpectChange
+    end
+  end
+
   describe ".perform" do
     let(:expirable_subscription) { create(:subscription, :incomplete, customer:, organization:, plan:) }
     let(:non_expirable_pending_subscription) { create(:subscription, :incomplete, customer:, organization:, plan:) }

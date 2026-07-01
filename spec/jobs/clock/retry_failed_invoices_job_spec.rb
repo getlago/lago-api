@@ -5,6 +5,21 @@ require "rails_helper"
 describe Clock::RetryFailedInvoicesJob, job: true do
   subject { described_class }
 
+  describe "unique job behavior" do
+    around do |example|
+      ActiveJob::Uniqueness.reset_manager!
+      example.run
+      ActiveJob::Uniqueness.test_mode!
+    end
+
+    it "does not enqueue duplicate jobs" do
+      expect do
+        described_class.perform_later
+        described_class.perform_later
+      end.to change { enqueued_jobs.count }.by(1) # rubocop:disable RSpec/ExpectChange
+    end
+  end
+
   describe ".perform" do
     let(:customer) { create(:customer) }
     let(:failed_invoice) do

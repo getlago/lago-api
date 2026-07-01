@@ -2,6 +2,8 @@
 
 module Clock
   class RetryGeneratingSubscriptionInvoicesJob < ClockJob
+    unique :until_executed, on_conflict: :log
+
     THRESHOLD = -> { 1.day.ago }
 
     def perform

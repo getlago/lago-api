@@ -2,6 +2,8 @@
 
 module Clock
   class SubscriptionsToBeTerminatedJob < ClockJob
+    unique :until_executed, on_conflict: :log
+
     def perform
       now = Time.current
       today = now.to_date

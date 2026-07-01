@@ -10,6 +10,21 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
   let!(:subscription2) { create(:subscription, ending_at: ending_at + 1.year) }
   let!(:subscription3) { create(:subscription, ending_at: nil) }
 
+  describe "unique job behavior" do
+    around do |example|
+      ActiveJob::Uniqueness.reset_manager!
+      example.run
+      ActiveJob::Uniqueness.test_mode!
+    end
+
+    it "does not enqueue duplicate jobs" do
+      expect do
+        described_class.perform_later
+        described_class.perform_later
+      end.to change { enqueued_jobs.count }.by(1) # rubocop:disable RSpec/ExpectChange
+    end
+  end
+
   describe ".perform" do
     it "enqueues a TerminateEndedSubscriptionJob for matching subscriptions" do
       current_date = Time.current + 2.months
