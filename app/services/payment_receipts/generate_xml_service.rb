@@ -61,7 +61,7 @@ module PaymentReceipts
     end
 
     def e_invoicing_enabled?
-      payment_receipt.billing_entity.einvoicing && BillingEntity::EINVOICING_COUNTRIES.include?(payment_receipt.billing_entity.country.try(:upcase))
+      payment_receipt.billing_entity.eligible_for_einvoicing?
     end
   end
 end

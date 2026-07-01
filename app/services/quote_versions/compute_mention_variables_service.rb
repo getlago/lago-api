@@ -11,7 +11,7 @@ module QuoteVersions
 
     def call
       result.mention_variables = {
-        "customer_name" => customer.name,
+        "customer_name" => customer.display_name,
         "customer_email" => customer.email,
         "organization_name" => organization.name,
         "organization_logo" => organization.logo_url,

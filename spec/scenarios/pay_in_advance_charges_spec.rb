@@ -92,6 +92,71 @@ describe "Pay in advance charges Scenarios", transaction: false do
     end
   end
 
+  describe "with count_agg / graduated when events are ingested in the same second" do
+    it "assigns each event its own marginal amount" do
+      ### 24 january: Create subscription.
+      jan24 = DateTime.new(2023, 1, 24)
+
+      travel_to(jan24) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          }
+        )
+      end
+
+      charge = create(
+        :graduated_charge,
+        :pay_in_advance,
+        invoiceable: false,
+        plan:,
+        billable_metric:,
+        properties: {
+          graduated_ranges: [
+            {from_value: 0, to_value: 2, per_unit_amount: "0", flat_amount: "0"},
+            {from_value: 3, to_value: nil, per_unit_amount: "2", flat_amount: "0"}
+          ]
+        }
+      )
+
+      subscription = customer.subscriptions.first
+
+      ### 15 february: Ingest 3 events sharing the same timestamp.
+      # All events are persisted before any fee is calculated, so each fee must
+      # be priced at its own position in the graduated ranges (0, 0, 2), not all
+      # of them as the last unit of the batch.
+      feb15 = DateTime.new(2023, 2, 15)
+
+      travel_to(feb15) do
+        expect do
+          api_call do
+            post_with_token(
+              organization,
+              "/api/v1/events/batch",
+              {
+                events: Array.new(3) do
+                  {
+                    code: billable_metric.code,
+                    transaction_id: SecureRandom.uuid,
+                    external_subscription_id: subscription.external_id,
+                    timestamp: feb15.to_i
+                  }
+                end
+              }
+            )
+          end
+        end.to change { subscription.reload.fees.count }.from(0).to(3)
+
+        fees = subscription.fees.where(charge:)
+        expect(fees.map(&:pay_in_advance_event_transaction_id).uniq.count).to eq(3)
+        expect(fees.map(&:units)).to all(eq(1))
+        expect(fees.map(&:amount_cents).sort).to eq([0, 0, 200])
+      end
+    end
+  end
+
   describe "with unique_count_agg / standard" do
     let(:aggregation_type) { "unique_count_agg" }
     let(:field_name) { "unique_id" }

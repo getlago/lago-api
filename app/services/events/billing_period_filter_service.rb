@@ -44,16 +44,61 @@ module Events
     end
 
     def charges_and_filters
-      return charges_and_filters_from_event_codes unless organization.pre_filter_events?
+      return charges_and_filters_from_events unless organization.pre_filter_events?
 
       charges_and_filters_from_pre_enriched_events
     end
 
-    # Return the list of all charges and filters that matches the event codes received in the period
+    # Return the list of all charges and filters that received usage in the period
     # It also includes the recurring charges and filters
     # The result will be a hash where the key is the charge id and the value is an array of filter ids
     # filter ids also include "nil" as a default filter
-    def charges_and_filters_from_event_codes
+    #
+    # For non-recurring charges, the exact filters are resolved by matching the distinct
+    # property combinations actually present in the events against the charge filters, so
+    # only the filters that received usage are returned.
+    def charges_and_filters_from_events
+      return all_charges_and_filters_from_event_codes unless organization.feature_flag_enabled?(:event_property_combinations)
+
+      combinations = event_store.distinct_codes_and_property_combinations(
+        codes: plan_codes,
+        filter_keys: billable_metric_filter_keys
+      )
+
+      # Stores that cannot extract property combinations (e.g. Clickhouse) fall back to
+      # including every filter of each charge that received events in the period.
+      return all_charges_and_filters_from_event_codes if combinations.nil?
+
+      combinations_by_code = combinations
+        .group_by(&:first)
+        .transform_values { |rows| rows.map(&:last) }
+
+      # Recurring charges must always be billed as usage carries over from previous periods
+      result = recurring_event_charges_and_filters
+
+      non_recurring_charges_with_events(combinations_by_code.keys).each do |charge|
+        code = charge.billable_metric.code
+
+        combinations_by_code[code].each do |properties|
+          event = ::Event.new(code:, properties:)
+          matching = ChargeFilters::EventMatchingService.call(charge:, event:).matching_charge_filters
+
+          # No filter matches: the usage falls into the default bucket.
+          # Otherwise include every matching filter and let the aggregation cascade
+          # assign the event to the most specific one (the others aggregate to zero).
+          if matching.empty?
+            result[charge.id] << nil
+          else
+            matching.each { |filter| result[charge.id] << filter.id }
+          end
+        end
+      end
+
+      result
+    end
+
+    # Return all charges and filters for codes that matches events plus all recurring charges.
+    def all_charges_and_filters_from_event_codes
       plan.charges.joins(:billable_metric).left_joins(:filters)
         .where(billable_metrics: {code: distinct_event_codes})
         .or(plan.charges.joins(:billable_metric).where(billable_metrics: {recurring: true}))
@@ -61,6 +106,33 @@ module Events
         .pluck("charges.id", "charge_filters.id")
         .then { group_by_charge_id(it) }
         .then { add_default_filter(it) }
+    end
+
+    # Recurring charges and all their filters (including the default bucket).
+    # They are always returned, even without events, as usage carries over.
+    def recurring_event_charges_and_filters
+      plan.charges.joins(:billable_metric).left_joins(:filters)
+        .where(billable_metrics: {recurring: true})
+        .group("charges.id, charge_filters.id")
+        .pluck("charges.id", "charge_filters.id")
+        .then { group_by_charge_id(it) }
+        .then { add_default_filter(it) }
+    end
+
+    # Non-recurring charges of the plan whose billable metric received events in the period
+    def non_recurring_charges_with_events(codes)
+      plan.charges
+        .joins(:billable_metric)
+        .where(billable_metrics: {code: codes, recurring: false})
+        .includes(billable_metric: :filters, filters: {values: :billable_metric_filter})
+    end
+
+    # Union of every filter key defined across the plan billable metrics
+    def billable_metric_filter_keys
+      @billable_metric_filter_keys ||= BillableMetricFilter
+        .where(billable_metric_id: plan.billable_metrics.select(:id))
+        .distinct
+        .pluck(:key)
     end
 
     # Return the list of charges and filters that matches the event pre enriched in clickhouse or Postgres for the period

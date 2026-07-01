@@ -26,7 +26,8 @@ module Mutations
           voided_invoice_id: args[:voided_invoice_id],
           payment_method_params: args[:payment_method]&.to_h,
           invoice_custom_section: args[:invoice_custom_section],
-          billing_entity_id: args[:billing_entity_id]
+          billing_entity_id: args[:billing_entity_id],
+          purchase_order_number: args[:purchase_order_number]
         )
 
         result.success? ? result.invoice : result_error(result)

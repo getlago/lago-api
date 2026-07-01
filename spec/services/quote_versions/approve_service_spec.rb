@@ -36,11 +36,30 @@ RSpec.describe QuoteVersions::ApproveService do
       it "persists the raw computed mention variables snapshot" do
         expect(result).to be_success
         expect(result.quote_version.reload.mention_variables).to include(
-          "customer_name" => quote.customer.name,
+          "customer_name" => quote.customer.display_name,
           "quote_number" => quote.number,
           "commercial_terms_start_date" => "2026-01-01",
           "commercial_terms_term_duration" => {"unit" => "years", "count" => 1}
         )
+      end
+    end
+
+    context "with concurrent mutations", :premium do
+      it "wraps the work in a per-quote lock" do
+        allow(Quotes::LockService).to receive(:call).and_call_original
+
+        result
+
+        expect(Quotes::LockService).to have_received(:call).with(quote: quote_version.quote).at_least(:once)
+      end
+
+      it "re-checks the status under the lock and refuses a stale approval" do
+        quote_version
+        QuoteVersion.find(quote_version.id).update!(status: :voided, void_reason: :manual, voided_at: Time.current)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({status: ["not_approvable"]})
       end
     end
 

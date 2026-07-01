@@ -13,6 +13,7 @@ module Types
 
       field :billing_snapshot, GraphQL::Types::JSON, null: false
       field :currency, String, null: true
+      field :execute_at, GraphQL::Types::ISO8601DateTime, null: true
       field :executed_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :customer, Types::Customers::Object, null: false

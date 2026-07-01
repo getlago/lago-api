@@ -11,19 +11,25 @@ module Subscriptions
     end
 
     def call
+      events_attributes = []
+
       subscriptions.each do |subscription|
         emitted_fixed_charge_ids = already_emitted_fixed_charge_ids(subscription)
 
         subscription.fixed_charges.find_each do |fixed_charge|
           next if emitted_fixed_charge_ids.include?(fixed_charge.id)
 
-          ::FixedChargeEvents::CreateService.call!(
-            subscription:,
-            fixed_charge:,
+          events_attributes << {
+            organization_id: subscription.organization_id,
+            subscription_id: subscription.id,
+            fixed_charge_id: fixed_charge.id,
+            units: fixed_charge.effective_units_for(subscription),
             timestamp:
-          )
+          }
         end
       end
+
+      ::FixedChargeEvents::BulkCreateService.call!(events_attributes:)
 
       result
     end

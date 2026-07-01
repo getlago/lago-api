@@ -35,6 +35,8 @@ module Wallets
 
           recurring_rule = wallet.recurring_transaction_rules.active.find_by(id: lago_id)
 
+          normalize_grants_target_top_up!(rule_attributes, recurring_rule)
+
           if rule_attributes.key?(:invoice_custom_section)
             invoice_custom_section = {
               invoice_custom_section: rule_attributes.delete(:invoice_custom_section)
@@ -95,6 +97,20 @@ module Wallets
 
       def hash_recurring_rules
         @hash_recurring_rules ||= params.map { |m| m.to_h.deep_symbolize_keys }
+      end
+
+      def normalize_grants_target_top_up!(rule_attributes, recurring_rule)
+        effective_method = rule_attributes[:method]&.to_s || recurring_rule&.method
+
+        if effective_method == "target"
+          if rule_attributes.key?(:grants_target_top_up)
+            rule_attributes[:grants_target_top_up] = ActiveModel::Type::Boolean.new.cast(rule_attributes[:grants_target_top_up])
+          elsif recurring_rule&.grants_target_top_up.nil?
+            rule_attributes[:grants_target_top_up] = false
+          end
+        else
+          rule_attributes[:grants_target_top_up] = nil
+        end
       end
 
       def valid_payment_methods?

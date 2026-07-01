@@ -19,7 +19,7 @@ module BillableMetrics
         # For charges that are pay in advance on billing date we always bill full amount
         return aggregation_without_proration if event.nil? && options[:is_pay_in_advance] && !options[:is_current_usage]
 
-        aggregation = event_store.prorated_unique_count.ceil(5)
+        aggregation = event_store.prorated_unique_count.value.ceil(5)
         result.full_units_number = aggregation_without_proration.aggregation if event.nil?
 
         if options[:is_current_usage]
@@ -34,7 +34,7 @@ module BillableMetrics
         end
 
         if presentation_by.present?
-          result.breakdowns = event_store.grouped_unique_count(uniq_grouped_by_and_presentation_by)
+          result.breakdowns = event_store.grouped_unique_count(uniq_grouped_by_and_presentation_by).map(&:to_grouped_hash)
           result.pay_in_advance_breakdowns = build_pay_in_advance_breakdowns(value: aggregation_without_proration.pay_in_advance_aggregation)
         end
 
@@ -62,19 +62,19 @@ module BillableMetrics
         return empty_results if aggregations.blank?
 
         result.aggregations = aggregations.map do |aggregation|
-          aggregation_value = aggregation[:value].ceil(5)
+          aggregation_value = aggregation.value.ceil(5)
 
           group_result_without_proration = aggregation_without_proration.aggregations.find do |agg|
-            agg.grouped_by == aggregation[:groups]
+            agg.grouped_by == aggregation.groups
           end
 
           unless group_result_without_proration
             group_result_without_proration = empty_results.aggregations.first
-            group_result_without_proration.grouped_by = aggregation[:groups]
+            group_result_without_proration.grouped_by = aggregation.groups
           end
 
           group_result = BaseService::Result.new
-          group_result.grouped_by = aggregation[:groups]
+          group_result.grouped_by = aggregation.groups
           group_result.full_units_number = group_result_without_proration&.aggregation || 0
 
           if options[:is_current_usage]
@@ -95,7 +95,7 @@ module BillableMetrics
         end
 
         if presentation_by.present?
-          result.breakdowns = event_store.grouped_unique_count(uniq_grouped_by_and_presentation_by)
+          result.breakdowns = event_store.grouped_unique_count(uniq_grouped_by_and_presentation_by).map(&:to_grouped_hash)
         end
 
         result

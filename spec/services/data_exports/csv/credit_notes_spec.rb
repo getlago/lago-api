@@ -30,6 +30,7 @@ RSpec.describe DataExports::Csv::CreditNotes do
           credit_note.customer.tax_identification_number,
           credit_note.number,
           credit_note.invoice.number,
+          credit_note.invoice.purchase_order_number,
           credit_note.credit_status,
           credit_note.refund_status,
           credit_note.reason,
@@ -57,9 +58,12 @@ RSpec.describe DataExports::Csv::CreditNotes do
     end
 
     it "adds serialized credit notes to csv" do
+      credit_notes.each { |credit_note| credit_note.invoice.update!(purchase_order_number: "PO-12345") }
+
       expect(result).to be_success
       parsed_rows = CSV.parse(result.csv_file, nil_value: "")
       expect(parsed_rows).to eq(expected_rows)
+      expect(parsed_rows.first).to include("PO-12345")
     end
 
     context "when organization has multiple billing_entities" do
@@ -82,6 +86,7 @@ RSpec.describe DataExports::Csv::CreditNotes do
           credit_note.customer.tax_identification_number,
           credit_note.number,
           credit_note.invoice.number,
+          credit_note.invoice.purchase_order_number,
           credit_note.credit_status,
           credit_note.refund_status,
           credit_note.reason,

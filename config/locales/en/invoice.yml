@@ -39,7 +39,7 @@ en:
       discount_reason: Discount %{tax_rate} portion
       payment_information: "%{payment_label} of %{currency} %{amount} applied"
       standard_payment: Standard payment
-    fee_prorated: The fee is prorated on days of usage, the displayed unit price is an average
+    fee_prorated: The fee is prorated for the period; the displayed unit price is an average
     fees_from_to_date: Fees from %{from_date} to %{to_date}
     free_credits: Free credits
     from_to_date: From %{from_date} to %{to_date}
@@ -81,6 +81,7 @@ en:
     prepaid_credits: Prepaid credits
     prepaid_credits_with_value: Prepaid credits - %{wallet_name}
     progressive_billing_credit: Usage already billed
+    purchase_order_number: Purchase Order Number
     quarter: quarter
     quarterly: Quarterly
     reached_usage_threshold: This progressive billing is generated because your cumulative usage has reached %{usage_amount}, exceeding the %{threshold_amount} threshold.

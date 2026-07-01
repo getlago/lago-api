@@ -89,6 +89,10 @@ RSpec.describe Invoice do
     end
   end
 
+  it_behaves_like "a model with a purchase order number" do
+    subject { build(:invoice) }
+  end
+
   describe "finalized_at" do
     let(:invoice) { create(:invoice, :draft) }
 
@@ -195,6 +199,36 @@ RSpec.describe Invoice do
         expect(invoice.sequential_id).to eq(1)
         expect(invoice.billing_entity_sequential_id).to be_nil
         expect(invoice.organization_sequential_id).to be_zero
+      end
+    end
+
+    context "when the same customer has invoices across multiple billing entities" do
+      let(:billing_entity_2) { create(:billing_entity, organization:) }
+
+      before do
+        create(:invoice, customer:, organization:, billing_entity:, sequential_id: 1, billing_entity_sequential_id: 1, organization_sequential_id: 0)
+        create(:invoice, customer:, organization:, billing_entity:, sequential_id: 2, billing_entity_sequential_id: 2, organization_sequential_id: 0)
+        create(:invoice, customer:, organization:, billing_entity: billing_entity_2, sequential_id: 1, billing_entity_sequential_id: 1, organization_sequential_id: 0)
+      end
+
+      it "scopes sequential_id per (customer, billing_entity)" do
+        invoice_in_entity_2 = build(
+          :invoice,
+          customer:,
+          organization:,
+          billing_entity: billing_entity_2,
+          billing_entity_sequential_id: nil,
+          organization_sequential_id: 0,
+          status: :generating
+        )
+        invoice_in_entity_2.save!
+        invoice_in_entity_2.finalized!
+
+        invoice.save!
+        invoice.finalized!
+
+        expect(invoice_in_entity_2.sequential_id).to eq(2)
+        expect(invoice.sequential_id).to eq(3)
       end
     end
 

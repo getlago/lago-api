@@ -116,11 +116,14 @@ module Invoices
       return unless charge_boundaries_valid?(boundaries)
 
       filters = event_filters(subscription, boundaries).charges
+      plan = subscription.plan
+      customer = subscription.customer
+      adjusted_fee_exists = AdjustedFee.where(invoice:, subscription:).matching_charge_boundaries(boundaries).exists?
 
       subscription
         .plan
         .charges
-        .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
+        .includes(:taxes, :applied_pricing_unit, billable_metric: :organization, filters: {values: :billable_metric_filter})
         .joins(:billable_metric)
         .where(invoiceable: true)
         .where
@@ -134,6 +137,9 @@ module Invoices
             subscription:,
             boundaries:,
             context:,
+            plan:,
+            customer:,
+            skip_adjusted_fees: !adjusted_fee_exists,
             filtered_aggregations: filters[charge.id] || []
           )
         end
@@ -227,6 +233,8 @@ module Invoices
             subscription:,
             context: :recurring,
             boundaries:,
+            plan: subscription.plan,
+            customer: subscription.customer,
             apply_taxes: invoice.customer.tax_customer.blank?
           )
 

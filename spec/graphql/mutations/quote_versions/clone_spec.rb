@@ -89,7 +89,7 @@ RSpec.describe Mutations::QuoteVersions::Clone do
   context "when quote version is approved", :premium do
     let(:quote_version) { create(:quote_version, :approved, organization: membership.organization) }
 
-    it "returns a not allowed error" do
+    it "returns an unprocessable entity error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
@@ -98,7 +98,33 @@ RSpec.describe Mutations::QuoteVersions::Clone do
         variables: {input:}
       )
 
-      expect_graphql_error(result:, message: "inappropriate_state")
+      expect_graphql_error(result:, message: "Unprocessable Entity", details: {status: ["not_clonable"]})
+    end
+  end
+
+  context "when an older version is cloned while a draft is active", :premium do
+    let(:quote) { create(:quote, organization: membership.organization) }
+    let(:quote_version) do
+      QuoteVersion.transaction do
+        older = create(:quote_version, :voided, quote:, organization: membership.organization)
+        create(:quote_version, quote:, organization: membership.organization)
+        older
+      end
+    end
+
+    it "clones the older version into a new draft" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+
+      cloned = result["data"]["cloneQuoteVersion"]
+      expect(cloned["status"]).to eq("draft")
+      expect(cloned["id"]).to be_present
+      expect(cloned["id"]).not_to eq(quote_version.id)
     end
   end
 end

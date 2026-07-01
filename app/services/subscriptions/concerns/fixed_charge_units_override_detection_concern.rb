@@ -2,24 +2,6 @@
 
 module Subscriptions
   module Concerns
-    # Pure params-shape predicates that decide whether a request is eligible
-    # for the units-only override write path (writing one row to
-    # subscription_fixed_charge_units_overrides instead of cloning the plan).
-    #
-    # The two shapes handled here:
-    #
-    # - `plan_overrides` envelope (subscription create/update with
-    #   `plan_overrides.fixed_charges`): match when only the `fixed_charges`
-    #   key is present, the array is non-empty, and every entry contains only
-    #   `id`, `units`, and optionally `apply_units_immediately`.
-    # - Dedicated subscription-scoped fixed_charge endpoint
-    #   (`UpdateOrOverrideFixedChargeService`): match when the top-level
-    #   params contain `units` and optionally `apply_units_immediately`, and
-    #   nothing else (the fixed_charge identity comes from the URL).
-    #
-    # The cloned-plan guard (`subscription.plan.parent_id` is set) is
-    # enforced by each calling service against the subscription it holds,
-    # not here — these predicates only inspect params.
     module FixedChargeUnitsOverrideDetectionConcern
       extend ActiveSupport::Concern
 
@@ -53,6 +35,27 @@ module Subscriptions
         return false unless entry.key?(:id) && entry.key?(:units)
 
         (entry.keys - PLAN_OVERRIDES_FIXED_CHARGE_ALLOWED_KEYS).empty?
+      end
+
+      def promote_units_overrides_to_fixed_charges_params(existing_params = [])
+        overrides = subscription.fixed_charge_units_overrides.to_a
+        return existing_params if overrides.empty?
+
+        params_by_id = existing_params.each_with_object({}) do |entry, acc|
+          entry = normalize_hash(entry)
+          acc[entry[:id]] = entry if entry && entry[:id]
+        end
+
+        overrides.each do |override|
+          params_by_id[override.fixed_charge_id] ||= {
+            id: override.fixed_charge_id,
+            units: override.units
+          }
+        end
+
+        overrides.each(&:discard!)
+
+        params_by_id.values
       end
 
       def normalize_hash(value)

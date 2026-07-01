@@ -58,19 +58,26 @@ module Invoices
           billing_time: current_subscription.billing_time,
           ending_at: current_subscription.ending_at,
           status: :active,
-          started_at: upgrade? ? Time.current : termination_date,
+          started_at: new_subscription_started_at,
           created_at: Time.current
         )
       end
 
+      def new_subscription_started_at
+        return Time.current if upgrade?
+
+        date_service.next_period_started_at
+      end
+
       def termination_date
-        @termination_date ||= if upgrade?
-          Time.current
-        else
-          Subscriptions::DatesService
-            .new_instance(current_subscription, Time.current, current_usage: true)
-            .end_of_period + 1.day
-        end
+        return Time.current if upgrade?
+
+        date_service.end_of_period + 1.day
+      end
+
+      def date_service
+        @date_service ||= Subscriptions::DatesService
+          .new_instance(current_subscription, Time.current, current_usage: true)
       end
 
       def upgrade?

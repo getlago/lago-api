@@ -19,7 +19,7 @@ module BillableMetrics
         result.count = max_result.events_count
 
         if presentation_by.present?
-          result.breakdowns = event_store.grouped_max(uniq_grouped_by_and_presentation_by)
+          result.breakdowns = event_store.grouped_max(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash)
         end
 
         result.options = options
@@ -34,22 +34,17 @@ module BillableMetrics
         aggregations = event_store.grouped_max
         return empty_results if aggregations.blank?
 
-        counts = event_store.grouped_count
-
         result.aggregations = aggregations.map do |aggregation|
           group_result = BaseService::Result.new
-          group_result.grouped_by = aggregation[:groups]
-          group_result.aggregation = aggregation[:value]
+          group_result.grouped_by = aggregation.groups
+          group_result.aggregation = aggregation.value
           group_result.options = options
-
-          count = counts.find { |c| c[:groups] == aggregation[:groups] } || {}
-          group_result.count = count[:value] || 0
-
+          group_result.count = aggregation.events_count || 0
           group_result
         end
 
         if presentation_by.present?
-          result.breakdowns = event_store.grouped_max(uniq_grouped_by_and_presentation_by)
+          result.breakdowns = event_store.grouped_max(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash)
         end
 
         result

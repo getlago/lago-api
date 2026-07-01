@@ -17,21 +17,25 @@ module QuoteVersions
     def call
       return result.not_found_failure!(resource: "quote_version") unless quote_version
       return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
-      return result.single_validation_failure!(field: :status, error_code: "not_approvable") unless approvable?
 
       QuoteVersion.transaction do
-        quote_version.update!(
-          status: :approved,
-          approved_at: Time.current,
-          mention_variables: ComputeMentionVariablesService.call!(quote_version:).mention_variables
-        )
+        Quotes::LockService.call(quote: quote_version.quote) do
+          quote_version.reload
+          next result.single_validation_failure!(field: :status, error_code: "not_approvable") unless approvable?
 
-        result.order_form = OrderForms::CreateService.call!(quote_version:, expires_at:).order_form
+          quote_version.update!(
+            status: :approved,
+            approved_at: Time.current,
+            mention_variables: ComputeMentionVariablesService.call!(quote_version:).mention_variables
+          )
+
+          result.order_form = OrderForms::CreateService.call!(quote_version:, expires_at:).order_form
+          result.quote_version = quote_version
+        end
       end
 
       # TODO: SendWebhookJob.perform_after_commit("quote_version.approved", quote_version)
 
-      result.quote_version = quote_version
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

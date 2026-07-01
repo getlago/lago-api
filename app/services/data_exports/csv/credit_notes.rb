@@ -28,6 +28,7 @@ module DataExports
           customer_tax_identification_number
           number
           invoice_number
+          purchase_order_number
           credit_status
           refund_status
           reason
@@ -71,6 +72,7 @@ module DataExports
           serialized_note.dig(:customer, :tax_identification_number),
           serialized_note[:number],
           serialized_note[:invoice_number],
+          serialized_note[:purchase_order_number],
           serialized_note[:credit_status],
           serialized_note[:refund_status],
           serialized_note[:reason],

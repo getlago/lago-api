@@ -62,7 +62,7 @@ module CreditNotes
     end
 
     def e_invoicing_enabled?
-      credit_note.billing_entity.einvoicing && BillingEntity::EINVOICING_COUNTRIES.include?(credit_note.billing_entity.country.try(:upcase))
+      credit_note.billing_entity.eligible_for_einvoicing?
     end
   end
 end

@@ -97,9 +97,9 @@ RSpec.describe Subscriptions::TerminateService do
     context "when subscription is incomplete" do
       let(:subscription) { create(:subscription, :incomplete) }
 
-      it "returns a not allowed error" do
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("subscription_incomplete")
+      it "returns a validation error" do
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({base: ["subscription_incomplete"]})
       end
     end
 
@@ -140,6 +140,39 @@ RSpec.describe Subscriptions::TerminateService do
 
           expect(result).to be_success
           expect(next_subscription.reload).to be_pending
+        end
+      end
+    end
+
+    context "when incomplete next subscription" do
+      let(:subscription) { create(:subscription) }
+      let(:next_subscription) do
+        create(
+          :subscription,
+          previous_subscription: subscription,
+          status: :incomplete
+        )
+      end
+
+      before { next_subscription }
+
+      it "returns a validation error" do
+        subject
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({base: ["next_subscription_incomplete"]})
+      end
+
+      context "when called with upgrade: true" do
+        subject(:result) { described_class.call(subscription:, on_termination_credit_note:, upgrade: true) }
+
+        it "terminates the subscription and leaves the next subscription untouched" do
+          subject
+
+          expect(result).to be_success
+          expect(subscription.reload).to be_terminated
+          expect(next_subscription.reload).to be_incomplete
         end
       end
     end

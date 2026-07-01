@@ -133,6 +133,69 @@ RSpec.describe WalletTransactions::ValidateService do
       end
     end
 
+    context "when inbound credits round to zero monetary value" do
+      let(:wallet) { create(:wallet, customer:, rate_amount: "0.01", credits_balance: 10) }
+
+      context "with paid_credits that round to zero" do
+        let(:paid_credits) { "0.4" }
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:paid_credits]).to eq(["amount_rounds_to_zero"])
+        end
+      end
+
+      context "with granted_credits that round to zero" do
+        let(:paid_credits) { "0.0" }
+        let(:granted_credits) { "0.4" }
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:granted_credits]).to eq(["amount_rounds_to_zero"])
+        end
+      end
+
+      context "when the credits produce a non-zero monetary value" do
+        let(:paid_credits) { "1.0" }
+
+        it "returns true" do
+          expect(validate_service).to be_valid
+          expect(result.error).to be_nil
+        end
+      end
+
+      context "with strictly-zero credits" do
+        let(:paid_credits) { "0.0" }
+        let(:granted_credits) { "0.0" }
+
+        it "returns true and preserves the existing no-op behavior" do
+          expect(validate_service).to be_valid
+          expect(result.error).to be_nil
+        end
+      end
+
+      context "with voided_credits that round to zero" do
+        let(:paid_credits) { "0.0" }
+        let(:granted_credits) { "0.0" }
+        let(:voided_credits) { "0.4" }
+
+        it "returns true since outbound transactions are unaffected" do
+          expect(validate_service).to be_valid
+          expect(result.error).to be_nil
+        end
+      end
+    end
+
+    context "when the wallet uses a three-decimal currency" do
+      let(:wallet) { create(:wallet, customer:, currency: "KWD", rate_amount: "0.001", credits_balance: 10) }
+      let(:paid_credits) { "1.0" }
+
+      it "keeps a sub-cent but non-zero monetary value valid" do
+        expect(validate_service).to be_valid
+        expect(result.error).to be_nil
+      end
+    end
+
     context "with invalid voided_credits" do
       let(:voided_credits) { "foobar" }
 

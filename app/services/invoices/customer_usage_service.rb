@@ -73,7 +73,7 @@ module Invoices
         .plan
         .charges
         .joins(:billable_metric)
-        .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
+        .includes(:taxes, :applied_pricing_unit, billable_metric: :organization, filters: {values: :billable_metric_filter})
       if usage_filters.filter_by_charge_id.present?
         charges = charges.where(id: usage_filters.filter_by_charge_id)
       elsif usage_filters.filter_by_charge_code.present?
@@ -148,6 +148,8 @@ module Invoices
           cache_middleware:,
           calculate_projected_usage:,
           with_zero_units_filters:,
+          # NOTE: current usage is computed on a non-persisted invoice, so adjusted fees never apply
+          skip_adjusted_fees: true,
           filtered_aggregations: applied_filters,
           usage_filters:
         )

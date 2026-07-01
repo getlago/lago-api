@@ -40,6 +40,10 @@ module Wallets
           attributes[:ignore_paid_top_up_limits] = ActiveModel::Type::Boolean.new.cast(rule_params[:ignore_paid_top_up_limits])
         end
 
+        attributes[:grants_target_top_up] = if method == "target"
+          ActiveModel::Type::Boolean.new.cast(rule_params[:grants_target_top_up]) == true
+        end
+
         if rule_params.key?(:payment_method)
           attributes[:payment_method_type] = rule_params[:payment_method][:payment_method_type] if rule_params[:payment_method].key?(:payment_method_type)
           attributes[:payment_method_id] = rule_params[:payment_method][:payment_method_id] if rule_params[:payment_method].key?(:payment_method_id)

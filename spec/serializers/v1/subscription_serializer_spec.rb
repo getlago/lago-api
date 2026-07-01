@@ -296,14 +296,4 @@ RSpec.describe ::V1::SubscriptionSerializer do
       end
     end
   end
-
-  context "when payment_gated_subscriptions feature flag is disabled" do
-    it "does not serialize feature-flagged fields" do
-      result = JSON.parse(serializer.to_json)
-
-      expect(result["subscription"]).not_to have_key("cancellation_reason")
-      expect(result["subscription"]).not_to have_key("activated_at")
-      expect(result["subscription"]).not_to have_key("activation_rules")
-    end
-  end
 end

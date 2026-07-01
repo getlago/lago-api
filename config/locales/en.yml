@@ -49,6 +49,7 @@ en:
         modification_not_allowed: modification_not_allowed
         must_be_array: must_be_array
         must_be_greater_than_or_equal_min: must_be_greater_than_or_equal_min
+        must_be_greater_than_or_equal_threshold: must_be_greater_than_or_equal_threshold
         must_be_true_unless_pay_in_advance: must_be_true_unless_pay_in_advance
         not_compatible_with_aggregation_type: not_compatible_with_aggregation_type
         not_compatible_with_pay_in_advance: not_compatible_with_pay_in_advance

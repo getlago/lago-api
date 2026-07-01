@@ -222,14 +222,34 @@ RSpec.describe Api::V1::QuoteVersionsController do
       expect(json[:quote_version][:lago_id]).not_to eq(quote_version.id)
     end
 
+    context "when a different draft is the active version", :premium do
+      let(:quote_version) do
+        QuoteVersion.transaction do
+          older = create(:quote_version, :voided, quote:, organization:)
+          create(:quote_version, quote:, organization:)
+          older
+        end
+      end
+
+      it "clones the older version and voids the active draft" do
+        active_draft = quote.versions.find_by(status: :draft)
+
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:quote_version][:status]).to eq("draft")
+        expect(json[:quote_version][:lago_id]).not_to eq(quote_version.id)
+        expect(active_draft.reload.status).to eq("voided")
+      end
+    end
+
     context "when an approved version exists", :premium do
       let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }
 
-      it "returns forbidden" do
+      it "returns unprocessable entity" do
         subject
 
-        expect(response).to have_http_status(:forbidden)
-        expect(json[:code]).to eq("inappropriate_state")
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 

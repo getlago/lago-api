@@ -10,10 +10,10 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
     create(
       :billing_entity,
       organization:,
-      name: "Mistral AI SAS",
-      legal_name: "Mistral AI SAS",
+      name: "Globex SARL",
+      legal_name: "Globex SARL",
       tax_identification_number: "FR12345678901",
-      email: "billing@mistral.ai",
+      email: "billing@globex.example",
       address_line1: "4 rue de la Paix",
       address_line2: nil,
       zipcode: "75002",
@@ -30,8 +30,11 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
       :customer,
       organization:,
       billing_entity:,
-      name: "Mistral AI",
-      email: "procurement@mistral.ai",
+      name: "Hooli",
+      legal_name: "Hooli Inc",
+      firstname: "Gavin",
+      lastname: "Belson",
+      email: "procurement@hooli.example",
       net_payment_term: customer_net_payment_term,
       document_locale: customer_document_locale
     )
@@ -61,15 +64,15 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
     it "computes the raw, locale-independent mention variables dictionary" do
       expect(result).to be_success
       expect(variables).to include(
-        "customer_name" => "Mistral AI",
-        "customer_email" => "procurement@mistral.ai",
+        "customer_name" => "Hooli Inc - Gavin Belson",
+        "customer_email" => "procurement@hooli.example",
         "organization_name" => "Lago",
         "organization_logo" => organization.logo_url,
-        "billing_entity_name" => "Mistral AI SAS",
-        "billing_entity_legal_name" => "Mistral AI SAS",
+        "billing_entity_name" => "Globex SARL",
+        "billing_entity_legal_name" => "Globex SARL",
         "billing_entity_address" => raw_address,
         "billing_entity_tax_id" => "FR12345678901",
-        "billing_entity_email" => "billing@mistral.ai",
+        "billing_entity_email" => "billing@globex.example",
         "quote_number" => quote.number,
         "quote_version" => quote_version.version.to_s,
         "quote_currency" => "EUR",

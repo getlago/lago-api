@@ -106,8 +106,9 @@ module Entitlement
 
         if plan_val && value_is_the_same?(privilege.value_type, value, plan_val.value)
           sub_val&.discard!
+          delete_all_privilege_entitlement_removals(privilege)
         elsif sub_val.nil?
-          subscription.entitlement_removals.where(privilege:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
+          delete_all_privilege_entitlement_removals(privilege)
 
           create_entitlement_value(sub_entitlement, privilege, value)
         elsif sub_val && !value_is_the_same?(privilege.value_type, value, sub_val.value)
@@ -118,6 +119,10 @@ module Entitlement
 
     def value_is_the_same?(type, value1, value2)
       Utils::Entitlement.same_value?(type, value1, value2)
+    end
+
+    def delete_all_privilege_entitlement_removals(privilege)
+      subscription.entitlement_removals.where(privilege:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def create_entitlement_value(entitlement, privilege, value)

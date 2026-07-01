@@ -1130,6 +1130,28 @@ RSpec.describe Fees::ChargeService, :premium do
           invoice.draft!
         end
 
+        context "when skip_adjusted_fees is true" do
+          subject(:charge_subscription_service) do
+            described_class.new(
+              invoice:,
+              charge:,
+              subscription:,
+              boundaries:,
+              context:,
+              apply_taxes:,
+              skip_adjusted_fees: true,
+              filtered_aggregations:
+            )
+          end
+
+          it "ignores the adjusted fee and bills the actual usage" do
+            result = charge_subscription_service.call
+
+            expect(result).to be_success
+            expect(result.fees).to be_empty
+          end
+        end
+
         context "with adjusted units" do
           it "creates a fee" do
             result = charge_subscription_service.call

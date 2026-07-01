@@ -468,6 +468,7 @@ DROP INDEX IF EXISTS public.index_plans_on_bill_fixed_charges_monthly;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_organization_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_customer_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_pending_active_subscriptions_on_plan_id_and_status;
 DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_id;
@@ -544,7 +545,7 @@ DROP INDEX IF EXISTS public.index_invoices_on_payment_due_date;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
-DROP INDEX IF EXISTS public.index_invoices_on_customer_id_and_sequential_id;
+DROP INDEX IF EXISTS public.index_invoices_on_customer_billing_entity_sequential;
 DROP INDEX IF EXISTS public.index_invoices_by_cursor;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_subscription_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_regenerated_invoice_id;
@@ -3192,7 +3193,7 @@ CREATE VIEW public.exports_customers AS
     '[]'::json AS lago_taxes_ids
    FROM ((public.customers c
      LEFT JOIN public.organizations o ON ((o.id = c.organization_id)))
-     LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL))));
+     LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL) AND (ppc.payment_provider_id IS NOT NULL))));
 
 
 --
@@ -3716,6 +3717,7 @@ CREATE TABLE public.invoices (
     prepaid_purchased_credit_amount_cents bigint,
     payment_method_id uuid,
     skip_automatic_payment boolean,
+    purchase_order_number character varying,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -5053,7 +5055,8 @@ CREATE TABLE public.recurring_transaction_rules (
     transaction_name character varying(255),
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
-    skip_invoice_custom_sections boolean DEFAULT false NOT NULL
+    skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
+    grants_target_top_up boolean
 );
 
 
@@ -8816,10 +8819,10 @@ CREATE INDEX index_invoices_by_cursor ON public.invoices USING btree (organizati
 
 
 --
--- Name: index_invoices_on_customer_id_and_sequential_id; Type: INDEX; Schema: public; Owner: -
+-- Name: index_invoices_on_customer_billing_entity_sequential; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_invoices_on_customer_id_and_sequential_id ON public.invoices USING btree (customer_id, sequential_id);
+CREATE UNIQUE INDEX index_invoices_on_customer_billing_entity_sequential ON public.invoices USING btree (customer_id, billing_entity_id, sequential_id);
 
 
 --
@@ -9352,6 +9355,13 @@ CREATE INDEX index_payments_on_payment_type ON public.payments USING btree (paym
 --
 
 CREATE UNIQUE INDEX index_payments_on_provider_payment_id_and_payment_provider_id ON public.payments USING btree (provider_payment_id, payment_provider_id) WHERE (provider_payment_id IS NOT NULL);
+
+
+--
+-- Name: index_pending_active_subscriptions_on_plan_id_and_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_active_subscriptions_on_plan_id_and_status ON public.subscriptions USING btree (plan_id, status) WHERE (status = ANY (ARRAY[0, 1]));
 
 
 --
@@ -12785,7 +12795,11 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260625095837'),
+('20260622113747'),
+('20260619065327'),
 ('20260617145515'),
+('20260617072554'),
 ('20260616160703'),
 ('20260616155032'),
 ('20260615181440'),
@@ -12811,6 +12825,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260526142247'),
 ('20260526131452'),
 ('20260525102114'),
+('20260520134318'),
 ('20260520075420'),
 ('20260518152858'),
 ('20260517101105'),

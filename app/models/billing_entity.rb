@@ -14,7 +14,7 @@ class BillingEntity < ApplicationRecord
     "payment_receipt.created"
   ]
 
-  EINVOICING_COUNTRIES = %w[FR].map(&:upcase)
+  EINVOICING_COUNTRIES = %w[FR DE].map(&:upcase)
 
   SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS = {
     current_period_end: "current_period_end",
@@ -152,6 +152,10 @@ class BillingEntity < ApplicationRecord
         last_dunning_campaign_attempt: 0,
         last_dunning_campaign_attempt_at: nil
       )
+  end
+
+  def eligible_for_einvoicing?
+    einvoicing && EINVOICING_COUNTRIES.include?(country.try(:upcase))
   end
 
   private

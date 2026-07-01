@@ -1141,4 +1141,105 @@ describe "Invoice Numbering Scenario", transaction: false do
       end
     end
   end
+
+  context "with a single customer billed across multiple billing entities" do
+    let(:organization) do
+      create(
+        :organization,
+        document_numbering: "per_customer",
+        webhook_url: nil,
+        billing_entities: [billing_entity_first, billing_entity_second]
+      )
+    end
+
+    let(:billing_entity_first) do
+      create(:billing_entity, document_numbering: "per_customer", document_number_prefix: "BENT-1")
+    end
+
+    let(:billing_entity_second) do
+      create(:billing_entity, document_numbering: "per_customer", document_number_prefix: "BENT-2")
+    end
+
+    let(:customer) { create(:customer, organization:, billing_entity: billing_entity_first) }
+    let(:subscription_under_first_external_id) { "sub-under-first" }
+    let(:subscription_under_second_external_id) { "sub-under-second" }
+
+    before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+    it "numbers invoices gaplessly per (customer, billing_entity)" do
+      # NOTE: Jul 19th: create two subscriptions for the same customer, one per billing entity
+      travel_to(subscription_at) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: subscription_under_first_external_id,
+            plan_code: monthly_plan.code,
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601
+          }
+        )
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: subscription_under_second_external_id,
+            plan_code: monthly_plan.code,
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601,
+            billing_entity_code: billing_entity_second.code
+          }
+        )
+
+        invoices = customer.reload.invoices
+
+        expect(invoices.where(billing_entity: billing_entity_first).pluck(:sequential_id)).to eq([1])
+        expect(invoices.where(billing_entity: billing_entity_second).pluck(:sequential_id)).to eq([1])
+        expect(invoices.pluck(:number))
+          .to match_array(%w[BENT-1-001-001 BENT-2-001-001])
+      end
+
+      # NOTE: August 19th: second billing cycle
+      travel_to(DateTime.new(2023, 8, 19, 12, 12)) do
+        perform_billing
+
+        invoices = customer.reload.invoices.order(created_at: :asc)
+
+        expect(invoices.where(billing_entity: billing_entity_first).pluck(:sequential_id))
+          .to eq([1, 2])
+        expect(invoices.where(billing_entity: billing_entity_second).pluck(:sequential_id))
+          .to eq([1, 2])
+        expect(invoices.pluck(:number))
+          .to match_array(
+            %w[
+              BENT-1-001-001
+              BENT-2-001-001
+              BENT-1-001-002
+              BENT-2-001-002
+            ]
+          )
+      end
+
+      # NOTE: September 19th: third billing cycle — sequences stay gapless and independent per entity
+      travel_to(DateTime.new(2023, 9, 19, 12, 12)) do
+        perform_billing
+
+        invoices = customer.reload.invoices.order(created_at: :asc)
+
+        expect(invoices.where(billing_entity: billing_entity_first).pluck(:sequential_id))
+          .to eq([1, 2, 3])
+        expect(invoices.where(billing_entity: billing_entity_second).pluck(:sequential_id))
+          .to eq([1, 2, 3])
+        expect(invoices.pluck(:number))
+          .to match_array(
+            %w[
+              BENT-1-001-001
+              BENT-2-001-001
+              BENT-1-001-002
+              BENT-2-001-002
+              BENT-1-001-003
+              BENT-2-001-003
+            ]
+          )
+      end
+    end
+  end
 end

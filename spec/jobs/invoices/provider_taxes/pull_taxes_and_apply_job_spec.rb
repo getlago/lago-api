@@ -31,6 +31,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob do
     [
       [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
       [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 25],
+      [Sequenced::SequenceError.new("Unable to acquire lock on the database"), 15],
       [BaseService::ThrottlingError.new, 25],
       [LagoHttpClient::HttpError.new(401, "body", "uri"), 6],
       [OpenSSL::SSL::SSLError.new("OpenSSL::SSL::SSLError"), 6],

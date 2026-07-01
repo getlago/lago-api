@@ -25,21 +25,24 @@ module QuoteVersions
     def call
       return result.not_found_failure!(resource: "quote_version") unless quote_version
       return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
-      return result.forbidden_failure!(code: "inappropriate_state") unless clonable?
 
-      cloned = QuoteVersion.transaction do
-        void!(quote_version:)
-        create_next_version(quote_version:)
+      QuoteVersion.transaction do
+        Quotes::LockService.call(quote: quote_version.quote) do
+          quote_version.reload
+          next result.single_validation_failure!(field: :status, error_code: "not_clonable") unless clonable?
+
+          void_active_version!
+          result.quote_version = create_next_version(quote_version:)
+        end
       end
 
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.cloned", cloned)
+      # TODO: SendWebhookJob.perform_after_commit("quote_version.cloned", result.quote_version)
 
-      result.quote_version = cloned
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique
-      result.forbidden_failure!(code: "active_version_exists")
+      result.single_validation_failure!(field: :status, error_code: "active_version_exists")
     rescue CloneError => e
       result.service_failure!(code: "clone_failed", message: e.message, error: e)
     end
@@ -47,10 +50,7 @@ module QuoteVersions
     private
 
     def clonable?
-      return false if quote_version.quote.versions.where(status: :approved).exists?
-
-      active_draft = quote_version.quote.versions.where(status: :draft).first
-      active_draft.nil? || active_draft.id == quote_version.id
+      !quote_version.quote.versions.approved.exists?
     end
 
     def create_next_version(quote_version:)
@@ -65,11 +65,15 @@ module QuoteVersions
       end
     end
 
-    def void!(quote_version:)
-      return if quote_version.voided?
+    def void_active_version!
+      # At most one draft exists per quote. If the version being cloned is that
+      # draft, void it directly; only look it up when cloning a non-draft (e.g.
+      # an older voided version while a newer draft is the active one).
+      active_draft = quote_version.draft? ? quote_version : quote_version.quote.versions.find_by(status: :draft)
+      return if active_draft.nil?
 
       void_result = QuoteVersions::VoidService.new(
-        quote_version: quote_version,
+        quote_version: active_draft,
         reason: :superseded
       ).call
 

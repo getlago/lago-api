@@ -227,6 +227,27 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
         end
       end
 
+      context "when re-adding a removed privilege at the plan default value" do
+        let(:privilege_params) { {seats_max.code => 2} }
+        let(:max_removal) { create(:subscription_feature_removal, privilege: seats_max, subscription:) }
+
+        before { max_removal }
+
+        context "when partial" do
+          let(:partial) { true }
+
+          it "discards the privilege removal so the plan default is restored" do
+            expect(result).to be_success
+            expect(max_removal.reload).to be_discarded
+            expect(subscription.entitlement_removals.where(privilege: seats_max)).not_to exist
+
+            ent = Entitlement::SubscriptionEntitlement.for_subscription(subscription).find { it.code == "seats" }
+            max_priv = ent.privileges.find { it.code == seats_max.code }
+            expect(Utils::Entitlement.cast_value(max_priv.value, max_priv.value_type)).to eq 2
+          end
+        end
+      end
+
       context "when subscription has privilege removals" do
         let(:max_removal) { create(:subscription_feature_removal, privilege: seats_max, subscription:) }
         let(:reset_removal) { create(:subscription_feature_removal, privilege: seats_reset, subscription:) }

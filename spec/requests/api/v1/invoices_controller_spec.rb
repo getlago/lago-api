@@ -118,6 +118,30 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "with a purchase_order_number" do
+      let(:create_params) do
+        {
+          external_customer_id: customer_external_id,
+          currency: "EUR",
+          purchase_order_number: "  PO-12345  ",
+          fees: [
+            {
+              add_on_code: add_on_first.code,
+              unit_amount_cents: 1200,
+              units: 2
+            }
+          ]
+        }
+      end
+
+      it "creates an invoice with the normalized purchase order number" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:purchase_order_number]).to eq("PO-12345")
+      end
+    end
+
     context "when multi_entity_billing feature flag is enabled" do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 
@@ -1527,6 +1551,51 @@ RSpec.describe Api::V1::InvoicesController do
           expect(subscriptions.size).to eq(2)
 
           pending_plan = subscriptions.find { |s| s[:plan_code] == next_plan.code }
+          expect(pending_plan).to be_present
+          expect(pending_plan[:started_at]).to eq("2026-07-03T00:00:00.000Z")
+          expect(pending_plan[:current_billing_period_started_at]).to eq("2026-07-03T00:00:00Z")
+          expect(pending_plan[:current_billing_period_ending_at]).to eq("2026-08-02T23:59:59Z")
+          expect(pending_plan[:current_billing_period_started_at])
+            .not_to eq(pending_plan[:current_billing_period_ending_at])
+        end
+      end
+    end
+
+    context "with a not-yet-scheduled downgrade (plan_code)" do
+      let(:customer) { create(:customer, organization:, external_id: "plan_change_customer") }
+      let(:current_plan) do
+        create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 1000)
+      end
+      let(:target_plan) do
+        create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 500)
+      end
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: current_plan,
+          status: :active,
+          billing_time: "anniversary",
+          subscription_at: Time.zone.parse("2026-03-03"),
+          started_at: Time.zone.parse("2026-03-03")
+        )
+      end
+      let(:preview_params) do
+        {
+          customer: {external_id: customer.external_id},
+          subscriptions: {external_ids: [subscription.external_id], plan_code: target_plan.code}
+        }
+      end
+
+      before { subscription }
+
+      it "serializes the target plan's real first billing period" do
+        travel_to(Time.zone.parse("2026-06-04T10:00:00Z")) do
+          subject
+
+          expect(response).to have_http_status(:success)
+
+          pending_plan = json[:invoice][:subscriptions].find { |s| s[:plan_code] == target_plan.code }
           expect(pending_plan).to be_present
           expect(pending_plan[:started_at]).to eq("2026-07-03T00:00:00.000Z")
           expect(pending_plan[:current_billing_period_started_at]).to eq("2026-07-03T00:00:00Z")

@@ -7,6 +7,7 @@ class Invoice < ApplicationRecord
   include PaperTrailTraceable
   include Sequenced
   include RansackUuidSearch
+  include HasPurchaseOrderNumber
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
@@ -124,8 +125,8 @@ class Invoice < ApplicationRecord
     end
   end
 
-  sequenced scope: ->(invoice) { invoice.customer.invoices },
-    lock_key: ->(invoice) { invoice.customer_id }
+  sequenced scope: ->(invoice) { invoice.customer.invoices.where(billing_entity_id: invoice.billing_entity_id) },
+    lock_key: ->(invoice) { "#{invoice.customer_id}-#{invoice.billing_entity_id}" }
 
   scope :visible, -> { where(status: VISIBLE_STATUS.keys) }
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
@@ -705,6 +706,7 @@ end
 #  prepaid_granted_credit_amount_cents     :bigint
 #  prepaid_purchased_credit_amount_cents   :bigint
 #  progressive_billing_credit_amount_cents :bigint           default(0), not null
+#  purchase_order_number                   :string
 #  ready_for_payment_processing            :boolean          default(TRUE), not null
 #  ready_to_be_refreshed                   :boolean          default(FALSE), not null
 #  self_billed                             :boolean          default(FALSE), not null
@@ -739,7 +741,7 @@ end
 #  idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655  (billing_entity_id,billing_entity_sequential_id DESC)
 #  idx_on_organization_id_organization_sequential_id_2387146f54    (organization_id,organization_sequential_id DESC)
 #  index_invoices_by_cursor                                        (organization_id,issuing_date DESC,created_at DESC,id)
-#  index_invoices_on_customer_id_and_sequential_id                 (customer_id,sequential_id) UNIQUE
+#  index_invoices_on_customer_billing_entity_sequential            (customer_id,billing_entity_id,sequential_id) UNIQUE
 #  index_invoices_on_number                                        (number)
 #  index_invoices_on_organization_id_and_customer_id               (customer_id,organization_id)
 #  index_invoices_on_organization_id_number_gin_trgm_ops           (organization_id,number) USING gin

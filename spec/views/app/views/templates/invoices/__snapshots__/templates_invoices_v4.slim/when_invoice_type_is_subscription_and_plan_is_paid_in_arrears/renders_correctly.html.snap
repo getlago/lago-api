@@ -175,7 +175,7 @@
             </tr>
             <tr class="fixed-charge-name fee">
               <td class="body-1">Graduated Pay in Arrears Prorated Fixed Charge Fee
-                <div class="body-3">The fee is prorated on days of usage, the displayed unit price is an average</div>
+                <div class="body-3">The fee is prorated for the period; the displayed unit price is an average</div>
               </td>
               <td class="body-2"></td>
               <td class="body-2"></td>
@@ -270,7 +270,7 @@
             </tr>
             <tr class="fixed-charge-name fee">
               <td class="body-1">Volume Pay in Arrears Prorated Fixed Charge Fee
-                <div class="body-3">The fee is prorated on days of usage, the displayed unit price is an average</div>
+                <div class="body-3">The fee is prorated for the period; the displayed unit price is an average</div>
               </td>
               <td class="body-2"></td>
               <td class="body-2"></td>
@@ -386,7 +386,7 @@
             <tr class="fee">
               <td>
                 <div class="body-1">Standard Pay in Advance Prorated Fixed Charge Fee</div>
-                <div class="body-3">The fee is prorated on days of usage, the displayed unit price is an average</div>
+                <div class="body-3">The fee is prorated for the period; the displayed unit price is an average</div>
               </td>
               <td class="body-2">0.5</td>
               <td class="body-2">$100.00</td>

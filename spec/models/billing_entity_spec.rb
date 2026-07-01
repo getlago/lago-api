@@ -241,7 +241,7 @@ RSpec.describe BillingEntity do
     context "with a supported country" do
       let(:country) { "fr" }
 
-      it "is not valid" do
+      it "is valid" do
         expect(billing_entity).to be_valid
       end
     end

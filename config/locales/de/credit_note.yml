@@ -17,6 +17,7 @@ de:
     offset_invoice_notice: Rechnung %{invoice_number} am %{issuing_date} ausgeglichen
     powered_by: Bereitgestellt von
     prepaid_credits_for_wallet: Prepaid-Guthaben - %{wallet_name}
+    purchase_order_number: Bestellnummer
     refunded: Erstattet
     refunded_notice: Erstattung am %{issuing_date}
     self_billed:

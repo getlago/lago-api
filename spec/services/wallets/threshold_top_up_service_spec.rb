@@ -239,6 +239,32 @@ RSpec.describe Wallets::ThresholdTopUpService do
             unique_transaction: true
           )
       end
+
+      context "when grants_target_top_up is true" do
+        let(:recurring_transaction_rule) do
+          create(
+            :recurring_transaction_rule,
+            wallet:,
+            trigger: "threshold",
+            threshold_credits: "6.0",
+            method: "target",
+            target_ongoing_balance: "200",
+            grants_target_top_up: true
+          )
+        end
+
+        it "enqueues the raw gap as granted credits, bypassing the paid_top_up_min limit" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+            .with(
+              organization_id: wallet.organization.id,
+              params: hash_including(
+                paid_credits: "0.0",
+                granted_credits: "194.5"
+              ),
+              unique_transaction: true
+            )
+        end
+      end
     end
   end
 end

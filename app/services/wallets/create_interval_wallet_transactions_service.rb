@@ -6,7 +6,8 @@ module Wallets
 
     def call
       recurring_transaction_rules.each do |rule|
-        paid_credits = rule.compute_paid_credits(ongoing_balance: rule.wallet.credits_ongoing_balance)
+        ongoing_balance = rule.wallet.credits_ongoing_balance
+        paid_credits = rule.compute_paid_credits(ongoing_balance:)
         granted_credits = rule.compute_granted_credits
 
         next if rule.target? && paid_credits.zero? && granted_credits.zero?
