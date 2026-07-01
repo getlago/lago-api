@@ -43,6 +43,7 @@ Rails.application.routes.draw do
         resources :rates, only: %i[index show create update destroy], controller: "rate_cards/rates"
       end
       resources :plan_product_items, only: %i[index show create]
+      resources :subscription_product_items, only: %i[create]
     end
   end
   resources :webhooks, only: [] do
