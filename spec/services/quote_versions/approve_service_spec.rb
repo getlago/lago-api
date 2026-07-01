@@ -42,6 +42,14 @@ RSpec.describe QuoteVersions::ApproveService do
           "commercial_terms_term_duration" => {"unit" => "years", "count" => 1}
         )
       end
+
+      it "does not snapshot billing items for a non one-off quote" do
+        allow(QuoteVersions::Snapshots::OneOffService).to receive(:call!).and_call_original
+
+        result
+
+        expect(QuoteVersions::Snapshots::OneOffService).not_to have_received(:call!)
+      end
     end
 
     context "with concurrent mutations", :premium do
@@ -96,12 +104,14 @@ RSpec.describe QuoteVersions::ApproveService do
 
     context "when the quote is one_off", :premium do
       let(:quote) { create(:quote, organization:, order_type: :one_off) }
+      let(:add_on) { create(:add_on, organization:, amount_cents: 4_200) }
       let(:quote_version) do
         create(
           :quote_version,
           :with_one_off_billing_items,
           quote:,
           organization:,
+          add_on:,
           start_date: Date.new(2026, 1, 1),
           end_date: Date.new(2027, 1, 1)
         )
@@ -110,6 +120,51 @@ RSpec.describe QuoteVersions::ApproveService do
       it "approves the quote version" do
         expect(result).to be_success
         expect(result.quote_version.approved?).to eq(true)
+      end
+
+      it "computes the billing items snapshot" do
+        allow(QuoteVersions::Snapshots::OneOffService).to receive(:call!).and_call_original
+
+        result
+
+        expect(QuoteVersions::Snapshots::OneOffService).to have_received(:call!).with(quote_version:)
+      end
+
+      it "freezes the add-on catalog data into billing_items" do
+        expect(result).to be_success
+
+        payload = result.quote_version.reload.billing_items["addons"].first["payload"]
+        expect(payload).to include("code" => add_on.code, "name" => add_on.name, "unit_amount_cents" => 4_200)
+      end
+
+      it "keeps the snapshot frozen when the add-on changes after approval" do
+        expect(result).to be_success
+        frozen_payload = quote_version.reload.billing_items["addons"].first["payload"]
+
+        add_on.update!(name: "Renamed", amount_cents: 9_999)
+
+        expect(quote_version.reload.billing_items["addons"].first["payload"]).to eq(frozen_payload)
+      end
+
+      it "keeps the snapshot after the add-on is discarded" do
+        expect(result).to be_success
+
+        add_on.discard
+
+        payload = quote_version.reload.billing_items["addons"].first["payload"]
+        expect(payload["unit_amount_cents"]).to eq(4_200)
+      end
+
+      context "when quote-level dates are absent" do
+        let(:quote_version) { create(:quote_version, :with_one_off_billing_items, quote:, organization:, add_on:) }
+
+        it "approves and leaves commercial term mention variables blank" do
+          expect(result).to be_success
+          expect(result.quote_version.approved?).to eq(true)
+          expect(result.order_form).to be_present
+          expect(result.quote_version.mention_variables["commercial_terms_start_date"]).to be_nil
+          expect(result.quote_version.mention_variables["commercial_terms_term_duration"]).to be_nil
+        end
       end
 
       context "when the billing items are incomplete" do

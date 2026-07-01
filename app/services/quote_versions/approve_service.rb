@@ -29,7 +29,8 @@ module QuoteVersions
           quote_version.update!(
             status: :approved,
             approved_at: Time.current,
-            mention_variables: ComputeMentionVariablesService.call!(quote_version:).mention_variables
+            mention_variables: ComputeMentionVariablesService.call!(quote_version:).mention_variables,
+            billing_items: billing_items_snapshot
           )
 
           result.order_form = OrderForms::CreateService.call!(quote_version:, expires_at:).order_form
@@ -50,6 +51,12 @@ module QuoteVersions
 
     def approvable?
       quote_version.draft?
+    end
+
+    def billing_items_snapshot
+      return quote_version.billing_items unless quote_version.quote.order_type == "one_off"
+
+      Snapshots::OneOffService.call!(quote_version:).billing_items
     end
   end
 end
