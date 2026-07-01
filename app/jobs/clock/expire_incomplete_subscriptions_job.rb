@@ -2,7 +2,7 @@
 
 module Clock
   class ExpireIncompleteSubscriptionsJob < ClockJob
-    unique :until_executed, on_conflict: :log
+    unique :until_executed, on_conflict: :log, lock_ttl: 4.hours
 
     def perform
       Subscription.expirable.find_each do |subscription|

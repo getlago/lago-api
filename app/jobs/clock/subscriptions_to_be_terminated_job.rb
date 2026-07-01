@@ -2,7 +2,7 @@
 
 module Clock
   class SubscriptionsToBeTerminatedJob < ClockJob
-    unique :until_executed, on_conflict: :log
+    unique :until_executed, on_conflict: :log, lock_ttl: 4.hours
 
     def perform
       now = Time.current
