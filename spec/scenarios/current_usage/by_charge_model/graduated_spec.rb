@@ -42,14 +42,14 @@ describe "Charge Models - Graduated Scenarios" do
           # First call exercises the previously-crashing hydrate_non_persistable_fees path
           # for current usage when there are no persistable fees.
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:total_amount_cents]).to eq(12_000)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(12_000) # 100 flat fee + 20% tax = 120
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
           expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(10_000)
 
           # Second call proves stability across repeated invocations, matching the
           # daily DailyUsages::ComputeJob invocation pattern.
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:total_amount_cents]).to eq(12_000)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(12_000) # 100 flat fee + 20% tax = 120
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
           expect(json[:customer_usage][:charges_usage][0][:amount_cents]).to eq(10_000)
         end

@@ -26,8 +26,8 @@ module ChargeModels
     end
 
     def compute_amount
-      # First pay-in-advance event: delta = cost(1 unit) - cost(0 units, exclude_event: true).
-      # Avoid including the flat fee here so it does not get subtracted from the delta.
+      # On the first pay-in-advance event: delta = cost(1 unit) - cost(0 units, exclude_event: true).
+      # Here we exclude the flat fee from cost(0 units, exclude_event: true).
       return 0 if units.zero? && properties[:exclude_event]
 
       amount_details.fetch(:graduated_ranges).sum { |e| e[:total_with_flat_amount] }

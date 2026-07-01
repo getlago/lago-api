@@ -704,7 +704,7 @@ describe "Pay in advance charges Scenarios", transaction: false do
         expect(fee.pay_in_advance).to eq(true)
         expect(fee.units).to eq(3)
         expect(fee.events_count).to eq(1)
-        expect(fee.amount_cents).to eq(2 * 3 + 1) # 3 events * 0.02 + 0.01 flat fee
+        expect(fee.amount_cents).to eq(2 * 3 + 1) # 3 units * $0.02 + $0.01 flat fee (charged on first event)
         expect(fee.amount_details).to eq({})
       end
 
@@ -723,7 +723,7 @@ describe "Pay in advance charges Scenarios", transaction: false do
         fee = subscription.fees.order(created_at: :desc).first
         expect(fee.units).to eq(1)
         expect(fee.events_count).to eq(1)
-        expect(fee.amount_cents).to eq(2 * 1)
+        expect(fee.amount_cents).to eq(2 * 1) # 1 unit * $0.02, flat fee not charged again
       end
 
       travel_to(DateTime.new(2023, 2, 18)) do
