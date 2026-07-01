@@ -14,6 +14,7 @@ RSpec.describe V1::CreditNoteSerializer do
   let(:item) { create(:credit_note_item, credit_note:) }
 
   before do
+    credit_note.invoice.update!(purchase_order_number: "PO-12345")
     error_detail
     item
   end
@@ -28,6 +29,7 @@ RSpec.describe V1::CreditNoteSerializer do
       "number" => credit_note.number,
       "lago_invoice_id" => credit_note.invoice_id,
       "invoice_number" => credit_note.invoice.number,
+      "purchase_order_number" => "PO-12345",
       "issuing_date" => credit_note.issuing_date.iso8601,
       "credit_status" => credit_note.credit_status,
       "refund_status" => credit_note.refund_status,
