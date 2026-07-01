@@ -16,7 +16,7 @@ class SubscriptionsQuery < BaseQuery
   ]
 
   def call
-    subscriptions = base_scope.result
+    subscriptions = base_scope
     # FE pulls next_subscription through Graphql object, which creates additional cases to handle when
     # next_subscription should be excluded from the result to avoid duplicates.
     subscriptions = with_excluded_next_subscriptions(subscriptions) if filters.exclude_next_subscriptions
@@ -49,32 +49,55 @@ class SubscriptionsQuery < BaseQuery
       Subscription.where(customer: filters.customer)
     end.includes(:customer, :plan)
 
-    scope = scope.joins(:customer, :plan) if search_term.present?
-    scope.ransack(search_params)
+    scope = scope.where(id: matching_ids_by_search) if search_term.present? && filters.external_id.blank?
+    scope
   end
 
-  def search_params
-    return if search_term.blank?
-    return if filters.external_id
+  # Free-text search is expressed as a UNION of single-table branches (rather than a cross-table
+  # ransack OR) so each branch can use its own trigram index instead of forcing a sequential scan.
+  def matching_ids_by_search
+    escaped_term = "%#{Subscription.sanitize_sql_like(search_term)}%"
+    search_base = Subscription.where(organization:)
 
-    terms = {
-      m: "or",
-      id_cont: search_term,
-      name_cont: search_term,
-      external_id_cont: search_term,
-      plan_name_cont: search_term,
-      plan_code_cont: search_term
-    }
+    branches = [
+      search_base.where("subscriptions.name ILIKE ?", escaped_term).select(:id),
+      search_base.where("subscriptions.external_id ILIKE ?", escaped_term).select(:id),
+      search_base.where(plan_id: matching_plan_ids).select(:id)
+    ]
 
-    return terms if filters.external_customer_id.present?
+    branches << search_base.where(id: search_term).select(:id) if search_term.match?(BaseQuery::UUID_REGEX)
+    branches << search_base.where(customer_id: matching_customer_ids).select(:id) if search_customers?
 
-    terms.merge(
-      customer_name_cont: search_term,
-      customer_firstname_cont: search_term,
-      customer_lastname_cont: search_term,
-      customer_external_id_cont: search_term,
-      customer_email_cont: search_term
-    )
+    union_sql = branches.map(&:to_sql).join(" UNION ")
+    Subscription.unscoped.from("(#{union_sql}) AS subscriptions").select(:id)
+  end
+
+  # Columns of a single table are combined with OR (not UNION): Postgres can still hit each column's
+  # trigram index through a bitmap OR. Only the cross-table search in #matching_ids_by_search needs a
+  # UNION, since an OR spanning several tables would require joins that defeat those indexes.
+  def matching_plan_ids
+    escaped_term = "%#{Plan.sanitize_sql_like(search_term)}%"
+
+    Plan.where(organization:)
+      .where("plans.name ILIKE :term OR plans.code ILIKE :term", term: escaped_term)
+      .select(:id)
+  end
+
+  def matching_customer_ids
+    escaped_term = "%#{Customer.sanitize_sql_like(search_term)}%"
+
+    Customer.where(organization:)
+      .where(
+        "customers.name ILIKE :term OR customers.firstname ILIKE :term " \
+        "OR customers.lastname ILIKE :term OR customers.external_id ILIKE :term " \
+        "OR customers.email ILIKE :term",
+        term: escaped_term
+      )
+      .select(:id)
+  end
+
+  def search_customers?
+    filters.external_customer_id.blank?
   end
 
   def with_external_id(scope)
