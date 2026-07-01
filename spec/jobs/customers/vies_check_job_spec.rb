@@ -18,19 +18,8 @@ RSpec.describe Customers::ViesCheckJob do
     allow_any_instance_of(Valvat).to receive(:exists?).and_return(vies_response) # rubocop:disable RSpec/AnyInstance
   end
 
-  describe "unique job behavior" do
-    around do |example|
-      ActiveJob::Uniqueness.reset_manager!
-      example.run
-      ActiveJob::Uniqueness.test_mode!
-    end
-
-    it "does not enqueue duplicate jobs" do
-      expect do
-        described_class.perform_later(customer)
-        described_class.perform_later(customer)
-      end.to change { enqueued_jobs.count }.by(1) # rubocop:disable RSpec/ExpectChange
-    end
+  it_behaves_like "a unique job" do
+    let(:job_args) { [customer] }
   end
 
   it "calls the ViesCheckService" do
