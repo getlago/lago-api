@@ -16,6 +16,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
   let(:invoice_file_url) { invoice.file_url }
   let(:file_url) { Faker::Internet.url }
   let(:due_date) { invoice.payment_due_date.strftime("%Y-%m-%d") }
+  let(:purchase_order_number) { "PO-123" }
 
   let(:invoice) do
     create(
@@ -25,7 +26,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
       coupons_amount_cents: 2000,
       prepaid_credit_amount_cents: 4000,
       credit_notes_amount_cents: 6000,
-      taxes_amount_cents: 8000
+      taxes_amount_cents: 8000,
+      purchase_order_number:
     )
   end
 
@@ -111,6 +113,19 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
 
             expect(result).to be_success
             expect(result.external_id).to eq("123456789")
+          end
+
+          it "sends the purchase order number" do
+            service_call
+
+            expect(lago_client).to have_received(:put_with_response).with(
+              hash_including(
+                "input" => hash_including(
+                  "properties" => hash_including("lago_invoice_purchase_order_number" => purchase_order_number)
+                )
+              ),
+              headers
+            )
           end
 
           it_behaves_like "throttles!", :hubspot
