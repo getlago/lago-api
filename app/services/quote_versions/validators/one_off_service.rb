@@ -13,18 +13,26 @@ module QuoteVersions
 
       def validate_billing_items
         validate_collection_shape(ADD_ONS_KEY)
-        validate_add_ons
+        validate_add_on_structure
+        validate_add_on_business_rules
       end
 
-      def validate_add_ons
+      def validate_add_on_structure
+        add_on_array.each_with_index do |item, index|
+          next unless item.is_a?(Hash)
+
+          validate_nested_objects(item, index)
+          validate_units(item, index)
+          validate_dates(item, index)
+        end
+      end
+
+      def validate_add_on_business_rules
         add_on_array.each_with_index do |item, index|
           next unless item.is_a?(Hash)
 
           validate_add_on_id(item, index)
-          validate_nested_objects(item, index)
-          validate_units(item, index)
           validate_unit_amount(item, index)
-          validate_dates(item, index)
           validate_tax_codes(item, index)
         end
       end
@@ -32,7 +40,7 @@ module QuoteVersions
       def validate_add_on_id(item, index)
         id = item[:id]
         if id.blank?
-          add_error(field: add_on_field(item, index, :id), error_code: "value_is_mandatory") if scope == :approve
+          add_error(field: add_on_field(item, index, :id), error_code: "value_is_mandatory") if approve?
           return
         end
 
@@ -49,7 +57,7 @@ module QuoteVersions
       def validate_units(item, index)
         units = payload(item)[:units]
         if units.nil?
-          add_error(field: add_on_field(item, index, :units), error_code: "value_is_mandatory") if scope == :approve
+          add_error(field: add_on_field(item, index, :units), error_code: "value_is_mandatory") if approve?
           return
         end
 
@@ -61,7 +69,7 @@ module QuoteVersions
       def validate_unit_amount(item, index)
         amount = effective_unit_amount_cents(item, add_ons_by_id[item[:id].to_s])
         if amount.nil?
-          add_error(field: add_on_field(item, index, :unit_amount_cents), error_code: "value_is_mandatory") if scope == :approve
+          add_error(field: add_on_field(item, index, :unit_amount_cents), error_code: "value_is_mandatory") if approve?
           return
         end
 
