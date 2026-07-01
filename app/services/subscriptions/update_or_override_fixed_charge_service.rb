@@ -18,9 +18,9 @@ module Subscriptions
     end
 
     def call
-      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "subscription") unless subscription
       return result.not_found_failure!(resource: "fixed_charge") unless fixed_charge
+      return result.forbidden_failure! if !License.premium? && !units_only_change?
 
       ActiveRecord::Base.transaction do
         result.fixed_charge = units_only_change? ? override_units_only : override_via_plan

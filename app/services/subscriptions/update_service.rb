@@ -48,7 +48,7 @@ module Subscriptions
         })
       end
 
-      return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
+      return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides) && !units_only_plan_overrides_change?
 
       ActiveRecord::Base.transaction do
         subscription.name = params[:name] if params.key?(:name)

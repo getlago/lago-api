@@ -758,6 +758,52 @@ RSpec.describe Subscriptions::UpdateService do
           expect(result).not_to be_success
           expect(result.error.code).to eq("feature_unavailable")
         end
+
+        context "when plan_overrides is a units-only fixed_charges payload" do
+          let(:plan) { create(:plan, organization: membership.organization) }
+          let(:subscription) { create(:subscription, plan:) }
+          let(:fixed_charge) { create(:fixed_charge, plan:, units: 5) }
+          let(:params) do
+            {
+              plan_overrides: {
+                fixed_charges: [{id: fixed_charge.id, units: 25}]
+              }
+            }
+          end
+
+          before { fixed_charge }
+
+          it "writes the per-subscription units override without requiring premium" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(subscription.reload.plan).to eq(plan)
+            override = Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)
+            expect(override.units).to eq(25)
+          end
+        end
+
+        context "when plan_overrides carries a fixed_charges change beyond units" do
+          let(:plan) { create(:plan, organization: membership.organization) }
+          let(:subscription) { create(:subscription, plan:) }
+          let(:fixed_charge) { create(:fixed_charge, plan:, units: 5) }
+          let(:params) do
+            {
+              plan_overrides: {
+                fixed_charges: [{id: fixed_charge.id, units: 25, invoice_display_name: "Renamed"}]
+              }
+            }
+          end
+
+          before { fixed_charge }
+
+          it "still requires premium" do
+            result = update_service.call
+
+            expect(result).not_to be_success
+            expect(result.error.code).to eq("feature_unavailable")
+          end
+        end
       end
 
       context "with fixed charge overrides and apply_units_immediately true", :premium do
