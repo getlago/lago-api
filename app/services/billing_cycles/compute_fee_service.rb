@@ -30,7 +30,8 @@ module BillingCycles
         rate_card_rate: rate,
         amount_cents:,
         amount_currency: currency,
-        unit_amount_cents:,
+        unit_amount_cents: fee_unit_amount_cents,
+        precise_unit_amount:,
         units:,
         taxes_amount_cents: 0,
         precise_amount_cents: BigDecimal(amount_cents),
@@ -66,11 +67,26 @@ module BillingCycles
     end
 
     def full_amount_cents
-      unit_amount_cents * units
+      rate_amount_cents * units
     end
 
-    def unit_amount_cents
+    # The catalog per-unit rate in cents (before proration).
+    def rate_amount_cents
       (BigDecimal(rate.rate_properties.fetch("amount", "0")) * subunit).round
+    end
+
+    # Effective per-unit amount shown on the invoice — proration baked in so that
+    # unit price × units == amount (matches the legacy engine). Full period => rate.
+    def fee_unit_amount_cents
+      return 0 if units.zero?
+
+      (amount_cents / units).round
+    end
+
+    def precise_unit_amount
+      return BigDecimal(0) if units.zero?
+
+      BigDecimal(amount_cents) / units / subunit
     end
 
     def units
