@@ -21,7 +21,7 @@ module QuoteVersions
         false
       end
 
-      protected
+      private
 
       attr_reader :quote_version, :scope
 
@@ -46,9 +46,10 @@ module QuoteVersions
       end
 
       def billing_items
-        @billing_items ||= begin
-          raw = quote_version.billing_items
-          raw.is_a?(Hash) ? raw.with_indifferent_access : {}.with_indifferent_access
+        @billing_items ||= if raw_billing_items.is_a?(Hash)
+          raw_billing_items.with_indifferent_access
+        else
+          {}.with_indifferent_access
         end
       end
 
@@ -79,7 +80,7 @@ module QuoteVersions
       end
 
       def billing_item_field(collection_key, item, index, attribute)
-        ref = item[:localId].presence || index
+        ref = item[:local_id].presence || index
         :"#{collection_key}/#{ref}/#{attribute}"
       end
 
@@ -90,8 +91,6 @@ module QuoteVersions
         add_error(field: :billing_items, error_code:)
       end
 
-      private
-
       def validate_currency_format
         currency = quote_version.currency
         return if currency.blank?
@@ -100,8 +99,12 @@ module QuoteVersions
         add_error(field: :currency, error_code: "value_is_invalid")
       end
 
+      def raw_billing_items
+        @raw_billing_items ||= quote_version.billing_items
+      end
+
       def validate_billing_items_shape
-        raw = quote_version.billing_items
+        raw = raw_billing_items
         return if raw.nil?
 
         unless raw.is_a?(Hash)

@@ -162,7 +162,7 @@ RSpec.describe QuoteVersions::ApproveService do
           end_date: Date.new(2027, 1, 1),
           billing_items: {
             "add_ons" => [
-              {"id" => add_on.id, "localId" => "row-1", "payload" => {"units" => 1, "unit_amount_cents" => 1_000}}
+              {"id" => add_on.id, "local_id" => "row-1", "payload" => {"units" => 1, "unit_amount_cents" => 1_000}}
             ]
           }
         )
@@ -172,6 +172,32 @@ RSpec.describe QuoteVersions::ApproveService do
         expect(result).to be_success
         expect(result.quote_version.approved?).to eq(true)
         expect(result.order_form).to be_present
+      end
+
+      context "when quote-level dates are absent" do
+        let(:quote_version) do
+          create(
+            :quote_version,
+            quote:,
+            organization:,
+            currency: "EUR",
+            start_date: nil,
+            end_date: nil,
+            billing_items: {
+              "add_ons" => [
+                {"id" => add_on.id, "local_id" => "row-1", "payload" => {"units" => 1, "unit_amount_cents" => 1_000}}
+              ]
+            }
+          )
+        end
+
+        it "approves and leaves commercial term mention variables blank" do
+          expect(result).to be_success
+          expect(result.quote_version.approved?).to eq(true)
+          expect(result.order_form).to be_present
+          expect(result.quote_version.mention_variables["commercial_terms_start_date"]).to be_nil
+          expect(result.quote_version.mention_variables["commercial_terms_term_duration"]).to be_nil
+        end
       end
     end
 

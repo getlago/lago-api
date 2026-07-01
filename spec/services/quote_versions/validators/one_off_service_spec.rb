@@ -15,7 +15,7 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
   let(:add_on_item) do
     {
       "id" => add_on.id,
-      "localId" => "row-1",
+      "local_id" => "row-1",
       "payload" => {
         "code" => add_on.code,
         "units" => 1,
@@ -195,10 +195,10 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
       end
     end
 
-    context "when localId is missing" do
+    context "when local_id is missing" do
       let(:add_on_item) {
         super().tap { |i|
-          i.delete("localId")
+          i.delete("local_id")
           i["payload"]["units"] = 0
         }
       }
@@ -248,7 +248,7 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
     end
 
     context "when the unit amount cannot be resolved" do
-      let(:add_on_item) { {"localId" => "row-1", "payload" => {"units" => 1}, "overrides" => {}} }
+      let(:add_on_item) { {"local_id" => "row-1", "payload" => {"units" => 1}, "overrides" => {}} }
 
       it "requires the unit amount" do
         expect(validator).not_to be_valid
@@ -359,7 +359,7 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
             add_on_item.tap { |item| item["payload"]["tax_codes"] = [tax_a.code] },
             {
               "id" => other_add_on.id,
-              "localId" => "row-2",
+              "local_id" => "row-2",
               "payload" => {"units" => 1, "unit_amount_cents" => 5_000, "tax_codes" => [tax_b.code]},
               "overrides" => {}
             }

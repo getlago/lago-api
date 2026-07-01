@@ -100,7 +100,7 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
   end
 
   context "when a nested payload is malformed" do
-    let(:billing_items) { {"items" => [{"localId" => "row-1", "payload" => "bad"}]} }
+    let(:billing_items) { {"items" => [{"local_id" => "row-1", "payload" => "bad"}]} }
 
     it "adds a nested validation failure without raising" do
       expect(validator_class).not_to be_nil
@@ -114,9 +114,9 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
   end
 
   context "when a nested payload is valid" do
-    let(:billing_items) { {"items" => [{"localId" => "row-1", "payload" => {"units" => 1}}]} }
+    let(:billing_items) { {"items" => [{"local_id" => "row-1", "payload" => {"units" => 1}}]} }
 
-    it "uses localId in field paths" do
+    it "uses local_id in field paths" do
       expect(validator_class).not_to be_nil
 
       expect(validator).not_to be_valid
@@ -124,7 +124,7 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
     end
   end
 
-  context "when localId is absent" do
+  context "when local_id is absent" do
     let(:billing_items) { {"items" => [{"payload" => {"units" => 1}}]} }
 
     it "uses the original array index in field paths" do
