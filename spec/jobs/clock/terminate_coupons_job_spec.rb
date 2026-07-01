@@ -2,10 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe Taxes::UpdateAllEuTaxesJob do
-  subject { described_class.perform_now }
-
-  let(:organization) { create(:organization, eu_tax_management: true) }
+RSpec.describe Clock::TerminateCouponsJob do
+  subject { described_class }
 
   describe "unique job behavior" do
     around do |example|
@@ -23,10 +21,12 @@ RSpec.describe Taxes::UpdateAllEuTaxesJob do
   end
 
   describe ".perform" do
-    it "enqueues a job for organization with EU Tax Management" do
-      create(:organization, eu_tax_management: false)
+    before { allow(Coupons::TerminateService).to receive(:terminate_all_expired) }
 
-      expect { subject }.to have_enqueued_job(::Taxes::UpdateOrganizationEuTaxesJob).with(organization).exactly(:once)
+    it "calls Coupons::TerminateService.terminate_all_expired" do
+      described_class.perform_now
+
+      expect(Coupons::TerminateService).to have_received(:terminate_all_expired)
     end
   end
 end

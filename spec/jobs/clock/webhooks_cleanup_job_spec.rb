@@ -5,6 +5,21 @@ require "rails_helper"
 describe Clock::WebhooksCleanupJob do
   subject(:webhooks_cleanup_job) { described_class }
 
+  describe "unique job behavior" do
+    around do |example|
+      ActiveJob::Uniqueness.reset_manager!
+      example.run
+      ActiveJob::Uniqueness.test_mode!
+    end
+
+    it "does not enqueue duplicate jobs" do
+      expect do
+        described_class.perform_later
+        described_class.perform_later
+      end.to change { enqueued_jobs.count }.by(1) # rubocop:disable RSpec/ExpectChange
+    end
+  end
+
   def with_batch_size(size)
     previous = described_class.batch_size
     described_class.batch_size = size
