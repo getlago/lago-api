@@ -1042,16 +1042,17 @@ RSpec.describe Customers::UpsertFromApiService do
 
         before { payment_method }
 
-        it "removes the payment provider from customer" do
+        it "removes the payment provider and its code from customer" do
           expect(result).to be_success
 
           expect(result.customer.payment_provider).to be_nil
+          expect(result.customer.payment_provider_code).to be_nil
         end
 
-        it "does not discard the provider customer" do
+        it "discards the provider customer" do
           expect(result).to be_success
 
-          expect(stripe_customer.reload).not_to be_discarded
+          expect(stripe_customer.reload).to be_discarded
         end
 
         it "discards the old provider customer's payment methods" do
