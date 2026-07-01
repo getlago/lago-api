@@ -84,7 +84,7 @@ module Resolvers
 
       return result_error(result) unless result.success?
 
-      Invoice.preload_offset_amounts(
+      ::InvoicesPreloader.new(
         result.invoices.preload(
           :fees,
           :regenerated_invoice,
@@ -93,7 +93,7 @@ module Resolvers
           :customer_payments,
           {customer: :billing_entity}
         )
-      )
+      ).call
     end
   end
 end
