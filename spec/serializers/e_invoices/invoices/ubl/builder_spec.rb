@@ -20,6 +20,20 @@ RSpec.describe EInvoices::Invoices::Ubl::Builder do
   end
 
   describe ".serialize" do
+    context "when OrderReference tag (BT-13)" do
+      it "is absent without a purchase order number" do
+        expect(subject).not_to contains_xml_node("//cac:OrderReference")
+      end
+
+      context "with a purchase order number" do
+        before { invoice.update!(purchase_order_number: "PO-12345") }
+
+        it "contains the purchase order number" do
+          expect(subject).to contains_xml_node("//cac:OrderReference/cbc:ID").with_value("PO-12345")
+        end
+      end
+    end
+
     context "when Invoice tag" do
       it "contains the tag" do
         expect(subject).to contains_xml_node("//*[local-name()='Invoice']")

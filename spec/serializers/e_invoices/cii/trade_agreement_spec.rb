@@ -5,11 +5,12 @@ require "rails_helper"
 RSpec.describe EInvoices::Cii::TradeAgreement do
   subject do
     xml_document(:cii) do |xml|
-      described_class.serialize(xml:, resource:, options:)
+      described_class.serialize(xml:, resource:, purchase_order_number:, options:)
     end
   end
 
   let(:options) { described_class::Options.new }
+  let(:purchase_order_number) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:resource) { create(:invoice, customer:, organization:, billing_entity:, invoice_type:) }
@@ -126,6 +127,21 @@ RSpec.describe EInvoices::Cii::TradeAgreement do
           expect(subject).to contains_xml_node("#{buyer_address_root}/ram:CountryID")
             .with_value(customer.country)
         end
+      end
+    end
+
+    context "with a purchase order number" do
+      let(:purchase_order_number) { "PO-12345" }
+
+      it "contains the BuyerOrderReferencedDocument" do
+        expect(subject).to contains_xml_node("#{root}/ram:BuyerOrderReferencedDocument/ram:IssuerAssignedID")
+          .with_value("PO-12345")
+      end
+    end
+
+    context "without a purchase order number" do
+      it "does not contain the BuyerOrderReferencedDocument" do
+        expect(subject).not_to contains_xml_node("#{root}/ram:BuyerOrderReferencedDocument")
       end
     end
   end
