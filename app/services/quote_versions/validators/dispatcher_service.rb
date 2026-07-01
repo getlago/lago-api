@@ -2,7 +2,7 @@
 
 module QuoteVersions
   module Validators
-    class BaseService < BaseValidator
+    class DispatcherService < BaseValidator
       def initialize(result, quote_version:, scope: :approve)
         @quote_version = quote_version
         @scope = scope.to_sym
@@ -13,12 +13,15 @@ module QuoteVersions
         case quote_version.quote.order_type
         when "one_off"
           OneOffService.new(result, quote_version:, scope:).valid?
-        else
+        when "subscription_creation", "subscription_amendment"
           true
+        else
+          result.validation_failure!(errors: {order_type: ["unsupported_order_type"]})
+          false
         end
       end
 
-      protected
+      private
 
       attr_reader :quote_version, :scope
     end

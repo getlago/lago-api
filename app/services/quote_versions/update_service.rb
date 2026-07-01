@@ -29,7 +29,7 @@ module QuoteVersions
         )
       )
 
-      return result unless Validators::BaseService.new(result, quote_version:, scope: :update).valid?
+      return result unless Validators::DispatcherService.new(result, quote_version:, scope: :update).valid?
 
       quote_version.save!
       result.quote_version = quote_version
