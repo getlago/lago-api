@@ -111,6 +111,26 @@ RSpec.describe SubscriptionsQuery do
       end
     end
 
+    context "when search_term is a plan name" do
+      let(:search_term) { plan.name }
+
+      it "returns only subscriptions for the specified plan name" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(2)
+        expect(result.subscriptions).to match_array([subscription, subscription_2])
+      end
+    end
+
+    context "when search_term is a plan code" do
+      let(:search_term) { plan.code }
+
+      it "returns only subscriptions for the specified plan code" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(2)
+        expect(result.subscriptions).to match_array([subscription, subscription_2])
+      end
+    end
+
     context "when search_term is a customer name" do
       let(:search_term) { customer.name }
 
