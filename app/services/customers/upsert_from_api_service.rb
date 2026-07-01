@@ -270,6 +270,8 @@ module Customers
       customer.save!
 
       if old_provider_customer && billing.key?(:payment_provider) && billing[:payment_provider].nil?
+        old_provider_customer.discard!
+        customer.update!(payment_provider_code: nil)
         discard_payment_methods(old_provider_customer.payment_methods)
       end
 
