@@ -98,7 +98,9 @@ RSpec.describe ::V1::SubscriptionSerializer do
           "current_billing_period_started_at" => "2024-05-01T00:00:00Z",
           "current_billing_period_ending_at" => "2024-05-31T23:59:59Z",
           "progressive_billing_disabled" => false,
-          "consolidate_invoice" => true
+          "consolidate_invoice" => true,
+          "activated_at" => subscription.activated_at.iso8601,
+          "activation_rules" => []
         )
 
         expect(result["subscription"]["customer"]["lago_id"]).to be_present
@@ -248,52 +250,39 @@ RSpec.describe ::V1::SubscriptionSerializer do
     end
   end
 
-  context "when payment_gated_subscriptions feature flag is enabled" do
-    let(:organization) { create(:organization, feature_flags: ["payment_gated_subscriptions"]) }
-    let(:activated_at) { Time.zone.parse("2026-04-13T10:00:00Z") }
+  context "with a canceled subscription" do
     let(:subscription) do
       create(
         :subscription,
-        organization:,
-        cancellation_reason: Subscription::CANCELLATION_REASONS[:payment_failed],
-        activated_at:
+        :canceled,
+        cancellation_reason: Subscription::CANCELLATION_REASONS[:payment_failed]
       )
     end
 
-    it "serializes cancellation_reason and activated_at" do
+    it "serializes the cancellation reason" do
       result = JSON.parse(serializer.to_json)
 
-      expect(result["subscription"]).to include(
-        "cancellation_reason" => Subscription::CANCELLATION_REASONS[:payment_failed],
-        "activated_at" => activated_at.iso8601
-      )
+      expect(result["subscription"]["cancellation_reason"])
+        .to eq(Subscription::CANCELLATION_REASONS[:payment_failed])
     end
+  end
 
-    context "when subscription does not have activation_rules" do
-      it "serializes activation_rules as an empty array" do
-        result = JSON.parse(serializer.to_json)
+  context "with activation rules" do
+    let(:activation_rule) { create(:subscription_activation_rule, subscription:) }
 
-        expect(result["subscription"]["activation_rules"]).to eq([])
-      end
-    end
+    before { activation_rule }
 
-    context "when subscription has activation_rules" do
-      let(:activation_rule) { create(:subscription_activation_rule, subscription:, organization:) }
+    it "serializes the activation rules" do
+      result = JSON.parse(serializer.to_json)
 
-      before { activation_rule }
-
-      it "serializes activation_rules" do
-        result = JSON.parse(serializer.to_json)
-
-        expect(result["subscription"]["activation_rules"]).to contain_exactly(
-          include(
-            "lago_id" => activation_rule.id,
-            "type" => Subscription::ActivationRule::TYPES[:payment],
-            "timeout_hours" => activation_rule.timeout_hours,
-            "status" => activation_rule.status
-          )
+      expect(result["subscription"]["activation_rules"]).to contain_exactly(
+        include(
+          "lago_id" => activation_rule.id,
+          "type" => Subscription::ActivationRule::TYPES[:payment],
+          "timeout_hours" => activation_rule.timeout_hours,
+          "status" => activation_rule.status
         )
-      end
+      )
     end
   end
 end
