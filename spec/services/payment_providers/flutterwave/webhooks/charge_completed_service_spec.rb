@@ -89,6 +89,46 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       .and_return(double(success?: true, payment_provider: flutterwave_provider)) # rubocop:disable RSpec/VerifiedDoubles
   end
 
+  describe "#find_payable" do
+    subject(:find_payable) { charge_completed_service.send(:find_payable, verified_reference:) }
+
+    let(:verified_reference) { nil }
+
+    before { invoice }
+
+    context "when webhook meta identifies the invoice" do
+      it "returns the invoice using provider_payment_id" do
+        expect(find_payable).to eq(invoice)
+      end
+    end
+
+    context "when webhook tx_ref does not match the invoice" do
+      let(:payload) do
+        {
+          event: "charge.completed",
+          data: {
+            id: 285959875,
+            tx_ref: "lago_invoice_12345",
+            status: "successful",
+            payment_type: "card"
+          }
+        }
+      end
+
+      it "returns nil without a verified reference" do
+        expect(find_payable).to be_nil
+      end
+
+      context "when verified reference matches the invoice id" do
+        let(:verified_reference) { invoice.id }
+
+        it "returns the invoice using the verified tx_ref" do
+          expect(find_payable).to eq(invoice)
+        end
+      end
+    end
+  end
+
   describe "#call" do
     context "when transaction status is successful" do
       let(:http_client) { instance_double(LagoHttpClient::Client) }
@@ -528,6 +568,207 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
         result = charge_completed_service.call
 
         expect(result).to be_success
+      end
+    end
+  end
+
+  # End-to-end: ChargeCompletedService → real FlutterwaveService (no mock on payment update).
+  # Only Flutterwave's verify HTTP call is stubbed.
+  describe "integration with Invoices::Payments::FlutterwaveService" do
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        payment_provider: "flutterwave",
+        payment_provider_code: flutterwave_provider.code
+      )
+    end
+
+    let(:invoice) do
+      create(
+        :invoice,
+        organization:,
+        customer:,
+        total_amount_cents: 1_000_000,
+        currency: "NGN",
+        payment_status: :pending
+      )
+    end
+
+    let(:flutterwave_customer) { create(:flutterwave_customer, customer:, payment_provider: flutterwave_provider) }
+
+    let(:http_client) { instance_double(LagoHttpClient::Client) }
+
+    let(:verification_response) do
+      {
+        "status" => "success",
+        "data" => {
+          "id" => 285959875,
+          "tx_ref" => invoice.id,
+          "flw_ref" => "LAGO/FLW270177170",
+          "amount" => 10_000,
+          "currency" => "NGN",
+          "charged_amount" => 10_000,
+          "status" => "successful",
+          "payment_type" => "card",
+          "customer" => {
+            "id" => 215604089,
+            "name" => "John Doe",
+            "email" => "customer@example.com"
+          }
+        }
+      }
+    end
+
+    before do
+      flutterwave_customer
+      invoice
+      allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
+      allow(http_client).to receive(:get).and_return(verification_response)
+    end
+
+    context "when webhook meta identifies the invoice" do
+      let(:payload) do
+        {
+          event: "charge.completed",
+          data: {
+            id: 285959875,
+            tx_ref: invoice.id,
+            flw_ref: "LAGO/FLW270177170",
+            amount: 10_000,
+            currency: "NGN",
+            status: "successful",
+            payment_type: "card",
+            customer: {
+              id: 215604089,
+              name: "John Doe",
+              email: "customer@example.com"
+            },
+            meta: {
+              lago_invoice_id: invoice.id,
+              lago_payable_type: "Invoice"
+            }
+          }
+        }
+      end
+
+      it "creates a payment and marks the invoice as succeeded" do
+        expect { charge_completed_service.call }.to change(Payment, :count).by(1)
+
+        payment = Payment.last
+        expect(payment.payable).to eq(invoice)
+        expect(payment.payable_payment_status).to eq("succeeded")
+        expect(invoice.reload.payment_status).to eq("succeeded")
+      end
+    end
+
+    context "when meta is missing but tx_ref matches the invoice id" do
+      let(:payload) do
+        {
+          event: "charge.completed",
+          data: {
+            id: 285959875,
+            tx_ref: invoice.id,
+            flw_ref: "LAGO/FLW270177170",
+            amount: 10_000,
+            currency: "NGN",
+            status: "successful",
+            payment_type: "card",
+            customer: {
+              id: 215604089,
+              name: "John Doe",
+              email: "customer@example.com"
+            }
+          }
+        }
+      end
+
+      it "creates a payment and marks the invoice as succeeded" do
+        expect { charge_completed_service.call }.to change(Payment, :count).by(1)
+
+        payment = Payment.last
+        expect(payment.payable).to eq(invoice)
+        expect(payment.payable_payment_status).to eq("succeeded")
+        expect(invoice.reload.payment_status).to eq("succeeded")
+      end
+    end
+
+    context "payment confirmation in Lago" do
+      let(:payload) do
+        {
+          event: "charge.completed",
+          data: {
+            id: 285959875,
+            tx_ref: invoice.id,
+            flw_ref: "LAGO/FLW270177170",
+            amount: 10_000,
+            currency: "NGN",
+            status: "successful",
+            payment_type: "card",
+            customer: {
+              id: 215604089,
+              name: "John Doe",
+              email: "customer@example.com"
+            },
+            meta: {
+              lago_invoice_id: invoice.id,
+              lago_payable_type: "Invoice"
+            }
+          }
+        }
+      end
+
+      it "records the payment and marks the invoice as succeeded" do
+        expect(invoice.payment_status).to eq("pending")
+
+        expect { charge_completed_service.call }.to change(Payment, :count).by(1)
+
+        payment = Payment.last
+
+        aggregate_failures do
+          expect(payment.payable).to eq(invoice)
+          expect(payment.payable_payment_status).to eq("succeeded")
+          expect(payment.payment_provider).to eq(flutterwave_provider)
+          expect(invoice.reload.payment_status).to eq("succeeded")
+          expect(invoice.payment_pending?).to be(false)
+        end
+      end
+    end
+
+    context "when webhook tx_ref does not match the invoice but verify succeeds" do
+      let(:payload) do
+        {
+          event: "charge.completed",
+          data: {
+            id: 285959875,
+            tx_ref: "lago_invoice_12345",
+            flw_ref: "LAGO/FLW270177170",
+            amount: 10_000,
+            currency: "NGN",
+            status: "successful",
+            payment_type: "card",
+            customer: {
+              id: 215604089,
+              name: "John Doe",
+              email: "customer@example.com"
+            }
+          }
+        }
+      end
+
+      it "records the payment using the verified tx_ref and marks the invoice as succeeded" do
+        expect(invoice.payment_status).to eq("pending")
+
+        expect { charge_completed_service.call }.to change(Payment, :count).by(1)
+
+        payment = Payment.last
+
+        aggregate_failures do
+          expect(payment.payable).to eq(invoice)
+          expect(payment.payable_payment_status).to eq("succeeded")
+          expect(invoice.reload.payment_status).to eq("succeeded")
+          expect(invoice.payment_pending?).to be(false)
+        end
       end
     end
   end
