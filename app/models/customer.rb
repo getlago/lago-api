@@ -57,6 +57,7 @@ class Customer < ApplicationRecord
   enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: {allow_nil: true}
 
   before_save :ensure_slug
+  after_update_commit :enqueue_invoices_reindex_job, if: -> { Lago::Meilisearch::Client.enabled? && search_indexed_fields_changed? }
 
   belongs_to :organization
   belongs_to :billing_entity, optional: true
@@ -385,6 +386,17 @@ class Customer < ApplicationRecord
     formatted_sequential_id = format("%03d", sequential_id)
 
     self.slug = "#{organization.document_number_prefix}-#{formatted_sequential_id}"
+  end
+
+  # `deleted_at` is included because invoice documents embed customer fields
+  # only while the customer is kept: discarding must blank them, undiscarding
+  # must restore them.
+  def search_indexed_fields_changed?
+    (saved_changes.keys & (SEARCHABLE_CUSTOMER_FIELDS + ["deleted_at"])).any?
+  end
+
+  def enqueue_invoices_reindex_job
+    Customers::ReindexInvoicesJob.perform_later(id)
   end
 end
 

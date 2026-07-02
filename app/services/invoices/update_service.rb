@@ -59,8 +59,6 @@ module Invoices
 
       schedule_post_processing_jobs(old_payment_status)
 
-      Invoices::SearchIndexJob.perform_after_commit(invoice.id) if Lago::Meilisearch::Client.enabled?
-
       result.invoice = invoice
       result
     rescue ActiveRecord::RecordInvalid => e

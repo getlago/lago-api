@@ -53,7 +53,6 @@ module Invoices
 
       result.invoice = invoice
       SendWebhookJob.perform_later("invoice.voided", result.invoice)
-      Invoices::SearchIndexJob.perform_after_commit(invoice.id) if Lago::Meilisearch::Client.enabled?
       Invoices::ProviderTaxes::VoidJob.perform_later(invoice:)
       Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice:) if invoice.should_update_hubspot_invoice?
 

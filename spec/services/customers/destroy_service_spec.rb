@@ -36,14 +36,13 @@ RSpec.describe Customers::DestroyService do
 
     context "when Meilisearch is enabled" do
       before do
+        customer
         allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true)
-        allow(Customers::ReindexInvoicesJob).to receive(:perform_after_commit)
       end
 
       it "reindexes the customer's invoices to drop the discarded customer fields" do
-        destroy_service.call
-
-        expect(Customers::ReindexInvoicesJob).to have_received(:perform_after_commit).with(customer)
+        expect { destroy_service.call }
+          .to have_enqueued_job(Customers::ReindexInvoicesJob).with(customer.id)
       end
     end
 

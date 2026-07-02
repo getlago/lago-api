@@ -1429,4 +1429,41 @@ RSpec.describe Customer do
       end
     end
   end
+
+  describe "invoices search reindexing" do
+    let(:customer) { create(:customer) }
+
+    context "when Meilisearch is enabled" do
+      before do
+        customer
+        allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true)
+      end
+
+      it "enqueues an invoices reindex when a searchable field changes" do
+        expect { customer.update!(name: "New name") }
+          .to have_enqueued_job(Customers::ReindexInvoicesJob).with(customer.id)
+      end
+
+      it "enqueues an invoices reindex when the customer is discarded" do
+        expect { customer.discard! }
+          .to have_enqueued_job(Customers::ReindexInvoicesJob).with(customer.id)
+      end
+
+      it "does not enqueue a reindex when no searchable field changes" do
+        expect { customer.update!(net_payment_term: 8) }
+          .not_to have_enqueued_job(Customers::ReindexInvoicesJob)
+      end
+
+      it "does not enqueue a reindex on creation" do
+        expect { create(:customer) }.not_to have_enqueued_job(Customers::ReindexInvoicesJob)
+      end
+    end
+
+    context "when Meilisearch is disabled" do
+      it "does not enqueue a reindex" do
+        expect { customer.update!(name: "New name") }
+          .not_to have_enqueued_job(Customers::ReindexInvoicesJob)
+      end
+    end
+  end
 end

@@ -49,6 +49,7 @@ class Invoice < ApplicationRecord
   before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
   before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
+  after_save_commit :enqueue_search_index_job, if: -> { Lago::Meilisearch::Client.enabled? && visible? }
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -558,6 +559,10 @@ class Invoice < ApplicationRecord
   end
 
   private
+
+  def enqueue_search_index_job
+    Invoices::SearchIndexJob.perform_later(id)
+  end
 
   # Returns the wallet associated with this credit invoice's prepaid credit fee.
   # Can be nil for historical invoices where the fee or wallet transaction is missing.

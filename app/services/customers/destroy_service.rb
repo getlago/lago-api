@@ -19,7 +19,6 @@ module Customers
       customer.discard!
 
       Customers::TerminateRelationsJob.perform_later(customer_id: customer.id)
-      Customers::ReindexInvoicesJob.perform_after_commit(customer) if Lago::Meilisearch::Client.enabled?
 
       result.customer = customer
       result

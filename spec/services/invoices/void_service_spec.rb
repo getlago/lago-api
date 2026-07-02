@@ -62,14 +62,12 @@ RSpec.describe Invoices::VoidService do
 
         context "when Meilisearch is enabled" do
           before do
+            invoice
             allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true)
-            allow(Invoices::SearchIndexJob).to receive(:perform_after_commit)
           end
 
           it "enqueues a search reindex for the invoice" do
-            void_service.call
-
-            expect(Invoices::SearchIndexJob).to have_received(:perform_after_commit).with(invoice.id)
+            expect { void_service.call }.to have_enqueued_job(Invoices::SearchIndexJob).with(invoice.id)
           end
         end
       end

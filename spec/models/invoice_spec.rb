@@ -2539,4 +2539,33 @@ RSpec.describe Invoice do
       end
     end
   end
+
+  describe "search indexing" do
+    context "when Meilisearch is enabled" do
+      before { allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true) }
+
+      it "enqueues a search index job when a visible invoice is created" do
+        expect { create(:invoice, organization:) }.to have_enqueued_job(Invoices::SearchIndexJob)
+      end
+
+      it "enqueues a search index job after commit when a visible invoice is saved" do
+        invoice = create(:invoice, organization:)
+        ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+
+        expect { invoice.update!(payment_status: :succeeded) }
+          .to have_enqueued_job_after_commit(Invoices::SearchIndexJob).with(invoice.id)
+      end
+
+      it "does not enqueue a search index job for an invisible invoice" do
+        expect { create(:invoice, :invisible, organization:) }
+          .not_to have_enqueued_job(Invoices::SearchIndexJob)
+      end
+    end
+
+    context "when Meilisearch is disabled" do
+      it "does not enqueue a search index job" do
+        expect { create(:invoice, organization:) }.not_to have_enqueued_job(Invoices::SearchIndexJob)
+      end
+    end
+  end
 end

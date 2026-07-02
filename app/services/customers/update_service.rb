@@ -203,7 +203,6 @@ module Customers
         new_customer: false
       )
       SendWebhookJob.perform_later("customer.updated", customer)
-      reindex_invoices_in_search(customer)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -217,13 +216,6 @@ module Customers
 
     attr_reader :customer, :args
     def_delegators :customer, :organization
-
-    def reindex_invoices_in_search(customer)
-      return unless Lago::Meilisearch::Client.enabled?
-      return if (args.keys.map(&:to_s) & Customer::SEARCHABLE_CUSTOMER_FIELDS).empty?
-
-      Customers::ReindexInvoicesJob.perform_after_commit(customer)
-    end
 
     def billing_entity
       @billing_entity ||= organization.billing_entities.find_by!(code: args[:billing_entity_code])

@@ -83,8 +83,6 @@ module Invoices
         end
       end
 
-      Invoices::SearchIndexJob.perform_after_commit(invoice.id) if Lago::Meilisearch::Client.enabled?
-
       result
     rescue BaseService::FailedResult => e
       e.result

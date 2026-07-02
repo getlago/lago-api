@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Customers::ReindexInvoicesJob do
-  subject(:perform) { described_class.perform_now(customer) }
+  subject(:perform) { described_class.perform_now(customer.id) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -25,5 +25,25 @@ RSpec.describe Customers::ReindexInvoicesJob do
 
     expect(Invoices::SearchIndexJob).to have_received(:perform_later).with(invoice.id)
     expect(Invoices::SearchIndexJob).not_to have_received(:perform_later).with(other_invoice.id)
+  end
+
+  context "when the customer is discarded" do
+    before { customer.discard! }
+
+    it "still reindexes its invoices" do
+      perform
+
+      expect(Invoices::SearchIndexJob).to have_received(:perform_later).with(invoice.id)
+    end
+  end
+
+  context "when the customer does not exist" do
+    subject(:perform) { described_class.perform_now(SecureRandom.uuid) }
+
+    it "does nothing" do
+      perform
+
+      expect(Invoices::SearchIndexJob).not_to have_received(:perform_later)
+    end
   end
 end

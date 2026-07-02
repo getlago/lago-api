@@ -71,23 +71,20 @@ RSpec.describe Customers::UpdateService do
 
     context "when Meilisearch is enabled" do
       before do
+        customer
         allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true)
-        allow(Customers::ReindexInvoicesJob).to receive(:perform_after_commit)
       end
 
       it "reindexes the customer's invoices when a searchable field changes" do
-        customers_service.call
-
-        expect(Customers::ReindexInvoicesJob).to have_received(:perform_after_commit).with(customer)
+        expect { customers_service.call }
+          .to have_enqueued_job(Customers::ReindexInvoicesJob).with(customer.id)
       end
 
       context "when no searchable field changes" do
         let(:update_args) { {id: customer.id, net_payment_term: 8} }
 
         it "does not reindex" do
-          customers_service.call
-
-          expect(Customers::ReindexInvoicesJob).not_to have_received(:perform_after_commit)
+          expect { customers_service.call }.not_to have_enqueued_job(Customers::ReindexInvoicesJob)
         end
       end
     end
