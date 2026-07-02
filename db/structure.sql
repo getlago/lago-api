@@ -626,6 +626,7 @@ DROP INDEX IF EXISTS public.index_fees_on_true_up_parent_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_fees_on_pay_in_advance_event_transaction_id;
 DROP INDEX IF EXISTS public.index_fees_on_original_fee_id;
+DROP INDEX IF EXISTS public.index_fees_on_organization_id_and_created_at_and_id;
 DROP INDEX IF EXISTS public.index_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_on_invoiceable;
 DROP INDEX IF EXISTS public.index_fees_on_invoice_id;
@@ -8259,6 +8260,13 @@ CREATE INDEX index_fees_on_organization_id ON public.fees USING btree (organizat
 
 
 --
+-- Name: index_fees_on_organization_id_and_created_at_and_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_organization_id_and_created_at_and_id ON public.fees USING btree (organization_id, created_at, id) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_fees_on_original_fee_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12795,6 +12803,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260702074504'),
 ('20260625095837'),
 ('20260622113747'),
 ('20260619065327'),
