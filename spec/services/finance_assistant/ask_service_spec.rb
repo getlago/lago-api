@@ -8,6 +8,7 @@ RSpec.describe FinanceAssistant::AskService do
   let(:organization) { create(:organization) }
   let(:question) { "Show MRR for the past 3 months" }
   let(:session_id) { SecureRandom.uuid }
+  let(:message_id) { SecureRandom.uuid }
   let(:finance_assistant_url) { "http://finance-assistant.test" }
 
   around do |example|
@@ -36,6 +37,7 @@ RSpec.describe FinanceAssistant::AskService do
           results: "| Month | MRR |",
           sql_query: "select * from invoices",
           session_id:,
+          message_id:,
           session_expired: false
         }.to_json
       )
@@ -44,6 +46,7 @@ RSpec.describe FinanceAssistant::AskService do
     expect(result.answer["explanation"]).to eq("Here is the result.")
     expect(result.answer["results"]).to eq("| Month | MRR |")
     expect(result.answer["sql_query"]).to eq("select * from invoices")
+    expect(result.answer["message_id"]).to eq(message_id)
     expect(request).to have_been_requested
   end
 

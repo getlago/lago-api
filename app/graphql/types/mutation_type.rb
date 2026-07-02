@@ -255,5 +255,6 @@ module Types
 
     field :create_ai_conversation, mutation: Mutations::AiConversations::Create
     field :ask_finance_assistant, mutation: Mutations::FinanceAssistant::Ask
+    field :export_finance_assistant_result, mutation: Mutations::FinanceAssistant::Export
   end
 end

@@ -5,7 +5,7 @@ module FinanceAssistant
     Result = BaseResult[:answer]
 
     # Keys the GraphQL FinanceAssistantAnswer type exposes as non-nullable
-    REQUIRED_ANSWER_KEYS = %w[explanation results session_id session_expired].freeze
+    REQUIRED_ANSWER_KEYS = %w[explanation results session_id session_expired message_id].freeze
 
     def initialize(organization:, question:, session_id: nil)
       @organization = organization
