@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class AddIndexOnFeesForOrganizationIdAndCreatedAt < ActiveRecord::Migration[8.0]
+class AddIndexOnFeesForOrganizationIdCreatedAtAndId < ActiveRecord::Migration[8.0]
   disable_ddl_transaction!
 
   def change
