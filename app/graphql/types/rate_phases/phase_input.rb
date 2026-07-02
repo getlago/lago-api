@@ -8,6 +8,7 @@ module Types
       argument :billing_interval_cycle_count, Integer, required: false
       argument :name, String, required: false
       argument :position, Integer, required: true
+      argument :rate_override, Types::RateOverrides::Input, required: false
     end
   end
 end

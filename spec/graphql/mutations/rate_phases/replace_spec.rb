@@ -22,7 +22,12 @@ RSpec.describe Mutations::RatePhases::Replace do
 
   let(:phases) do
     [
-      {position: 1, name: "trial", billingIntervalCycleCount: 3},
+      {
+        position: 1,
+        name: "trial",
+        billingIntervalCycleCount: 3,
+        rateOverride: {rateModel: "standard", rateProperties: {amount: "0"}, minAmountCents: 0}
+      },
       {position: 2, name: "standard", billingIntervalCycleCount: nil}
     ]
   end
@@ -35,6 +40,11 @@ RSpec.describe Mutations::RatePhases::Replace do
           position
           name
           billingIntervalCycleCount
+          rateOverride {
+            id
+            rateModel
+            rateProperties
+          }
         }
       }
     GQL
@@ -44,11 +54,12 @@ RSpec.describe Mutations::RatePhases::Replace do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "plans:update"
 
-  it "replaces the ordered phase sequence" do
+  it "replaces the ordered phase sequence with the phase overrides" do
     response = execution["data"]["replaceRatePhases"]
 
     expect(response.map { |phase| phase["position"] }).to eq([1, 2])
     expect(response.map { |phase| phase["name"] }).to eq(%w[trial standard])
-    expect(response.map { |phase| phase["billingIntervalCycleCount"] }).to eq([3, nil])
+    expect(response.first["rateOverride"]["rateModel"]).to eq("standard")
+    expect(response.last["rateOverride"]).to be_nil
   end
 end
