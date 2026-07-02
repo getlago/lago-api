@@ -14,6 +14,7 @@ module Types
       field :product, Types::Products::Object, null: false
       field :rate_card, Types::RateCards::Object, null: false
 
+      field :rate_phases, [Types::RatePhases::Object], null: false
       field :rate_phases_count, Integer, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -21,6 +22,10 @@ module Types
 
       def rate_phases_count
         dataloader.with(Sources::CountByForeignKey, RatePhase, :plan_rate_card_id).load(object.id)
+      end
+
+      def rate_phases
+        object.rate_phases.order(:position)
       end
     end
   end
