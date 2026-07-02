@@ -41,7 +41,12 @@ Rails.application.routes.draw do
         resources :rates, only: %i[index show create update destroy], controller: "rate_cards/rates"
       end
       resources :plans, param: :code, code: /.*/, only: [] do
-        resources :rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_rate_cards"
+        resources :rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_rate_cards" do
+          scope module: :plan_rate_cards do
+            get "rate_phases", to: "rate_phases#index"
+            put "rate_phases", to: "rate_phases#replace"
+          end
+        end
       end
     end
 
