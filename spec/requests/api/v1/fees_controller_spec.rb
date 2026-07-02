@@ -210,9 +210,8 @@ RSpec.describe Api::V1::FeesController do
       end
     end
 
-    context "with unknown params" do
+    context "with unknown params", cache: :memory do
       before do
-        allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
         create(:fee, subscription:, invoice: nil)
       end
 
