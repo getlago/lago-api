@@ -3966,6 +3966,86 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(aggregated_fees).not_to be_empty
         end
       end
+
+      context "when context is current_usage", cache: :memory do
+        subject(:charge_subscription_service) do
+          described_class.new(
+            invoice:,
+            charge:,
+            subscription:,
+            boundaries:,
+            context: :current_usage,
+            apply_taxes: false,
+            filtered_aggregations:,
+            with_zero_units_filters:,
+            cache_middleware:
+          )
+        end
+
+        let(:with_zero_units_filters) { true }
+        let(:filtered_aggregations) { [eu_charge_filter.id, nil] }
+
+        let(:cache_middleware) do
+          Subscriptions::ChargeCacheMiddleware.new(
+            subscription:,
+            charge:,
+            to_datetime: boundaries.charges_to_datetime,
+            cache: true
+          )
+        end
+
+        around { |test| travel_to(Time.zone.parse("2022-03-16")) { test.run } }
+
+        before do
+          Rails.cache.clear
+          allow(Subscriptions::ChargeCacheService).to receive(:call).and_call_original
+        end
+
+        it "skips the cache and aggregation for filters without any usage" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+
+          eu_fee = result.fees.find { |f| f.charge_filter_id == eu_charge_filter.id }
+          us_fee = result.fees.find { |f| f.charge_filter_id == us_charge_filter.id }
+          asia_fee = result.fees.find { |f| f.charge_filter_id == asia_charge_filter.id }
+          default_fee = result.fees.find { |f| f.charge_filter_id.nil? }
+
+          expect(eu_fee).to have_attributes(units: 1, amount_cents: 2_000)
+          expect(us_fee).to have_attributes(units: 0, amount_cents: 0)
+          expect(asia_fee).to have_attributes(units: 0, amount_cents: 0)
+          expect(default_fee).to have_attributes(units: 1, amount_cents: 2_000)
+
+          expect(Subscriptions::ChargeCacheService).to have_received(:call)
+            .with(hash_including(charge_filter: eu_charge_filter)).once
+          expect(Subscriptions::ChargeCacheService).not_to have_received(:call)
+            .with(hash_including(charge_filter: us_charge_filter))
+          expect(Subscriptions::ChargeCacheService).not_to have_received(:call)
+            .with(hash_including(charge_filter: asia_charge_filter))
+        end
+
+        context "when with_zero_units_filters is false" do
+          let(:with_zero_units_filters) { false }
+
+          it "does not return zero-units fees for filters without any usage" do
+            result = charge_subscription_service.call
+            expect(result).to be_success
+
+            expect(result.fees.map(&:charge_filter_id)).to match_array([eu_charge_filter.id, nil])
+          end
+        end
+
+        context "with recurring billable metric" do
+          let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
+          let(:filtered_aggregations) { [] }
+
+          it "computes fees for all filters regardless of filtered_aggregations" do
+            result = charge_subscription_service.call
+            expect(result).to be_success
+
+            expect(Subscriptions::ChargeCacheService).to have_received(:call).exactly(4).times
+          end
+        end
+      end
     end
 
     context "with filter_by_group" do
