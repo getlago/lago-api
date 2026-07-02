@@ -21,7 +21,7 @@ module EInvoices
               Cii::LineItem.serialize(xml:, resource:, data: line_item_data(line_id, fee))
             end
 
-            Cii::TradeAgreement.serialize(xml:, resource:, purchase_order_number: invoice.purchase_order_number, options: trade_aggreement_options)
+            Cii::TradeAgreement.serialize(xml:, resource:, options: trade_aggreement_options)
             Cii::TradeDelivery.serialize(xml:, delivery_date:)
             Cii::TradeSettlement.serialize(xml:, resource:) do
               credits_and_payments do |type, amount|

@@ -14,10 +14,9 @@ module EInvoices
       delegate :billing_entity, to: :resource
       delegate :customer, to: :resource
 
-      def initialize(xml:, resource:, purchase_order_number: nil, options: Options.new)
+      def initialize(xml:, resource:, options: Options.new)
         super(xml:, resource:)
 
-        @purchase_order_number = purchase_order_number
         @options = options
       end
 
@@ -61,7 +60,10 @@ module EInvoices
       private
 
       attr_accessor :options
-      attr_reader :purchase_order_number
+
+      def purchase_order_number
+        resource.try(:purchase_order_number)
+      end
 
       def render_tax_registration?
         options && !!options.tax_registration
