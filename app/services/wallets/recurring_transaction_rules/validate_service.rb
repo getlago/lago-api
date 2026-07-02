@@ -11,6 +11,7 @@ module Wallets
       def call
         return false unless valid_trigger?
         return false unless valid_method?
+        return false unless valid_target_above_threshold?
         return false unless valid_credits?
         return false unless valid_metadata?
         return false unless valid_expiration_at?
@@ -47,6 +48,13 @@ module Wallets
         return valid_decimal?(params[:target_ongoing_balance]) if method == "target"
 
         true
+      end
+
+      def valid_target_above_threshold?
+        return true unless method == "target" && trigger == "threshold"
+        return true if params[:target_ongoing_balance].nil? || params[:threshold_credits].nil?
+
+        BigDecimal(params[:target_ongoing_balance].to_s) >= BigDecimal(params[:threshold_credits].to_s)
       end
 
       def valid_credits?

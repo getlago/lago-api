@@ -47,6 +47,12 @@ RSpec.describe Integrations::Hubspot::Invoices::DeployObjectService do
             type: "string",
             fieldType: "text",
             searchableInGlobalSearch: true
+          ),
+          hash_including(
+            name: "lago_invoice_url",
+            label: "Lago Invoice URL",
+            type: "string",
+            fieldType: "text"
           )
         )
         expect(headers["Authorization"]).to include("Bearer")

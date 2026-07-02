@@ -160,6 +160,12 @@ module Integrations
                 label: "Lago Invoice File URL",
                 type: "string",
                 fieldType: "file"
+              },
+              {
+                name: "lago_invoice_url",
+                label: "Lago Invoice URL",
+                type: "string",
+                fieldType: "text"
               }
             ],
             associatedObjects: %w[COMPANY CONTACT]
