@@ -19,7 +19,7 @@ RSpec.describe Mutations::RatePhases::Update do
   let(:plan_rate_card) { create(:plan_rate_card, organization:) }
   let!(:rate_phase) { create(:rate_phase, organization:, plan_rate_card:, position: 1, code: "launch", name: "Before") }
 
-  let(:input) { {planAppliedRateCardId: plan_rate_card.id, code: "launch", name: "After", newCode: "intro"} }
+  let(:input) { {planAppliedRateCardId: plan_rate_card.id, code: rate_phase.code, name: "After", newCode: "intro"} }
 
   let(:mutation) do
     <<~GQL

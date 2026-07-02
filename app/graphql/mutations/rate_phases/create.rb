@@ -11,12 +11,7 @@ module Mutations
       graphql_name "CreateRatePhase"
       description "Inserts a phase into a plan rate card's sequence"
 
-      argument :billing_interval_cycle_count, Integer, required: false
-      argument :code, String, required: true
-      argument :name, String, required: false
-      argument :plan_applied_rate_card_id, ID, required: true
-      argument :position, Integer, required: false
-
+      input_object_class Types::RatePhases::CreateInput
       type Types::RatePhases::Object
 
       def resolve(**args)
