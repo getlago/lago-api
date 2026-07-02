@@ -9,6 +9,7 @@ class RatePhase < ApplicationRecord
   belongs_to :organization
   belongs_to :plan_rate_card, optional: true
   belongs_to :subscription_rate_card, optional: true
+  belongs_to :rate_override, optional: true
 
   # The code is the phase's stable identifier within its parent entry:
   # positions renumber on insert/delete, codes never move. It is always
@@ -23,6 +24,7 @@ class RatePhase < ApplicationRecord
   validates :position, presence: true, numericality: {greater_than: 0}
   # nil = indefinite (terminal) phase; a zero-cycle phase would never bill.
   validates :billing_interval_cycle_count, numericality: {greater_than: 0}, allow_nil: true
+  validates :rate_override_id, uniqueness: {conditions: -> { where(deleted_at: nil) }}, allow_nil: true
 
   validate :validate_exactly_one_parent
 
@@ -64,6 +66,7 @@ end
 #  index_rate_phases_on_plan_rate_card_id               (plan_rate_card_id)
 #  index_rate_phases_on_plan_rate_card_id_and_code      (plan_rate_card_id,code) UNIQUE WHERE ((plan_rate_card_id IS NOT NULL) AND (deleted_at IS NULL))
 #  index_rate_phases_on_plan_rate_card_id_and_position  (plan_rate_card_id,position) UNIQUE WHERE ((plan_rate_card_id IS NOT NULL) AND (deleted_at IS NULL))
+#  index_rate_phases_on_rate_override_id                (rate_override_id) UNIQUE WHERE ((rate_override_id IS NOT NULL) AND (deleted_at IS NULL))
 #  index_rate_phases_on_sub_rate_card_id_and_code       (subscription_rate_card_id,code) UNIQUE WHERE ((subscription_rate_card_id IS NOT NULL) AND (deleted_at IS NULL))
 #  index_rate_phases_on_sub_rate_card_id_and_position   (subscription_rate_card_id,position) UNIQUE WHERE ((subscription_rate_card_id IS NOT NULL) AND (deleted_at IS NULL))
 #  index_rate_phases_on_subscription_rate_card_id       (subscription_rate_card_id)
@@ -72,5 +75,6 @@ end
 #
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (plan_rate_card_id => plan_rate_cards.id)
+#  fk_rails_...  (rate_override_id => rate_overrides.id)
 #  fk_rails_...  (subscription_rate_card_id => subscription_rate_cards.id)
 #

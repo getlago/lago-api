@@ -12,11 +12,28 @@ RSpec.describe RatePhase do
       expect(rate_phase).to belong_to(:organization)
       expect(rate_phase).to belong_to(:plan_rate_card).optional
       expect(rate_phase).to belong_to(:subscription_rate_card).optional
+      expect(rate_phase).to belong_to(:rate_override).optional
     end
   end
 
   describe "validations" do
     it { is_expected.to validate_numericality_of(:billing_interval_cycle_count).is_greater_than(0).allow_nil }
+
+    it "rejects two kept phases sharing the same rate_override" do
+      override = create(:rate_override)
+      phase = create(:rate_phase, organization: override.organization, rate_override: override)
+      duplicate = build(
+        :rate_phase,
+        organization: override.organization,
+        plan_rate_card: phase.plan_rate_card,
+        position: 2,
+        code: "other",
+        rate_override: override
+      )
+      duplicate.valid?
+
+      expect(duplicate.errors.where(:rate_override_id, :taken)).to be_present
+    end
 
     it { is_expected.to validate_presence_of(:position) }
     it { is_expected.to validate_numericality_of(:position).is_greater_than(0) }

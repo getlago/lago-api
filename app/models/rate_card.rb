@@ -75,16 +75,16 @@ end
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #  organization_id           :uuid             not null
-#  product_filter_id    :uuid
-#  product_id           :uuid             not null
+#  product_filter_id         :uuid
+#  product_id                :uuid             not null
 #
 # Indexes
 #
 #  index_rate_cards_on_deleted_at                (deleted_at)
 #  index_rate_cards_on_organization_id           (organization_id)
 #  index_rate_cards_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
-#  index_rate_cards_on_product_filter_id    (product_filter_id)
-#  index_rate_cards_on_product_id           (product_id)
+#  index_rate_cards_on_product_filter_id         (product_filter_id)
+#  index_rate_cards_on_product_id                (product_id)
 #
 # Foreign Keys
 #

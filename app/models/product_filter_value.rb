@@ -39,20 +39,20 @@ end
 #
 #  id                        :uuid             not null, primary key
 #  deleted_at                :datetime
-#  value                     :string           not null
+#  value                     :string
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #  billable_metric_filter_id :uuid             not null
 #  organization_id           :uuid             not null
-#  product_filter_id    :uuid             not null
+#  product_filter_id         :uuid             not null
 #
 # Indexes
 #
-#  idx_pif_values_on_filter_metric_filter_and_value               (product_filter_id,billable_metric_filter_id,value) UNIQUE WHERE (deleted_at IS NULL)
+#  idx_pif_values_on_filter_metric_filter_and_value          (product_filter_id,billable_metric_filter_id,value) UNIQUE NULLS NOT DISTINCT WHERE (deleted_at IS NULL)
 #  index_product_filter_values_on_billable_metric_filter_id  (billable_metric_filter_id)
 #  index_product_filter_values_on_deleted_at                 (deleted_at)
 #  index_product_filter_values_on_organization_id            (organization_id)
-#  index_product_filter_values_on_product_filter_id     (product_filter_id)
+#  index_product_filter_values_on_product_filter_id          (product_filter_id)
 #
 # Foreign Keys
 #

@@ -31394,7 +31394,7 @@
               "deprecationReason": null
             },
             {
-              "name": "product_item",
+              "name": "product",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

@@ -52,12 +52,12 @@ end
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  organization_id      :uuid             not null
-#  product_id      :uuid             not null
+#  product_id           :uuid             not null
 #
 # Indexes
 #
-#  index_product_filters_on_deleted_at                (deleted_at)
-#  index_product_filters_on_organization_id           (organization_id)
+#  index_product_filters_on_deleted_at           (deleted_at)
+#  index_product_filters_on_organization_id      (organization_id)
 #  index_product_filters_on_product_id           (product_id)
 #  index_product_filters_on_product_id_and_code  (product_id,code) UNIQUE WHERE (deleted_at IS NULL)
 #

@@ -24,6 +24,7 @@ class Fee < ApplicationRecord
   # Fees are historical records: they must resolve their pricing source
   # even after the rate is discarded.
   belongs_to :rate_card_rate, -> { with_discarded }, optional: true
+  belongs_to :rate_override, -> { with_discarded }, optional: true
 
   has_one :adjusted_fee, dependent: :nullify
   has_one :billable_metric, -> { with_discarded }, through: :charge
@@ -418,6 +419,7 @@ end
 #  pay_in_advance_event_id             :uuid
 #  pay_in_advance_event_transaction_id :string
 #  rate_card_rate_id                   :uuid
+#  rate_override_id                    :uuid
 #  subscription_id                     :uuid
 #  true_up_parent_fee_id               :uuid
 #
@@ -441,6 +443,7 @@ end
 #  index_fees_on_original_fee_id                        (original_fee_id)
 #  index_fees_on_pay_in_advance_event_transaction_id    (pay_in_advance_event_transaction_id) WHERE (deleted_at IS NULL)
 #  index_fees_on_rate_card_rate_id                      (rate_card_rate_id)
+#  index_fees_on_rate_override_id                       (rate_override_id)
 #  index_fees_on_subscription_id                        (subscription_id)
 #  index_fees_on_true_up_parent_fee_id                  (true_up_parent_fee_id)
 #
@@ -456,6 +459,7 @@ end
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (original_fee_id => fees.id)
 #  fk_rails_...  (rate_card_rate_id => rate_card_rates.id)
+#  fk_rails_...  (rate_override_id => rate_overrides.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)
 #  fk_rails_...  (true_up_parent_fee_id => fees.id)
 #

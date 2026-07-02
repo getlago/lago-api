@@ -96,6 +96,7 @@ end
 #  applied_pricing_unit_conversion_rate :decimal(30, 10)
 #  billing_interval_count               :integer          default(1), not null
 #  billing_interval_unit                :enum             not null
+#  code                                 :string           not null
 #  deleted_at                           :datetime
 #  effective_datetime                   :datetime         not null
 #  min_amount_cents                     :bigint           default(0), not null
@@ -111,6 +112,7 @@ end
 #  index_rate_card_rates_on_deleted_at                           (deleted_at)
 #  index_rate_card_rates_on_organization_id                      (organization_id)
 #  index_rate_card_rates_on_rate_card_id                         (rate_card_id)
+#  index_rate_card_rates_on_rate_card_id_and_code                (rate_card_id,code) UNIQUE WHERE (deleted_at IS NULL)
 #  index_rate_card_rates_on_rate_card_id_and_effective_datetime  (rate_card_id,effective_datetime) UNIQUE WHERE (deleted_at IS NULL)
 #
 # Foreign Keys

@@ -83,7 +83,7 @@ end
 #  billable_metric_id   :uuid
 #  charge_id            :uuid
 #  organization_id      :uuid             not null
-#  product_category_id           :uuid
+#  product_category_id  :uuid
 #
 # Indexes
 #
@@ -93,7 +93,7 @@ end
 #  index_products_on_deleted_at                (deleted_at)
 #  index_products_on_organization_id           (organization_id)
 #  index_products_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
-#  index_products_on_product_category_id                (product_category_id)
+#  index_products_on_product_category_id       (product_category_id)
 #
 # Foreign Keys
 #
