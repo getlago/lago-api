@@ -22,6 +22,79 @@ RSpec.describe RatePhases::CreateService do
     expect(rate_phase.code).to eq("trial")
   end
 
+  context "when the code is missing" do
+    before { params.delete(:code) }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:code]).to be_present
+    end
+  end
+
+  context "when inserting between existing phases" do
+    let!(:launch) { create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3) }
+    let!(:standard) { create(:rate_phase, plan_rate_card:, organization:, position: 2, billing_interval_cycle_count: nil) }
+
+    let(:params) { {code: "ramp", position: 2, billing_interval_cycle_count: 6, name: "Ramp"} }
+
+    it "shifts the later phases down" do
+      expect(result).to be_success
+      expect(result.rate_phase.position).to eq(2)
+      expect(launch.reload.position).to eq(1)
+      expect(standard.reload.position).to eq(3)
+    end
+  end
+
+  context "when position is omitted" do
+    let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: nil) }
+
+    let(:params) { {code: "intro", billing_interval_cycle_count: 3} }
+
+    it "inserts a definite phase before the indefinite tail" do
+      expect(result).to be_success
+      expect(result.rate_phase.position).to eq(1)
+      expect(terminal.reload.position).to eq(2)
+    end
+
+    context "when the new phase is indefinite" do
+      let(:params) { {billing_interval_cycle_count: nil} }
+
+      it "rejects a second indefinite phase" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:billing_interval_cycle_count]).to eq(["non_terminal_indefinite"])
+      end
+    end
+  end
+
+  context "when the position is out of range" do
+    let(:params) { {position: 3, billing_interval_cycle_count: 3} }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:position]).to eq(["non_contiguous_position"])
+    end
+  end
+
+  context "when inserting an indefinite phase before the end" do
+    before { create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3) }
+
+    let(:params) { {position: 1, billing_interval_cycle_count: nil} }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:billing_interval_cycle_count]).to eq(["non_terminal_indefinite"])
+    end
+  end
+
+  context "when the plan has subscriptions" do
+    before { create(:subscription, plan: plan_rate_card.plan, organization:) }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:rate_phase]).to eq(["plan_locked"])
+    end
+  end
+
   context "when no parent is provided" do
     subject(:result) { described_class.call(params:) }
 
