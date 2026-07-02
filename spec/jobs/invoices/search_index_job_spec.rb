@@ -8,8 +8,8 @@ RSpec.describe Invoices::SearchIndexJob do
   let(:invoice) { create(:invoice) }
 
   before do
-    allow(Invoices::SearchIndexService).to receive(:call!)
-    allow(Invoices::RemoveFromSearchIndexService).to receive(:call!)
+    allow(Invoices::Search::IndexService).to receive(:call!)
+    allow(Invoices::Search::RemoveFromIndexService).to receive(:call!)
   end
 
   it "runs on the meilisearch queue" do
@@ -22,7 +22,7 @@ RSpec.describe Invoices::SearchIndexJob do
     it "indexes the invoice" do
       perform
 
-      expect(Invoices::SearchIndexService).to have_received(:call!).with(invoice:)
+      expect(Invoices::Search::IndexService).to have_received(:call!).with(invoice:)
     end
   end
 
@@ -32,7 +32,7 @@ RSpec.describe Invoices::SearchIndexJob do
     it "removes the invoice from the index" do
       perform
 
-      expect(Invoices::RemoveFromSearchIndexService).to have_received(:call!).with(invoice_id:)
+      expect(Invoices::Search::RemoveFromIndexService).to have_received(:call!).with(invoice_id:)
     end
   end
 end

@@ -37,6 +37,15 @@ class Customer < ApplicationRecord
     align_with_finalization_date: "align_with_finalization_date"
   }.freeze
 
+  SEARCHABLE_CUSTOMER_FIELDS = %w[
+    name
+    firstname
+    lastname
+    legal_name
+    external_id
+    email
+  ].freeze
+
   attribute :finalize_zero_amount_invoice, :integer
   enum :finalize_zero_amount_invoice, FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, prefix: :finalize_zero_amount_invoice
   attribute :customer_type, :string

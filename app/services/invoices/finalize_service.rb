@@ -17,7 +17,7 @@ module Invoices
 
       invoice.finalized!
 
-      Invoices::SearchIndexJob.perform_after_commit(invoice.id) if MeilisearchClient.enabled?
+      Invoices::SearchIndexJob.perform_after_commit(invoice.id) if Lago::Meilisearch::Client.enabled?
 
       result.invoice = invoice
       result

@@ -19,9 +19,7 @@ module Customers
       customer.discard!
 
       Customers::TerminateRelationsJob.perform_later(customer_id: customer.id)
-      # Drop the discarded customer's denormalized fields from the invoice index,
-      # matching the Postgres search which excluded discarded customers.
-      Customers::ReindexInvoicesJob.perform_after_commit(customer) if MeilisearchClient.enabled?
+      Customers::ReindexInvoicesJob.perform_after_commit(customer) if Lago::Meilisearch::Client.enabled?
 
       result.customer = customer
       result

@@ -22,7 +22,7 @@ RSpec.describe Invoices::FinalizeService do
 
       context "when Meilisearch is enabled" do
         before do
-          allow(MeilisearchClient).to receive(:enabled?).and_return(true)
+          allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true)
           allow(Invoices::SearchIndexJob).to receive(:perform_after_commit)
         end
 

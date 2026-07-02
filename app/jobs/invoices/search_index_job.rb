@@ -8,9 +8,9 @@ module Invoices
       invoice = Invoice.find_by(id: invoice_id)
 
       if invoice
-        Invoices::SearchIndexService.call!(invoice:)
+        Invoices::Search::IndexService.call!(invoice:)
       else
-        Invoices::RemoveFromSearchIndexService.call!(invoice_id:)
+        Invoices::Search::RemoveFromIndexService.call!(invoice_id:)
       end
     end
   end

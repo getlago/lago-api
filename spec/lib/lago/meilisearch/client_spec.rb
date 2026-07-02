@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe MeilisearchClient do
+RSpec.describe Lago::Meilisearch::Client do
   describe ".enabled?" do
     context "when LAGO_MEILISEARCH_URL is set" do
       around do |example|

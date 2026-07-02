@@ -70,10 +70,6 @@ class InvoicesQuery < BaseQuery
     )
   end
 
-  # Meilisearch resolves the text search AND every filter, returning the page of
-  # records (in relevance/sort order) plus the exact total count via kaminari.
-  # Falls back to the Postgres path on any Meilisearch error so search never
-  # hard-fails.
   def meilisearch_invoices
     search_params = {
       filter: meilisearch_filter,
@@ -93,13 +89,14 @@ class InvoicesQuery < BaseQuery
     ).call
 
     invoices
+  # NOTE: If any error happens, we fallback to PG search
   rescue Meilisearch::Error => e
     Sentry.capture_exception(e) if defined?(Sentry)
     postgres_invoices
   end
 
   def use_meilisearch?
-    use_meilisearch_flag && MeilisearchClient.search_enabled? && (search_term.present? || filters_present?)
+    use_meilisearch_flag && Lago::Meilisearch::Client.search_enabled? && (search_term.present? || filters_present?)
   end
 
   def filters_present?

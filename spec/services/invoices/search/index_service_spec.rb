@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::SearchIndexService do
+RSpec.describe Invoices::Search::IndexService do
   subject(:result) { described_class.call(invoice:) }
 
   let(:invoice) { create(:invoice) }
@@ -10,7 +10,7 @@ RSpec.describe Invoices::SearchIndexService do
   before { allow(invoice).to receive(:ms_index!) }
 
   context "when Meilisearch is enabled" do
-    before { allow(MeilisearchClient).to receive(:enabled?).and_return(true) }
+    before { allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true) }
 
     it "indexes the invoice" do
       result
@@ -20,7 +20,7 @@ RSpec.describe Invoices::SearchIndexService do
   end
 
   context "when Meilisearch is disabled" do
-    before { allow(MeilisearchClient).to receive(:enabled?).and_return(false) }
+    before { allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(false) }
 
     it "does not index the invoice" do
       result

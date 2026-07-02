@@ -218,13 +218,9 @@ module Customers
     attr_reader :customer, :args
     def_delegators :customer, :organization
 
-    SEARCHABLE_CUSTOMER_FIELDS = %w[name firstname lastname legal_name external_id email].freeze
-
-    # Customer fields are denormalized into the invoice search index, so an update
-    # touching any of them requires re-indexing the customer's invoices.
     def reindex_invoices_in_search(customer)
-      return unless MeilisearchClient.enabled?
-      return if (args.keys.map(&:to_s) & SEARCHABLE_CUSTOMER_FIELDS).empty?
+      return unless Lago::Meilisearch::Client.enabled?
+      return if (args.keys.map(&:to_s) & Customer::SEARCHABLE_CUSTOMER_FIELDS).empty?
 
       Customers::ReindexInvoicesJob.perform_after_commit(customer)
     end

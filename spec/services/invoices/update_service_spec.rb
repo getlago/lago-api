@@ -32,7 +32,7 @@ RSpec.describe Invoices::UpdateService do
     end
 
     context "when Meilisearch is enabled" do
-      before { allow(MeilisearchClient).to receive(:enabled?).and_return(true) }
+      before { allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true) }
 
       it "enqueues a search reindex for the invoice" do
         expect { result }.to have_enqueued_job_after_commit(Invoices::SearchIndexJob).with(invoice.id)

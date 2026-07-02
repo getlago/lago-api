@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::RemoveFromSearchIndexService do
+RSpec.describe Invoices::Search::RemoveFromIndexService do
   subject(:result) { described_class.call(invoice_id:) }
 
   let(:invoice_id) { SecureRandom.uuid }
@@ -11,7 +11,7 @@ RSpec.describe Invoices::RemoveFromSearchIndexService do
   before { allow(Invoice).to receive(:index).and_return(index) }
 
   context "when Meilisearch is enabled" do
-    before { allow(MeilisearchClient).to receive(:enabled?).and_return(true) }
+    before { allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true) }
 
     it "deletes the document from the index" do
       result
@@ -21,7 +21,7 @@ RSpec.describe Invoices::RemoveFromSearchIndexService do
   end
 
   context "when Meilisearch is disabled" do
-    before { allow(MeilisearchClient).to receive(:enabled?).and_return(false) }
+    before { allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(false) }
 
     it "does not touch the index" do
       result

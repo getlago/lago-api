@@ -928,7 +928,7 @@ RSpec.describe InvoicesQuery do
     before do
       ms_invoice_first
       ms_invoice_second
-      allow(MeilisearchClient).to receive(:search_enabled?).and_return(true)
+      allow(Lago::Meilisearch::Client).to receive(:search_enabled?).and_return(true)
       allow(Invoice).to receive(:search).and_return(search_results)
     end
 
@@ -986,7 +986,7 @@ RSpec.describe InvoicesQuery do
     context "when search is disabled (LAGO_USE_MEILISEARCH off)" do
       let(:search_term) { "Acme" }
 
-      before { allow(MeilisearchClient).to receive(:search_enabled?).and_return(false) }
+      before { allow(Lago::Meilisearch::Client).to receive(:search_enabled?).and_return(false) }
 
       it "uses the Postgres path even with a search term" do
         expect(meili_result.invoices.map(&:id)).to include(ms_invoice_first.id, ms_invoice_second.id)

@@ -36,7 +36,7 @@ RSpec.describe Customers::DestroyService do
 
     context "when Meilisearch is enabled" do
       before do
-        allow(MeilisearchClient).to receive(:enabled?).and_return(true)
+        allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true)
         allow(Customers::ReindexInvoicesJob).to receive(:perform_after_commit)
       end
 
