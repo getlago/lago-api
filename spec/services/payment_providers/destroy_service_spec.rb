@@ -24,6 +24,39 @@ RSpec.describe PaymentProviders::DestroyService do
       before { destroy_service.call }
     end
 
+    context "with provider customers" do
+      let(:customer) { create(:customer, organization:) }
+      let(:provider_customer) { create(:stripe_customer, customer:, organization:, payment_provider:) }
+
+      before { provider_customer }
+
+      it "soft-deletes the provider customers" do
+        destroy_service.call
+
+        expect(provider_customer.reload).to be_discarded
+      end
+
+      it "removes the provider customers from the default scope" do
+        destroy_service.call
+
+        expect(PaymentProviderCustomers::BaseCustomer.find_by(id: provider_customer.id)).to be_nil
+      end
+
+      it "nullifies the payment provider on the customer" do
+        destroy_service.call
+
+        expect(customer.reload).to have_attributes(payment_provider: nil, payment_provider_code: nil)
+      end
+
+      it "allows a single live provider customer per customer/type after reconnect" do
+        destroy_service.call
+
+        new_provider = create(:stripe_provider, organization:)
+        expect { create(:stripe_customer, customer:, organization:, payment_provider: new_provider) }
+          .to change { PaymentProviderCustomers::StripeCustomer.where(customer:).count }.from(0).to(1)
+      end
+    end
+
     context "when payment provider is not found" do
       let(:payment_provider) { nil }
 
