@@ -27,6 +27,7 @@ module Types
     field :update_plan, mutation: Mutations::Plans::Update
 
     field :create_plan_rate_card, mutation: Mutations::PlanRateCards::Create
+    field :replace_rate_phases, mutation: Mutations::RatePhases::Replace
 
     field :create_charge, mutation: Mutations::Charges::Create
     field :destroy_charge, mutation: Mutations::Charges::Destroy
