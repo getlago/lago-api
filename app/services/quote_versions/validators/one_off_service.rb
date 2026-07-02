@@ -22,6 +22,8 @@ module QuoteVersions
           next unless item.is_a?(Hash)
 
           validate_nested_objects(item, index)
+          next if payload_invalid?(item)
+
           validate_units(item, index)
           validate_dates(item, index)
         end
@@ -32,9 +34,15 @@ module QuoteVersions
           next unless item.is_a?(Hash)
 
           validate_add_on_id(item, index)
+          next if payload_invalid?(item)
+
           validate_unit_amount(item, index)
           validate_tax_codes(item, index)
         end
+      end
+
+      def payload_invalid?(item)
+        item.key?(:payload) && !item[:payload].nil? && !item[:payload].is_a?(Hash)
       end
 
       def validate_add_on_id(item, index)
@@ -108,23 +116,45 @@ module QuoteVersions
       end
 
       def validate_tax_codes(item, index)
-        codes = Array(payload(item)[:tax_codes]).compact
+        codes = normalized_tax_codes(payload(item)[:tax_codes])
+        if codes.nil?
+          add_error(field: add_on_field(item, index, :tax_codes), error_code: "value_is_invalid")
+          return
+        end
+
+        codes = codes.compact
         return if codes.empty?
         return if (codes.uniq - existing_tax_codes).empty?
 
         add_error(field: add_on_field(item, index, :tax_codes), error_code: "tax_not_found")
       end
 
+      # Coerces a bare string to a single-element array and leaves arrays untouched;
+      # returns nil for any other shape (e.g. a Hash) so the caller can flag it as invalid.
+      def normalized_tax_codes(value)
+        case value
+        when nil then []
+        when Array then value
+        when String then [value]
+        end
+      end
+
       def existing_tax_codes
-        @existing_tax_codes ||= quote_version.organization.taxes.where(code: requested_tax_codes).pluck(:code)
+        @existing_tax_codes ||= quote_version.organization.taxes.with_discarded.where(code: requested_tax_codes).pluck(:code)
       end
 
       def requested_tax_codes
-        add_on_array.flat_map { |item| item.is_a?(Hash) ? Array(payload(item)[:tax_codes]) : [] }.compact.uniq
+        add_on_array.flat_map do |item|
+          item.is_a?(Hash) ? normalized_tax_codes(payload(item)[:tax_codes]).to_a : []
+        end.compact.uniq
       end
 
       def validate_completeness
         add_error(field: :currency, error_code: "value_is_mandatory") if quote_version.currency.blank?
+
+        # A shape error already reported the malformed billing_items; add_ons_required would be misleading.
+        return if errors[:billing_items].present?
+
         add_error(field: ADD_ONS_KEY.to_sym, error_code: "add_ons_required") if add_on_items.empty?
       end
 

@@ -209,6 +209,26 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
       end
     end
 
+    context "when tax_codes is a hash instead of an array or string" do
+      let(:add_on_item) { super().tap { |i| i["payload"]["tax_codes"] = {"vat" => true} } }
+
+      it "is invalid on shape" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages[:"add_ons/row-1/tax_codes"]).to eq(["value_is_invalid"])
+      end
+    end
+
+    context "when a tax code resolves only to a soft-deleted tax" do
+      let(:tax) { create(:tax, organization:, code: "vat_20") }
+      let(:add_on_item) { super().tap { |i| i["payload"]["tax_codes"] = [tax.code] } }
+
+      before { tax.discard }
+
+      it "is valid (soft-deleted taxes resolve)" do
+        expect(validator).to be_valid
+      end
+    end
+
     context "when local_id is missing" do
       let(:add_on_item) {
         super().tap { |i|
@@ -296,6 +316,24 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
       it "only reports the unresolved add-on id" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(:"add_ons/row-1/id" => ["add_on_not_found"])
+      end
+    end
+
+    context "when add_ons is present but not an array" do
+      let(:billing_items) { {"add_ons" => "foo"} }
+
+      it "reports the shape error only, not add_ons_required" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(billing_items: ["value_is_invalid"])
+      end
+    end
+
+    context "when an add-on payload is not a hash" do
+      let(:add_on_item) { super().merge("payload" => "bad") }
+
+      it "reports the payload shape error only, not mandatory cascades" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(:"add_ons/row-1/payload" => ["value_is_invalid"])
       end
     end
   end

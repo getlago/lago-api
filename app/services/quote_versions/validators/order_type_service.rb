@@ -33,10 +33,6 @@ module QuoteVersions
         scope == :approve
       end
 
-      def update?
-        scope == :update
-      end
-
       def validate_billing_items
         # Override in concrete order type validators.
       end
