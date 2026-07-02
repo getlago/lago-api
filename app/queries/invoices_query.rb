@@ -96,7 +96,10 @@ class InvoicesQuery < BaseQuery
   end
 
   def use_meilisearch?
-    use_meilisearch_flag && Lago::Meilisearch::Client.search_enabled? && (search_term.present? || filters_present?)
+    use_meilisearch_flag &&
+      Lago::Meilisearch::Client.search_enabled? &&
+      organization.feature_flag_enabled?(:meilisearch) &&
+      (search_term.present? || filters_present?)
   end
 
   def filters_present?

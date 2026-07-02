@@ -928,6 +928,7 @@ RSpec.describe InvoicesQuery do
     before do
       ms_invoice_first
       ms_invoice_second
+      organization.enable_feature_flag!(:meilisearch)
       allow(Lago::Meilisearch::Client).to receive(:search_enabled?).and_return(true)
       allow(Invoice).to receive(:search).and_return(search_results)
     end
@@ -979,6 +980,17 @@ RSpec.describe InvoicesQuery do
       let(:search_term) { "Acme" }
 
       it "uses the Postgres path even with a search term" do
+        expect(Invoice).not_to have_received(:search)
+      end
+    end
+
+    context "when the organization does not have the meilisearch feature flag" do
+      let(:search_term) { "Acme" }
+
+      before { organization.disable_feature_flag!(:meilisearch) }
+
+      it "uses the Postgres path even with a search term" do
+        expect(meili_result.invoices.map(&:id)).to include(ms_invoice_first.id, ms_invoice_second.id)
         expect(Invoice).not_to have_received(:search)
       end
     end
