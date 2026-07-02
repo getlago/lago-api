@@ -36,7 +36,19 @@ module Api
 
         def replace_params
           params
-            .permit(rate_phases: %i[position name billing_interval_cycle_count])
+            .permit(rate_phases: [
+              :position,
+              :name,
+              :billing_interval_cycle_count,
+              {rate_override: [
+                :rate_model,
+                :min_amount_cents,
+                :billing_interval_count,
+                :billing_interval_unit,
+                :pricing_unit_conversion_rate,
+                {rate_properties: {}}
+              ]}
+            ])
             .to_h
             .deep_symbolize_keys
             .fetch(:rate_phases, [])

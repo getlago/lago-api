@@ -55,6 +55,30 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       expect(json[:rate_phases].map { |phase| phase[:name] }).to eq(%w[trial standard])
     end
 
+    context "with a rate override on a phase" do
+      let(:phases) do
+        [
+          {
+            position: 1,
+            name: "trial",
+            billing_interval_cycle_count: 3,
+            rate_override: {rate_model: "standard", rate_properties: {amount: "0"}, min_amount_cents: 0}
+          },
+          {position: 2, billing_interval_cycle_count: nil}
+        ]
+      end
+
+      it "creates the override and returns it on the phase" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        override = json[:rate_phases].first[:rate_override]
+        expect(override[:lago_id]).to be_present
+        expect(override[:rate_model]).to eq("standard")
+        expect(json[:rate_phases].last[:rate_override]).to be_nil
+      end
+    end
+
     context "when positions are not contiguous" do
       let(:phases) do
         [
