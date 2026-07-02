@@ -61,6 +61,42 @@ RSpec.describe PlanRateCards::CreateService do
     end
   end
 
+  context "with a nested rate_phases sequence" do
+    let(:params) do
+      {
+        rate_card_code: rate_card.code,
+        units: "1",
+        rate_phases: [
+          {position: 1, name: "Launch", billing_interval_cycle_count: 3},
+          {position: 2, name: "Standard", billing_interval_cycle_count: nil}
+        ]
+      }
+    end
+
+    it "creates the entry with the provided phases instead of the default" do
+      expect(result).to be_success
+      expect(result.plan_rate_card.rate_phases.order(:position).pluck(:name)).to eq(%w[Launch Standard])
+    end
+  end
+
+  context "with an invalid nested rate_phases sequence" do
+    let(:params) do
+      {
+        rate_card_code: rate_card.code,
+        rate_phases: [
+          {position: 1, billing_interval_cycle_count: 3},
+          {position: 3, billing_interval_cycle_count: nil}
+        ]
+      }
+    end
+
+    it "fails and rolls the whole create back" do
+      expect { result }.not_to change(PlanRateCard, :count)
+      expect(result).not_to be_success
+      expect(result.error.messages[:rate_phases]).to eq(["non_contiguous_position"])
+    end
+  end
+
   context "when the plan is missing" do
     let(:plan) { nil }
 

@@ -44,7 +44,15 @@ module PlanRateCards
           units: params[:units]
         )
 
-        RatePhases::CreateService.call!(plan_rate_card:, params: {position: 1})
+        # Phases can be authored atomically with the entry: a provided sequence
+        # goes through the same validations as the PUT (contiguous positions,
+        # indefinite phase last) and a failure rolls the whole create back.
+        # Omitted, the entry starts on a single default terminal phase.
+        if params[:rate_phases].present?
+          RatePhases::ReplaceService.call!(plan_rate_card:, phases_params: params[:rate_phases])
+        else
+          RatePhases::CreateService.call!(plan_rate_card:, params: {position: 1})
+        end
 
         result.plan_rate_card = plan_rate_card
       end
@@ -52,6 +60,8 @@ module PlanRateCards
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private
