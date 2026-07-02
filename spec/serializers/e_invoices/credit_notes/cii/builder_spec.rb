@@ -23,20 +23,6 @@ RSpec.describe EInvoices::CreditNotes::Cii::Builder do
   end
 
   describe ".serialize" do
-    context "when BuyerOrderReferencedDocument (BT-13)" do
-      it "is absent without a purchase order number" do
-        expect(subject).not_to contains_xml_node("//ram:BuyerOrderReferencedDocument")
-      end
-
-      context "with a purchase order number on the invoice" do
-        before { credit_note.invoice.update!(purchase_order_number: "PO-12345") }
-
-        it "contains the inherited purchase order number" do
-          expect(subject).to contains_xml_node("//ram:BuyerOrderReferencedDocument/ram:IssuerAssignedID").with_value("PO-12345")
-        end
-      end
-    end
-
     context "when CrossIndustryInvoice tag" do
       it "contains the tag" do
         expect(subject).to contains_xml_node("//rsm:CrossIndustryInvoice")
@@ -124,6 +110,20 @@ RSpec.describe EInvoices::CreditNotes::Cii::Builder do
         expect(subject).to contains_xml_node("//ram:ApplicableHeaderTradeAgreement//ram:SpecifiedTaxRegistration/ram:ID")
           .with_value(credit_note.billing_entity.tax_identification_number)
           .with_attribute("schemeID", "VA")
+      end
+    end
+
+    context "when BuyerOrderReferencedDocument tag" do
+      it "is absent without a purchase order number" do
+        expect(subject).not_to contains_xml_node("//ram:BuyerOrderReferencedDocument")
+      end
+
+      context "with a purchase order number on the invoice" do
+        before { credit_note.invoice.update!(purchase_order_number: "PO-12345") }
+
+        it "contains the inherited purchase order number" do
+          expect(subject).to contains_xml_node("//ram:BuyerOrderReferencedDocument/ram:IssuerAssignedID").with_value("PO-12345")
+        end
       end
     end
 
