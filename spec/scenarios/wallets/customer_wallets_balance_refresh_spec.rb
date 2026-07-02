@@ -92,13 +92,11 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
     end
 
     ##
-    # wallet 1
-    # 1000 - 3000(from events) = -2000
-    # wallet 2
-    # 1000 - 500(from event) = 500
+    # bm1 usage (3000) fills wallet 1 to 0, then spills onto the unrestricted wallet 3.
+    # wallet 2 covers bm2 usage (500) -> 500 remaining.
     ##
     it "updates the correct ongoing balances for each wallet" do
-      expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
+      expect_wallet(wallet, ongoing_usage: 1000, credits_usage: 10, ongoing: 0, credits: 0)
       expect_wallet(wallet2, ongoing_usage: 500, credits_usage: 5, ongoing: 500, credits: 5)
     end
 
@@ -116,9 +114,9 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       end
 
       it "updates the correct ongoing balances for each wallet" do
-        expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
+        expect_wallet(wallet, ongoing_usage: 1000, credits_usage: 10, ongoing: 0, credits: 0)
         expect_wallet(wallet2, ongoing_usage: 500, credits_usage: 5, ongoing: 500, credits: 5)
-        expect_wallet(wallet3, ongoing_usage: 0, credits_usage: 0, ongoing: 1000, credits: 10)
+        expect_wallet(wallet3, ongoing_usage: 2000, credits_usage: 20, ongoing: -1000, credits: -10)
       end
     end
 
@@ -171,15 +169,14 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       end
 
       ##
-      # wallet 1
-      # 1000 - 3000(from events) = -2000 #untouched
+      # bm1 usage (3000) fills wallet 1 to 0, spilling onto the unrestricted wallet 3.
       # wallet 2
       # fee 2 is not taken into account because of the wallet restrictions
       # 1000 - 500(from event) - 100(from invoice) ( 100 + 10(tax) - 10(already paid) )
       # = 400 # progressive billing invoice
       ##
       it "updates wallet ongoing balances including progressive billing invoice" do
-        expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
+        expect_wallet(wallet, ongoing_usage: 1000, credits_usage: 10, ongoing: 0, credits: 0)
         expect_wallet(wallet2, ongoing_usage: 400, credits_usage: 4, ongoing: 600, credits: 6)
       end
     end
@@ -213,14 +210,13 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       end
 
       ##
-      # wallet 1
-      # 1000 - 3000(from events) = -2000 #untouched
+      # bm1 usage (3000) fills wallet 1 to 0, spilling onto the unrestricted wallet 3.
       # wallet 2
       # 1000 - 500(from event) - 110(from draft invoice) + 70 (already paid)
       # = 540 # progressive billing invoice
       ##
       it "updates wallet ongoing balances including progressive billing invoice" do
-        expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
+        expect_wallet(wallet, ongoing_usage: 1000, credits_usage: 10, ongoing: 0, credits: 0)
         expect_wallet(wallet2, ongoing_usage: 540, credits_usage: 5.4, ongoing: 460, credits: 4.6)
       end
     end
