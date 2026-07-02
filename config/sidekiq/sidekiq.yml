@@ -12,8 +12,6 @@ queues:
   - integrations
   - low_priority
   - long_running
-  # TO REMOVE: Just for staging PoC
-  - meilisearch
 
 production:
   concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
