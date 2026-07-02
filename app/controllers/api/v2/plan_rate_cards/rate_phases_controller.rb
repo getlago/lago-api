@@ -70,13 +70,33 @@ module Api
         end
 
         def create_params
-          params.require(:rate_phase).permit(:code, :position, :name, :billing_interval_cycle_count)
+          params.require(:rate_phase).permit(
+            :code, :position, :name, :billing_interval_cycle_count,
+            rate_override: [
+              :rate_model,
+              :min_amount_cents,
+              :billing_interval_count,
+              :billing_interval_unit,
+              :pricing_unit_conversion_rate,
+              {rate_properties: {}}
+            ]
+          )
         end
 
         # Positions are not editable on update (ordering goes through insert
         # and delete), so update does not permit one.
         def update_params
-          params.require(:rate_phase).permit(:code, :name, :billing_interval_cycle_count)
+          params.require(:rate_phase).permit(
+            :code, :name, :billing_interval_cycle_count,
+            rate_override: [
+              :rate_model,
+              :min_amount_cents,
+              :billing_interval_count,
+              :billing_interval_unit,
+              :pricing_unit_conversion_rate,
+              {rate_properties: {}}
+            ]
+          )
         end
 
         def render_rate_phase(rate_phase)
