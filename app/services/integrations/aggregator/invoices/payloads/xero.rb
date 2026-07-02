@@ -11,7 +11,7 @@ module Integrations
 
           def body
             super.map do |invoice_payload|
-              invoice_payload.merge("purchase_order_number" => invoice.purchase_order_number)
+              invoice_payload.merge("reference" => invoice.purchase_order_number)
             end
           end
 

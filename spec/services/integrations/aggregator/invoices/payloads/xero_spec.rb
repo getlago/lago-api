@@ -33,7 +33,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
             "issuing_date" => "2024-07-08T00:00:00Z",
             "payment_due_date" => "2024-07-08T00:00:00Z",
             "number" => invoice.number,
-            "purchase_order_number" => "PO-123",
+            "reference" => "PO-123",
             "currency" => "EUR",
             "type" => "ACCREC",
             "fees" => [
