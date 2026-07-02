@@ -53,6 +53,26 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       expect(terminal.reload.position).to eq(2)
     end
 
+    context "with a rate override" do
+      let(:phase_params) do
+        {
+          code: "trial",
+          name: "trial",
+          billing_interval_cycle_count: 3,
+          rate_override: {rate_model: "standard", rate_properties: {amount: "0"}, min_amount_cents: 0}
+        }
+      end
+
+      it "creates the override and returns it on the phase" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        override = json[:rate_phase][:rate_override]
+        expect(override[:lago_id]).to be_present
+        expect(override[:rate_model]).to eq("standard")
+      end
+    end
+
     context "when inserting an indefinite phase before the end" do
       let(:phase_params) { {position: 1, billing_interval_cycle_count: nil} }
 

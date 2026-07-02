@@ -78,21 +78,22 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
   context "with a nested rate_phases sequence" do
     subject do
-      post_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards", {plan_rate_card: {
+      post_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards", {applied_rate_card: {
         rate_card_code: rate_card.code,
         units: "1",
         rate_phases: [
-          {position: 1, name: "Launch", billing_interval_cycle_count: 3},
-          {position: 2, name: "Standard", billing_interval_cycle_count: nil}
+          {code: "launch", position: 1, name: "Launch", billing_interval_cycle_count: 3, rate_override: {rate_model: "standard", rate_properties: {amount: "0.02"}}},
+          {code: "standard", position: 2, name: "Standard", billing_interval_cycle_count: nil}
         ]
       }})
     end
 
-    it "creates the entry with the provided phases in one call" do
+    it "creates the entry with the provided phases and overrides in one call" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_card][:rate_phases_count]).to eq(2)
+      expect(RateOverride.count).to eq(1)
     end
   end
 
