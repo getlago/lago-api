@@ -80,19 +80,15 @@ module Subscriptions
     end
 
     def ending_at
-      @ending_at ||= if args[:ending_at].is_a?(String)
-        DateTime.iso8601(args[:ending_at])
-      else
-        args[:ending_at]
-      end
+      return @ending_at if defined?(@ending_at)
+
+      @ending_at = Utils::Datetime.parse_iso8601(args[:ending_at])
     end
 
     def subscription_at
-      @subscription_at ||= if args[:subscription_at].is_a?(String)
-        DateTime.iso8601(args[:subscription_at])
-      else
-        args[:subscription_at]
-      end
+      return @subscription_at if defined?(@subscription_at)
+
+      @subscription_at = Utils::Datetime.parse_iso8601(args[:subscription_at])
     end
 
     def valid_payment_method?

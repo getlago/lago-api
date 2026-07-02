@@ -116,6 +116,24 @@ RSpec.describe Subscriptions::ValidateService do
           expect(result.error.messages[:subscription_at]).to eq(["invalid_date"])
         end
       end
+
+      context "when subscription_at raises a bare ArgumentError while parsing" do
+        let(:subscription_at) { "1" * 129 }
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:subscription_at]).to eq(["invalid_date"])
+        end
+      end
+
+      context "when subscription_at is in ISO8601 week-date format" do
+        let(:subscription_at) { "2022-W50-2" }
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:subscription_at]).to eq(["invalid_date"])
+        end
+      end
     end
 
     context "with invalid ending_at" do
@@ -137,6 +155,24 @@ RSpec.describe Subscriptions::ValidateService do
         end
       end
 
+      context "when ending_at raises a bare ArgumentError while parsing" do
+        let(:ending_at) { "1" * 129 }
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:ending_at]).to eq(["invalid_date"])
+        end
+      end
+
+      context "when ending_at is in ISO8601 week-date format" do
+        let(:ending_at) { "2099-W50-2" }
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:ending_at]).to eq(["invalid_date"])
+        end
+      end
+
       context "when ending_at uses an invalid date format" do
         let(:ending_at) { "2025-08-20T16:11:39.061+02:00" }
 
@@ -148,6 +184,26 @@ RSpec.describe Subscriptions::ValidateService do
 
       context "when ending_at is less than subscription_at and current time" do
         let(:ending_at) { (Time.current - 1.year).iso8601 }
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:ending_at]).to eq(["invalid_date"])
+        end
+      end
+
+      context "when ending_at is in the future but not after subscription_at" do
+        let(:subscription_at) { (Time.current + 2.years).iso8601 }
+        let(:ending_at) { (Time.current + 1.year).iso8601 }
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:ending_at]).to eq(["invalid_date"])
+        end
+      end
+
+      context "when ending_at is valid but subscription_at uses an invalid format" do
+        let(:subscription_at) { "2022-W50-2" }
+        let(:ending_at) { (Time.current + 1.year).iso8601 }
 
         it "returns false and result has errors" do
           expect(validate_service).not_to be_valid
