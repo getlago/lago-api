@@ -13,31 +13,20 @@ module QuoteVersions
 
       def validate_billing_items
         validate_collection_shape(ADD_ONS_KEY)
-        validate_add_on_structure
-        validate_add_on_business_rules
+        validate_add_ons
       end
 
-      def validate_add_on_structure
+      def validate_add_ons
         add_on_array.each_with_index do |item, index|
           next unless item.is_a?(Hash)
 
           validate_nested_objects(item, index)
+          validate_add_on_id(item, index)
           next if payload_invalid?(item)
 
           validate_units(item, index)
           validate_dates(item, index)
-        end
-      end
-
-      def validate_add_on_business_rules
-        add_on_array.each_with_index do |item, index|
-          next unless item.is_a?(Hash)
-
-          validate_add_on_id(item, index)
-          next if payload_invalid?(item)
-
           validate_unit_amount(item, index)
-          validate_tax_codes(item, index)
         end
       end
 
@@ -113,40 +102,6 @@ module QuoteVersions
         return if parsed_from.nil? || parsed_to.nil?
 
         add_error(field: add_on_field(item, index, :to_datetime), error_code: "from_after_to") if parsed_from > parsed_to
-      end
-
-      def validate_tax_codes(item, index)
-        codes = normalized_tax_codes(payload(item)[:tax_codes])
-        if codes.nil?
-          add_error(field: add_on_field(item, index, :tax_codes), error_code: "value_is_invalid")
-          return
-        end
-
-        codes = codes.compact
-        return if codes.empty?
-        return if (codes.uniq - existing_tax_codes).empty?
-
-        add_error(field: add_on_field(item, index, :tax_codes), error_code: "tax_not_found")
-      end
-
-      # Coerces a bare string to a single-element array and leaves arrays untouched;
-      # returns nil for any other shape (e.g. a Hash) so the caller can flag it as invalid.
-      def normalized_tax_codes(value)
-        case value
-        when nil then []
-        when Array then value
-        when String then [value]
-        end
-      end
-
-      def existing_tax_codes
-        @existing_tax_codes ||= quote_version.organization.taxes.with_discarded.where(code: requested_tax_codes).pluck(:code)
-      end
-
-      def requested_tax_codes
-        add_on_array.flat_map do |item|
-          item.is_a?(Hash) ? normalized_tax_codes(payload(item)[:tax_codes]).to_a : []
-        end.compact.uniq
       end
 
       def validate_completeness

@@ -21,8 +21,7 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
         "units" => 1,
         "unit_amount_cents" => 10_000,
         "from_datetime" => nil,
-        "to_datetime" => nil,
-        "tax_codes" => []
+        "to_datetime" => nil
       },
       "overrides" => {}
     }
@@ -179,53 +178,6 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
       it "is invalid" do
         expect(validator).not_to be_valid
         expect(result.error.messages[:"add_ons/row-1/from_datetime"]).to eq(["value_is_invalid"])
-      end
-    end
-
-    context "when a tax code does not resolve to an organization tax" do
-      let(:add_on_item) { super().tap { |i| i["payload"]["tax_codes"] = ["nope"] } }
-
-      it "is invalid" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages[:"add_ons/row-1/tax_codes"]).to eq(["tax_not_found"])
-      end
-    end
-
-    context "when every tax code resolves" do
-      let(:tax) { create(:tax, organization:, code: "vat_20") }
-      let(:add_on_item) { super().tap { |i| i["payload"]["tax_codes"] = [tax.code] } }
-
-      it "is valid" do
-        expect(validator).to be_valid
-      end
-    end
-
-    context "when tax_codes is a bare string instead of an array" do
-      let(:tax) { create(:tax, organization:, code: "vat_20") }
-      let(:add_on_item) { super().tap { |i| i["payload"]["tax_codes"] = tax.code } }
-
-      it "coerces it to an array and is valid" do
-        expect(validator).to be_valid
-      end
-    end
-
-    context "when tax_codes is a hash instead of an array or string" do
-      let(:add_on_item) { super().tap { |i| i["payload"]["tax_codes"] = {"vat" => true} } }
-
-      it "is invalid on shape" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages[:"add_ons/row-1/tax_codes"]).to eq(["value_is_invalid"])
-      end
-    end
-
-    context "when a tax code resolves only to a soft-deleted tax" do
-      let(:tax) { create(:tax, organization:, code: "vat_20") }
-      let(:add_on_item) { super().tap { |i| i["payload"]["tax_codes"] = [tax.code] } }
-
-      before { tax.discard }
-
-      it "is valid (soft-deleted taxes resolve)" do
-        expect(validator).to be_valid
       end
     end
 
@@ -414,42 +366,6 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
         expect { valid = validator.valid? }.not_to raise_error
         expect(valid).to eq(false)
         expect(result.error.messages[:"add_ons/row-1/overrides"]).to eq(["value_is_invalid"])
-      end
-    end
-
-    context "with several add-ons carrying tax codes" do
-      let(:tax_a) { create(:tax, organization:, code: "vat_a") }
-      let(:tax_b) { create(:tax, organization:, code: "vat_b") }
-      let(:other_add_on) { create(:add_on, organization:, amount_cents: 5_000) }
-      let(:billing_items) do
-        {
-          "add_ons" => [
-            add_on_item.tap { |item| item["payload"]["tax_codes"] = [tax_a.code] },
-            {
-              "id" => other_add_on.id,
-              "local_id" => "row-2",
-              "payload" => {"units" => 1, "unit_amount_cents" => 5_000, "tax_codes" => [tax_b.code]},
-              "overrides" => {}
-            }
-          ]
-        }
-      end
-
-      it "is valid" do
-        expect(validator).to be_valid
-      end
-
-      it "resolves all tax codes in a single query" do
-        validator # build the subject (and its factory-created records) before counting
-
-        tax_queries = 0
-        counter = ->(*, payload) { tax_queries += 1 if payload[:sql].include?('FROM "taxes"') }
-
-        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
-          validator.valid?
-        end
-
-        expect(tax_queries).to eq(1)
       end
     end
   end
