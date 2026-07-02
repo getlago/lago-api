@@ -18,14 +18,15 @@ module RatePhases
       return sequence_failure if sequence_failure
 
       ActiveRecord::Base.transaction do
-        plan_rate_card.rate_phases.discard_all!
+        discard_existing_phases
 
         result.rate_phases = ordered_params.map do |phase|
           plan_rate_card.rate_phases.create!(
             organization:,
             position: phase[:position],
             name: phase[:name],
-            billing_interval_cycle_count: phase[:billing_interval_cycle_count]
+            billing_interval_cycle_count: phase[:billing_interval_cycle_count],
+            rate_override: build_override(phase)
           )
         end
       end
@@ -33,6 +34,8 @@ module RatePhases
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private
@@ -41,6 +44,21 @@ module RatePhases
 
     def organization
       plan_rate_card.organization
+    end
+
+    def discard_existing_phases
+      existing_phases = plan_rate_card.rate_phases.to_a
+      RateOverride.where(id: existing_phases.filter_map(&:rate_override_id)).discard_all!
+      plan_rate_card.rate_phases.discard_all!
+    end
+
+    def build_override(phase)
+      return if phase[:rate_override].blank?
+
+      RateOverrides::CreateService.call(
+        rate_card: plan_rate_card.rate_card,
+        params: phase[:rate_override]
+      ).raise_if_error!.rate_override
     end
 
     def plan_locked?
