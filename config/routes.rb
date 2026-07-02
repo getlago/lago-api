@@ -42,7 +42,12 @@ Rails.application.routes.draw do
       resources :rate_cards, only: %i[index show create update destroy] do
         resources :rates, only: %i[index show create update destroy], controller: "rate_cards/rates"
       end
-      resources :plan_product_items, only: %i[index show create]
+      resources :plan_product_items, only: %i[index show create] do
+        scope module: :plan_product_items do
+          get "rate_phases", to: "rate_phases#index"
+          put "rate_phases", to: "rate_phases#replace"
+        end
+      end
     end
   end
   resources :webhooks, only: [] do
