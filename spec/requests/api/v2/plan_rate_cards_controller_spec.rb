@@ -82,17 +82,18 @@ RSpec.describe Api::V2::PlanRateCardsController do
         rate_card_code: rate_card.code,
         units: "1",
         rate_phases: [
-          {position: 1, name: "Launch", billing_interval_cycle_count: 3},
+          {position: 1, name: "Launch", billing_interval_cycle_count: 3, rate_override: {rate_model: "standard", rate_properties: {amount: "0.02"}}},
           {position: 2, name: "Standard", billing_interval_cycle_count: nil}
         ]
       }})
     end
 
-    it "creates the entry with the provided phases in one call" do
+    it "creates the entry with the provided phases and overrides in one call" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:plan_rate_card][:rate_phases_count]).to eq(2)
+      expect(RateOverride.count).to eq(1)
     end
   end
 
