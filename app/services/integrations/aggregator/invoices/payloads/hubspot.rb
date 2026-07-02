@@ -28,7 +28,8 @@ module Integrations
                   "lago_invoice_total_amount" => total_amount,
                   "lago_invoice_total_due_amount" => total_due_amount,
                   "lago_invoice_subtotal_excluding_taxes" => subtotal_excluding_taxes,
-                  "lago_invoice_file_url" => invoice.file_url
+                  "lago_invoice_file_url" => invoice.file_url,
+                  "lago_invoice_url" => invoice_url
                 }
               }
             }
@@ -57,7 +58,8 @@ module Integrations
                   "lago_invoice_total_amount" => total_amount,
                   "lago_invoice_total_due_amount" => total_due_amount,
                   "lago_invoice_subtotal_excluding_taxes" => subtotal_excluding_taxes,
-                  "lago_invoice_file_url" => invoice.file_url
+                  "lago_invoice_file_url" => invoice.file_url,
+                  "lago_invoice_url" => invoice_url
                 }
               }
             }
