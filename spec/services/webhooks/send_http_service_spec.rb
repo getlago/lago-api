@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "aws-sdk-s3"
 
 RSpec.describe Webhooks::SendHttpService do
   subject(:service) { described_class.new(webhook:) }
@@ -107,6 +108,28 @@ RSpec.describe Webhooks::SendHttpService do
           expect(SendHttpWebhookJob).not_to have_received(:set)
         end
       end
+    end
+  end
+
+  context "when S3 throttles reading the stored payload" do
+    let(:webhook) { create(:webhook, :retrying, retries: 1) }
+    let(:slow_down_error) { Aws::S3::Errors::SlowDown.new(nil, "Please reduce your request rate.") }
+
+    before do
+      allow(webhook).to receive(:payload).and_raise(slow_down_error)
+      allow(SendHttpWebhookJob).to receive(:set)
+    end
+
+    it "lets the error propagate for the job to retry" do
+      expect { service.call }.to raise_error(Aws::S3::Errors::SlowDown)
+    end
+
+    it "does not count the S3 error against the webhook retry counter" do
+      expect { service.call }.to raise_error(Aws::S3::Errors::SlowDown)
+
+      expect(webhook.retries).to eq(1)
+      expect(webhook).to be_retrying
+      expect(SendHttpWebhookJob).not_to have_received(:set)
     end
   end
 end

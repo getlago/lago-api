@@ -17,6 +17,7 @@ zh-TW:
     offset_invoice_notice: 發票 %{invoice_number} 已於 %{issuing_date} 抵銷
     powered_by: 技術提供
     prepaid_credits_for_wallet: 預付點數 - %{wallet_name}
+    purchase_order_number: 採購訂單編號
     refunded: 已退款
     refunded_notice: 已於 %{issuing_date} 退款
     self_billed:

@@ -334,6 +334,23 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
         end
       end
 
+      context "when granted_credits round to zero monetary value" do
+        let(:rate_amount) { 0.01 }
+        let(:params) do
+          {
+            wallet_id: wallet.id,
+            granted_credits: "0.4"
+          }
+        end
+
+        it "fails and persists no wallet transaction" do
+          expect { result }.not_to change(WalletTransaction, :count)
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:granted_credits]).to eq(["amount_rounds_to_zero"])
+        end
+      end
+
       context "with invalid payment method" do
         let(:payment_method) { create(:payment_method, organization:, customer:) }
         let(:params) do

@@ -160,5 +160,22 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
       expect(invoice.taxes_rate).to eq(80)
       expect(invoice.total_amount_cents).to eq(272)
     end
+
+    context "when provider taxes are not provided" do
+      subject(:compute_amounts) { described_class.new(invoice:, provider_taxes: nil) }
+
+      before do
+        allow(invoice).to receive(:should_apply_provider_tax?).and_return(true)
+        allow(Invoices::ApplyProviderTaxesService).to receive(:call!)
+        allow(Invoices::ApplyTaxesService).to receive(:call!).and_call_original
+      end
+
+      it "applies regular taxes without fetching provider taxes" do
+        compute_amounts.call
+
+        expect(Invoices::ApplyProviderTaxesService).not_to have_received(:call!)
+        expect(Invoices::ApplyTaxesService).to have_received(:call!).with(invoice:)
+      end
+    end
   end
 end
