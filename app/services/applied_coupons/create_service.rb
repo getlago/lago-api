@@ -18,9 +18,27 @@ module AppliedCoupons
     )
 
     def call
-      check_preconditions
-      return result if result.error
+      return result.not_found_failure!(resource: "customer") unless customer
 
+      # Serialize concurrent applications for the same customer so the
+      # `coupon_is_not_reusable` check cannot be bypassed by simultaneous requests.
+      AppliedCoupons::LockService.new(customer:).call do
+        check_preconditions
+        create_applied_coupon unless result.error
+      end
+
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
+    end
+
+    private
+
+    attr_reader :customer, :coupon, :params
+
+    def create_applied_coupon
       applied_coupon = AppliedCoupon.new(
         customer:,
         coupon:,
@@ -46,16 +64,7 @@ module AppliedCoupons
       end
 
       result.applied_coupon = applied_coupon
-      result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
-    rescue BaseService::FailedResult => e
-      e.result
     end
-
-    private
-
-    attr_reader :customer, :coupon, :params
 
     def check_preconditions
       return result.not_found_failure!(resource: "customer") unless customer

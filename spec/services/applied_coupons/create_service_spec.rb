@@ -49,6 +49,17 @@ RSpec.describe AppliedCoupons::CreateService do
       expect(Utils::ActivityLog).to have_produced("applied_coupon.created").after_commit.with(applied_coupon)
     end
 
+    it "creates the coupon while holding the customer coupon advisory lock" do
+      lock_service = instance_double(AppliedCoupons::LockService)
+      allow(AppliedCoupons::LockService).to receive(:new).with(customer:).and_return(lock_service)
+      allow(lock_service).to receive(:call).and_yield
+
+      expect { create_result }.to change(AppliedCoupon, :count).by(1)
+
+      expect(AppliedCoupons::LockService).to have_received(:new).with(customer:)
+      expect(lock_service).to have_received(:call)
+    end
+
     context "when coupon type is percentage" do
       let(:coupon) do
         create(
