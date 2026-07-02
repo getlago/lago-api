@@ -9,6 +9,7 @@ class RatePhase < ApplicationRecord
   belongs_to :organization
   belongs_to :plan_rate_card, optional: true
   belongs_to :subscription_rate_card, optional: true
+  belongs_to :rate_override, optional: true
 
   validates :position, presence: true, numericality: {greater_than: 0}
 
@@ -50,6 +51,7 @@ end
 #  index_rate_phases_on_organization_id                    (organization_id)
 #  index_rate_phases_on_plan_rate_card_id               (plan_rate_card_id)
 #  index_rate_phases_on_plan_rate_card_id_and_position  (plan_rate_card_id,position) UNIQUE WHERE ((plan_rate_card_id IS NOT NULL) AND (deleted_at IS NULL))
+#  index_rate_phases_on_rate_override_id                   (rate_override_id)
 #  index_rate_phases_on_sub_product_item_id_and_position   (subscription_rate_card_id,position) UNIQUE WHERE ((subscription_rate_card_id IS NOT NULL) AND (deleted_at IS NULL))
 #  index_rate_phases_on_subscription_rate_card_id       (subscription_rate_card_id)
 #
@@ -57,5 +59,6 @@ end
 #
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (plan_rate_card_id => plan_rate_cards.id)
+#  fk_rails_...  (rate_override_id => rate_overrides.id)
 #  fk_rails_...  (subscription_rate_card_id => subscription_rate_cards.id)
 #
