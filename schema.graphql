@@ -10285,6 +10285,7 @@ input PhaseInput {
   billingIntervalCycleCount: Int
   name: String
   position: Int!
+  rateOverride: RateOverrideInput
 }
 
 type Plan {
@@ -12005,6 +12006,33 @@ enum RateCardRegroupPaidFeesEnum {
 }
 
 """
+Overridden pricing applied by a rate phase in place of the card's active rate
+"""
+type RateOverride {
+  billingIntervalCount: Int
+  billingIntervalUnit: RateCardRateBillingIntervalUnitEnum
+  createdAt: ISO8601DateTime!
+  id: ID!
+  minAmountCents: BigInt!
+  pricingUnitConversionRate: Float
+  rateModel: RateCardRateModelEnum!
+  rateProperties: JSON!
+  updatedAt: ISO8601DateTime!
+}
+
+"""
+Overridden pricing for a rate phase
+"""
+input RateOverrideInput {
+  billingIntervalCount: Int
+  billingIntervalUnit: RateCardRateBillingIntervalUnitEnum
+  minAmountCents: BigInt
+  pricingUnitConversionRate: Float
+  rateModel: RateCardRateModelEnum!
+  rateProperties: JSON!
+}
+
+"""
 A phase in the ordered rate schedule of a plan product item
 """
 type RatePhase {
@@ -12013,6 +12041,7 @@ type RatePhase {
   id: ID!
   name: String
   position: Int!
+  rateOverride: RateOverride
   updatedAt: ISO8601DateTime!
 }
 
