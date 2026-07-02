@@ -509,10 +509,10 @@ module Fees
       end
 
       if charge_filter.present?
-        result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
+        matching_result = matching_and_ignored_filters(charge_filter)
         filters[:charge_filter] = charge_filter
-        filters[:matching_filters] = result.matching_filters
-        filters[:ignored_filters] = result.ignored_filters
+        filters[:matching_filters] = matching_result[:matching_filters]
+        filters[:ignored_filters] = matching_result[:ignored_filters]
       end
 
       if usage_filters.filter_by_group.present?
@@ -526,6 +526,22 @@ module Fees
       end
 
       filters
+    end
+
+    # NOTE: Matching and ignored filters are computed for all the filters of the charge at
+    #       once: resolving them one filter at a time scans every sibling filter and becomes
+    #       quadratic on charges with many filters.
+    #       The default bucket (the non-persisted filter covering events matching no filter)
+    #       is not part of the batch and keeps using the per-filter service.
+    def matching_and_ignored_filters(charge_filter)
+      if charge_filter.id
+        @matching_and_ignored_filters ||= ChargeFilters::MatchingAndIgnoredBatchService.call(charge:).filters_results
+        batched = @matching_and_ignored_filters[charge_filter.id]
+        return batched if batched
+      end
+
+      service_result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
+      {matching_filters: service_result.matching_filters, ignored_filters: service_result.ignored_filters}
     end
 
     def calculate_period_ratio
