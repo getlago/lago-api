@@ -112,6 +112,7 @@ ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_aa34dd5db6;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_aa04ceacf6;
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
+ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_a9ba49506f;
 ALTER TABLE IF EXISTS ONLY public.subscription_product_items DROP CONSTRAINT IF EXISTS fk_rails_a8771420b2;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_a7f20c73bb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
@@ -188,6 +189,7 @@ ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_6e148ccbb1;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_6d465e6b10;
 ALTER TABLE IF EXISTS ONLY public.plan_products DROP CONSTRAINT IF EXISTS fk_rails_6cc811864d;
+ALTER TABLE IF EXISTS ONLY public.rate_overrides DROP CONSTRAINT IF EXISTS fk_rails_6c8a54dfe1;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaigns DROP CONSTRAINT IF EXISTS fk_rails_6c720a8ccd;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_699cd1384f;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_68754484c0;
@@ -472,10 +474,13 @@ DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_organization_id
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_expiration_at;
 DROP INDEX IF EXISTS public.index_rate_phases_on_subscription_product_item_id;
 DROP INDEX IF EXISTS public.index_rate_phases_on_sub_product_item_id_and_position;
+DROP INDEX IF EXISTS public.index_rate_phases_on_rate_override_id;
 DROP INDEX IF EXISTS public.index_rate_phases_on_plan_product_item_id_and_position;
 DROP INDEX IF EXISTS public.index_rate_phases_on_plan_product_item_id;
 DROP INDEX IF EXISTS public.index_rate_phases_on_organization_id;
 DROP INDEX IF EXISTS public.index_rate_phases_on_deleted_at;
+DROP INDEX IF EXISTS public.index_rate_overrides_on_organization_id;
+DROP INDEX IF EXISTS public.index_rate_overrides_on_deleted_at;
 DROP INDEX IF EXISTS public.index_rate_cards_on_product_item_id;
 DROP INDEX IF EXISTS public.index_rate_cards_on_product_item_filter_id;
 DROP INDEX IF EXISTS public.index_rate_cards_on_organization_id_and_code;
@@ -994,6 +999,7 @@ ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS refunds_pkey
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS recurring_transaction_rules_pkey;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS recurring_transaction_rules_invoice_custom_sections_pkey;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS rate_phases_pkey;
+ALTER TABLE IF EXISTS ONLY public.rate_overrides DROP CONSTRAINT IF EXISTS rate_overrides_pkey;
 ALTER TABLE IF EXISTS ONLY public.rate_cards DROP CONSTRAINT IF EXISTS rate_cards_pkey;
 ALTER TABLE IF EXISTS ONLY public.rate_card_rates DROP CONSTRAINT IF EXISTS rate_card_rates_pkey;
 ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS quotes_pkey;
@@ -1126,6 +1132,7 @@ DROP TABLE IF EXISTS public.refunds;
 DROP TABLE IF EXISTS public.recurring_transaction_rules_invoice_custom_sections;
 DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.rate_phases;
+DROP TABLE IF EXISTS public.rate_overrides;
 DROP TABLE IF EXISTS public.rate_cards;
 DROP TABLE IF EXISTS public.rate_card_rates;
 DROP TABLE IF EXISTS public.quotes;
@@ -5367,6 +5374,25 @@ CREATE TABLE public.rate_cards (
 
 
 --
+-- Name: rate_overrides; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_overrides (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    rate_model public.rate_card_rate_model NOT NULL,
+    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    min_amount_cents bigint DEFAULT 0 NOT NULL,
+    billing_interval_count integer,
+    billing_interval_unit public.rate_card_rate_billing_interval_unit,
+    pricing_unit_conversion_rate numeric(30,10),
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: rate_phases; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6646,6 +6672,14 @@ ALTER TABLE ONLY public.rate_card_rates
 
 ALTER TABLE ONLY public.rate_cards
     ADD CONSTRAINT rate_cards_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: rate_overrides rate_overrides_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rate_overrides
+    ADD CONSTRAINT rate_overrides_pkey PRIMARY KEY (id);
 
 
 --
@@ -10335,6 +10369,20 @@ CREATE INDEX index_rate_cards_on_product_item_id ON public.rate_cards USING btre
 
 
 --
+-- Name: index_rate_overrides_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_rate_overrides_on_deleted_at ON public.rate_overrides USING btree (deleted_at);
+
+
+--
+-- Name: index_rate_overrides_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_rate_overrides_on_organization_id ON public.rate_overrides USING btree (organization_id);
+
+
+--
 -- Name: index_rate_phases_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10360,6 +10408,13 @@ CREATE INDEX index_rate_phases_on_plan_product_item_id ON public.rate_phases USI
 --
 
 CREATE UNIQUE INDEX index_rate_phases_on_plan_product_item_id_and_position ON public.rate_phases USING btree (plan_product_item_id, "position") WHERE ((plan_product_item_id IS NOT NULL) AND (deleted_at IS NULL));
+
+
+--
+-- Name: index_rate_phases_on_rate_override_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_rate_phases_on_rate_override_id ON public.rate_phases USING btree (rate_override_id);
 
 
 --
@@ -12412,6 +12467,14 @@ ALTER TABLE ONLY public.dunning_campaigns
 
 
 --
+-- Name: rate_overrides fk_rails_6c8a54dfe1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rate_overrides
+    ADD CONSTRAINT fk_rails_6c8a54dfe1 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: plan_products fk_rails_6cc811864d; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13017,6 +13080,14 @@ ALTER TABLE ONLY public.recurring_transaction_rules_invoice_custom_sections
 
 ALTER TABLE ONLY public.subscription_product_items
     ADD CONSTRAINT fk_rails_a8771420b2 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+
+
+--
+-- Name: rate_phases fk_rails_a9ba49506f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rate_phases
+    ADD CONSTRAINT fk_rails_a9ba49506f FOREIGN KEY (rate_override_id) REFERENCES public.rate_overrides(id);
 
 
 --
@@ -13850,6 +13921,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260702111527'),
 ('20260630161816'),
 ('20260630122927'),
 ('20260625095837'),
