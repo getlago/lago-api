@@ -9,9 +9,11 @@ RSpec.describe Mutations::PlanRateCards::Create do
       current_organization: organization,
       permissions: required_permission,
       query: mutation,
-      variables: {input: {planId: plan.id, rateCardCode: rate_card.code, units: 10.0}}
+      variables: {input:}
     )
   end
+
+  let(:input) { {planId: plan.id, rateCardCode: rate_card.code, units: 10.0} }
 
   let(:required_permission) { "plans:update" }
   let(:membership) { create(:membership) }
@@ -44,5 +46,24 @@ RSpec.describe Mutations::PlanRateCards::Create do
     expect(response["rateCard"]["id"]).to eq(rate_card.id)
     expect(response["units"]).to eq(10.0)
     expect(response["ratePhasesCount"]).to eq(1)
+  end
+
+  context "with nested rate phases" do
+    let(:input) do
+      {
+        planId: plan.id,
+        rateCardCode: rate_card.code,
+        ratePhases: [
+          {position: 1, name: "Launch", billingIntervalCycleCount: 3},
+          {position: 2, name: "Standard"}
+        ]
+      }
+    end
+
+    it "creates the entry with the provided phases" do
+      result_data = execution["data"]["createPlanRateCard"]
+
+      expect(result_data["ratePhasesCount"]).to eq(2)
+    end
   end
 end
