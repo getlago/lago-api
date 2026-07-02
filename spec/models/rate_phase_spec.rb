@@ -12,6 +12,7 @@ RSpec.describe RatePhase do
       expect(rate_phase).to belong_to(:organization)
       expect(rate_phase).to belong_to(:plan_rate_card).optional
       expect(rate_phase).to belong_to(:subscription_rate_card).optional
+      expect(rate_phase).to belong_to(:rate_override).optional
     end
   end
 
