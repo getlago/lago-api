@@ -92,6 +92,30 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
     expect(result.count).to eq(4)
   end
 
+  context "with an event exactly on the period boundary" do
+    let(:boundary_event) do
+      create(
+        :event,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        customer:,
+        subscription:,
+        timestamp: from_datetime,
+        properties: {total_count: 10}
+      )
+    end
+
+    before { boundary_event }
+
+    it "counts the boundary event once, not in both the persisted and current windows" do
+      result = sum_service.aggregate(options:)
+
+      # The event sits on `from_datetime`: it belongs to the current period only.
+      # 4 base events + 1 boundary event, counted once (a double-count would report 6).
+      expect(result.count).to eq(5)
+    end
+  end
+
   context "with presentation group keys" do
     let(:presentation_by) { ["cloud"] }
 
@@ -205,6 +229,15 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
       expect(result.aggregation).to eq(29)
       expect(result.pay_in_advance_aggregation).to be_zero
       expect(result.count).to eq(4)
+    end
+
+    it "does not run the prorated queries" do
+      event_store = sum_service.send(:event_store)
+      allow(event_store).to receive(:prorated_sum).and_call_original
+
+      sum_service.aggregate(options:)
+
+      expect(event_store).not_to have_received(:prorated_sum)
     end
   end
 
@@ -682,6 +715,17 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
 
       expect(result.event_aggregation).to eq([5, 12, 12])
       expect(result.event_prorated_aggregation.map { |el| el.round(5) }).to eq([5, 2.32258, 2.32258])
+    end
+
+    it "reuses the persisted prorated result instead of running a sum query" do
+      persisted_store = sum_service.send(:persisted_event_store_instance)
+      allow(persisted_store).to receive(:sum).and_call_original
+
+      sum_service.options = {}
+      result = sum_service.per_event_aggregation
+
+      expect(result.event_aggregation).to eq([5, 12, 12])
+      expect(persisted_store).not_to have_received(:sum)
     end
 
     context "with grouped_by_values" do
