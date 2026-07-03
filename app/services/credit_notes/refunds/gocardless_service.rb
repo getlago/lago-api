@@ -28,7 +28,7 @@ module CreditNotes
           reason: :credit_note,
           payment:,
           payment_provider: payment.payment_provider,
-          payment_provider_customer: payment_provider_customer(customer),
+          payment_provider_customer: payment_provider_customer(payment),
           amount_cents: gocardless_result.amount,
           amount_currency: gocardless_result.currency&.upcase,
           status: gocardless_result.status,
@@ -130,7 +130,7 @@ module CreditNotes
         SendWebhookJob.perform_later(
           "credit_note.provider_refund_failure",
           credit_note,
-          provider_customer_id: payment_provider_customer(customer)&.provider_customer_id,
+          provider_customer_id: payment_provider_customer(payment)&.provider_customer_id,
           provider_error: {
             message:,
             error_code: code
