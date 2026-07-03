@@ -131,7 +131,7 @@ module Customers
       end
 
       ActiveRecord::Base.transaction do
-        if old_provider_customer && payment_provider_removed?
+        if old_provider_customer && args[:payment_provider].nil? && args[:payment_provider_code].present?
           old_provider_customer.discard!
           customer.payment_provider_code = nil
         end
@@ -191,7 +191,7 @@ module Customers
 
       result.customer = customer
 
-      if old_provider_customer && payment_provider_removed?
+      if old_provider_customer && args.key?(:payment_provider) && args[:payment_provider].nil?
         old_provider_customer.payment_methods.find_each do |payment_method|
           PaymentMethods::DestroyService.call(payment_method:)
         end
@@ -230,11 +230,6 @@ module Customers
 
     def allow_billing_entity_update?
       organization.feature_flag_enabled?(:multi_entity_billing) || customer.editable?
-    end
-
-    # NOTE: true when the update explicitly removes the payment provider (payment_provider: nil)
-    def payment_provider_removed?
-      args.key?(:payment_provider) && args[:payment_provider].nil?
     end
 
     def assign_premium_attributes(customer, args)
