@@ -131,9 +131,8 @@ module Customers
       end
 
       ActiveRecord::Base.transaction do
-        if old_provider_customer && args[:payment_provider].nil? && args[:payment_provider_code].present?
+        if old_provider_customer && payment_provider_removed?
           old_provider_customer.discard!
-          customer.payment_provider_code = nil
         end
 
         if customer.applied_dunning_campaign_id_changed? || customer.exclude_from_dunning_campaign_changed?
@@ -191,7 +190,7 @@ module Customers
 
       result.customer = customer
 
-      if old_provider_customer && args.key?(:payment_provider) && args[:payment_provider].nil?
+      if old_provider_customer && payment_provider_removed?
         old_provider_customer.payment_methods.find_each do |payment_method|
           PaymentMethods::DestroyService.call(payment_method:)
         end
@@ -219,6 +218,11 @@ module Customers
 
     def billing_entity
       @billing_entity ||= organization.billing_entities.find_by!(code: args[:billing_entity_code])
+    end
+
+    # True when the update explicitly clears the payment provider (passed as nil).
+    def payment_provider_removed?
+      args.key?(:payment_provider) && args[:payment_provider].nil?
     end
 
     def valid_metadata_count?(metadata:)
