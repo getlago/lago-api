@@ -10,17 +10,6 @@ describe "Analytics customer cache invalidation" do
   let(:customer) { create(:customer, organization:) }
   let(:billing_entity) { organization.default_billing_entity }
 
-  # Freeze the clock to midday of the current day so the wall-clock version
-  # token and the Date.current embedded in the cache key stay stable: the
-  # nested `travel 1.second` around expiring reads can no longer cross a day
-  # boundary. Midday of today (not a hardcoded date) is used on purpose: the
-  # analytics SQL groups on Postgres CURRENT_DATE, which travel_to does not
-  # freeze, so the frozen Ruby clock must remain in the real current month.
-  # A non-block travel_to is used so the per-example `travel 1.second do` blocks
-  # don't trip ActiveSupport's nested-block guard.
-  before { travel_to(Time.current.midday) }
-  after { travel_back }
-
   let(:overdue_balances_query) do
     <<~GQL
       query($currency: CurrencyEnum, $externalCustomerId: String, $months: Int, $expireCache: Boolean) {
@@ -50,6 +39,17 @@ describe "Analytics customer cache invalidation" do
       }
     GQL
   end
+
+  # Freeze the clock to midday of the current day so the wall-clock version
+  # token and the Date.current embedded in the cache key stay stable: the
+  # nested `travel 1.second` around expiring reads can no longer cross a day
+  # boundary. Midday of today (not a hardcoded date) is used on purpose: the
+  # analytics SQL groups on Postgres CURRENT_DATE, which travel_to does not
+  # freeze, so the frozen Ruby clock must remain in the real current month.
+  # A non-block travel_to is used so the per-example `travel 1.second do` blocks
+  # don't trip ActiveSupport's nested-block guard.
+  before { travel_to(Time.current.midday) }
+  after { travel_back }
 
   def overdue_amounts(**variables)
     collection = execute_graphql(
