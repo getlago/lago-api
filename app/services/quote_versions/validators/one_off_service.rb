@@ -7,35 +7,24 @@ module QuoteVersions
 
       private
 
+      def schema
+        Schemas::OneOff.for(scope)
+      end
+
       def allowed_billing_item_keys
         [ADD_ONS_KEY]
       end
 
       def validate_billing_items
-        validate_collection_shape(ADD_ONS_KEY)
-        validate_add_ons
-      end
-
-      def validate_add_ons
         add_on_array.each_with_index do |item, index|
-          next unless item.is_a?(Hash)
-
-          validate_nested_objects(item, index)
           validate_add_on_id(item, index)
-          next if payload_invalid?(item)
-
-          validate_units(item, index)
           validate_dates(item, index)
           validate_unit_amount(item, index)
         end
       end
 
-      def payload_invalid?(item)
-        item.key?(:payload) && !item[:payload].nil? && !item[:payload].is_a?(Hash)
-      end
-
       def validate_add_on_id(item, index)
-        id = item[:id]
+        id = item["id"]
         if id.blank?
           add_error(field: add_on_field(item, index, :id), error_code: "value_is_mandatory") if approve?
           return
@@ -46,27 +35,10 @@ module QuoteVersions
         add_error(field: add_on_field(item, index, :id), error_code: "add_on_not_found")
       end
 
-      def validate_nested_objects(item, index)
-        validate_nested_hash(item, index, collection_key: ADD_ONS_KEY, nested_key: :payload)
-        validate_nested_hash(item, index, collection_key: ADD_ONS_KEY, nested_key: :overrides)
-      end
-
-      def validate_units(item, index)
-        units = payload(item)[:units]
-        if units.nil?
-          add_error(field: add_on_field(item, index, :units), error_code: "value_is_mandatory") if approve?
-          return
-        end
-
-        return if units.is_a?(Numeric) && units.positive?
-
-        add_error(field: add_on_field(item, index, :units), error_code: "value_is_invalid")
-      end
-
       def validate_unit_amount(item, index)
         return if unresolved_add_on_id?(item)
 
-        amount = effective_unit_amount_cents(item, add_ons_by_id[item[:id].to_s])
+        amount = effective_unit_amount_cents(item, add_ons_by_id[item["id"].to_s])
         if amount.nil?
           add_error(field: add_on_field(item, index, :unit_amount_cents), error_code: "value_is_mandatory") if approve?
           return
@@ -78,15 +50,15 @@ module QuoteVersions
       end
 
       def unresolved_add_on_id?(item)
-        id = item[:id]
+        id = item["id"]
         return false if id.blank?
 
         !add_ons_by_id.key?(id.to_s)
       end
 
       def validate_dates(item, index)
-        from = payload(item)[:from_datetime]
-        to = payload(item)[:to_datetime]
+        from = payload(item)["from_datetime"]
+        to = payload(item)["to_datetime"]
         return if from.blank? && to.blank?
 
         if from.blank? || to.blank?
@@ -104,34 +76,21 @@ module QuoteVersions
         add_error(field: add_on_field(item, index, :to_datetime), error_code: "from_after_to") if parsed_from > parsed_to
       end
 
-      def validate_completeness
-        add_error(field: :currency, error_code: "value_is_mandatory") if quote_version.currency.blank?
-
-        # A shape error already reported the malformed billing_items; add_ons_required would be misleading.
-        return if errors[:billing_items].present?
-
-        add_error(field: ADD_ONS_KEY.to_sym, error_code: "add_ons_required") if add_on_items.empty?
-      end
-
       def add_on_array
         @add_on_array ||= billing_item_array(ADD_ONS_KEY)
       end
 
-      def add_on_items
-        @add_on_items ||= add_on_array.select { |item| item.is_a?(Hash) }
-      end
-
       def payload(item)
-        safe_hash(item[:payload])
+        item["payload"]
       end
 
       def overrides(item)
-        safe_hash(item[:overrides])
+        item["overrides"]
       end
 
       def add_ons_by_id
         @add_ons_by_id ||= begin
-          ids = add_on_items.filter_map { |item| item[:id] }.uniq
+          ids = add_on_array.filter_map { |item| item["id"] }.uniq
           if ids.empty?
             {}
           else
@@ -141,10 +100,10 @@ module QuoteVersions
       end
 
       def effective_unit_amount_cents(item, add_on)
-        override_amount = overrides(item)[:unit_amount_cents]
+        override_amount = overrides(item)["unit_amount_cents"]
         return override_amount unless override_amount.nil?
 
-        payload_amount = payload(item)[:unit_amount_cents]
+        payload_amount = payload(item)["unit_amount_cents"]
         return payload_amount unless payload_amount.nil?
 
         add_on&.amount_cents

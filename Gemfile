@@ -28,6 +28,7 @@ gem "sidekiq-throttled", "1.4.0" # '1.5.0' was losing some jobs
 gem "throttling"
 gem "device_detector"
 gem "dry-validation"
+gem "json_schemer", "~> 2.4"
 
 # Security
 gem "bcrypt"

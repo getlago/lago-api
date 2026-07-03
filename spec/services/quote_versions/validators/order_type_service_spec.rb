@@ -5,8 +5,33 @@ require "rails_helper"
 RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
   subject(:validator) { validator_class.new(result, quote_version:, scope:) }
 
+  let(:test_schema) do
+    JSONSchemer.schema(
+      {
+        "type" => "object",
+        "properties" => {
+          "currency" => {"enum" => ["EUR", nil], "x-error" => {"*" => "value_is_invalid"}},
+          "billing_items" => {
+            "type" => "object",
+            "additionalProperties" => {"not" => {}, "x-error" => {"*" => "value_is_invalid"}},
+            "x-error" => {"*" => "value_is_invalid"},
+            "properties" => {
+              "items" => {"type" => "array", "items" => {"type" => "object"}}
+            }
+          }
+        }
+      }
+    )
+  end
+
   let(:validator_class) do
+    schema = test_schema
+
     Class.new(QuoteVersions::Validators::OrderTypeService) do
+      attr_reader :business_validated
+
+      define_method(:schema) { schema }
+
       private
 
       def allowed_billing_item_keys
@@ -14,14 +39,12 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
       end
 
       def validate_billing_items
-        validate_collection_shape("items")
+        @business_validated = true
 
         billing_item_array("items").each_with_index do |item, index|
-          validate_nested_hash(item, index, collection_key: "items", nested_key: :payload)
-          payload = safe_hash(item[:payload])
-          next if payload[:units].blank?
-
-          add_error(field: billing_item_field("items", item, index, :units), error_code: "unexpected_units")
+          if item["name"].blank?
+            add_error(field: billing_item_field("items", item, index, :name), error_code: "value_is_mandatory")
+          end
         end
       end
     end
@@ -33,85 +56,59 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
   let(:quote_version) { build(:quote_version, quote:, organization:, currency:, billing_items:) }
   let(:currency) { "EUR" }
   let(:scope) { :update }
-  let(:billing_items) { {"items" => []} }
+  let(:billing_items) { {"items" => [{"local_id" => "row-1", "name" => "Item"}]} }
 
-  it "is valid for an empty allowed collection" do
+  it "is valid and runs the business validations" do
     expect(validator).to be_valid
     expect(result.error).to be_nil
+    expect(validator.business_validated).to eq(true)
   end
 
-  context "when currency is invalid" do
-    let(:currency) { "ABC" }
+  context "when the currency is lowercase" do
+    let(:currency) { "eur" }
 
-    it "adds a currency validation failure" do
+    it "normalizes it on the quote version" do
+      expect(validator).to be_valid
+      expect(quote_version.currency).to eq("EUR")
+    end
+  end
+
+  context "when the currency is not in the schema" do
+    let(:currency) { "usd" }
+
+    it "adds a currency validation failure and keeps the original value" do
       expect(validator).not_to be_valid
       expect(result.error.messages[:currency]).to eq(["value_is_invalid"])
+      expect(quote_version.currency).to eq("usd")
     end
   end
 
-  context "when billing_items is not an object" do
-    let(:billing_items) { [] }
+  context "when the currency is blank" do
+    let(:currency) { "   " }
 
-    it "adds a billing_items validation failure" do
-      expect(validator).not_to be_valid
-      expect(result.error.messages[:billing_items]).to eq(["value_is_invalid"])
+    it "is structurally valid and leaves the value untouched" do
+      expect(validator).to be_valid
+      expect(quote_version.currency).to eq("   ")
     end
   end
 
-  context "when billing_items has an unexpected key" do
+  context "when the document is structurally invalid" do
     let(:billing_items) { {"unexpected" => []} }
 
-    it "adds a billing_items validation failure" do
+    it "fails fast without running the business validations" do
       expect(validator).not_to be_valid
       expect(result.error.messages[:billing_items]).to eq(["value_is_invalid"])
+      expect(validator.business_validated).to be_nil
     end
   end
 
-  context "when the collection is not an array" do
-    let(:billing_items) { {"items" => "bad"} }
+  context "when a business validation fails" do
+    let(:billing_items) { {"items" => [{"local_id" => "row-1"}, {}]} }
 
-    it "adds a billing_items validation failure" do
+    it "aggregates errors keyed by local_id or index" do
       expect(validator).not_to be_valid
-      expect(result.error.messages[:billing_items]).to eq(["value_is_invalid"])
-    end
-  end
-
-  context "when several shape errors affect billing_items" do
-    let(:billing_items) { {"items" => "bad", "unexpected" => []} }
-
-    it "reports the shape error once" do
-      expect(validator).not_to be_valid
-      expect(result.error.messages[:billing_items]).to eq(["value_is_invalid"])
-    end
-  end
-
-  context "when a nested payload is malformed" do
-    let(:billing_items) { {"items" => [{"local_id" => "row-1", "payload" => "bad"}]} }
-
-    it "adds a nested validation failure without raising" do
-      valid = nil
-
-      expect { valid = validator.valid? }.not_to raise_error
-      expect(valid).to eq(false)
-      expect(result.error.messages[:"items/row-1/payload"]).to eq(["value_is_invalid"])
-    end
-  end
-
-  context "when a nested payload is valid" do
-    let(:billing_items) { {"items" => [{"local_id" => "row-1", "payload" => {"units" => 1}}]} }
-
-    it "uses local_id in field paths" do
-      expect(validator).not_to be_valid
-      expect(result.error.messages[:"items/row-1/units"]).to eq(["unexpected_units"])
-    end
-  end
-
-  context "when local_id is absent" do
-    let(:billing_items) { {"items" => [{"payload" => {"units" => 1}}]} }
-
-    it "uses the original array index in field paths" do
-      expect(validator).not_to be_valid
-      expect(result.error.messages[:"items/0/units"]).to eq(["unexpected_units"])
+      expect(result.error.messages[:"items/row-1/name"]).to eq(["value_is_mandatory"])
+      expect(result.error.messages[:"items/1/name"]).to eq(["value_is_mandatory"])
     end
   end
 end

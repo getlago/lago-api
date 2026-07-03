@@ -3,6 +3,8 @@
 module QuoteVersions
   module Validators
     class OrderTypeService < BaseValidator
+      NESTED_ITEM_KEYS = %w[payload overrides].freeze
+
       def initialize(result, quote_version:, scope: :approve)
         @quote_version = quote_version
         @scope = scope.to_sym
@@ -10,10 +12,12 @@ module QuoteVersions
       end
 
       def valid?
-        validate_currency_format
-        validate_billing_items_shape
-        validate_billing_items
-        validate_completeness if approve?
+        validate_structure
+
+        # Business validations assume a well-shaped document: fail fast on structural errors.
+        if errors.empty?
+          validate_billing_items
+        end
 
         return true unless errors?
 
@@ -24,6 +28,10 @@ module QuoteVersions
       private
 
       attr_reader :quote_version, :scope
+
+      def schema
+        raise NotImplementedError
+      end
 
       def allowed_billing_item_keys
         []
@@ -37,90 +45,64 @@ module QuoteVersions
         # Override in concrete order type validators.
       end
 
-      def validate_completeness
-        # Override in concrete order type validators when approve needs required fields.
+      def validate_structure
+        entries = SchemaErrorMapper.new(document: schema_document).call(schema.validate(schema_document))
+        entries.each { |field, error_code| add_error(field:, error_code:) }
+
+        normalize_currency
       end
 
-      def billing_items
-        @billing_items ||= if raw_billing_items.is_a?(Hash)
-          raw_billing_items.with_indifferent_access
-        else
-          {}.with_indifferent_access
+      def normalize_currency
+        currency = quote_version.currency
+        if currency.present? && errors[:currency].blank?
+          quote_version.currency = currency.to_s.upcase
         end
       end
 
+      def schema_document
+        @schema_document ||= {
+          "currency" => quote_version.currency.presence&.to_s&.upcase,
+          "billing_items" => normalized_billing_items
+        }
+      end
+
+      def normalized_billing_items
+        raw = quote_version.billing_items
+        return {} if raw.nil?
+        return raw unless raw.is_a?(Hash)
+
+        normalized = raw.deep_stringify_keys
+        allowed_billing_item_keys.map(&:to_s).each do |key|
+          next unless normalized.key?(key)
+
+          normalized[key] = normalize_collection(normalized[key])
+        end
+        normalized
+      end
+
+      def normalize_collection(items)
+        return [] if items.nil?
+        return items unless items.is_a?(Array)
+
+        items.each do |item|
+          next unless item.is_a?(Hash)
+
+          NESTED_ITEM_KEYS.each do |key|
+            item[key] = {} if item[key].nil?
+          end
+        end
+        items
+      end
+
+      # Business validations read the schema-validated document: string keys,
+      # collections are arrays of hashes, nested payload/overrides are hashes.
       def billing_item_array(key)
-        items = billing_items[key]
-        items.is_a?(Array) ? items : []
-      end
-
-      def validate_collection_shape(key)
-        items = billing_items[key]
-        return if items.nil?
-        return if items.is_a?(Array) && items.all? { |item| item.is_a?(Hash) }
-
-        add_billing_items_error
-      end
-
-      def validate_nested_hash(item, index, collection_key:, nested_key:)
-        return unless item.key?(nested_key)
-
-        value = item[nested_key]
-        return if value.nil? || value.is_a?(Hash)
-
-        add_error(field: billing_item_field(collection_key, item, index, nested_key), error_code: "value_is_invalid")
-      end
-
-      def safe_hash(value)
-        value.is_a?(Hash) ? value.with_indifferent_access : {}.with_indifferent_access
+        schema_document["billing_items"].fetch(key, [])
       end
 
       def billing_item_field(collection_key, item, index, attribute)
-        ref = item[:local_id].presence || index
+        ref = item["local_id"].presence || index
         :"#{collection_key}/#{ref}/#{attribute}"
-      end
-
-      def add_billing_items_error(error_code: "value_is_invalid")
-        errors[:billing_items] ||= []
-        return if errors[:billing_items].include?(error_code)
-
-        add_error(field: :billing_items, error_code:)
-      end
-
-      def validate_currency_format
-        currency = quote_version.currency
-        return if currency.blank?
-
-        normalized_currency = currency.to_s.upcase
-        if Currencies::ACCEPTED_CURRENCIES.key?(normalized_currency.to_sym)
-          quote_version.currency = normalized_currency
-          return
-        end
-
-        add_error(field: :currency, error_code: "value_is_invalid")
-      end
-
-      def raw_billing_items
-        @raw_billing_items ||= quote_version.billing_items
-      end
-
-      def validate_billing_items_shape
-        raw = raw_billing_items
-        return if raw.nil?
-
-        unless raw.is_a?(Hash)
-          add_billing_items_error
-          return
-        end
-
-        validate_allowed_billing_item_keys(raw)
-      end
-
-      def validate_allowed_billing_item_keys(raw)
-        unexpected_keys = raw.keys.map(&:to_s) - allowed_billing_item_keys.map(&:to_s)
-        return if unexpected_keys.empty?
-
-        add_billing_items_error
       end
     end
   end
