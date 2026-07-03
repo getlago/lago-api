@@ -14,6 +14,9 @@ class SendHttpWebhookJob < ApplicationJob
     Rails.logger.warn("Discarding #{job.class.name} after 3 retries due to: #{error.message}")
   end
 
+  # Retry when S3 throttles queries
+  retry_on "Aws::S3::Errors::SlowDown", wait: :polynomially_longer, attempts: 6
+
   def perform(webhook)
     Webhooks::SendHttpService.call(webhook:)
   end

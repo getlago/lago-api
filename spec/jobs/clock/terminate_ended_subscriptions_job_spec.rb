@@ -10,6 +10,10 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
   let!(:subscription2) { create(:subscription, ending_at: ending_at + 1.year) }
   let!(:subscription3) { create(:subscription, ending_at: nil) }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [] }
+  end
+
   describe ".perform" do
     it "enqueues a TerminateEndedSubscriptionJob for matching subscriptions" do
       current_date = Time.current + 2.months

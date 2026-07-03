@@ -13,6 +13,9 @@ class SendWebhookJob < ApplicationJob
 
   retry_on ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 6
 
+  # Retry when S3 throttles queries.
+  retry_on "Aws::S3::Errors::SlowDown", wait: :polynomially_longer, attempts: 6
+
   WEBHOOK_SERVICES = {
     "alert.triggered" => Webhooks::UsageMonitoring::AlertTriggeredService,
     "billable_metric.created" => Webhooks::BillableMetrics::CreatedService,

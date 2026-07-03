@@ -312,12 +312,12 @@ module Events
         end
 
         sql = <<-SQL
-          SUM(
-            (#{sanitized_property_name})::numeric * (#{ratio})::numeric
-          ) AS sum_result
+          SUM((#{sanitized_property_name})::numeric * (#{ratio})::numeric) AS prorated_value,
+          SUM((#{sanitized_property_name})::numeric) AS value,
+          COUNT(*) AS events_count
         SQL
 
-        connection.execute(Arel.sql(events.select(sql).to_sql)).first["sum_result"]
+        build_prorated_aggregation_result(select_one(events.select(sql).to_sql))
       end
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
@@ -329,9 +329,9 @@ module Events
 
         sum_sql = <<-SQL
           #{sanitized_grouped_by.join(", ")},
-          SUM(
-            (#{sanitized_property_name})::numeric * (#{ratio})::numeric
-          ) AS sum_result
+          SUM((#{sanitized_property_name})::numeric * (#{ratio})::numeric) AS prorated_value,
+          SUM((#{sanitized_property_name})::numeric) AS value,
+          COUNT(*) AS events_count
         SQL
 
         sql = events
@@ -339,7 +339,7 @@ module Events
           .select(sum_sql)
           .to_sql
 
-        prepare_grouped_result(select_all(sql).rows)
+        prepare_grouped_prorated_result(select_all(sql).rows)
       end
 
       def sum_date_breakdown
@@ -566,6 +566,20 @@ module Events
             groups: build_groups(row[...-2], columns:),
             value: row[-2],
             events_count: row[-1]&.to_i
+          )
+        end
+      end
+
+      # NOTE: Same as prepare_grouped_aggregated_values but the last three columns of each
+      #       row are the prorated value, the non-prorated value and the events count,
+      #       returned as GroupedProratedAggregationResult.
+      def prepare_grouped_prorated_result(rows, columns: grouped_by)
+        rows.map do |row|
+          build_grouped_prorated_aggregation_result(
+            groups: build_groups(row[...-3], columns:),
+            prorated_value: row[-3],
+            value: row[-2],
+            events_count: row[-1]
           )
         end
       end

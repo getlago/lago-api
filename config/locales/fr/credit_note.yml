@@ -17,6 +17,7 @@ fr:
     offset_invoice_notice: Facture %{invoice_number} compensée le %{issuing_date}
     powered_by: Généré par
     prepaid_credits_for_wallet: Crédit(s) prépayé(s) - %{wallet_name}
+    purchase_order_number: Nº de bon de commande
     refunded: Remboursement
     refunded_notice: Remboursé le %{issuing_date}
     self_billed:
