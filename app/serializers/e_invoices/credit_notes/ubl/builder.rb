@@ -19,6 +19,7 @@ module EInvoices
           xml["cbc"].ProfileID PEPPOL_BIS_BILLING_PROFILE if de_billing_entity?
 
           Ubl::Header.serialize(xml:, resource:, type_code: CREDIT_NOTE, notes:)
+          Ubl::OrderReference.serialize(xml:, id: resource.purchase_order_number) if resource.purchase_order_number.present?
           Ubl::BillingReference.serialize(xml:, resource: invoice)
 
           Ubl::SupplierParty.serialize(xml:, resource:, options: supplier_party_options)
