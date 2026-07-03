@@ -22,19 +22,6 @@ module Events
         filters_scope(scope)
       end
 
-      def distinct_codes(codes: nil)
-        scope = Event.where(external_subscription_id: subscription.external_id)
-          .where(organization_id: subscription.organization.id)
-          .from_datetime(from_datetime)
-          .to_datetime(applicable_to_datetime)
-
-        if codes.nil?
-          scope.pluck("DISTINCT(code)")
-        else
-          codes.select { |code| scope.where(code:).exists? }
-        end
-      end
-
       def distinct_charges_and_filters(codes: nil)
         scope = EnrichedEvent.where(organization_id: subscription.organization_id)
           .where(subscription_id: subscription.id)
