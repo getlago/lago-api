@@ -306,7 +306,10 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
       let(:add_on_item) { super().merge("id" => "not-a-uuid") }
 
       it "reports add_on_not_found instead of raising" do
-        expect(validator).not_to be_valid
+        valid = nil
+
+        expect { valid = validator.valid? }.not_to raise_error
+        expect(valid).to eq(false)
         expect(result.error.messages[:"add_ons/row-1/id"]).to eq(["add_on_not_found"])
       end
     end

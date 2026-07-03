@@ -13,30 +13,36 @@ RSpec.describe QuoteVersions::Validators::DispatcherService do
     let(:quote_version) { build(:quote_version, quote:, organization:, currency: "EUR", billing_items: {}) }
 
     it "delegates to OneOffService and applies its rules" do
+      allow(QuoteVersions::Validators::OneOffService).to receive(:new).and_call_original
+
       expect(validator).not_to be_valid
+      expect(QuoteVersions::Validators::OneOffService)
+        .to have_received(:new).with(result, quote_version:, scope: :approve)
       expect(result.error.messages[:add_ons]).to eq(["add_ons_required"])
     end
   end
 
   context "when the order type intentionally has no validator" do
-    let(:quote) { create(:quote, organization:, order_type: :subscription_creation) }
-    let(:quote_version) { build(:quote_version, quote:, organization:) }
+    context "when the order type is subscription_creation" do
+      let(:quote) { create(:quote, organization:, order_type: :subscription_creation) }
+      let(:quote_version) { build(:quote_version, quote:, organization:) }
 
-    it "is a no-op and returns true" do
-      expect(validator).to be_valid
-      expect(result.error).to be_nil
+      it "is a no-op and returns true" do
+        expect(validator).to be_valid
+        expect(result.error).to be_nil
+      end
     end
-  end
 
-  context "when the order type is subscription_amendment" do
-    let(:customer) { create(:customer, organization:) }
-    let(:subscription) { create(:subscription, organization:, customer:) }
-    let(:quote) { create(:quote, organization:, customer:, subscription:, order_type: :subscription_amendment) }
-    let(:quote_version) { build(:quote_version, quote:, organization:) }
+    context "when the order type is subscription_amendment" do
+      let(:customer) { create(:customer, organization:) }
+      let(:subscription) { create(:subscription, organization:, customer:) }
+      let(:quote) { create(:quote, organization:, customer:, subscription:, order_type: :subscription_amendment) }
+      let(:quote_version) { build(:quote_version, quote:, organization:) }
 
-    it "is a no-op and returns true" do
-      expect(validator).to be_valid
-      expect(result.error).to be_nil
+      it "is a no-op and returns true" do
+        expect(validator).to be_valid
+        expect(result.error).to be_nil
+      end
     end
   end
 
