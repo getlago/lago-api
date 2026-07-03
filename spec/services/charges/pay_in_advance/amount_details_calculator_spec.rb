@@ -14,7 +14,7 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator do
     let(:charges_details_without_last_event) { nil }
 
     it "returns an empty hash" do
-      expect(amount_details_calculator.call).to eq({})
+      expect(amount_details_calculator.call.amount_details).to eq({})
     end
   end
 
@@ -63,7 +63,7 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator do
         min_max_adjustment_total_amount: "10.0",
         per_unit_total_amount: "100.0"
       }
-      expect(amount_details_calculator.call).to eq(expected_details)
+      expect(amount_details_calculator.call.amount_details).to eq(expected_details)
     end
   end
 
@@ -93,7 +93,7 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator do
           {from_value: 100, to_value: 200, flat_unit_amount: 10, rate: 0.2, units: "10.0", per_unit_total_amount: "20.0", total_with_flat_amount: 200}
         ]
       }
-      expect(amount_details_calculator.call).to eq(expected_details)
+      expect(amount_details_calculator.call.amount_details).to eq(expected_details)
     end
 
     context "when first event covers all tiers" do
@@ -120,7 +120,7 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator do
             {from_value: 100, to_value: 200, flat_unit_amount: 20, rate: 0.2, units: "20.0", per_unit_total_amount: "20.0", total_with_flat_amount: 400}
           ]
         }
-        expect(amount_details_calculator.call).to eq(expected_details)
+        expect(amount_details_calculator.call.amount_details).to eq(expected_details)
       end
     end
   end

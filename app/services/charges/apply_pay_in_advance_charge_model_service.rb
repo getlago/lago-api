@@ -2,6 +2,8 @@
 
 module Charges
   class ApplyPayInAdvanceChargeModelService < BaseService
+    Result = BaseResult[:units, :count, :amount, :precise_amount, :unit_amount, :amount_details]
+
     def initialize(charge:, aggregation_result:, properties:)
       @charge = charge
       @aggregation_result = aggregation_result
@@ -132,7 +134,7 @@ module Charges
         charge:,
         applied_charge_model:,
         applied_charge_model_excluding_event: applied_charge_model_excluding_persisted_event
-      )
+      ).amount_details
     end
 
     def build_aggregation_result(aggregation:, count:, precise_total_amount_cents:)

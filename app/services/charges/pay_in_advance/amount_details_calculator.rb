@@ -3,6 +3,8 @@
 module Charges
   module PayInAdvance
     class AmountDetailsCalculator < BaseService
+      Result = BaseResult[:amount_details]
+
       AMOUNT_DETAILS_FOR_SINGLE_EVENT_ENABLED = %w[percentage graduated_percentage].freeze
       PERCENTAGE_CHARGE_AMOUNT_DETAILS_KEYS = %i[units free_units paid_units free_events paid_events fixed_fee_total_amount
         min_max_adjustment_total_amount per_unit_total_amount].freeze
@@ -11,9 +13,20 @@ module Charges
         @charge = charge
         @all_charges_details = applied_charge_model.amount_details
         @charges_details_without_last_event = applied_charge_model_excluding_event.amount_details
+
+        super
       end
 
       def call
+        result.amount_details = compute_amount_details
+        result
+      end
+
+      private
+
+      attr_reader :charge, :all_charges_details, :charges_details_without_last_event
+
+      def compute_amount_details
         return {} unless AMOUNT_DETAILS_FOR_SINGLE_EVENT_ENABLED.include? charge.charge_model
         return {} if all_charges_details.blank? || charges_details_without_last_event.blank?
 
@@ -21,17 +34,15 @@ module Charges
           calculate_percentage_charge_details
         elsif charge.graduated_percentage?
           calculate_graduated_percentage_charge_details
+        else
+          {}
         end
       end
 
-      private
-
-      attr_reader :charge, :all_charges_details, :charges_details_without_last_event
-
       def calculate_percentage_charge_details
         fixed_values = {rate: all_charges_details[:rate], fixed_fee_unit_amount: all_charges_details[:fixed_fee_unit_amount]}
-        details = PERCENTAGE_CHARGE_AMOUNT_DETAILS_KEYS.each_with_object(fixed_values) do |key, result|
-          result[key] = (BigDecimal(all_charges_details[key].to_s) - BigDecimal(charges_details_without_last_event[key].to_s)).to_s
+        details = PERCENTAGE_CHARGE_AMOUNT_DETAILS_KEYS.each_with_object(fixed_values) do |key, acc|
+          acc[key] = (BigDecimal(all_charges_details[key].to_s) - BigDecimal(charges_details_without_last_event[key].to_s)).to_s
         end
         # TODO: remove this when ChargeModels::PercentageService#free_units_value respects :exclude_event flag
         details[:free_units] = (BigDecimal(details[:units].to_s) - BigDecimal(details[:paid_units].to_s)).to_s

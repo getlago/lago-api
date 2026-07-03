@@ -19,9 +19,9 @@ RSpec.describe Fees::PaidCreditService do
 
   before { subscription }
 
-  describe ".create" do
+  describe "#call" do
     it "creates a fee" do
-      result = paid_credit_service.create
+      result = paid_credit_service.call
 
       expect(result).to be_success
       expect(result.fee).to have_attributes(
@@ -56,7 +56,7 @@ RSpec.describe Fees::PaidCreditService do
       end
 
       it "does not create a new fee" do
-        expect { paid_credit_service.create }.not_to change(Fee, :count)
+        expect { paid_credit_service.call }.not_to change(Fee, :count)
       end
     end
   end

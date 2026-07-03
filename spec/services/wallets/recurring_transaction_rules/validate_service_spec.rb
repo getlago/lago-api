@@ -14,7 +14,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
 
   describe "#call" do
     it "returns true" do
-      expect(validate_service.call).to be_truthy
+      expect(validate_service.call.valid).to be_truthy
     end
 
     context "when invalid interval" do
@@ -26,7 +26,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
       end
 
       it "returns false" do
-        expect(validate_service.call).to be_falsey
+        expect(validate_service.call.valid).to be_falsey
       end
     end
 
@@ -39,7 +39,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
       end
 
       it "returns false" do
-        expect(validate_service.call).to be_falsey
+        expect(validate_service.call.valid).to be_falsey
       end
     end
 
@@ -54,7 +54,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
       end
 
       it "returns false" do
-        expect(validate_service.call).to be_falsey
+        expect(validate_service.call.valid).to be_falsey
       end
     end
 
@@ -68,7 +68,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
       end
 
       it "returns true" do
-        expect(validate_service.call).to eq true
+        expect(validate_service.call.valid).to eq true
       end
     end
 
@@ -82,7 +82,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
       end
 
       it "returns false" do
-        expect(validate_service.call).to eq false
+        expect(validate_service.call.valid).to eq false
       end
     end
 
@@ -96,7 +96,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
       end
 
       it "returns false" do
-        expect(validate_service.call).to be_falsey
+        expect(validate_service.call.valid).to be_falsey
       end
     end
 
@@ -113,7 +113,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns true" do
-          expect(validate_service.call).to eq true
+          expect(validate_service.call.valid).to eq true
         end
       end
 
@@ -128,7 +128,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns false" do
-          expect(validate_service.call).to be_falsey
+          expect(validate_service.call.valid).to be_falsey
         end
       end
 
@@ -143,7 +143,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns false" do
-          expect(validate_service.call).to be_falsey
+          expect(validate_service.call.valid).to be_falsey
         end
       end
 
@@ -157,7 +157,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns true" do
-          expect(validate_service.call).to eq true
+          expect(validate_service.call.valid).to eq true
         end
       end
 
@@ -172,7 +172,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns true" do
-          expect(validate_service.call).to eq true
+          expect(validate_service.call.valid).to eq true
         end
       end
 
@@ -186,7 +186,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns false" do
-          expect(validate_service.call).to be_falsey
+          expect(validate_service.call.valid).to be_falsey
         end
       end
 
@@ -202,7 +202,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns true" do
-          expect(validate_service.call).to eq true
+          expect(validate_service.call.valid).to eq true
         end
       end
 
@@ -217,7 +217,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns false" do
-          expect(validate_service.call).to be_falsey
+          expect(validate_service.call.valid).to be_falsey
         end
       end
 
@@ -232,7 +232,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns false" do
-          expect(validate_service.call).to be_falsey
+          expect(validate_service.call.valid).to be_falsey
         end
       end
     end
@@ -249,7 +249,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns false" do
-          expect(validate_service.call).to be_falsey
+          expect(validate_service.call.valid).to be_falsey
         end
       end
 
@@ -264,7 +264,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns true" do
-          expect(validate_service.call).to eq true
+          expect(validate_service.call.valid).to eq true
         end
       end
 
@@ -279,7 +279,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns true" do
-          expect(validate_service.call).to eq true
+          expect(validate_service.call.valid).to eq true
         end
       end
 
@@ -295,7 +295,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "ignores the threshold comparison and returns true" do
-          expect(validate_service.call).to eq true
+          expect(validate_service.call.valid).to eq true
         end
       end
     end
@@ -311,7 +311,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns true" do
-          expect(validate_service.call).to eq true
+          expect(validate_service.call.valid).to eq true
         end
       end
 
@@ -325,7 +325,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns false" do
-          expect(validate_service.call).to be_falsey
+          expect(validate_service.call.valid).to be_falsey
         end
       end
 
@@ -339,7 +339,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns false" do
-          expect(validate_service.call).to be_falsey
+          expect(validate_service.call.valid).to be_falsey
         end
       end
 
@@ -353,7 +353,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         end
 
         it "returns true" do
-          expect(validate_service.call).to eq true
+          expect(validate_service.call.valid).to eq true
         end
       end
     end

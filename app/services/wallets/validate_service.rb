@@ -89,7 +89,7 @@ module Wallets
         return add_error(field: :recurring_transaction_rules, error_code: "invalid_number_of_recurring_rules")
       end
 
-      unless Wallets::RecurringTransactionRules::ValidateService.call(params: args[:recurring_transaction_rules].first)
+      unless Wallets::RecurringTransactionRules::ValidateService.call(params: args[:recurring_transaction_rules].first).valid
         add_error(field: :recurring_transaction_rules, error_code: "invalid_recurring_rule")
       end
     end

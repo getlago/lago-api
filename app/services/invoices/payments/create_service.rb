@@ -3,6 +3,8 @@
 module Invoices
   module Payments
     class CreateService < BaseService
+      Result = BaseResult[:invoice, :payment, :payment_provider]
+
       include Customers::PaymentProviderFinder
 
       def initialize(invoice:, payment_provider: nil, payment_method_params: {})

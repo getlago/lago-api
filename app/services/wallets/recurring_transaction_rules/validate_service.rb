@@ -3,21 +3,23 @@
 module Wallets
   module RecurringTransactionRules
     class ValidateService < BaseService
+      Result = BaseResult[:valid]
+
       def initialize(params:)
         @params = params
         super
       end
 
       def call
-        return false unless valid_trigger?
-        return false unless valid_method?
-        return false unless valid_target_above_threshold?
-        return false unless valid_credits?
-        return false unless valid_metadata?
-        return false unless valid_expiration_at?
-        return false unless valid_grants_target_top_up?
+        result.valid = valid_trigger? &&
+          valid_method? &&
+          valid_target_above_threshold? &&
+          valid_credits? &&
+          valid_metadata? &&
+          valid_expiration_at? &&
+          valid_grants_target_top_up?
 
-        true
+        result
       end
 
       private

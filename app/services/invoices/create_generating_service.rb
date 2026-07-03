@@ -2,6 +2,8 @@
 
 module Invoices
   class CreateGeneratingService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil, invoicing_reason: nil, subscription_gated: false, billing_entity: nil) # rubocop:disable Metrics/ParameterLists
       @customer = customer
       @invoice_type = invoice_type

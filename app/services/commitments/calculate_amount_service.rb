@@ -2,6 +2,8 @@
 
 module Commitments
   class CalculateAmountService < BaseService
+    Result = BaseResult[:commitment_amount_cents]
+
     def initialize(commitment:, invoice_subscription:)
       @commitment = commitment
       @invoice_subscription = invoice_subscription
@@ -23,7 +25,7 @@ module Commitments
     def commitment_amount_cents
       return 0 if !commitment || !invoice_subscription || commitment.amount_cents.zero?
 
-      service_result = proration_coefficient_service.proration_coefficient
+      service_result = proration_coefficient_service.call
 
       Money.from_cents(
         commitment.amount_cents * service_result.proration_coefficient,

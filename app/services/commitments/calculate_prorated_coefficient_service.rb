@@ -2,6 +2,8 @@
 
 module Commitments
   class CalculateProratedCoefficientService < BaseService
+    Result = BaseResult[:proration_coefficient]
+
     def initialize(commitment:, invoice_subscription:)
       @commitment = commitment
       @invoice_subscription = invoice_subscription
@@ -9,13 +11,9 @@ module Commitments
       super
     end
 
-    def proration_coefficient
+    def call
       result.proration_coefficient = calculate_proration_coefficient
       result
-    end
-
-    def dates_service
-      @dates_service ||= Commitments::DatesService.new_instance(commitment:, invoice_subscription:).call
     end
 
     private
@@ -23,6 +21,10 @@ module Commitments
     attr_reader :commitment, :invoice_subscription
 
     delegate :subscription, to: :invoice_subscription
+
+    def dates_service
+      @dates_service ||= Commitments::DatesService.new_instance(commitment:, invoice_subscription:).call
+    end
 
     def calculate_proration_coefficient
       invoices_service = Commitments::FetchInvoicesService.new_instance(commitment:, invoice_subscription:)

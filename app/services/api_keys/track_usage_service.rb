@@ -2,6 +2,8 @@
 
 module ApiKeys
   class TrackUsageService < BaseService
+    Result = BaseResult
+
     def call
       ApiKey.find_each do |api_key|
         cache_key = "api_key_last_used_#{api_key.id}"
@@ -12,6 +14,8 @@ module ApiKeys
         api_key.update_columns(last_used_at:) # rubocop:disable Rails/SkipsModelValidations
         Rails.cache.delete(cache_key)
       end
+
+      result
     end
   end
 end

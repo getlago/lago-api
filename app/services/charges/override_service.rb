@@ -2,6 +2,8 @@
 
 module Charges
   class OverrideService < BaseService
+    Result = BaseResult[:charge]
+
     def initialize(charge:, params:)
       @charge = charge
       @params = params

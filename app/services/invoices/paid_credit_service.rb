@@ -2,6 +2,8 @@
 
 module Invoices
   class PaidCreditService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(wallet_transaction:, timestamp:, invoice: nil)
       @customer = wallet_transaction.wallet.customer
       @wallet_transaction = wallet_transaction
@@ -88,10 +90,7 @@ module Invoices
     end
 
     def create_credit_fee(invoice)
-      fee_result = Fees::PaidCreditService
-        .new(invoice:, wallet_transaction:, customer:).create
-
-      fee_result.raise_if_error!
+      Fees::PaidCreditService.call!(invoice:, wallet_transaction:, customer:)
     end
 
     def create_payment(invoice)

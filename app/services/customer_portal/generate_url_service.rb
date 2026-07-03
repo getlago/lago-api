@@ -2,6 +2,8 @@
 
 module CustomerPortal
   class GenerateUrlService < BaseService
+    Result = BaseResult[:url]
+
     def initialize(customer:)
       @customer = customer
 

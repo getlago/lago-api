@@ -2,6 +2,8 @@
 
 module WalletTransactions
   class SettleService < BaseService
+    Result = BaseResult[:wallet_transaction]
+
     def initialize(wallet_transaction:)
       super(nil)
 

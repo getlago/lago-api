@@ -2,6 +2,8 @@
 
 module CreditNotes
   class LockService < BaseService
+    Result = BaseResult
+
     def initialize(customer:)
       @customer = customer
 

@@ -2,6 +2,8 @@
 
 module Invoices
   class RefreshDraftAndFinalizeService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(invoice:)
       @invoice = invoice
       super

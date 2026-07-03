@@ -30,7 +30,7 @@ RSpec.describe Commitments::CalculateProratedCoefficientService do
   let(:timestamp) { DateTime.parse("2024-02-01T10:00:00") }
 
   describe "#proration_coefficient" do
-    subject(:apply_service) { service.proration_coefficient }
+    subject(:apply_service) { service.call }
 
     context "with whole period" do
       it "returns proration coefficient" do
@@ -58,7 +58,7 @@ RSpec.describe Commitments::CalculateProratedCoefficientService do
 
       it "returns proration coefficient" do
         invoice_subscription = subscription.invoice_subscriptions.reload.last
-        apply_service = described_class.new(commitment:, invoice_subscription:).proration_coefficient
+        apply_service = described_class.new(commitment:, invoice_subscription:).call
 
         expect(apply_service.proration_coefficient).to eq(1 / days_in_month.to_f)
       end

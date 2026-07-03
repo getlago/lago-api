@@ -47,7 +47,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
       it "returns a result with error" do
         result = payment_receipt_generate_service.call
 
-        expect(result.success).to be_falsey
+        expect(result).not_to be_success
         expect(result.error.error_code).to eq("payment_receipt_not_found")
       end
     end
