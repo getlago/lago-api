@@ -16,7 +16,18 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
             "additionalProperties" => {"not" => {}, "x-error" => {"*" => "value_is_invalid"}},
             "x-error" => {"*" => "value_is_invalid"},
             "properties" => {
-              "items" => {"type" => "array", "items" => {"type" => "object"}}
+              "items" => {
+                "type" => "array",
+                "minItems" => 1,
+                "x-error" => {"minItems" => "items_required", "*" => "value_is_invalid"},
+                "items" => {
+                  "type" => "object",
+                  "x-error" => {"*" => "value_is_invalid"},
+                  "properties" => {
+                    "name" => {"type" => ["string", "null"], "x-error" => {"*" => "value_is_invalid"}}
+                  }
+                }
+              }
             }
           }
         }
@@ -99,6 +110,24 @@ RSpec.describe "QuoteVersions::Validators::OrderTypeService" do
       expect(validator).not_to be_valid
       expect(result.error.messages[:billing_items]).to eq(["value_is_invalid"])
       expect(validator.business_validated).to be_nil
+    end
+  end
+
+  context "when the collection is empty" do
+    let(:billing_items) { {"items" => []} }
+
+    it "anchors the schema error code to the collection key" do
+      expect(validator).not_to be_valid
+      expect(result.error.messages[:items]).to eq(["items_required"])
+    end
+  end
+
+  context "when an item attribute is structurally invalid and local_id is blank" do
+    let(:billing_items) { {"items" => [{"local_id" => "", "name" => 1}]} }
+
+    it "keys the error by the array index" do
+      expect(validator).not_to be_valid
+      expect(result.error.messages[:"items/0/name"]).to eq(["value_is_invalid"])
     end
   end
 

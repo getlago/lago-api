@@ -7,7 +7,7 @@ module QuoteVersions
         CURRENCY_CODES = Currencies::ACCEPTED_CURRENCIES.keys.map(&:to_s).freeze
 
         # Error codes are declared next to their constraints via "x-error" and
-        # surface on the json_schemer error objects; SchemaErrorMapper only
+        # surface on the json_schemer error objects; OrderTypeService only
         # anchors them to field keys.
         UPDATE_SCHEMA = {
           "type" => "object",

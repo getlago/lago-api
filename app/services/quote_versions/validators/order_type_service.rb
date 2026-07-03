@@ -3,6 +3,7 @@
 module QuoteVersions
   module Validators
     class OrderTypeService < BaseValidator
+      BILLING_ITEMS_KEY = "billing_items"
       NESTED_ITEM_KEYS = %w[payload overrides].freeze
 
       def initialize(result, quote_version:, scope: :approve)
@@ -46,10 +47,80 @@ module QuoteVersions
       end
 
       def validate_structure
-        entries = SchemaErrorMapper.new(document: schema_document).call(schema.validate(schema_document))
+        entries = schema.validate(schema_document).flat_map { |error| schema_error_entries(error) }
+        entries = suppress_required(dedup_billing_items(entries))
         entries.each { |field, error_code| add_error(field:, error_code:) }
 
         normalize_currency
+      end
+
+      # json_schemer reports errors at JSON pointers, with codes declared in
+      # the schemas ("x-error"); anchor each one to a validator field key.
+      def schema_error_entries(error)
+        code = error["error"]
+        segments = error["data_pointer"].split("/").drop(1)
+
+        if error["type"] == "required"
+          error.dig("details", "missing_keys").map { |key| [required_error_field(segments, key), code] }
+        else
+          [[schema_error_field(error, segments), code]]
+        end
+      end
+
+      def required_error_field(segments, key)
+        if segments == [BILLING_ITEMS_KEY]
+          key.to_sym
+        else
+          pointer_item_field(segments[1], segments[2], key)
+        end
+      end
+
+      def schema_error_field(error, segments)
+        case segments.length
+        when 1
+          segments.first.to_sym
+        when 2
+          # minItems anchors to the collection; wrong types and unexpected keys
+          # roll up to billing_items as a single shape error.
+          (error["type"] == "minItems") ? segments.last.to_sym : :billing_items
+        when 3
+          :billing_items
+        when 4
+          pointer_item_field(segments[1], segments[2], segments[3])
+        else
+          pointer_item_field(segments[1], segments[2], segments.last)
+        end
+      end
+
+      def pointer_item_field(collection_key, index, attribute)
+        item = schema_document[BILLING_ITEMS_KEY].dig(collection_key, index.to_i)
+        if item.is_a?(Hash)
+          billing_item_field(collection_key, item, index, attribute)
+        else
+          :"#{collection_key}/#{index}/#{attribute}"
+        end
+      end
+
+      def dedup_billing_items(entries)
+        seen = []
+        entries.select do |field, code|
+          if field != :billing_items
+            true
+          elsif seen.include?(code)
+            false
+          else
+            seen << code
+            true
+          end
+        end
+      end
+
+      def suppress_required(entries)
+        if entries.any? { |field, _| field == :billing_items }
+          entries.reject { |_, code| code.end_with?("_required") }
+        else
+          entries
+        end
       end
 
       def normalize_currency
