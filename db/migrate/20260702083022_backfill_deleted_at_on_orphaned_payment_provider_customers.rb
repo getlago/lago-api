@@ -6,10 +6,8 @@ class BackfillDeletedAtOnOrphanedPaymentProviderCustomers < ActiveRecord::Migrat
   def up
     PaymentProviderCustomers::BaseCustomer.unscoped
       .where(payment_provider_id: nil, deleted_at: nil)
-      .find_in_batches(batch_size: 1000) do |batch|
-        PaymentProviderCustomers::BaseCustomer.unscoped.where(id: batch.pluck(:id))
-          .update_all("deleted_at = updated_at") # rubocop:disable Rails/SkipsModelValidations
-      end
+      .in_batches(of: 1000)
+      .update_all("deleted_at = updated_at") # rubocop:disable Rails/SkipsModelValidations
   end
 
   def down
