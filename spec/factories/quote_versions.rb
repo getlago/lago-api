@@ -20,7 +20,7 @@ FactoryBot.define do
       currency { "EUR" }
       billing_items do
         {
-          "addons" => [
+          "add_ons" => [
             {
               "id" => add_on.id,
               "local_id" => SecureRandom.uuid,

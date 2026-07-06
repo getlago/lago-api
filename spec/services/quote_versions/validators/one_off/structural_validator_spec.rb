@@ -7,7 +7,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
   let(:result) { BaseService::Result.new }
   let(:scope) { :update }
-  let(:addon_item) do
+  let(:add_on_item) do
     {
       "id" => "48e59220-6722-49c1-8cdf-eacd040e2a56",
       "local_id" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
@@ -29,7 +29,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
       "to_datetime" => "2026-02-01T00:00:00Z"
     }
   end
-  let(:billing_items) { {"addons" => [addon_item]} }
+  let(:billing_items) { {"add_ons" => [add_on_item]} }
 
   describe "#valid?" do
     context "with a full valid payload" do
@@ -50,9 +50,9 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
       context "when the scope is approve" do
         let(:scope) { :approve }
 
-        it "requires the addons list" do
+        it "requires the add_ons list" do
           expect(validator).not_to be_valid
-          expect(result.error.messages).to eq({"billing_items.addons": ["value_is_mandatory"]})
+          expect(result.error.messages).to eq({"billing_items.add_ons": ["value_is_mandatory"]})
         end
       end
     end
@@ -67,7 +67,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
     end
 
     context "when billing_items contains an unknown root key" do
-      let(:billing_items) { {"addons" => [addon_item], "subscriptions" => []} }
+      let(:billing_items) { {"add_ons" => [add_on_item], "subscriptions" => []} }
 
       it "returns an unsupported_key error" do
         expect(validator).not_to be_valid
@@ -80,48 +80,48 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an unsupported_key error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.payload.tax_codes": ["unsupported_key"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.tax_codes": ["unsupported_key"]})
       end
     end
 
     context "when overrides contains an unknown key" do
-      let(:addon_item) { super().merge("overrides" => {"units" => 2}) }
+      let(:add_on_item) { super().merge("overrides" => {"units" => 2}) }
 
       it "returns an unsupported_key error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.overrides.units": ["unsupported_key"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.units": ["unsupported_key"]})
       end
     end
 
-    context "when the addon identity is missing" do
-      let(:addon_item) { super().except("id", "local_id") }
+    context "when the add_on identity is missing" do
+      let(:add_on_item) { super().except("id", "local_id") }
 
       it "requires id and local_id at update scope" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
           {
-            "billing_items.addons.0.id": ["value_is_mandatory"],
-            "billing_items.addons.0.local_id": ["value_is_mandatory"]
+            "billing_items.add_ons.0.id": ["value_is_mandatory"],
+            "billing_items.add_ons.0.local_id": ["value_is_mandatory"]
           }
         )
       end
     end
 
-    context "when the addon id is not a uuid" do
-      let(:addon_item) { super().merge("id" => "not-a-uuid") }
+    context "when the add_on id is not a uuid" do
+      let(:add_on_item) { super().merge("id" => "not-a-uuid") }
 
       it "returns an invalid_format error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.id": ["invalid_format"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.id": ["invalid_format"]})
       end
     end
 
     context "when local_id is empty" do
-      let(:addon_item) { super().merge("local_id" => "") }
+      let(:add_on_item) { super().merge("local_id" => "") }
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.local_id": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.local_id": ["invalid_value"]})
       end
     end
 
@@ -130,7 +130,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.payload.units": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.units": ["invalid_value"]})
       end
     end
 
@@ -139,7 +139,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_type error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.payload.units": ["invalid_type"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.units": ["invalid_type"]})
       end
     end
 
@@ -150,8 +150,8 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
           {
-            "billing_items.addons.0.payload.unit_amount_cents": ["invalid_value"],
-            "billing_items.addons.0.payload.total_amount_cents": ["invalid_type"]
+            "billing_items.add_ons.0.payload.unit_amount_cents": ["invalid_value"],
+            "billing_items.add_ons.0.payload.total_amount_cents": ["invalid_type"]
           }
         )
       end
@@ -162,7 +162,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_format error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.payload.from_datetime": ["invalid_format"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.from_datetime": ["invalid_format"]})
       end
     end
 
@@ -171,7 +171,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_type error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.payload.to_datetime": ["invalid_type"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.to_datetime": ["invalid_type"]})
       end
     end
 
@@ -186,21 +186,21 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
     context "when the scope is approve" do
       let(:scope) { :approve }
 
-      context "when the addons list is empty" do
-        let(:billing_items) { {"addons" => []} }
+      context "when the add_ons list is empty" do
+        let(:billing_items) { {"add_ons" => []} }
 
         it "returns an invalid_count error" do
           expect(validator).not_to be_valid
-          expect(result.error.messages).to eq({"billing_items.addons": ["invalid_count"]})
+          expect(result.error.messages).to eq({"billing_items.add_ons": ["invalid_count"]})
         end
       end
 
-      context "when an addon has no payload" do
-        let(:addon_item) { super().except("payload") }
+      context "when an add_on has no payload" do
+        let(:add_on_item) { super().except("payload") }
 
         it "requires the payload" do
           expect(validator).not_to be_valid
-          expect(result.error.messages).to eq({"billing_items.addons.0.payload": ["value_is_mandatory"]})
+          expect(result.error.messages).to eq({"billing_items.add_ons.0.payload": ["value_is_mandatory"]})
         end
       end
 
@@ -211,10 +211,10 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
           expect(validator).not_to be_valid
           expect(result.error.messages).to eq(
             {
-              "billing_items.addons.0.payload.code": ["value_is_mandatory"],
-              "billing_items.addons.0.payload.units": ["value_is_mandatory"],
-              "billing_items.addons.0.payload.unit_amount_cents": ["value_is_mandatory"],
-              "billing_items.addons.0.payload.total_amount_cents": ["value_is_mandatory"]
+              "billing_items.add_ons.0.payload.code": ["value_is_mandatory"],
+              "billing_items.add_ons.0.payload.units": ["value_is_mandatory"],
+              "billing_items.add_ons.0.payload.unit_amount_cents": ["value_is_mandatory"],
+              "billing_items.add_ons.0.payload.total_amount_cents": ["value_is_mandatory"]
             }
           )
         end
@@ -230,22 +230,22 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
       end
     end
 
-    context "with errors on multiple addons" do
+    context "with errors on multiple add_ons" do
       let(:billing_items) do
         {
-          "addons" => [
-            addon_item.merge("id" => "not-a-uuid"),
-            addon_item.merge("payload" => payload.merge("units" => -1))
+          "add_ons" => [
+            add_on_item.merge("id" => "not-a-uuid"),
+            add_on_item.merge("payload" => payload.merge("units" => -1))
           ]
         }
       end
 
-      it "keys each error with the addon index" do
+      it "keys each error with the add_on index" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
           {
-            "billing_items.addons.0.id": ["invalid_format"],
-            "billing_items.addons.1.payload.units": ["invalid_value"]
+            "billing_items.add_ons.0.id": ["invalid_format"],
+            "billing_items.add_ons.1.payload.units": ["invalid_value"]
           }
         )
       end

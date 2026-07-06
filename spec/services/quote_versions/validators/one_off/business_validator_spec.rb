@@ -12,7 +12,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
   let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
   let(:add_on) { create(:add_on, organization:) }
   let(:scope) { :update }
-  let(:addon_item) do
+  let(:add_on_item) do
     {
       "id" => add_on.id,
       "local_id" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
@@ -27,7 +27,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
       "total_amount_cents" => 10_000
     }
   end
-  let(:billing_items) { {"addons" => [addon_item]} }
+  let(:billing_items) { {"add_ons" => [add_on_item]} }
 
   describe "#valid?" do
     context "with a valid quote version" do
@@ -64,11 +64,11 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
     end
 
     context "when the add-on does not exist" do
-      let(:addon_item) { super().merge("id" => "11111111-2222-3333-4444-555555555555") }
+      let(:add_on_item) { super().merge("id" => "11111111-2222-3333-4444-555555555555") }
 
       it "returns an add_on_not_found error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.id": ["add_on_not_found"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.id": ["add_on_not_found"]})
       end
     end
 
@@ -85,7 +85,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "returns an add_on_not_found error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.id": ["add_on_not_found"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.id": ["add_on_not_found"]})
       end
     end
 
@@ -94,7 +94,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "requires to_datetime" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.payload.to_datetime": ["value_is_mandatory"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.to_datetime": ["value_is_mandatory"]})
       end
     end
 
@@ -103,7 +103,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "requires from_datetime" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.payload.from_datetime": ["value_is_mandatory"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.from_datetime": ["value_is_mandatory"]})
       end
     end
 
@@ -112,7 +112,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "returns an invalid_date_range error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.payload.from_datetime": ["invalid_date_range"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.from_datetime": ["invalid_date_range"]})
       end
     end
 
@@ -124,19 +124,19 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
       end
     end
 
-    context "with errors on multiple addons" do
+    context "with errors on multiple add_ons" do
       let(:billing_items) do
         {
-          "addons" => [
-            addon_item,
-            addon_item.merge("id" => "11111111-2222-3333-4444-555555555555")
+          "add_ons" => [
+            add_on_item,
+            add_on_item.merge("id" => "11111111-2222-3333-4444-555555555555")
           ]
         }
       end
 
-      it "keys each error with the addon index" do
+      it "keys each error with the add_on index" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.1.id": ["add_on_not_found"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.1.id": ["add_on_not_found"]})
       end
     end
   end

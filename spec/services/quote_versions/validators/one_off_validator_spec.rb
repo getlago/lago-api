@@ -12,7 +12,7 @@ RSpec.describe QuoteVersions::Validators::OneOffValidator do
   let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR", billing_items:) }
   let(:add_on) { create(:add_on, organization:) }
   let(:scope) { :approve }
-  let(:addon_item) do
+  let(:add_on_item) do
     {
       "id" => add_on.id,
       "local_id" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
@@ -27,7 +27,7 @@ RSpec.describe QuoteVersions::Validators::OneOffValidator do
       "total_amount_cents" => 10_000
     }
   end
-  let(:billing_items) { {"addons" => [addon_item]} }
+  let(:billing_items) { {"add_ons" => [add_on_item]} }
 
   describe "#valid?" do
     context "with a complete valid quote version" do
@@ -44,28 +44,28 @@ RSpec.describe QuoteVersions::Validators::OneOffValidator do
       it "returns the structural errors first" do
         expect(validator).not_to be_valid
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages).to eq({"billing_items.addons.0.payload.units": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.units": ["invalid_value"]})
       end
     end
 
     context "with a valid structure and an unknown add-on" do
-      let(:addon_item) { super().merge("id" => "11111111-2222-3333-4444-555555555555") }
+      let(:add_on_item) { super().merge("id" => "11111111-2222-3333-4444-555555555555") }
 
       it "reports the business error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.addons.0.id": ["add_on_not_found"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.id": ["add_on_not_found"]})
       end
     end
 
     context "when the structure is invalid" do
       let(:payload) { super().merge("tax_codes" => ["vat_20"]) }
-      let(:addon_item) { super().merge("id" => "11111111-2222-3333-4444-555555555555") }
+      let(:add_on_item) { super().merge("id" => "11111111-2222-3333-4444-555555555555") }
       let(:quote_version) { create(:quote_version, quote:, organization:, currency: nil, billing_items:) }
 
       it "returns only structural errors and skips business validation" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
-          {"billing_items.addons.0.payload.tax_codes": ["unsupported_key"]}
+          {"billing_items.add_ons.0.payload.tax_codes": ["unsupported_key"]}
         )
       end
     end
@@ -73,7 +73,7 @@ RSpec.describe QuoteVersions::Validators::OneOffValidator do
     context "when billing_items has symbol keys" do
       let(:billing_items) do
         {
-          addons: [
+          add_ons: [
             {
               id: add_on.id,
               local_id: "3d08b2df-4e4c-4d58-b415-a525c1663735",

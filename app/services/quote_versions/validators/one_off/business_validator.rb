@@ -16,7 +16,7 @@ module QuoteVersions
 
         def valid?
           validate_currency
-          validate_addons
+          validate_add_ons
 
           if errors?
             result.validation_failure!(errors:)
@@ -40,39 +40,39 @@ module QuoteVersions
           end
         end
 
-        def validate_addons
-          addons.each_with_index do |addon, index|
-            validate_add_on_existence(addon, index)
-            validate_datetimes(addon, index)
+        def validate_add_ons
+          add_ons.each_with_index do |add_on, index|
+            validate_add_on_existence(add_on, index)
+            validate_datetimes(add_on, index)
           end
         end
 
-        def validate_add_on_existence(addon, index)
-          unless known_add_on_ids.include?(addon["id"])
-            add_error(field: addon_field(index, "id"), error_code: "add_on_not_found")
+        def validate_add_on_existence(add_on, index)
+          unless known_add_on_ids.include?(add_on["id"])
+            add_error(field: add_on_field(index, "id"), error_code: "add_on_not_found")
           end
         end
 
-        def validate_datetimes(addon, index)
-          from = addon.dig("payload", "from_datetime")
-          to = addon.dig("payload", "to_datetime")
+        def validate_datetimes(add_on, index)
+          from = add_on.dig("payload", "from_datetime")
+          to = add_on.dig("payload", "to_datetime")
           return if from.nil? && to.nil?
 
           if from.nil?
-            add_error(field: addon_field(index, "payload.from_datetime"), error_code: "value_is_mandatory")
+            add_error(field: add_on_field(index, "payload.from_datetime"), error_code: "value_is_mandatory")
           elsif to.nil?
-            add_error(field: addon_field(index, "payload.to_datetime"), error_code: "value_is_mandatory")
+            add_error(field: add_on_field(index, "payload.to_datetime"), error_code: "value_is_mandatory")
           elsif Time.zone.parse(from) > Time.zone.parse(to)
-            add_error(field: addon_field(index, "payload.from_datetime"), error_code: "invalid_date_range")
+            add_error(field: add_on_field(index, "payload.from_datetime"), error_code: "invalid_date_range")
           end
         end
 
-        def addons
-          billing_items["addons"] || []
+        def add_ons
+          billing_items["add_ons"] || []
         end
 
-        def addon_field(index, suffix)
-          :"billing_items.addons.#{index}.#{suffix}"
+        def add_on_field(index, suffix)
+          :"billing_items.add_ons.#{index}.#{suffix}"
         end
 
         def known_add_on_ids
@@ -80,7 +80,7 @@ module QuoteVersions
             .organization
             .add_ons
             .with_discarded
-            .where(id: addons.map { |addon| addon["id"] })
+            .where(id: add_ons.map { |add_on| add_on["id"] })
             .pluck(:id)
             .to_set
         end

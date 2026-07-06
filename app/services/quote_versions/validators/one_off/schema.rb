@@ -9,7 +9,7 @@ module QuoteVersions
           "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
           "x-error" => {"type" => "invalid_type", "required" => "value_is_mandatory"},
           "properties" => {
-            "addons" => {
+            "add_ons" => {
               "type" => "array",
               "x-error" => {"type" => "invalid_type", "minItems" => "invalid_count"},
               "items" => {
@@ -93,12 +93,12 @@ module QuoteVersions
         }.freeze
 
         APPROVE_DEFINITION = UPDATE_DEFINITION.deep_dup.tap do |schema|
-          schema["required"] = ["addons"]
+          schema["required"] = ["add_ons"]
 
-          addons = schema["properties"]["addons"]
-          addons["minItems"] = 1
-          addons["items"]["required"] += ["payload"]
-          addons["items"]["properties"]["payload"]["required"] =
+          add_ons = schema["properties"]["add_ons"]
+          add_ons["minItems"] = 1
+          add_ons["items"]["required"] += ["payload"]
+          add_ons["items"]["properties"]["payload"]["required"] =
             %w[code units unit_amount_cents total_amount_cents]
         end.freeze
 

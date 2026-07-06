@@ -45,7 +45,7 @@ RSpec.describe QuoteVersions::UpdateService do
       let(:update_params) { {billing_items:, currency: "EUR"} }
       let(:billing_items) do
         {
-          "addons" => [
+          "add_ons" => [
             {
               "id" => add_on.id,
               "local_id" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
@@ -67,7 +67,7 @@ RSpec.describe QuoteVersions::UpdateService do
 
       context "when the payload is invalid" do
         let(:billing_items) do
-          {"addons" => [{"id" => "not-a-uuid", "local_id" => "3d08b2df", "payload" => {"units" => 0}}]}
+          {"add_ons" => [{"id" => "not-a-uuid", "local_id" => "3d08b2df", "payload" => {"units" => 0}}]}
         end
 
         it "returns a validation failure and does not persist the changes" do
@@ -75,8 +75,8 @@ RSpec.describe QuoteVersions::UpdateService do
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages).to eq(
             {
-              "billing_items.addons.0.id": ["invalid_format"],
-              "billing_items.addons.0.payload.units": ["invalid_value"]
+              "billing_items.add_ons.0.id": ["invalid_format"],
+              "billing_items.add_ons.0.payload.units": ["invalid_value"]
             }
           )
 
