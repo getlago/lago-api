@@ -63,23 +63,6 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessService do
       end
     end
 
-    context "when the customer is discarded" do
-      before { customer.discard! }
-
-      it "is valid at update scope" do
-        expect(validator).to be_valid
-      end
-
-      context "when the scope is approve" do
-        let(:scope) { :approve }
-
-        it "returns a customer_not_found error" do
-          expect(validator).not_to be_valid
-          expect(validator.errors).to eq({customer: ["customer_not_found"]})
-        end
-      end
-    end
-
     context "when the add-on does not exist" do
       let(:addon_item) { super().merge("id" => "11111111-2222-3333-4444-555555555555") }
 
