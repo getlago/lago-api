@@ -8,6 +8,7 @@ class ApiKey < ApplicationRecord
     customer event fee invoice organization order order_form payment payment_receipt payment_request payment_method plan subscription lifetime_usage
     tax wallet wallet_transaction webhook_endpoint webhook_jwt_public_key invoice_custom_section
     billing_entity alert feature security_log quote product product_item rate_card plan_rate_card
+    subscription_rate_card
   ].freeze
 
   MODES = %w[read write].freeze

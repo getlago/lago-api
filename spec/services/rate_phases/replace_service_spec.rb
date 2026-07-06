@@ -88,7 +88,7 @@ RSpec.describe RatePhases::ReplaceService do
 
     it "returns a not found failure" do
       expect(result).not_to be_success
-      expect(result.error.resource).to eq("plan_rate_card")
+      expect(result.error.resource).to eq("rate_phaseable")
     end
   end
 
@@ -135,6 +135,31 @@ RSpec.describe RatePhases::ReplaceService do
     it "returns a plan_locked failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_phases]).to include("plan_locked")
+    end
+  end
+
+  context "with a subscription product item parent" do
+    subject(:result) { described_class.call(subscription_rate_card:, phases_params:) }
+
+    let(:subscription) { create(:subscription, :pending, organization:) }
+    let(:subscription_rate_card) { create(:subscription_rate_card, organization:, subscription:, rate_card:) }
+
+    it "replaces the phase sequence on the subscription entry" do
+      create(:rate_phase, :subscription_level, organization:, subscription_rate_card:, position: 1)
+
+      expect { result }.to change { subscription_rate_card.rate_phases.reload.pluck(:name) }
+        .to(%w[trial standard])
+
+      expect(result.rate_phases.map(&:subscription_rate_card_id).uniq).to eq([subscription_rate_card.id])
+    end
+
+    context "when the subscription is active" do
+      let(:subscription) { create(:subscription, organization:) }
+
+      it "forbids editing the phases" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:rate_phases]).to eq(["subscription_locked"])
+      end
     end
   end
 end
