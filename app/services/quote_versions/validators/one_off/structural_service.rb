@@ -4,16 +4,6 @@ module QuoteVersions
   module Validators
     module OneOff
       class StructuralService
-        TYPE_KEYWORDS = %w[type string integer number boolean object array null].freeze
-
-        ERROR_CODES = {
-          "format" => "invalid_format",
-          "minItems" => "invalid_count",
-          "minimum" => "invalid_value",
-          "exclusiveMinimum" => "invalid_value",
-          "minLength" => "invalid_value"
-        }.freeze
-
         attr_reader :errors
 
         def initialize(billing_items:, scope:)
@@ -37,7 +27,7 @@ module QuoteVersions
         def add_schema_error(schema_error)
           if schema_error["type"] == "required"
             schema_error.dig("details", "missing_keys").each do |missing_key|
-              add_error(pointer: "#{schema_error["data_pointer"]}/#{missing_key}", code: "value_is_mandatory")
+              add_error(pointer: "#{schema_error["data_pointer"]}/#{missing_key}", code: error_code(schema_error))
             end
           else
             add_error(pointer: schema_error["data_pointer"], code: error_code(schema_error))
@@ -51,14 +41,10 @@ module QuoteVersions
         end
 
         def error_code(schema_error)
-          type = schema_error["type"]
-
-          if type == "schema" && schema_error["schema_pointer"].end_with?("/additionalProperties")
-            "unsupported_key"
-          elsif TYPE_KEYWORDS.include?(type)
-            "invalid_type"
+          if schema_error["x-error"]
+            schema_error["error"]
           else
-            ERROR_CODES.fetch(type, "is_invalid")
+            "is_invalid"
           end
         end
       end
