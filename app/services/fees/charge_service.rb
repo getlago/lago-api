@@ -2,6 +2,8 @@
 
 module Fees
   class ChargeService < BaseService
+    Result = BaseResult[:fees, :cached_aggregations]
+
     # optional params:
     # | usage_filters - UsageFilters
     #  - context (:current_usage, :invoice_preview, :recurring) - to be moved in usage_filters

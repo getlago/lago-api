@@ -6,6 +6,8 @@ module PaymentRequests
       include Customers::PaymentProviderFinder
       include Updatable
 
+      Result = BaseResult[:payable, :payment, :payment_provider]
+
       def initialize(payable:, payment_provider: nil, payment_method_params: {})
         @payable = payable
         @provider = payment_provider&.to_sym

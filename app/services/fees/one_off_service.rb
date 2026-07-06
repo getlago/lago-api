@@ -2,6 +2,8 @@
 
 module Fees
   class OneOffService < BaseService
+    Result = BaseResult[:fees]
+
     def initialize(invoice:, fees:)
       @invoice = invoice
       @fees = fees
