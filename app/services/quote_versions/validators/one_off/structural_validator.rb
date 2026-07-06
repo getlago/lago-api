@@ -3,7 +3,7 @@
 module QuoteVersions
   module Validators
     module OneOff
-      class StructuralService
+      class StructuralValidator
         attr_reader :errors
 
         def initialize(billing_items:, scope:)
@@ -27,20 +27,24 @@ module QuoteVersions
         def add_schema_error(schema_error)
           if schema_error["type"] == "required"
             schema_error.dig("details", "missing_keys").each do |missing_key|
-              add_error(pointer: "#{schema_error["data_pointer"]}/#{missing_key}", code: error_code(schema_error))
+              field = field_for("#{schema_error["data_pointer"]}/#{missing_key}")
+              add_error(field:, error_code: code_for(schema_error))
             end
           else
-            add_error(pointer: schema_error["data_pointer"], code: error_code(schema_error))
+            add_error(field: field_for(schema_error["data_pointer"]), error_code: code_for(schema_error))
           end
         end
 
-        def add_error(pointer:, code:)
-          field = ["billing_items", *pointer.split("/").reject(&:empty?)].join(".").to_sym
-          errors[field] ||= []
-          errors[field] |= [code]
+        def field_for(pointer)
+          ["billing_items", *pointer.split("/").reject(&:empty?)].join(".").to_sym
         end
 
-        def error_code(schema_error)
+        def add_error(field:, error_code:)
+          errors[field] ||= []
+          errors[field] |= [error_code]
+        end
+
+        def code_for(schema_error)
           if schema_error["x-error"]
             schema_error["error"]
           else

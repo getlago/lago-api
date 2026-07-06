@@ -3,7 +3,7 @@
 module QuoteVersions
   module Validators
     module OneOff
-      class BusinessService
+      class BusinessValidator
         include Currencies
 
         attr_reader :errors
@@ -30,9 +30,9 @@ module QuoteVersions
           currency = quote_version.currency
 
           if currency.blank?
-            add_error(field: :currency, code: "value_is_mandatory") if scope == :approve
+            add_error(field: :currency, error_code: "value_is_mandatory") if scope == :approve
           elsif self.class.currency_list.exclude?(currency)
-            add_error(field: :currency, code: "invalid_currency")
+            add_error(field: :currency, error_code: "invalid_currency")
           end
         end
 
@@ -45,7 +45,7 @@ module QuoteVersions
 
         def validate_add_on_existence(addon, index)
           unless known_add_on_ids.include?(addon["id"])
-            add_error(field: addon_field(index, "id"), code: "add_on_not_found")
+            add_error(field: addon_field(index, "id"), error_code: "add_on_not_found")
           end
         end
 
@@ -55,11 +55,11 @@ module QuoteVersions
           return if from.nil? && to.nil?
 
           if from.nil?
-            add_error(field: addon_field(index, "payload.from_datetime"), code: "value_is_mandatory")
+            add_error(field: addon_field(index, "payload.from_datetime"), error_code: "value_is_mandatory")
           elsif to.nil?
-            add_error(field: addon_field(index, "payload.to_datetime"), code: "value_is_mandatory")
+            add_error(field: addon_field(index, "payload.to_datetime"), error_code: "value_is_mandatory")
           elsif Time.zone.parse(from) > Time.zone.parse(to)
-            add_error(field: addon_field(index, "payload.from_datetime"), code: "invalid_date_range")
+            add_error(field: addon_field(index, "payload.from_datetime"), error_code: "invalid_date_range")
           end
         end
 
@@ -81,9 +81,9 @@ module QuoteVersions
             .to_set
         end
 
-        def add_error(field:, code:)
+        def add_error(field:, error_code:)
           errors[field.to_sym] ||= []
-          errors[field.to_sym] << code
+          errors[field.to_sym] << error_code
         end
       end
     end
