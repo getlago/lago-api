@@ -156,6 +156,8 @@ orders:
     - manager
   update:
     - manager
+  execute:
+    - manager
 organization:
   view:
     - finance
