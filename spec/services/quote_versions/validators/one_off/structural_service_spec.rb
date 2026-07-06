@@ -9,7 +9,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralService do
   let(:addon_item) do
     {
       "id" => "48e59220-6722-49c1-8cdf-eacd040e2a56",
-      "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+      "local_id" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
       "payload" => payload,
       "overrides" => {
         "unit_amount_cents" => 12_000,
@@ -93,14 +93,14 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralService do
     end
 
     context "when the addon identity is missing" do
-      let(:addon_item) { super().except("id", "localId") }
+      let(:addon_item) { super().except("id", "local_id") }
 
-      it "requires id and localId at update scope" do
+      it "requires id and local_id at update scope" do
         expect(validator).not_to be_valid
         expect(validator.errors).to eq(
           {
             "billing_items.addons.0.id": ["value_is_mandatory"],
-            "billing_items.addons.0.localId": ["value_is_mandatory"]
+            "billing_items.addons.0.local_id": ["value_is_mandatory"]
           }
         )
       end
@@ -115,12 +115,12 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralService do
       end
     end
 
-    context "when localId is empty" do
-      let(:addon_item) { super().merge("localId" => "") }
+    context "when local_id is empty" do
+      let(:addon_item) { super().merge("local_id" => "") }
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.localId": ["invalid_value"]})
+        expect(validator.errors).to eq({"billing_items.addons.0.local_id": ["invalid_value"]})
       end
     end
 
