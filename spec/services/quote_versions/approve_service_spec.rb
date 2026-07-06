@@ -94,6 +94,46 @@ RSpec.describe QuoteVersions::ApproveService do
       end
     end
 
+    context "when the quote is one_off", :premium do
+      let(:quote) { create(:quote, organization:, order_type: :one_off) }
+      let(:quote_version) do
+        create(
+          :quote_version,
+          :with_one_off_billing_items,
+          quote:,
+          organization:,
+          start_date: Date.new(2026, 1, 1),
+          end_date: Date.new(2027, 1, 1)
+        )
+      end
+
+      it "approves the quote version" do
+        expect(result).to be_success
+        expect(result.quote_version.approved?).to eq(true)
+      end
+
+      context "when the billing items are incomplete" do
+        let(:quote_version) { create(:quote_version, quote:, organization:) }
+
+        it "does not approve the quote version" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq(
+            {
+              "billing_items.addons": ["value_is_mandatory"],
+              currency: ["value_is_mandatory"]
+            }
+          )
+
+          expect(quote_version.reload.approved?).to eq(false)
+        end
+
+        it "does not create an order form" do
+          expect { result }.not_to change(OrderForm, :count)
+        end
+      end
+    end
+
     context "when the quote version is voided", :premium do
       let(:quote_version) { create(:quote_version, :voided, quote:, organization:) }
 
