@@ -422,44 +422,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
-  if include_feature?(:distinct_codes)
-    describe "#distinct_codes" do
-      before do
-        create_event(
-          timestamp: subscription_started_at + (1..10).to_a.sample.days,
-          value: "value",
-          transaction_id: SecureRandom.uuid,
-          code: "other_code"
-        )
-      end
-
-      it "returns the distinct event codes" do
-        expect(event_store.distinct_codes).to match_array([code, "other_code"])
-      end
-
-      context "when codes are provided" do
-        it "returns only the distinct event codes matching the provided codes" do
-          expect(event_store.distinct_codes(codes: [code, "unknown_code"])).to eq([code])
-        end
-
-        context "when an event with a provided code exists outside the period" do
-          before do
-            create_event(
-              timestamp: boundaries[:to_datetime] + 1.day,
-              value: "value",
-              transaction_id: SecureRandom.uuid,
-              code: "out_of_period_code"
-            )
-          end
-
-          it "does not return the code" do
-            expect(event_store.distinct_codes(codes: [code, "out_of_period_code"])).to eq([code])
-          end
-        end
-      end
-    end
-  end
-
   if include_feature?(:grouped_count)
     describe "#grouped_count" do
       let(:grouped_by) { %w[region] }

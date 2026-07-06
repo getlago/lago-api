@@ -148,19 +148,6 @@ module Events
         conditions.join(" AND ")
       end
 
-      def distinct_codes(codes: nil)
-        Events::Stores::Utils::ClickhouseConnection.with_retry do
-          scope = ::Clickhouse::EventsEnriched
-            .where(external_subscription_id: subscription.external_id)
-            .where(organization_id: subscription.organization.id)
-            .where("events_enriched.timestamp >= ?", from_datetime)
-            .where("events_enriched.timestamp <= ?", applicable_to_datetime)
-
-          scope = scope.where(code: codes) unless codes.nil?
-          scope.pluck("DISTINCT(code)")
-        end
-      end
-
       def distinct_charges_and_filters(codes: nil)
         # Implementation relies directly on the events_enriched_expanded table,
         # so we delegate the implementation to the ClickhouseEnrichedStore
