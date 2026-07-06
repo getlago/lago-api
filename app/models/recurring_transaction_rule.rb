@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class RecurringTransactionRule < ApplicationRecord
+  include HasPurchaseOrderNumber
   include PaperTrailTraceable
 
   belongs_to :wallet
@@ -140,6 +141,7 @@ end
 #  method                              :integer          default("fixed"), not null
 #  paid_credits                        :decimal(30, 5)   default(0.0), not null
 #  payment_method_type                 :enum             default("provider"), not null
+#  purchase_order_number               :string
 #  skip_invoice_custom_sections        :boolean          default(FALSE), not null
 #  started_at                          :datetime
 #  status                              :integer          default("active")

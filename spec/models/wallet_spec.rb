@@ -6,6 +6,7 @@ RSpec.describe Wallet do
   subject(:wallet) { build(:wallet) }
 
   it_behaves_like "paper_trail traceable"
+  it_behaves_like "a model with a purchase order number"
 
   describe "associations" do
     it do

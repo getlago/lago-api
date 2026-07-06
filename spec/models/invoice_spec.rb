@@ -8,6 +8,7 @@ RSpec.describe Invoice do
   let(:organization) { create(:organization) }
 
   it_behaves_like "paper_trail traceable"
+  it_behaves_like "a model with a purchase order number"
 
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_many(:error_details) }
