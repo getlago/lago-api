@@ -4,11 +4,13 @@ module QuoteVersions
   module Validators
     module OneOff
       class BusinessService
+        include Currencies
+
         attr_reader :errors
 
         def initialize(quote_version:, billing_items:, scope:, payload_valid:)
           @quote_version = quote_version
-          @billing_items = billing_items || {}
+          @billing_items = billing_items
           @scope = scope
           @payload_valid = payload_valid
           @errors = {}
@@ -30,7 +32,7 @@ module QuoteVersions
 
           if currency.blank?
             add_error(field: :currency, code: "value_is_mandatory") if scope == :approve
-          elsif !Currencies::ACCEPTED_CURRENCIES.key?(currency.to_sym)
+          elsif self.class.currency_list.exclude?(currency)
             add_error(field: :currency, code: "invalid_currency")
           end
         end
