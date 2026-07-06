@@ -11,22 +11,10 @@ module QuoteVersions
       end
 
       def valid?
-        structural = OneOff::StructuralValidator.new(billing_items:, scope:)
+        structural = OneOff::StructuralValidator.new(result, billing_items:, scope:)
+        return false unless structural.valid?
 
-        if structural.valid?
-          business = OneOff::BusinessValidator.new(quote_version:, billing_items:, scope:)
-          business.valid?
-          merge_errors(business.errors)
-        else
-          merge_errors(structural.errors)
-        end
-
-        if errors?
-          result.validation_failure!(errors:)
-          return false
-        end
-
-        true
+        OneOff::BusinessValidator.new(result, quote_version:, billing_items:, scope:).valid?
       end
 
       private
@@ -44,12 +32,6 @@ module QuoteVersions
           items.deep_stringify_keys
         else
           items
-        end
-      end
-
-      def merge_errors(layer_errors)
-        layer_errors.each do |field, codes|
-          codes.each { |code| add_error(field:, error_code: code) }
         end
       end
     end

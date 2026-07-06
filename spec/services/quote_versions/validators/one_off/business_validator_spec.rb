@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
-  subject(:validator) { described_class.new(quote_version:, billing_items:, scope:) }
+  subject(:validator) { described_class.new(result, quote_version:, billing_items:, scope:) }
 
+  let(:result) { BaseService::Result.new }
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:, order_type: :one_off) }
@@ -31,8 +32,8 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
   describe "#valid?" do
     context "with a valid quote version" do
       it "is valid for both scopes" do
-        expect(described_class.new(quote_version:, billing_items:, scope: :update)).to be_valid
-        expect(described_class.new(quote_version:, billing_items:, scope: :approve)).to be_valid
+        expect(described_class.new(BaseService::Result.new, quote_version:, billing_items:, scope: :update)).to be_valid
+        expect(described_class.new(BaseService::Result.new, quote_version:, billing_items:, scope: :approve)).to be_valid
       end
     end
 
@@ -48,7 +49,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
         it "requires the currency" do
           expect(validator).not_to be_valid
-          expect(validator.errors).to eq({currency: ["value_is_mandatory"]})
+          expect(result.error.messages).to eq({currency: ["value_is_mandatory"]})
         end
       end
     end
@@ -58,7 +59,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "returns an invalid_currency error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({currency: ["invalid_currency"]})
+        expect(result.error.messages).to eq({currency: ["invalid_currency"]})
       end
     end
 
@@ -67,7 +68,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "returns an add_on_not_found error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.id": ["add_on_not_found"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.id": ["add_on_not_found"]})
       end
     end
 
@@ -84,7 +85,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "returns an add_on_not_found error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.id": ["add_on_not_found"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.id": ["add_on_not_found"]})
       end
     end
 
@@ -93,7 +94,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "requires to_datetime" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.payload.to_datetime": ["value_is_mandatory"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.payload.to_datetime": ["value_is_mandatory"]})
       end
     end
 
@@ -102,7 +103,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "requires from_datetime" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.payload.from_datetime": ["value_is_mandatory"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.payload.from_datetime": ["value_is_mandatory"]})
       end
     end
 
@@ -111,7 +112,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "returns an invalid_date_range error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.payload.from_datetime": ["invalid_date_range"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.payload.from_datetime": ["invalid_date_range"]})
       end
     end
 
@@ -135,7 +136,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "keys each error with the addon index" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.1.id": ["add_on_not_found"]})
+        expect(result.error.messages).to eq({"billing_items.addons.1.id": ["add_on_not_found"]})
       end
     end
   end

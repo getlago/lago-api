@@ -3,13 +3,12 @@
 module QuoteVersions
   module Validators
     module OneOff
-      class StructuralValidator
-        attr_reader :errors
-
-        def initialize(billing_items:, scope:)
+      class StructuralValidator < ::BaseValidator
+        def initialize(result, billing_items:, scope:)
           @billing_items = billing_items || {}
           @scope = scope
-          @errors = {}
+
+          super
         end
 
         def valid?
@@ -17,7 +16,12 @@ module QuoteVersions
             add_schema_error(schema_error)
           end
 
-          errors.empty?
+          if errors?
+            result.validation_failure!(errors:)
+            return false
+          end
+
+          true
         end
 
         private
@@ -37,11 +41,6 @@ module QuoteVersions
 
         def field_for(pointer)
           ["billing_items", *pointer.split("/").reject(&:empty?)].join(".").to_sym
-        end
-
-        def add_error(field:, error_code:)
-          errors[field] ||= []
-          errors[field] |= [error_code]
         end
 
         def code_for(schema_error)

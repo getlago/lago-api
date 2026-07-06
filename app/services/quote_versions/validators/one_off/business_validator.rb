@@ -3,23 +3,27 @@
 module QuoteVersions
   module Validators
     module OneOff
-      class BusinessValidator
+      class BusinessValidator < ::BaseValidator
         include Currencies
 
-        attr_reader :errors
-
-        def initialize(quote_version:, billing_items:, scope:)
+        def initialize(result, quote_version:, billing_items:, scope:)
           @quote_version = quote_version
           @billing_items = billing_items
           @scope = scope
-          @errors = {}
+
+          super
         end
 
         def valid?
           validate_currency
           validate_addons
 
-          errors.empty?
+          if errors?
+            result.validation_failure!(errors:)
+            return false
+          end
+
+          true
         end
 
         private
@@ -79,11 +83,6 @@ module QuoteVersions
             .where(id: addons.map { |addon| addon["id"] })
             .pluck(:id)
             .to_set
-        end
-
-        def add_error(field:, error_code:)
-          errors[field.to_sym] ||= []
-          errors[field.to_sym] << error_code
         end
       end
     end

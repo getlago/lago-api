@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
-  subject(:validator) { described_class.new(billing_items:, scope:) }
+  subject(:validator) { described_class.new(result, billing_items:, scope:) }
 
+  let(:result) { BaseService::Result.new }
   let(:scope) { :update }
   let(:addon_item) do
     {
@@ -33,8 +34,8 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
   describe "#valid?" do
     context "with a full valid payload" do
       it "is valid for both scopes" do
-        expect(described_class.new(billing_items:, scope: :update)).to be_valid
-        expect(described_class.new(billing_items:, scope: :approve)).to be_valid
+        expect(described_class.new(BaseService::Result.new, billing_items:, scope: :update)).to be_valid
+        expect(described_class.new(BaseService::Result.new, billing_items:, scope: :approve)).to be_valid
       end
     end
 
@@ -43,7 +44,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "is valid at update scope" do
         expect(validator).to be_valid
-        expect(validator.errors).to eq({})
+        expect(result).to be_success
       end
 
       context "when the scope is approve" do
@@ -51,7 +52,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
         it "requires the addons list" do
           expect(validator).not_to be_valid
-          expect(validator.errors).to eq({"billing_items.addons": ["value_is_mandatory"]})
+          expect(result.error.messages).to eq({"billing_items.addons": ["value_is_mandatory"]})
         end
       end
     end
@@ -61,7 +62,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_type error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({billing_items: ["invalid_type"]})
+        expect(result.error.messages).to eq({billing_items: ["invalid_type"]})
       end
     end
 
@@ -70,7 +71,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an unsupported_key error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.subscriptions": ["unsupported_key"]})
+        expect(result.error.messages).to eq({"billing_items.subscriptions": ["unsupported_key"]})
       end
     end
 
@@ -79,7 +80,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an unsupported_key error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.payload.tax_codes": ["unsupported_key"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.payload.tax_codes": ["unsupported_key"]})
       end
     end
 
@@ -88,7 +89,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an unsupported_key error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.overrides.units": ["unsupported_key"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.overrides.units": ["unsupported_key"]})
       end
     end
 
@@ -97,7 +98,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "requires id and local_id at update scope" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq(
+        expect(result.error.messages).to eq(
           {
             "billing_items.addons.0.id": ["value_is_mandatory"],
             "billing_items.addons.0.local_id": ["value_is_mandatory"]
@@ -111,7 +112,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_format error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.id": ["invalid_format"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.id": ["invalid_format"]})
       end
     end
 
@@ -120,7 +121,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.local_id": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.local_id": ["invalid_value"]})
       end
     end
 
@@ -129,7 +130,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.payload.units": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.payload.units": ["invalid_value"]})
       end
     end
 
@@ -138,7 +139,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_type error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.payload.units": ["invalid_type"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.payload.units": ["invalid_type"]})
       end
     end
 
@@ -147,7 +148,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns invalid_value and invalid_type errors" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq(
+        expect(result.error.messages).to eq(
           {
             "billing_items.addons.0.payload.unit_amount_cents": ["invalid_value"],
             "billing_items.addons.0.payload.total_amount_cents": ["invalid_type"]
@@ -161,7 +162,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_format error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.payload.from_datetime": ["invalid_format"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.payload.from_datetime": ["invalid_format"]})
       end
     end
 
@@ -170,7 +171,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_type error" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq({"billing_items.addons.0.payload.to_datetime": ["invalid_type"]})
+        expect(result.error.messages).to eq({"billing_items.addons.0.payload.to_datetime": ["invalid_type"]})
       end
     end
 
@@ -190,7 +191,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
         it "returns an invalid_count error" do
           expect(validator).not_to be_valid
-          expect(validator.errors).to eq({"billing_items.addons": ["invalid_count"]})
+          expect(result.error.messages).to eq({"billing_items.addons": ["invalid_count"]})
         end
       end
 
@@ -199,7 +200,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
         it "requires the payload" do
           expect(validator).not_to be_valid
-          expect(validator.errors).to eq({"billing_items.addons.0.payload": ["value_is_mandatory"]})
+          expect(result.error.messages).to eq({"billing_items.addons.0.payload": ["value_is_mandatory"]})
         end
       end
 
@@ -208,7 +209,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
         it "requires the snapshot fields" do
           expect(validator).not_to be_valid
-          expect(validator.errors).to eq(
+          expect(result.error.messages).to eq(
             {
               "billing_items.addons.0.payload.code": ["value_is_mandatory"],
               "billing_items.addons.0.payload.units": ["value_is_mandatory"],
@@ -241,7 +242,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "keys each error with the addon index" do
         expect(validator).not_to be_valid
-        expect(validator.errors).to eq(
+        expect(result.error.messages).to eq(
           {
             "billing_items.addons.0.id": ["invalid_format"],
             "billing_items.addons.1.payload.units": ["invalid_value"]
