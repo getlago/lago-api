@@ -2,7 +2,7 @@
 
 module QuoteVersions
   module Validators
-    class OneOffService < ::BaseValidator
+    class OneOffValidator < ::BaseValidator
       def initialize(result, quote_version:, scope:)
         @quote_version = quote_version
         @scope = scope

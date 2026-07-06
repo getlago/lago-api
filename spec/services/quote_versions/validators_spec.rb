@@ -14,7 +14,7 @@ RSpec.describe QuoteVersions::Validators do
       let(:order_type) { :one_off }
 
       it "returns a one_off validator" do
-        expect(validator).to be_a(QuoteVersions::Validators::OneOffService)
+        expect(validator).to be_a(QuoteVersions::Validators::OneOffValidator)
       end
     end
 
