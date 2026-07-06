@@ -2126,4 +2126,28 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
   end
+
+  describe "product catalog materialization" do
+    before do
+      allow(Subscriptions::ProductCatalog::MaterializeService).to receive(:call!).and_call_original
+    end
+
+    context "when the plan uses the product catalog" do
+      let(:plan) { create(:plan, organization:, pricing_type: "product_catalog") }
+
+      it "materializes the plan's rate cards onto the subscription" do
+        create_service.call
+
+        expect(Subscriptions::ProductCatalog::MaterializeService).to have_received(:call!)
+      end
+    end
+
+    context "when the plan is legacy" do
+      it "does not materialize rate cards" do
+        create_service.call
+
+        expect(Subscriptions::ProductCatalog::MaterializeService).not_to have_received(:call!)
+      end
+    end
+  end
 end
