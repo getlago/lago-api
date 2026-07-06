@@ -130,7 +130,7 @@ RSpec.describe CreditNotes::GeneratePdfService do
       it "returns a result with error" do
         result = credit_note_generate_service.call
 
-        expect(result.success).to be_falsey
+        expect(result).not_to be_success
         expect(result.error.error_code).to eq("credit_note_not_found")
       end
     end
@@ -141,7 +141,7 @@ RSpec.describe CreditNotes::GeneratePdfService do
       it "returns a not found error" do
         result = credit_note_generate_service.call
 
-        expect(result.success).to be_falsey
+        expect(result).not_to be_success
         expect(result.error.error_code).to eq("credit_note_not_found")
       end
     end

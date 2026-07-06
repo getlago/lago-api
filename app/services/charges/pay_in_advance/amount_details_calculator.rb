@@ -3,6 +3,8 @@
 module Charges
   module PayInAdvance
     class AmountDetailsCalculator < BaseService
+      Result = BaseResult
+
       AMOUNT_DETAILS_FOR_SINGLE_EVENT_ENABLED = %w[percentage graduated_percentage].freeze
       PERCENTAGE_CHARGE_AMOUNT_DETAILS_KEYS = %i[units free_units paid_units free_events paid_events fixed_fee_total_amount
         min_max_adjustment_total_amount per_unit_total_amount].freeze
