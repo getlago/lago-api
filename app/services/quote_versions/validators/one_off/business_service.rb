@@ -8,24 +8,23 @@ module QuoteVersions
 
         attr_reader :errors
 
-        def initialize(quote_version:, billing_items:, scope:, payload_valid:)
+        def initialize(quote_version:, billing_items:, scope:)
           @quote_version = quote_version
           @billing_items = billing_items
           @scope = scope
-          @payload_valid = payload_valid
           @errors = {}
         end
 
         def valid?
           validate_currency
-          validate_addons if payload_valid
+          validate_addons
 
           errors.empty?
         end
 
         private
 
-        attr_reader :quote_version, :billing_items, :scope, :payload_valid
+        attr_reader :quote_version, :billing_items, :scope
 
         def validate_currency
           currency = quote_version.currency

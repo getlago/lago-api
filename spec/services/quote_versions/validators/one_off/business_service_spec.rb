@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe QuoteVersions::Validators::OneOff::BusinessService do
-  subject(:validator) { described_class.new(quote_version:, billing_items:, scope:, payload_valid:) }
+  subject(:validator) { described_class.new(quote_version:, billing_items:, scope:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -11,7 +11,6 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessService do
   let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
   let(:add_on) { create(:add_on, organization:) }
   let(:scope) { :update }
-  let(:payload_valid) { true }
   let(:addon_item) do
     {
       "id" => add_on.id,
@@ -32,8 +31,8 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessService do
   describe "#valid?" do
     context "with a valid quote version" do
       it "is valid for both scopes" do
-        expect(described_class.new(quote_version:, billing_items:, scope: :update, payload_valid:)).to be_valid
-        expect(described_class.new(quote_version:, billing_items:, scope: :approve, payload_valid:)).to be_valid
+        expect(described_class.new(quote_version:, billing_items:, scope: :update)).to be_valid
+        expect(described_class.new(quote_version:, billing_items:, scope: :approve)).to be_valid
       end
     end
 
@@ -86,17 +85,6 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessService do
       it "returns an add_on_not_found error" do
         expect(validator).not_to be_valid
         expect(validator.errors).to eq({"billing_items.addons.0.id": ["add_on_not_found"]})
-      end
-    end
-
-    context "when the payload is structurally invalid" do
-      let(:payload_valid) { false }
-      let(:addon_item) { super().merge("id" => "11111111-2222-3333-4444-555555555555") }
-      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "DOUBLOON") }
-
-      it "skips per-addon checks but keeps quote version level ones" do
-        expect(validator).not_to be_valid
-        expect(validator.errors).to eq({currency: ["invalid_currency"]})
       end
     end
 
