@@ -267,11 +267,13 @@ module Customers
         end
       end
 
+      removing_provider = old_provider_customer && billing.key?(:payment_provider) && billing[:payment_provider].nil?
+      customer.payment_provider_code = nil if removing_provider
+
       customer.save!
 
-      if old_provider_customer && billing.key?(:payment_provider) && billing[:payment_provider].nil?
+      if removing_provider
         old_provider_customer.discard!
-        customer.update!(payment_provider_code: nil)
         discard_payment_methods(old_provider_customer.payment_methods)
       end
 
