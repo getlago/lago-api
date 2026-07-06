@@ -12,18 +12,14 @@ module QuoteVersions
 
       def valid?
         structural = OneOff::StructuralService.new(billing_items:, scope:)
-        structural_valid = structural.valid?
 
-        business = OneOff::BusinessService.new(
-          quote_version:,
-          billing_items:,
-          scope:,
-          payload_valid: structural_valid
-        )
-        business.valid?
-
-        merge_errors(structural.errors)
-        merge_errors(business.errors)
+        if structural.valid?
+          business = OneOff::BusinessService.new(quote_version:, billing_items:, scope:)
+          business.valid?
+          merge_errors(business.errors)
+        else
+          merge_errors(structural.errors)
+        end
 
         if errors?
           result.validation_failure!(errors:)

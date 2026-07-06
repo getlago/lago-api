@@ -41,15 +41,10 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
       let(:payload) { super().merge("units" => 0) }
       let(:quote_version) { create(:quote_version, quote:, organization:, currency: "DOUBLOON", billing_items:) }
 
-      it "merges the errors of both layers into the result" do
+      it "returns the structural errors first" do
         expect(validator).not_to be_valid
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages).to eq(
-          {
-            "billing_items.addons.0.payload.units": ["invalid_value"],
-            currency: ["invalid_currency"]
-          }
-        )
+        expect(result.error.messages).to eq({"billing_items.addons.0.payload.units": ["invalid_value"]})
       end
     end
 
@@ -67,13 +62,10 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
       let(:addon_item) { super().merge("id" => "11111111-2222-3333-4444-555555555555") }
       let(:quote_version) { create(:quote_version, quote:, organization:, currency: nil, billing_items:) }
 
-      it "skips per-addon business checks but keeps quote version level ones" do
+      it "returns only structural errors and skips business validation" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
-          {
-            "billing_items.addons.0.payload.tax_codes": ["unsupported_key"],
-            currency: ["value_is_mandatory"]
-          }
+          {"billing_items.addons.0.payload.tax_codes": ["unsupported_key"]}
         )
       end
     end

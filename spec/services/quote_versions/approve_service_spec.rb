@@ -118,12 +118,7 @@ RSpec.describe QuoteVersions::ApproveService do
         it "does not approve the quote version" do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages).to eq(
-            {
-              "billing_items.addons": ["value_is_mandatory"],
-              currency: ["value_is_mandatory"]
-            }
-          )
+          expect(result.error.messages).to eq({"billing_items.addons": ["value_is_mandatory"]})
 
           expect(quote_version.reload.approved?).to eq(false)
         end
