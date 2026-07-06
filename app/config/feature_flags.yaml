@@ -10,10 +10,6 @@ enriched_events_aggregation:
   description: "Use the enriched events store for aggregation queries in ClickHouse"
   owners: ["@vincent-pochet"]
 
-event_property_combinations:
-  description: "Resolve exact charge filters from distinct event property combinations during billing period filtering"
-  owners: ["@vincent-pochet"]
-
 wallet_traceability:
   description: "Enable wallet traceability on newly created wallets"
   owners: ["@groyoh", "@D1353L"]

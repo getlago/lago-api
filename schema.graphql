@@ -5864,7 +5864,6 @@ Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
   enriched_events_aggregation
-  event_property_combinations
   multi_currency
   multi_entity_billing
   multiple_payment_methods
