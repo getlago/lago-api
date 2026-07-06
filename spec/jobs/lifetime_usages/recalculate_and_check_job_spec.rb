@@ -64,4 +64,22 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckJob do
       end
     end
   end
+
+  describe "discard_on" do
+    context "when an Idempotency::IdempotencyError is raised", :premium do
+      before do
+        allow(LifetimeUsages::CalculateService).to receive(:call!)
+        allow(LifetimeUsages::CheckThresholdsService).to receive(:call!)
+          .and_raise(Idempotency::IdempotencyError.new("already exists"))
+      end
+
+      it "discards the job without raising or retrying" do
+        assert_performed_jobs(1, only: [described_class]) do
+          expect do
+            described_class.perform_later(lifetime_usage)
+          end.not_to raise_error
+        end
+      end
+    end
+  end
 end
