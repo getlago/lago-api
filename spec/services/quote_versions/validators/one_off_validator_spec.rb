@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe QuoteVersions::Validators::OneOffService do
+RSpec.describe QuoteVersions::Validators::OneOffValidator do
   subject(:validator) { described_class.new(result, quote_version:, scope:) }
 
   let(:result) { BaseService::Result.new }
