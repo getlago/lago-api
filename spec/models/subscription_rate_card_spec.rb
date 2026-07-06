@@ -60,4 +60,11 @@ RSpec.describe SubscriptionRateCard do
       end
     end
   end
+
+  it_behaves_like "a rate phase parent" do
+    let(:item) { create(:subscription_rate_card) }
+    let(:create_rate_phase) do
+      ->(attributes) { create(:rate_phase, :subscription_level, subscription_rate_card: item, **attributes) }
+    end
+  end
 end
