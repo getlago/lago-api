@@ -3,18 +3,19 @@
 require "rubocop"
 
 module Cops
-  # `expect(SomeJob).to receive(...)` stubs the job class method, so the job is never
-  # enqueued and the expectation hides the real behavior. Assert enqueued jobs with
-  # `have_been_enqueued`/`have_enqueued_job`, or stub with `allow(SomeJob).to receive(...)`
-  # and assert with `expect(SomeJob).to have_received(...)`.
+  # Stubbing a job class (`allow(SomeJob).to receive(...)`, `expect(SomeJob).to receive(...)`)
+  # or asserting the stub (`expect(SomeJob).to have_received(...)`) hides whether the job
+  # was really enqueued. Assert enqueued jobs with `have_been_enqueued`/`have_enqueued_job`.
   #
   # A class counts as a job when its name ends with `Job` or when it is defined under
-  # `app/jobs`. `expect(described_class)` is also checked, using the class of the
-  # innermost enclosing `describe` with a constant argument.
+  # `app/jobs`. `ActiveJob` itself is exempt because `Lago/StubPerformAllLater` directs
+  # specs to stub `ActiveJob.perform_all_later` directly. `described_class` subjects are
+  # also checked, using the class of the innermost enclosing `describe`/`context` with a
+  # constant argument.
   class NoExpectReceiveOnJobCop < ::RuboCop::Cop::Base
-    MSG = "Avoid `expect(...).to receive` on job classes. Assert enqueued jobs with `have_been_enqueued`/`have_enqueued_job`, or use `allow` + `have_received`."
+    MSG = "Do not stub or set message expectations on job classes. Assert enqueued jobs with `have_been_enqueued`/`have_enqueued_job`."
 
-    RECEIVE_MATCHERS = %i[receive receive_messages receive_message_chain].freeze
+    STUB_MATCHERS = %i[receive receive_messages receive_message_chain have_received].freeze
     RESTRICT_ON_SEND = %i[to not_to to_not].freeze
 
     jobs_root = File.expand_path("../../app/jobs", __dir__)
@@ -34,10 +35,10 @@ module Cops
     # Matches:
     #   expect(SendWebhookJob).to <matcher>
     #   expect(Clock::SubscriptionsBillerJob).not_to <matcher>
-    #   expect(described_class).to_not <matcher>
-    def_node_matcher :expect_to?, <<~PATTERN
+    #   allow(described_class).to <matcher>
+    def_node_matcher :allow_or_expect_to?, <<~PATTERN
       (send
-        (send nil? :expect ${(const _ _) (send nil? :described_class)})
+        (send nil? {:allow :expect} ${(const _ _) (send nil? :described_class)})
         {:to :not_to :to_not}
         $_
         ...)
@@ -57,9 +58,9 @@ module Cops
     end
 
     def on_send(node)
-      subject, matcher = expect_to?(node)
+      subject, matcher = allow_or_expect_to?(node)
       return unless matcher
-      return unless receive_matcher?(matcher)
+      return unless stub_matcher?(matcher)
       return unless job_subject?(node, subject)
 
       add_offense(node)
@@ -68,28 +69,28 @@ module Cops
     private
 
     # Follows only the matcher's own chain and compound combinators to find a bare
-    # `receive`, `receive_messages` or `receive_message_chain`: a block node delegates
-    # to its send, `.and`/`.or` recurse into receiver and arguments, and any other
-    # chained call recurses into its receiver. Block bodies are never inspected, so a
-    # nested `expect`/`allow` inside a block does not trigger the cop.
-    def receive_matcher?(node)
+    # `receive`, `receive_messages`, `receive_message_chain` or `have_received`: a block
+    # node delegates to its send, `.and`/`.or` recurse into receiver and arguments, and
+    # any other chained call recurses into its receiver. Block bodies are never
+    # inspected, so a nested `expect`/`allow` inside a block does not trigger the cop.
+    def stub_matcher?(node)
       if node.block_type? || node.numblock_type?
-        return receive_matcher?(node.send_node)
+        return stub_matcher?(node.send_node)
       end
 
       return false unless node.send_type?
 
       if node.receiver.nil?
-        return RECEIVE_MATCHERS.include?(node.method_name)
+        return STUB_MATCHERS.include?(node.method_name)
       end
 
       if %i[and or].include?(node.method_name)
-        return true if receive_matcher?(node.receiver)
+        return true if stub_matcher?(node.receiver)
 
-        return node.arguments.any? { |arg| receive_matcher?(arg) }
+        return node.arguments.any? { |arg| stub_matcher?(arg) }
       end
 
-      receive_matcher?(node.receiver)
+      stub_matcher?(node.receiver)
     end
 
     def job_subject?(node, subject)
@@ -112,7 +113,10 @@ module Cops
     end
 
     def job_const?(const_node)
-      const_node.const_name.end_with?("Job") || JOB_CLASS_NAMES.include?(const_node.const_name)
+      name = const_node.const_name
+      return false if name == "ActiveJob"
+
+      name.end_with?("Job") || JOB_CLASS_NAMES.include?(name)
     end
   end
 end
