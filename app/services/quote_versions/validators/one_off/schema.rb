@@ -16,14 +16,14 @@ module QuoteVersions
                 "type" => "object",
                 "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
                 "x-error" => {"type" => "invalid_type", "required" => "value_is_mandatory"},
-                "required" => %w[id localId],
+                "required" => %w[id local_id],
                 "properties" => {
                   "id" => {
                     "type" => "string",
                     "format" => "uuid",
                     "x-error" => {"type" => "invalid_type", "format" => "invalid_format"}
                   },
-                  "localId" => {
+                  "local_id" => {
                     "type" => "string",
                     "minLength" => 1,
                     "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}

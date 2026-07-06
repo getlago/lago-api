@@ -92,7 +92,7 @@ RSpec.describe QuoteVersions::CreateService do
             "addons" => [
               {
                 "id" => add_on.id,
-                "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+                "local_id" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
                 "payload" => {
                   "code" => add_on.code,
                   "units" => 1,
@@ -113,7 +113,7 @@ RSpec.describe QuoteVersions::CreateService do
 
       context "when the payload is invalid" do
         let(:create_params) do
-          {billing_items: {"addons" => [{"id" => "not-a-uuid", "localId" => "l1"}]}, currency: "EUR"}
+          {billing_items: {"addons" => [{"id" => "not-a-uuid", "local_id" => "l1"}]}, currency: "EUR"}
         end
 
         it "returns a validation failure and does not create the version" do

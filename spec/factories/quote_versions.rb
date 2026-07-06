@@ -23,7 +23,7 @@ FactoryBot.define do
           "addons" => [
             {
               "id" => add_on.id,
-              "localId" => SecureRandom.uuid,
+              "local_id" => SecureRandom.uuid,
               "payload" => {
                 "code" => add_on.code,
                 "units" => 1,

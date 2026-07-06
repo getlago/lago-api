@@ -15,7 +15,7 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
   let(:addon_item) do
     {
       "id" => add_on.id,
-      "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+      "local_id" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
       "payload" => payload
     }
   end
@@ -76,7 +76,7 @@ RSpec.describe QuoteVersions::Validators::OneOffService do
           addons: [
             {
               id: add_on.id,
-              localId: "3d08b2df-4e4c-4d58-b415-a525c1663735",
+              local_id: "3d08b2df-4e4c-4d58-b415-a525c1663735",
               payload: {code: add_on.code, units: 1, unit_amount_cents: 10_000, total_amount_cents: 10_000}
             }
           ]
