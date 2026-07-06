@@ -73,11 +73,55 @@ RSpec.describe QuoteVersions::CreateService do
 
     context "when a concurrent insert wins the unique-index race", :premium do
       it "translates the RecordNotUnique into active_version_exists" do
-        allow(quote.versions).to receive(:create!).and_raise(ActiveRecord::RecordNotUnique)
+        quote_version = build(:quote_version, quote:, organization:)
+        allow(quote.versions).to receive(:new).and_return(quote_version)
+        allow(quote_version).to receive(:save!).and_raise(ActiveRecord::RecordNotUnique)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("active_version_exists")
+      end
+    end
+
+    context "when the quote is one_off", :premium do
+      let(:quote) { create(:quote, organization:, customer:, order_type: :one_off) }
+      let(:add_on) { create(:add_on, organization:) }
+      let(:create_params) do
+        {
+          billing_items: {
+            "addons" => [
+              {
+                "id" => add_on.id,
+                "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+                "payload" => {
+                  "code" => add_on.code,
+                  "units" => 1,
+                  "unit_amount_cents" => 10_000,
+                  "total_amount_cents" => 10_000
+                }
+              }
+            ]
+          },
+          currency: "EUR"
+        }
+      end
+
+      it "creates the draft version" do
+        expect(result).to be_success
+        expect(result.quote_version.billing_items).to eq(create_params[:billing_items])
+      end
+
+      context "when the payload is invalid" do
+        let(:create_params) do
+          {billing_items: {"addons" => [{"id" => "not-a-uuid", "localId" => "l1"}]}, currency: "EUR"}
+        end
+
+        it "returns a validation failure and does not create the version" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({"billing_items.addons.0.id": ["invalid_format"]})
+          expect(quote.versions.count).to eq(0)
+        end
       end
     end
 
