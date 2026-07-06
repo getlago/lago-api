@@ -57,7 +57,8 @@ class Customer < ApplicationRecord
   enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: {allow_nil: true}
 
   before_save :ensure_slug
-  after_update_commit :enqueue_invoices_reindex_job, if: -> { Lago::Meilisearch::Client.enabled? && search_indexed_fields_changed? }
+  after_update :flag_invoices_for_search_reindex, if: -> { Lago::Meilisearch.indexing_enabled? && search_indexed_fields_changed? }
+  after_commit :enqueue_invoices_reindex_job, if: -> { @invoices_search_reindex_needed }
 
   belongs_to :organization
   belongs_to :billing_entity, optional: true
@@ -395,7 +396,12 @@ class Customer < ApplicationRecord
     (saved_changes.keys & (SEARCHABLE_CUSTOMER_FIELDS + ["deleted_at"])).any?
   end
 
+  def flag_invoices_for_search_reindex
+    @invoices_search_reindex_needed = true
+  end
+
   def enqueue_invoices_reindex_job
+    @invoices_search_reindex_needed = false
     Customers::ReindexInvoicesJob.perform_later(id)
   end
 end

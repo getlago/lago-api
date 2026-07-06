@@ -19,6 +19,11 @@ RSpec.describe Lago::Meilisearch::Filter do
     it "escapes embedded quotes" do
       expect(described_class.eq("customer_name", %(Acme "Inc"))).to eq(%(customer_name = "Acme \\"Inc\\""))
     end
+
+    it "escapes backslashes so they cannot neutralize the closing quote" do
+      expect(described_class.eq("customer_name", "Acme\\")).to eq(%(customer_name = "Acme\\\\"))
+      expect(described_class.eq("customer_name", %(Acme\\"))).to eq(%(customer_name = "Acme\\\\\\""))
+    end
   end
 
   describe ".in_list" do
@@ -31,9 +36,9 @@ RSpec.describe Lago::Meilisearch::Filter do
     end
   end
 
-  describe ".not_in" do
+  describe ".not_in_list" do
     it "builds a quoted NOT IN list" do
-      expect(described_class.not_in("metadata_keys", %w[po])).to eq(%(metadata_keys NOT IN ["po"]))
+      expect(described_class.not_in_list("metadata_keys", %w[po])).to eq(%(metadata_keys NOT IN ["po"]))
     end
   end
 
@@ -50,6 +55,12 @@ RSpec.describe Lago::Meilisearch::Filter do
     it "casts truthy and falsey inputs" do
       expect(described_class.boolean("true")).to be(true)
       expect(described_class.boolean("f")).to be(false)
+    end
+  end
+
+  describe ".literal" do
+    it "is private" do
+      expect { described_class.literal("value") }.to raise_error(NoMethodError)
     end
   end
 end

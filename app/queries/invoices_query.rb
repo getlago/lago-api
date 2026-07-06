@@ -79,9 +79,15 @@ class InvoicesQuery < BaseQuery
       matching_strategy: "all"
     }
 
-    search_params[:attributes_to_search_on] = ["number"] unless search_customers?
+    if search_term.present? && search_term.match?(BaseQuery::UUID_REGEX)
+      query = ""
+      search_params[:filter] << Lago::Meilisearch::Filter.eq("id", search_term)
+    else
+      query = search_term.to_s
+      search_params[:attributes_to_search_on] = ["number"] unless search_customers?
+    end
 
-    invoices = Invoice.search(search_term.to_s, search_params)
+    invoices = Invoice.search(query, search_params)
 
     ActiveRecord::Associations::Preloader.new(
       records: invoices.to_a,
@@ -91,13 +97,13 @@ class InvoicesQuery < BaseQuery
     invoices
   # NOTE: If any error happens, we fallback to PG search
   rescue Meilisearch::Error => e
-    Sentry.capture_exception(e) if defined?(Sentry)
+    Sentry.capture_exception(e)
     postgres_invoices
   end
 
   def use_meilisearch?
     use_meilisearch_flag &&
-      Lago::Meilisearch::Client.search_enabled? &&
+      Lago::Meilisearch.search_enabled? &&
       organization.feature_flag_enabled?(:meilisearch) &&
       (search_term.present? || filters_present?)
   end
@@ -177,7 +183,7 @@ class InvoicesQuery < BaseQuery
     absence_filters = filters.metadata.select { |_k, v| v.blank? }
 
     presence_filters.each { |key, value| conditions << ms.eq("metadata", "#{key}::#{value}") }
-    conditions << ms.not_in("metadata_keys", absence_filters.keys) if absence_filters.any?
+    conditions << ms.not_in_list("metadata_keys", absence_filters.keys) if absence_filters.any?
 
     conditions
   end

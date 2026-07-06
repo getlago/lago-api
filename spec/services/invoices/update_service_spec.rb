@@ -34,7 +34,7 @@ RSpec.describe Invoices::UpdateService do
     context "when Meilisearch is enabled" do
       before do
         invoice
-        allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true)
+        stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
       end
 
       it "enqueues a search reindex for the invoice" do

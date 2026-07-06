@@ -8,11 +8,8 @@ module Lago
     # builder — they only forward the `filter:` value to the engine — so these
     # helpers centralize the expression syntax (quoting/escaping, IN lists,
     # comparisons) for reuse across queries.
-    #
-    # Namespaced under Lago:: to avoid clashing with the gem's top-level
-    # `Meilisearch` constant.
     module Filter
-      module_function
+      extend self
 
       def eq(field, value)
         "#{field} = #{literal(value)}"
@@ -22,7 +19,7 @@ module Lago
         "#{field} IN [#{Array(values).map { |value| literal(value) }.join(", ")}]"
       end
 
-      def not_in(field, values)
+      def not_in_list(field, values)
         "#{field} NOT IN [#{Array(values).map { |value| literal(value) }.join(", ")}]"
       end
 
@@ -46,13 +43,17 @@ module Lago
         ActiveModel::Type::Boolean.new.cast(value)
       end
 
+      private
+
       # Renders a value for an equality / IN expression: booleans bare, numerics
-      # bare, everything else as a quoted, escaped string.
+      # bare, everything else as a quoted, escaped string. Backslashes are
+      # escaped before quotes so a value ending in `\` cannot neutralize the
+      # closing quote and leak into the rest of the expression.
       def literal(value)
         return value.to_s if value == true || value == false
         return value.to_s if value.is_a?(Numeric)
 
-        %("#{value.to_s.gsub('"', '\\"')}")
+        %("#{value.to_s.gsub(/["\\]/) { |char| "\\#{char}" }}")
       end
     end
   end

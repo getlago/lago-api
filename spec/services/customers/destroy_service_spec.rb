@@ -37,12 +37,12 @@ RSpec.describe Customers::DestroyService do
     context "when Meilisearch is enabled" do
       before do
         customer
-        allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true)
+        stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
       end
 
       it "reindexes the customer's invoices to drop the discarded customer fields" do
         expect { destroy_service.call }
-          .to have_enqueued_job(Customers::ReindexInvoicesJob).with(customer.id)
+          .to have_enqueued_job_after_commit(Customers::ReindexInvoicesJob).with(customer.id)
       end
     end
 

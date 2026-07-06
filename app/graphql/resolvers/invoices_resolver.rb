@@ -87,16 +87,17 @@ module Resolvers
 
       invoices = result.invoices
 
-      if invoices.respond_to?(:preload)
-        invoices = invoices.preload(
+      ActiveRecord::Associations::Preloader.new(
+        records: invoices.to_a,
+        associations: [
           :fees,
           :regenerated_invoice,
           :error_details,
           :billing_entity,
           :customer_payments,
           {customer: :billing_entity}
-        )
-      end
+        ]
+      ).call
 
       Invoice.preload_offset_amounts(invoices)
     end

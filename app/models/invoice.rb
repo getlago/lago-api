@@ -25,14 +25,14 @@ class Invoice < ApplicationRecord
     attribute(:customer_legal_name) { customer.legal_name if customer&.kept? }
     attribute(:customer_external_id) { customer.external_id if customer&.kept? }
     attribute(:customer_email) { customer.email if customer&.kept? }
-    attribute(:subscription_ids) { invoice_subscriptions.pluck(:subscription_id).uniq }
-    attribute(:settlement_types) { invoice_settlements.distinct.pluck(:settlement_type) }
+    attribute(:subscription_ids) { invoice_subscriptions.map(&:subscription_id).uniq }
+    attribute(:settlement_types) { invoice_settlements.map(&:settlement_type).uniq }
     attribute(:metadata) { metadata.map { |meta| "#{meta.key}::#{meta.value}" } }
     attribute(:metadata_keys) { metadata.map(&:key) }
 
     searchable_attributes %i[number customer_name customer_firstname customer_lastname
       customer_legal_name customer_external_id customer_email]
-    filterable_attributes %i[organization_id billing_entity_id currency customer_id
+    filterable_attributes %i[id organization_id billing_entity_id currency customer_id
       customer_external_id invoice_type status payment_status payment_dispute_lost
       payment_overdue self_billed issuing_date total_amount_cents due_amount_cents
       partially_paid subscription_ids settlement_types metadata metadata_keys]
@@ -49,7 +49,7 @@ class Invoice < ApplicationRecord
   before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
   before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
-  after_save_commit :enqueue_search_index_job, if: -> { Lago::Meilisearch::Client.enabled? && visible? }
+  after_save_commit :enqueue_search_index_job, if: -> { Lago::Meilisearch.indexing_enabled? && visible? }
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -161,6 +161,7 @@ class Invoice < ApplicationRecord
   sequenced scope: ->(invoice) { invoice.customer.invoices.where(billing_entity_id: invoice.billing_entity_id) },
     lock_key: ->(invoice) { "#{invoice.customer_id}-#{invoice.billing_entity_id}" }
 
+  scope :meilisearch_import, -> { includes(:customer, :invoice_subscriptions, :invoice_settlements, :metadata) }
   scope :visible, -> { where(status: VISIBLE_STATUS.keys) }
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }

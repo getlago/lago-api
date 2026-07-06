@@ -11,7 +11,7 @@ module Invoices
       end
 
       def call
-        return result unless Lago::Meilisearch::Client.enabled?
+        return result unless Lago::Meilisearch.indexing_enabled?
 
         invoice.ms_index!
         result

@@ -13,7 +13,6 @@ RSpec.describe Customers::ReindexInvoicesJob do
   before do
     invoice
     other_invoice
-    allow(Invoices::SearchIndexJob).to receive(:perform_later)
   end
 
   it "runs on the meilisearch queue" do
@@ -21,19 +20,16 @@ RSpec.describe Customers::ReindexInvoicesJob do
   end
 
   it "enqueues a reindex job for each of the customer's invoices" do
-    perform
-
-    expect(Invoices::SearchIndexJob).to have_received(:perform_later).with(invoice.id)
-    expect(Invoices::SearchIndexJob).not_to have_received(:perform_later).with(other_invoice.id)
+    expect { perform }
+      .to have_enqueued_job(Invoices::SearchIndexJob).with(invoice.id)
+      .and not_have_enqueued_job(Invoices::SearchIndexJob).with(other_invoice.id)
   end
 
   context "when the customer is discarded" do
     before { customer.discard! }
 
     it "still reindexes its invoices" do
-      perform
-
-      expect(Invoices::SearchIndexJob).to have_received(:perform_later).with(invoice.id)
+      expect { perform }.to have_enqueued_job(Invoices::SearchIndexJob).with(invoice.id)
     end
   end
 
@@ -41,9 +37,7 @@ RSpec.describe Customers::ReindexInvoicesJob do
     subject(:perform) { described_class.perform_now(SecureRandom.uuid) }
 
     it "does nothing" do
-      perform
-
-      expect(Invoices::SearchIndexJob).not_to have_received(:perform_later)
+      expect { perform }.not_to have_enqueued_job(Invoices::SearchIndexJob)
     end
   end
 end

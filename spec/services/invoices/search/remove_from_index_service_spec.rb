@@ -11,7 +11,7 @@ RSpec.describe Invoices::Search::RemoveFromIndexService do
   before { allow(Invoice).to receive(:index).and_return(index) }
 
   context "when Meilisearch is enabled" do
-    before { allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true) }
+    before { stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700")) }
 
     it "deletes the document from the index" do
       result
@@ -21,8 +21,6 @@ RSpec.describe Invoices::Search::RemoveFromIndexService do
   end
 
   context "when Meilisearch is disabled" do
-    before { allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(false) }
-
     it "does not touch the index" do
       result
 

@@ -10,7 +10,7 @@ RSpec.describe Invoices::Search::IndexService do
   before { allow(invoice).to receive(:ms_index!) }
 
   context "when Meilisearch is enabled" do
-    before { allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(true) }
+    before { stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700")) }
 
     it "indexes the invoice" do
       result
@@ -20,8 +20,6 @@ RSpec.describe Invoices::Search::IndexService do
   end
 
   context "when Meilisearch is disabled" do
-    before { allow(Lago::Meilisearch::Client).to receive(:enabled?).and_return(false) }
-
     it "does not index the invoice" do
       result
 
