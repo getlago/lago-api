@@ -2,6 +2,8 @@
 
 module Fees
   class ApplyTaxesService < BaseService
+    Result = BaseResult[:applied_taxes]
+
     def initialize(fee:, tax_codes: nil, customer: nil, plan: nil)
       @fee = fee
       @tax_codes = tax_codes

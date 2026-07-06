@@ -2,6 +2,8 @@
 
 module Credits
   class AppliedCouponService < BaseService
+    Result = BaseResult[:credit]
+
     def initialize(invoice:, applied_coupon:)
       @invoice = invoice
       @applied_coupon = applied_coupon

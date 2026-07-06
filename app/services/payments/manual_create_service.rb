@@ -2,6 +2,8 @@
 
 module Payments
   class ManualCreateService < BaseService
+    Result = BaseResult[:payment]
+
     def initialize(organization:, params:)
       @organization = organization
       @params = params

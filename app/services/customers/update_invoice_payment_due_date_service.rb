@@ -2,6 +2,8 @@
 
 module Customers
   class UpdateInvoicePaymentDueDateService < BaseService
+    Result = BaseResult[:customer]
+
     def initialize(customer:, net_payment_term:)
       @customer = customer
       @net_payment_term = net_payment_term

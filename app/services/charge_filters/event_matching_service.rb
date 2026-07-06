@@ -2,6 +2,8 @@
 
 module ChargeFilters
   class EventMatchingService < BaseService
+    Result = BaseResult[:matching_charge_filters, :charge_filter]
+
     def initialize(charge:, event:)
       @charge = charge
       @event = event
