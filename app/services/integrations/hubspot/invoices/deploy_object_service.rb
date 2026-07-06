@@ -4,7 +4,7 @@ module Integrations
   module Hubspot
     module Invoices
       class DeployObjectService < Integrations::Aggregator::BaseService
-        VERSION = 2
+        VERSION = 3
 
         def action_path
           "v1/hubspot/object"
