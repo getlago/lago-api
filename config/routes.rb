@@ -48,6 +48,14 @@ Rails.application.routes.draw do
           end
         end
       end
+      resources :subscriptions, param: :external_id, only: [] do
+        resources :rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "subscription_rate_cards" do
+          scope module: :subscription_rate_cards do
+            get "rate_phases", to: "rate_phases#index"
+            put "rate_phases", to: "rate_phases#replace"
+          end
+        end
+      end
     end
 
     namespace :v2, module: :v1 do
