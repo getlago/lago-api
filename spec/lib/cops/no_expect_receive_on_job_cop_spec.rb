@@ -89,6 +89,44 @@ RSpec.describe Cops::NoExpectReceiveOnJobCop, :config do
     RUBY
   end
 
+  it "registers an offense when expecting receive in a compound matcher on a job class" do
+    expect_offense(<<~RUBY)
+      expect(SendWebhookJob).to have_been_enqueued.and receive(:perform_later)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Avoid `expect(...).to receive` on job classes. Assert enqueued jobs with `have_been_enqueued`/`have_enqueued_job`, or use `allow` + `have_received`.
+    RUBY
+  end
+
+  it "registers an offense when expecting receive on a job class from the app/jobs index" do
+    expect_offense(<<~RUBY)
+      expect(DatabaseMigrations::PopulatePaymentsWithCustomerId).to receive(:perform_later)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Avoid `expect(...).to receive` on job classes. Assert enqueued jobs with `have_been_enqueued`/`have_enqueued_job`, or use `allow` + `have_received`.
+    RUBY
+  end
+
+  it "registers an offense when expecting receive on described_class inside a job describe" do
+    expect_offense(<<~RUBY)
+      RSpec.describe SendWebhookJob do
+        it "enqueues" do
+          expect(described_class).to receive(:perform_later)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Avoid `expect(...).to receive` on job classes. Assert enqueued jobs with `have_been_enqueued`/`have_enqueued_job`, or use `allow` + `have_received`.
+        end
+      end
+    RUBY
+  end
+
+  it "registers an offense when expecting receive on described_class inside a nested string describe" do
+    expect_offense(<<~RUBY)
+      RSpec.describe SendWebhookJob do
+        describe "#perform" do
+          it "enqueues" do
+            expect(described_class).to receive(:perform_later)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Avoid `expect(...).to receive` on job classes. Assert enqueued jobs with `have_been_enqueued`/`have_enqueued_job`, or use `allow` + `have_received`.
+          end
+        end
+      end
+    RUBY
+  end
+
   it "does not register an offense when stubbing receive on a job class with allow" do
     expect_no_offenses(<<~RUBY)
       allow(SendWebhookJob).to receive(:perform_later)
@@ -119,9 +157,25 @@ RSpec.describe Cops::NoExpectReceiveOnJobCop, :config do
     RUBY
   end
 
-  it "does not register an offense when expecting receive on described_class" do
+  it "does not register an offense when expecting receive on described_class without an enclosing describe" do
     expect_no_offenses(<<~RUBY)
       expect(described_class).to receive(:perform_later)
+    RUBY
+  end
+
+  it "does not register an offense when expecting receive on described_class inside a non-job describe" do
+    expect_no_offenses(<<~RUBY)
+      RSpec.describe SomeService do
+        it "calls" do
+          expect(described_class).to receive(:call)
+        end
+      end
+    RUBY
+  end
+
+  it "does not register an offense when expecting receive on a non-job const close to an indexed job name" do
+    expect_no_offenses(<<~RUBY)
+      expect(PopulatePayments).to receive(:call)
     RUBY
   end
 
