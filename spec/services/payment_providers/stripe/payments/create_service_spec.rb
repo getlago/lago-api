@@ -38,6 +38,8 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
     )
   end
 
+  let(:payment_method) { create(:payment_method, customer:, provider_method_id: "pm_123456") }
+
   let(:payment) do
     create(
       :payment,
@@ -45,6 +47,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       status: "pending",
       payment_provider: stripe_payment_provider,
       payment_provider_customer: stripe_customer,
+      payment_method:,
       amount_cents: invoice.total_amount_cents,
       amount_currency: invoice.currency,
       provider_payment_id: nil
@@ -117,34 +120,9 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       end
     end
 
-    context "when multiple payment methods are enabled" do
-      let(:default_payment_method) { create(:payment_method, customer:, provider_method_id: "pm_123456") }
-
-      before do
-        payment.update!(payment_method: default_payment_method)
-        organization.update!(feature_flags: ["multiple_payment_methods"])
-      end
-
-      it "creates a stripe payment and a payment" do
-        result = create_service.call
-
-        expect(result).to be_success
-
-        expect(result.payment.id).to be_present
-        expect(result.payment.payable).to eq(invoice)
-        expect(result.payment.payment_provider).to eq(stripe_payment_provider)
-        expect(result.payment.payment_provider_customer).to eq(stripe_customer)
-        expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
-        expect(result.payment.amount_currency).to eq(invoice.currency)
-        expect(result.payment.status).to eq("succeeded")
-        expect(result.payment.payable_payment_status).to eq("succeeded")
-
-        expect(Stripe::PaymentIntent).to have_received(:create)
-      end
-    end
-
     context "when customer does not have a payment method" do
       let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider) }
+      let(:payment_method) { nil }
 
       before do
         allow(Stripe::Customer).to receive(:retrieve)
@@ -169,18 +147,17 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
         result = create_service.call
 
         expect(result).to be_success
-        expect(customer.stripe_customer.reload).to be_present
-        expect(customer.stripe_customer.provider_customer_id).to eq(stripe_customer.provider_customer_id)
-        expect(customer.stripe_customer.payment_method_id).to eq("pm_123456")
 
         expect(Stripe::Customer).to have_received(:list_payment_methods).with(stripe_customer.provider_customer_id, {}, anything)
         expect(Stripe::PaymentIntent).to have_received(:create)
+          .with(hash_including(payment_method: "pm_123456"), anything)
       end
     end
 
     context "when customer has a default shared payment token" do
       let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider) }
       let(:shared_payment_token) { "spt_test_123" }
+      let(:payment_method) { nil }
 
       before do
         organization.enable_feature_flag!("stripe_shared_payment_token")
@@ -400,6 +377,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
               status: "pending",
               payment_provider: stripe_payment_provider,
               payment_provider_customer: stripe_customer,
+              payment_method:,
               amount_cents: payable.total_amount_cents,
               amount_currency: payable.currency,
               provider_payment_id: nil

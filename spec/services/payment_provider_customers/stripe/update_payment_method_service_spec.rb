@@ -19,47 +19,35 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
       expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
     end
 
-    context "with multiple_payment_methods feature flag" do
-      before do
-        organization.enable_feature_flag!(:multiple_payment_methods)
-      end
+    context "without payment_method" do
+      it "creates a new one with provider_method_id" do
+        expect(customer.payment_methods.count).to eq(0)
+        result = update_service.call
 
-      context "without payment_method" do
-        it "creates a new one with provider_method_id" do
-          expect(customer.payment_methods.count).to eq(0)
-          result = update_service.call
-
-          expect(result).to be_success
-          expect(result.payment_method.provider_method_id).to eq(payment_method_id)
-          expect(result.payment_method.is_default).to be_truthy
-          expect(customer.payment_methods.count).to eq(1)
-        end
-      end
-
-      context "with existing payment_method" do
-        before do
-          create(:payment_method, customer:, payment_provider_customer: stripe_customer, provider_method_id: payment_method_id, is_default: false)
-        end
-
-        it "set as default" do
-          result = update_service.call
-
-          expect(result).to be_success
-          expect(result.payment_method.provider_method_id).to eq(payment_method_id)
-          expect(result.payment_method.is_default).to be_truthy
-        end
-      end
-
-      context "when payment_method_id is nil" do
-        let(:payment_method_id) { nil }
-
-        it "does not create a PaymentMethod" do
-          expect { update_service.call }.not_to change(PaymentMethod, :count)
-        end
+        expect(result).to be_success
+        expect(result.payment_method.provider_method_id).to eq(payment_method_id)
+        expect(result.payment_method.is_default).to be_truthy
+        expect(customer.payment_methods.count).to eq(1)
       end
     end
 
-    context "without multiple_payment_methods feature flag" do
+    context "with existing payment_method" do
+      before do
+        create(:payment_method, customer:, payment_provider_customer: stripe_customer, provider_method_id: payment_method_id, is_default: false)
+      end
+
+      it "set as default" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.payment_method.provider_method_id).to eq(payment_method_id)
+        expect(result.payment_method.is_default).to be_truthy
+      end
+    end
+
+    context "when payment_method_id is nil" do
+      let(:payment_method_id) { nil }
+
       it "does not create a PaymentMethod" do
         expect { update_service.call }.not_to change(PaymentMethod, :count)
       end
