@@ -33,7 +33,8 @@ module Wallets
           target_ongoing_balance: rule_params[:target_ongoing_balance],
           trigger: rule_params[:trigger].to_s,
           transaction_metadata: rule_params[:transaction_metadata] || [],
-          transaction_name: rule_params[:transaction_name].presence
+          transaction_name: rule_params[:transaction_name].presence,
+          purchase_order_number: rule_params[:purchase_order_number]
         }
 
         if rule_params.key? :ignore_paid_top_up_limits

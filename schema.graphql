@@ -2954,6 +2954,7 @@ input CreateCustomerWalletInput {
   paidTopUpMinAmountCents: BigInt
   paymentMethod: PaymentMethodReferenceInput
   priority: Int!
+  purchaseOrderNumber: String
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
   transactionName: String
@@ -2976,6 +2977,7 @@ input CreateCustomerWalletTransactionInput {
   paidCredits: String
   paymentMethod: PaymentMethodReferenceInput
   priority: Int
+  purchaseOrderNumber: String
   voidedCredits: String
   walletId: ID!
 }
@@ -3318,6 +3320,7 @@ input CreateRecurringTransactionRuleInput {
   method: RecurringTransactionMethodEnum
   paidCredits: String
   paymentMethod: PaymentMethodReferenceInput
+  purchaseOrderNumber: String
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String
@@ -3409,6 +3412,7 @@ input CreateSubscriptionInput {
   planId: ID!
   planOverrides: PlanOverridesInput
   progressiveBillingDisabled: Boolean
+  purchaseOrderNumber: String
   subscriptionAt: ISO8601DateTime
   subscriptionId: ID
   usageThresholds: [UsageThresholdInput!]
@@ -11110,6 +11114,7 @@ type RecurringTransactionRule {
   paidCredits: String!
   paymentMethod: PaymentMethod
   paymentMethodType: PaymentMethodTypeEnum
+  purchaseOrderNumber: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   skipInvoiceCustomSections: Boolean
   startedAt: ISO8601DateTime
@@ -11664,6 +11669,7 @@ type Subscription {
   previousPlan: Plan
   previousSubscription: Subscription
   progressiveBillingDisabled: Boolean
+  purchaseOrderNumber: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   skipInvoiceCustomSections: Boolean
   startedAt: ISO8601DateTime
@@ -13034,6 +13040,7 @@ input UpdateCustomerWalletInput {
   paidTopUpMinAmountCents: BigInt
   paymentMethod: PaymentMethodReferenceInput
   priority: Int!
+  purchaseOrderNumber: String
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
 }
 
@@ -13426,6 +13433,7 @@ input UpdateRecurringTransactionRuleInput {
   method: RecurringTransactionMethodEnum
   paidCredits: String
   paymentMethod: PaymentMethodReferenceInput
+  purchaseOrderNumber: String
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String
@@ -13566,6 +13574,7 @@ input UpdateSubscriptionInput {
   paymentMethod: PaymentMethodReferenceInput
   planOverrides: PlanOverridesInput
   progressiveBillingDisabled: Boolean
+  purchaseOrderNumber: String
   subscriptionAt: ISO8601DateTime
   usageThresholds: [UsageThresholdInput!]
 }
@@ -13728,6 +13737,7 @@ type Wallet {
   paymentMethod: PaymentMethod
   paymentMethodType: PaymentMethodTypeEnum
   priority: Int!
+  purchaseOrderNumber: String
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
@@ -13800,6 +13810,7 @@ type WalletTransaction {
   metadata: [WalletTransactionMetadataObject!]
   name: String
   priority: Int!
+  purchaseOrderNumber: String
   remainingAmountCents: BigInt
   remainingCreditAmount: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]

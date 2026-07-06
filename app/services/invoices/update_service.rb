@@ -32,6 +32,7 @@ module Invoices
 
       old_payment_status = invoice.payment_status
       invoice.payment_status = params[:payment_status] if params.key?(:payment_status)
+      invoice.purchase_order_number = params[:purchase_order_number] if params.key?(:purchase_order_number)
 
       if invoice.draft? && (old_payment_status != invoice.payment_status)
         return result.not_allowed_failure!(code: "payment_status_update_on_draft_invoice")
