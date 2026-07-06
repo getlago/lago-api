@@ -16,7 +16,6 @@ module QuoteVersions
 
         def valid?
           validate_currency
-          validate_customer if scope == :approve
           validate_addons if payload_valid
 
           errors.empty?
@@ -33,12 +32,6 @@ module QuoteVersions
             add_error(field: :currency, code: "value_is_mandatory") if scope == :approve
           elsif !Currencies::ACCEPTED_CURRENCIES.key?(currency.to_sym)
             add_error(field: :currency, code: "invalid_currency")
-          end
-        end
-
-        def validate_customer
-          unless Customer.exists?(id: quote_version.quote.customer_id)
-            add_error(field: :customer, code: "customer_not_found")
           end
         end
 
