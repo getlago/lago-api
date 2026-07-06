@@ -105,6 +105,12 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     events
   end
 
+  def grouped_prorated_to_h(results)
+    results.map do |r|
+      {groups: r.groups, prorated_value: r.prorated_value.to_f, value: r.value.to_f, events_count: r.events_count}
+    end
+  end
+
   def create_european_event(country:, city:, value:, timestamp:, charge_filter: nil)
     create_event(
       timestamp:,
@@ -411,44 +417,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       it "applies the grouped_by_values in the block" do
         event_store.with_grouped_by_values(with_grouped_by_values) do
           expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 3, events_count: 3))
-        end
-      end
-    end
-  end
-
-  if include_feature?(:distinct_codes)
-    describe "#distinct_codes" do
-      before do
-        create_event(
-          timestamp: subscription_started_at + (1..10).to_a.sample.days,
-          value: "value",
-          transaction_id: SecureRandom.uuid,
-          code: "other_code"
-        )
-      end
-
-      it "returns the distinct event codes" do
-        expect(event_store.distinct_codes).to match_array([code, "other_code"])
-      end
-
-      context "when codes are provided" do
-        it "returns only the distinct event codes matching the provided codes" do
-          expect(event_store.distinct_codes(codes: [code, "unknown_code"])).to eq([code])
-        end
-
-        context "when an event with a provided code exists outside the period" do
-          before do
-            create_event(
-              timestamp: boundaries[:to_datetime] + 1.day,
-              value: "value",
-              transaction_id: SecureRandom.uuid,
-              code: "out_of_period_code"
-            )
-          end
-
-          it "does not return the code" do
-            expect(event_store.distinct_codes(codes: [code, "out_of_period_code"])).to eq([code])
-          end
         end
       end
     end
@@ -2126,19 +2094,27 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
   if include_feature?(:prorated_sum)
     describe "#prorated_sum" do
-      it "returns the prorated sum of event properties" do
+      it "returns the prorated sum alongside the non-prorated value and events count" do
         event_store.aggregation_property = billable_metric.field_name
         event_store.numeric_property = true
 
-        expect(event_store.prorated_sum(period_duration: 31).round(5)).to eq(6.45161)
+        result = event_store.prorated_sum(period_duration: 31)
+
+        expect(result.prorated_value.round(5)).to eq(6.45161)
+        expect(result.value.to_f).to eq(15)
+        expect(result.events_count).to eq(5)
       end
 
       context "with persisted_duration" do
-        it "returns the prorated sum of event properties" do
+        it "returns the prorated sum alongside the non-prorated value and events count" do
           event_store.aggregation_property = billable_metric.field_name
           event_store.numeric_property = true
 
-          expect(event_store.prorated_sum(period_duration: 31, persisted_duration: 10).round(5)).to eq(4.83871)
+          result = event_store.prorated_sum(period_duration: 31, persisted_duration: 10)
+
+          expect(result.prorated_value.round(5)).to eq(4.83871)
+          expect(result.value.to_f).to eq(15)
+          expect(result.events_count).to eq(5)
         end
       end
     end
@@ -2148,28 +2124,28 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     describe "#grouped_prorated_sum" do
       let(:grouped_by) { %w[region] }
 
-      it "returns the prorated sum of event properties" do
+      it "returns the prorated sum alongside the non-prorated value and events count" do
         event_store.aggregation_property = billable_metric.field_name
         event_store.numeric_property = true
 
         result = event_store.grouped_prorated_sum(period_duration: 31)
 
-        expect(result).to match_array([
-          {groups: {"region" => nil}, value: within(0.00001).of(2.64516)},
-          {groups: {"region" => "europe"}, value: within(0.00001).of(3.80645)}
+        expect(grouped_prorated_to_h(result)).to match_array([
+          {groups: {"region" => nil}, prorated_value: within(0.00001).of(2.64516), value: 6, events_count: 2},
+          {groups: {"region" => "europe"}, prorated_value: within(0.00001).of(3.80645), value: 9, events_count: 3}
         ])
       end
 
       context "with persisted_duration" do
-        it "returns the prorated sum of event properties" do
+        it "returns the prorated sum alongside the non-prorated value and events count" do
           event_store.aggregation_property = billable_metric.field_name
           event_store.numeric_property = true
 
           result = event_store.grouped_prorated_sum(period_duration: 31, persisted_duration: 10)
 
-          expect(result).to match_array([
-            {groups: {"region" => nil}, value: within(0.00001).of(1.93548)},
-            {groups: {"region" => "europe"}, value: within(0.00001).of(2.90322)}
+          expect(grouped_prorated_to_h(result)).to match_array([
+            {groups: {"region" => nil}, prorated_value: within(0.00001).of(1.93548), value: 6, events_count: 2},
+            {groups: {"region" => "europe"}, prorated_value: within(0.00001).of(2.90322), value: 9, events_count: 3}
           ])
         end
       end
@@ -2183,19 +2159,19 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
           result = event_store.grouped_prorated_sum(period_duration: 31)
 
-          expect(result).to match_array(
+          expect(grouped_prorated_to_h(result)).to match_array(
             [
               {
                 groups: {"country" => "united kingdom", "region" => "europe"},
-                value: within(0.00001).of(1.93548)
+                prorated_value: within(0.00001).of(1.93548), value: 5, events_count: 1
               },
               {
                 groups: {"country" => nil, "region" => nil},
-                value: within(0.00001).of(2.64516)
+                prorated_value: within(0.00001).of(2.64516), value: 6, events_count: 2
               },
               {
                 groups: {"country" => "france", "region" => "europe"},
-                value: within(0.00001).of(1.87096)
+                prorated_value: within(0.00001).of(1.87096), value: 4, events_count: 2
               }
             ]
           )

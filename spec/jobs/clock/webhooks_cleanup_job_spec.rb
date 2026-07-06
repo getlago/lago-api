@@ -5,6 +5,10 @@ require "rails_helper"
 describe Clock::WebhooksCleanupJob do
   subject(:webhooks_cleanup_job) { described_class }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [] }
+  end
+
   def with_batch_size(size)
     previous = described_class.batch_size
     described_class.batch_size = size

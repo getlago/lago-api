@@ -2,6 +2,8 @@
 
 module ApiKeys
   class CreateService < BaseService
+    Result = BaseResult[:api_key]
+
     def initialize(params)
       @params = params
       super

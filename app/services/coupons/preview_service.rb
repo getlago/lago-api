@@ -2,6 +2,8 @@
 
 module Coupons
   class PreviewService < BaseService
+    Result = BaseResult[:credits, :invoice]
+
     def initialize(invoice:, applied_coupons:)
       @invoice = invoice
       @applied_coupons = applied_coupons

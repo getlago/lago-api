@@ -2,6 +2,8 @@
 
 module AppliedCoupons
   class LockService < BaseService
+    Result = BaseResult
+
     def initialize(customer:)
       @customer = customer
 

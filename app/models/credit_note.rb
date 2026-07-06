@@ -14,6 +14,9 @@ class CreditNote < ApplicationRecord
   belongs_to :organization
 
   has_one :billing_entity, through: :invoice
+
+  delegate :purchase_order_number, to: :invoice, allow_nil: true
+
   has_one :metadata,
     class_name: "Metadata::ItemMetadata",
     as: :owner,

@@ -2,6 +2,8 @@
 
 module Invoices
   class CreateOneOffService < BaseService
+    Result = BaseResult[:invoice, :payment_method]
+
     def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil, payment_method_params: nil, invoice_custom_section: {}, billing_entity_id: nil, billing_entity_code: nil, purchase_order_number: nil)
       @customer = customer
       @currency = currency || customer&.currency

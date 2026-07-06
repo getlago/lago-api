@@ -87,7 +87,7 @@ RSpec.describe PaymentReceipts::GenerateXmlService do
         it "results in error" do
           result = described_class.call(payment_receipt:, context:)
 
-          expect(result.success).to be_falsey
+          expect(result).to be_failure
           expect(result.error.error_code).to eq("payment_receipt_not_found")
         end
       end

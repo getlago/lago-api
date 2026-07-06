@@ -16,6 +16,8 @@ module Customers
     ACQUIRE_LOCK_TIMEOUT = 5.seconds
     VALID_SCOPES = %i[prepaid_credit].freeze
 
+    Result = BaseResult
+
     def initialize(customer:, scope:, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true)
       @customer = customer
       @scope = scope

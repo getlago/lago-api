@@ -2,6 +2,8 @@
 
 module BillableMetrics
   class CreateService < BaseService
+    Result = BaseResult[:billable_metric]
+
     def initialize(args = {})
       @args = args
       super

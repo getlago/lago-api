@@ -35,10 +35,6 @@ module Events
       )
     end
 
-    def distinct_event_codes
-      event_store.distinct_codes(codes: plan_codes)
-    end
-
     def plan_codes
       @plan_codes ||= plan.billable_metrics.distinct.pluck(:code)
     end
@@ -58,16 +54,10 @@ module Events
     # property combinations actually present in the events against the charge filters, so
     # only the filters that received usage are returned.
     def charges_and_filters_from_events
-      return all_charges_and_filters_from_event_codes unless organization.feature_flag_enabled?(:event_property_combinations)
-
       combinations = event_store.distinct_codes_and_property_combinations(
         codes: plan_codes,
         filter_keys: billable_metric_filter_keys
       )
-
-      # Stores that cannot extract property combinations (e.g. Clickhouse) fall back to
-      # including every filter of each charge that received events in the period.
-      return all_charges_and_filters_from_event_codes if combinations.nil?
 
       combinations_by_code = combinations
         .group_by(&:first)
@@ -95,17 +85,6 @@ module Events
       end
 
       result
-    end
-
-    # Return all charges and filters for codes that matches events plus all recurring charges.
-    def all_charges_and_filters_from_event_codes
-      plan.charges.joins(:billable_metric).left_joins(:filters)
-        .where(billable_metrics: {code: distinct_event_codes})
-        .or(plan.charges.joins(:billable_metric).where(billable_metrics: {recurring: true}))
-        .group("charges.id, charge_filters.id")
-        .pluck("charges.id", "charge_filters.id")
-        .then { group_by_charge_id(it) }
-        .then { add_default_filter(it) }
     end
 
     # Recurring charges and all their filters (including the default bucket).

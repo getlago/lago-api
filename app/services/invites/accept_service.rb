@@ -2,6 +2,8 @@
 
 module Invites
   class AcceptService < BaseService
+    Result = BaseResult[:membership, :token, :user]
+
     def call(**args)
       invite = args[:invite] || Invite.find_by(token: args[:token], status: :pending)
       return result.not_found_failure!(resource: "invite") unless invite

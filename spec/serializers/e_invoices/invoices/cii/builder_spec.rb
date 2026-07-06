@@ -136,6 +136,20 @@ RSpec.describe EInvoices::Invoices::Cii::Builder do
       end
     end
 
+    context "when BuyerOrderReferencedDocument tag" do
+      it "is absent without a purchase order number" do
+        expect(subject).not_to contains_xml_node("//ram:BuyerOrderReferencedDocument")
+      end
+
+      context "with a purchase order number" do
+        before { invoice.update!(purchase_order_number: "PO-12345") }
+
+        it "contains the purchase order number" do
+          expect(subject).to contains_xml_node("//ram:BuyerOrderReferencedDocument/ram:IssuerAssignedID").with_value("PO-12345")
+        end
+      end
+    end
+
     context "when ApplicableHeaderTradeDelivery tag" do
       it "contains the tag" do
         expect(subject).to contains_xml_node("//ram:ApplicableHeaderTradeDelivery")

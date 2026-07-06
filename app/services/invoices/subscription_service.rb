@@ -2,6 +2,8 @@
 
 module Invoices
   class SubscriptionService < BaseService
+    Result = BaseResult[:invoice, :non_invoiceable_fees]
+
     def initialize(subscriptions:, timestamp:, invoicing_reason:, invoice: nil, skip_charges: false)
       @subscriptions = subscriptions
       @timestamp = timestamp

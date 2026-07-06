@@ -148,19 +148,6 @@ module Events
         conditions.join(" AND ")
       end
 
-      def distinct_codes(codes: nil)
-        Events::Stores::Utils::ClickhouseConnection.with_retry do
-          scope = ::Clickhouse::EventsEnriched
-            .where(external_subscription_id: subscription.external_id)
-            .where(organization_id: subscription.organization.id)
-            .where("events_enriched.timestamp >= ?", from_datetime)
-            .where("events_enriched.timestamp <= ?", applicable_to_datetime)
-
-          scope = scope.where(code: codes) unless codes.nil?
-          scope.pluck("DISTINCT(code)")
-        end
-      end
-
       def distinct_charges_and_filters(codes: nil)
         # Implementation relies directly on the events_enriched_expanded table,
         # so we delegate the implementation to the ClickhouseEnrichedStore
@@ -614,6 +601,7 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
             select: [
+              arel_table[:decimal_value],
               Arel::Nodes::InfixOperation.new(
                 "*",
                 arel_table[:decimal_value],
@@ -624,11 +612,14 @@ module Events
           )
 
           sql = with_ctes(ctes_sql, <<-SQL)
-            SELECT sum(events.prorated_value)
+            SELECT
+              sum(events.prorated_value) as prorated_value,
+              sum(events.decimal_value) as value,
+              count() as events_count
             FROM events
           SQL
 
-          connection.select_value(sql)
+          build_prorated_aggregation_result(connection.select_one(sql))
         end
       end
 
@@ -644,6 +635,7 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
             select: groups + [
+              arel_table[:decimal_value],
               Arel::Nodes::InfixOperation.new(
                 "*",
                 arel_table[:decimal_value],
@@ -656,12 +648,14 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               #{group_names},
-              sum(events.prorated_value)
+              sum(events.prorated_value) as prorated_value,
+              sum(events.decimal_value) as value,
+              count() as events_count
             FROM events
             GROUP BY #{group_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows)
+          prepare_grouped_prorated_result(connection.select_all(sql).rows)
         end
       end
 
@@ -908,6 +902,22 @@ module Events
             groups: build_groups(flat[...-2], columns:),
             value: flat[-2],
             events_count: flat[-1].presence&.to_i
+          )
+        end
+      end
+
+      # NOTE: Same as prepare_grouped_aggregated_values but the last three columns of each
+      #       row are the prorated value, the non-prorated value and the events count,
+      #       returned as GroupedProratedAggregationResult.
+      def prepare_grouped_prorated_result(rows, columns: grouped_by)
+        rows.map do |row|
+          flat = row.flatten
+
+          build_grouped_prorated_aggregation_result(
+            groups: build_groups(flat[...-3], columns:),
+            prorated_value: flat[-3],
+            value: flat[-2],
+            events_count: flat[-1]
           )
         end
       end

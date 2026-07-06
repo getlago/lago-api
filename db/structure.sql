@@ -407,6 +407,7 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_started_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_previous_subscription_id_and_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_payment_method_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_organization_id_name_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_subscriptions_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on_null;
 DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on;
@@ -460,6 +461,8 @@ DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_plans_on_parent_id;
+DROP INDEX IF EXISTS public.index_plans_on_organization_id_name_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_plans_on_organization_id_code_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_plans_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_plans_on_organization_id;
 DROP INDEX IF EXISTS public.index_plans_on_deleted_at;
@@ -626,6 +629,7 @@ DROP INDEX IF EXISTS public.index_fees_on_true_up_parent_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_fees_on_pay_in_advance_event_transaction_id;
 DROP INDEX IF EXISTS public.index_fees_on_original_fee_id;
+DROP INDEX IF EXISTS public.index_fees_on_organization_id_and_created_at_and_id;
 DROP INDEX IF EXISTS public.index_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_on_invoiceable;
 DROP INDEX IF EXISTS public.index_fees_on_invoice_id;
@@ -839,6 +843,7 @@ DROP INDEX IF EXISTS public.idx_on_organization_id_subscription_at_created_at_id
 DROP INDEX IF EXISTS public.idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
 DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
+DROP INDEX IF EXISTS public.idx_on_organization_id_external_id_gin_trgm_ops_fb8058a497;
 DROP INDEX IF EXISTS public.idx_on_organization_id_e742f77454;
 DROP INDEX IF EXISTS public.idx_on_organization_id_e73219f079;
 DROP INDEX IF EXISTS public.idx_on_organization_id_deleted_at_225e3f789d;
@@ -6764,6 +6769,13 @@ CREATE INDEX idx_on_organization_id_e742f77454 ON public.subscription_fixed_char
 
 
 --
+-- Name: idx_on_organization_id_external_id_gin_trgm_ops_fb8058a497; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_organization_id_external_id_gin_trgm_ops_fb8058a497 ON public.subscriptions USING gin (organization_id, external_id public.gin_trgm_ops);
+
+
+--
 -- Name: idx_on_organization_id_external_subscription_id_df3a30d96d; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8259,6 +8271,13 @@ CREATE INDEX index_fees_on_organization_id ON public.fees USING btree (organizat
 
 
 --
+-- Name: index_fees_on_organization_id_and_created_at_and_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_organization_id_and_created_at_and_id ON public.fees USING btree (organization_id, created_at, id) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_fees_on_original_fee_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9421,6 +9440,20 @@ CREATE UNIQUE INDEX index_plans_on_organization_id_and_code ON public.plans USIN
 
 
 --
+-- Name: index_plans_on_organization_id_code_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plans_on_organization_id_code_gin_trgm_ops ON public.plans USING gin (organization_id, code public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_plans_on_organization_id_name_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plans_on_organization_id_name_gin_trgm_ops ON public.plans USING gin (organization_id, name public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_plans_on_parent_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9789,6 +9822,13 @@ CREATE INDEX index_subscriptions_on_last_received_event_on_null ON public.subscr
 --
 
 CREATE INDEX index_subscriptions_on_organization_id ON public.subscriptions USING btree (organization_id);
+
+
+--
+-- Name: index_subscriptions_on_organization_id_name_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_on_organization_id_name_gin_trgm_ops ON public.subscriptions USING gin (organization_id, name public.gin_trgm_ops);
 
 
 --
@@ -12795,6 +12835,11 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260702074504'),
+('20260701083110'),
+('20260701083109'),
+('20260701083108'),
+('20260701083107'),
 ('20260625095837'),
 ('20260622113747'),
 ('20260619065327'),

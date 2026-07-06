@@ -2,6 +2,8 @@
 
 module Invoices
   class GeneratePdfService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(invoice:, context: nil)
       @invoice = invoice
       @context = context
