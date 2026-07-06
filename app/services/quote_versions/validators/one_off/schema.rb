@@ -11,7 +11,11 @@ module QuoteVersions
             "properties" => {"addons" => addons_definition(strict:)},
             "x-error" => {"type" => "invalid_type", "required" => "value_is_mandatory"}
           }
-          root["required"] = ["addons"] if strict
+
+          if strict
+            root["required"] = ["addons"]
+          end
+
           root
         end
 
@@ -21,7 +25,11 @@ module QuoteVersions
             "items" => addon_definition(strict:),
             "x-error" => {"type" => "invalid_type", "minItems" => "invalid_count"}
           }
-          addons["minItems"] = 1 if strict
+
+          if strict
+            addons["minItems"] = 1
+          end
+
           addons
         end
 
@@ -74,7 +82,11 @@ module QuoteVersions
             },
             "x-error" => {"type" => "invalid_type", "required" => "value_is_mandatory"}
           }
-          payload["required"] = %w[code units unit_amount_cents total_amount_cents] if strict
+
+          if strict
+            payload["required"] = %w[code units unit_amount_cents total_amount_cents]
+          end
+
           payload
         end
 
