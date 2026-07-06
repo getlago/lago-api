@@ -12,6 +12,30 @@ FactoryBot.define do
       approved_at { Time.current }
     end
 
+    trait :with_one_off_billing_items do
+      transient do
+        add_on { create(:add_on, organization: quote.organization) }
+      end
+
+      currency { "EUR" }
+      billing_items do
+        {
+          "addons" => [
+            {
+              "id" => add_on.id,
+              "localId" => SecureRandom.uuid,
+              "payload" => {
+                "code" => add_on.code,
+                "units" => 1,
+                "unit_amount_cents" => 10_000,
+                "total_amount_cents" => 10_000
+              }
+            }
+          ]
+        }
+      end
+    end
+
     trait :voided do
       status { :voided }
       voided_at { Time.current }
