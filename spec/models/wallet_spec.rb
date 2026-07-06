@@ -292,6 +292,7 @@ RSpec.describe Wallet do
       customer_id
       organization_id
       payment_method_id
+      purchase_order_number
     ].freeze
 
     it "covers every column that does not need to trigger a refresh" do
