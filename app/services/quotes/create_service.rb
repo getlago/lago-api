@@ -42,6 +42,8 @@ module Quotes
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::ValidationFailure => e
+      e.result
     end
 
     private

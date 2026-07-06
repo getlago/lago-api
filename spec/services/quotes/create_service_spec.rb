@@ -57,6 +57,53 @@ RSpec.describe Quotes::CreateService do
       end
     end
 
+    context "when the quote is one_off", :premium do
+      let(:add_on) { create(:add_on, organization:) }
+      let(:create_params) do
+        {
+          order_type: :one_off,
+          currency: "EUR",
+          billing_items: {
+            "addons" => [
+              {
+                "id" => add_on.id,
+                "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+                "payload" => {
+                  "code" => add_on.code,
+                  "units" => 1,
+                  "unit_amount_cents" => 10_000,
+                  "total_amount_cents" => 10_000
+                }
+              }
+            ]
+          }
+        }
+      end
+
+      it "creates the quote with its version" do
+        expect(result).to be_success
+        expect(result.quote.order_type).to eq("one_off")
+        expect(result.quote.current_version.billing_items).to eq(create_params[:billing_items])
+      end
+
+      context "when the payload is invalid" do
+        let(:create_params) do
+          {
+            order_type: :one_off,
+            currency: "EUR",
+            billing_items: {"addons" => [{"id" => "not-a-uuid", "localId" => "l1"}]}
+          }
+        end
+
+        it "returns a validation failure and persists nothing" do
+          expect { result }.not_to change(Quote, :count)
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({"billing_items.addons.0.id": ["invalid_format"]})
+        end
+      end
+    end
+
     context "when subscription is required and provided correctly", :premium do
       let(:subscription) { create(:subscription, organization:, customer:) }
       let(:create_params) do
