@@ -10,6 +10,8 @@ module Cops
   class NoExpectReceiveOnJobCop < ::RuboCop::Cop::Base
     MSG = "Avoid `expect(...).to receive` on job classes. Assert enqueued jobs with `have_been_enqueued`/`have_enqueued_job`, or use `allow` + `have_received`."
 
+    RECEIVE_MATCHERS = %i[receive receive_messages receive_message_chain].freeze
+
     # Matches:
     #   expect(SendWebhookJob).to <matcher>
     #   expect(Clock::SubscriptionsBillerJob).not_to <matcher>
@@ -37,12 +39,22 @@ module Cops
     private
 
     # Walks a matcher chain like `receive(:perform_later).with(anything).and_call_original`
-    # down its receivers to the root send and checks it is a bare `receive`.
+    # down its receivers to the root send and checks it is a bare `receive`,
+    # `receive_messages` or `receive_message_chain`. Block nodes are unwrapped so
+    # `receive(:perform_later) { true }` is also caught.
     def receive_matcher?(matcher)
       current = matcher
-      current = current.receiver while current.send_type? && current.receiver
+      loop do
+        if current.block_type? || current.numblock_type?
+          current = current.send_node
+        end
 
-      current.send_type? && current.method?(:receive)
+        break unless current.send_type? && current.receiver
+
+        current = current.receiver
+      end
+
+      current.send_type? && RECEIVE_MATCHERS.include?(current.method_name)
     end
 
     def job_const?(name)
