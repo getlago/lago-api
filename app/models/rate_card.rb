@@ -56,6 +56,14 @@ class RateCard < ApplicationRecord
   def active_rate
     rates.effective.order(effective_datetime: :desc).first
   end
+
+  # The rate that was active at a given time — how billing resolves the rate
+  # for a period (the rate effective at the period start). Rates are
+  # append-only and locked once the card has subscriptions, so only rates
+  # scheduled before signing can change a subscriber's price.
+  def rate_active_at(datetime)
+    rates.where(effective_datetime: ..datetime).order(effective_datetime: :desc).first
+  end
 end
 
 # == Schema Information

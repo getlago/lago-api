@@ -61,6 +61,17 @@ class RateCardRate < ApplicationRecord
     rate_properties
   end
 
+  # The charge-model calculators (ChargeModels::*) read the pricing model from
+  # a `charge_model` attribute and check `prorated?`; expose both so a rate can
+  # be priced through the same calculators as charges.
+  def charge_model
+    rate_model
+  end
+
+  def prorated?
+    rate_card.proration?
+  end
+
   # Status is derived from the card's append-only timeline rather than stored:
   # the latest effective rate is active, future rates are pending, and earlier
   # effective rates have been superseded and are terminated.

@@ -33,6 +33,18 @@ class RateOverride < ApplicationRecord
     rate_properties
   end
 
+  # The charge-model calculators (ChargeModels::*) read the pricing model from
+  # a `charge_model` attribute and check `prorated?`; expose both so an
+  # override can be priced through the same calculators as charges. Overrides
+  # never carry per-event aggregation, so proration does not apply here.
+  def charge_model
+    rate_model
+  end
+
+  def prorated?
+    false
+  end
+
   private
 
   def validate_properties

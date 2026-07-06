@@ -110,4 +110,20 @@ RSpec.describe RateCard do
       expect(rate_card.attached_to_subscriptions?).to be(true)
     end
   end
+
+  describe "#rate_active_at" do
+    subject(:rate_card) { create(:rate_card) }
+
+    let!(:old_rate) { create(:rate_card_rate, rate_card:, effective_datetime: 10.days.ago) }
+    let!(:new_rate) { create(:rate_card_rate, rate_card:, effective_datetime: 2.days.ago) }
+
+    it "returns the rate that was active at the given time" do
+      expect(rate_card.rate_active_at(5.days.ago)).to eq(old_rate)
+      expect(rate_card.rate_active_at(1.day.ago)).to eq(new_rate)
+    end
+
+    it "returns nil before the first rate" do
+      expect(rate_card.rate_active_at(11.days.ago)).to be_nil
+    end
+  end
 end
