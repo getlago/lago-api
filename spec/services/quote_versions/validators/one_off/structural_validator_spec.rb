@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe QuoteVersions::Validators::OneOff::StructuralService do
+RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
   subject(:validator) { described_class.new(billing_items:, scope:) }
 
   let(:scope) { :update }

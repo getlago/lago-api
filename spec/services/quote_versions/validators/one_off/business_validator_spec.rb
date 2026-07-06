@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe QuoteVersions::Validators::OneOff::BusinessService do
+RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
   subject(:validator) { described_class.new(quote_version:, billing_items:, scope:) }
 
   let(:organization) { create(:organization) }
