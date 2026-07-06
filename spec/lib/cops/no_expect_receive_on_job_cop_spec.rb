@@ -127,6 +127,17 @@ RSpec.describe Cops::NoExpectReceiveOnJobCop, :config do
     RUBY
   end
 
+  it "registers an offense when expecting receive on described_class inside a job context" do
+    expect_offense(<<~RUBY)
+      context SendWebhookJob do
+        it "enqueues" do
+          expect(described_class).to receive(:perform_later)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Avoid `expect(...).to receive` on job classes. Assert enqueued jobs with `have_been_enqueued`/`have_enqueued_job`, or use `allow` + `have_received`.
+        end
+      end
+    RUBY
+  end
+
   it "does not register an offense when stubbing receive on a job class with allow" do
     expect_no_offenses(<<~RUBY)
       allow(SendWebhookJob).to receive(:perform_later)
@@ -142,6 +153,18 @@ RSpec.describe Cops::NoExpectReceiveOnJobCop, :config do
   it "does not register an offense when expecting have_received with a chained matcher on a job class" do
     expect_no_offenses(<<~RUBY)
       expect(SendWebhookJob).to have_received(:perform_later).with(anything)
+    RUBY
+  end
+
+  it "does not register an offense when a block on a have_received chain contains receive" do
+    expect_no_offenses(<<~RUBY)
+      expect(SendWebhookJob).to have_received(:perform_later).with(anything) { |a| a.to_s }
+    RUBY
+  end
+
+  it "does not register an offense when a matcher block body stubs another object" do
+    expect_no_offenses(<<~RUBY)
+      expect(SendWebhookJob).to satisfy { allow(foo).to receive(:bar) }
     RUBY
   end
 

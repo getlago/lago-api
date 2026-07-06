@@ -17,11 +17,16 @@ module Cops
     RECEIVE_MATCHERS = %i[receive receive_messages receive_message_chain].freeze
     RESTRICT_ON_SEND = %i[to not_to to_not].freeze
 
-    # Job class names derived from the Zeitwerk mapping of app/jobs, so jobs whose
-    # name does not end with `Job` (e.g. DatabaseMigrations::PopulatePaymentsWithCustomerId)
-    # are also detected.
-    JOB_CLASS_NAMES = Dir.glob("app/jobs/**/*.rb").map do |path|
-      path.delete_prefix("app/jobs/").delete_suffix(".rb").split("/").map do |segment|
+    jobs_root = File.expand_path("../../app/jobs", __dir__)
+
+    # Job class names approximated from the file paths under app/jobs (a path-derived
+    # constant approximation, not a full Zeitwerk mapping), so jobs whose name does not
+    # end with `Job` (e.g. DatabaseMigrations::PopulatePaymentsWithCustomerId) are also
+    # detected. Files under concerns/ are skipped since Rails collapses that directory.
+    JOB_CLASS_NAMES = Dir.glob("#{jobs_root}/**/*.rb").filter_map do |path|
+      next if path.start_with?("#{jobs_root}/concerns/")
+
+      path.delete_prefix("#{jobs_root}/").delete_suffix(".rb").split("/").map do |segment|
         segment.split("_").map(&:capitalize).join
       end.join("::")
     end.to_set.freeze
@@ -38,11 +43,12 @@ module Cops
         ...)
     PATTERN
 
-    # Matches example groups like `RSpec.describe SendWebhookJob do ... end` and
-    # `describe SendWebhookJob do ... end`, capturing the described constant.
+    # Matches example groups like `RSpec.describe SendWebhookJob do ... end`,
+    # `describe SendWebhookJob do ... end` and `context SendWebhookJob do ... end`,
+    # capturing the described constant.
     def_node_matcher :describe_const, <<~PATTERN
       (block
-        (send {nil? (const {nil? cbase} :RSpec)} :describe $(const _ _) ...)
+        (send {nil? (const {nil? cbase} :RSpec)} {:describe :context} $(const _ _) ...)
         ...)
     PATTERN
 
@@ -61,13 +67,29 @@ module Cops
 
     private
 
-    # Checks the matcher node itself and any descendant send node for a bare `receive`,
-    # `receive_messages` or `receive_message_chain`, so blocks and compound matchers
-    # like `have_been_enqueued.and receive(:perform_later)` are also caught.
-    def receive_matcher?(matcher)
-      [matcher, *matcher.each_descendant(:send)].any? do |node|
-        node.send_type? && node.receiver.nil? && RECEIVE_MATCHERS.include?(node.method_name)
+    # Follows only the matcher's own chain and compound combinators to find a bare
+    # `receive`, `receive_messages` or `receive_message_chain`: a block node delegates
+    # to its send, `.and`/`.or` recurse into receiver and arguments, and any other
+    # chained call recurses into its receiver. Block bodies are never inspected, so a
+    # nested `expect`/`allow` inside a block does not trigger the cop.
+    def receive_matcher?(node)
+      if node.block_type? || node.numblock_type?
+        return receive_matcher?(node.send_node)
       end
+
+      return false unless node.send_type?
+
+      if node.receiver.nil?
+        return RECEIVE_MATCHERS.include?(node.method_name)
+      end
+
+      if %i[and or].include?(node.method_name)
+        return true if receive_matcher?(node.receiver)
+
+        return node.arguments.any? { |arg| receive_matcher?(arg) }
+      end
+
+      receive_matcher?(node.receiver)
     end
 
     def job_subject?(node, subject)
