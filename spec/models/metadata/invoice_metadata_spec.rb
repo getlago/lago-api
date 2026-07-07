@@ -37,5 +37,11 @@ RSpec.describe Metadata::InvoiceMetadata do
 
       it { expect(metadata).not_to be_valid }
     end
+
+    context "when value length is invalid" do
+      let(:value) { "a" * 101 }
+
+      it { expect(metadata).not_to be_valid }
+    end
   end
 end

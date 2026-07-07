@@ -8,7 +8,7 @@ module Metadata
     belongs_to :organization
 
     validates :key, presence: true, uniqueness: {scope: :invoice_id}, length: {maximum: 20}
-    validates :value, presence: true
+    validates :value, presence: true, length: {maximum: 100}
   end
 end
 

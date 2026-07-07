@@ -120,6 +120,14 @@ RSpec.describe Customer do
       expect(customer).not_to be_valid
     end
 
+    it "validates the name length" do
+      customer.name = "a" * 255
+      expect(customer).to be_valid
+
+      customer.name = "a" * 256
+      expect(customer).not_to be_valid
+    end
+
     describe "of email" do
       let(:customer) { build_stubbed(:customer, email: "invalid @example.com") }
       let(:error) { customer.errors.where(:email, :invalid_email_format) }
