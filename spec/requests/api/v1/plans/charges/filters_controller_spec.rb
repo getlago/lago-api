@@ -180,14 +180,13 @@ RSpec.describe Api::V1::Plans::Charges::FiltersController do
       before do
         create(:subscription, plan: child_plan, status: :active)
         child_charge
-        allow(ChargeFilters::CascadeJob).to receive(:perform_later)
       end
 
       it "triggers cascade to children" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(ChargeFilters::CascadeJob).to have_received(:perform_later)
+        expect(ChargeFilters::CascadeJob).to have_been_enqueued
       end
     end
 

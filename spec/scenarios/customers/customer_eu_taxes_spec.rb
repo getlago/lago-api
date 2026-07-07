@@ -109,8 +109,6 @@ describe "Add customer-specific taxes" do
   end
 
   context "when VIES returns an error" do
-    let(:retry_job) { class_double(Customers::ViesCheckJob) }
-
     it "does not change taxes but send the webhook" do
       enable_eu_tax_management!
 
@@ -122,11 +120,13 @@ describe "Add customer-specific taxes" do
       allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
         .and_raise(::Valvat::RateLimitError.new("rate limit exceeded", Valvat::Lookup::VIES))
 
-      allow(Customers::ViesCheckJob).to receive(:set).and_return retry_job
-      allow(retry_job).to receive(:perform_later)
+      # Perform the failing VIES check without draining the delayed retry it schedules,
+      # since performing the retry would fail VIES again and re-enqueue forever.
+      create_or_update_customer({external_id: "user_fr_123", tax_identification_number: vat_number}, perform_jobs: false)
+      perform_enqueued_jobs(only: Customers::ViesCheckJob)
+      perform_all_enqueued_jobs(except: [Customers::ViesCheckJob])
 
-      create_or_update_customer({external_id: "user_fr_123", tax_identification_number: vat_number})
-
+      expect(Customers::ViesCheckJob).to have_been_enqueued
       expect(Customer.find_by(external_id: "user_fr_123").taxes.reload.sole.code).to eq "lago_eu_fr_standard"
       expect(webhooks_sent.find { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "valid" => false,
@@ -138,7 +138,6 @@ describe "Add customer-specific taxes" do
 
   context "when VIES fails and invoice is blocked until retry succeeds" do
     let(:vat_number) { "IT12345678901" }
-    let(:retry_job) { class_double(Customers::ViesCheckJob) }
 
     def setup_customer_with_pending_vies_check!
       enable_eu_tax_management!
@@ -150,10 +149,18 @@ describe "Add customer-specific taxes" do
       # Update with VAT number - VIES fails
       allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
         .and_raise(::Valvat::RateLimitError.new("rate limit exceeded", Valvat::Lookup::VIES))
-      allow(Customers::ViesCheckJob).to receive(:set).and_return(retry_job)
-      allow(retry_job).to receive(:perform_later)
 
-      create_or_update_customer({external_id: "user_it_123", tax_identification_number: vat_number})
+      # Perform the failing VIES check without draining the delayed retry it schedules,
+      # since performing the retry would fail VIES again and re-enqueue forever.
+      create_or_update_customer({external_id: "user_it_123", tax_identification_number: vat_number}, perform_jobs: false)
+      perform_enqueued_jobs(only: Customers::ViesCheckJob)
+      perform_all_enqueued_jobs(except: [Customers::ViesCheckJob])
+
+      # Drop the scheduled retry so the rest of the scenario controls when VIES resolves.
+      # The adapter queue is mutated directly because QueuesHelper#enqueued_jobs returns
+      # a filtered copy, which makes clear_enqueued_jobs a no-op.
+      expect(Customers::ViesCheckJob).to have_been_enqueued
+      queue_adapter.enqueued_jobs.reject! { |job| job[:job] == Customers::ViesCheckJob }
 
       expect(customer.reload.pending_vies_check).to be_present
       expect(customer.vies_check_in_progress?).to be true

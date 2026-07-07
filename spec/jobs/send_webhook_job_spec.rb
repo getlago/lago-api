@@ -75,14 +75,13 @@ RSpec.describe SendWebhookJob do
 
       before do
         allow(Webhooks::Invoices::CreatedService).to receive(:new)
-        allow(SendHttpWebhookJob).to receive(:perform_later)
       end
 
       it "calls the webhook invoice service" do
         webhook = create(:webhook, webhook_endpoint: create(:webhook_endpoint, organization:))
         send_webhook_job.perform_now("invoice.created", invoice, {}, webhook.id)
 
-        expect(SendHttpWebhookJob).to have_received(:perform_later).with(webhook)
+        expect(SendHttpWebhookJob).to have_been_enqueued.with(webhook)
         expect(Webhooks::Invoices::CreatedService).not_to have_received(:new)
       end
     end
