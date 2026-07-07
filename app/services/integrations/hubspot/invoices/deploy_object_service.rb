@@ -4,7 +4,7 @@ module Integrations
   module Hubspot
     module Invoices
       class DeployObjectService < Integrations::Aggregator::BaseService
-        VERSION = 1
+        VERSION = 3
 
         def action_path
           "v1/hubspot/object"
@@ -84,6 +84,13 @@ module Integrations
                 searchableInGlobalSearch: true
               },
               {
+                name: "lago_invoice_purchase_order_number",
+                label: "Lago Purchase Order Number",
+                type: "string",
+                fieldType: "text",
+                searchableInGlobalSearch: true
+              },
+              {
                 name: "lago_invoice_issuing_date",
                 label: "Lago Invoice Issuing Date",
                 type: "date",
@@ -153,6 +160,12 @@ module Integrations
                 label: "Lago Invoice File URL",
                 type: "string",
                 fieldType: "file"
+              },
+              {
+                name: "lago_invoice_url",
+                label: "Lago Invoice URL",
+                type: "string",
+                fieldType: "text"
               }
             ],
             associatedObjects: %w[COMPANY CONTACT]
