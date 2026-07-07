@@ -14,7 +14,7 @@ module Customers
   #
   class LockService < BaseService
     ACQUIRE_LOCK_TIMEOUT = 5.seconds
-    VALID_SCOPES = %i[prepaid_credit].freeze
+    VALID_SCOPES = %i[prepaid_credit payment_method].freeze
 
     Result = BaseResult
 

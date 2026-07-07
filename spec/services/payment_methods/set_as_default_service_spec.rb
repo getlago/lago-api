@@ -22,6 +22,14 @@ RSpec.describe PaymentMethods::SetAsDefaultService do
         payment_method3
       end
 
+      it "serializes under a per-customer advisory lock" do
+        allow(Customers::LockService).to receive(:call).and_call_original
+
+        default_service.call
+
+        expect(Customers::LockService).to have_received(:call).with(customer:, scope: :payment_method)
+      end
+
       it "correctly sets default payment method" do
         default_service.call
 
