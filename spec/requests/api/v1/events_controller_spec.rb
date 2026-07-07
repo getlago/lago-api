@@ -275,6 +275,25 @@ RSpec.describe Api::V1::EventsController do
       end
     end
 
+    context "with unknown params", cache: :memory do
+      let(:params) { {page: 1, per_page: 1} }
+
+      before { create(:event, organization:) }
+
+      it "ignores unknown params for caching" do
+        # First request populates the cache
+        get_with_token(organization, "/api/v1/events", page: 1, per_page: 1)
+        expect(json[:meta][:total_count]).to eq(2)
+
+        # Add a third event
+        create(:event, organization:)
+
+        # Request with unknown param should return cached count (2), not fresh count (3)
+        get_with_token(organization, "/api/v1/events", page: 1, per_page: 1, unknown_param: "value")
+        expect(json[:meta][:total_count]).to eq(2)
+      end
+    end
+
     context "with code" do
       let(:params) { {code: event.code} }
 

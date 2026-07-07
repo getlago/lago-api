@@ -83,7 +83,12 @@ module Api
               result.events,
               ::V1::EventSerializer,
               collection_name: "events",
-              meta: pagination_metadata(result.events)
+              meta: pagination_metadata(
+                result.events,
+                key: "events",
+                organization_id: current_organization.id,
+                params: index_filters.merge(page: params[:page], per_page: params[:per_page])
+              )
             )
           )
         else
@@ -109,7 +114,12 @@ module Api
               result.events,
               ::V1::EventEnrichedSerializer,
               collection_name: "events",
-              meta: pagination_metadata(result.events)
+              meta: pagination_metadata(
+                result.events,
+                key: "events_enriched",
+                organization_id: current_organization.id,
+                params: index_filters.merge(page: params[:page], per_page: params[:per_page])
+              )
             )
           )
         else
