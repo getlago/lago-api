@@ -196,6 +196,19 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
+    context "when wallet is terminated" do
+      let(:wallet) { create(:wallet, :terminated, customer:, allowed_fee_types: []) }
+
+      it "returns a validation failure and does not update the wallet" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:wallet_id]).to eq(["wallet_is_terminated"])
+
+        expect(wallet.reload.name).not_to eq("new name")
+        expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
+
     context "with invalid priority" do
       let(:priority) { 55 }
 

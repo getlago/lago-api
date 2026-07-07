@@ -28,6 +28,8 @@ module Api
       def update
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
 
+        return method_not_allowed_error(code: "update_on_voided_invoice") if invoice&.voided?
+
         result = Invoices::UpdateService.new(
           invoice:,
           params: update_params.to_h.deep_symbolize_keys,
