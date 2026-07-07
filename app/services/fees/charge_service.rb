@@ -110,18 +110,55 @@ module Fees
     end
 
     def init_charge_fees(properties:, charge_filter: nil)
-      fees = cache_middleware.call(charge_filter:) do
+      if skip_unused_filter?(charge_filter)
+        fees = []
+      else
+        fees = compute_fees_with_cache(properties:, charge_filter:)
+        # NOTE: nil means the aggregation or the charge model failed, result carries the error
+        return if fees.nil?
+      end
+
+      if fees.empty? && skip_caching_of_non_persistable_fee?
+        fees = hydrate_non_persistable_fees(properties:, charge_filter:)
+      end
+
+      # Preserve preloaded associations on all fees (including cached ones) to avoid N+1 queries
+      fees.each do |fee|
+        fee.association(:billable_metric).target = billable_metric
+        fee.association(:charge_filter).target = charge_filter if charge_filter&.id
+        fee.association(:charge).target = charge
+      end
+
+      result.fees.concat(fees.compact)
+    end
+
+    # NOTE: When the billing period pre-filtering (Events::BillingPeriodFilterService) reports
+    #       that no event matches this filter in the period, the fee can only have zero units.
+    #       The cache round-trip and the bypassed aggregation are skipped and the zero-units fee
+    #       is hydrated in memory instead. Scoped to current usage: on invoicing, adjusted fees
+    #       on draft invoices can target filters without any usage.
+    #       Recurring metrics always aggregate as usage carries over from previous periods.
+    def skip_unused_filter?(charge_filter)
+      return false unless current_usage
+      return false if filtered_aggregations.nil?
+      return false if billable_metric.recurring?
+
+      !filtered_aggregations.include?(charge_filter&.id)
+    end
+
+    def compute_fees_with_cache(properties:, charge_filter:)
+      cache_middleware.call(charge_filter:) do
         aggregation_result = aggregator(charge_filter:).aggregate(options: options(properties))
 
         unless aggregation_result.success?
           result.fail_with_error!(aggregation_result.error)
-          return []
+          return
         end
 
         charge_model_result = apply_charge_model(aggregation_result:, properties:)
         unless charge_model_result.success?
           result.fail_with_error!(charge_model_result.error)
-          return []
+          return
         end
 
         breakdowns_by_group = breakdowns_by_grouped_by(aggregation_result.breakdowns, charge_model_result)
@@ -139,19 +176,6 @@ module Fees
 
         filter_non_persistable_fees_for_caching(charge_fees)
       end
-
-      if fees.empty? && skip_caching_of_non_persistable_fee?
-        fees = hydrate_non_persistable_fees(properties:, charge_filter:)
-      end
-
-      # Preserve preloaded associations on all fees (including cached ones) to avoid N+1 queries
-      fees.each do |fee|
-        fee.association(:billable_metric).target = billable_metric
-        fee.association(:charge_filter).target = charge_filter if charge_filter&.id
-        fee.association(:charge).target = charge
-      end
-
-      result.fees.concat(fees.compact)
     end
 
     def skip_caching_of_non_persistable_fee?
