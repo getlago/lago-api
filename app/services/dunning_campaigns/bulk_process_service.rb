@@ -2,6 +2,8 @@
 
 module DunningCampaigns
   class BulkProcessService < BaseService
+    Result = BaseResult
+
     def call
       return result unless License.premium?
 
@@ -26,6 +28,8 @@ module DunningCampaigns
     end
 
     class CustomerDunningEvaluator < BaseService
+      Result = BaseResult
+
       def initialize(customer)
         @customer = customer
         @billing_entity = customer.billing_entity

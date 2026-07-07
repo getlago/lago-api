@@ -3,6 +3,8 @@
 module Invoices
   module Payments
     class DeliverErrorWebhookService < BaseService
+      Result = BaseResult
+
       def initialize(invoice, params)
         @invoice = invoice
         @params = params
