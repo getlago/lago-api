@@ -126,7 +126,10 @@ describe "Add customer-specific taxes" do
       perform_enqueued_jobs(only: Customers::ViesCheckJob)
       perform_all_enqueued_jobs(except: [Customers::ViesCheckJob])
 
-      expect(Customers::ViesCheckJob).to have_been_enqueued
+      # The failing check scheduled a delayed retry, which is still in the queue.
+      # `have_been_enqueued` is avoided here because it is unreliable after the
+      # perform_all_enqueued_jobs drain loop (see QueuesHelper).
+      expect(enqueued_jobs(only: [Customers::ViesCheckJob])).not_to be_empty
       expect(Customer.find_by(external_id: "user_fr_123").taxes.reload.sole.code).to eq "lago_eu_fr_standard"
       expect(webhooks_sent.find { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "valid" => false,
@@ -157,9 +160,11 @@ describe "Add customer-specific taxes" do
       perform_all_enqueued_jobs(except: [Customers::ViesCheckJob])
 
       # Drop the scheduled retry so the rest of the scenario controls when VIES resolves.
-      # The adapter queue is mutated directly because QueuesHelper#enqueued_jobs returns
-      # a filtered copy, which makes clear_enqueued_jobs a no-op.
-      expect(Customers::ViesCheckJob).to have_been_enqueued
+      # The adapter queue is inspected and mutated directly: `have_been_enqueued` is
+      # unreliable after the perform_all_enqueued_jobs drain loop (see QueuesHelper),
+      # and QueuesHelper#enqueued_jobs returns a filtered copy, which makes
+      # clear_enqueued_jobs a no-op.
+      expect(enqueued_jobs(only: [Customers::ViesCheckJob])).not_to be_empty
       queue_adapter.enqueued_jobs.reject! { |job| job[:job] == Customers::ViesCheckJob }
 
       expect(customer.reload.pending_vies_check).to be_present
