@@ -255,6 +255,17 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "when invoice is voided" do
+      let(:invoice) { create(:invoice, :voided, customer:, organization:) }
+
+      it "returns a method not allowed error and does not update the invoice" do
+        expect { subject }.not_to change { invoice.reload.payment_status }
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("update_on_voided_invoice")
+      end
+    end
+
     context "with metadata" do
       let(:update_params) do
         {
