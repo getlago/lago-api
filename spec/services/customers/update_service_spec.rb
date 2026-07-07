@@ -46,8 +46,6 @@ RSpec.describe Customers::UpdateService do
     let(:account_type) { "customer" }
 
     it "updates a customer and calls SendWebhookJob" do
-      allow(SendWebhookJob).to receive(:perform_later)
-
       result = customers_service.call
       updated_customer = result.customer
       expect(updated_customer.name).to eq(update_args[:name])
@@ -60,7 +58,7 @@ RSpec.describe Customers::UpdateService do
 
       shipping_address = update_args[:shipping_address]
       expect(updated_customer.shipping_city).to eq(shipping_address[:city])
-      expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", updated_customer)
+      expect(SendWebhookJob).to have_been_enqueued.with("customer.updated", updated_customer)
     end
 
     it "produces an activity log" do

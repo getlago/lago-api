@@ -409,18 +409,17 @@ RSpec.describe Charges::UpdateService do
         before do
           create(:subscription, plan: child_plan, status: :active)
           child_charge
-          allow(Charges::UpdateChildrenJob).to receive(:perform_later)
         end
 
         it "triggers charge-level cascade via Charges::UpdateChildrenJob (without filters)" do
           subject
 
-          expect(Charges::UpdateChildrenJob).to have_received(:perform_later) do |args|
+          expect(Charges::UpdateChildrenJob).to have_been_enqueued.with { |args|
             expect(args[:params]).to include("charge_model", "properties")
             expect(args[:params]).not_to have_key("filters")
             expect(args[:old_parent_attrs]).to include("id" => charge.id)
             expect(args).not_to have_key(:old_parent_filters_attrs)
-          end
+          }
         end
 
         context "when charge has no children" do
@@ -429,7 +428,7 @@ RSpec.describe Charges::UpdateService do
           it "does not trigger cascade update" do
             subject
 
-            expect(Charges::UpdateChildrenJob).not_to have_received(:perform_later)
+            expect(Charges::UpdateChildrenJob).not_to have_been_enqueued
           end
         end
       end
@@ -441,13 +440,12 @@ RSpec.describe Charges::UpdateService do
         before do
           create(:subscription, plan: child_plan, status: :active)
           child_charge
-          allow(Charges::UpdateChildrenJob).to receive(:perform_later)
         end
 
         it "does not trigger cascade update" do
           subject
 
-          expect(Charges::UpdateChildrenJob).not_to have_received(:perform_later)
+          expect(Charges::UpdateChildrenJob).not_to have_been_enqueued
         end
       end
     end
