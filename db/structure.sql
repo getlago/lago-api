@@ -746,6 +746,7 @@ DROP INDEX IF EXISTS public.index_charges_on_plan_id;
 DROP INDEX IF EXISTS public.index_charges_on_parent_id;
 DROP INDEX IF EXISTS public.index_charges_on_organization_id;
 DROP INDEX IF EXISTS public.index_charges_on_deleted_at;
+DROP INDEX IF EXISTS public.index_charges_on_billable_metric_id_all;
 DROP INDEX IF EXISTS public.index_charges_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_charges_on_accepts_target_wallet;
 DROP INDEX IF EXISTS public.index_charge_filters_on_organization_id;
@@ -7463,6 +7464,13 @@ CREATE INDEX index_charges_on_billable_metric_id ON public.charges USING btree (
 
 
 --
+-- Name: index_charges_on_billable_metric_id_all; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_charges_on_billable_metric_id_all ON public.charges USING btree (billable_metric_id);
+
+
+--
 -- Name: index_charges_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12840,6 +12848,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260706131152'),
+('20260703164249'),
 ('20260702074504'),
 ('20260701083110'),
 ('20260701083109'),

@@ -22,7 +22,6 @@ module Wallets
         invoice_requires_successful_payment: rule.invoice_requires_successful_payment?,
         metadata: rule.transaction_metadata,
         name: rule.transaction_name,
-        purchase_order_number: rule.purchase_order_number,
         ignore_paid_top_up_limits: rule.ignore_paid_top_up_limits?
       }
 
