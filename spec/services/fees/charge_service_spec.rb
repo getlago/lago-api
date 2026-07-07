@@ -4017,6 +4017,24 @@ RSpec.describe Fees::ChargeService, :premium do
         end
       end
 
+      context "when some filters are excluded from filtered_aggregations" do
+        let(:filtered_aggregations) { [eu_charge_filter.id] }
+
+        it "does not compute matching and ignored filters for bypassed aggregations" do
+          allow(ChargeFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
+
+          result = charge_subscription_service.call
+          expect(result).to be_success
+
+          expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
+            .with(charge:, filter: eu_charge_filter)
+          expect(ChargeFilters::MatchingAndIgnoredService).not_to have_received(:call)
+            .with(charge:, filter: us_charge_filter)
+          expect(ChargeFilters::MatchingAndIgnoredService).not_to have_received(:call)
+            .with(charge:, filter: asia_charge_filter)
+        end
+      end
+
       context "when filtered_aggregations includes nil for default bucket" do
         let(:filtered_aggregations) { [nil] }
 
