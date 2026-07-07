@@ -9,6 +9,11 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:file_url) { Faker::Internet.url }
+  let(:invoice_url) do
+    url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+
+    URI.join(url, "/#{customer.organization.slug}/customer/#{customer.id}/", "invoice/#{invoice.id}/overview").to_s
+  end
 
   let(:invoice) do
     create(
@@ -43,6 +48,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
           "properties" => {
             "lago_invoice_id" => invoice.id,
             "lago_invoice_number" => invoice.number,
+            "lago_invoice_purchase_order_number" => invoice.purchase_order_number,
             "lago_invoice_issuing_date" => invoice.issuing_date.strftime("%Y-%m-%d"),
             "lago_invoice_payment_due_date" => invoice.payment_due_date.strftime("%Y-%m-%d"),
             "lago_invoice_payment_overdue" => invoice.payment_overdue,
@@ -53,7 +59,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
             "lago_invoice_total_amount" => invoice.total_amount_cents / 100.0,
             "lago_invoice_total_due_amount" => invoice.total_due_amount_cents / 100.0,
             "lago_invoice_subtotal_excluding_taxes" => invoice.sub_total_including_taxes_amount_cents / 100.0,
-            "lago_invoice_file_url" => invoice.file_url
+            "lago_invoice_file_url" => invoice.file_url,
+            "lago_invoice_url" => invoice_url
           }
         }
       }
@@ -83,6 +90,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
           "properties" => {
             "lago_invoice_id" => invoice.id,
             "lago_invoice_number" => invoice.number,
+            "lago_invoice_purchase_order_number" => invoice.purchase_order_number,
             "lago_invoice_issuing_date" => invoice.issuing_date.strftime("%Y-%m-%d"),
             "lago_invoice_payment_due_date" => invoice.payment_due_date.strftime("%Y-%m-%d"),
             "lago_invoice_payment_overdue" => invoice.payment_overdue,
@@ -93,7 +101,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
             "lago_invoice_total_amount" => invoice.total_amount_cents / 100.0,
             "lago_invoice_total_due_amount" => invoice.total_due_amount_cents / 100.0,
             "lago_invoice_subtotal_excluding_taxes" => invoice.sub_total_including_taxes_amount_cents / 100.0,
-            "lago_invoice_file_url" => invoice.file_url
+            "lago_invoice_file_url" => invoice.file_url,
+            "lago_invoice_url" => invoice_url
           }
         }
       }

@@ -9,6 +9,12 @@ module Integrations
             super
           end
 
+          def body
+            super.map do |invoice_payload|
+              invoice_payload.merge("reference" => invoice.purchase_order_number)
+            end
+          end
+
           def item(fee)
             base_item = super
             base_item["item_code"] = base_item.delete("external_id")
