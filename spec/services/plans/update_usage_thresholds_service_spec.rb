@@ -48,11 +48,12 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
       around { |test| premium_integration!(organization, "progressive_billing", &test) }
 
       it "does update the plan" do
-        thresholds = subject.plan.usage_thresholds
-        expect(thresholds.size).to eq(1)
-        expect(thresholds.first.threshold_display_name).to eq("Threshold 1")
-        expect(thresholds.first.amount_cents).to eq(1000)
-        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to have_been_enqueued
+        expect do
+          thresholds = subject.plan.usage_thresholds
+          expect(thresholds.size).to eq(1)
+          expect(thresholds.first.threshold_display_name).to eq("Threshold 1")
+          expect(thresholds.first.amount_cents).to eq(1000)
+        end.to have_enqueued_job_after_commit(LifetimeUsages::FlagRefreshFromPlanUpdateJob).with(plan)
       end
     end
   end
@@ -110,11 +111,12 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
         around { |test| premium_integration!(organization, "progressive_billing", &test) }
 
         it "does update the plan" do
-          thresholds = subject.plan.usage_thresholds
-          expect(thresholds.size).to eq(1)
-          expect(thresholds.first.threshold_display_name).to eq("Other threshold")
-          expect(thresholds.first.amount_cents).to eq(1000)
-          expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to have_been_enqueued.with(plan)
+          expect do
+            thresholds = subject.plan.usage_thresholds
+            expect(thresholds.size).to eq(1)
+            expect(thresholds.first.threshold_display_name).to eq("Other threshold")
+            expect(thresholds.first.amount_cents).to eq(1000)
+          end.to have_enqueued_job_after_commit(LifetimeUsages::FlagRefreshFromPlanUpdateJob).with(plan)
         end
       end
     end
