@@ -140,8 +140,6 @@ RSpec.describe PaymentRequests::Payments::AdyenService do
     let(:provider_payment_id) { "ch_123456" }
 
     before do
-      allow(SendWebhookJob).to receive(:perform_later)
-      allow(SegmentTrackJob).to receive(:perform_later)
       payment
     end
 

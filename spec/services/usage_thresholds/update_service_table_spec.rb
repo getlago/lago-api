@@ -8,10 +8,6 @@ RSpec.describe UsageThresholds::UpdateService, premium: true do
   let(:organization) { create(:organization, premium_integrations: ["progressive_billing"]) }
   let(:model) { create(:plan, organization:) }
 
-  before do
-    allow(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to receive(:perform_after_commit)
-  end
-
   # Helper to build threshold attributes for comparison
   def threshold_attrs(thresholds)
     thresholds.map { |t| {amount_cents: t.amount_cents, threshold_display_name: t.threshold_display_name, recurring: t.recurring} }

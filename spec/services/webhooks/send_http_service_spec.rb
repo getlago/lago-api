@@ -53,7 +53,6 @@ RSpec.describe Webhooks::SendHttpService do
       allow(lago_client).to receive(:post_with_response).and_raise(
         LagoHttpClient::HttpError.new(403, error_body.to_json, "")
       )
-      allow(SendHttpWebhookJob).to receive(:set).and_return(class_double(SendHttpWebhookJob, perform_later: nil))
     end
 
     context "when LAGO_WEBHOOK_TIMEOUT_SECONDS is set" do
@@ -80,7 +79,7 @@ RSpec.describe Webhooks::SendHttpService do
 
       expect(webhook).to be_retrying
       expect(webhook.http_status).to eq(403)
-      expect(SendHttpWebhookJob).to have_received(:set)
+      expect(SendHttpWebhookJob).to have_been_enqueued.with(webhook)
     end
 
     context "with a retrying webhook" do
@@ -93,7 +92,7 @@ RSpec.describe Webhooks::SendHttpService do
         expect(webhook.http_status).to eq(403)
         expect(webhook.retries).to eq(2)
         expect(webhook.last_retried_at).not_to be_nil
-        expect(SendHttpWebhookJob).to have_received(:set)
+        expect(SendHttpWebhookJob).to have_been_enqueued.with(webhook)
       end
 
       context "when the webhook failed 3 times" do
@@ -105,7 +104,7 @@ RSpec.describe Webhooks::SendHttpService do
           expect(webhook).to be_failed
           expect(webhook.http_status).to eq(403)
           expect(webhook.reload.retries).to eq 3
-          expect(SendHttpWebhookJob).not_to have_received(:set)
+          expect(SendHttpWebhookJob).not_to have_been_enqueued
         end
       end
     end
@@ -117,7 +116,6 @@ RSpec.describe Webhooks::SendHttpService do
 
     before do
       allow(webhook).to receive(:payload).and_raise(slow_down_error)
-      allow(SendHttpWebhookJob).to receive(:set)
     end
 
     it "lets the error propagate for the job to retry" do
@@ -129,7 +127,7 @@ RSpec.describe Webhooks::SendHttpService do
 
       expect(webhook.retries).to eq(1)
       expect(webhook).to be_retrying
-      expect(SendHttpWebhookJob).not_to have_received(:set)
+      expect(SendHttpWebhookJob).not_to have_been_enqueued
     end
   end
 end

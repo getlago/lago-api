@@ -129,10 +129,6 @@ RSpec.describe Plans::CreateService do
   describe "#call" do
     subject(:result) { plans_service.call }
 
-    before do
-      allow(SegmentTrackJob).to receive(:perform_later)
-    end
-
     it "creates a plan" do
       expect { plans_service.call }
         .to change(Plan, :count).by(1)
@@ -304,7 +300,7 @@ RSpec.describe Plans::CreateService do
     it "calls SegmentTrackJob" do
       plan = plans_service.call.plan
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "plan_created",
         properties: {

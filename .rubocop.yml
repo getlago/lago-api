@@ -43,33 +43,6 @@ Lago/LagoPremiumAround:
 Lago/NoExpectReceiveOnJob:
   Include:
     - "spec/**/*.rb"
-  # TODO: Migrate these specs to have_been_enqueued
-  Exclude:
-    - "spec/services/invoices/create_one_off_service_spec.rb"
-    - "spec/services/invoices/finalize_pending_vies_invoice_service_spec.rb"
-    - "spec/services/invoices/payments/stripe_service_spec.rb"
-    - "spec/services/invoices/progressive_billing_service_spec.rb"
-    - "spec/services/invoices/provider_taxes/pull_taxes_and_apply_service_spec.rb"
-    - "spec/services/invoices/refresh_draft_and_finalize_service_spec.rb"
-    - "spec/services/invoices/subscription_service_spec.rb"
-    - "spec/services/password_resets/reset_service_spec.rb"
-    - "spec/services/payment_providers/gocardless/payments/create_service_spec.rb"
-    - "spec/services/payment_providers/stripe/payments/create_service_spec.rb"
-    - "spec/services/payment_providers/stripe/webhooks/payment_intent_succeeded_service_spec.rb"
-    - "spec/services/payment_requests/payments/adyen_service_spec.rb"
-    - "spec/services/payment_requests/payments/cashfree_service_spec.rb"
-    - "spec/services/payment_requests/payments/flutterwave_service_spec.rb"
-    - "spec/services/payment_requests/payments/gocardless_service_spec.rb"
-    - "spec/services/payment_requests/payments/stripe_service_spec.rb"
-    - "spec/services/plans/create_service_spec.rb"
-    - "spec/services/plans/override_service_spec.rb"
-    - "spec/services/plans/update_usage_thresholds_service_spec.rb"
-    - "spec/services/subscriptions/free_trial_billing_service_spec.rb"
-    - "spec/services/usage_monitoring/process_all_subscription_activities_service_spec.rb"
-    - "spec/services/usage_monitoring/process_subscription_activity_service_spec.rb"
-    - "spec/services/usage_thresholds/update_service_table_spec.rb"
-    - "spec/services/users_service_spec.rb"
-    - "spec/services/webhooks/send_http_service_spec.rb"
 
 Lago/NoDropColumnOrTable:
   Include:

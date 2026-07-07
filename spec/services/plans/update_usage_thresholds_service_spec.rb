@@ -8,10 +8,6 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
 
-  before do
-    allow(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to receive(:perform_after_commit)
-  end
-
   context "when usage_thresholds_params is empty" do
     let(:usage_thresholds_params) { [] }
 
@@ -26,7 +22,7 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
 
       it "does not update the plan" do
         expect(subject.plan.usage_thresholds).to be_empty
-        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).not_to have_received(:perform_after_commit)
+        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).not_to have_been_enqueued
       end
     end
   end
@@ -44,7 +40,7 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
     context "when progressive_billing is not enabled" do
       it "does not update the plan" do
         expect(subject.plan.usage_thresholds).to be_empty
-        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).not_to have_received(:perform_after_commit).with(plan)
+        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).not_to have_been_enqueued.with(plan)
       end
     end
 
@@ -56,7 +52,7 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
         expect(thresholds.size).to eq(1)
         expect(thresholds.first.threshold_display_name).to eq("Threshold 1")
         expect(thresholds.first.amount_cents).to eq(1000)
-        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to have_received(:perform_after_commit)
+        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to have_been_enqueued
       end
     end
   end
@@ -89,7 +85,7 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
 
         it "clears the thresholds" do
           expect(subject.plan.usage_thresholds).to be_empty
-          expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).not_to have_received(:perform_after_commit)
+          expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).not_to have_been_enqueued
         end
       end
     end
@@ -118,7 +114,7 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
           expect(thresholds.size).to eq(1)
           expect(thresholds.first.threshold_display_name).to eq("Other threshold")
           expect(thresholds.first.amount_cents).to eq(1000)
-          expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to have_received(:perform_after_commit).with(plan)
+          expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to have_been_enqueued.with(plan)
         end
       end
     end
