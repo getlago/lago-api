@@ -499,7 +499,7 @@ class Invoice < ApplicationRecord
     return I18n.t("invoice.self_billed.document_name") if self_billed?
     return I18n.t("invoice.prepaid_credit_invoice") if credit?
 
-    if TAX_INVOICE_LABEL_COUNTRIES.include?(organization.country)
+    if TAX_INVOICE_LABEL_COUNTRIES.include?(billing_entity.country)
       return I18n.t("invoice.paid_tax_invoice") if advance_charges?
       return I18n.t("invoice.document_tax_name")
     end

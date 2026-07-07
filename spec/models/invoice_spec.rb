@@ -1110,40 +1110,50 @@ RSpec.describe Invoice do
 
   describe "#document_invoice_name" do
     let(:organization) { create(:organization, name: "LAGO", country: "FR") }
+    let(:billing_entity) { create(:billing_entity, organization:, country: "FR") }
     let(:customer) { create(:customer, organization:) }
-    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:, billing_entity:) }
 
     it "returns the correct name for EU country" do
       expect(invoice.document_invoice_name).to eq("Invoice")
     end
 
     context "when invoice is self billed" do
-      let(:invoice) { create(:invoice, :self_billed, customer:, organization:) }
+      let(:invoice) { create(:invoice, :self_billed, customer:, organization:, billing_entity:) }
 
       it "returns the correct name for EU country" do
         expect(invoice.document_invoice_name).to eq("Self-billing invoice")
       end
     end
 
-    context "when organization country is Australia" do
-      let(:organization) { create(:organization, name: "LAGO", country: "AU") }
+    context "when billing entity country is Australia" do
+      let(:billing_entity) { create(:billing_entity, organization:, country: "AU") }
 
       it "returns the correct name that includes keyword tax" do
         expect(invoice.document_invoice_name).to eq("Tax invoice")
       end
     end
 
-    context "when the organization country is in TAX_INVOICE_LABEL_COUNTRIES" do
+    context "when the billing entity country is in TAX_INVOICE_LABEL_COUNTRIES" do
       let(:country) { Invoice::TAX_INVOICE_LABEL_COUNTRIES.sample }
-      let(:organization) { create(:organization, name: "LAGO", country:) }
+      let(:billing_entity) { create(:billing_entity, organization:, country:) }
 
       it "returns the correct tax invoice name" do
         expect(invoice.document_invoice_name).to eq(I18n.t("invoice.document_tax_name"))
       end
     end
 
+    context "when the billing entity country differs from the organization country" do
+      let(:organization) { create(:organization, name: "LAGO", country: "FR") }
+      let(:billing_entity) { create(:billing_entity, organization:, country: "SG") }
+
+      it "uses the billing entity country to determine the tax invoice name" do
+        expect(invoice.document_invoice_name).to eq("Tax invoice")
+      end
+    end
+
     context "when it is credit invoice" do
-      let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :credit) }
+      let(:invoice) { create(:invoice, customer:, organization:, billing_entity:, invoice_type: :credit) }
 
       it "returns the correct name for EU country" do
         expect(invoice.document_invoice_name).to eq("Advance invoice")
