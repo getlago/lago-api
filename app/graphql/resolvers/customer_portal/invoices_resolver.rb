@@ -27,7 +27,7 @@ module Resolvers
 
         return result_error(result) unless result.success?
 
-        Invoice.preload_offset_amounts(result.invoices)
+        InvoicesPreloader.new(result.invoices, :offset_amount_cents).call
       rescue ActiveRecord::RecordNotFound
         not_found_error(resource: "customer")
       end
