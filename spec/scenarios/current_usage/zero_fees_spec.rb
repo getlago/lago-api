@@ -471,7 +471,7 @@ describe "Current usage zero fees Scenarios" do
     end
   end
 
-  context "with charge filters and event_property_combinations pre-filtering" do
+  context "with charge filters pre-filtering" do
     let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa]) }
 
     let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"}) }
@@ -479,8 +479,6 @@ describe "Current usage zero fees Scenarios" do
     let(:usa_filter) { create(:charge_filter, charge:, properties: {amount: "50"}) }
 
     before do
-      organization.enable_feature_flag!(:event_property_combinations)
-
       create(:charge_filter_value, charge_filter: europe_filter, billable_metric_filter: region, values: ["europe"])
       create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ["usa"])
     end
@@ -514,7 +512,6 @@ describe "Current usage zero fees Scenarios" do
             properties: {region: "europe"}
           }
         )
-        # Event not matching any filter falls into the catch-all bucket
         create_event(
           {
             code: billable_metric.code,
@@ -565,7 +562,6 @@ describe "Current usage zero fees Scenarios" do
           }
         )
 
-        # Usage carries over to the next period even though it has no events
         travel_to(DateTime.new(2024, 4, 10))
 
         fetch_current_usage(customer:)
