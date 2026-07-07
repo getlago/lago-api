@@ -124,6 +124,45 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
       end
     end
 
+    context "when only overrides from_datetime is present" do
+      let(:add_on_item) { super().merge("overrides" => {"from_datetime" => "2026-01-01T00:00:00Z"}) }
+
+      it "requires overrides to_datetime" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.to_datetime": ["value_is_mandatory"]})
+      end
+    end
+
+    context "when only overrides to_datetime is present" do
+      let(:add_on_item) { super().merge("overrides" => {"to_datetime" => "2026-02-01T00:00:00Z"}) }
+
+      it "requires overrides from_datetime" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.from_datetime": ["value_is_mandatory"]})
+      end
+    end
+
+    context "when overrides from_datetime is after to_datetime" do
+      let(:add_on_item) do
+        super().merge("overrides" => {"from_datetime" => "2026-02-01T00:00:00Z", "to_datetime" => "2026-01-01T00:00:00Z"})
+      end
+
+      it "returns an invalid_date_range error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.from_datetime": ["invalid_date_range"]})
+      end
+    end
+
+    context "when overrides from_datetime equals to_datetime" do
+      let(:add_on_item) do
+        super().merge("overrides" => {"from_datetime" => "2026-01-01T00:00:00Z", "to_datetime" => "2026-01-01T00:00:00Z"})
+      end
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
     context "with errors on multiple add_ons" do
       let(:billing_items) do
         {

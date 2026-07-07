@@ -12,10 +12,18 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
       "id" => "48e59220-6722-49c1-8cdf-eacd040e2a56",
       "local_id" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
       "payload" => payload,
-      "overrides" => {
-        "unit_amount_cents" => 12_000,
-        "total_amount_cents" => 12_000
-      }
+      "overrides" => overrides
+    }
+  end
+  let(:overrides) do
+    {
+      "description" => "Setup fee",
+      "units" => 2,
+      "unit_amount_cents" => 12_000,
+      "total_amount_cents" => 12_000,
+      "invoice_display_name" => "Custom setup",
+      "from_datetime" => "2026-01-05T00:00:00Z",
+      "to_datetime" => "2026-01-20T00:00:00Z"
     }
   end
   let(:payload) do
@@ -85,11 +93,91 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
     end
 
     context "when overrides contains an unknown key" do
-      let(:add_on_item) { super().merge("overrides" => {"units" => 2}) }
+      let(:overrides) { super().merge("tax_codes" => ["vat_20"]) }
 
       it "returns an unsupported_key error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.units": ["unsupported_key"]})
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.tax_codes": ["unsupported_key"]})
+      end
+    end
+
+    context "when overrides description is empty" do
+      let(:overrides) { super().merge("description" => "") }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.description": ["invalid_value"]})
+      end
+    end
+
+    context "when overrides description is null" do
+      let(:overrides) { super().merge("description" => nil) }
+
+      it "returns an invalid_type error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.description": ["invalid_type"]})
+      end
+    end
+
+    context "when overrides units is zero" do
+      let(:overrides) { super().merge("units" => 0) }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.units": ["invalid_value"]})
+      end
+    end
+
+    context "when overrides units is a string" do
+      let(:overrides) { super().merge("units" => "2") }
+
+      it "returns an invalid_type error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.units": ["invalid_type"]})
+      end
+    end
+
+    context "when overrides invoice_display_name is empty" do
+      let(:overrides) { super().merge("invoice_display_name" => "") }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.invoice_display_name": ["invalid_value"]})
+      end
+    end
+
+    context "when overrides invoice_display_name is null" do
+      let(:overrides) { super().merge("invoice_display_name" => nil) }
+
+      it "returns an invalid_type error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.invoice_display_name": ["invalid_type"]})
+      end
+    end
+
+    context "when overrides from_datetime is not an ISO 8601 date-time" do
+      let(:overrides) { super().merge("from_datetime" => "not-a-date") }
+
+      it "returns an invalid_format error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.from_datetime": ["invalid_format"]})
+      end
+    end
+
+    context "when overrides to_datetime has a wrong type" do
+      let(:overrides) { super().merge("to_datetime" => 123) }
+
+      it "returns an invalid_type error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.to_datetime": ["invalid_type"]})
+      end
+    end
+
+    context "when overrides datetimes are null" do
+      let(:overrides) { super().merge("from_datetime" => nil, "to_datetime" => nil) }
+
+      it "is valid" do
+        expect(validator).to be_valid
       end
     end
 

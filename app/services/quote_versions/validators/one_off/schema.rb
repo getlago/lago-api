@@ -74,6 +74,16 @@ module QuoteVersions
                     "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
                     "x-error" => {"type" => "invalid_type"},
                     "properties" => {
+                      "description" => {
+                        "type" => "string",
+                        "minLength" => 1,
+                        "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
+                      },
+                      "units" => {
+                        "type" => "number",
+                        "exclusiveMinimum" => 0,
+                        "x-error" => {"type" => "invalid_type", "exclusiveMinimum" => "invalid_value"}
+                      },
                       "unit_amount_cents" => {
                         "type" => "integer",
                         "minimum" => 0,
@@ -83,6 +93,21 @@ module QuoteVersions
                         "type" => "integer",
                         "minimum" => 0,
                         "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
+                      },
+                      "invoice_display_name" => {
+                        "type" => "string",
+                        "minLength" => 1,
+                        "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
+                      },
+                      "from_datetime" => {
+                        "type" => %w[string null],
+                        "format" => "date-time",
+                        "x-error" => {"type" => "invalid_type", "format" => "invalid_format"}
+                      },
+                      "to_datetime" => {
+                        "type" => %w[string null],
+                        "format" => "date-time",
+                        "x-error" => {"type" => "invalid_type", "format" => "invalid_format"}
                       }
                     }
                   }
