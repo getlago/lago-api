@@ -116,7 +116,7 @@ module Types
       end
 
       def has_draft_invoices
-        object.invoices.draft.where(organization_id: object.organization_id).exists? || has_draft_invoices_on_children
+        object.invoices.draft.exists? || has_draft_invoices_on_children
       end
 
       def has_draft_invoices_on_children
