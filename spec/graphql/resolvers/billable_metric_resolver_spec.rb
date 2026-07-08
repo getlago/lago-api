@@ -110,7 +110,7 @@ RSpec.describe Resolvers::BillableMetricResolver do
       create(:subscription, plan:, organization:)
       charge = create(:standard_charge, plan:, billable_metric:, organization:)
 
-      invoice = create(:invoice, customer:, organization:)
+      invoice = create(:invoice, customer:, organization:, status: :finalized)
       create(:fee, invoice:, charge:)
     end
 
