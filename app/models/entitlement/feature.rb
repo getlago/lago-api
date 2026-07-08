@@ -27,8 +27,12 @@ module Entitlement
     def subscriptions_count
       return @subscriptions_count if defined?(@subscriptions_count)
 
-      base_scope = Subscription.joins(:plan).where(status: [:active, :pending])
-      base_scope.where(plan: plans).or(base_scope.where(plan: {parent: plans})).count
+      subscriptions_count = SubscriptionsCountQuery.call(
+        organization:,
+        filters: {feature_ids: [id]}
+      )
+
+      subscriptions_count[id]
     end
 
     def self.preload_subscriptions_count(organization, features)

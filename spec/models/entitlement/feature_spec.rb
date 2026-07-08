@@ -27,19 +27,14 @@ RSpec.describe Entitlement::Feature do
   end
 
   describe "#subscriptions_count" do
+    subject { build_stubbed(:feature) }
+
     context "when subscriptions_count is not preloaded" do
-      it "calculates the number of subscriptions" do
-        expect(subject.subscriptions_count).to eq(0)
-        entitlement = create(:entitlement, feature: subject)
-        create(:subscription, plan: entitlement.plan)
-        create(:subscription, :pending, plan: entitlement.plan)
-        create(:subscription, :terminated, plan: entitlement.plan)
-        create(:subscription, :canceled, plan: entitlement.plan)
-        expect(subject.subscriptions_count).to eq(2)
-        create(:subscription, plan: create(:plan, parent: entitlement.plan))
-        create(:subscription, :pending, plan: create(:plan, parent: entitlement.plan))
-        create(:subscription, :terminated, plan: create(:plan, parent: entitlement.plan))
-        create(:subscription, :canceled, plan: create(:plan, parent: entitlement.plan))
+      before do
+        allow(Entitlement::Feature::SubscriptionsCountQuery).to receive(:call).and_return(subject.id => 4)
+      end
+
+      it "queries for the subscriptions count" do
         expect(subject.subscriptions_count).to eq(4)
       end
     end
