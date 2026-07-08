@@ -2,6 +2,8 @@
 
 module PaymentProviderCustomers
   class UpdateService < BaseService
+    Result = BaseResult
+
     attr_reader :customer
 
     def initialize(customer)

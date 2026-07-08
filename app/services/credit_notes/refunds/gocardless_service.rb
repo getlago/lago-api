@@ -3,6 +3,8 @@
 module CreditNotes
   module Refunds
     class GocardlessService < BaseService
+      Result = BaseResult[:credit_note, :refund]
+
       include Customers::PaymentProviderFinder
 
       PENDING_STATUSES = %w[created pending_submission submitted refund_settled].freeze

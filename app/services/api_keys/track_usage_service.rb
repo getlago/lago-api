@@ -2,6 +2,8 @@
 
 module ApiKeys
   class TrackUsageService < BaseService
+    Result = BaseResult
+
     def call
       ApiKey.find_each do |api_key|
         cache_key = "api_key_last_used_#{api_key.id}"

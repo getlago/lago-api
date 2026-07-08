@@ -31,8 +31,6 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
   end
 
   before do
-    allow(SegmentTrackJob).to receive(:perform_later)
-
     tax
     charge
     event
@@ -278,7 +276,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
     it "calls SegmentTrackJob" do
       invoice = create_service.call.invoice
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "invoice_created",
         properties: {

@@ -3,6 +3,8 @@
 module PaymentRequests
   module Payments
     class GeneratePaymentUrlService < BaseService
+      Result = BaseResult
+
       include Customers::PaymentProviderFinder
 
       PROVIDER_GOCARDLESS = "gocardless"

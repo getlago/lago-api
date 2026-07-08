@@ -29,16 +29,13 @@ RSpec.describe Mutations::Integrations::Salesforce::SyncInvoice do
     GQL
   end
 
-  before do
-    allow(SendWebhookJob).to receive(:perform_later)
-    execute_graphql_call
-  end
+  before { execute_graphql_call }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:update"
 
   it "sends resync invoice webhook" do
-    expect(SendWebhookJob).to have_received(:perform_later).with("invoice.resynced", invoice)
+    expect(SendWebhookJob).to have_been_enqueued.with("invoice.resynced", invoice)
   end
 end

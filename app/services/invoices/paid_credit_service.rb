@@ -2,6 +2,8 @@
 
 module Invoices
   class PaidCreditService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(wallet_transaction:, timestamp:, invoice: nil)
       @customer = wallet_transaction.wallet.customer
       @wallet_transaction = wallet_transaction

@@ -32,11 +32,9 @@ RSpec.describe "migrations:backfill_wallet_transactions_billing_entity" do # rub
 
   context "when there is nothing to backfill" do
     it "reports nothing to do without enqueuing the job" do
-      allow(DatabaseMigrations::BackfillWalletTransactionsBillingEntityJob).to receive(:perform_later)
-
       expect { task.invoke }.to output(/Nothing to do/).to_stdout
 
-      expect(DatabaseMigrations::BackfillWalletTransactionsBillingEntityJob).not_to have_received(:perform_later)
+      expect(DatabaseMigrations::BackfillWalletTransactionsBillingEntityJob).not_to have_been_enqueued
     end
   end
 end
