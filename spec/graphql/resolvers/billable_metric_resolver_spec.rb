@@ -103,6 +103,23 @@ RSpec.describe Resolvers::BillableMetricResolver do
     end
   end
 
+  context "when billable metric only has finalized invoices" do
+    before do
+      customer = create(:customer, organization:)
+      plan = create(:plan, organization:)
+      create(:subscription, plan:, organization:)
+      charge = create(:standard_charge, plan:, billable_metric:, organization:)
+
+      invoice = create(:invoice, customer:, organization:)
+      create(:fee, invoice:, charge:)
+    end
+
+    it "returns false for has draft invoices" do
+      metric_response = graphql_request["data"]["billableMetric"]
+      expect(metric_response["hasDraftInvoices"]).to eq(false)
+    end
+  end
+
   context "when billable metric has plans" do
     before do
       plan = create(:plan, organization:)

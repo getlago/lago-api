@@ -260,6 +260,35 @@ RSpec.describe Resolvers::PlanResolver do
     end
   end
 
+  context "when plan only has finalized invoices" do
+    before do
+      subscription = create(:subscription, customer:, plan:)
+      invoice = create(:invoice, customer:)
+      create(:invoice_subscription, subscription:, invoice:)
+    end
+
+    it "returns false for has draft invoices" do
+      plan_response = result["data"]["plan"]
+
+      expect(plan_response["hasDraftInvoices"]).to eq(false)
+    end
+  end
+
+  context "when child plan only has finalized invoices" do
+    before do
+      child_plan = create(:plan, organization:, parent: plan)
+      subscription = create(:subscription, :terminated, customer:, plan: child_plan)
+      invoice = create(:invoice, customer:)
+      create(:invoice_subscription, subscription:, invoice:)
+    end
+
+    it "returns false for has draft invoices" do
+      plan_response = result["data"]["plan"]
+
+      expect(plan_response["hasDraftInvoices"]).to eq(false)
+    end
+  end
+
   context "when plan is a child plan" do
     subject(:result) do
       execute_graphql(
