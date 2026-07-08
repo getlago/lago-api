@@ -20,7 +20,7 @@ module Wallets
           invoice_requires_successful_payment: rule.invoice_requires_successful_payment?,
           metadata: rule.transaction_metadata,
           name: rule.transaction_name,
-          purchase_order_number: rule.purchase_order_number.presence || rule.wallet.purchase_order_number
+          purchase_order_number: rule.resolved_purchase_order_number
         }
 
         params[:invoice_custom_section] = rule.invoice_custom_section_params if rule.invoice_custom_section_params

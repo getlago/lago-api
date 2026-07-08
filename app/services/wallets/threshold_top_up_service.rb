@@ -23,7 +23,7 @@ module Wallets
         metadata: rule.transaction_metadata,
         name: rule.transaction_name,
         ignore_paid_top_up_limits: rule.ignore_paid_top_up_limits?,
-        purchase_order_number: rule.purchase_order_number.presence || wallet.purchase_order_number
+        purchase_order_number: rule.resolved_purchase_order_number
       }
 
       params[:invoice_custom_section] = rule.invoice_custom_section_params if rule.invoice_custom_section_params

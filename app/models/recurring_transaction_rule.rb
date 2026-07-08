@@ -100,6 +100,10 @@ class RecurringTransactionRule < ApplicationRecord
     end
   end
 
+  def resolved_purchase_order_number
+    purchase_order_number.presence || wallet.purchase_order_number
+  end
+
   private
 
   def target_ongoing_balance_not_below_threshold
