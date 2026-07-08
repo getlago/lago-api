@@ -68,6 +68,7 @@ RSpec.describe Quotes::CreateService do
               {
                 "id" => add_on.id,
                 "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+                "type" => "add_on",
                 "payload" => {
                   "code" => add_on.code,
                   "units" => 1,
@@ -91,7 +92,9 @@ RSpec.describe Quotes::CreateService do
           {
             order_type: :one_off,
             currency: "EUR",
-            billing_items: {"addOns" => [{"id" => "not-a-uuid", "localId" => "l1", "payload" => {}}]}
+            billing_items: {
+              "addOns" => [{"id" => "not-a-uuid", "localId" => "l1", "type" => "add_on", "payload" => {}}]
+            }
           }
         end
 

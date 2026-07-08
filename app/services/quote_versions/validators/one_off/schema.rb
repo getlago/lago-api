@@ -16,7 +16,7 @@ module QuoteVersions
                 "type" => "object",
                 "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
                 "x-error" => {"type" => "invalid_type", "required" => "value_is_mandatory"},
-                "required" => %w[id localId payload],
+                "required" => %w[id localId type payload],
                 "properties" => {
                   "id" => {
                     "type" => "string",
@@ -27,6 +27,11 @@ module QuoteVersions
                     "type" => "string",
                     "minLength" => 1,
                     "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
+                  },
+                  "type" => {
+                    "type" => "string",
+                    "const" => "add_on",
+                    "x-error" => {"type" => "invalid_type", "const" => "invalid_value"}
                   },
                   "payload" => {
                     "type" => "object",

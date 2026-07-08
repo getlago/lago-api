@@ -11,6 +11,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
     {
       "id" => "48e59220-6722-49c1-8cdf-eacd040e2a56",
       "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+      "type" => "add_on",
       "payload" => payload,
       "overrides" => overrides
     }
@@ -236,6 +237,33 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq({"billing_items.addOns.0.localId": ["invalid_value"]})
+      end
+    end
+
+    context "when type is missing" do
+      let(:add_on_item) { super().except("type") }
+
+      it "returns a value_is_mandatory error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.addOns.0.type": ["value_is_mandatory"]})
+      end
+    end
+
+    context "when type is not add_on" do
+      let(:add_on_item) { super().merge("type" => "charge") }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.addOns.0.type": ["invalid_value"]})
+      end
+    end
+
+    context "when type has a wrong JSON type" do
+      let(:add_on_item) { super().merge("type" => 123) }
+
+      it "returns invalid_type and invalid_value errors" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.addOns.0.type": ["invalid_type", "invalid_value"]})
       end
     end
 

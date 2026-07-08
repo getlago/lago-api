@@ -16,6 +16,7 @@ RSpec.describe QuoteVersions::Validators::OneOffValidator do
     {
       "id" => add_on.id,
       "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+      "type" => "add_on",
       "payload" => payload
     }
   end
@@ -76,6 +77,7 @@ RSpec.describe QuoteVersions::Validators::OneOffValidator do
             {
               id: add_on.id,
               localId: "3d08b2df-4e4c-4d58-b415-a525c1663735",
+              type: "add_on",
               payload: {code: add_on.code, units: 1, unitAmountCents: 10_000, totalAmountCents: 10_000}
             }
           ]

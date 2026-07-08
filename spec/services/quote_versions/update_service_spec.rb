@@ -49,6 +49,7 @@ RSpec.describe QuoteVersions::UpdateService do
             {
               "id" => add_on.id,
               "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+              "type" => "add_on",
               "payload" => {
                 "code" => add_on.code,
                 "units" => 2,
@@ -67,7 +68,11 @@ RSpec.describe QuoteVersions::UpdateService do
 
       context "when the payload is invalid" do
         let(:billing_items) do
-          {"addOns" => [{"id" => "not-a-uuid", "localId" => "3d08b2df", "payload" => {"units" => 0}}]}
+          {
+            "addOns" => [
+              {"id" => "not-a-uuid", "localId" => "3d08b2df", "type" => "add_on", "payload" => {"units" => 0}}
+            ]
+          }
         end
 
         it "returns a validation failure and does not persist the changes" do
