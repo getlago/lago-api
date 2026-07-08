@@ -9,11 +9,13 @@ class SubscriptionRateCard < ApplicationRecord
 
   belongs_to :organization
   belongs_to :subscription
+  belongs_to :customer
   belongs_to :rate_card
 
   has_one :product_item, through: :rate_card
 
   has_many :rate_phases
+  has_many :billing_cycles
 
   validates :billing_anchor_date, presence: true
   validates :next_billing_at, presence: true

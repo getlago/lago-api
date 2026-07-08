@@ -21,6 +21,7 @@ class Subscription < ApplicationRecord
   has_many :integration_resources, as: :syncable
   has_many :fees
   has_many :subscription_rate_cards
+  has_many :billing_cycles
   has_many :daily_usages
   has_many :usage_thresholds
   has_many :entitlements, class_name: "Entitlement::Entitlement"
