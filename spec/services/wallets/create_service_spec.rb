@@ -165,6 +165,19 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "when purchase_order_number is too long" do
+      let(:params) do
+        super().merge(purchase_order_number: "a" * 256)
+      end
+
+      it "returns a validation error" do
+        expect { service_result }.not_to change(Wallet, :count)
+
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:purchase_order_number]).to eq(["value_is_too_long"])
+      end
+    end
+
     context "when the initial credits round to zero monetary value" do
       let(:params) do
         {
