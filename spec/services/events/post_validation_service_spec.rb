@@ -84,13 +84,11 @@ RSpec.describe Events::PostValidationService, transaction: false do
 
   describe ".call" do
     context "when does not belong to the organization" do
-      before { allow(SendWebhookJob).to receive(:perform_later) }
-
       let(:other_organization) { create(:organization) }
 
       it "does not send the webhook" do
         described_class.new(organization: other_organization).call
-        expect(SendWebhookJob).not_to have_received(:perform_later)
+        expect(SendWebhookJob).not_to have_been_enqueued
       end
     end
 
