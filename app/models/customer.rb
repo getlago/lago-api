@@ -66,6 +66,8 @@ class Customer < ApplicationRecord
   belongs_to :applied_dunning_campaign, optional: true, class_name: "DunningCampaign"
 
   has_many :subscriptions
+  has_many :subscription_rate_cards
+  has_many :billing_cycles
   has_many :events
   has_many :invoices
   has_many :applied_coupons
