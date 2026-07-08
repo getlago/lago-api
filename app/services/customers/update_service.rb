@@ -133,6 +133,7 @@ module Customers
       ActiveRecord::Base.transaction do
         if old_provider_customer && payment_provider_removed?
           old_provider_customer.discard!
+          customer.payment_provider_code = nil
           old_provider_customer.payment_methods.find_each do |payment_method|
             PaymentMethods::DestroyService.call(payment_method:)
           end

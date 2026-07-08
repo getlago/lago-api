@@ -466,6 +466,25 @@ RSpec.describe Customers::UpdateService do
         expect(result).to be_success
         expect(payment_method.reload).to be_discarded
       end
+
+      context "when a non-nil payment_provider_code is still provided" do
+        let(:update_args) do
+          {
+            id: customer.id,
+            organization_id: organization.id,
+            payment_provider: nil,
+            provider_customer: nil,
+            payment_provider_code:
+          }
+        end
+
+        it "wipes out the payment_provider_code" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.payment_provider_code).to be_nil
+        end
+      end
     end
 
     context "when partialy updating", :premium do
