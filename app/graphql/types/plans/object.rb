@@ -120,7 +120,7 @@ module Types
       end
 
       def has_draft_invoices_on_children
-        object.children.joins(:invoices).merge(Invoice.draft).where(invoices: {organization_id: object.organization_id}).exists?
+        object.children.joins(:invoices).merge(Invoice.draft).exists?
       end
 
       def has_overridden_plans
