@@ -31,7 +31,7 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, :premium do
     GQL
   end
 
-  before_all do |example|
+  before do |example|
     Scenic.database.refresh_materialized_view(
       :entitlement_features_subscriptions_count,
       concurrently: false
