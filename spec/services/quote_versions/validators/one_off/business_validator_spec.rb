@@ -15,7 +15,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
   let(:add_on_item) do
     {
       "id" => add_on.id,
-      "local_id" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+      "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
       "payload" => payload
     }
   end
@@ -23,11 +23,11 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
     {
       "code" => add_on.code,
       "units" => 1,
-      "unit_amount_cents" => 10_000,
-      "total_amount_cents" => 10_000
+      "unitAmountCents" => 10_000,
+      "totalAmountCents" => 10_000
     }
   end
-  let(:billing_items) { {"add_ons" => [add_on_item]} }
+  let(:billing_items) { {"addOns" => [add_on_item]} }
 
   describe "#valid?" do
     context "with a valid quote version" do
@@ -68,7 +68,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "returns an add_on_not_found error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.id": ["add_on_not_found"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.id": ["add_on_not_found"]})
       end
     end
 
@@ -85,77 +85,77 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "returns an add_on_not_found error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.id": ["add_on_not_found"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.id": ["add_on_not_found"]})
       end
     end
 
-    context "when only from_datetime is present" do
-      let(:payload) { super().merge("from_datetime" => "2026-01-01T00:00:00Z", "to_datetime" => nil) }
+    context "when only fromDatetime is present" do
+      let(:payload) { super().merge("fromDatetime" => "2026-01-01T00:00:00Z", "toDatetime" => nil) }
 
-      it "requires to_datetime" do
+      it "requires toDatetime" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.to_datetime": ["value_is_mandatory"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.payload.toDatetime": ["value_is_mandatory"]})
       end
     end
 
-    context "when only to_datetime is present" do
-      let(:payload) { super().merge("from_datetime" => nil, "to_datetime" => "2026-02-01T00:00:00Z") }
+    context "when only toDatetime is present" do
+      let(:payload) { super().merge("fromDatetime" => nil, "toDatetime" => "2026-02-01T00:00:00Z") }
 
-      it "requires from_datetime" do
+      it "requires fromDatetime" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.from_datetime": ["value_is_mandatory"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.payload.fromDatetime": ["value_is_mandatory"]})
       end
     end
 
-    context "when from_datetime is after to_datetime" do
-      let(:payload) { super().merge("from_datetime" => "2026-02-01T00:00:00Z", "to_datetime" => "2026-01-01T00:00:00Z") }
+    context "when fromDatetime is after toDatetime" do
+      let(:payload) { super().merge("fromDatetime" => "2026-02-01T00:00:00Z", "toDatetime" => "2026-01-01T00:00:00Z") }
 
       it "returns an invalid_date_range error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.from_datetime": ["invalid_date_range"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.payload.fromDatetime": ["invalid_date_range"]})
       end
     end
 
-    context "when from_datetime equals to_datetime" do
-      let(:payload) { super().merge("from_datetime" => "2026-01-01T00:00:00Z", "to_datetime" => "2026-01-01T00:00:00Z") }
+    context "when fromDatetime equals toDatetime" do
+      let(:payload) { super().merge("fromDatetime" => "2026-01-01T00:00:00Z", "toDatetime" => "2026-01-01T00:00:00Z") }
 
       it "is valid" do
         expect(validator).to be_valid
       end
     end
 
-    context "when only overrides from_datetime is present" do
-      let(:add_on_item) { super().merge("overrides" => {"from_datetime" => "2026-01-01T00:00:00Z"}) }
+    context "when only overrides fromDatetime is present" do
+      let(:add_on_item) { super().merge("overrides" => {"fromDatetime" => "2026-01-01T00:00:00Z"}) }
 
-      it "requires overrides to_datetime" do
+      it "requires overrides toDatetime" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.to_datetime": ["value_is_mandatory"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.overrides.toDatetime": ["value_is_mandatory"]})
       end
     end
 
-    context "when only overrides to_datetime is present" do
-      let(:add_on_item) { super().merge("overrides" => {"to_datetime" => "2026-02-01T00:00:00Z"}) }
+    context "when only overrides toDatetime is present" do
+      let(:add_on_item) { super().merge("overrides" => {"toDatetime" => "2026-02-01T00:00:00Z"}) }
 
-      it "requires overrides from_datetime" do
+      it "requires overrides fromDatetime" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.from_datetime": ["value_is_mandatory"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.overrides.fromDatetime": ["value_is_mandatory"]})
       end
     end
 
-    context "when overrides from_datetime is after to_datetime" do
+    context "when overrides fromDatetime is after toDatetime" do
       let(:add_on_item) do
-        super().merge("overrides" => {"from_datetime" => "2026-02-01T00:00:00Z", "to_datetime" => "2026-01-01T00:00:00Z"})
+        super().merge("overrides" => {"fromDatetime" => "2026-02-01T00:00:00Z", "toDatetime" => "2026-01-01T00:00:00Z"})
       end
 
       it "returns an invalid_date_range error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.from_datetime": ["invalid_date_range"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.overrides.fromDatetime": ["invalid_date_range"]})
       end
     end
 
-    context "when overrides from_datetime equals to_datetime" do
+    context "when overrides fromDatetime equals toDatetime" do
       let(:add_on_item) do
-        super().merge("overrides" => {"from_datetime" => "2026-01-01T00:00:00Z", "to_datetime" => "2026-01-01T00:00:00Z"})
+        super().merge("overrides" => {"fromDatetime" => "2026-01-01T00:00:00Z", "toDatetime" => "2026-01-01T00:00:00Z"})
       end
 
       it "is valid" do
@@ -166,7 +166,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
     context "with errors on multiple add_ons" do
       let(:billing_items) do
         {
-          "add_ons" => [
+          "addOns" => [
             add_on_item,
             add_on_item.merge("id" => "11111111-2222-3333-4444-555555555555")
           ]
@@ -175,7 +175,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
       it "keys each error with the add_on index" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.1.id": ["add_on_not_found"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.1.id": ["add_on_not_found"]})
       end
     end
   end

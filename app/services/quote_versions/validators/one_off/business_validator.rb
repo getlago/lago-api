@@ -55,26 +55,26 @@ module QuoteVersions
 
         def validate_datetimes(add_on, index)
           %w[payload overrides].each do |section|
-            from = add_on.dig(section, "from_datetime")
-            to = add_on.dig(section, "to_datetime")
+            from = add_on.dig(section, "fromDatetime")
+            to = add_on.dig(section, "toDatetime")
             next if from.nil? && to.nil?
 
             if from.nil?
-              add_error(field: add_on_field(index, "#{section}.from_datetime"), error_code: "value_is_mandatory")
+              add_error(field: add_on_field(index, "#{section}.fromDatetime"), error_code: "value_is_mandatory")
             elsif to.nil?
-              add_error(field: add_on_field(index, "#{section}.to_datetime"), error_code: "value_is_mandatory")
+              add_error(field: add_on_field(index, "#{section}.toDatetime"), error_code: "value_is_mandatory")
             elsif Time.zone.parse(from) > Time.zone.parse(to)
-              add_error(field: add_on_field(index, "#{section}.from_datetime"), error_code: "invalid_date_range")
+              add_error(field: add_on_field(index, "#{section}.fromDatetime"), error_code: "invalid_date_range")
             end
           end
         end
 
         def add_ons
-          billing_items["add_ons"] || []
+          billing_items["addOns"] || []
         end
 
         def add_on_field(index, suffix)
-          :"billing_items.add_ons.#{index}.#{suffix}"
+          :"billing_items.addOns.#{index}.#{suffix}"
         end
 
         def known_add_on_ids

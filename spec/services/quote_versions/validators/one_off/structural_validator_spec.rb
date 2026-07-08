@@ -10,7 +10,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
   let(:add_on_item) do
     {
       "id" => "48e59220-6722-49c1-8cdf-eacd040e2a56",
-      "local_id" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+      "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
       "payload" => payload,
       "overrides" => overrides
     }
@@ -19,25 +19,25 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
     {
       "description" => "Setup fee",
       "units" => 2,
-      "unit_amount_cents" => 12_000,
-      "total_amount_cents" => 12_000,
-      "invoice_display_name" => "Custom setup",
-      "from_datetime" => "2026-01-05T00:00:00Z",
-      "to_datetime" => "2026-01-20T00:00:00Z"
+      "unitAmountCents" => 12_000,
+      "totalAmountCents" => 12_000,
+      "invoiceDisplayName" => "Custom setup",
+      "fromDatetime" => "2026-01-05T00:00:00Z",
+      "toDatetime" => "2026-01-20T00:00:00Z"
     }
   end
   let(:payload) do
     {
       "code" => "setup",
       "units" => 1,
-      "unit_amount_cents" => 10_000,
-      "total_amount_cents" => 10_000,
-      "invoice_display_name" => "One-time setup",
-      "from_datetime" => "2026-01-01T00:00:00Z",
-      "to_datetime" => "2026-02-01T00:00:00Z"
+      "unitAmountCents" => 10_000,
+      "totalAmountCents" => 10_000,
+      "invoiceDisplayName" => "One-time setup",
+      "fromDatetime" => "2026-01-01T00:00:00Z",
+      "toDatetime" => "2026-02-01T00:00:00Z"
     }
   end
-  let(:billing_items) { {"add_ons" => [add_on_item]} }
+  let(:billing_items) { {"addOns" => [add_on_item]} }
 
   describe "#valid?" do
     context "with a full valid payload" do
@@ -58,9 +58,9 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
       context "when the scope is approve" do
         let(:scope) { :approve }
 
-        it "requires the add_ons list" do
+        it "requires the addOns list" do
           expect(validator).not_to be_valid
-          expect(result.error.messages).to eq({"billing_items.add_ons": ["value_is_mandatory"]})
+          expect(result.error.messages).to eq({"billing_items.addOns": ["value_is_mandatory"]})
         end
       end
     end
@@ -75,7 +75,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
     end
 
     context "when billing_items contains an unknown root key" do
-      let(:billing_items) { {"add_ons" => [add_on_item], "subscriptions" => []} }
+      let(:billing_items) { {"addOns" => [add_on_item], "subscriptions" => []} }
 
       it "returns an unsupported_key error" do
         expect(validator).not_to be_valid
@@ -83,21 +83,47 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
       end
     end
 
-    context "when the payload contains tax_codes" do
-      let(:payload) { super().merge("tax_codes" => ["vat_20"]) }
+    context "when the add_on contains an unknown key" do
+      let(:add_on_item) { super().merge("taxCodes" => ["vat_20"]) }
 
       it "returns an unsupported_key error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.tax_codes": ["unsupported_key"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.taxCodes": ["unsupported_key"]})
+      end
+    end
+
+    context "when the payload contains unknown keys" do
+      let(:payload) { super().merge("customField" => {"nested" => true}) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the payload is missing" do
+      let(:add_on_item) { super().except("payload") }
+
+      it "returns a value_is_mandatory error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.addOns.0.payload": ["value_is_mandatory"]})
+      end
+    end
+
+    context "when the payload is not an object" do
+      let(:payload) { "bogus" }
+
+      it "returns an invalid_type error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.addOns.0.payload": ["invalid_type"]})
       end
     end
 
     context "when overrides contains an unknown key" do
-      let(:overrides) { super().merge("tax_codes" => ["vat_20"]) }
+      let(:overrides) { super().merge("taxCodes" => ["vat_20"]) }
 
       it "returns an unsupported_key error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.tax_codes": ["unsupported_key"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.overrides.taxCodes": ["unsupported_key"]})
       end
     end
 
@@ -106,7 +132,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.description": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.overrides.description": ["invalid_value"]})
       end
     end
 
@@ -115,7 +141,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_type error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.description": ["invalid_type"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.overrides.description": ["invalid_type"]})
       end
     end
 
@@ -124,7 +150,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.units": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.overrides.units": ["invalid_value"]})
       end
     end
 
@@ -133,48 +159,48 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_type error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.units": ["invalid_type"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.overrides.units": ["invalid_type"]})
       end
     end
 
-    context "when overrides invoice_display_name is empty" do
-      let(:overrides) { super().merge("invoice_display_name" => "") }
+    context "when overrides invoiceDisplayName is empty" do
+      let(:overrides) { super().merge("invoiceDisplayName" => "") }
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.invoice_display_name": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.overrides.invoiceDisplayName": ["invalid_value"]})
       end
     end
 
-    context "when overrides invoice_display_name is null" do
-      let(:overrides) { super().merge("invoice_display_name" => nil) }
+    context "when overrides invoiceDisplayName is null" do
+      let(:overrides) { super().merge("invoiceDisplayName" => nil) }
 
       it "returns an invalid_type error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.invoice_display_name": ["invalid_type"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.overrides.invoiceDisplayName": ["invalid_type"]})
       end
     end
 
-    context "when overrides from_datetime is not an ISO 8601 date-time" do
-      let(:overrides) { super().merge("from_datetime" => "not-a-date") }
+    context "when overrides fromDatetime is not an ISO 8601 date-time" do
+      let(:overrides) { super().merge("fromDatetime" => "not-a-date") }
 
       it "returns an invalid_format error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.from_datetime": ["invalid_format"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.overrides.fromDatetime": ["invalid_format"]})
       end
     end
 
-    context "when overrides to_datetime has a wrong type" do
-      let(:overrides) { super().merge("to_datetime" => 123) }
+    context "when overrides toDatetime has a wrong type" do
+      let(:overrides) { super().merge("toDatetime" => 123) }
 
       it "returns an invalid_type error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.overrides.to_datetime": ["invalid_type"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.overrides.toDatetime": ["invalid_type"]})
       end
     end
 
     context "when overrides datetimes are null" do
-      let(:overrides) { super().merge("from_datetime" => nil, "to_datetime" => nil) }
+      let(:overrides) { super().merge("fromDatetime" => nil, "toDatetime" => nil) }
 
       it "is valid" do
         expect(validator).to be_valid
@@ -182,14 +208,14 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
     end
 
     context "when the add_on identity is missing" do
-      let(:add_on_item) { super().except("id", "local_id") }
+      let(:add_on_item) { super().except("id", "localId") }
 
-      it "requires id and local_id at update scope" do
+      it "requires id and localId at update scope" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
           {
-            "billing_items.add_ons.0.id": ["value_is_mandatory"],
-            "billing_items.add_ons.0.local_id": ["value_is_mandatory"]
+            "billing_items.addOns.0.id": ["value_is_mandatory"],
+            "billing_items.addOns.0.localId": ["value_is_mandatory"]
           }
         )
       end
@@ -200,16 +226,16 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_format error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.id": ["invalid_format"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.id": ["invalid_format"]})
       end
     end
 
-    context "when local_id is empty" do
-      let(:add_on_item) { super().merge("local_id" => "") }
+    context "when localId is empty" do
+      let(:add_on_item) { super().merge("localId" => "") }
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.local_id": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.localId": ["invalid_value"]})
       end
     end
 
@@ -218,7 +244,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.units": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.payload.units": ["invalid_value"]})
       end
     end
 
@@ -227,44 +253,44 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       it "returns an invalid_type error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.units": ["invalid_type"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.payload.units": ["invalid_type"]})
       end
     end
 
     context "when amounts are negative or fractional" do
-      let(:payload) { super().merge("unit_amount_cents" => -1, "total_amount_cents" => 10.5) }
+      let(:payload) { super().merge("unitAmountCents" => -1, "totalAmountCents" => 10.5) }
 
       it "returns invalid_value and invalid_type errors" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
           {
-            "billing_items.add_ons.0.payload.unit_amount_cents": ["invalid_value"],
-            "billing_items.add_ons.0.payload.total_amount_cents": ["invalid_type"]
+            "billing_items.addOns.0.payload.unitAmountCents": ["invalid_value"],
+            "billing_items.addOns.0.payload.totalAmountCents": ["invalid_type"]
           }
         )
       end
     end
 
-    context "when from_datetime is not an ISO 8601 date-time" do
-      let(:payload) { super().merge("from_datetime" => "not-a-date") }
+    context "when fromDatetime is not an ISO 8601 date-time" do
+      let(:payload) { super().merge("fromDatetime" => "not-a-date") }
 
       it "returns an invalid_format error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.from_datetime": ["invalid_format"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.payload.fromDatetime": ["invalid_format"]})
       end
     end
 
-    context "when to_datetime has a wrong type" do
-      let(:payload) { super().merge("to_datetime" => 123) }
+    context "when toDatetime has a wrong type" do
+      let(:payload) { super().merge("toDatetime" => 123) }
 
       it "returns an invalid_type error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.add_ons.0.payload.to_datetime": ["invalid_type"]})
+        expect(result.error.messages).to eq({"billing_items.addOns.0.payload.toDatetime": ["invalid_type"]})
       end
     end
 
     context "when datetimes are null" do
-      let(:payload) { super().merge("from_datetime" => nil, "to_datetime" => nil) }
+      let(:payload) { super().merge("fromDatetime" => nil, "toDatetime" => nil) }
 
       it "is valid" do
         expect(validator).to be_valid
@@ -274,35 +300,26 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
     context "when the scope is approve" do
       let(:scope) { :approve }
 
-      context "when the add_ons list is empty" do
-        let(:billing_items) { {"add_ons" => []} }
+      context "when the addOns list is empty" do
+        let(:billing_items) { {"addOns" => []} }
 
         it "returns an invalid_count error" do
           expect(validator).not_to be_valid
-          expect(result.error.messages).to eq({"billing_items.add_ons": ["invalid_count"]})
-        end
-      end
-
-      context "when an add_on has no payload" do
-        let(:add_on_item) { super().except("payload") }
-
-        it "requires the payload" do
-          expect(validator).not_to be_valid
-          expect(result.error.messages).to eq({"billing_items.add_ons.0.payload": ["value_is_mandatory"]})
+          expect(result.error.messages).to eq({"billing_items.addOns": ["invalid_count"]})
         end
       end
 
       context "when the payload is incomplete" do
-        let(:payload) { {"invoice_display_name" => "One-time setup"} }
+        let(:payload) { {"invoiceDisplayName" => "One-time setup"} }
 
         it "requires the snapshot fields" do
           expect(validator).not_to be_valid
           expect(result.error.messages).to eq(
             {
-              "billing_items.add_ons.0.payload.code": ["value_is_mandatory"],
-              "billing_items.add_ons.0.payload.units": ["value_is_mandatory"],
-              "billing_items.add_ons.0.payload.unit_amount_cents": ["value_is_mandatory"],
-              "billing_items.add_ons.0.payload.total_amount_cents": ["value_is_mandatory"]
+              "billing_items.addOns.0.payload.code": ["value_is_mandatory"],
+              "billing_items.addOns.0.payload.units": ["value_is_mandatory"],
+              "billing_items.addOns.0.payload.unitAmountCents": ["value_is_mandatory"],
+              "billing_items.addOns.0.payload.totalAmountCents": ["value_is_mandatory"]
             }
           )
         end
@@ -310,7 +327,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
 
       context "when the payload is incomplete at update scope" do
         let(:scope) { :update }
-        let(:payload) { {"invoice_display_name" => "One-time setup"} }
+        let(:payload) { {"invoiceDisplayName" => "One-time setup"} }
 
         it "is valid" do
           expect(validator).to be_valid
@@ -321,7 +338,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
     context "with errors on multiple add_ons" do
       let(:billing_items) do
         {
-          "add_ons" => [
+          "addOns" => [
             add_on_item.merge("id" => "not-a-uuid"),
             add_on_item.merge("payload" => payload.merge("units" => -1))
           ]
@@ -332,8 +349,8 @@ RSpec.describe QuoteVersions::Validators::OneOff::StructuralValidator do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
           {
-            "billing_items.add_ons.0.id": ["invalid_format"],
-            "billing_items.add_ons.1.payload.units": ["invalid_value"]
+            "billing_items.addOns.0.id": ["invalid_format"],
+            "billing_items.addOns.1.payload.units": ["invalid_value"]
           }
         )
       end

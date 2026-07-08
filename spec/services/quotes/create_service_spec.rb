@@ -64,15 +64,15 @@ RSpec.describe Quotes::CreateService do
           order_type: :one_off,
           currency: "EUR",
           billing_items: {
-            "add_ons" => [
+            "addOns" => [
               {
                 "id" => add_on.id,
-                "local_id" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+                "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
                 "payload" => {
                   "code" => add_on.code,
                   "units" => 1,
-                  "unit_amount_cents" => 10_000,
-                  "total_amount_cents" => 10_000
+                  "unitAmountCents" => 10_000,
+                  "totalAmountCents" => 10_000
                 }
               }
             ]
@@ -91,7 +91,7 @@ RSpec.describe Quotes::CreateService do
           {
             order_type: :one_off,
             currency: "EUR",
-            billing_items: {"add_ons" => [{"id" => "not-a-uuid", "local_id" => "l1"}]}
+            billing_items: {"addOns" => [{"id" => "not-a-uuid", "localId" => "l1", "payload" => {}}]}
           }
         end
 
@@ -99,7 +99,7 @@ RSpec.describe Quotes::CreateService do
           expect { result }.not_to change(Quote, :count)
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages).to eq({"billing_items.add_ons.0.id": ["invalid_format"]})
+          expect(result.error.messages).to eq({"billing_items.addOns.0.id": ["invalid_format"]})
         end
       end
     end
