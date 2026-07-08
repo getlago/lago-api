@@ -9,9 +9,13 @@ RSpec.describe Mutations::Wallets::Update, :premium do
   let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:billable_metric, organization: membership.organization) }
   let(:subscription) { create(:subscription, customer:) }
-  let(:wallet) { create(:wallet, customer:) }
+  let(:wallet) { create(:wallet, customer:, purchase_order_number: wallet_purchase_order_number) }
+  let(:wallet_purchase_order_number) { nil }
   let(:expiration_at) { (Time.zone.now + 1.year) }
-  let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
+  let(:recurring_transaction_rule) do
+    create(:recurring_transaction_rule, wallet:, purchase_order_number: recurring_transaction_rule_purchase_order_number)
+  end
+  let(:recurring_transaction_rule_purchase_order_number) { nil }
 
   let(:mutation) do
     <<-GQL
@@ -154,6 +158,80 @@ RSpec.describe Mutations::Wallets::Update, :premium do
     expect(result_data["appliesTo"]["billableMetrics"].first["id"]).to eq(billable_metric.id)
 
     expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+  end
+
+  context "when wallet purchase order number is present and recurring rule purchase order number is nil" do
+    let(:recurring_transaction_rule_purchase_order_number) { "PO-OLD-RULE" }
+
+    it "updates the wallet purchase order number and clears the recurring rule purchase order number" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: wallet.id,
+            priority: 22,
+            purchaseOrderNumber: "PO-WALLET-123",
+            recurringTransactionRules: [
+              {
+                lagoId: recurring_transaction_rule.id,
+                trigger: "interval",
+                interval: "weekly",
+                paidCredits: "22.2",
+                grantedCredits: "22.2",
+                purchaseOrderNumber: nil
+              }
+            ]
+          }
+        }
+      )
+
+      result_data = result["data"]["updateCustomerWallet"]
+
+      expect(result_data["purchaseOrderNumber"]).to eq("PO-WALLET-123")
+      expect(result_data["recurringTransactionRules"][0]["purchaseOrderNumber"]).to be_nil
+      expect(wallet.reload.purchase_order_number).to eq("PO-WALLET-123")
+      expect(recurring_transaction_rule.reload.purchase_order_number).to be_nil
+    end
+  end
+
+  context "when wallet purchase order number is nil and recurring rule purchase order number is present" do
+    let(:wallet_purchase_order_number) { "PO-OLD-WALLET" }
+
+    it "clears the wallet purchase order number and updates the recurring rule purchase order number" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: wallet.id,
+            priority: 22,
+            purchaseOrderNumber: nil,
+            recurringTransactionRules: [
+              {
+                lagoId: recurring_transaction_rule.id,
+                trigger: "interval",
+                interval: "weekly",
+                paidCredits: "22.2",
+                grantedCredits: "22.2",
+                purchaseOrderNumber: "PO-RULE-456"
+              }
+            ]
+          }
+        }
+      )
+
+      result_data = result["data"]["updateCustomerWallet"]
+
+      expect(result_data["purchaseOrderNumber"]).to be_nil
+      expect(result_data["recurringTransactionRules"][0]["purchaseOrderNumber"]).to eq("PO-RULE-456")
+      expect(wallet.reload.purchase_order_number).to be_nil
+      expect(recurring_transaction_rule.reload.purchase_order_number).to eq("PO-RULE-456")
+    end
   end
 
   context "with metadata" do
