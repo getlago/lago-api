@@ -5866,7 +5866,6 @@ enum FeatureFlagEnum {
   enriched_events_aggregation
   multi_currency
   multi_entity_billing
-  multiple_payment_methods
   order_forms
   payment_gated_subscriptions
   postgres_enriched_events
