@@ -200,10 +200,6 @@ module Clockwork
       .perform_later
   end
 
-  every(10.minutes, "schedule:refresh_entitlement_features_subscription_count") do
-    Scenic.database.refresh_materialized_view(:entitlement_features_subscriptions_count, concurrently: true)
-  end
-
   # NOTE: Enable wallets and lifetime usage refresh from the events-processor
   if ENV["LAGO_REDIS_STORE_URL"].present? && ENV["LAGO_CLICKHOUSE_ENABLED"].present?
     every(10.seconds, "schedule:refresh_flagged_subscriptions") do
@@ -211,5 +207,9 @@ module Clockwork
         .set(sentry: {"slug" => "lago_refresh_flagged_subscriptions"})
         .perform_later
     end
+  end
+
+  every(10.minutes, "refresh:entitlement_features_subscription_count") do
+    Scenic.database.refresh_materialized_view(:entitlement_features_subscriptions_count, concurrently: true)
   end
 end
