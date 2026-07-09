@@ -258,6 +258,20 @@ RSpec.describe Analytics::OverdueBalance do
           expect(result["amount_cents"]).to eq(1100) # invoice1 (100) + invoice_with_draft_credit (1000, draft credit note not applied)
         end
       end
+
+      context "with a deleted invoice" do
+        let(:deleted_invoice) do
+          create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
+            total_amount_cents: 5000, billing_entity: billing_entity1, issuing_date: 1.month.ago, status: :deleted)
+        end
+
+        before { deleted_invoice }
+
+        it "excludes deleted invoices from overdue balances" do
+          invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
+          expect(invoice_ids).not_to include(deleted_invoice.id)
+        end
+      end
     end
 
     context "with filters" do

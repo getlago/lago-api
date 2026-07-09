@@ -94,7 +94,7 @@ class Invoice < ApplicationRecord
   }.freeze
 
   VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4, pending: 7}.freeze
-  INVISIBLE_STATUS = {generating: 3, open: 5, closed: 6}.freeze
+  INVISIBLE_STATUS = {generating: 3, open: 5, closed: 6, deleted: 8}.freeze
   MANUALLY_PAYABLE_INVOICE_STATUS = %i[finalized open].freeze
   STATUS = VISIBLE_STATUS.merge(INVISIBLE_STATUS).freeze
   GENERATED_INVOICE_STATUSES = %w[finalized closed].freeze
@@ -115,9 +115,14 @@ class Invoice < ApplicationRecord
     state :failed
     state :closed
     state :pending
+    state :deleted
 
     event :finalize do
       transitions from: :draft, to: :finalized
+    end
+
+    event :mark_as_deleted do
+      transitions from: :draft, to: :deleted
     end
 
     event :void do

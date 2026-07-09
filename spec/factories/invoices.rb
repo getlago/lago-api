@@ -82,6 +82,10 @@ FactoryBot.define do
       status { Invoice::INVISIBLE_STATUS.keys.sample }
     end
 
+    trait :deleted do
+      status { :deleted }
+    end
+
     trait :progressive_billing_invoice do
       invoice_type { :progressive_billing }
       with_subscriptions

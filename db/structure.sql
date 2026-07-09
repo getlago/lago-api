@@ -1095,7 +1095,6 @@ DROP VIEW IF EXISTS public.exports_item_metadata;
 DROP VIEW IF EXISTS public.exports_invoices_taxes;
 DROP TABLE IF EXISTS public.invoices_taxes;
 DROP VIEW IF EXISTS public.exports_invoices;
-DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.invoice_metadata;
 DROP VIEW IF EXISTS public.exports_invoice_subscriptions;
 DROP TABLE IF EXISTS public.invoice_subscriptions;
@@ -1108,6 +1107,7 @@ DROP TABLE IF EXISTS public.fees_taxes;
 DROP VIEW IF EXISTS public.exports_fees;
 DROP TABLE IF EXISTS public.subscriptions;
 DROP TABLE IF EXISTS public.plans;
+DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.fees;
 DROP VIEW IF EXISTS public.exports_entitlement_features;
 DROP VIEW IF EXISTS public.exports_entitlement_entitlements;
@@ -3321,6 +3321,66 @@ CREATE TABLE public.fees (
 
 
 --
+-- Name: invoices; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoices (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    issuing_date date,
+    taxes_amount_cents bigint DEFAULT 0 NOT NULL,
+    total_amount_cents bigint DEFAULT 0 NOT NULL,
+    invoice_type integer DEFAULT 0 NOT NULL,
+    payment_status integer DEFAULT 0 NOT NULL,
+    number character varying DEFAULT ''::character varying NOT NULL,
+    sequential_id integer,
+    file character varying,
+    customer_id uuid,
+    taxes_rate double precision DEFAULT 0.0 NOT NULL,
+    status integer DEFAULT 1 NOT NULL,
+    timezone character varying DEFAULT 'UTC'::character varying NOT NULL,
+    payment_attempts integer DEFAULT 0 NOT NULL,
+    ready_for_payment_processing boolean DEFAULT true NOT NULL,
+    organization_id uuid NOT NULL,
+    version_number integer DEFAULT 4 NOT NULL,
+    currency character varying,
+    fees_amount_cents bigint DEFAULT 0 NOT NULL,
+    coupons_amount_cents bigint DEFAULT 0 NOT NULL,
+    credit_notes_amount_cents bigint DEFAULT 0 NOT NULL,
+    prepaid_credit_amount_cents bigint DEFAULT 0 NOT NULL,
+    sub_total_excluding_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
+    sub_total_including_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
+    payment_due_date date,
+    net_payment_term integer DEFAULT 0 NOT NULL,
+    voided_at timestamp(6) without time zone,
+    organization_sequential_id integer DEFAULT 0 NOT NULL,
+    ready_to_be_refreshed boolean DEFAULT false NOT NULL,
+    payment_dispute_lost_at timestamp(6) without time zone DEFAULT NULL::timestamp without time zone,
+    skip_charges boolean DEFAULT false NOT NULL,
+    payment_overdue boolean DEFAULT false,
+    negative_amount_cents bigint DEFAULT 0 NOT NULL,
+    progressive_billing_credit_amount_cents bigint DEFAULT 0 NOT NULL,
+    tax_status public.tax_status,
+    total_paid_amount_cents bigint DEFAULT 0 NOT NULL,
+    self_billed boolean DEFAULT false NOT NULL,
+    applied_grace_period integer,
+    billing_entity_id uuid NOT NULL,
+    billing_entity_sequential_id integer,
+    finalized_at timestamp without time zone,
+    voided_invoice_id uuid,
+    xml_file character varying,
+    expected_finalization_date date,
+    prepaid_granted_credit_amount_cents bigint,
+    prepaid_purchased_credit_amount_cents bigint,
+    payment_method_id uuid,
+    skip_automatic_payment boolean,
+    purchase_order_number character varying,
+    CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
+);
+
+
+--
 -- Name: plans; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3481,13 +3541,15 @@ CREATE VIEW public.exports_fees AS
             WHEN 0 THEN (((f.properties ->> 'charges_to_datetime'::text))::timestamp with time zone)::text
             ELSE (((f.properties ->> 'to_datetime'::text))::timestamp with time zone)::text
         END AS to_date
-   FROM ((((((public.fees f
+   FROM (((((((public.fees f
      LEFT JOIN public.subscriptions s ON ((f.subscription_id = s.id)))
      LEFT JOIN public.customers c ON ((s.customer_id = c.id)))
      LEFT JOIN public.charges ch ON ((f.charge_id = ch.id)))
      LEFT JOIN public.billable_metrics bm ON ((ch.billable_metric_id = bm.id)))
      LEFT JOIN public.add_ons ao ON ((f.add_on_id = ao.id)))
-     LEFT JOIN public.plans p ON ((s.plan_id = p.id)));
+     LEFT JOIN public.plans p ON ((s.plan_id = p.id)))
+     LEFT JOIN public.invoices i ON ((i.id = f.invoice_id)))
+  WHERE (i.status IS DISTINCT FROM 8);
 
 
 --
@@ -3645,7 +3707,9 @@ CREATE VIEW public.exports_invoice_subscriptions AS
     ins.charges_to_datetime,
     ins."timestamp",
     (ins.invoicing_reason)::text AS invoicing_reason
-   FROM public.invoice_subscriptions ins;
+   FROM (public.invoice_subscriptions ins
+     JOIN public.invoices i ON ((i.id = ins.invoice_id)))
+  WHERE (i.status <> 8);
 
 
 --
@@ -3660,66 +3724,6 @@ CREATE TABLE public.invoice_metadata (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     organization_id uuid NOT NULL
-);
-
-
---
--- Name: invoices; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoices (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    issuing_date date,
-    taxes_amount_cents bigint DEFAULT 0 NOT NULL,
-    total_amount_cents bigint DEFAULT 0 NOT NULL,
-    invoice_type integer DEFAULT 0 NOT NULL,
-    payment_status integer DEFAULT 0 NOT NULL,
-    number character varying DEFAULT ''::character varying NOT NULL,
-    sequential_id integer,
-    file character varying,
-    customer_id uuid,
-    taxes_rate double precision DEFAULT 0.0 NOT NULL,
-    status integer DEFAULT 1 NOT NULL,
-    timezone character varying DEFAULT 'UTC'::character varying NOT NULL,
-    payment_attempts integer DEFAULT 0 NOT NULL,
-    ready_for_payment_processing boolean DEFAULT true NOT NULL,
-    organization_id uuid NOT NULL,
-    version_number integer DEFAULT 4 NOT NULL,
-    currency character varying,
-    fees_amount_cents bigint DEFAULT 0 NOT NULL,
-    coupons_amount_cents bigint DEFAULT 0 NOT NULL,
-    credit_notes_amount_cents bigint DEFAULT 0 NOT NULL,
-    prepaid_credit_amount_cents bigint DEFAULT 0 NOT NULL,
-    sub_total_excluding_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
-    sub_total_including_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
-    payment_due_date date,
-    net_payment_term integer DEFAULT 0 NOT NULL,
-    voided_at timestamp(6) without time zone,
-    organization_sequential_id integer DEFAULT 0 NOT NULL,
-    ready_to_be_refreshed boolean DEFAULT false NOT NULL,
-    payment_dispute_lost_at timestamp(6) without time zone DEFAULT NULL::timestamp without time zone,
-    skip_charges boolean DEFAULT false NOT NULL,
-    payment_overdue boolean DEFAULT false,
-    negative_amount_cents bigint DEFAULT 0 NOT NULL,
-    progressive_billing_credit_amount_cents bigint DEFAULT 0 NOT NULL,
-    tax_status public.tax_status,
-    total_paid_amount_cents bigint DEFAULT 0 NOT NULL,
-    self_billed boolean DEFAULT false NOT NULL,
-    applied_grace_period integer,
-    billing_entity_id uuid NOT NULL,
-    billing_entity_sequential_id integer,
-    finalized_at timestamp without time zone,
-    voided_invoice_id uuid,
-    xml_file character varying,
-    expected_finalization_date date,
-    prepaid_granted_credit_amount_cents bigint,
-    prepaid_purchased_credit_amount_cents bigint,
-    payment_method_id uuid,
-    skip_automatic_payment boolean,
-    purchase_order_number character varying,
-    CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
 
@@ -3831,7 +3835,9 @@ CREATE VIEW public.exports_invoices_taxes AS
     it.fees_amount_cents,
     it.created_at,
     it.updated_at
-   FROM public.invoices_taxes it;
+   FROM (public.invoices_taxes it
+     JOIN public.invoices i ON ((i.id = it.invoice_id)))
+  WHERE (i.status <> 8);
 
 
 --
@@ -12803,6 +12809,9 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260702183711'),
+('20260702183710'),
+('20260702183709'),
 ('20260702074504'),
 ('20260625095837'),
 ('20260622113747'),
