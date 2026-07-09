@@ -97,9 +97,7 @@ module BillingCycles
           currency: subscriptions.first.plan.amount_currency,
           datetime: billing_at
         ) do |generating_invoice|
-          Invoices::CreateInvoiceSubscriptionService
-            .call(invoice: generating_invoice, subscriptions:, timestamp: billing_at.to_i, invoicing_reason: :subscription_periodic)
-            .raise_if_error!
+          create_invoice_subscriptions(generating_invoice, cycles)
         end
         invoice_result.raise_if_error!
         invoice = invoice_result.invoice
@@ -118,6 +116,31 @@ module BillingCycles
       end
 
       invoice
+    end
+
+    # The billing_cycle already carries the exact period per item, so the new engine owns
+    # its invoice_subscription link directly — one per subscription, boundaries spanning that
+    # subscription's cycles. This replaces the legacy CreateInvoiceSubscriptionService, which
+    # derives boundaries from a plan-level interval that product-catalog plans don't have
+    # (their intervals live per rate card). Keeping the link is what wires the invoice into
+    # subscription.invoices and the invoice PDF's subscription section.
+    def create_invoice_subscriptions(invoice, cycles)
+      cycles.group_by(&:subscription).each do |subscription, subscription_cycles|
+        period_from = subscription_cycles.map(&:period_from).min
+        period_to = subscription_cycles.map(&:period_to).max
+
+        InvoiceSubscription.create!(
+          organization: invoice.organization,
+          invoice:,
+          subscription:,
+          from_datetime: period_from,
+          to_datetime: period_to,
+          charges_from_datetime: period_from,
+          charges_to_datetime: period_to,
+          recurring: true,
+          invoicing_reason: :subscription_periodic
+        )
+      end
     end
 
     # Finalize every still-generating invoice this customer's cycles produced — this run's
