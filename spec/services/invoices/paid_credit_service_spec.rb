@@ -15,7 +15,8 @@ RSpec.describe Invoices::PaidCreditService do
     let(:customer) { create(:customer, organization:, payment_provider: :stripe) }
     let(:subscription) { create(:subscription, plan:, customer:) }
     let(:plan) { create(:plan, organization:) }
-    let(:wallet) { create(:wallet, customer:) }
+    let(:wallet) { create(:wallet, customer:, purchase_order_number: wallet_purchase_order_number) }
+    let(:wallet_purchase_order_number) { nil }
     let(:wallet_transaction) do
       create(:wallet_transaction, wallet:, amount: "15.00", credit_amount: "15.00", invoice_requires_successful_payment:)
     end
@@ -73,6 +74,37 @@ RSpec.describe Invoices::PaidCreditService do
 
         expect(result).to be_success
         expect(result.invoice.purchase_order_number).to eq("PO-123")
+      end
+    end
+
+    context "when wallet has purchase_order_number" do
+      let(:wallet_purchase_order_number) { "PO-WALLET-123" }
+
+      it "stamps the generated invoice with the wallet purchase order number" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.purchase_order_number).to eq("PO-WALLET-123")
+      end
+
+      context "when wallet_transaction also has purchase_order_number" do
+        let(:wallet_transaction) do
+          create(
+            :wallet_transaction,
+            wallet:,
+            amount: "15.00",
+            credit_amount: "15.00",
+            invoice_requires_successful_payment:,
+            purchase_order_number: "PO-TRANSACTION-123"
+          )
+        end
+
+        it "prioritizes the wallet transaction purchase order number" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.purchase_order_number).to eq("PO-TRANSACTION-123")
+        end
       end
     end
 
@@ -261,6 +293,18 @@ RSpec.describe Invoices::PaidCreditService do
             purchase_order_number: "PO-123"
           )
         end
+        let(:invoice_purchase_order_number) { "PO-EXISTING" }
+
+        it "does not overwrite the provided invoice purchase order number" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.purchase_order_number).to eq("PO-EXISTING")
+        end
+      end
+
+      context "when wallet has purchase_order_number" do
+        let(:wallet_purchase_order_number) { "PO-WALLET-123" }
         let(:invoice_purchase_order_number) { "PO-EXISTING" }
 
         it "does not overwrite the provided invoice purchase order number" do
