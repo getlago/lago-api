@@ -5,6 +5,7 @@ module Resolvers
     class InvoiceCollectionsResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
+      include BillingEntityArgsResolvable
 
       REQUIRED_PERMISSION = "analytics:view"
 
@@ -19,6 +20,9 @@ module Resolvers
 
       def resolve(**args)
         raise unauthorized_error unless License.premium?
+
+        error = resolve_billing_entity!(args)
+        return error if error
 
         ::Analytics::InvoiceCollection.find_all_by(current_organization.id, **args.merge(months: 12))
       end

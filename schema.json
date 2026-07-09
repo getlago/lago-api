@@ -56292,6 +56292,18 @@
               "description": "Query gross revenue of an organization",
               "args": [
                 {
+                  "name": "billingEntityCode",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "billingEntityId",
                   "description": null,
                   "type": {
@@ -56902,6 +56914,18 @@
               "description": "Query invoiced usage of an organization",
               "args": [
                 {
+                  "name": "billingEntityCode",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "billingEntityId",
                   "description": null,
                   "type": {
@@ -57292,6 +57316,18 @@
               "name": "mrrs",
               "description": "Query MRR of an organization",
               "args": [
+                {
+                  "name": "billingEntityCode",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
                 {
                   "name": "billingEntityId",
                   "description": null,

@@ -10,12 +10,6 @@ module Analytics
           and_billing_entity_id_sql = sanitize_sql(["AND i.billing_entity_id = :billing_entity_id", args[:billing_entity_id]])
         end
 
-        if args[:billing_entity_code].present?
-          and_billing_entity_code_sql = sanitize_sql(
-            ["AND be.code = :billing_entity_code", args[:billing_entity_code]]
-          )
-        end
-
         if args[:external_customer_id].present?
           and_external_customer_id_sql = sanitize_sql(
             ["AND c.external_id = :external_customer_id AND c.deleted_at IS NULL", args[:external_customer_id]]
@@ -74,7 +68,6 @@ module Analytics
                 COALESCE(SUM(i.total_amount_cents::float), 0) AS amount_cents
             FROM invoices i
             LEFT JOIN customers c ON i.customer_id = c.id
-            LEFT JOIN billing_entities be ON i.billing_entity_id = be.id
             WHERE i.organization_id = :organization_id
             AND i.self_billed IS FALSE
             AND i.status = 1
@@ -82,7 +75,6 @@ module Analytics
             #{and_external_customer_id_sql}
             #{and_is_customer_tin_empty_sql}
             #{and_billing_entity_id_sql}
-            #{and_billing_entity_code_sql}
             GROUP BY payment_status, month, i.currency
           )
           SELECT
