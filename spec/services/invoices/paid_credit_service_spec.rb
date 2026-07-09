@@ -56,6 +56,26 @@ RSpec.describe Invoices::PaidCreditService do
         .to change(wallet_transaction, :invoice).from(nil).to(Invoice)
     end
 
+    context "when wallet_transaction has purchase_order_number" do
+      let(:wallet_transaction) do
+        create(
+          :wallet_transaction,
+          wallet:,
+          amount: "15.00",
+          credit_amount: "15.00",
+          invoice_requires_successful_payment:,
+          purchase_order_number: "PO-123"
+        )
+      end
+
+      it "stamps the generated invoice with the purchase order number" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.purchase_order_number).to eq("PO-123")
+      end
+    end
+
     context "with billing entity resolution" do
       it "stamps the customer's billing_entity when wallet has none" do
         invoice = invoice_service.call.invoice
@@ -203,8 +223,16 @@ RSpec.describe Invoices::PaidCreditService do
 
     context "with provided invoice" do
       let(:invoice) do
-        create(:invoice, organization: customer.organization, customer:, invoice_type: :credit, status: :generating)
+        create(
+          :invoice,
+          organization: customer.organization,
+          customer:,
+          invoice_type: :credit,
+          status: :generating,
+          purchase_order_number: invoice_purchase_order_number
+        )
       end
+      let(:invoice_purchase_order_number) { nil }
 
       it "does not re-create an invoice" do
         result = invoice_service.call
@@ -220,6 +248,27 @@ RSpec.describe Invoices::PaidCreditService do
         expect(result.invoice.total_amount_cents).to eq(1500)
 
         expect(result.invoice).to be_finalized
+      end
+
+      context "when wallet_transaction has purchase_order_number" do
+        let(:wallet_transaction) do
+          create(
+            :wallet_transaction,
+            wallet:,
+            amount: "15.00",
+            credit_amount: "15.00",
+            invoice_requires_successful_payment:,
+            purchase_order_number: "PO-123"
+          )
+        end
+        let(:invoice_purchase_order_number) { "PO-EXISTING" }
+
+        it "does not overwrite the provided invoice purchase order number" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.purchase_order_number).to eq("PO-EXISTING")
+        end
       end
     end
 
