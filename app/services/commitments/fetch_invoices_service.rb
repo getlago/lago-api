@@ -2,6 +2,8 @@
 
 module Commitments
   class FetchInvoicesService < BaseService
+    Result = BaseResult[:invoices]
+
     def self.new_instance(commitment:, invoice_subscription:)
       klass = if invoice_subscription.subscription.plan.pay_in_advance?
         Commitments::Minimum::InAdvance::FetchInvoicesService
