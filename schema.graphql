@@ -10567,7 +10567,7 @@ type Query {
   """
   Query invoice collections of an organization
   """
-  invoiceCollections(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, isCustomerTinEmpty: Boolean): FinalizedInvoiceCollectionCollection!
+  invoiceCollections(billingEntityCode: String, currency: CurrencyEnum, isCustomerTinEmpty: Boolean): FinalizedInvoiceCollectionCollection!
 
   """
   Query invoice's credit note
@@ -10599,7 +10599,7 @@ type Query {
   """
   Query invoiced usage of an organization
   """
-  invoicedUsages(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum): InvoicedUsageCollection!
+  invoicedUsages(billingEntityCode: String, currency: CurrencyEnum): InvoicedUsageCollection!
 
   """
   Query invoices
@@ -10640,7 +10640,7 @@ type Query {
   """
   Query MRR of an organization
   """
-  mrrs(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum): MrrCollection!
+  mrrs(billingEntityCode: String, currency: CurrencyEnum): MrrCollection!
 
   """
   Query a single order
@@ -10680,7 +10680,7 @@ type Query {
   """
   Query overdue balances of an organization
   """
-  overdueBalances(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, isCustomerTinEmpty: Boolean, months: Int): OverdueBalanceCollection!
+  overdueBalances(billingEntityCode: String, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, isCustomerTinEmpty: Boolean, months: Int): OverdueBalanceCollection!
 
   """
   Query a password reset by token

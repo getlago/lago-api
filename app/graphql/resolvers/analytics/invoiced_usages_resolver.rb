@@ -12,7 +12,6 @@ module Resolvers
       description "Query invoiced usage of an organization"
 
       argument :billing_entity_code, String, required: false
-      argument :billing_entity_id, ID, required: false
       argument :currency, Types::CurrencyEnum, required: false
 
       type Types::Analytics::InvoicedUsages::Object.collection_type, null: false
