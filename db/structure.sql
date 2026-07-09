@@ -2806,31 +2806,31 @@ CREATE MATERIALIZED VIEW public.entitlement_features_subscriptions_count AS
           WHERE ((plans.deleted_at IS NULL) AND (subscriptions.status = ANY (ARRAY[0, 1])))
           GROUP BY COALESCE(plans.parent_id, subscriptions.plan_id)
         ), plan_subcriptions_count AS (
-         SELECT plan_features.entitlement_feature_id,
+         SELECT plan_entitlements.entitlement_feature_id,
             sum(plan_subcriptions.count) AS count
-           FROM ((public.entitlement_entitlements plan_features
-             JOIN plan_subcriptions ON ((plan_subcriptions.plan_id = plan_features.plan_id)))
-             JOIN public.entitlement_features ON ((entitlement_features.id = plan_features.entitlement_feature_id)))
-          WHERE ((plan_features.plan_id IS NOT NULL) AND (plan_features.deleted_at IS NULL) AND (entitlement_features.deleted_at IS NULL))
-          GROUP BY plan_features.entitlement_feature_id
+           FROM ((public.entitlement_entitlements plan_entitlements
+             JOIN public.entitlement_features ON ((entitlement_features.id = plan_entitlements.entitlement_feature_id)))
+             JOIN plan_subcriptions ON ((plan_subcriptions.plan_id = plan_entitlements.plan_id)))
+          WHERE ((plan_entitlements.deleted_at IS NULL) AND (entitlement_features.deleted_at IS NULL) AND (plan_entitlements.plan_id IS NOT NULL))
+          GROUP BY plan_entitlements.entitlement_feature_id
         ), direct_subscriptions_count AS (
-         SELECT subscription_features.entitlement_feature_id,
+         SELECT subscription_entitlements.entitlement_feature_id,
             count(*) AS count
-           FROM (((public.entitlement_entitlements subscription_features
-             JOIN public.entitlement_features ON ((entitlement_features.id = subscription_features.entitlement_feature_id)))
-             JOIN public.subscriptions ON ((subscriptions.id = subscription_features.subscription_id)))
+           FROM (((public.entitlement_entitlements subscription_entitlements
+             JOIN public.entitlement_features ON ((entitlement_features.id = subscription_entitlements.entitlement_feature_id)))
+             JOIN public.subscriptions ON ((subscriptions.id = subscription_entitlements.subscription_id)))
              JOIN public.plans ON ((plans.id = subscriptions.plan_id)))
-          WHERE ((subscription_features.deleted_at IS NULL) AND (subscription_features.subscription_id IS NOT NULL) AND (entitlement_features.deleted_at IS NULL) AND (subscriptions.status = ANY (ARRAY[0, 1])) AND (plans.deleted_at IS NULL) AND (NOT (EXISTS ( SELECT 1
-                   FROM public.entitlement_entitlements plan_features
-                  WHERE ((plan_features.plan_id = COALESCE(plans.parent_id, plans.id)) AND (plan_features.entitlement_feature_id = subscription_features.entitlement_feature_id) AND (plan_features.plan_id IS NOT NULL) AND (plan_features.deleted_at IS NULL))))))
-          GROUP BY subscription_features.entitlement_feature_id
+          WHERE ((subscription_entitlements.deleted_at IS NULL) AND (subscription_entitlements.subscription_id IS NOT NULL) AND (entitlement_features.deleted_at IS NULL) AND (subscriptions.status = ANY (ARRAY[0, 1])) AND (plans.deleted_at IS NULL) AND (NOT (EXISTS ( SELECT 1
+                   FROM public.entitlement_entitlements plan_entitlements
+                  WHERE ((plan_entitlements.plan_id = COALESCE(plans.parent_id, plans.id)) AND (plan_entitlements.entitlement_feature_id = subscription_entitlements.entitlement_feature_id) AND (plan_entitlements.plan_id IS NOT NULL) AND (plan_entitlements.deleted_at IS NULL))))))
+          GROUP BY subscription_entitlements.entitlement_feature_id
         ), feature_removals_count AS (
          SELECT feature_removals.entitlement_feature_id,
             count(*) AS count
            FROM ((public.entitlement_subscription_feature_removals feature_removals
-             JOIN public.subscriptions ON ((subscriptions.id = feature_removals.subscription_id)))
              JOIN public.entitlement_features ON ((entitlement_features.id = feature_removals.entitlement_feature_id)))
-          WHERE ((feature_removals.entitlement_feature_id IS NOT NULL) AND (entitlement_features.deleted_at IS NULL) AND (subscriptions.status = ANY (ARRAY[0, 1])) AND (feature_removals.deleted_at IS NULL))
+             JOIN public.subscriptions ON ((subscriptions.id = feature_removals.subscription_id)))
+          WHERE ((feature_removals.entitlement_feature_id IS NOT NULL) AND (feature_removals.deleted_at IS NULL) AND (entitlement_features.deleted_at IS NULL) AND (subscriptions.status = ANY (ARRAY[0, 1])))
           GROUP BY feature_removals.entitlement_feature_id
         )
  SELECT COALESCE(plan_subcriptions_count.entitlement_feature_id, direct_subscriptions_count.entitlement_feature_id) AS entitlement_feature_id,
