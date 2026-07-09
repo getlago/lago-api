@@ -39,8 +39,16 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver do
 
   context "when filtering by billing entity code" do
     let(:billing_entity) { create(:billing_entity, organization:, code: "entity_01") }
+    let(:customer) { create(:customer, organization:) }
 
-    it "returns a list of gross revenues for the billing entity" do
+    before do
+      create(:invoice, organization:, customer:, billing_entity:,
+        issuing_date: Time.current.beginning_of_month, total_amount_cents: 100)
+      create(:invoice, organization:, customer:, billing_entity: organization.default_billing_entity,
+        issuing_date: Time.current.beginning_of_month, total_amount_cents: 200)
+    end
+
+    it "returns gross revenues scoped to the billing entity" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -49,7 +57,11 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver do
         variables: {billingEntityCode: billing_entity.code}
       )
 
-      expect(result["data"]["grossRevenues"]["collection"]).to eq([])
+      collection = result["data"]["grossRevenues"]["collection"]
+
+      expect(collection.count).to eq(1)
+      expect(collection.first["amountCents"]).to eq("100")
+      expect(collection.first["invoicesCount"]).to eq("1")
     end
   end
 

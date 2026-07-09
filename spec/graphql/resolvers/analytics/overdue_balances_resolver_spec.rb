@@ -78,6 +78,36 @@ RSpec.describe Resolvers::Analytics::OverdueBalancesResolver do
     end
   end
 
+  context "when billing entity code belongs to another organization" do
+    before { create(:billing_entity, code: "entity_01") }
+
+    it "returns a not found error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {billingEntityCode: "entity_01"}
+      )
+
+      expect_graphql_error(result:, message: "not_found")
+    end
+  end
+
+  context "when billing entity code is blank" do
+    it "does not filter by billing entity" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {billingEntityCode: ""}
+      )
+
+      expect(result["data"]["overdueBalances"]["collection"]).to eq([])
+    end
+  end
+
   context "when both billing entity code and id are provided" do
     let(:billing_entity) { create(:billing_entity, organization:, code: "entity_01") }
 

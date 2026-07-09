@@ -55,8 +55,20 @@ RSpec.describe Resolvers::Analytics::InvoicedUsagesResolver do
 
     context "when filtering by billing entity code" do
       let(:billing_entity) { create(:billing_entity, organization:, code: "entity_01") }
+      let(:customer) { create(:customer, organization:) }
+      let(:subscription) { create(:subscription, customer:) }
+      let(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
+      let(:charge) { create(:standard_charge, billable_metric:) }
+      let(:fee1) { create(:charge_fee, charge:, subscription:, amount_cents: 100, amount_currency: "EUR") }
+      let(:fee2) { create(:charge_fee, charge:, subscription:, amount_cents: 200, amount_currency: "EUR") }
 
-      it "returns a list of invoiced usages for the billing entity" do
+      before do
+        create(:invoice, organization:, customer:, billing_entity:, status: :finalized, fees: [fee1])
+        create(:invoice, organization:, customer:, billing_entity: organization.default_billing_entity,
+          status: :finalized, fees: [fee2])
+      end
+
+      it "returns invoiced usages scoped to the billing entity" do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
@@ -65,7 +77,11 @@ RSpec.describe Resolvers::Analytics::InvoicedUsagesResolver do
           variables: {billingEntityCode: billing_entity.code}
         )
 
-        expect(result["data"]["invoicedUsages"]["collection"]).to eq([])
+        collection = result["data"]["invoicedUsages"]["collection"]
+
+        expect(collection.count).to eq(1)
+        expect(collection.first["amountCents"]).to eq("100")
+        expect(collection.first["currency"]).to eq("EUR")
       end
     end
 

@@ -60,8 +60,19 @@ RSpec.describe Resolvers::Analytics::MrrsResolver do
 
     context "when filtering by billing entity code" do
       let(:billing_entity) { create(:billing_entity, organization:, code: "entity_01") }
+      let(:customer) { create(:customer, organization:) }
+      let(:subscription) { create(:subscription, customer:) }
+      let(:fee1) { create(:fee, subscription:, amount_cents: 100, amount_currency: "EUR", taxes_amount_cents: 0) }
+      let(:fee2) { create(:fee, subscription:, amount_cents: 200, amount_currency: "EUR", taxes_amount_cents: 0) }
 
-      it "returns a list of mrrs for the billing entity" do
+      before do
+        create(:invoice, organization:, customer:, billing_entity:, status: :finalized,
+          issuing_date: Time.current.beginning_of_month, fees: [fee1])
+        create(:invoice, organization:, customer:, billing_entity: organization.default_billing_entity,
+          status: :finalized, issuing_date: Time.current.beginning_of_month, fees: [fee2])
+      end
+
+      it "returns mrrs scoped to the billing entity" do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
@@ -70,11 +81,13 @@ RSpec.describe Resolvers::Analytics::MrrsResolver do
           variables: {billingEntityCode: billing_entity.code}
         )
 
-        mrrs_response = result["data"]["mrrs"]
-        month = DateTime.parse mrrs_response["collection"].first["month"]
+        collection = result["data"]["mrrs"]["collection"]
+        month = DateTime.parse collection.first["month"]
 
+        expect(collection.count).to eq(1)
         expect(month).to eq(DateTime.current.beginning_of_month)
-        expect(mrrs_response["collection"].first["amountCents"]).to eq(nil)
+        expect(collection.first["amountCents"]).to eq("100")
+        expect(collection.first["currency"]).to eq("EUR")
       end
     end
 
