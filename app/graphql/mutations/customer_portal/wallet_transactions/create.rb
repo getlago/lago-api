@@ -9,8 +9,7 @@ module Mutations
         graphql_name "CreateCustomerPortalWalletTransaction"
         description "Creates a new Customer Wallet Transaction from Customer Portal"
 
-        argument :paid_credits, String, required: false
-        argument :wallet_id, ID, required: true
+        input_object_class Types::CustomerPortal::WalletTransactions::CreateInput
 
         type Types::CustomerPortal::WalletTransactions::Object.collection_type
 

@@ -2907,6 +2907,7 @@ input CreateCustomerPortalWalletTransactionInput {
   """
   clientMutationId: String
   paidCredits: String
+  purchaseOrderNumber: String
   walletId: ID!
 }
 

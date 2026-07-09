@@ -40,6 +40,48 @@ RSpec.describe Mutations::CustomerPortal::WalletTransactions::Create do
     expect(result_data["collection"].first["amount"]).to eq "5.0"
   end
 
+  context "with purchase_order_number" do
+    it "passes it to the wallet transaction creation service" do
+      allow(WalletTransactions::CreateFromParamsService).to receive(:call).and_call_original
+
+      execute_graphql(
+        customer_portal_user: wallet.customer,
+        query: mutation,
+        variables: {
+          input: {
+            walletId: wallet.id,
+            paidCredits: "5.00",
+            purchaseOrderNumber: "PO-123"
+          }
+        }
+      )
+
+      expect(WalletTransactions::CreateFromParamsService).to have_received(:call).with(
+        organization: wallet.customer.organization,
+        params: hash_including(
+          customer: wallet.customer,
+          purchase_order_number: "PO-123"
+        )
+      )
+    end
+
+    it "creates a wallet transaction with the purchase order number" do
+      execute_graphql(
+        customer_portal_user: wallet.customer,
+        query: mutation,
+        variables: {
+          input: {
+            walletId: wallet.id,
+            paidCredits: "5.00",
+            purchaseOrderNumber: "PO-123"
+          }
+        }
+      )
+
+      expect(wallet.wallet_transactions.last.purchase_order_number).to eq("PO-123")
+    end
+  end
+
   context "when wallet has a minimum amount" do
     it "returns an error" do
       wallet.update!(paid_top_up_min_amount_cents: 10_00)
