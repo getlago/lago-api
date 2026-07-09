@@ -6781,6 +6781,7 @@ enum InvoiceSettlementTypeEnum {
 
 enum InvoiceStatusTypeEnum {
   closed
+  deleted
   draft
   failed
   finalized
