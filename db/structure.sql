@@ -642,7 +642,7 @@ DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
-DROP INDEX IF EXISTS public.index_events_on_organization_id_and_transaction_id;
+DROP INDEX IF EXISTS public.index_events_on_transaction_id;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_created_at;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
@@ -8188,10 +8188,10 @@ CREATE INDEX index_events_on_organization_id_and_timestamp ON public.events USIN
 
 
 --
--- Name: index_events_on_organization_id_and_transaction_id; Type: INDEX; Schema: public; Owner: -
+-- Name: index_events_on_transaction_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_events_on_organization_id_and_transaction_id ON public.events USING btree (organization_id, transaction_id) WHERE (deleted_at IS NULL);
+CREATE INDEX index_events_on_transaction_id ON public.events USING btree (transaction_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -12843,6 +12843,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260709084414'),
 ('20260708095857'),
 ('20260706173746'),
 ('20260703164249'),
