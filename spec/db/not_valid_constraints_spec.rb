@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "NOT VALID constraints" do # rubocop:disable RSpec/DescribeClass
   let(:structure_sql) { Rails.root.join("db/structure.sql").read }
-  let(:allowlist) { YAML.load_file(Rails.root.join("db/not_valid_constraints.yml")) || [] }
+  let(:allowlist) { YAML.load_file(Rails.root.join("db/not_valid_constraints.yml"), permitted_classes: [Date]) || [] }
 
   let(:not_valid_constraints) do
     structure_sql
