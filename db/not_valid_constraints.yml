@@ -14,4 +14,4 @@
 #
 # - table: payments
 #   constraint: payments_customer_id_null
-#   validate_by: 2026-08-09  # usually ~1 month after the constraint is added
+#   validate_by: 2026-08-09  # deadline for the validation follow-up
