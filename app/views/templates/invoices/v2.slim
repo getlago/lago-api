@@ -499,7 +499,7 @@ html
           h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.invoice_name)
           .body-1 = I18n.t('invoice.subscription')
           .mb-24.body-3
-            | #{I18n.t('invoice.date_from')} #{I18n.l(invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date, format: :default)} #{I18n.t('invoice.date_to')} #{I18n.l(invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date, format: :default)}
+            | #{I18n.t('invoice.date_from')} #{DateHelper.format(invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date)} #{I18n.t('invoice.date_to')} #{DateHelper.format(invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date)}
 
           .invoice-resume.mb-24.overflow-auto
             table.invoice-resume-table width="100%"
@@ -517,7 +517,7 @@ html
           - if subscription? && subscription_fees(subscription.id).charge.any?
             .body-1 = I18n.t('invoice.usage_based_fees')
             .mb-24.body-3
-              = I18n.t('invoice.list_of_charges', from: I18n.l(invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone&.to_date, format: :default), to: I18n.l(invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone&.to_date, format: :default))
+              = I18n.t('invoice.list_of_charges', from: DateHelper.format(invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone&.to_date), to: DateHelper.format(invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone&.to_date))
             .charge-details.mb-24
               table.charge-details-table width="100%"
                 - subscription_fees(subscription.id).charge.where(true_up_parent_fee: nil).group_by(&:charge_id).each do |_charge_id, fees|
@@ -591,11 +591,11 @@ html
                             td.body-3 width="15%" = I18n.l(breakdown.date, format: :default)
                             td.body-1 width="65%"
                               - if breakdown.action.to_sym == :add
-                                | +#{breakdown.count} #{fee.invoice_name}
+                                | +#{breakdown.amount} #{fee.invoice_name}
                               - elsif breakdown.action.to_sym == :remove
-                                | -#{breakdown.count} #{fee.invoice_name}
+                                | -#{breakdown.amount} #{fee.invoice_name}
                               - else
-                                | +/-#{breakdown.count} #{fee.invoice_name}
+                                | +/-#{breakdown.amount} #{fee.invoice_name}
                             td.body-3 width="20%"
                               = I18n.t('invoice.breakdown_for_days', breakdown_duration: breakdown.duration, breakdown_total_duration: breakdown.total_duration)
                 - else
@@ -609,11 +609,11 @@ html
                             td.body-3 width="15%" = breakdown.date.strftime('%b %d, %Y')
                             td.body-1 width="65%"
                               - if breakdown.action.to_sym == :add
-                                | +#{breakdown.count} #{fee.invoice_name}
+                                | +#{breakdown.amount} #{fee.invoice_name}
                               - elsif breakdown.action.to_sym == :remove
-                                | -#{breakdown.count} #{fee.invoice_name}
+                                | -#{breakdown.amount} #{fee.invoice_name}
                               - else
-                                | +/-#{breakdown.count} #{fee.invoice_name}
+                                | +/-#{breakdown.amount} #{fee.invoice_name}
                             td.body-3 width="20%"
                               = I18n.t('invoice.breakdown_for_days', breakdown_duration: breakdown.duration, breakdown_total_duration: breakdown.total_duration)
 
