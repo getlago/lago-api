@@ -60,6 +60,7 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:base]).to eq(["invalid_payment_status"])
+        expect(result.payment_url).to be_nil
       end
     end
   end
