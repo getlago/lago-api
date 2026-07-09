@@ -148,7 +148,7 @@ end
 #  status                       :string           not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
-#  customer_id                  :uuid
+#  customer_id                  :uuid             not null
 #  invoice_id                   :uuid
 #  organization_id              :uuid             not null
 #  payable_id                   :uuid
