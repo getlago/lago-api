@@ -2,7 +2,16 @@
 
 module Auth
   class GoogleService < BaseService
+    include TypedResults
+
     BASE_SCOPE = %w[profile email openid].freeze
+
+    RESULTS = {
+      authorize_url: BaseResult[:url],
+      login: BaseResult[:user, :token],
+      register_user: BaseResult[:user, :organization, :membership, :token],
+      accept_invite: Invites::AcceptService::Result
+    }.freeze
 
     def authorize_url(request)
       ensure_google_auth_setup

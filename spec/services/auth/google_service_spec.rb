@@ -10,6 +10,77 @@ RSpec.describe Auth::GoogleService do
     ENV["GOOGLE_AUTH_CLIENT_SECRET"] = "client_secret"
   end
 
+  describe ".call (typed routing)" do
+    it "routes :authorize_url to a typed Result" do
+      request = Rack::Request.new(Rack::MockRequest.env_for("http://example.com"))
+      result = described_class.call(:authorize_url, request)
+
+      expect(result).to be_a(BaseResult)
+      expect(result).not_to be_a(BaseService::LegacyResult)
+      expect(result).to be_success
+      expect(result.url).to include("https://accounts.google.com/o/oauth2/auth")
+    end
+
+    it "raises when the method is not declared in RESULTS" do
+      expect { described_class.call(:unknown) }
+        .to raise_error(ArgumentError, /not declared in RESULTS/)
+    end
+
+    context "with google oauth mocked" do
+      let(:authorizer) { instance_double(Google::Auth::UserAuthorizer) }
+      let(:authorizer_response) { instance_double(Google::Auth::UserRefreshCredentials, id_token: "id_token") }
+      let(:email) { "foo@bar.com" }
+
+      before do
+        allow(Google::Auth::UserAuthorizer).to receive(:new).and_return(authorizer)
+        allow(authorizer).to receive(:get_credentials_from_code).and_return(authorizer_response)
+        allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return({"email" => email})
+        allow(UserDevices::RegisterService).to receive(:call!)
+      end
+
+      it "routes :login to a typed Result" do
+        user = create(:user, email:, password: "foobar")
+        create(:membership, :active, user:)
+
+        result = described_class.call(:login, "code")
+
+        expect(result).to be_a(BaseResult)
+        expect(result).not_to be_a(BaseService::LegacyResult)
+        expect(result).to be_success
+        expect(result.user).to eq(user)
+        expect(result.token).to be_present
+      end
+
+      it "routes :register_user to a typed Result" do
+        create(:role, :admin)
+
+        result = described_class.call(:register_user, "code", "Foobar")
+
+        expect(result).to be_a(BaseResult)
+        expect(result).not_to be_a(BaseService::LegacyResult)
+        expect(result).to be_success
+        expect(result.user).to be_a(User)
+        expect(result.organization).to be_present
+        expect(result.membership).to be_present
+        expect(result.token).to be_present
+      end
+
+      # NOTE: accept_invite delegates to Invites::AcceptService and returns its
+      # result, so the TypedResults-injected result is discarded. The returned
+      # type follows the delegate (still LegacyResult until it migrates), hence
+      # no BaseResult assertion here.
+      it "routes :accept_invite and returns the delegate result" do
+        invite = create(:invite, email:)
+
+        result = described_class.call(:accept_invite, "code", invite.token)
+
+        expect(result).to be_success
+        expect(result.user.email).to eq(invite.email)
+        expect(result.token).to be_present
+      end
+    end
+  end
+
   describe "#authorize_url" do
     it "returns the authorize url" do
       request = Rack::Request.new(Rack::MockRequest.env_for("http://example.com"))

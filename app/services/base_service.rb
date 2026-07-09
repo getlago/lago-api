@@ -210,14 +210,19 @@ class BaseService
   end
 
   def call_with_middlewares(&block)
-    chain = init_middlewares
-
-    chain.call { call(&block) }
+    with_middlewares { call(&block) }
   end
 
   protected
 
   attr_writer :result
+
+  # Runs an arbitrary block through the service middleware chain.
+  # Used by `call_with_middlewares` and by the TypedResults bridge to wrap
+  # legacy named methods with the same instrumentation as a regular `call`.
+  def with_middlewares(&block)
+    init_middlewares.call(&block)
+  end
 
   private
 
