@@ -928,7 +928,6 @@ ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_ta
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS plans_pkey;
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS pending_vies_checks_pkey;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS payments_pkey;
-ALTER TABLE IF EXISTS public.payments DROP CONSTRAINT IF EXISTS payments_customer_id_null;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS payment_requests_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS payment_receipts_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_providers DROP CONSTRAINT IF EXISTS payment_providers_pkey;
@@ -3912,7 +3911,7 @@ CREATE TABLE public.payments (
     provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
     provider_payment_method_id character varying,
     organization_id uuid NOT NULL,
-    customer_id uuid,
+    customer_id uuid NOT NULL,
     error_code character varying,
     payment_method_id uuid
 );
@@ -6113,14 +6112,6 @@ ALTER TABLE ONLY public.payment_receipts
 
 ALTER TABLE ONLY public.payment_requests
     ADD CONSTRAINT payment_requests_pkey PRIMARY KEY (id);
-
-
---
--- Name: payments payments_customer_id_null; Type: CHECK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE public.payments
-    ADD CONSTRAINT payments_customer_id_null CHECK ((customer_id IS NOT NULL)) NOT VALID;
 
 
 --
@@ -11201,7 +11192,7 @@ ALTER TABLE ONLY public.order_forms
 --
 
 ALTER TABLE ONLY public.wallets
-    ADD CONSTRAINT fk_rails_4ff087c52e FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_4ff087c52e FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
 
 
 --
@@ -11281,7 +11272,7 @@ ALTER TABLE ONLY public.credits
 --
 
 ALTER TABLE ONLY public.subscriptions
-    ADD CONSTRAINT fk_rails_56b3626631 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_56b3626631 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
 
 
 --
@@ -11377,7 +11368,7 @@ ALTER TABLE ONLY public.fixed_charges
 --
 
 ALTER TABLE ONLY public.recurring_transaction_rules
-    ADD CONSTRAINT fk_rails_5efea6fe31 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_5efea6fe31 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
 
 
 --
@@ -11913,7 +11904,7 @@ ALTER TABLE ONLY public.invoice_subscriptions
 --
 
 ALTER TABLE ONLY public.adjusted_fees
-    ADD CONSTRAINT fk_rails_91802dc891 FOREIGN KEY (fixed_charge_id) REFERENCES public.fixed_charges(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_91802dc891 FOREIGN KEY (fixed_charge_id) REFERENCES public.fixed_charges(id);
 
 
 --
@@ -12225,7 +12216,7 @@ ALTER TABLE ONLY public.plans_taxes
 --
 
 ALTER TABLE ONLY public.wallet_transactions
-    ADD CONSTRAINT fk_rails_bcb5aecd6c FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_bcb5aecd6c FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
 
 
 --
@@ -12273,7 +12264,7 @@ ALTER TABLE ONLY public.enriched_store_migrations
 --
 
 ALTER TABLE ONLY public.wallet_transactions
-    ADD CONSTRAINT fk_rails_c29bf4ff0f FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_c29bf4ff0f FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
 
 
 --
@@ -12417,7 +12408,7 @@ ALTER TABLE ONLY public.quote_versions
 --
 
 ALTER TABLE ONLY public.payments
-    ADD CONSTRAINT fk_rails_d384ec1ebf FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_d384ec1ebf FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
 
 
 --
@@ -12465,7 +12456,7 @@ ALTER TABLE ONLY public.subscription_fixed_charge_units_overrides
 --
 
 ALTER TABLE ONLY public.wallets
-    ADD CONSTRAINT fk_rails_d9342a8ca7 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_d9342a8ca7 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
 
 
 --
@@ -12593,7 +12584,7 @@ ALTER TABLE ONLY public.charge_filters
 --
 
 ALTER TABLE ONLY public.subscriptions
-    ADD CONSTRAINT fk_rails_e744efbe51 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_e744efbe51 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
 
 
 --
@@ -12721,7 +12712,7 @@ ALTER TABLE ONLY public.fees
 --
 
 ALTER TABLE ONLY public.invoice_subscriptions
-    ADD CONSTRAINT fk_rails_f435d13904 FOREIGN KEY (regenerated_invoice_id) REFERENCES public.invoices(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_f435d13904 FOREIGN KEY (regenerated_invoice_id) REFERENCES public.invoices(id);
 
 
 --
@@ -12843,6 +12834,19 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260709141039'),
+('20260709141038'),
+('20260709141037'),
+('20260709135727'),
+('20260709135726'),
+('20260709135725'),
+('20260709135724'),
+('20260709135723'),
+('20260709135722'),
+('20260709135721'),
+('20260709135720'),
+('20260709135718'),
+('20260709135717'),
 ('20260708095857'),
 ('20260706173746'),
 ('20260703164249'),
