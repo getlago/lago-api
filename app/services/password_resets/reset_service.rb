@@ -2,6 +2,8 @@
 
 module PasswordResets
   class ResetService < BaseService
+    Result = BaseResult
+
     def initialize(token:, new_password:)
       @token = token
       @new_password = new_password

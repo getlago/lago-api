@@ -213,7 +213,6 @@ RSpec.describe Invoices::Payments::StripeService do
     end
 
     before do
-      allow(SegmentTrackJob).to receive(:perform_later)
       payment
     end
 

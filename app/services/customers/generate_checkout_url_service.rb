@@ -2,6 +2,8 @@
 
 module Customers
   class GenerateCheckoutUrlService < BaseService
+    Result = BaseResult
+
     def initialize(customer:)
       @customer = customer
       @provider_customer = customer&.provider_customer

@@ -2,6 +2,8 @@
 
 module Credits
   class CreditNoteService < BaseService
+    Result = BaseResult[:credits]
+
     def initialize(invoice:, context: nil)
       @invoice = invoice
       @context = context

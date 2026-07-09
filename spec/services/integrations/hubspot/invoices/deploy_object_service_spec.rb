@@ -40,6 +40,21 @@ RSpec.describe Integrations::Hubspot::Invoices::DeployObjectService do
       expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
       expect(http_client).to have_received(:post_with_response) do |payload, headers|
         expect(payload[:name]).to eq("LagoInvoices")
+        expect(payload[:properties]).to include(
+          hash_including(
+            name: "lago_invoice_purchase_order_number",
+            label: "Lago Purchase Order Number",
+            type: "string",
+            fieldType: "text",
+            searchableInGlobalSearch: true
+          ),
+          hash_including(
+            name: "lago_invoice_url",
+            label: "Lago Invoice URL",
+            type: "string",
+            fieldType: "text"
+          )
+        )
         expect(headers["Authorization"]).to include("Bearer")
       end
       expect(integration.reload.invoices_properties_version).to eq(described_class::VERSION)

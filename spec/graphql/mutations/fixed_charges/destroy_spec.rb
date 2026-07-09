@@ -47,10 +47,7 @@ RSpec.describe Mutations::FixedCharges::Destroy, type: :graphql do
     let(:child_plan) { create(:plan, organization:, parent: plan) }
     let(:child_fixed_charge) { create(:fixed_charge, plan: child_plan, organization:, add_on:, parent: fixed_charge) }
 
-    before do
-      child_fixed_charge
-      allow(FixedCharges::DestroyChildrenJob).to receive(:perform_later)
-    end
+    before { child_fixed_charge }
 
     it "cascades the deletion to children" do
       execute_graphql(
@@ -66,7 +63,7 @@ RSpec.describe Mutations::FixedCharges::Destroy, type: :graphql do
         }
       )
 
-      expect(FixedCharges::DestroyChildrenJob).to have_received(:perform_later).with(fixed_charge.id)
+      expect(FixedCharges::DestroyChildrenJob).to have_been_enqueued.with(fixed_charge.id)
     end
   end
 

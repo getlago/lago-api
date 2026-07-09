@@ -3,6 +3,8 @@
 module Integrations
   module Avalara
     class FetchCompanyIdService < BaseService
+      Result = BaseResult
+
       def initialize(integration:)
         @integration = integration
         super

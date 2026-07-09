@@ -2,6 +2,8 @@
 
 module Fees
   class SubscriptionService < BaseService
+    Result = BaseResult[:fee]
+
     def initialize(invoice:, subscription:, boundaries:, context: nil)
       @invoice = invoice
       @subscription = subscription

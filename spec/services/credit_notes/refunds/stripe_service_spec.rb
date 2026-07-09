@@ -47,7 +47,6 @@ RSpec.describe CreditNotes::Refunds::StripeService do
             currency: "chf"
           )
         )
-      allow(SegmentTrackJob).to receive(:perform_later)
     end
 
     it "creates a stripe refund and a refund" do
@@ -75,7 +74,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
     it "call SegmentTrackJob" do
       stripe_service.create
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "refund_status_changed",
         properties: {
@@ -281,14 +280,12 @@ RSpec.describe CreditNotes::Refunds::StripeService do
     end
 
     it "calls SegmentTrackJob" do
-      allow(SegmentTrackJob).to receive(:perform_later)
-
       stripe_service.update_status(
         provider_refund_id: refund.provider_refund_id,
         status: "succeeded"
       )
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "refund_status_changed",
         properties: {

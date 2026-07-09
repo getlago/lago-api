@@ -156,146 +156,116 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
         expect(result.error.to_s).to eq("moneyhash_customer_not_found")
       end
 
-      context "when multiple_payment_methods feature flag is enabled" do
-        before { organization.update!(feature_flags: ["multiple_payment_methods"]) }
-
-        it "creates a PaymentMethod record" do
-          expect {
-            moneyhash_service.update_payment_method(
-              organization_id: organization.id,
-              customer_id: customer.id,
-              payment_method_id: payment_method_id,
-              metadata: custom_fields
-            )
-          }.to change(PaymentMethod, :count).by(1)
-
-          payment_method = PaymentMethod.last
-          expect(payment_method).to have_attributes(
-            customer: customer,
-            payment_provider_customer: moneyhash_customer,
-            provider_method_id: payment_method_id,
-            provider_method_type: "card",
-            is_default: true
-          )
-        end
-
-        it "returns the payment_method in the result" do
-          result = moneyhash_service.update_payment_method(
+      it "creates a PaymentMethod record" do
+        expect {
+          moneyhash_service.update_payment_method(
             organization_id: organization.id,
             customer_id: customer.id,
             payment_method_id: payment_method_id,
             metadata: custom_fields
           )
+        }.to change(PaymentMethod, :count).by(1)
 
-          expect(result).to be_success
-          expect(result.payment_method).to be_present
-          expect(result.payment_method.provider_method_id).to eq(payment_method_id)
+        payment_method = PaymentMethod.last
+        expect(payment_method).to have_attributes(
+          customer: customer,
+          payment_provider_customer: moneyhash_customer,
+          provider_method_id: payment_method_id,
+          provider_method_type: "card",
+          is_default: true
+        )
+      end
+
+      it "returns the payment_method in the result" do
+        result = moneyhash_service.update_payment_method(
+          organization_id: organization.id,
+          customer_id: customer.id,
+          payment_method_id: payment_method_id,
+          metadata: custom_fields
+        )
+
+        expect(result).to be_success
+        expect(result.payment_method).to be_present
+        expect(result.payment_method.provider_method_id).to eq(payment_method_id)
+      end
+
+      context "when card_details is provided" do
+        let(:card_details) do
+          {
+            brand: "Visa",
+            last4: "4242",
+            expiration_month: "12",
+            expiration_year: "25",
+            card_holder_name: "John Doe"
+          }
         end
 
-        context "when card_details is provided" do
-          let(:card_details) do
-            {
-              brand: "Visa",
-              last4: "4242",
-              expiration_month: "12",
-              expiration_year: "25",
-              card_holder_name: "John Doe"
-            }
-          end
-
-          it "stores card details in PaymentMethod.details" do
-            result = moneyhash_service.update_payment_method(
-              organization_id: organization.id,
-              customer_id: customer.id,
-              payment_method_id: payment_method_id,
-              metadata: custom_fields,
-              card_details: card_details
-            )
-
-            expect(result).to be_success
-            expect(result.payment_method.details).to include(
-              "brand" => "Visa",
-              "last4" => "4242",
-              "expiration_month" => "12",
-              "expiration_year" => "25",
-              "card_holder_name" => "John Doe"
-            )
-          end
-        end
-
-        context "when card_details is empty" do
-          it "does not call UpdateDetailsService" do
-            allow(PaymentMethods::UpdateDetailsService).to receive(:call)
-
-            moneyhash_service.update_payment_method(
-              organization_id: organization.id,
-              customer_id: customer.id,
-              payment_method_id: payment_method_id,
-              metadata: custom_fields,
-              card_details: {}
-            )
-
-            expect(PaymentMethods::UpdateDetailsService).not_to have_received(:call)
-          end
-        end
-
-        it "finds existing PaymentMethod instead of creating duplicate" do
-          existing_payment_method = create(
-            :payment_method,
-            customer:,
-            payment_provider_customer: moneyhash_customer,
-            provider_method_id: payment_method_id,
-            is_default: false
+        it "stores card details in PaymentMethod.details" do
+          result = moneyhash_service.update_payment_method(
+            organization_id: organization.id,
+            customer_id: customer.id,
+            payment_method_id: payment_method_id,
+            metadata: custom_fields,
+            card_details: card_details
           )
 
-          expect {
-            moneyhash_service.update_payment_method(
-              organization_id: organization.id,
-              customer_id: customer.id,
-              payment_method_id: payment_method_id,
-              metadata: custom_fields
-            )
-          }.not_to change(PaymentMethod, :count)
-
-          expect(existing_payment_method.reload.is_default).to be(true)
-        end
-
-        it "does not create PaymentMethod when payment_method_id is nil" do
-          expect {
-            moneyhash_service.update_payment_method(
-              organization_id: organization.id,
-              customer_id: customer.id,
-              payment_method_id: nil,
-              metadata: custom_fields
-            )
-          }.not_to change(PaymentMethod, :count)
+          expect(result).to be_success
+          expect(result.payment_method.details).to include(
+            "brand" => "Visa",
+            "last4" => "4242",
+            "expiration_month" => "12",
+            "expiration_year" => "25",
+            "card_holder_name" => "John Doe"
+          )
         end
       end
 
-      context "when multiple_payment_methods feature flag is disabled" do
-        it "does not create a PaymentMethod record" do
-          expect {
-            moneyhash_service.update_payment_method(
-              organization_id: organization.id,
-              customer_id: customer.id,
-              payment_method_id: payment_method_id,
-              metadata: custom_fields
-            )
-          }.not_to change(PaymentMethod, :count)
-        end
+      context "when card_details is empty" do
+        it "does not call UpdateDetailsService" do
+          allow(PaymentMethods::UpdateDetailsService).to receive(:call)
 
-        it "still updates the legacy payment_method_id" do
-          result = moneyhash_service.update_payment_method(
+          moneyhash_service.update_payment_method(
+            organization_id: organization.id,
+            customer_id: customer.id,
+            payment_method_id: payment_method_id,
+            metadata: custom_fields,
+            card_details: {}
+          )
+
+          expect(PaymentMethods::UpdateDetailsService).not_to have_received(:call)
+        end
+      end
+
+      it "finds existing PaymentMethod instead of creating duplicate" do
+        existing_payment_method = create(
+          :payment_method,
+          customer:,
+          payment_provider_customer: moneyhash_customer,
+          provider_method_id: payment_method_id,
+          is_default: false
+        )
+
+        expect {
+          moneyhash_service.update_payment_method(
             organization_id: organization.id,
             customer_id: customer.id,
             payment_method_id: payment_method_id,
             metadata: custom_fields
           )
+        }.not_to change(PaymentMethod, :count)
 
-          expect(result).to be_success
-          expect(moneyhash_customer.reload.payment_method_id).to eq(payment_method_id)
-          expect(result.payment_method).to be_nil
-        end
+        expect(existing_payment_method.reload.is_default).to be(true)
+      end
+
+      it "does not create PaymentMethod when payment_method_id is nil" do
+        expect {
+          moneyhash_service.update_payment_method(
+            organization_id: organization.id,
+            customer_id: customer.id,
+            payment_method_id: nil,
+            metadata: custom_fields
+          )
+        }.not_to change(PaymentMethod, :count)
       end
     end
 
@@ -364,7 +334,7 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
         expect(moneyhash_customer.reload.payment_method_id).to eq(payment_method_id)
       end
 
-      context "when multiple_payment_methods feature flag is enabled" do
+      context "when the customer has a payment method" do
         let!(:payment_method) do
           create(
             :payment_method,
@@ -372,10 +342,6 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
             payment_provider_customer: moneyhash_customer,
             provider_method_id: payment_method_id
           )
-        end
-
-        before do
-          organization.update!(feature_flags: ["multiple_payment_methods"])
         end
 
         it "soft-deletes the PaymentMethod record" do
@@ -400,21 +366,6 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
           )
 
           expect(result).to be_success
-        end
-      end
-
-      context "when multiple_payment_methods feature flag is disabled" do
-        it "does not call DestroyService" do
-          allow(PaymentMethods::DestroyService).to receive(:call)
-
-          moneyhash_service.delete_payment_method(
-            organization_id: organization.id,
-            customer_id: customer.id,
-            payment_method_id: payment_method_id,
-            metadata: custom_fields
-          )
-
-          expect(PaymentMethods::DestroyService).not_to have_received(:call)
         end
       end
 

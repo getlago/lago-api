@@ -2,6 +2,8 @@
 
 module Invoices
   class ApplyProviderTaxesService < BaseService
+    Result = BaseResult[:applied_taxes, :invoice]
+
     def initialize(invoice:, provider_taxes: nil)
       @invoice = invoice
       @provider_taxes = provider_taxes || fetch_provider_taxes_result.fees

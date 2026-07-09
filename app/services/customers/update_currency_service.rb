@@ -2,6 +2,8 @@
 
 module Customers
   class UpdateCurrencyService < BaseService
+    Result = BaseResult
+
     def initialize(customer:, currency:, customer_update: false)
       @customer = customer
       @currency = currency

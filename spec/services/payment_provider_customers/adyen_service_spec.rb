@@ -220,59 +220,45 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
           .on_queue(webhook_queue)
       end
 
-      it "does not create a PaymentMethod record" do
-        expect { preauthorise }.not_to change(PaymentMethod, :count)
+      it "creates a new PaymentMethod record" do
+        expect { preauthorise }.to change(PaymentMethod, :count).by(1)
+
+        payment_method = PaymentMethod.last
+        expect(payment_method.customer).to eq(customer)
+        expect(payment_method.payment_provider_customer).to eq(adyen_customer)
+        expect(payment_method.provider_method_id).to eq(payment_method_id)
+        expect(payment_method.provider_method_type).to eq("card")
+        expect(payment_method.is_default).to be(true)
       end
 
-      context "with multiple_payment_methods feature flag enabled" do
-        before { organization.enable_feature_flag!(:multiple_payment_methods) }
-
-        it "creates a new PaymentMethod record" do
-          expect { preauthorise }.to change(PaymentMethod, :count).by(1)
-
-          payment_method = PaymentMethod.last
-          expect(payment_method.customer).to eq(customer)
-          expect(payment_method.payment_provider_customer).to eq(adyen_customer)
-          expect(payment_method.provider_method_id).to eq(payment_method_id)
-          expect(payment_method.provider_method_type).to eq("card")
-          expect(payment_method.is_default).to be(true)
+      context "when PaymentMethod already exists" do
+        let!(:existing_payment_method) do
+          create(
+            :payment_method,
+            customer:,
+            payment_provider_customer: adyen_customer,
+            provider_method_id: payment_method_id,
+            is_default: false
+          )
         end
 
-        it "still updates adyen_customer payment_method_id for backward compatibility" do
+        it "does not create a new PaymentMethod" do
+          expect { preauthorise }.not_to change(PaymentMethod, :count)
+        end
+
+        it "sets the existing PaymentMethod as default" do
           preauthorise
 
-          expect(adyen_customer.reload.payment_method_id).to eq(payment_method_id)
+          expect(existing_payment_method.reload.is_default).to be(true)
         end
 
-        context "when PaymentMethod already exists" do
-          let!(:existing_payment_method) do
-            create(
-              :payment_method,
-              customer:,
-              payment_provider_customer: adyen_customer,
-              provider_method_id: payment_method_id,
-              is_default: false
-            )
+        context "when payment method lookup raises RecordNotUnique" do
+          before do
+            allow(PaymentMethods::FindOrCreateFromProviderService).to receive(:call).and_raise(ActiveRecord::RecordNotUnique)
           end
 
-          it "does not create a new PaymentMethod" do
-            expect { preauthorise }.not_to change(PaymentMethod, :count)
-          end
-
-          it "sets the existing PaymentMethod as default" do
-            preauthorise
-
-            expect(existing_payment_method.reload.is_default).to be(true)
-          end
-
-          context "when payment method lookup raises RecordNotUnique" do
-            before do
-              allow(PaymentMethods::FindOrCreateFromProviderService).to receive(:call).and_raise(ActiveRecord::RecordNotUnique)
-            end
-
-            it "does not raise error" do
-              expect { preauthorise }.not_to raise_error(ActiveRecord::RecordNotUnique)
-            end
+          it "does not raise error" do
+            expect { preauthorise }.not_to raise_error(ActiveRecord::RecordNotUnique)
           end
         end
       end

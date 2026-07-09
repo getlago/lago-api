@@ -2,6 +2,8 @@
 
 module WalletTransactions
   class RecreditService < BaseService
+    Result = BaseResult[:wallet_transaction]
+
     def initialize(wallet_transaction:)
       @wallet_transaction = wallet_transaction
       @wallet = wallet_transaction.wallet

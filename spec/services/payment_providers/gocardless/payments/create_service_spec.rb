@@ -68,7 +68,6 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService do
           "currency" => invoice.currency,
           "status" => "paid_out"
         ))
-      allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
 
     it "creates a gocardless payment" do
@@ -148,12 +147,11 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService do
       end
     end
 
-    context "when multiple payment methods are enabled" do
+    context "when payment has a payment method" do
       let(:default_payment_method) { create(:payment_method, customer:, provider_method_id: "mandate_id2") }
 
       before do
         payment.update!(payment_method: default_payment_method)
-        organization.update!(feature_flags: ["multiple_payment_methods"])
         gocardless_customer.update!(provider_mandate_id: "mandate_id2")
       end
 

@@ -50,7 +50,7 @@ module Types
       end
 
       def has_draft_invoices
-        object.invoices.draft.exists?
+        object.invoices.draft.where(organization_id: object.organization_id).exists?
       end
 
       def integration_mappings(integration_id: nil)

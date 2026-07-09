@@ -128,5 +128,20 @@ RSpec.describe EInvoices::Cii::TradeAgreement do
         end
       end
     end
+
+    context "with a purchase order number" do
+      before { resource.update!(purchase_order_number: "PO-12345") }
+
+      it "contains the BuyerOrderReferencedDocument" do
+        expect(subject).to contains_xml_node("#{root}/ram:BuyerOrderReferencedDocument/ram:IssuerAssignedID")
+          .with_value("PO-12345")
+      end
+    end
+
+    context "without a purchase order number" do
+      it "does not contain the BuyerOrderReferencedDocument" do
+        expect(subject).not_to contains_xml_node("#{root}/ram:BuyerOrderReferencedDocument")
+      end
+    end
   end
 end

@@ -57,11 +57,7 @@ module PaymentProviders
         end
 
         def mandate_id
-          if customer.organization.feature_flag_enabled?(:multiple_payment_methods)
-            mandate_id_from_payment_method || fetch_mandate_from_api
-          else
-            fetch_mandate_from_api
-          end
+          mandate_id_from_payment_method || fetch_mandate_from_api
         end
 
         def mandate_id_from_payment_method

@@ -1,17 +1,9 @@
-multiple_payment_methods:
-  description: "Allow multiple payment methods per customer"
-  owners: ["@lovrocolic", "@mariohd"]
-
 postgres_enriched_events:
   description: "Turn on events pre-enrichement for organizations using the PG event store"
   owners: ["@vincent-pochet"]
 
 enriched_events_aggregation:
   description: "Use the enriched events store for aggregation queries in ClickHouse"
-  owners: ["@vincent-pochet"]
-
-event_property_combinations:
-  description: "Resolve exact charge filters from distinct event property combinations during billing period filtering"
   owners: ["@vincent-pochet"]
 
 wallet_traceability:
@@ -33,6 +25,10 @@ multi_entity_billing:
 order_forms:
   description: "Enable quotes, order forms and orders"
   owners: ["@murparreira", "@toommz", "@rinasergeeva"]
+
+meilisearch:
+  description: "Use Meilisearch instead of Postgres for list searches"
+  owners: ["@jdenquin"]
 
 stripe_shared_payment_token:
   description: "Use Stripe Shared Payment Token for agent-initiated payments when no other payment method is attached"

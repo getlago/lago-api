@@ -64,7 +64,6 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
     before do
       fee_subscription
       fee_charge
-      allow(SegmentTrackJob).to receive(:perform_later)
     end
 
     context "when invoice does not exist" do
@@ -314,7 +313,6 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
 
       before do
         fee_add_on
-        allow(SegmentTrackJob).to receive(:perform_later)
       end
 
       it "changes status from pending to finalized" do
@@ -447,7 +445,6 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
       before do
         invoice_subscription
         fee_fixed_charge
-        allow(SegmentTrackJob).to receive(:perform_later)
       end
 
       it "changes status from pending to finalized" do

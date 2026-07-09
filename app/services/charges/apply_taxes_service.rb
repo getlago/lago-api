@@ -2,6 +2,8 @@
 
 module Charges
   class ApplyTaxesService < BaseService
+    Result = BaseResult[:applied_taxes]
+
     def initialize(charge:, tax_codes:)
       @charge = charge
       @tax_codes = tax_codes

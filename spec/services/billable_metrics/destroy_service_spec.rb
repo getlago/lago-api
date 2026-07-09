@@ -14,7 +14,6 @@ RSpec.describe BillableMetrics::DestroyService do
   before do
     charge
 
-    allow(BillableMetrics::DeleteEventsJob).to receive(:perform_later).and_call_original
     allow(Invoices::RefreshDraftService).to receive(:call)
   end
 

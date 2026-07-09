@@ -182,25 +182,24 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
         billable_metric:, organization:, subscription_external_id: subscription.external_id)
     end
 
-    let(:job_proxy) { instance_double(ActiveJob::ConfiguredJob) }
-
     before do
       charge
       alert_5
-      allow(UsageMonitoring::ProcessLifetimeUsageAlertJob).to receive(:set).with(wait: 5.minutes).and_return(job_proxy)
-      allow(job_proxy).to receive(:perform_later)
     end
 
     it "enqueues ProcessLifetimeUsageAlertJob with a 5 minute delay" do
-      service.call
+      freeze_time do
+        service.call
 
-      expect(job_proxy).to have_received(:perform_later).with(alert: alert_5, subscription:)
+        expect(UsageMonitoring::ProcessLifetimeUsageAlertJob)
+          .to have_been_enqueued.with(alert: alert_5, subscription:).at(5.minutes.from_now)
+      end
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
 
     context "when the job enqueue raises" do
       before do
-        allow(job_proxy).to receive(:perform_later).and_raise(StandardError, "enqueue failed")
+        allow(queue_adapter).to receive(:enqueue_at).and_raise(StandardError, "enqueue failed")
       end
 
       it "deletes subscription_activity before raising" do

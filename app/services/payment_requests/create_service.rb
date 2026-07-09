@@ -2,6 +2,8 @@
 
 module PaymentRequests
   class CreateService < BaseService
+    Result = BaseResult[:payment_request]
+
     def initialize(organization:, params:, dunning_campaign: nil)
       @organization = organization
       @params = params

@@ -33,7 +33,6 @@ RSpec.describe Customers::CreateService do
   end
 
   before do
-    allow(SendWebhookJob).to receive(:perform_later)
     allow(CurrentContext).to receive(:source).and_return("graphql")
   end
 
@@ -66,7 +65,7 @@ RSpec.describe Customers::CreateService do
   it "calls SendWebhookJob with customer.created" do
     result
 
-    expect(SendWebhookJob).to have_received(:perform_later).with("customer.created", result.customer)
+    expect(SendWebhookJob).to have_been_enqueued.with("customer.created", result.customer)
   end
 
   it "produces an activity log" do

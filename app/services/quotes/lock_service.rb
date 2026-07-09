@@ -15,6 +15,8 @@ module Quotes
   class LockService < BaseService
     ACQUIRE_LOCK_TIMEOUT = 5.seconds
 
+    Result = BaseResult
+
     def initialize(quote:, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true)
       @quote = quote
       @timeout_seconds = timeout_seconds

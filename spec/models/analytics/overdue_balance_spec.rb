@@ -328,4 +328,94 @@ RSpec.describe Analytics::OverdueBalance do
       end
     end
   end
+
+  describe ".expire_cache_for_customer", cache: :redis do
+    subject(:expire_cache) { described_class.expire_cache_for_customer(organization_id, external_customer_id) }
+
+    let(:organization_id) { SecureRandom.uuid }
+    let(:external_customer_id) { "customer_01" }
+    let(:version_key) { described_class.cache_version_key(organization_id, external_customer_id) }
+
+    before { allow(Rails.cache).to receive(:delete_matched).and_call_original }
+
+    it "bumps the stored version token" do
+      initial_version = described_class.cache_version(organization_id, external_customer_id)
+
+      travel 1.second do
+        expire_cache
+      end
+
+      expect(Rails.cache.read(version_key, raw: true)).not_to eq(initial_version)
+    end
+
+    it "does not scan the keyspace" do
+      expire_cache
+
+      expect(Rails.cache).not_to have_received(:delete_matched)
+    end
+
+    it "uses an independent version namespace per model" do
+      expect(described_class.cache_version_key(organization_id, external_customer_id))
+        .not_to eq(Analytics::GrossRevenue.cache_version_key(organization_id, external_customer_id))
+    end
+  end
+
+  describe ".versioned_cache_key" do
+    let(:organization_id) { SecureRandom.uuid }
+
+    context "without external_customer_id" do
+      it "returns the cache key without a version suffix" do
+        expect(described_class.versioned_cache_key(organization_id))
+          .to eq(described_class.cache_key(organization_id))
+      end
+    end
+  end
+
+  describe ".cache_version", cache: :redis do
+    let(:organization_id) { SecureRandom.uuid }
+    let(:external_customer_id) { "customer_01" }
+
+    it "seeds the token once and keeps it stable across reads" do
+      first = described_class.cache_version(organization_id, external_customer_id)
+
+      travel 1.second do
+        expect(described_class.cache_version(organization_id, external_customer_id)).to eq(first)
+      end
+    end
+  end
+
+  describe "cache invalidation through .find_all_by", cache: :redis do
+    let(:organization) { create(:organization, created_at: 3.months.ago) }
+    let(:customer) { create(:customer, organization:) }
+    let(:billing_entity) { organization.default_billing_entity }
+
+    before do
+      create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
+        total_amount_cents: 100, billing_entity:, issuing_date: 1.month.ago)
+    end
+
+    def overdue_amounts(expire_cache: false)
+      args = {external_customer_id: customer.external_id}
+      args[:expire_cache] = true if expire_cache
+      described_class.find_all_by(organization.id, **args).sum { |row| row["amount_cents"] }
+    end
+
+    it "serves stale results until expired, then recomputes" do
+      expect(overdue_amounts).to eq(100)
+
+      create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
+        total_amount_cents: 250, billing_entity:, issuing_date: 1.month.ago)
+
+      expect(overdue_amounts).to eq(100)
+
+      travel 1.second do
+        expect(overdue_amounts(expire_cache: true)).to eq(350)
+
+        # The expiring read seeded a fresh token and recomputed. A subsequent
+        # plain read must neither reseed the token nor bust the cache: it still
+        # hits the cache written against the new token and returns 350.
+        expect(overdue_amounts).to eq(350)
+      end
+    end
+  end
 end

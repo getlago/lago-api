@@ -42,7 +42,7 @@ RSpec.describe Invoices::GeneratePdfService do
       it "returns a result with error" do
         result = described_class.call(invoice:, context:)
 
-        expect(result.success).to be_falsey
+        expect(result).to be_failure
         expect(result.error.error_code).to eq("invoice_not_found")
       end
     end
@@ -53,7 +53,7 @@ RSpec.describe Invoices::GeneratePdfService do
       it "returns a result with error" do
         result = described_class.call(invoice:, context:)
 
-        expect(result.success).to be_falsey
+        expect(result).to be_failure
         expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         expect(result.error.code).to eq("is_draft")
       end
