@@ -16,32 +16,32 @@ WITH
   -- Number of subscriptions that have the feature through a plan
   plan_subcriptions_count AS (
     SELECT
-      plan_features.entitlement_feature_id,
+      plan_entitlements.entitlement_feature_id,
       SUM(count) AS count
     FROM
-      entitlement_entitlements AS plan_features
-      INNER JOIN plan_subcriptions ON plan_subcriptions.plan_id = plan_features.plan_id
-      INNER JOIN entitlement_features ON entitlement_features.id = plan_features.entitlement_feature_id
+      entitlement_entitlements AS plan_entitlements
+      INNER JOIN entitlement_features ON entitlement_features.id = plan_entitlements.entitlement_feature_id
+      INNER JOIN plan_subcriptions ON plan_subcriptions.plan_id = plan_entitlements.plan_id
     WHERE
-      plan_features.plan_id IS NOT NULL
-      AND plan_features.deleted_at IS NULL
+      plan_entitlements.deleted_at IS NULL
       AND entitlement_features.deleted_at IS NULL
+      AND plan_entitlements.plan_id IS NOT NULL
     GROUP BY
-      plan_features.entitlement_feature_id
+      plan_entitlements.entitlement_feature_id
   ),
   -- Number of subscriptions that have the feature assigned directly
   direct_subscriptions_count AS (
     SELECT
-      subscription_features.entitlement_feature_id,
+      subscription_entitlements.entitlement_feature_id,
       COUNT(*) AS count
     FROM
-      entitlement_entitlements AS subscription_features
-      INNER JOIN entitlement_features ON entitlement_features.id = subscription_features.entitlement_feature_id
-      INNER JOIN subscriptions ON subscriptions.id = subscription_features.subscription_id
+      entitlement_entitlements AS subscription_entitlements
+      INNER JOIN entitlement_features ON entitlement_features.id = subscription_entitlements.entitlement_feature_id
+      INNER JOIN subscriptions ON subscriptions.id = subscription_entitlements.subscription_id
       INNER JOIN plans ON plans.id = subscriptions.plan_id
     WHERE
-      subscription_features.deleted_at IS NULL
-      AND subscription_features.subscription_id IS NOT NULL
+      subscription_entitlements.deleted_at IS NULL
+      AND subscription_entitlements.subscription_id IS NOT NULL
       AND entitlement_features.deleted_at IS NULL
       AND subscriptions.status IN (0, 1)
       AND plans.deleted_at IS NULL
@@ -50,15 +50,15 @@ WITH
         SELECT
           1
         FROM
-          entitlement_entitlements AS plan_features
+          entitlement_entitlements AS plan_entitlements
         WHERE
-          plan_features.plan_id = COALESCE(plans.parent_id, plans.id)
-          AND plan_features.entitlement_feature_id = subscription_features.entitlement_feature_id
-          AND plan_features.plan_id IS NOT NULL
-          AND plan_features.deleted_at IS NULL
+          plan_entitlements.plan_id = COALESCE(plans.parent_id, plans.id)
+          AND plan_entitlements.entitlement_feature_id = subscription_entitlements.entitlement_feature_id
+          AND plan_entitlements.plan_id IS NOT NULL
+          AND plan_entitlements.deleted_at IS NULL
        )
     GROUP BY
-      subscription_features.entitlement_feature_id
+      subscription_entitlements.entitlement_feature_id
   ),
   -- Number of subscriptions where the feature has been manually removed
   feature_removals_count AS (
@@ -67,13 +67,13 @@ WITH
       COUNT(*) AS count
     FROM
       entitlement_subscription_feature_removals AS feature_removals
-      INNER JOIN subscriptions ON subscriptions.id = feature_removals.subscription_id
       INNER JOIN entitlement_features ON entitlement_features.id = feature_removals.entitlement_feature_id
+      INNER JOIN subscriptions ON subscriptions.id = feature_removals.subscription_id
     WHERE
       feature_removals.entitlement_feature_id IS NOT NULL
+      AND feature_removals.deleted_at IS NULL
       AND entitlement_features.deleted_at IS NULL
       AND subscriptions.status IN (0, 1)
-      AND feature_removals.deleted_at IS NULL
     GROUP BY
       feature_removals.entitlement_feature_id
   )

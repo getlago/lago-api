@@ -170,6 +170,21 @@ RSpec.describe Entitlement::Feature::SubscriptionsCountQuery do
       end
     end
 
+    context "with deleted features" do
+      let(:feature) { create(:feature, organization:, deleted_at: Time.zone.now) }
+
+      before do
+        create(:subscription, plan:)
+        create(:entitlement, feature:, plan:)
+      end
+
+      it "does not include deleted features" do
+        result = subject.call
+
+        expect(result).to eq({})
+      end
+    end
+
     context "with deleted plan entitlements" do
       before do
         create(:subscription, plan:)
