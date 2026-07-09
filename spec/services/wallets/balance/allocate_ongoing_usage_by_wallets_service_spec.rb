@@ -300,6 +300,23 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
       end
     end
 
+    context "when a fee targets a wallet whose balance is smaller than the fee" do
+      around { |test| lago_premium! { test.run } }
+
+      let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
+      let(:charge) { create(:standard_charge, organization:, accepts_target_wallet: true) }
+      let(:wallet_b) { create(:wallet, customer:, organization:, code: "wallet-b", balance_cents: 50, priority: 1) }
+      let(:current_usage_fees) do
+        [create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 80,
+          taxes_amount_cents: 0, amount_currency: "EUR", grouped_by: {"target_wallet_code" => "wallet-b"})]
+      end
+
+      it "lets the targeted wallet absorb the full amount and go negative, never spilling onto other wallets" do
+        expect(result).to be_success
+        expect(result.wallet_allocations).to eq({wallet_b => 80, wallet_a => 0})
+      end
+    end
+
     context "when a wallet's in-memory balance is stale" do
       let(:current_usage_fees) { [usage_fee(amount_cents: 80)] }
 
