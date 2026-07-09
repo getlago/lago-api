@@ -22,9 +22,10 @@ RSpec.describe "NOT VALID constraints" do # rubocop:disable RSpec/DescribeClass
       #{unregistered.map { |c| "  - #{c["table"]}.#{c["constraint"]}" }.join("\n")}
 
       A NOT VALID constraint must be validated by a follow-up migration
-      (`validate_foreign_key` or `validate_check_constraint`). Until then, register
-      it in db/not_valid_constraints.yml with a `validate_by` deadline and the
-      ticket tracking the follow-up.
+      (`validate_foreign_key` or `validate_check_constraint`), normally added
+      right after it in the same PR. If validation is not possible yet (e.g.
+      existing rows must be backfilled or fixed first), register the constraint
+      in db/not_valid_constraints.yml with a `validate_by` deadline.
 
       Note: when a table has several foreign keys to the same table, pass the
       `column:` option to `validate_foreign_key`, otherwise the wrong constraint
@@ -50,10 +51,10 @@ RSpec.describe "NOT VALID constraints" do # rubocop:disable RSpec/DescribeClass
 
     expect(overdue).to be_empty, <<~MSG
       The following NOT VALID constraints are past their validation deadline.
-      Add a migration validating them (see the referenced ticket), then remove
-      them from db/not_valid_constraints.yml:
+      Add a migration validating them, then remove them from
+      db/not_valid_constraints.yml:
 
-      #{overdue.map { |c| "  - #{c["table"]}.#{c["constraint"]} (validate_by: #{c["validate_by"]}, ticket: #{c["ticket"]})" }.join("\n")}
+      #{overdue.map { |c| "  - #{c["table"]}.#{c["constraint"]} (validate_by: #{c["validate_by"]})" }.join("\n")}
     MSG
   end
 end
