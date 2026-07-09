@@ -10317,7 +10317,7 @@ type Query {
   """
   Query invoice collections of a customer portal user
   """
-  customerPortalInvoiceCollections(expireCache: Boolean, months: Int): FinalizedInvoiceCollectionCollection!
+  customerPortalInvoiceCollections(expireCache: Boolean): FinalizedInvoiceCollectionCollection!
 
   """
   Query invoices of a customer
@@ -10332,7 +10332,7 @@ type Query {
   """
   Query overdue balances of a customer portal user
   """
-  customerPortalOverdueBalances(expireCache: Boolean, months: Int): OverdueBalanceCollection!
+  customerPortalOverdueBalances(expireCache: Boolean): OverdueBalanceCollection!
 
   """
   Query a single subscription from the customer portal

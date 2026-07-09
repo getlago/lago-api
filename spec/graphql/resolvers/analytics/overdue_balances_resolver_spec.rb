@@ -6,8 +6,8 @@ RSpec.describe Resolvers::Analytics::OverdueBalancesResolver do
   let(:required_permission) { "analytics:view" }
   let(:query) do
     <<~GQL
-      query($currency: CurrencyEnum, $externalCustomerId: String, $months: Int, $expireCache: Boolean, $billingEntityCode: String) {
-        overdueBalances(currency: $currency, externalCustomerId: $externalCustomerId, months: $months, expireCache: $expireCache, billingEntityCode: $billingEntityCode) {
+      query($currency: CurrencyEnum, $externalCustomerId: String, $months: Int, $expireCache: Boolean, $billingEntityCode: String, $isCustomerTinEmpty: Boolean) {
+        overdueBalances(currency: $currency, externalCustomerId: $externalCustomerId, months: $months, expireCache: $expireCache, billingEntityCode: $billingEntityCode, isCustomerTinEmpty: $isCustomerTinEmpty) {
           collection {
             amountCents
             currency
@@ -55,6 +55,33 @@ RSpec.describe Resolvers::Analytics::OverdueBalancesResolver do
         permissions: required_permission,
         query:,
         variables: {billingEntityCode: billing_entity.code}
+      )
+
+      collection = result["data"]["overdueBalances"]["collection"]
+
+      expect(collection.count).to eq(1)
+      expect(collection.first["amountCents"]).to eq("100")
+    end
+  end
+
+  context "when filtering by customer tax identification number emptiness" do
+    let(:customer_without_tin) { create(:customer, organization:, tax_identification_number: nil) }
+    let(:customer_with_tin) { create(:customer, organization:, tax_identification_number: "123456789") }
+
+    before do
+      create(:invoice, organization:, customer: customer_without_tin, payment_overdue: true,
+        payment_due_date: Time.current.beginning_of_month, total_amount_cents: 100)
+      create(:invoice, organization:, customer: customer_with_tin, payment_overdue: true,
+        payment_due_date: Time.current.beginning_of_month - 1.month, total_amount_cents: 200)
+    end
+
+    it "returns overdue balances for customers without a tax identification number" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {isCustomerTinEmpty: true}
       )
 
       collection = result["data"]["overdueBalances"]["collection"]

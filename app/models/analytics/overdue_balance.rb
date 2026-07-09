@@ -16,6 +16,15 @@ module Analytics
           )
         end
 
+        unless args[:is_customer_tin_empty].nil?
+          and_is_customer_tin_empty_sql =
+            if args[:is_customer_tin_empty] == true
+              sanitize_sql(["AND (c.tax_identification_number IS NULL OR trim(c.tax_identification_number) = '')"])
+            else
+              sanitize_sql(["AND (c.tax_identification_number IS NOT NULL AND trim(c.tax_identification_number) <> '')"])
+            end
+        end
+
         if args[:months].present?
           months_interval = (args[:months].to_i <= 1) ? 0 : args[:months].to_i - 1
 
@@ -72,6 +81,7 @@ module Analytics
             AND i.self_billed IS FALSE
             AND i.payment_overdue IS TRUE
             #{and_external_customer_id_sql}
+            #{and_is_customer_tin_empty_sql}
             #{and_billing_entity_id_sql}
             GROUP BY month, i.currency, i.billing_entity_id, total_amount_cents
             ORDER BY month ASC
@@ -103,7 +113,8 @@ module Analytics
           args[:billing_entity_id],
           args[:external_customer_id],
           args[:currency],
-          args[:months]
+          args[:months],
+          args[:is_customer_tin_empty]
         ].join("/")
       end
     end
