@@ -103,6 +103,35 @@ RSpec.describe Subscriptions::PlanUpgradeService do
       end
     end
 
+    context "when the current subscription has a purchase_order_number" do
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: old_plan,
+          status: :active,
+          subscription_at: Time.current,
+          started_at: Time.current,
+          external_id: SecureRandom.uuid,
+          purchase_order_number: "PO-OLD"
+        )
+      end
+
+      it "does not carry the purchase_order_number over to the new subscription" do
+        expect(result).to be_success
+        expect(result.subscription.purchase_order_number).to be_nil
+      end
+
+      context "when params provide a purchase_order_number" do
+        let(:params) { {name: subscription_name, purchase_order_number: "PO-NEW"} }
+
+        it "sets it on the new subscription" do
+          expect(result).to be_success
+          expect(result.subscription.purchase_order_number).to eq("PO-NEW")
+        end
+      end
+    end
+
     context "with payment method" do
       let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
       let(:params) do
