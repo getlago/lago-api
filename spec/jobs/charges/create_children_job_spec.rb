@@ -25,14 +25,11 @@ RSpec.describe Charges::CreateChildrenJob do
     subscription
     subscription2
     child_plan2
-    allow(Charges::CreateChildrenBatchJob).to receive(:perform_later)
-      .with(child_ids:, charge:, payload: params)
-      .and_call_original
   end
 
   it "calls the batch job" do
     described_class.perform_now(charge:, payload: params)
 
-    expect(Charges::CreateChildrenBatchJob).to have_received(:perform_later).once
+    expect(Charges::CreateChildrenBatchJob).to have_been_enqueued.once.with(child_ids:, charge:, payload: params)
   end
 end

@@ -188,8 +188,6 @@ RSpec.describe PaymentRequests::Payments::StripeService do
     end
 
     before do
-      allow(SegmentTrackJob).to receive(:perform_later)
-      allow(SendWebhookJob).to receive(:perform_later)
       payment
     end
 

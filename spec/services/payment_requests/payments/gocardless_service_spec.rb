@@ -68,8 +68,6 @@ RSpec.describe PaymentRequests::Payments::GocardlessService do
     let(:provider_payment_id) { "ch_123456" }
 
     before do
-      allow(SegmentTrackJob).to receive(:perform_later)
-      allow(SendWebhookJob).to receive(:perform_later)
       payment
     end
 

@@ -119,4 +119,55 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       end
     end
   end
+
+  # SQL-shape guard: the transaction_id tie-break applies only when aggregating for a
+  # pay-in-advance event AND the boundary is that event's own timestamp.
+  describe "#charge_id_based_where_sql boundary predicate" do
+    let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
+    let(:organization) { billable_metric.organization }
+    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:event_timestamp) { subscription.started_at.beginning_of_day + 1.day }
+
+    def event_store(filters)
+      described_class.new(
+        code: billable_metric.code,
+        subscription:,
+        boundaries: {
+          from_datetime: subscription.started_at.beginning_of_day,
+          to_datetime: subscription.started_at.end_of_month.end_of_day,
+          max_timestamp: event_timestamp,
+          charges_duration: 31
+        },
+        filters: {charge_id: charge.id}.merge(filters)
+      )
+    end
+
+    it "tie-breaks the boundary on transaction_id for a pay-in-advance event" do
+      store = event_store(event: Events::Common.new(transaction_id: "tx-boundary", timestamp: event_timestamp))
+
+      sql = store.charge_id_based_where_sql(from_datetime: nil, to_datetime: event_timestamp)
+
+      expect(sql).to include("transaction_id <= 'tx-boundary'")
+    end
+
+    it "keeps the plain timestamp upper bound without a pay-in-advance event" do
+      store = event_store({})
+
+      sql = store.charge_id_based_where_sql(from_datetime: nil, to_datetime: event_timestamp)
+
+      expect(sql).to include("timestamp <=")
+      expect(sql).not_to include("transaction_id <=")
+    end
+
+    it "keeps the plain timestamp upper bound when the boundary is not the event timestamp" do
+      store = event_store(event: Events::Common.new(transaction_id: "tx-boundary", timestamp: event_timestamp))
+
+      sql = store.charge_id_based_where_sql(from_datetime: nil, to_datetime: event_timestamp - 0.001.seconds)
+
+      expect(sql).to include("timestamp <=")
+      expect(sql).not_to include("transaction_id <=")
+    end
+  end
 end

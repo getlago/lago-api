@@ -20,11 +20,11 @@ RSpec.describe Fees::CreatePayInAdvanceJob do
 
   describe ".retry_wait" do
     it "grows polynomially and adds the jitter on each retry" do
-      allow(described_class).to receive(:rand).and_return(7)
+      jitter = described_class::RETRY_JITTER
 
-      expect(described_class.retry_wait(1)).to eq(8)  # 1**4 + 7
-      expect(described_class.retry_wait(2)).to eq(23) # 2**4 + 7
-      expect(described_class.retry_wait(3)).to eq(88) # 3**4 + 7
+      expect(described_class.retry_wait(1)).to be_between(1**4 + jitter.min, 1**4 + jitter.max)
+      expect(described_class.retry_wait(2)).to be_between(2**4 + jitter.min, 2**4 + jitter.max)
+      expect(described_class.retry_wait(3)).to be_between(3**4 + jitter.min, 3**4 + jitter.max)
     end
 
     it "keeps the jitter within RETRY_JITTER" do

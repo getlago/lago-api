@@ -482,13 +482,11 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         end
 
         it "returns a success" do
-          allow(PaymentProviders::CancelPaymentAuthorizationJob).to receive(:perform_later)
-
           subject
           expect(json[:authorization]).to include(stripe_pi)
           expect(json[:subscription]).to include(status: "active")
 
-          expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_received(:perform_later).with(
+          expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_been_enqueued.with(
             payment_provider: stripe_customer.payment_provider, id: stripe_pi[:id]
           )
         end

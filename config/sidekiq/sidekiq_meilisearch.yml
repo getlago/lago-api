@@ -1,0 +1,7 @@
+queues:
+  - meilisearch
+
+production:
+  concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
+staging:
+  concurrency: 10

@@ -860,7 +860,7 @@ module Events
         ]
 
         conditions << sql_condition("#{prefix}timestamp >= ?", from_datetime) if from_datetime
-        conditions << sql_condition("#{prefix}timestamp <= ?", to_datetime) if to_datetime
+        conditions << upper_timestamp_boundary_sql(to_datetime, prefix:) if to_datetime
         conditions << grouped_by_values_sql_condition(prefix) if include_grouped_by_values && grouped_by_values?
 
         conditions.join(" AND ")

@@ -2,6 +2,8 @@
 
 module Commitments
   class CalculateProratedCoefficientService < BaseService
+    Result = BaseResult[:proration_coefficient]
+
     def initialize(commitment:, invoice_subscription:)
       @commitment = commitment
       @invoice_subscription = invoice_subscription

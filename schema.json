@@ -28518,12 +28518,6 @@
           "interfaces": null,
           "enumValues": [
             {
-              "name": "multiple_payment_methods",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "postgres_enriched_events",
               "description": null,
               "isDeprecated": false,
@@ -28561,6 +28555,12 @@
             },
             {
               "name": "order_forms",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "meilisearch",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

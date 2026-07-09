@@ -30,7 +30,6 @@ RSpec.describe Invoices::CreateOneOffService do
     before do
       tax
 
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
       CurrentContext.source = "api"
     end
@@ -141,7 +140,7 @@ RSpec.describe Invoices::CreateOneOffService do
     it "calls SegmentTrackJob" do
       invoice = described_class.call(**args).invoice
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "invoice_created",
         properties: {

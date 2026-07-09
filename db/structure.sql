@@ -643,9 +643,9 @@ DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_transaction_id;
+DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_created_at;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
-DROP INDEX IF EXISTS public.index_events_on_organization_id;
 DROP INDEX IF EXISTS public.index_events_on_created_at;
 DROP INDEX IF EXISTS public.index_error_details_on_owner;
 DROP INDEX IF EXISTS public.index_error_details_on_organization_id;
@@ -8167,13 +8167,6 @@ CREATE INDEX index_events_on_created_at ON public.events USING btree (created_at
 
 
 --
--- Name: index_events_on_organization_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_events_on_organization_id ON public.events USING btree (organization_id);
-
-
---
 -- Name: index_events_on_organization_id_and_code; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8185,6 +8178,13 @@ CREATE INDEX index_events_on_organization_id_and_code ON public.events USING btr
 --
 
 CREATE INDEX index_events_on_organization_id_and_created_at ON public.events USING btree (organization_id, created_at DESC) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_events_on_organization_id_and_timestamp; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_organization_id_and_timestamp ON public.events USING btree (organization_id, "timestamp" DESC) WHERE (deleted_at IS NULL);
 
 
 --
@@ -12843,6 +12843,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260708095857'),
+('20260706173746'),
 ('20260703164249'),
 ('20260702074504'),
 ('20260701083110'),

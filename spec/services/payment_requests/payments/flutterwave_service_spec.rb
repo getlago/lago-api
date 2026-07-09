@@ -73,7 +73,6 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
 
       before do
         allow(http_client).to receive(:post_with_response).and_raise(http_error)
-        allow(SendWebhookJob).to receive(:perform_later)
       end
 
       it "delivers error webhook and returns service failure" do
@@ -87,7 +86,7 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       it "sends webhook notification about payment failure" do
         flutterwave_service.call
 
-        expect(SendWebhookJob).to have_received(:perform_later).with(
+        expect(SendWebhookJob).to have_been_enqueued.with(
           "payment_request.payment_failure",
           payment_request,
           provider_customer_id: flutterwave_customer.provider_customer_id,

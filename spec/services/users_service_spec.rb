@@ -19,19 +19,17 @@ RSpec.describe UsersService do
     end
 
     it "calls SegmentIdentifyJob" do
-      allow(SegmentIdentifyJob).to receive(:perform_later)
       result = user_service.register("email", "password", "organization_name")
 
-      expect(SegmentIdentifyJob).to have_received(:perform_later).with(
+      expect(SegmentIdentifyJob).to have_been_enqueued.with(
         membership_id: "membership/#{result.membership.id}"
       )
     end
 
     it "calls SegmentTrackJob" do
-      allow(SegmentTrackJob).to receive(:perform_later)
       result = user_service.register("user@email.com", "password", "organization_name")
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: "membership/#{result.membership.id}",
         event: "organization_registered",
         properties: {
@@ -187,10 +185,9 @@ RSpec.describe UsersService do
           end
 
           it "calls SegmentIdentifyJob with user's first active membership" do
-            allow(SegmentIdentifyJob).to receive(:perform_later)
             subject
 
-            expect(SegmentIdentifyJob).to have_received(:perform_later).with(
+            expect(SegmentIdentifyJob).to have_been_enqueued.with(
               membership_id: "membership/#{active_membership.id}"
             )
           end
@@ -225,10 +222,9 @@ RSpec.describe UsersService do
           end
 
           it "does not call SegmentIdentifyJob" do
-            allow(SegmentIdentifyJob).to receive(:perform_later)
             subject
 
-            expect(SegmentIdentifyJob).not_to have_received(:perform_later)
+            expect(SegmentIdentifyJob).not_to have_been_enqueued
           end
         end
       end
@@ -247,10 +243,9 @@ RSpec.describe UsersService do
           end
 
           it "does not call SegmentIdentifyJob" do
-            allow(SegmentIdentifyJob).to receive(:perform_later)
             subject
 
-            expect(SegmentIdentifyJob).not_to have_received(:perform_later)
+            expect(SegmentIdentifyJob).not_to have_been_enqueued
           end
         end
 
@@ -263,10 +258,9 @@ RSpec.describe UsersService do
           end
 
           it "does not call SegmentIdentifyJob" do
-            allow(SegmentIdentifyJob).to receive(:perform_later)
             subject
 
-            expect(SegmentIdentifyJob).not_to have_received(:perform_later)
+            expect(SegmentIdentifyJob).not_to have_been_enqueued
           end
         end
       end
@@ -308,10 +302,9 @@ RSpec.describe UsersService do
       end
 
       it "does not call SegmentIdentifyJob" do
-        allow(SegmentIdentifyJob).to receive(:perform_later)
         subject
 
-        expect(SegmentIdentifyJob).not_to have_received(:perform_later)
+        expect(SegmentIdentifyJob).not_to have_been_enqueued
       end
     end
   end

@@ -35,7 +35,7 @@ module Events
               .where(code:)
 
             query = query.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
-            query = query.where("events_enriched.timestamp <= ?", applicable_to_datetime) if applicable_to_datetime
+            query = query.where(upper_timestamp_boundary_sql(applicable_to_datetime, prefix: "events_enriched.")) if applicable_to_datetime
             query
           end
 
@@ -144,7 +144,7 @@ module Events
         ]
 
         conditions << ActiveRecord::Base.sanitize_sql_for_conditions(["#{prefix}timestamp >= ?", from_datetime]) if from_datetime
-        conditions << ActiveRecord::Base.sanitize_sql_for_conditions(["#{prefix}timestamp <= ?", to_datetime]) if to_datetime
+        conditions << upper_timestamp_boundary_sql(to_datetime, prefix:) if to_datetime
         conditions.join(" AND ")
       end
 
@@ -784,7 +784,7 @@ module Events
 
       def with_timestamp_boundaries(query, from_datetime, to_datetime)
         query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
-        query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
+        query = query.where(Arel.sql(upper_timestamp_boundary_sql(to_datetime, prefix: "events_enriched."))) if to_datetime
         query
       end
 

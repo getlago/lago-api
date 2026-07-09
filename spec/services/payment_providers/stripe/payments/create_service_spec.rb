@@ -84,9 +84,6 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       stub_request(:post, "https://api.stripe.com/v1/payment_intents")
         .to_return(body: stripe_payment_intent_data.to_json)
 
-      allow(SegmentTrackJob).to receive(:perform_later)
-      allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
-
       allow(PaymentProviderCustomers::Stripe::CheckPaymentMethodService).to receive(:call)
         .and_return(provider_customer_service_result)
 
