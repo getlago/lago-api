@@ -69,6 +69,50 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
       end
     end
 
+    context "when a plan's charges span several charge batches" do
+      let(:second_charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
+
+      before do
+        stub_const("#{described_class}::CHARGE_BATCH_SIZE", 1)
+        second_charge
+        allow(Subscriptions::ChargeCacheService).to receive(:expire_for_subscriptions).and_call_original
+      end
+
+      it "processes the subscription twice but deletes its events idempotently" do
+        expect { service.call }
+          .to change { event.reload.deleted_at }.from(nil).to(billable_metric.deleted_at)
+
+        expect(Subscriptions::ChargeCacheService).to have_received(:expire_for_subscriptions).twice
+        expect(not_impacted_event.reload.deleted_at).to be_nil
+      end
+    end
+
+    context "with unrelated events" do
+      let(:other_metric) { create(:billable_metric, organization: billable_metric.organization) }
+      let(:other_metric_charge) { create(:standard_charge, plan: subscription.plan, billable_metric: other_metric) }
+      let(:other_metric_event) do
+        create(:event, code: other_metric.code, subscription_id: subscription.id, organization_id: billable_metric.organization_id, timestamp: event_timestamp, created_at: event_timestamp)
+      end
+      let(:other_organization) { create(:organization) }
+      let(:other_org_event) do
+        create(:event, code: billable_metric.code, external_subscription_id: subscription.external_id, organization_id: other_organization.id, timestamp: event_timestamp, created_at: event_timestamp)
+      end
+
+      before do
+        other_metric_charge
+        other_metric_event
+        other_org_event
+      end
+
+      it "only deletes events matching the metric code and organization" do
+        service.call
+
+        expect(event.reload.deleted_at).to eq(billable_metric.deleted_at)
+        expect(other_metric_event.reload.deleted_at).to be_nil
+        expect(other_org_event.reload.deleted_at).to be_nil
+      end
+    end
+
     context "when event is received after billable_metric deletion" do
       let(:event) do
         create(
@@ -152,6 +196,26 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
         )
       end
 
+      let(:other_code_ch_event) do
+        create(
+          :clickhouse_events_raw,
+          organization_id: billable_metric.organization_id,
+          code: "#{billable_metric.code}_other",
+          external_subscription_id: subscription.external_id,
+          ingested_at: event_timestamp
+        )
+      end
+
+      let(:other_org_ch_event) do
+        create(
+          :clickhouse_events_raw,
+          organization_id: SecureRandom.uuid,
+          code: billable_metric.code,
+          external_subscription_id: subscription.external_id,
+          ingested_at: event_timestamp
+        )
+      end
+
       let(:ch_enriched_event) do
         create(
           :clickhouse_events_enriched,
@@ -197,6 +261,8 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
 
         ch_event
         not_impacted_ch_event
+        other_code_ch_event
+        other_org_ch_event
         ch_enriched_event
         not_impacted_ch_enriched_event
         ch_enriched_expanded_event
@@ -209,6 +275,10 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
         expect(Clickhouse::EventsRaw.where(transaction_id: ch_event.transaction_id).count)
           .to eq(0)
         expect(Clickhouse::EventsRaw.where(transaction_id: not_impacted_ch_event.transaction_id).count)
+          .to eq(1)
+        expect(Clickhouse::EventsRaw.where(transaction_id: other_code_ch_event.transaction_id).count)
+          .to eq(1)
+        expect(Clickhouse::EventsRaw.where(transaction_id: other_org_ch_event.transaction_id).count)
           .to eq(1)
       end
 
