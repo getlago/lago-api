@@ -127,6 +127,21 @@ module Lago
       output.puts "#{indent}#{error}" if error
     end
 
+    # Prints one settings row for an env-backed value. The value is masked
+    # (secret-named keys become `***`, URL userinfo/query secrets are redacted)
+    # and unset env vars render as `(unset)`.
+    def setting(label, env_key)
+      raw = ENV[env_key]
+      value = raw.nil? ? "(unset)" : mask(env_key, raw)
+      output.puts format("    %-24s: %s", label, value)
+    end
+
+    # Prints one settings row for a value that is not env-backed (a hardcoded
+    # default or a derived boolean), keeping the same alignment as `setting`.
+    def fact(label, value)
+      output.puts format("    %-24s: %s", label, value)
+    end
+
     # ── sections ────────────────────────────────────────────────────────────
 
     def version_and_build
@@ -294,6 +309,26 @@ module Lago
             output.puts "    #{key}: #{value}"
           end
         end
+
+        output.puts
+        output.puts "  ## Settings"
+        setting("DATABASE_URL", "DATABASE_URL")
+
+        pool_size = safe { ApplicationRecord.connection_pool.db_config.pool }
+        if pool_size.to_s.start_with?("error:")
+          pool_size = ENV["DATABASE_POOL"] || "(unset)"
+        end
+        fact("Pool size", pool_size)
+
+        setting("Prepared statements", "DATABASE_PREPARED_STATEMENTS")
+        setting("Schema search path", "POSTGRES_SCHEMA")
+        setting("Statement timeout", "LAGO_DATABASE_STATEMENT_TIMEOUT")
+        setting("Idle in tx timeout", "LAGO_DATABASE_IDLE_TX_TIMEOUT")
+        setting("Lock timeout", "LAGO_DATABASE_LOCK_TIMEOUT")
+
+        fact("statement_timeout (live)", safe { ActiveRecord::Base.connection.select_value("SHOW statement_timeout") })
+        fact("lock_timeout (live)", safe { ActiveRecord::Base.connection.select_value("SHOW lock_timeout") })
+        fact("idle_in_tx_timeout (live)", safe { ActiveRecord::Base.connection.select_value("SHOW idle_in_transaction_session_timeout") })
       end
     end
 
@@ -344,6 +379,20 @@ module Lago
             end
           end
         end
+
+        output.puts
+        output.puts "  ## Settings"
+        setting("REDIS_URL", "REDIS_URL")
+        setting("REDIS_PASSWORD", "REDIS_PASSWORD")
+        fact("Sidekiq sentinels", ENV["LAGO_REDIS_SIDEKIQ_SENTINELS"].present? ? "configured" : "(none)")
+        fact("Sidekiq master name", ENV["LAGO_REDIS_SIDEKIQ_MASTER_NAME"] || "master (default)")
+        fact("Sidekiq retry window s", ENV["LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS"] || "5 (default)")
+        fact("Cache enabled", ENV["LAGO_REDIS_CACHE_URL"].present?)
+        setting("Cache URL", "LAGO_REDIS_CACHE_URL")
+        setting("Cache pool size", "LAGO_REDIS_CACHE_POOL_SIZE")
+        fact("Cache sentinels", ENV["LAGO_REDIS_CACHE_SENTINELS"].present? ? "configured" : "(none)")
+        fact("SSL verify mode", "VERIFY_NONE")
+        fact("Connection timeout", "1s")
       end
     end
 
@@ -356,6 +405,15 @@ module Lago
           version = safe { Clickhouse::BaseRecord.connection.select_value("SELECT version()") }
           output.puts "  Version        : #{version}"
         end
+
+        output.puts
+        output.puts "  ## Settings"
+        setting("Host", "LAGO_CLICKHOUSE_HOST")
+        setting("Port", "LAGO_CLICKHOUSE_PORT")
+        setting("Database", "LAGO_CLICKHOUSE_DATABASE")
+        setting("Username", "LAGO_CLICKHOUSE_USERNAME")
+        setting("SSL", "LAGO_CLICKHOUSE_SSL")
+        setting("Migrations enabled", "LAGO_CLICKHOUSE_MIGRATIONS_ENABLED")
       end
     end
 
@@ -367,6 +425,18 @@ module Lago
         if enabled
           servers = mask("LAGO_KAFKA_BOOTSTRAP_SERVERS", ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"])
           output.puts "  Bootstrap servers : #{servers}"
+
+          output.puts
+          output.puts "  ## Settings"
+          setting("Security protocol", "LAGO_KAFKA_SECURITY_PROTOCOL")
+          setting("SASL mechanisms", "LAGO_KAFKA_SASL_MECHANISMS")
+          setting("Username", "LAGO_KAFKA_USERNAME")
+          fact("Client id", "Lago")
+          setting("Raw events topic", "LAGO_KAFKA_RAW_EVENTS_TOPIC")
+          setting("Enriched events topic", "LAGO_KAFKA_ENRICHED_EVENTS_TOPIC")
+          setting("API logs topic", "LAGO_KAFKA_API_LOGS_TOPIC")
+          setting("Activity logs topic", "LAGO_KAFKA_ACTIVITY_LOGS_TOPIC")
+          setting("Security logs topic", "LAGO_KAFKA_SECURITY_LOGS_TOPIC")
         end
       end
     end
@@ -379,6 +449,15 @@ module Lago
         if enabled
           output.puts "  Address        : #{ENV["LAGO_SMTP_ADDRESS"]}"
           output.puts "  Port           : #{ENV["LAGO_SMTP_PORT"]}"
+
+          output.puts
+          output.puts "  ## Settings"
+          setting("Address", "LAGO_SMTP_ADDRESS")
+          setting("Port", "LAGO_SMTP_PORT")
+          setting("Domain", "LAGO_SMTP_DOMAIN")
+          setting("Username", "LAGO_SMTP_USERNAME")
+          fact("Authentication", "login")
+          fact("STARTTLS", "enabled")
         end
       end
     end

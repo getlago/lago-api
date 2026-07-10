@@ -429,6 +429,68 @@ RSpec.describe Lago::SupportInfo do
         expect(report).to include("kubectl logs <pod> -n <namespace>")
       end
     end
+
+    context "with a database URL containing credentials" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("DATABASE_URL").and_return("postgresql://lago:secretpw@db:5432/lago")
+      end
+
+      it "prints a Settings subsection with the masked DATABASE_URL" do
+        support_info.call
+
+        expect(report).to include("## Settings")
+        expect(report).to include("postgresql://***@db:5432/lago")
+        expect(report).not_to include("secretpw")
+      end
+    end
+
+    context "when rendering the Redis settings" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS").and_return(nil)
+      end
+
+      it "prints the hardcoded SSL and timeout facts with the retry window default" do
+        support_info.call
+
+        expect(report).to match(/SSL verify mode\s+: VERIFY_NONE/)
+        expect(report).to match(/Connection timeout\s+: 1s/)
+        expect(report).to match(/Sidekiq retry window s\s+: 5 \(default\)/)
+      end
+    end
+
+    context "when Kafka is configured with a security protocol" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_KAFKA_BOOTSTRAP_SERVERS").and_return("broker1:9092")
+        allow(ENV).to receive(:[]).with("LAGO_KAFKA_SECURITY_PROTOCOL").and_return("SASL_SSL")
+        allow(ENV).to receive(:[]).with("LAGO_KAFKA_PASSWORD").and_return("kafkapw")
+      end
+
+      it "prints the security protocol and never the password" do
+        support_info.call
+
+        expect(report).to match(/Security protocol\s+: SASL_SSL/)
+        expect(report).not_to include("kafkapw")
+      end
+    end
+
+    context "when SMTP is configured with authentication" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_SMTP_ADDRESS").and_return("smtp.example.com")
+        allow(ENV).to receive(:[]).with("LAGO_SMTP_PORT").and_return("587")
+        allow(ENV).to receive(:[]).with("LAGO_SMTP_PASSWORD").and_return("smtppw")
+      end
+
+      it "prints the authentication fact and never the password" do
+        support_info.call
+
+        expect(report).to match(/Authentication\s+: login/)
+        expect(report).not_to include("smtppw")
+      end
+    end
   end
 
   describe "#mask" do
