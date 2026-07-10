@@ -30,9 +30,7 @@ RSpec.describe PasswordResets::ResetService do
     it "logs in the user" do
       result = reset_service.call(**reset_args)
 
-      data = result["user"]
-
-      expect(data).to be_present
+      expect(result.user).to be_present
       expect(SegmentIdentifyJob).to have_been_enqueued.with(
         membership_id: "membership/#{membership.id}"
       )

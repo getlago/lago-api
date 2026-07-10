@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-module Auth
-  class TokenService < BaseService
+module Utils
+  class AuthToken
     THREE_HOURS = 10800
     ALGORITHM = "HS256"
     LAGO_TOKEN_HEADER = "x-lago-token"
@@ -28,8 +28,6 @@ module Auth
       encode(user_id:, **extra)
     end
 
-    private_class_method
-
     def self.non_extra_attributes
       ["sub", "exp", "alg"]
     end
@@ -40,5 +38,7 @@ module Auth
         exp: Time.current.to_i + THREE_HOURS
       }.merge(extra)
     end
+
+    private_class_method :non_extra_attributes, :payload
   end
 end

@@ -27,8 +27,7 @@ module PasswordResets
         user.save!
 
         UsersService
-          .new
-          .login(user.email, new_password)
+          .call(:login, user.email, new_password)
           .tap { password_reset.destroy! }
       end
 
