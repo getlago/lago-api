@@ -101,9 +101,31 @@ RSpec.describe Lago::SupportInfo do
         .to eq("redis://redis:6379/0?user=lago&access_token=***")
     end
 
+    it "redacts query parameters whose name tokens match a secret keyword" do
+      expect(support_info.mask("SOME_URL", "http://h?password=x")).to eq("http://h?password=***")
+      expect(support_info.mask("SOME_URL", "http://h?passwd=x")).to eq("http://h?passwd=***")
+      expect(support_info.mask("SOME_URL", "http://h?pass=x")).to eq("http://h?pass=***")
+      expect(support_info.mask("SOME_URL", "http://h?salt=x")).to eq("http://h?salt=***")
+      expect(support_info.mask("SOME_URL", "http://h?a=b&access_token=x")).to eq("http://h?a=b&access_token=***")
+      expect(support_info.mask("SOME_URL", "http://h?sslkey=x")).to eq("http://h?sslkey=***")
+      expect(support_info.mask("SOME_URL", "http://h?api_key=x")).to eq("http://h?api_key=***")
+      expect(support_info.mask("SOME_URL", "http://h?oauth_token=x")).to eq("http://h?oauth_token=***")
+    end
+
     it "keeps non-sensitive query string parameters untouched" do
       expect(support_info.mask("DATABASE_URL", "postgresql://db:5432/lago?sslmode=require"))
         .to eq("postgresql://db:5432/lago?sslmode=require")
+      expect(support_info.mask("SOME_URL", "http://h?monkey=banana")).to eq("http://h?monkey=banana")
+      expect(support_info.mask("SOME_URL", "http://h?design=modern")).to eq("http://h?design=modern")
+      expect(support_info.mask("SOME_URL", "http://h?oauth_state=xyz")).to eq("http://h?oauth_state=xyz")
+      expect(support_info.mask("SOME_URL", "http://h?pool_size=5")).to eq("http://h?pool_size=5")
+    end
+
+    it "scrubs values with invalid UTF-8 bytes instead of raising" do
+      malformed = ("x" + 255.chr).force_encoding("UTF-8")
+
+      expect { support_info.mask("SOME_URL", malformed) }.not_to raise_error
+      expect(support_info.mask("SOME_URL", malformed)).to eq("x�")
     end
 
     it "passes plain values through" do

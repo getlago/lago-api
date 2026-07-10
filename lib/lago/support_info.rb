@@ -28,7 +28,17 @@ module Lago
     URL_USERINFO_PATTERN = %r{([a-z][a-z0-9+.-]*://)[^/\s]*@}i
 
     # Matches sensitive query string parameters (`?password=...`, `&token=...`).
-    URL_QUERY_SECRET_PATTERN = /([?&](?:[^=&\s]*(?:password|token|key|secret|sig|signature|auth|credential)[^=&\s]*)=)[^&\s]+/i
+    # The keyword must be a full `_`/`-` separated token of the param name
+    # (or the whole name), so `?access_token=` and `?api_key=` are masked
+    # while `?monkey=`, `?sslmode=` or `?oauth_state=` are left untouched.
+    URL_QUERY_SECRET_PATTERN = /
+      ([?&]
+      (?:[^=&\s]*[_-])?
+      (?:password|passwd|pass|pwd|token|apikey|sslkey|key|secret|signature|sig|auth|credentials|credential|salt|dsn)
+      (?:[_-][^=&\s]*)?
+      =)
+      [^&\s]+
+    /xi
 
     RECENT_ERRORS_LIMIT = 100
     RECENT_ERRORS_PATTERN = /ERROR|FATAL/i
@@ -64,10 +74,10 @@ module Lago
     # - sensitive query string parameters are redacted
     #   (e.g. `?password=secret` -> `?password=***`)
     def mask(key, value)
-      if key.to_s.match?(SECRET_PATTERN)
+      if key.to_s.scrub.match?(SECRET_PATTERN)
         "***"
       else
-        value.to_s
+        value.to_s.scrub
           .gsub(URL_USERINFO_PATTERN, '\1***@')
           .gsub(URL_QUERY_SECRET_PATTERN, '\1***')
       end
@@ -207,7 +217,9 @@ module Lago
       section("3. CONFIGURATION") do
         output.puts "  ## Environment Variables (secrets redacted)"
         ENV.sort_by { |k, _| k }.each do |key, value|
-          output.puts "    #{key}=#{mask(key, value)}"
+          print_safe do
+            output.puts "    #{key}=#{mask(key, value)}"
+          end
         end
 
         output.puts
@@ -352,14 +364,14 @@ module Lago
     end
 
     # Uses the PostgreSQL planner estimate to avoid a full table scan on
-    # large production tables. Falls back to an exact count when the table
-    # was never analyzed (negative reltuples).
+    # large production tables. Falls back to an exact count, bounded by a
+    # statement timeout, when the table was never analyzed (negative reltuples).
     def estimated_count(model)
       estimate = ActiveRecord::Base.connection.select_value(
         "SELECT reltuples::bigint FROM pg_class WHERE oid = '#{model.table_name}'::regclass"
       ).to_i
 
-      estimate.negative? ? model.count : estimate
+      estimate.negative? ? count_with_timeout { model.count } : estimate
     end
 
     # Runs a range-count query with a local statement timeout so a missing
@@ -406,9 +418,10 @@ module Lago
         file.gets if seek_pos.positive?
 
         file.each_line do |line|
-          next unless line.match?(pattern)
+          clean = line.scrub
+          next unless clean.match?(pattern)
 
-          buffer << line.chomp
+          buffer << clean.chomp
           buffer.shift if buffer.size > limit
         end
       end
