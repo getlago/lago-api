@@ -11,7 +11,8 @@ RSpec.describe "lago:support_info" do # rubocop:disable RSpec/DescribeClass
     Rake.application.rake_require("tasks/lago")
     Rake::Task.define_task(:environment)
     task.reenable
-    stub_request(:post, %r{clickhouse}).to_return(status: 500)
+    allow(Clickhouse::BaseRecord).to receive(:connection)
+      .and_raise(StandardError, "clickhouse unavailable in specs")
   end
 
   it "prints the support diagnostic report" do

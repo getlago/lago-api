@@ -10,7 +10,10 @@ RSpec.describe Lago::SupportInfo do
   let(:report) { output.string }
 
   describe "#call" do
-    before { stub_request(:post, %r{clickhouse}).to_return(status: 500) }
+    before do
+      allow(Clickhouse::BaseRecord).to receive(:connection)
+        .and_raise(StandardError, "clickhouse unavailable in specs")
+    end
 
     it "prints the banners and all six section headers" do
       support_info.call
