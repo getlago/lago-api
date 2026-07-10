@@ -44,6 +44,158 @@ RSpec.describe Lago::SupportInfo do
       end
     end
 
+    context "when LAGO_VERSION contains a git commit SHA" do
+      let(:sha) { "0f425aee1b9e7c927eb9559055fd1d11708bc7b5" }
+
+      before do
+        allow(File).to receive(:read).and_call_original
+        allow(File).to receive(:read).with(Rails.root.join("LAGO_VERSION")).and_return("#{sha}\n")
+      end
+
+      it "prints the SHA as the commit SHA" do
+        support_info.call
+
+        expect(report).to include("Commit SHA     : #{sha}")
+      end
+    end
+
+    context "when the LAGO_VERSION file cannot be read" do
+      before do
+        allow(File).to receive(:read).and_call_original
+        allow(File).to receive(:read).with(Rails.root.join("LAGO_VERSION")).and_raise(Errno::ENOENT)
+      end
+
+      it "prints the read error as the commit SHA" do
+        support_info.call
+
+        expect(report).to match(/Commit SHA     : error: Errno::ENOENT/)
+      end
+    end
+
+    context "when ClickHouse is not enabled" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_CLICKHOUSE_ENABLED").and_return(nil)
+      end
+
+      it "reports ClickHouse as disabled without probing it" do
+        support_info.call
+
+        expect(report).to include("ClickHouse     : disabled")
+      end
+    end
+
+    context "when ClickHouse is enabled but unreachable" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_CLICKHOUSE_ENABLED").and_return("true")
+      end
+
+      it "prints an error marker on the ClickHouse line" do
+        support_info.call
+
+        expect(report).to match(/ClickHouse     : error:/)
+      end
+    end
+
+    context "when running on Kubernetes" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("KUBERNETES_SERVICE_HOST").and_return("10.0.0.1")
+      end
+
+      it "detects a kubernetes deployment" do
+        support_info.call
+
+        expect(report).to include("Deployment     : kubernetes")
+      end
+    end
+
+    context "when running on Lago cloud" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("KUBERNETES_SERVICE_HOST").and_return(nil)
+        allow(ENV).to receive(:[]).with("LAGO_CLOUD").and_return("true")
+      end
+
+      it "detects a lago-cloud deployment" do
+        support_info.call
+
+        expect(report).to include("Deployment     : lago-cloud")
+      end
+    end
+
+    context "when running in a plain container" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("KUBERNETES_SERVICE_HOST").and_return(nil)
+        allow(ENV).to receive(:[]).with("LAGO_CLOUD").and_return(nil)
+        allow(File).to receive(:exist?).and_call_original
+        allow(File).to receive(:exist?).with("/.dockerenv").and_return(true)
+      end
+
+      it "detects a docker/container deployment" do
+        support_info.call
+
+        expect(report).to include("Deployment     : docker/container")
+      end
+    end
+
+    context "when no deployment marker is present" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("KUBERNETES_SERVICE_HOST").and_return(nil)
+        allow(ENV).to receive(:[]).with("LAGO_CLOUD").and_return(nil)
+        allow(File).to receive(:exist?).and_call_original
+        allow(File).to receive(:exist?).with("/.dockerenv").and_return(false)
+      end
+
+      it "reports the deployment as unknown" do
+        support_info.call
+
+        expect(report).to include("Deployment     : unknown")
+      end
+    end
+
+    context "with a secret environment variable set" do
+      before { ENV["LAGO_SUPPORT_INFO_SPEC_TOKEN"] = "s3cr3t-value" }
+      after { ENV.delete("LAGO_SUPPORT_INFO_SPEC_TOKEN") }
+
+      it "redacts the value in the ENV dump" do
+        support_info.call
+
+        expect(report).to include("LAGO_SUPPORT_INFO_SPEC_TOKEN=***")
+        expect(report).not_to include("s3cr3t-value")
+      end
+    end
+
+    context "when masking one environment variable raises" do
+      let(:instance) { described_class.new(output:) }
+
+      before do
+        ENV["LAGO_SUPPORT_INFO_SPEC_BROKEN"] = "broken-value"
+        ENV["LAGO_SUPPORT_INFO_SPEC_PLAIN"] = "plain-value"
+        allow(instance).to receive(:mask).and_call_original
+        allow(instance).to receive(:mask)
+          .with("LAGO_SUPPORT_INFO_SPEC_BROKEN", "broken-value")
+          .and_raise(StandardError, "bad entry")
+      end
+
+      after do
+        ENV.delete("LAGO_SUPPORT_INFO_SPEC_BROKEN")
+        ENV.delete("LAGO_SUPPORT_INFO_SPEC_PLAIN")
+      end
+
+      it "prints an error marker for that entry and keeps dumping the others" do
+        instance.call
+
+        expect(report).to include("error: StandardError - bad entry")
+        expect(report).not_to include("broken-value")
+        expect(report).to include("LAGO_SUPPORT_INFO_SPEC_PLAIN=plain-value")
+        expect(report).to include("END OF DIAGNOSTIC")
+      end
+    end
+
     context "when a probe raises" do
       before do
         allow(Sidekiq::Queue).to receive(:all).and_raise(StandardError, "redis is down")
@@ -54,6 +206,106 @@ RSpec.describe Lago::SupportInfo do
 
         expect(report).to include("error: StandardError - redis is down")
         expect(report).to include("END OF DIAGNOSTIC")
+      end
+    end
+
+    context "when the Sidekiq dead set cannot be read" do
+      before do
+        allow(Sidekiq::DeadSet).to receive(:new).and_raise(StandardError, "dead set unavailable")
+      end
+
+      it "prints error markers and still renders the following sections" do
+        expect { support_info.call }.not_to raise_error
+
+        expect(report).to include("error: StandardError - dead set unavailable")
+        expect(report).to include("## DB Connection Pool")
+        expect(report).to include("## Key Table Row Counts (estimated)")
+        expect(report).to include("6. RECENT ERRORS")
+      end
+    end
+
+    context "with a stubbed log file" do
+      let(:log_path) { Rails.root.join("log", "#{Rails.env}.log") }
+      let(:log_file) { Tempfile.new("support_info_log") }
+
+      before do
+        log_file.write(log_content)
+        allow(File).to receive(:exist?).and_call_original
+        allow(File).to receive(:exist?).with(log_path).and_return(true)
+        allow(File).to receive(:open).and_call_original
+        allow(File).to receive(:open).with(log_path).and_yield(log_file)
+      end
+
+      after { log_file.close! }
+
+      context "when the log contains more matching lines than the limit" do
+        let(:log_content) do
+          lines = (1..105).map { |i| "ERROR line-#{format("%03d", i)}" }
+          lines.insert(50, "INFO everything is fine")
+          lines.join("\n") + "\n"
+        end
+
+        it "keeps only the last 100 ERROR/FATAL lines" do
+          support_info.call
+
+          expect(report).to include("ERROR line-006")
+          expect(report).to include("ERROR line-105")
+          expect(report).not_to include("ERROR line-005")
+          expect(report).not_to include("INFO everything is fine")
+        end
+      end
+
+      context "when the log mixes severities" do
+        let(:log_content) { "INFO all good\nfatal: disk failure\nError: boom\n" }
+
+        it "matches ERROR and FATAL case-insensitively and skips other lines" do
+          support_info.call
+
+          expect(report).to include("fatal: disk failure")
+          expect(report).to include("Error: boom")
+          expect(report).not_to include("INFO all good")
+        end
+      end
+
+      context "when the log contains no matching line" do
+        let(:log_content) { "INFO nothing to see\nDEBUG still nothing\n" }
+
+        it "prints a none-found marker" do
+          support_info.call
+
+          expect(report).to include("(none found)")
+        end
+      end
+
+      context "when the log is larger than the tail window" do
+        let(:log_content) do
+          "ERROR outside-window\n" \
+            "#{"y" * (6 * 1024 * 1024)} ERROR straddling\n" \
+            "ERROR inside-window\n"
+        end
+
+        it "scans only the tail and discards the partial first line" do
+          support_info.call
+
+          expect(report).to include("ERROR inside-window")
+          expect(report).not_to include("ERROR outside-window")
+          expect(report).not_to include("ERROR straddling")
+        end
+      end
+    end
+
+    context "when the log file does not exist" do
+      before do
+        allow(File).to receive(:exist?).and_call_original
+        allow(File).to receive(:exist?).with(Rails.root.join("log", "#{Rails.env}.log")).and_return(false)
+      end
+
+      it "prints container log hints instead" do
+        support_info.call
+
+        expect(report).to include("Log file not found:")
+        expect(report).to include("docker logs <container>")
+        expect(report).to include("kubectl logs <pod> -n <namespace>")
       end
     end
   end
@@ -126,6 +378,22 @@ RSpec.describe Lago::SupportInfo do
 
       expect { support_info.mask("SOME_URL", malformed) }.not_to raise_error
       expect(support_info.mask("SOME_URL", malformed)).to eq("x�")
+    end
+
+    it "scrubs keys with invalid UTF-8 bytes and still masks secret-matching ones" do
+      malformed_key = ("SECRET_" + 255.chr).force_encoding("UTF-8")
+
+      expect { support_info.mask(malformed_key, "value") }.not_to raise_error
+      expect(support_info.mask(malformed_key, "value")).to eq("***")
+    end
+
+    it "converts nil values to an empty string" do
+      expect(support_info.mask("SOME_VALUE", nil)).to eq("")
+    end
+
+    it "redacts every URL when the value contains several" do
+      expect(support_info.mask("SOME_URLS", "a=redis://u:p@h1:6379 b=amqp://u:p@h2:5672"))
+        .to eq("a=redis://***@h1:6379 b=amqp://***@h2:5672")
     end
 
     it "passes plain values through" do
