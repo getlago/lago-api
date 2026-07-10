@@ -48,6 +48,27 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
       end
     end
 
+    context "when the charges span several charge batches" do
+      let(:other_subscription) { create(:subscription) }
+      let(:other_charge) { create(:standard_charge, plan: other_subscription.plan, billable_metric:) }
+      let(:other_event) do
+        create(:event, code: billable_metric.code, subscription_id: other_subscription.id, organization_id: billable_metric.organization_id, timestamp: event_timestamp, created_at: event_timestamp)
+      end
+
+      before do
+        stub_const("#{described_class}::CHARGE_BATCH_SIZE", 1)
+        other_charge
+        other_event
+      end
+
+      it "deletes events for subscriptions across every charge batch" do
+        service.call
+
+        expect(event.reload.deleted_at).to eq(billable_metric.deleted_at)
+        expect(other_event.reload.deleted_at).to eq(billable_metric.deleted_at)
+      end
+    end
+
     context "when event is received after billable_metric deletion" do
       let(:event) do
         create(
