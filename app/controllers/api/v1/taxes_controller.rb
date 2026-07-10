@@ -57,7 +57,8 @@ module Api
               result.taxes,
               ::V1::TaxSerializer,
               collection_name: "taxes",
-              meta: pagination_metadata(result.taxes)
+              meta: pagination_metadata(result.taxes),
+              default_billing_entity: current_organization.default_billing_entity
             )
           )
         else
@@ -72,7 +73,11 @@ module Api
       end
 
       def render_tax(tax)
-        render(json: ::V1::TaxSerializer.new(tax, root_name: "tax"))
+        render(json: ::V1::TaxSerializer.new(
+          tax,
+          root_name: "tax",
+          default_billing_entity: current_organization.default_billing_entity
+        ))
       end
 
       def resource_name

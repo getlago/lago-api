@@ -38,7 +38,9 @@ class Tax < ApplicationRecord
   validates :name, :rate, presence: true
   validates :code, presence: true, uniqueness: {scope: :organization_id}
 
-  scope :applied_to_organization, -> { where(applied_to_organization: true) }
+  scope :applied_to_billing_entity, ->(billing_entity) {
+    joins(:billing_entities_taxes).where(billing_entities_taxes: {billing_entity_id: billing_entity.id})
+  }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

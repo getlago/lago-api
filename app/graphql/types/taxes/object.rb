@@ -13,6 +13,7 @@ module Types
       field :name, String, null: false
       field :rate, Float, null: false
 
+      field :applied_to_billing_entities_codes, [String], null: false
       field :applied_to_organization, Boolean, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -24,6 +25,17 @@ module Types
       field :plans_count, Integer, null: false, description: "Number of plans using this tax"
 
       field :auto_generated, Boolean, null: false
+
+      def applied_to_organization
+        default_billing_entity = object.organization.default_billing_entity
+        return false if default_billing_entity.nil?
+
+        object.billing_entities.any? { |billing_entity| billing_entity.id == default_billing_entity.id }
+      end
+
+      def applied_to_billing_entities_codes
+        object.billing_entities.map(&:code)
+      end
 
       def add_ons_count
         object.add_ons.count
