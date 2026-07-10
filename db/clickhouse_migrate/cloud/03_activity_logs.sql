@@ -5,8 +5,6 @@ CREATE TABLE default.activity_logs
     `api_key_id` Nullable(String),
     `external_customer_id` Nullable(String),
     `external_subscription_id` Nullable(String),
-    INDEX idx_external_customer_id external_customer_id TYPE bloom_filter(0.001) GRANULARITY 1,
-    INDEX idx_external_subscription_id external_subscription_id TYPE bloom_filter(0.001) GRANULARITY 1,
     `activity_id` String,
     `activity_type` String,
     `activity_source` Enum8('api' = 1, 'front' = 2, 'system' = 3),
@@ -15,7 +13,9 @@ CREATE TABLE default.activity_logs
     `resource_id` String,
     `resource_type` String,
     `logged_at` DateTime64(3),
-    `created_at` DateTime64(3)
+    `created_at` DateTime64(3),
+    INDEX idx_external_customer_id external_customer_id TYPE bloom_filter(0.001) GRANULARITY 1,
+    INDEX idx_external_subscription_id external_subscription_id TYPE bloom_filter(0.001) GRANULARITY 1
 )
 ENGINE = SharedMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}')
 PRIMARY KEY (organization_id, activity_type, activity_id, logged_at)
