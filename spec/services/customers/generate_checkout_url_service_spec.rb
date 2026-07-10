@@ -27,7 +27,7 @@ RSpec.describe Customers::GenerateCheckoutUrlService do
 
         allow(stripe_customer_service).to receive(:generate_checkout_url)
           .with(send_webhook: false)
-          .and_return(OpenStruct.new(checkout_url: "http://foo.bar"))
+          .and_return(BaseResult[:checkout_url].new.tap { |r| r.checkout_url = "http://foo.bar" })
       end
 
       it "returns the generated checkout url" do
