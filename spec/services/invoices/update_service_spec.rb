@@ -31,6 +31,17 @@ RSpec.describe Invoices::UpdateService do
       )
     end
 
+    context "when Meilisearch is enabled" do
+      before do
+        invoice
+        stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
+      end
+
+      it "enqueues a search reindex for the invoice" do
+        expect { result }.to have_enqueued_job_after_commit(Invoices::SearchIndexJob).with(invoice.id)
+      end
+    end
+
     context "when the invoice settles with an open checkout session" do
       before { create(:payment_intent, invoice:) }
 

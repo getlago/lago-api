@@ -121,6 +121,41 @@ RSpec.describe Pagination do
     end
   end
 
+  context "when records are backed by a ClickHouse relation" do
+    let(:records) do
+      double("records", klass: Clickhouse::EventsRaw, current_page: 2, limit_value: 10)
+    end
+
+    context "when the count query drops the connection once" do
+      before do
+        call_count = 0
+        allow(records).to receive(:total_count) do
+          call_count += 1
+          raise ActiveRecord::ActiveRecordError, "Response: end of file reached" if call_count == 1
+
+          25
+        end
+      end
+
+      it "retries the count and returns correct metadata" do
+        expect(result["total_count"]).to eq(25)
+        expect(records).to have_received(:total_count).twice
+      end
+    end
+
+    context "when the count query keeps failing" do
+      before do
+        allow(records).to receive(:total_count)
+          .and_raise(ActiveRecord::ActiveRecordError, "Response: end of file reached")
+      end
+
+      it "raises after exhausting retries" do
+        expect { result }.to raise_error(ActiveRecord::ActiveRecordError)
+        expect(records).to have_received(:total_count).exactly(3).times
+      end
+    end
+  end
+
   context "with different filter params" do
     let(:organization_id) { SecureRandom.uuid }
 

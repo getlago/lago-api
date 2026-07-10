@@ -108,7 +108,7 @@ module Invoices
       raise unless invoicing_reason.to_sym == :subscription_periodic
 
       result
-    rescue ActiveRecord::StaleObjectError, Customers::FailedToAcquireLock
+    rescue ActiveRecord::StaleObjectError, BaseLockService::FailedToAcquireLock
       raise
     rescue => e
       result.fail_with_error!(e)

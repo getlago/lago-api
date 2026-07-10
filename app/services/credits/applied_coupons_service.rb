@@ -19,7 +19,7 @@ module Credits
       # We're not locking individual coupons as that might lead to deadlocks.
       # This will also keep the lock for the shortest time possible, otherwise
       # we'd have to wait for the transaction to either rollback / commit.
-      AppliedCoupons::LockService.new(customer:).call do
+      Customers::LockService.call(customer:, scope: :coupon) do
         # reload coupons now that we've acquired the lock
         applied_coupons.reload
 
