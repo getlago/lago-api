@@ -5,6 +5,8 @@ CREATE TABLE default.activity_logs
     `api_key_id` Nullable(String),
     `external_customer_id` Nullable(String),
     `external_subscription_id` Nullable(String),
+    INDEX idx_external_customer_id external_customer_id TYPE bloom_filter(0.001) GRANULARITY 1,
+    INDEX idx_external_subscription_id external_subscription_id TYPE bloom_filter(0.001) GRANULARITY 1,
     `activity_id` String,
     `activity_type` String,
     `activity_source` Enum8('api' = 1, 'front' = 2, 'system' = 3),
