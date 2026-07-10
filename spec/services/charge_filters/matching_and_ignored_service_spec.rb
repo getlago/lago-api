@@ -159,17 +159,19 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
   # children, and duplicate filters. Empty filters should not occur in normal
   # usage but missing validations allow them in production; the store-level
   # defensive guards (ISSUE-1799) prevent them from producing invalid SQL.
-  # Subset and identical children are kept verbatim in ignored_filters so
-  # their events are excluded from the parent's bucket instead of being
-  # counted in both buckets.
+  # Strict-subset children are kept verbatim in ignored_filters so their
+  # events are excluded from the parent's bucket instead of being counted in
+  # both buckets. Identical children are resolved with a tie-break on
+  # [created_at, id]: only the oldest duplicate counts the events, the others
+  # keep the older duplicate in their ignored_filters and count zero.
 
   context "when a filter has no values" do
     subject(:service_result) { described_class.call(charge: isolated_charge, filter: current_filter) }
 
     let(:isolated_charge) { create(:standard_charge, billable_metric:) }
 
-    let(:empty_a) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "empty_a") }
-    let(:empty_b) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "empty_b") }
+    let(:empty_a) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "empty_a", created_at: 2.days.ago) }
+    let(:empty_b) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "empty_b", created_at: 1.day.ago) }
     let(:with_values) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "with_values") }
 
     before do
@@ -181,11 +183,12 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     describe "for empty_a" do
       let(:current_filter) { empty_a }
 
-      it "produces empty hashes in ignored_filters from other empty filters" do
+      # empty_a and empty_b are vacuously identical (both match {}), so the
+      # tie-break applies: empty_a is older and drops empty_b's {} entry.
+      it "does not include the newer empty filter in ignored_filters" do
         expect(service_result.matching_filters).to eq({})
         expect(service_result.ignored_filters).to eq(
           [
-            {},
             {"size" => ["512"]}
           ]
         )
@@ -260,25 +263,41 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     end
   end
 
-  context "when two filters have identical keys and values" do
+  # Identical duplicates are resolved with a tie-break on [created_at, id]:
+  # the oldest duplicate drops the newer ones from its ignored_filters and
+  # counts the events; the newer ones keep at least one older identical
+  # sibling verbatim and count zero.
+  context "when filters have identical keys and values" do
     subject(:service_result) { described_class.call(charge: isolated_charge, filter: current_filter) }
 
     let(:isolated_charge) { create(:standard_charge, billable_metric:) }
 
-    let(:filter_a) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "filter_a") }
-    let(:filter_b) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "filter_b") }
+    let(:filter_a) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "filter_a", created_at: 3.days.ago) }
+    let(:filter_b) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "filter_b", created_at: 2.days.ago) }
+    let(:filter_c) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "filter_c", created_at: 1.day.ago) }
 
     before do
       create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: filter_a)
       create(:charge_filter_value, values: ["25"], billable_metric_filter: filter_steps, charge_filter: filter_a)
       create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: filter_b)
       create(:charge_filter_value, values: ["25"], billable_metric_filter: filter_steps, charge_filter: filter_b)
+      create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: filter_c)
+      create(:charge_filter_value, values: ["25"], billable_metric_filter: filter_steps, charge_filter: filter_c)
     end
 
-    describe "for filter_a" do
+    describe "for filter_a (oldest)" do
       let(:current_filter) { filter_a }
 
-      it "keeps the identical sibling verbatim" do
+      it "drops the newer identical siblings from ignored_filters" do
+        expect(service_result.matching_filters).to eq({"size" => ["512"], "steps" => ["25"]})
+        expect(service_result.ignored_filters).to eq([])
+      end
+    end
+
+    describe "for filter_b (middle)" do
+      let(:current_filter) { filter_b }
+
+      it "keeps only the older identical sibling verbatim" do
         expect(service_result.matching_filters).to eq({"size" => ["512"], "steps" => ["25"]})
         expect(service_result.ignored_filters).to eq(
           [{"size" => ["512"], "steps" => ["25"]}]
@@ -286,13 +305,56 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
       end
     end
 
-    describe "for filter_b" do
-      let(:current_filter) { filter_b }
+    describe "for filter_c (newest)" do
+      let(:current_filter) { filter_c }
 
-      it "keeps the identical sibling verbatim" do
+      it "keeps both older identical siblings verbatim" do
         expect(service_result.matching_filters).to eq({"size" => ["512"], "steps" => ["25"]})
         expect(service_result.ignored_filters).to eq(
-          [{"size" => ["512"], "steps" => ["25"]}]
+          [
+            {"size" => ["512"], "steps" => ["25"]},
+            {"size" => ["512"], "steps" => ["25"]}
+          ]
+        )
+      end
+    end
+  end
+
+  # When identical duplicates share the same created_at, the id part of the
+  # [created_at, id] tie-break decides: exactly one filter counts the events.
+  context "when identical filters share the same created_at" do
+    subject(:service_result) { described_class.call(charge: isolated_charge, filter: current_filter) }
+
+    let(:isolated_charge) { create(:standard_charge, billable_metric:) }
+    let(:created_at) { 1.day.ago }
+
+    let(:filter_a) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "filter_a", created_at:) }
+    let(:filter_b) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "filter_b", created_at:) }
+
+    let(:winner) { [filter_a, filter_b].min_by(&:id) }
+    let(:loser) { [filter_a, filter_b].max_by(&:id) }
+
+    before do
+      create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: filter_a)
+      create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: filter_b)
+    end
+
+    describe "for the filter with the lowest id" do
+      let(:current_filter) { winner }
+
+      it "drops the identical sibling from ignored_filters" do
+        expect(service_result.matching_filters).to eq({"size" => ["512"]})
+        expect(service_result.ignored_filters).to eq([])
+      end
+    end
+
+    describe "for the filter with the highest id" do
+      let(:current_filter) { loser }
+
+      it "keeps the identical sibling verbatim" do
+        expect(service_result.matching_filters).to eq({"size" => ["512"]})
+        expect(service_result.ignored_filters).to eq(
+          [{"size" => ["512"]}]
         )
       end
     end

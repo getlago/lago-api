@@ -7,7 +7,9 @@ require "rails_helper"
 #   the store-level defensive guards prevent them from rendering invalid SQL.
 # - Subset and identical duplicate filters used to be double-counted: events
 #   matching both a filter and a more specific sibling were counted in both
-#   buckets. Each event must only be counted in its most specific bucket.
+#   buckets. Each event must only be counted in its most specific bucket, and
+#   identical duplicates must count the event only in the oldest duplicate's
+#   bucket (tie-break on [created_at, id]).
 describe "Current Usage - Overlapping charge filters", transaction: false do
   [
     :postgres,
@@ -125,21 +127,22 @@ describe "Current Usage - Overlapping charge filters", transaction: false do
       end
 
       # Duplicate filters with identical values should not exist but can due
-      # to missing validations. Each duplicate is kept verbatim in the other's
-      # ignored_filters, so they exclude each other and neither counts events.
+      # to missing validations. The tie-break on [created_at, id] makes the
+      # oldest duplicate count the events; the newer duplicate keeps the older
+      # one in its ignored_filters and counts zero.
       context "when two charge filters have identical values" do
         before do
           cloud_filter = create(:billable_metric_filter, billable_metric:, key: "cloud", values: %w[aws gcp])
 
           charge = create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"})
 
-          create(:charge_filter, charge:, properties: {amount: "5"}, invoice_display_name: "Duplicate A")
+          create(:charge_filter, charge:, properties: {amount: "5"}, invoice_display_name: "Duplicate A", created_at: 2.days.ago)
             .tap { |cf| create(:charge_filter_value, charge_filter: cf, billable_metric_filter: cloud_filter, values: ["aws"]) }
-          create(:charge_filter, charge:, properties: {amount: "3"}, invoice_display_name: "Duplicate B")
+          create(:charge_filter, charge:, properties: {amount: "3"}, invoice_display_name: "Duplicate B", created_at: 1.day.ago)
             .tap { |cf| create(:charge_filter_value, charge_filter: cf, billable_metric_filter: cloud_filter, values: ["aws"]) }
         end
 
-        it "counts the event in neither duplicate's bucket" do
+        it "counts the event only in the oldest duplicate's bucket" do
           travel_to(DateTime.new(2024, 3, 5)) do
             create_subscription(
               {
@@ -166,9 +169,9 @@ describe "Current Usage - Overlapping charge filters", transaction: false do
             expect(filters.count).to eq(3)
 
             duplicate_a = filters.find { |f| f[:invoice_display_name] == "Duplicate A" }
-            expect(duplicate_a[:events_count]).to eq(0)
-            expect(duplicate_a[:units]).to eq("0.0")
-            expect(duplicate_a[:amount_cents]).to eq(0)
+            expect(duplicate_a[:events_count]).to eq(1)
+            expect(duplicate_a[:units]).to eq("10.0")
+            expect(duplicate_a[:amount_cents]).to eq(5000)
 
             duplicate_b = filters.find { |f| f[:invoice_display_name] == "Duplicate B" }
             expect(duplicate_b[:events_count]).to eq(0)
