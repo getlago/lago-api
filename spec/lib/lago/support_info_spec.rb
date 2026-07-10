@@ -495,7 +495,7 @@ RSpec.describe Lago::SupportInfo do
     end
 
     context "when there are no pending Postgres migrations" do
-      let(:context) { instance_double(ActiveRecord::MigrationContext, current_version: 42, needs_migration?: false) }
+      let(:context) { instance_double(ActiveRecord::MigrationContext, current_version: 42, pending_migration_versions: []) }
 
       before do
         allow(ApplicationRecord.connection_pool).to receive(:migration_context).and_return(context)

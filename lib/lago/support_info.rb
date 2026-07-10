@@ -316,7 +316,7 @@ module Lago
 
         pool_size = safe { ApplicationRecord.connection_pool.db_config.pool }
         if pool_size.to_s.start_with?("error:")
-          pool_size = ENV["DATABASE_POOL"] || "(unset)"
+          pool_size = ENV["DATABASE_POOL"].presence || "(unset)"
         end
         fact("Pool size", pool_size)
 
@@ -420,8 +420,8 @@ module Lago
         setting("REDIS_URL", "REDIS_URL")
         setting("REDIS_PASSWORD", "REDIS_PASSWORD")
         fact("Sidekiq sentinels", ENV["LAGO_REDIS_SIDEKIQ_SENTINELS"].present? ? "configured" : "(none)")
-        fact("Sidekiq master name", ENV["LAGO_REDIS_SIDEKIQ_MASTER_NAME"] || "master (default)")
-        fact("Sidekiq retry window s", ENV["LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS"] || "5 (default)")
+        fact("Sidekiq master name", ENV["LAGO_REDIS_SIDEKIQ_MASTER_NAME"].presence || "master (default)")
+        fact("Sidekiq retry window s", ENV["LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS"].presence || "5 (default)")
         fact("Cache enabled", ENV["LAGO_REDIS_CACHE_URL"].present?)
         setting("Cache URL", "LAGO_REDIS_CACHE_URL")
         setting("Cache pool size", "LAGO_REDIS_CACHE_POOL_SIZE")
