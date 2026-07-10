@@ -49,15 +49,28 @@ RSpec.describe AppliedCoupons::CreateService do
       expect(Utils::ActivityLog).to have_produced("applied_coupon.created").after_commit.with(applied_coupon)
     end
 
-    it "creates the coupon while holding the customer coupon advisory lock" do
-      lock_service = instance_double(AppliedCoupons::LockService)
-      allow(AppliedCoupons::LockService).to receive(:new).with(customer:).and_return(lock_service)
-      allow(lock_service).to receive(:call).and_yield
+    context "when there is a concurrent lock" do
+      around do |test|
+        with_advisory_lock("COUPONS-#{customer.id}", lock_released_after:) do
+          test.run
+        end
+      end
 
-      expect { create_result }.to change(AppliedCoupon, :count).by(1)
+      context "when it fails to acquire the lock" do
+        let(:lock_released_after) { 6.seconds }
 
-      expect(AppliedCoupons::LockService).to have_received(:new).with(customer:)
-      expect(lock_service).to have_received(:call)
+        it "raises the error and does not apply the coupon" do
+          expect { create_result }.to raise_error(Customers::FailedToAcquireLock).and not_change(AppliedCoupon, :count)
+        end
+      end
+
+      context "when the lock is acquired" do
+        let(:lock_released_after) { 0.6.seconds }
+
+        it "applies the coupon to the customer" do
+          expect { create_result }.to change(AppliedCoupon, :count).by(1)
+        end
+      end
     end
 
     context "when coupon type is percentage" do

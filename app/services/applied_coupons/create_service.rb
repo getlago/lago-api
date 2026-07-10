@@ -22,9 +22,12 @@ module AppliedCoupons
 
       # Serialize concurrent applications for the same customer so the
       # `coupon_is_not_reusable` check cannot be bypassed by simultaneous requests.
-      AppliedCoupons::LockService.new(customer:).call do
-        check_preconditions
-        create_applied_coupon unless result.error
+      # The transaction-level advisory lock requires an open transaction to be held.
+      ActiveRecord::Base.transaction do
+        AppliedCoupons::LockService.new(customer:).call do
+          check_preconditions
+          create_applied_coupon unless result.error
+        end
       end
 
       result
