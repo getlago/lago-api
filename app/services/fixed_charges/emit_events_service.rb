@@ -59,7 +59,7 @@ module FixedCharges
     end
 
     def next_billing_period(subscription)
-      ::Subscriptions::DatesService.new_instance(subscription, timestamp, current_usage: true).fixed_charges_to_datetime + 1.second
+      ::Subscriptions::DatesService.new_instance(subscription, timestamp, current_usage: true).fixed_charges_period_to_datetime + 1.second
     end
   end
 end
