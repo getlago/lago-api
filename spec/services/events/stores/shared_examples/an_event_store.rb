@@ -18,7 +18,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     )
   end
 
-  let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
+  let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
   let(:organization) { billable_metric.organization }
   let(:charge) { create(:standard_charge, organization:, billable_metric:) }
   let(:charge_filter) { nil }

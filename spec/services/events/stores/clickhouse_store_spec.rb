@@ -76,7 +76,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
         )
       end
 
-      let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
+      let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
       let(:organization) { billable_metric.organization }
       let(:charge) { create(:standard_charge, organization:, billable_metric:) }
       let(:customer) { create(:customer, organization:) }
@@ -149,7 +149,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       described_class.new(code: billable_metric.code, subscription:, boundaries:, filters:, deduplicate:)
     end
 
-    let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
     let(:organization) { billable_metric.organization }
     let(:charge) { create(:standard_charge, organization:, billable_metric:) }
     let(:customer) { create(:customer, organization:) }
@@ -237,7 +237,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       described_class.new(code: billable_metric.code, subscription:, boundaries:, filters: {}, deduplicate: true)
     end
 
-    let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
     let(:organization) { billable_metric.organization }
     let(:charge) { create(:standard_charge, organization:, billable_metric:) }
     let(:customer) { create(:customer, organization:) }
