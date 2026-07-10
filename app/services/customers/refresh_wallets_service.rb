@@ -31,8 +31,7 @@ module Customers
         )
       end
 
-      now = Time.current
-      Wallet.where(id: all_wallets.map(&:id)).update_all(updated_at: now, last_ongoing_balance_sync_at: now) # rubocop:disable Rails/SkipsModelValidations
+      Wallet.where(id: all_wallets.map(&:id)).touch_all(:last_ongoing_balance_sync_at) # rubocop:disable Rails/SkipsModelValidations
 
       customer.update!(awaiting_wallet_refresh: false)
 
