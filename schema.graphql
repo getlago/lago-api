@@ -9247,6 +9247,7 @@ enum OrderFormVoidReasonEnum {
 enum OrderStatusEnum {
   created
   executed
+  failed
 }
 
 enum OrderTypeEnum {
