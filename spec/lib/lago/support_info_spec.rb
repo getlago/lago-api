@@ -15,16 +15,20 @@ RSpec.describe Lago::SupportInfo do
         .and_raise(StandardError, "clickhouse unavailable in specs")
     end
 
-    it "prints the banners and all six section headers" do
+    it "prints the banners and all ten section headers" do
       support_info.call
 
       expect(report).to include("LAGO SUPPORT DIAGNOSTIC")
       expect(report).to include("1. VERSION AND BUILD")
       expect(report).to include("2. ENVIRONMENT")
       expect(report).to include("3. CONFIGURATION")
-      expect(report).to include("4. HEALTH AND QUEUE STATE")
-      expect(report).to include("5. DATA SHAPE (counts only, no content)")
-      expect(report).to include("6. RECENT ERRORS")
+      expect(report).to include("4. DATABASE")
+      expect(report).to include("5. REDIS")
+      expect(report).to include("6. CLICKHOUSE")
+      expect(report).to include("7. KAFKA")
+      expect(report).to include("8. SMTP")
+      expect(report).to include("9. DATA SHAPE (counts only, no content)")
+      expect(report).to include("10. RECENT ERRORS")
       expect(report).to include("END OF DIAGNOSTIC")
     end
 
@@ -35,7 +39,7 @@ RSpec.describe Lago::SupportInfo do
         expect(report).to match(/^    #{Regexp.escape(name)}\s+: (enabled|disabled)$/)
       end
 
-      ["Anrok (tax)", "Avalara (tax)", "Hubspot", "Netsuite", "Okta (SSO)", "Salesforce", "Xero", "SMTP", "Kafka"].each do |name|
+      ["Anrok (tax)", "Avalara (tax)", "Hubspot", "Netsuite", "Okta (SSO)", "Salesforce", "Xero"].each do |name|
         expect(report).to match(/^    #{Regexp.escape(name)}\s+: (enabled|disabled)$/)
       end
     end
@@ -111,7 +115,8 @@ RSpec.describe Lago::SupportInfo do
       it "reports ClickHouse as disabled without probing it" do
         support_info.call
 
-        expect(report).to include("ClickHouse     : disabled")
+        expect(report).to include("Enabled        : false")
+        expect(report).not_to match(/^  Version        :/)
       end
     end
 
@@ -121,10 +126,66 @@ RSpec.describe Lago::SupportInfo do
         allow(ENV).to receive(:[]).with("LAGO_CLICKHOUSE_ENABLED").and_return("true")
       end
 
-      it "prints an error marker on the ClickHouse line" do
+      it "prints an error marker on the ClickHouse version line" do
         support_info.call
 
-        expect(report).to match(/ClickHouse     : error:/)
+        expect(report).to include("Enabled        : true")
+        expect(report).to match(/Version        : error:/)
+      end
+    end
+
+    context "when Kafka is not configured" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_KAFKA_BOOTSTRAP_SERVERS").and_return(nil)
+      end
+
+      it "reports Kafka as disabled without a bootstrap servers line" do
+        support_info.call
+
+        expect(report).not_to include("Bootstrap servers :")
+      end
+    end
+
+    context "when Kafka is configured" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_KAFKA_BOOTSTRAP_SERVERS").and_return("broker1:9092")
+      end
+
+      it "reports Kafka as enabled with the bootstrap servers" do
+        support_info.call
+
+        expect(report).to include("Bootstrap servers : broker1:9092")
+      end
+    end
+
+    context "when SMTP is not configured" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_SMTP_ADDRESS").and_return(nil)
+      end
+
+      it "reports SMTP as disabled without address and port lines" do
+        support_info.call
+
+        expect(report).not_to include("Address        :")
+        expect(report).not_to include("Port           :")
+      end
+    end
+
+    context "when SMTP is configured" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_SMTP_ADDRESS").and_return("smtp.example.com")
+        allow(ENV).to receive(:[]).with("LAGO_SMTP_PORT").and_return("587")
+      end
+
+      it "reports SMTP as enabled with address and port" do
+        support_info.call
+
+        expect(report).to include("Address        : smtp.example.com")
+        expect(report).to include("Port           : 587")
       end
     end
 
@@ -278,9 +339,9 @@ RSpec.describe Lago::SupportInfo do
         expect { support_info.call }.not_to raise_error
 
         expect(report).to include("error: StandardError - dead set unavailable")
-        expect(report).to include("## DB Connection Pool")
+        expect(report).to include("6. CLICKHOUSE")
         expect(report).to include("## Key Table Row Counts (estimated)")
-        expect(report).to include("6. RECENT ERRORS")
+        expect(report).to include("10. RECENT ERRORS")
       end
     end
 

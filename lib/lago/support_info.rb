@@ -65,7 +65,11 @@ module Lago
       version_and_build
       environment
       configuration
-      health_and_queues
+      database
+      redis
+      clickhouse
+      kafka
+      smtp
       data_shape
       recent_errors
 
@@ -138,38 +142,17 @@ module Lago
           "(not available, version tag build)"
         end
         build_date = safe { File.ctime(version_file).utc.iso8601 }
-        db_schema = safe { ApplicationRecord.connection_pool.migration_context.current_version }
 
         output.puts "  Lago version   : #{version_number}"
         output.puts "  Commit SHA     : #{commit_sha}"
         output.puts "  Build date     : #{build_date}"
-        output.puts "  DB schema ver  : #{db_schema}"
       end
     end
 
     def environment
       section("2. ENVIRONMENT") do
-        pg_version = safe do
-          ActiveRecord::Base.connection.select_value("SELECT version()").split(",").first
-        end
-
-        redis_version = safe do
-          Sidekiq.redis do |c|
-            c.call("INFO", "server").match(/redis_version:([^\r\n]+)/)&.captures&.first&.strip
-          end
-        end
-
-        clickhouse_version = if ENV["LAGO_CLICKHOUSE_ENABLED"].present?
-          safe { Clickhouse::BaseRecord.connection.select_value("SELECT version()") }
-        else
-          "disabled"
-        end
-
         output.puts "  Ruby           : #{RUBY_VERSION} (#{RUBY_PLATFORM})"
         output.puts "  Rails          : #{Rails.version}"
-        output.puts "  PostgreSQL     : #{pg_version}"
-        output.puts "  Redis          : #{redis_version}"
-        output.puts "  ClickHouse     : #{clickhouse_version}"
         output.puts "  Deployment     : #{detect_deployment}"
         output.puts "  Memory limit   : #{detect_memory_limit}"
         output.puts "  CPU quota      : #{detect_cpu_quota}"
@@ -269,8 +252,8 @@ module Lago
         .sort_by(&:first)
     end
 
-    # Integrations are derived from the class hierarchy, with the SMTP and
-    # Kafka rows appended since they are env-based rather than model-based.
+    # Integrations are derived from the class hierarchy so newly added
+    # integrations show up in the report without touching this file.
     def integration_rows
       ensure_models_loaded
       rows = Integrations::BaseIntegration.descendants.map do |klass|
@@ -278,10 +261,7 @@ module Lago
         ["#{name}#{INTEGRATION_LABEL_SUFFIXES[name]}", -> { klass.exists? }]
       end
 
-      rows.sort_by(&:first) + [
-        ["SMTP", -> { ENV["LAGO_SMTP_ADDRESS"].present? }],
-        ["Kafka", -> { ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].present? }]
-      ]
+      rows.sort_by(&:first)
     end
 
     # `descendants` only sees loaded classes; dev and test environments load
@@ -297,8 +277,49 @@ module Lago
       safe { check.call ? "enabled" : "disabled" }
     end
 
-    def health_and_queues
-      section("4. HEALTH AND QUEUE STATE") do
+    def database
+      section("4. DATABASE") do
+        pg_version = safe do
+          ActiveRecord::Base.connection.select_value("SELECT version()").split(",").first
+        end
+        db_schema = safe { ApplicationRecord.connection_pool.migration_context.current_version }
+
+        output.puts "  PostgreSQL     : #{pg_version}"
+        output.puts "  DB schema ver  : #{db_schema}"
+
+        output.puts
+        output.puts "  ## DB Connection Pool"
+        print_safe do
+          ActiveRecord::Base.connection_pool.stat.each do |key, value|
+            output.puts "    #{key}: #{value}"
+          end
+        end
+      end
+    end
+
+    def redis
+      section("5. REDIS") do
+        redis_version = safe do
+          Sidekiq.redis do |c|
+            c.call("INFO", "server").match(/redis_version:([^\r\n]+)/)&.captures&.first&.strip
+          end
+        end
+
+        output.puts "  Redis          : #{redis_version}"
+
+        output.puts
+        output.puts "  ## Redis Memory"
+        print_safe do
+          Sidekiq.redis do |c|
+            info = c.call("INFO", "memory")
+            %w[used_memory_human used_memory_peak_human maxmemory_human].each do |key|
+              value = info.match(/#{key}:([^\r\n]+)/)&.captures&.first&.strip
+              output.puts "    #{key}: #{value}" if value
+            end
+          end
+        end
+
+        output.puts
         output.puts "  ## Sidekiq Queues"
         print_safe do
           Sidekiq::Queue.all.sort_by(&:name).each do |q|
@@ -323,31 +344,47 @@ module Lago
             end
           end
         end
+      end
+    end
 
-        output.puts
-        output.puts "  ## DB Connection Pool"
-        print_safe do
-          ActiveRecord::Base.connection_pool.stat.each do |key, value|
-            output.puts "    #{key}: #{value}"
-          end
+    def clickhouse
+      section("6. CLICKHOUSE") do
+        enabled = ENV["LAGO_CLICKHOUSE_ENABLED"].present?
+
+        output.puts "  Enabled        : #{enabled}"
+        if enabled
+          version = safe { Clickhouse::BaseRecord.connection.select_value("SELECT version()") }
+          output.puts "  Version        : #{version}"
         end
+      end
+    end
 
-        output.puts
-        output.puts "  ## Redis Memory"
-        print_safe do
-          Sidekiq.redis do |c|
-            info = c.call("INFO", "memory")
-            %w[used_memory_human used_memory_peak_human maxmemory_human].each do |key|
-              value = info.match(/#{key}:([^\r\n]+)/)&.captures&.first&.strip
-              output.puts "    #{key}: #{value}" if value
-            end
-          end
+    def kafka
+      section("7. KAFKA") do
+        enabled = ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].present?
+
+        output.puts "  Enabled        : #{enabled}"
+        if enabled
+          servers = mask("LAGO_KAFKA_BOOTSTRAP_SERVERS", ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"])
+          output.puts "  Bootstrap servers : #{servers}"
+        end
+      end
+    end
+
+    def smtp
+      section("8. SMTP") do
+        enabled = ENV["LAGO_SMTP_ADDRESS"].present?
+
+        output.puts "  Enabled        : #{enabled}"
+        if enabled
+          output.puts "  Address        : #{ENV["LAGO_SMTP_ADDRESS"]}"
+          output.puts "  Port           : #{ENV["LAGO_SMTP_PORT"]}"
         end
       end
     end
 
     def data_shape
-      section("5. DATA SHAPE (counts only, no content)") do
+      section("9. DATA SHAPE (counts only, no content)") do
         output.puts "  ## Key Table Row Counts (estimated)"
         {
           "Organizations" => -> { estimated_count(Organization) },
@@ -422,7 +459,7 @@ module Lago
     end
 
     def recent_errors
-      section("6. RECENT ERRORS") do
+      section("10. RECENT ERRORS") do
         log_path = Rails.root.join("log", "#{Rails.env}.log")
 
         if File.exist?(log_path)
