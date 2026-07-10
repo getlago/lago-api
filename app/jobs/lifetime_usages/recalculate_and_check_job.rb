@@ -10,7 +10,7 @@ module LifetimeUsages
       end
     end
 
-    retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
+    retry_on BaseLockService::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
 
     # This job can run concurrently for the same lifetime usage (the clock's async
     # sweep and the inline perform_now from subscription activity processing don't
