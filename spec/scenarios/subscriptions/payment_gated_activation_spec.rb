@@ -378,7 +378,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
         end
     end
 
-    it "bills a mid-incomplete unit increase applied immediately as a delta invoice on activation" do
+    it "defers a mid-incomplete unit increase applied immediately to the next billing period" do
       travel_to(Time.zone.local(2026, 3, 1, 10)) do
         fixed_charge
         create_subscription(subscription_params)
@@ -389,23 +389,26 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription).to be_incomplete
       expect(subscription.invoices.count).to eq(1)
 
-      # Mid-gap: units 10 -> 15. The event is emitted for the incomplete sub but not billed yet.
+      # Mid-gap: units 10 -> 15. The event is deferred to the next period start (April 1).
       update_fixed_charge_units(fixed_charge, 15, timestamp: Time.zone.local(2026, 3, 10, 10))
       expect(subscription.invoices.count).to eq(1)
 
-      # Payment succeeds within the same period -> activation bills the 5-unit delta.
+      # Payment succeeds within the same period -> no delta: the customer paid for 10 units.
       travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
 
       subscription.reload
       expect(subscription).to be_active
-      expect(subscription.invoices.count).to eq(2)
+      expect(subscription.invoices.count).to eq(1)
 
-      delta_invoice = subscription.invoices.order(:created_at).last
-      expect(delta_invoice.fees.fixed_charge.count).to eq(1)
-      expect(delta_invoice.fees.fixed_charge.sole.units).to eq(5)
+      # The regular billing run at the boundary picks up the new units.
+      travel_to(Time.zone.local(2026, 4, 1, 1)) { perform_billing }
+
+      expect(subscription.invoices.count).to eq(2)
+      periodic_invoice = subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
     end
 
-    it "bills one delta invoice per distinct timestamp of unit increases applied immediately" do
+    it "bills the latest of several unit increases applied immediately at the next billing period" do
       travel_to(Time.zone.local(2026, 3, 1, 10)) do
         fixed_charge
         create_subscription(subscription_params)
@@ -415,6 +418,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       subscription = customer.subscriptions.sole
       expect(subscription).to be_incomplete
 
+      # Mid-gap: both changes are deferred to the same next period start (April 1).
       update_fixed_charge_units(fixed_charge, 15, timestamp: Time.zone.local(2026, 3, 10, 10))
       update_fixed_charge_units(fixed_charge, 20, timestamp: Time.zone.local(2026, 3, 15, 10))
       expect(subscription.invoices.count).to eq(1)
@@ -423,10 +427,17 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       subscription.reload
       expect(subscription).to be_active
-      expect(subscription.invoices.count).to eq(3)
+      expect(subscription.invoices.count).to eq(1)
+
+      # The regular billing run bills a single invoice carrying the latest units.
+      travel_to(Time.zone.local(2026, 4, 1, 1)) { perform_billing }
+
+      expect(subscription.invoices.count).to eq(2)
+      periodic_invoice = subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(20)
     end
 
-    it "documents a mid-incomplete unit reduction applied immediately with a zero-amount invoice (no refund)" do
+    it "defers a mid-incomplete unit reduction applied immediately to the next billing period" do
       travel_to(Time.zone.local(2026, 3, 1, 10)) do
         fixed_charge
         create_subscription(subscription_params)
@@ -437,7 +448,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription).to be_incomplete
       expect(subscription.invoices.count).to eq(1)
 
-      # Mid-gap: units 10 -> 5. Pay-in-advance is never refunded.
+      # Mid-gap: units 10 -> 5. Pay-in-advance is never refunded; the paid period keeps 10 units.
       update_fixed_charge_units(fixed_charge, 5, timestamp: Time.zone.local(2026, 3, 10, 10))
       expect(subscription.invoices.count).to eq(1)
 
@@ -445,12 +456,14 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       subscription.reload
       expect(subscription).to be_active
-      expect(subscription.invoices.count).to eq(2)
+      expect(subscription.invoices.count).to eq(1)
 
-      delta_invoice = subscription.invoices.order(:created_at).last
-      expect(delta_invoice).to be_finalized
-      expect(delta_invoice.total_amount_cents).to eq(0)
-      expect(delta_invoice.fees.fixed_charge.sole.units).to eq(0)
+      # The regular billing run bills the reduced units from the next period on.
+      travel_to(Time.zone.local(2026, 4, 1, 1)) { perform_billing }
+
+      expect(subscription.invoices.count).to eq(2)
+      periodic_invoice = subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(5)
     end
 
     it "bills a unit change scheduled for the next billing period through the regular clock when activation happens within the gated period" do
@@ -479,7 +492,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
     end
 
-    it "bills a fixed charge added mid-incomplete with units applied immediately as a delta invoice on activation" do
+    it "defers a fixed charge added mid-incomplete with units applied immediately to the next billing period" do
       travel_to(Time.zone.local(2026, 3, 1, 10)) do
         fixed_charge
         create_subscription(subscription_params)
@@ -491,6 +504,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription.invoices.count).to eq(1)
 
       # Mid-gap: a brand-new pay-in-advance fixed charge is added to the gated plan.
+      # Its event is deferred to the next period start (April 1).
       new_fixed_charge = create_fixed_charge(plan, 3, timestamp: Time.zone.local(2026, 3, 10, 10))
       expect(subscription.invoices.count).to eq(1)
 
@@ -498,11 +512,14 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       subscription.reload
       expect(subscription).to be_active
-      expect(subscription.invoices.count).to eq(2)
+      expect(subscription.invoices.count).to eq(1)
 
-      delta_fee = subscription.invoices.order(:created_at).last.fees.fixed_charge.sole
-      expect(delta_fee.fixed_charge).to eq(new_fixed_charge)
-      expect(delta_fee.units).to eq(3)
+      # The regular billing run at the boundary bills the new charge.
+      travel_to(Time.zone.local(2026, 4, 1, 1)) { perform_billing }
+
+      expect(subscription.invoices.count).to eq(2)
+      periodic_invoice = subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.fees.fixed_charge.find_by(fixed_charge: new_fixed_charge).units).to eq(3)
     end
 
     it "bills a fixed charge added mid-incomplete with units scheduled for the next billing period through the regular clock" do
@@ -618,7 +635,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
         end
     end
 
-    it "bills an override unit increase applied immediately as a delta invoice on activation" do
+    it "defers an override unit increase applied immediately to the next billing period" do
       travel_to(Time.zone.local(2026, 3, 1, 10)) do
         fixed_charge
         create_subscription(subscription_params)
@@ -630,6 +647,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription.invoices.count).to eq(1)
 
       # Mid-gap: the fixed charge units are overridden for this subscription only.
+      # The event is deferred to the next period start (April 1).
       travel_to(Time.zone.local(2026, 3, 10, 10)) do
         Subscriptions::UpdateOrOverrideFixedChargeService.call!(
           subscription:,
@@ -650,11 +668,14 @@ describe "Payment Gated Subscription Activation Scenarios" do
 
       subscription.reload
       expect(subscription).to be_active
-      expect(subscription.invoices.count).to eq(2)
+      expect(subscription.invoices.count).to eq(1)
 
-      delta_fee = subscription.invoices.order(:created_at).last.fees.fixed_charge.sole
-      expect(delta_fee.fixed_charge).to eq(fixed_charge)
-      expect(delta_fee.units).to eq(5)
+      # The regular billing run at the boundary picks up the overridden units.
+      travel_to(Time.zone.local(2026, 4, 1, 1)) { perform_billing }
+
+      expect(subscription.invoices.count).to eq(2)
+      periodic_invoice = subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
     end
   end
 
@@ -1658,7 +1679,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(invoice.reload).to be_finalized
     end
 
-    it "bills a unit increase applied immediately as a delta invoice on activation" do
+    it "defers a unit increase applied immediately to the next billing period" do
       travel_to(Time.zone.local(2026, 3, 1, 10)) do
         # Stage 1: initial active subscription on the cheaper pay-in-arrears plan (no rules)
         create_subscription({
@@ -1685,6 +1706,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(new_subscription).to be_incomplete
       expect(new_subscription.invoices.count).to eq(1)
 
+      # Mid-gap: the event is deferred to the next period start (April 1).
       update_fixed_charge_units(fixed_charge, 15, timestamp: Time.zone.local(2026, 3, 10, 10))
 
       travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
@@ -1692,10 +1714,14 @@ describe "Payment Gated Subscription Activation Scenarios" do
       new_subscription.reload
       expect(new_subscription).to be_active
       expect(previous_subscription.reload).to be_terminated
-      expect(new_subscription.invoices.count).to eq(2)
+      expect(new_subscription.invoices.count).to eq(1)
 
-      delta_invoice = new_subscription.invoices.order(:created_at).last
-      expect(delta_invoice.fees.fixed_charge.sole.units).to eq(5)
+      # The regular billing run at the boundary picks up the new units.
+      travel_to(Time.zone.local(2026, 4, 1, 1)) { perform_billing }
+
+      expect(new_subscription.invoices.count).to eq(2)
+      periodic_invoice = new_subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
     end
 
     it "defers a unit change scheduled for the next billing period until the following billing run on cross-period activation" do
@@ -1888,7 +1914,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(invoice.reload).to be_finalized
     end
 
-    it "bills a unit increase applied immediately as a delta invoice on activation" do
+    it "defers a unit increase applied immediately to the next billing period" do
       # Stage 1: active subscription on the pricier plan (no rules)
       travel_to(DateTime.new(2026, 1, 10)) do
         create_subscription({
@@ -1923,6 +1949,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       gated_invoice = new_subscription.invoices.sole
       expect(gated_invoice.fees.fixed_charge.sole.units).to eq(10)
 
+      # Mid-gap: the event is deferred to the next period start (March 1).
       update_fixed_charge_units(fixed_charge, 15, timestamp: DateTime.new(2026, 2, 10))
 
       travel_to(DateTime.new(2026, 2, 20)) do
@@ -1932,10 +1959,14 @@ describe "Payment Gated Subscription Activation Scenarios" do
       new_subscription.reload
       expect(new_subscription).to be_active
       expect(previous_subscription.reload).to be_terminated
-      expect(new_subscription.invoices.count).to eq(2)
+      expect(new_subscription.invoices.count).to eq(1)
 
-      delta_invoice = new_subscription.invoices.order(:created_at).last
-      expect(delta_invoice.fees.fixed_charge.sole.units).to eq(5)
+      # The regular billing run at the boundary picks up the new units.
+      travel_to(DateTime.new(2026, 3, 1)) { perform_billing }
+
+      expect(new_subscription.invoices.count).to eq(2)
+      periodic_invoice = new_subscription.invoices.order(:created_at).last
+      expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
     end
 
     it "defers a unit change scheduled for the next billing period until the following billing run on cross-period activation" do
