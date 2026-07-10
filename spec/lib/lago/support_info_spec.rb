@@ -212,6 +212,36 @@ RSpec.describe Lago::SupportInfo do
       end
     end
 
+    context "when the dead set contains wrapped ActiveJob entries" do
+      let(:wrapped_entry) do
+        {
+          "class" => "ActiveJob::QueueAdapters::SidekiqAdapter::JobWrapper",
+          "wrapped" => "BillSubscriptionJob",
+          "error_class" => "BaseService::ForbiddenFailure",
+          "failed_at" => Time.current.to_f
+        }
+      end
+      let(:plain_entry) do
+        {
+          "class" => "PlainSidekiqJob",
+          "error_class" => "StandardError",
+          "failed_at" => Time.current.to_f
+        }
+      end
+
+      before do
+        allow(Sidekiq::DeadSet).to receive(:new).and_return([wrapped_entry, plain_entry])
+      end
+
+      it "prints the wrapped job class instead of the ActiveJob wrapper" do
+        support_info.call
+
+        expect(report).to include("BillSubscriptionJob  [BaseService::ForbiddenFailure]")
+        expect(report).to include("PlainSidekiqJob  [StandardError]")
+        expect(report).not_to include("JobWrapper  [")
+      end
+    end
+
     context "when the Sidekiq dead set cannot be read" do
       before do
         allow(Sidekiq::DeadSet).to receive(:new).and_raise(StandardError, "dead set unavailable")

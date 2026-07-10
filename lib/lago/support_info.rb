@@ -288,7 +288,7 @@ module Lago
           else
             entries.each do |job|
               ts = safe { Time.zone.at(job["failed_at"].to_f).utc.iso8601 }
-              output.puts "    #{ts}  #{job["class"]}  [#{job["error_class"]}]"
+              output.puts "    #{ts}  #{job_class(job)}  [#{job["error_class"]}]"
             end
           end
         end
@@ -343,7 +343,7 @@ module Lago
           cutoff = 24.hours.ago.to_f
           by_class = dead_set_entries
             .select { |j| j["failed_at"].to_f >= cutoff }
-            .group_by { |j| j["class"] }
+            .group_by { |j| job_class(j) }
             .transform_values(&:count)
             .sort_by { |_, count| -count }
 
@@ -361,6 +361,13 @@ module Lago
     # an error marker instead of crashing the report.
     def dead_set_entries
       @dead_set_entries ||= Sidekiq::DeadSet.new.to_a
+    end
+
+    # ActiveJob jobs are enqueued through a Sidekiq wrapper, so the raw
+    # "class" is always ActiveJob::QueueAdapters::SidekiqAdapter::JobWrapper.
+    # The real job class lives in the "wrapped" key.
+    def job_class(job)
+      job["wrapped"] || job["class"]
     end
 
     # Uses the PostgreSQL planner estimate to avoid a full table scan on
