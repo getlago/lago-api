@@ -1429,4 +1429,58 @@ RSpec.describe Customer do
       end
     end
   end
+
+  describe "invoices search reindexing" do
+    let(:customer) { create(:customer) }
+
+    context "when Meilisearch is enabled" do
+      before do
+        customer
+        stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
+      end
+
+      {
+        name: "New name",
+        firstname: "New firstname",
+        lastname: "New lastname",
+        legal_name: "New legal name",
+        external_id: "new-external-id",
+        email: "new@email.test"
+      }.each do |field, value|
+        it "enqueues an invoices reindex after commit when #{field} changes" do
+          expect { customer.update!(field => value) }
+            .to have_enqueued_job_after_commit(Customers::ReindexInvoicesJob).with(customer.id)
+        end
+      end
+
+      it "enqueues an invoices reindex after commit when the customer is discarded" do
+        expect { customer.discard! }
+          .to have_enqueued_job_after_commit(Customers::ReindexInvoicesJob).with(customer.id)
+      end
+
+      it "enqueues an invoices reindex after commit when the customer is undiscarded" do
+        customer.discard!
+        ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+
+        expect { customer.undiscard! }
+          .to have_enqueued_job_after_commit(Customers::ReindexInvoicesJob).with(customer.id)
+      end
+
+      it "does not enqueue a reindex when no searchable field changes" do
+        expect { customer.update!(net_payment_term: 8) }
+          .not_to have_enqueued_job(Customers::ReindexInvoicesJob)
+      end
+
+      it "does not enqueue a reindex on creation" do
+        expect { create(:customer) }.not_to have_enqueued_job(Customers::ReindexInvoicesJob)
+      end
+    end
+
+    context "when Meilisearch is disabled" do
+      it "does not enqueue a reindex" do
+        expect { customer.update!(name: "New name") }
+          .not_to have_enqueued_job(Customers::ReindexInvoicesJob)
+      end
+    end
+  end
 end

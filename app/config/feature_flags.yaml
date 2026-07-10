@@ -1,7 +1,3 @@
-multiple_payment_methods:
-  description: "Allow multiple payment methods per customer"
-  owners: ["@lovrocolic", "@mariohd"]
-
 postgres_enriched_events:
   description: "Turn on events pre-enrichement for organizations using the PG event store"
   owners: ["@vincent-pochet"]
@@ -29,6 +25,10 @@ multi_entity_billing:
 order_forms:
   description: "Enable quotes, order forms and orders"
   owners: ["@murparreira", "@toommz", "@rinasergeeva"]
+
+meilisearch:
+  description: "Use Meilisearch instead of Postgres for list searches"
+  owners: ["@jdenquin"]
 
 stripe_shared_payment_token:
   description: "Use Stripe Shared Payment Token for agent-initiated payments when no other payment method is attached"

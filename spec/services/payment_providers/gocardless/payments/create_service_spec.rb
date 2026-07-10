@@ -68,7 +68,6 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService do
           "currency" => invoice.currency,
           "status" => "paid_out"
         ))
-      allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
 
     it "creates a gocardless payment" do

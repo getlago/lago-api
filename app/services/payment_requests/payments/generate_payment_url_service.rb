@@ -3,6 +3,8 @@
 module PaymentRequests
   module Payments
     class GeneratePaymentUrlService < BaseService
+      Result = BaseResult[:payment_url]
+
       include Customers::PaymentProviderFinder
 
       PROVIDER_GOCARDLESS = "gocardless"
@@ -33,7 +35,8 @@ module PaymentRequests
 
         return result.single_validation_failure!(error_code: "payment_provider_error") if payment_url_result.payment_url.blank?
 
-        payment_url_result
+        result.payment_url = payment_url_result.payment_url
+        result
       rescue BaseService::ThirdPartyFailure => e
         deliver_error_webhook(e)
 

@@ -12,8 +12,6 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
     Rake.application.rake_require("tasks/daily_usages")
     Rake::Task.define_task(:environment)
     task.reenable
-
-    allow(DailyUsages::FillHistoryJob).to receive(:perform_later)
   end
 
   def stub_stdin(*responses)
@@ -41,7 +39,7 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
 
     it "finishes without enqueueing any job" do
       expect { task.invoke }.not_to raise_error
-      expect(DailyUsages::FillHistoryJob).not_to have_received(:perform_later)
+      expect(DailyUsages::FillHistoryJob).not_to have_been_enqueued
     end
   end
 
@@ -67,15 +65,15 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
 
       it "enqueues a FillHistoryJob for active and terminated subscriptions" do
         task.invoke
-        expect(DailyUsages::FillHistoryJob).to have_received(:perform_later)
+        expect(DailyUsages::FillHistoryJob).to have_been_enqueued
           .with(subscription: active_sub, from_date: DailyUsage::DEFAULT_HISTORY_DAYS.days.ago.to_date)
-        expect(DailyUsages::FillHistoryJob).to have_received(:perform_later)
+        expect(DailyUsages::FillHistoryJob).to have_been_enqueued
           .with(subscription: terminated_sub, from_date: DailyUsage::DEFAULT_HISTORY_DAYS.days.ago.to_date)
       end
 
       it "does not enqueue a job for pending subscriptions" do
         task.invoke
-        expect(DailyUsages::FillHistoryJob).not_to have_received(:perform_later)
+        expect(DailyUsages::FillHistoryJob).not_to have_been_enqueued
           .with(subscription: pending_sub, from_date: anything)
       end
     end
@@ -90,7 +88,7 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
 
       it "still enqueues the FillHistoryJobs" do
         task.invoke
-        expect(DailyUsages::FillHistoryJob).to have_received(:perform_later)
+        expect(DailyUsages::FillHistoryJob).to have_been_enqueued
           .with(subscription: active_sub, from_date: DailyUsage::DEFAULT_HISTORY_DAYS.days.ago.to_date)
       end
     end
@@ -100,7 +98,7 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
 
       it "uses the entered date as from_date" do
         task.invoke
-        expect(DailyUsages::FillHistoryJob).to have_received(:perform_later)
+        expect(DailyUsages::FillHistoryJob).to have_been_enqueued
           .with(subscription: active_sub, from_date: Date.new(2026, 1, 15))
       end
     end
@@ -110,7 +108,7 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
 
       it "aborts" do
         expect { task.invoke }.to raise_error(SystemExit)
-        expect(DailyUsages::FillHistoryJob).not_to have_received(:perform_later)
+        expect(DailyUsages::FillHistoryJob).not_to have_been_enqueued
       end
     end
 
@@ -120,7 +118,7 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
       it "aborts without deleting or enqueueing" do
         expect { task.invoke }.to raise_error(SystemExit)
         expect(DailyUsage.where(id: existing_usage.id)).to exist
-        expect(DailyUsages::FillHistoryJob).not_to have_received(:perform_later)
+        expect(DailyUsages::FillHistoryJob).not_to have_been_enqueued
       end
     end
 
@@ -129,9 +127,9 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
 
       it "only enqueues a FillHistoryJob for the provided subscriptions" do
         task.invoke
-        expect(DailyUsages::FillHistoryJob).to have_received(:perform_later)
+        expect(DailyUsages::FillHistoryJob).to have_been_enqueued
           .with(subscription: active_sub, from_date: DailyUsage::DEFAULT_HISTORY_DAYS.days.ago.to_date)
-        expect(DailyUsages::FillHistoryJob).not_to have_received(:perform_later)
+        expect(DailyUsages::FillHistoryJob).not_to have_been_enqueued
           .with(subscription: terminated_sub, from_date: anything)
       end
     end
@@ -141,11 +139,11 @@ RSpec.describe "daily_usages:fill_history" do # rubocop:disable RSpec/DescribeCl
 
       it "enqueues a FillHistoryJob for each provided subscription" do
         task.invoke
-        expect(DailyUsages::FillHistoryJob).to have_received(:perform_later)
+        expect(DailyUsages::FillHistoryJob).to have_been_enqueued
           .with(subscription: active_sub, from_date: DailyUsage::DEFAULT_HISTORY_DAYS.days.ago.to_date)
-        expect(DailyUsages::FillHistoryJob).to have_received(:perform_later)
+        expect(DailyUsages::FillHistoryJob).to have_been_enqueued
           .with(subscription: terminated_sub, from_date: DailyUsage::DEFAULT_HISTORY_DAYS.days.ago.to_date)
-        expect(DailyUsages::FillHistoryJob).not_to have_received(:perform_later)
+        expect(DailyUsages::FillHistoryJob).not_to have_been_enqueued
           .with(subscription: pending_sub, from_date: anything)
       end
     end

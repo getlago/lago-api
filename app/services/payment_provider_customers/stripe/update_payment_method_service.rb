@@ -3,6 +3,8 @@
 module PaymentProviderCustomers
   module Stripe
     class UpdatePaymentMethodService < BaseService
+      Result = BaseResult[:payment_method, :stripe_customer]
+
       def initialize(stripe_customer:, payment_method_id:, payment_method_details: {})
         @stripe_customer = stripe_customer
         @payment_method_id = payment_method_id

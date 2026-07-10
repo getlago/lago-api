@@ -74,8 +74,6 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
     end
 
     before do
-      allow(SendWebhookJob).to receive(:perform_later)
-      allow(SegmentTrackJob).to receive(:perform_later)
       payment
     end
 

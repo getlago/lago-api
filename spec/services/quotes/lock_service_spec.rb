@@ -19,8 +19,8 @@ RSpec.describe Quotes::LockService do
         expect(ActiveRecord::Base.advisory_lock_exists?("quote-#{quote.id}")).to be false
       end
 
-      it "yields the block return value" do
-        expect(lock_service.call { :done }).to eq(:done)
+      it "exposes the block return value on the result" do
+        expect(lock_service.call { :done }.value).to eq(:done)
       end
     end
 
@@ -33,10 +33,10 @@ RSpec.describe Quotes::LockService do
         end
       end
 
-      it "raises a Customers::FailedToAcquireLock error" do
+      it "raises a BaseLockService::FailedToAcquireLock error" do
         expect do
           lock_service.call { nil }
-        end.to raise_error(Customers::FailedToAcquireLock, "Failed to acquire lock quote-#{quote.id}")
+        end.to raise_error(BaseLockService::FailedToAcquireLock, "Failed to acquire lock quote-#{quote.id}")
       end
     end
   end
@@ -54,7 +54,7 @@ RSpec.describe Quotes::LockService do
         expect(ActiveRecord::Base.advisory_lock_exists?("quote-#{quote.id}")).to be true
       end
 
-      expect(inner_result).to eq(:inner)
+      expect(inner_result.value).to eq(:inner)
     end
 
     it "allows nesting a lock on a different quote" do

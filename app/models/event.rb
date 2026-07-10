@@ -88,7 +88,6 @@ end
 #  idx_events_billing_lookup                           (external_subscription_id,organization_id,code,timestamp) WHERE (deleted_at IS NULL)
 #  idx_events_for_distinct_codes                       (external_subscription_id,organization_id,timestamp) WHERE (deleted_at IS NULL)
 #  index_events_on_created_at                          (created_at) WHERE (deleted_at IS NULL)
-#  index_events_on_organization_id                     (organization_id)
 #  index_events_on_organization_id_and_code            (organization_id,code)
 #  index_events_on_organization_id_and_created_at      (organization_id,created_at DESC) WHERE (deleted_at IS NULL)
 #  index_events_on_organization_id_and_timestamp       (organization_id,timestamp DESC) WHERE (deleted_at IS NULL)

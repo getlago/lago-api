@@ -60,6 +60,7 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:base]).to eq(["invalid_payment_status"])
+        expect(result.payment_url).to be_nil
       end
     end
   end
@@ -113,6 +114,8 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     end
 
     before do
+      provider_customer
+
       allow(PaymentRequests::Payments::CashfreeService)
         .to receive(:new)
         .and_return(payment_provider_service)
@@ -143,7 +146,7 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
   end
 
   context "when provider service return an error" do
-    let(:payment_provider_service) { instance_double(Invoices::Payments::StripeService) }
+    let(:payment_provider_service) { instance_double(PaymentRequests::Payments::StripeService) }
 
     let(:error_result) do
       BaseService::Result.new.tap do |result|
@@ -158,7 +161,9 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     end
 
     before do
-      allow(Invoices::Payments::StripeService)
+      provider_customer
+
+      allow(PaymentRequests::Payments::StripeService)
         .to receive(:new)
         .and_return(payment_provider_service)
 

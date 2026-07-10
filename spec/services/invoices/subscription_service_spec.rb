@@ -44,7 +44,6 @@ RSpec.describe Invoices::SubscriptionService do
       create(:standard_charge, plan: subscription.plan, charge_model: "standard")
       lifetime_usage
 
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
@@ -52,7 +51,7 @@ RSpec.describe Invoices::SubscriptionService do
     it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "invoice_created",
         properties: {
@@ -425,7 +424,7 @@ RSpec.describe Invoices::SubscriptionService do
 
       it "does not track any invoice creation on segment" do
         invoice_service.call
-        expect(SegmentTrackJob).not_to have_received(:perform_later)
+        expect(SegmentTrackJob).not_to have_been_enqueued
       end
 
       it "does not create any payment" do
@@ -871,9 +870,9 @@ RSpec.describe Invoices::SubscriptionService do
       context "with a failed to acquire lock error" do
         it "propagates the error" do
           allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
-            .to receive(:call).and_raise(Customers::FailedToAcquireLock)
+            .to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
 
-          expect { invoice_service.call }.to raise_error(Customers::FailedToAcquireLock)
+          expect { invoice_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
         end
       end
     end

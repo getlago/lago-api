@@ -37,6 +37,15 @@ class Customer < ApplicationRecord
     align_with_finalization_date: "align_with_finalization_date"
   }.freeze
 
+  SEARCHABLE_CUSTOMER_FIELDS = %w[
+    name
+    firstname
+    lastname
+    legal_name
+    external_id
+    email
+  ].freeze
+
   attribute :finalize_zero_amount_invoice, :integer
   enum :finalize_zero_amount_invoice, FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, prefix: :finalize_zero_amount_invoice
   attribute :customer_type, :string
@@ -48,6 +57,8 @@ class Customer < ApplicationRecord
   enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: {allow_nil: true}
 
   before_save :ensure_slug
+  after_update :flag_invoices_for_search_reindex, if: -> { Lago::Meilisearch.indexing_enabled? && search_indexed_fields_changed? }
+  after_commit :enqueue_invoices_reindex_job, if: -> { @invoices_search_reindex_needed }
 
   belongs_to :organization
   belongs_to :billing_entity, optional: true
@@ -376,6 +387,22 @@ class Customer < ApplicationRecord
     formatted_sequential_id = format("%03d", sequential_id)
 
     self.slug = "#{organization.document_number_prefix}-#{formatted_sequential_id}"
+  end
+
+  # `deleted_at` is included because invoice documents embed customer fields
+  # only while the customer is kept: discarding must blank them, undiscarding
+  # must restore them.
+  def search_indexed_fields_changed?
+    (saved_changes.keys & (SEARCHABLE_CUSTOMER_FIELDS + ["deleted_at"])).any?
+  end
+
+  def flag_invoices_for_search_reindex
+    @invoices_search_reindex_needed = true
+  end
+
+  def enqueue_invoices_reindex_job
+    @invoices_search_reindex_needed = false
+    Customers::ReindexInvoicesJob.perform_later(id)
   end
 end
 

@@ -3,7 +3,6 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Auth::Google::RegisterUser do
-  let(:google_service) { instance_double(Auth::GoogleService) }
   let(:user) { create(:user) }
 
   let(:register_user_result) do
@@ -28,8 +27,7 @@ RSpec.describe Mutations::Auth::Google::RegisterUser do
   end
 
   before do
-    allow(Auth::GoogleService).to receive(:new).and_return(google_service)
-    allow(google_service).to receive(:register_user).and_return(register_user_result)
+    allow(Auth::GoogleService).to receive(:call).with(:register_user, "code", "FooBar").and_return(register_user_result)
   end
 
   it "returns token and user" do

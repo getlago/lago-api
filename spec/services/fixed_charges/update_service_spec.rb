@@ -398,13 +398,12 @@ RSpec.describe FixedCharges::UpdateService do
         before do
           create(:subscription, plan: child_plan, status: :active)
           child_fixed_charge
-          allow(FixedCharges::UpdateChildrenJob).to receive(:perform_later)
         end
 
         it "triggers cascade update via FixedCharges::UpdateChildrenJob" do
           result
 
-          expect(FixedCharges::UpdateChildrenJob).to have_received(:perform_later).with(
+          expect(FixedCharges::UpdateChildrenJob).to have_been_enqueued.with(
             params: hash_including("charge_model", "properties", "units"),
             old_parent_attrs: hash_including("id" => fixed_charge.id)
           )
@@ -416,7 +415,7 @@ RSpec.describe FixedCharges::UpdateService do
           it "does not trigger cascade update" do
             result
 
-            expect(FixedCharges::UpdateChildrenJob).not_to have_received(:perform_later)
+            expect(FixedCharges::UpdateChildrenJob).not_to have_been_enqueued
           end
         end
       end
@@ -428,13 +427,12 @@ RSpec.describe FixedCharges::UpdateService do
         before do
           create(:subscription, plan: child_plan, status: :active)
           child_fixed_charge
-          allow(FixedCharges::UpdateChildrenJob).to receive(:perform_later)
         end
 
         it "does not trigger cascade update" do
           result
 
-          expect(FixedCharges::UpdateChildrenJob).not_to have_received(:perform_later)
+          expect(FixedCharges::UpdateChildrenJob).not_to have_been_enqueued
         end
       end
     end

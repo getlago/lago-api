@@ -44,7 +44,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckJob do
 
   describe "retry_on" do
     [
-      [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
+      [BaseLockService::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
       [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 25]
     ].each do |error, attempts|
       error_class = error.class
@@ -60,6 +60,24 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckJob do
               described_class.perform_later(lifetime_usage)
             end.to raise_error(error_class)
           end
+        end
+      end
+    end
+  end
+
+  describe "discard_on" do
+    context "when an Idempotency::IdempotencyError is raised", :premium do
+      before do
+        allow(LifetimeUsages::CalculateService).to receive(:call!)
+        allow(LifetimeUsages::CheckThresholdsService).to receive(:call!)
+          .and_raise(Idempotency::IdempotencyError.new("already exists"))
+      end
+
+      it "discards the job without raising or retrying" do
+        assert_performed_jobs(1, only: [described_class]) do
+          expect do
+            described_class.perform_later(lifetime_usage)
+          end.not_to raise_error
         end
       end
     end
