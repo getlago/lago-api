@@ -7,7 +7,7 @@ RSpec.describe ::V1::WalletTransactionSerializer do
     described_class.new(wallet_transaction, root_name: "wallet_transaction", includes:)
   end
 
-  let(:wallet_transaction) { create(:wallet_transaction) }
+  let(:wallet_transaction) { create(:wallet_transaction, :with_purchase_order_number) }
   let(:includes) { [] }
 
   context "when includes is empty" do
@@ -30,6 +30,7 @@ RSpec.describe ::V1::WalletTransactionSerializer do
         "remaining_amount_cents" => wallet_transaction.remaining_amount_cents,
         "remaining_credit_amount" => wallet_transaction.remaining_credit_amount,
         "priority" => wallet_transaction.priority,
+        "purchase_order_number" => wallet_transaction.purchase_order_number,
         "settled_at" => wallet_transaction.settled_at&.iso8601,
         "failed_at" => wallet_transaction.failed_at&.iso8601,
         "created_at" => wallet_transaction.created_at.iso8601,
