@@ -23,10 +23,16 @@ module Lago
     /xi
 
     # Matches URL userinfo credentials (`scheme://user:pass@` or `scheme://user@`).
-    URL_USERINFO_PATTERN = %r{([a-z][a-z0-9+.-]*://)[^/@\s]+@}i
+    # The match is greedy up to the last `@` before the path so passwords
+    # containing `@` are fully redacted.
+    URL_USERINFO_PATTERN = %r{([a-z][a-z0-9+.-]*://)[^/\s]*@}i
+
+    # Matches sensitive query string parameters (`?password=...`, `&token=...`).
+    URL_QUERY_SECRET_PATTERN = /([?&](?:[^=&\s]*(?:password|token|key|secret|sig|signature|auth|credential)[^=&\s]*)=)[^&\s]+/i
 
     RECENT_ERRORS_LIMIT = 100
     RECENT_ERRORS_PATTERN = /ERROR|FATAL/i
+    RECENT_ERRORS_TAIL_BYTES = 5 * 1024 * 1024
 
     def initialize(output: $stdout)
       @output = output
@@ -55,11 +61,15 @@ module Lago
     # - values of secret-looking keys are fully replaced by `***`
     # - URL userinfo credentials are redacted while host/port stay visible
     #   (e.g. `postgresql://lago:pass@db:5432/lago` -> `postgresql://***@db:5432/lago`)
+    # - sensitive query string parameters are redacted
+    #   (e.g. `?password=secret` -> `?password=***`)
     def mask(key, value)
       if key.to_s.match?(SECRET_PATTERN)
         "***"
       else
-        value.to_s.gsub(URL_USERINFO_PATTERN, '\1***@')
+        value.to_s
+          .gsub(URL_USERINFO_PATTERN, '\1***@')
+          .gsub(URL_QUERY_SECRET_PATTERN, '\1***')
       end
     end
 
@@ -102,7 +112,13 @@ module Lago
         version_file = Rails.root.join("LAGO_VERSION")
 
         version_number = safe { LAGO_VERSION.number }
-        commit_sha = safe { File.read(version_file).squish }
+        # LAGO_VERSION holds either a 40-char git SHA or a version tag string.
+        version_content = safe { File.read(version_file).squish }
+        commit_sha = if version_content.match?(/\A[0-9a-f]{40}\z/i) || version_content.start_with?("error:")
+          version_content
+        else
+          "(not available, version tag build)"
+        end
         build_date = safe { File.ctime(version_file).utc.iso8601 }
         db_schema = safe { ApplicationRecord.connection_pool.migration_context.current_version }
 
@@ -254,7 +270,7 @@ module Lago
         output.puts
         output.puts "  ## Dead Set - last 50 entries (class + error class only)"
         print_safe do
-          entries = Sidekiq::DeadSet.new.first(50)
+          entries = dead_set_entries.first(50)
           if entries.empty?
             output.puts "    (empty)"
           else
@@ -289,31 +305,31 @@ module Lago
 
     def data_shape
       section("5. DATA SHAPE (counts only, no content)") do
-        output.puts "  ## Key Table Row Counts"
+        output.puts "  ## Key Table Row Counts (estimated)"
         {
-          "Organizations" => -> { Organization.count },
-          "Customers" => -> { Customer.count },
-          "Subscriptions" => -> { Subscription.count },
-          "Invoices" => -> { Invoice.count },
-          "Fees" => -> { Fee.count },
-          "Charges" => -> { Charge.count },
+          "Organizations" => -> { estimated_count(Organization) },
+          "Customers" => -> { estimated_count(Customer) },
+          "Subscriptions" => -> { estimated_count(Subscription) },
+          "Invoices" => -> { estimated_count(Invoice) },
+          "Fees" => -> { estimated_count(Fee) },
+          "Charges" => -> { estimated_count(Charge) },
           # ::Event is required: the lago-expression gem defines Lago::Event,
           # which shadows the model inside this namespace.
-          "Events" => -> { ::Event.count }
+          "Events" => -> { estimated_count(::Event) }
         }.each do |label, count_proc|
           output.puts format("    %-16s: %s", label, safe { count_proc.call })
         end
 
         output.puts
         output.puts "  ## Ingestion / Generation Rates"
-        output.puts "    Events   last 24h : #{safe { ::Event.where(created_at: 24.hours.ago..).count }}"
-        output.puts "    Invoices last 7d  : #{safe { Invoice.where(created_at: 7.days.ago..).count }}"
+        output.puts "    Events   last 24h : #{safe { count_with_timeout { ::Event.where(created_at: 24.hours.ago..).count } }}"
+        output.puts "    Invoices last 7d  : #{safe { count_with_timeout { Invoice.where(created_at: 7.days.ago..).count } }}"
 
         output.puts
         output.puts "  ## Failed Jobs by Class - Sidekiq dead set, last 24h"
         print_safe do
           cutoff = 24.hours.ago.to_f
-          by_class = Sidekiq::DeadSet.new
+          by_class = dead_set_entries
             .select { |j| j["failed_at"].to_f >= cutoff }
             .group_by { |j| j["class"] }
             .transform_values(&:count)
@@ -328,12 +344,39 @@ module Lago
       end
     end
 
+    # Reads the dead set once for both the last-50 listing and the 24h tally.
+    # Each caller stays wrapped in safe/print_safe so a Redis failure prints
+    # an error marker instead of crashing the report.
+    def dead_set_entries
+      @dead_set_entries ||= Sidekiq::DeadSet.new.to_a
+    end
+
+    # Uses the PostgreSQL planner estimate to avoid a full table scan on
+    # large production tables. Falls back to an exact count when the table
+    # was never analyzed (negative reltuples).
+    def estimated_count(model)
+      estimate = ActiveRecord::Base.connection.select_value(
+        "SELECT reltuples::bigint FROM pg_class WHERE oid = '#{model.table_name}'::regclass"
+      ).to_i
+
+      estimate.negative? ? model.count : estimate
+    end
+
+    # Runs a range-count query with a local statement timeout so a missing
+    # index cannot stall the whole report.
+    def count_with_timeout
+      ActiveRecord::Base.transaction do
+        ActiveRecord::Base.connection.execute("SET LOCAL statement_timeout = '15s'")
+        yield
+      end
+    end
+
     def recent_errors
       section("6. RECENT ERRORS") do
         log_path = Rails.root.join("log", "#{Rails.env}.log")
 
         if File.exist?(log_path)
-          output.puts "  ## Last #{RECENT_ERRORS_LIMIT} ERROR/FATAL lines from #{log_path}"
+          output.puts "  ## Last #{RECENT_ERRORS_LIMIT} ERROR/FATAL lines (last 5 MB of #{log_path})"
           print_safe do
             lines = last_matching_lines(log_path, RECENT_ERRORS_PATTERN, RECENT_ERRORS_LIMIT)
             if lines.empty?
@@ -351,15 +394,23 @@ module Lago
       end
     end
 
-    # Streams the file line by line, keeping only the last `limit` lines
-    # matching `pattern` in a bounded buffer.
+    # Scans only the last RECENT_ERRORS_TAIL_BYTES of the file, keeping the
+    # last `limit` lines matching `pattern` in a bounded buffer, so huge log
+    # files are never read in full.
     def last_matching_lines(path, pattern, limit)
       buffer = []
-      File.foreach(path) do |line|
-        next unless line.match?(pattern)
+      File.open(path) do |file|
+        seek_pos = [file.size - RECENT_ERRORS_TAIL_BYTES, 0].max
+        file.seek(seek_pos)
+        # Discard the first, possibly partial, line when starting mid-file.
+        file.gets if seek_pos.positive?
 
-        buffer << line.chomp
-        buffer.shift if buffer.size > limit
+        file.each_line do |line|
+          next unless line.match?(pattern)
+
+          buffer << line.chomp
+          buffer.shift if buffer.size > limit
+        end
       end
       buffer
     end
