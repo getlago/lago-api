@@ -42,8 +42,10 @@ module ChargeFilters
       result.ignored_filters = children.map do |child|
         res = child.to_h_with_all_values.dup
 
-        if res.keys == result.matching_filters.keys
-          # NOTE: when child and filter have the same keys, we need to remove the filter value from the child
+        # NOTE: when child and filter have the same keys, we need to remove the filter value from the child.
+        #       When the child's values are a subset of the filter's values on every key, the child is kept
+        #       verbatim so that its events are excluded from the filter's bucket instead of being counted twice.
+        if res.keys == result.matching_filters.keys && !subset_of_matching_filters?(res)
           res.each do |key, values|
             next if filter.to_h[key] == [ChargeFilterValue::ALL_FILTER_VALUES]
 
@@ -63,6 +65,10 @@ module ChargeFilters
 
     def other_filters
       @other_filters ||= charge.filters.select { it.id != filter.id }
+    end
+
+    def subset_of_matching_filters?(child)
+      child.all? { |key, values| (values - result.matching_filters[key]).empty? }
     end
   end
 end

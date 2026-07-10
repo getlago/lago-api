@@ -155,12 +155,13 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     end
   end
 
-  # The following contexts cover edge cases where ignored_filters contains
-  # empty hashes or hashes with all-empty-array values. These states should
-  # not occur in normal usage — charge filters should always have values,
-  # and duplicate filters should not exist — but missing validations allow
-  # them in production. The store-level defensive guards (ISSUE-1799) prevent
-  # these from producing invalid SQL.
+  # The following contexts cover edge cases with empty filters, subset
+  # children, and duplicate filters. Empty filters should not occur in normal
+  # usage but missing validations allow them in production; the store-level
+  # defensive guards (ISSUE-1799) prevent them from producing invalid SQL.
+  # Subset and identical children are kept verbatim in ignored_filters so
+  # their events are excluded from the parent's bucket instead of being
+  # counted in both buckets.
 
   context "when a filter has no values" do
     subject(:service_result) { described_class.call(charge: isolated_charge, filter: current_filter) }
@@ -220,13 +221,40 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     describe "for parent_filter" do
       let(:current_filter) { parent_filter }
 
-      it "produces all-empty-values entry from subset child and keeps different-key children intact" do
+      it "keeps the subset child verbatim and keeps different-key children intact" do
         expect(service_result.matching_filters).to eq({"size" => %w[512 1024]})
         expect(service_result.ignored_filters).to eq(
           [
-            {"size" => []},
+            {"size" => ["512"]},
             {"size" => ["512"], "steps" => ["25"]}
           ]
+        )
+      end
+    end
+  end
+
+  context "when a child is a subset on one key but not on another" do
+    subject(:service_result) { described_class.call(charge: isolated_charge, filter: current_filter) }
+
+    let(:isolated_charge) { create(:standard_charge, billable_metric:) }
+
+    let(:parent_filter) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "parent") }
+    let(:mixed_child) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "mixed_child") }
+
+    before do
+      create(:charge_filter_value, values: %w[512 1024], billable_metric_filter: filter_size, charge_filter: parent_filter)
+      create(:charge_filter_value, values: %w[25 50], billable_metric_filter: filter_steps, charge_filter: parent_filter)
+      create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: mixed_child)
+      create(:charge_filter_value, values: %w[25 75], billable_metric_filter: filter_steps, charge_filter: mixed_child)
+    end
+
+    describe "for parent_filter" do
+      let(:current_filter) { parent_filter }
+
+      it "subtracts the matching values from the non-subset child" do
+        expect(service_result.matching_filters).to eq({"size" => %w[512 1024], "steps" => %w[25 50]})
+        expect(service_result.ignored_filters).to eq(
+          [{"size" => [], "steps" => ["75"]}]
         )
       end
     end
@@ -250,10 +278,21 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     describe "for filter_a" do
       let(:current_filter) { filter_a }
 
-      it "produces all-empty-values entry from the identical sibling" do
+      it "keeps the identical sibling verbatim" do
         expect(service_result.matching_filters).to eq({"size" => ["512"], "steps" => ["25"]})
         expect(service_result.ignored_filters).to eq(
-          [{"size" => [], "steps" => []}]
+          [{"size" => ["512"], "steps" => ["25"]}]
+        )
+      end
+    end
+
+    describe "for filter_b" do
+      let(:current_filter) { filter_b }
+
+      it "keeps the identical sibling verbatim" do
+        expect(service_result.matching_filters).to eq({"size" => ["512"], "steps" => ["25"]})
+        expect(service_result.ignored_filters).to eq(
+          [{"size" => ["512"], "steps" => ["25"]}]
         )
       end
     end
