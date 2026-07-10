@@ -15,4 +15,11 @@ namespace :lago do
 
     puts(output.to_json)
   end
+
+  desc "Print a support diagnostic report for self-hosted deployments"
+  task support_info: :environment do
+    require "lago/support_info"
+
+    Lago::SupportInfo.new.call
+  end
 end

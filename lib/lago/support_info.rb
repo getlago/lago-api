@@ -1,0 +1,367 @@
+# frozen_string_literal: true
+
+module Lago
+  # Prints a support diagnostic report for self-hosted deployments.
+  #
+  # The report is meant to be pasted into support tickets: it only contains
+  # versions, configuration (with secrets masked), queue health and row
+  # counts, never customer data.
+  #
+  # @example
+  #   Lago::SupportInfo.new.call
+  #
+  # @example Writing to a custom IO
+  #   Lago::SupportInfo.new(output: StringIO.new).call
+  class SupportInfo
+    SEP = "=" * 72
+    LINE = "-" * 72
+
+    SECRET_PATTERN = /
+      key|secret|password|passwd|token|dsn|salt|private|credential|
+      auth|api_key|access_key|signing|webhook|client_secret|client_id|
+      license|master\.key
+    /xi
+
+    # Matches URL userinfo credentials (`scheme://user:pass@` or `scheme://user@`).
+    URL_USERINFO_PATTERN = %r{([a-z][a-z0-9+.-]*://)[^/@\s]+@}i
+
+    RECENT_ERRORS_LIMIT = 100
+    RECENT_ERRORS_PATTERN = /ERROR|FATAL/i
+
+    def initialize(output: $stdout)
+      @output = output
+    end
+
+    def call
+      output.puts SEP
+      output.puts "  LAGO SUPPORT DIAGNOSTIC"
+      output.puts "  Generated : #{Time.current.utc.iso8601}"
+      output.puts SEP
+
+      version_and_build
+      environment
+      configuration
+      health_and_queues
+      data_shape
+      recent_errors
+
+      output.puts
+      output.puts SEP
+      output.puts "  END OF DIAGNOSTIC"
+      output.puts SEP
+    end
+
+    # Masks secrets so the report can be shared in support tickets:
+    # - values of secret-looking keys are fully replaced by `***`
+    # - URL userinfo credentials are redacted while host/port stay visible
+    #   (e.g. `postgresql://lago:pass@db:5432/lago` -> `postgresql://***@db:5432/lago`)
+    def mask(key, value)
+      if key.to_s.match?(SECRET_PATTERN)
+        "***"
+      else
+        value.to_s.gsub(URL_USERINFO_PATTERN, '\1***@')
+      end
+    end
+
+    private
+
+    attr_reader :output
+
+    # ── helpers ─────────────────────────────────────────────────────────────
+
+    def section(title)
+      output.puts
+      output.puts LINE
+      output.puts "  #{title}"
+      output.puts LINE
+      yield
+    end
+
+    # Returns the block value or a formatted error string, never raises.
+    def safe(label = nil)
+      yield
+    rescue => e
+      message = "error: #{e.class} - #{e.message.split("\n").first}"
+      label ? "#{label} #{message}" : message
+    end
+
+    # Runs a block that prints by itself; if it raises, prints an error line
+    # instead so the report keeps going.
+    def print_safe(indent = "    ")
+      error = safe do
+        yield
+        nil
+      end
+      output.puts "#{indent}#{error}" if error
+    end
+
+    # ── sections ────────────────────────────────────────────────────────────
+
+    def version_and_build
+      section("1. VERSION AND BUILD") do
+        version_file = Rails.root.join("LAGO_VERSION")
+
+        version_number = safe { LAGO_VERSION.number }
+        commit_sha = safe { File.read(version_file).squish }
+        build_date = safe { File.ctime(version_file).utc.iso8601 }
+        db_schema = safe { ApplicationRecord.connection_pool.migration_context.current_version }
+
+        output.puts "  Lago version   : #{version_number}"
+        output.puts "  Commit SHA     : #{commit_sha}"
+        output.puts "  Build date     : #{build_date}"
+        output.puts "  DB schema ver  : #{db_schema}"
+      end
+    end
+
+    def environment
+      section("2. ENVIRONMENT") do
+        pg_version = safe do
+          ActiveRecord::Base.connection.select_value("SELECT version()").split(",").first
+        end
+
+        redis_version = safe do
+          Sidekiq.redis do |c|
+            c.call("INFO", "server").match(/redis_version:([^\r\n]+)/)&.captures&.first&.strip
+          end
+        end
+
+        clickhouse_version = if ENV["LAGO_CLICKHOUSE_ENABLED"].present?
+          safe { Clickhouse::BaseRecord.connection.select_value("SELECT version()") }
+        else
+          "disabled"
+        end
+
+        output.puts "  Ruby           : #{RUBY_VERSION} (#{RUBY_PLATFORM})"
+        output.puts "  Rails          : #{Rails.version}"
+        output.puts "  PostgreSQL     : #{pg_version}"
+        output.puts "  Redis          : #{redis_version}"
+        output.puts "  ClickHouse     : #{clickhouse_version}"
+        output.puts "  Deployment     : #{detect_deployment}"
+        output.puts "  Memory limit   : #{detect_memory_limit}"
+        output.puts "  CPU quota      : #{detect_cpu_quota}"
+      end
+    end
+
+    def detect_deployment
+      if ENV["KUBERNETES_SERVICE_HOST"].present?
+        "kubernetes"
+      elsif ENV["LAGO_CLOUD"].present?
+        "lago-cloud"
+      elsif File.exist?("/.dockerenv")
+        "docker/container"
+      else
+        "unknown"
+      end
+    end
+
+    def detect_memory_limit
+      safe do
+        # cgroup v2
+        raw = File.read("/sys/fs/cgroup/memory.max").strip
+        (raw == "max") ? "unlimited" : "#{(raw.to_i / 1024.0**3).round(2)} GiB"
+      rescue Errno::ENOENT
+        begin
+          # cgroup v1
+          bytes = File.read("/sys/fs/cgroup/memory/memory.limit_in_bytes").strip.to_i
+          (bytes >= 2**62) ? "unlimited" : "#{(bytes / 1024.0**3).round(2)} GiB"
+        rescue Errno::ENOENT
+          "unknown"
+        end
+      end
+    end
+
+    def detect_cpu_quota
+      safe do
+        # cgroup v2
+        parts = File.read("/sys/fs/cgroup/cpu.max").strip.split
+        (parts[0] == "max") ? "unlimited" : "#{(parts[0].to_f / parts[1].to_f).round(2)} cores"
+      rescue Errno::ENOENT
+        begin
+          # cgroup v1
+          quota = File.read("/sys/fs/cgroup/cpu/cpu.cfs_quota_us").strip.to_i
+          period = File.read("/sys/fs/cgroup/cpu/cpu.cfs_period_us").strip.to_i
+          (quota < 0) ? "unlimited" : "#{(quota.to_f / period).round(2)} cores"
+        rescue Errno::ENOENT
+          "unknown"
+        end
+      end
+    end
+
+    def configuration
+      section("3. CONFIGURATION") do
+        output.puts "  ## Environment Variables (secrets redacted)"
+        ENV.sort_by { |k, _| k }.each do |key, value|
+          output.puts "    #{key}=#{mask(key, value)}"
+        end
+
+        output.puts
+        output.puts "  ## Feature Flags"
+        flags = safe { YAML.load_file(Rails.root.join("app/config/feature_flags.yaml")).keys }
+        Array(flags).each { |flag| output.puts "    - #{flag}" }
+
+        output.puts
+        output.puts "  ## License"
+        output.puts "    Premium: #{safe { License.premium? }}"
+
+        output.puts
+        output.puts "  ## Payment Providers"
+        {
+          "Stripe" => -> { PaymentProviders::StripeProvider.exists? },
+          "GoCardless" => -> { PaymentProviders::GocardlessProvider.exists? },
+          "Adyen" => -> { PaymentProviders::AdyenProvider.exists? },
+          "Cashfree" => -> { PaymentProviders::CashfreeProvider.exists? },
+          "Flutterwave" => -> { PaymentProviders::FlutterwaveProvider.exists? },
+          "Moneyhash" => -> { PaymentProviders::MoneyhashProvider.exists? }
+        }.each do |name, check|
+          output.puts "    #{name.ljust(14)}: #{enabled_label(check)}"
+        end
+
+        output.puts
+        output.puts "  ## Integrations"
+        {
+          "Netsuite" => -> { Integrations::NetsuiteIntegration.exists? },
+          "Hubspot" => -> { Integrations::HubspotIntegration.exists? },
+          "Xero" => -> { Integrations::XeroIntegration.exists? },
+          "Salesforce" => -> { Integrations::SalesforceIntegration.exists? },
+          "Anrok (tax)" => -> { Integrations::AnrokIntegration.exists? },
+          "Avalara (tax)" => -> { Integrations::AvalaraIntegration.exists? },
+          "Okta (SSO)" => -> { Integrations::OktaIntegration.exists? },
+          "SMTP" => -> { ENV["LAGO_SMTP_ADDRESS"].present? },
+          "Kafka" => -> { ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].present? }
+        }.each do |name, check|
+          output.puts "    #{name.ljust(16)}: #{enabled_label(check)}"
+        end
+      end
+    end
+
+    def enabled_label(check)
+      safe { check.call ? "enabled" : "disabled" }
+    end
+
+    def health_and_queues
+      section("4. HEALTH AND QUEUE STATE") do
+        output.puts "  ## Sidekiq Queues"
+        print_safe do
+          Sidekiq::Queue.all.sort_by(&:name).each do |q|
+            output.puts format("    %-22s size=%-8d latency=%.2fs", q.name, q.size, q.latency)
+          end
+        end
+
+        output.puts
+        output.puts "  Retry set size : #{safe { Sidekiq::RetrySet.new.size }}"
+        output.puts "  Dead set size  : #{safe { Sidekiq::DeadSet.new.size }}"
+
+        output.puts
+        output.puts "  ## Dead Set - last 50 entries (class + error class only)"
+        print_safe do
+          entries = Sidekiq::DeadSet.new.first(50)
+          if entries.empty?
+            output.puts "    (empty)"
+          else
+            entries.each do |job|
+              ts = safe { Time.zone.at(job["failed_at"].to_f).utc.iso8601 }
+              output.puts "    #{ts}  #{job["class"]}  [#{job["error_class"]}]"
+            end
+          end
+        end
+
+        output.puts
+        output.puts "  ## DB Connection Pool"
+        print_safe do
+          ActiveRecord::Base.connection_pool.stat.each do |key, value|
+            output.puts "    #{key}: #{value}"
+          end
+        end
+
+        output.puts
+        output.puts "  ## Redis Memory"
+        print_safe do
+          Sidekiq.redis do |c|
+            info = c.call("INFO", "memory")
+            %w[used_memory_human used_memory_peak_human maxmemory_human].each do |key|
+              value = info.match(/#{key}:([^\r\n]+)/)&.captures&.first&.strip
+              output.puts "    #{key}: #{value}" if value
+            end
+          end
+        end
+      end
+    end
+
+    def data_shape
+      section("5. DATA SHAPE (counts only, no content)") do
+        output.puts "  ## Key Table Row Counts"
+        {
+          "Organizations" => -> { Organization.count },
+          "Customers" => -> { Customer.count },
+          "Subscriptions" => -> { Subscription.count },
+          "Invoices" => -> { Invoice.count },
+          "Fees" => -> { Fee.count },
+          "Charges" => -> { Charge.count },
+          # ::Event is required: the lago-expression gem defines Lago::Event,
+          # which shadows the model inside this namespace.
+          "Events" => -> { ::Event.count }
+        }.each do |label, count_proc|
+          output.puts format("    %-16s: %s", label, safe { count_proc.call })
+        end
+
+        output.puts
+        output.puts "  ## Ingestion / Generation Rates"
+        output.puts "    Events   last 24h : #{safe { ::Event.where(created_at: 24.hours.ago..).count }}"
+        output.puts "    Invoices last 7d  : #{safe { Invoice.where(created_at: 7.days.ago..).count }}"
+
+        output.puts
+        output.puts "  ## Failed Jobs by Class - Sidekiq dead set, last 24h"
+        print_safe do
+          cutoff = 24.hours.ago.to_f
+          by_class = Sidekiq::DeadSet.new
+            .select { |j| j["failed_at"].to_f >= cutoff }
+            .group_by { |j| j["class"] }
+            .transform_values(&:count)
+            .sort_by { |_, count| -count }
+
+          if by_class.empty?
+            output.puts "    (none)"
+          else
+            by_class.each { |klass, count| output.puts format("    %-52s %d", klass, count) }
+          end
+        end
+      end
+    end
+
+    def recent_errors
+      section("6. RECENT ERRORS") do
+        log_path = Rails.root.join("log", "#{Rails.env}.log")
+
+        if File.exist?(log_path)
+          output.puts "  ## Last #{RECENT_ERRORS_LIMIT} ERROR/FATAL lines from #{log_path}"
+          print_safe do
+            lines = last_matching_lines(log_path, RECENT_ERRORS_PATTERN, RECENT_ERRORS_LIMIT)
+            if lines.empty?
+              output.puts "    (none found)"
+            else
+              lines.each { |line| output.puts line }
+            end
+          end
+        else
+          output.puts "  Log file not found: #{log_path}"
+          output.puts "  In containerized deployments check stdout via:"
+          output.puts "    docker logs <container>"
+          output.puts "    kubectl logs <pod> -n <namespace>"
+        end
+      end
+    end
+
+    # Streams the file line by line, keeping only the last `limit` lines
+    # matching `pattern` in a bounded buffer.
+    def last_matching_lines(path, pattern, limit)
+      buffer = []
+      File.foreach(path) do |line|
+        next unless line.match?(pattern)
+
+        buffer << line.chomp
+        buffer.shift if buffer.size > limit
+      end
+      buffer
+    end
+  end
+end
