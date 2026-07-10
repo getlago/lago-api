@@ -9165,6 +9165,7 @@ type Order {
   executeAt: ISO8601DateTime
   executedAt: ISO8601DateTime
   executionMode: OrderExecutionModeEnum
+  executionRecord: OrderExecutionRecord!
   id: ID!
   number: String!
   orderForm: OrderForm!
@@ -9197,6 +9198,13 @@ type OrderCollection {
 enum OrderExecutionModeEnum {
   execute_in_lago
   order_only
+}
+
+type OrderExecutionRecord {
+  errors: [String!]!
+  executedAt: String
+  executionMode: OrderExecutionModeEnum
+  invoiceId: ID
 }
 
 type OrderForm {

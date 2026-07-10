@@ -24,11 +24,28 @@ RSpec.describe ::V1::OrderSerializer do
       "billing_snapshot" => order.billing_snapshot,
       "currency" => "EUR",
       "executed_at" => nil,
+      "execution_record" => order.execution_record,
       "lago_organization_id" => order.organization_id,
       "lago_customer_id" => order.customer_id,
       "lago_order_form_id" => order.order_form_id,
       "created_at" => order.created_at.iso8601,
       "updated_at" => order.updated_at.iso8601
     )
+  end
+
+  context "when the order failed" do
+    let(:order) { create(:order, :failed, organization:, customer:, order_form:) }
+
+    it "serializes the execution record trace" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["order"]["status"]).to eq("failed")
+      expect(result["order"]["execution_record"]).to eq(
+        "executed_at" => nil,
+        "execution_mode" => "execute_in_lago",
+        "invoice_id" => nil,
+        "errors" => ["currencies_does_not_match"]
+      )
+    end
   end
 end
