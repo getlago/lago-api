@@ -13,6 +13,8 @@ RSpec.describe Lago::SupportInfo do
     before do
       allow(Clickhouse::BaseRecord).to receive(:connection)
         .and_raise(StandardError, "clickhouse unavailable in specs")
+      allow(Clickhouse::BaseRecord).to receive(:connection_pool)
+        .and_raise(StandardError, "clickhouse unavailable in specs")
     end
 
     it "prints the banners and all ten section headers" do
@@ -489,6 +491,137 @@ RSpec.describe Lago::SupportInfo do
 
         expect(report).to match(/Authentication\s+: login/)
         expect(report).not_to include("smtppw")
+      end
+    end
+
+    context "when there are no pending Postgres migrations" do
+      let(:context) { instance_double(ActiveRecord::MigrationContext, current_version: 42, needs_migration?: false) }
+
+      before do
+        allow(ApplicationRecord.connection_pool).to receive(:migration_context).and_return(context)
+      end
+
+      it "reports no pending migrations" do
+        support_info.call
+
+        expect(report).to match(/Pending migrations\s+: none/)
+      end
+    end
+
+    context "when Postgres migrations are pending" do
+      let(:context) do
+        instance_double(
+          ActiveRecord::MigrationContext,
+          current_version: 42,
+          pending_migration_versions: [20260101000000, 20260102000000]
+        )
+      end
+
+      before do
+        allow(ApplicationRecord.connection_pool).to receive(:migration_context).and_return(context)
+      end
+
+      it "reports the pending migration count and versions" do
+        support_info.call
+
+        expect(report).to match(/Pending migrations\s+: 2 \(20260101000000, 20260102000000\)/)
+      end
+    end
+
+    context "when there are no running Sidekiq workers" do
+      before do
+        allow(Sidekiq::ProcessSet).to receive(:new).and_return([])
+      end
+
+      it "prints the no running workers marker" do
+        support_info.call
+
+        expect(report).to include("## Sidekiq Processes")
+        expect(report).to include("(no running workers)")
+      end
+    end
+
+    context "when a Sidekiq worker is running" do
+      let(:process) do
+        {
+          "hostname" => "worker-1",
+          "pid" => 4321,
+          "concurrency" => 10,
+          "busy" => 3,
+          "queues" => %w[default billing],
+          "beat" => Time.current.to_f
+        }
+      end
+
+      before do
+        allow(Sidekiq::ProcessSet).to receive(:new).and_return([process])
+      end
+
+      it "prints the worker hostname, pid and concurrency" do
+        support_info.call
+
+        expect(report).to match(/worker-1 pid=4321 concurrency=10 busy=3/)
+        expect(report).to include("queues=default,billing")
+      end
+    end
+
+    context "when the Sidekiq process set cannot be read" do
+      before do
+        allow(Sidekiq::ProcessSet).to receive(:new).and_raise(StandardError, "process set unavailable")
+      end
+
+      it "prints an error marker and still completes the report" do
+        expect { support_info.call }.not_to raise_error
+
+        expect(report).to include("error: StandardError - process set unavailable")
+        expect(report).to include("END OF DIAGNOSTIC")
+      end
+    end
+
+    context "when rendering the Sidekiq stats" do
+      let(:stats) do
+        instance_double(
+          Sidekiq::Stats,
+          processed: 100,
+          failed: 2,
+          enqueued: 5,
+          scheduled_size: 1,
+          retry_size: 3,
+          dead_size: 4,
+          processes_size: 1,
+          workers_size: 6
+        )
+      end
+
+      before do
+        allow(Sidekiq::Stats).to receive(:new).and_return(stats)
+      end
+
+      it "prints the eight counters" do
+        support_info.call
+
+        expect(report).to include("## Sidekiq Stats")
+        expect(report).to match(/processed: 100/)
+        expect(report).to match(/failed: 2/)
+        expect(report).to match(/enqueued: 5/)
+        expect(report).to match(/scheduled_size: 1/)
+        expect(report).to match(/retry_size: 3/)
+        expect(report).to match(/dead_size: 4/)
+        expect(report).to match(/processes_size: 1/)
+        expect(report).to match(/workers_size: 6/)
+      end
+    end
+
+    context "when an env-backed setting is set to an empty string" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_DATABASE_STATEMENT_TIMEOUT").and_return("")
+      end
+
+      it "renders the row as unset instead of blank" do
+        support_info.call
+
+        expect(report).to match(/Statement timeout\s+: \(unset\)/)
       end
     end
   end

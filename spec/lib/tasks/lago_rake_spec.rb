@@ -13,6 +13,8 @@ RSpec.describe "lago:support_info" do # rubocop:disable RSpec/DescribeClass
     task.reenable
     allow(Clickhouse::BaseRecord).to receive(:connection)
       .and_raise(StandardError, "clickhouse unavailable in specs")
+    allow(Clickhouse::BaseRecord).to receive(:connection_pool)
+      .and_raise(StandardError, "clickhouse unavailable in specs")
   end
 
   it "prints the support diagnostic report" do

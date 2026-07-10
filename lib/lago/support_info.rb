@@ -129,10 +129,10 @@ module Lago
 
     # Prints one settings row for an env-backed value. The value is masked
     # (secret-named keys become `***`, URL userinfo/query secrets are redacted)
-    # and unset env vars render as `(unset)`.
+    # and unset or blank env vars render as `(unset)`.
     def setting(label, env_key)
       raw = ENV[env_key]
-      value = raw.nil? ? "(unset)" : mask(env_key, raw)
+      value = raw.to_s.strip.empty? ? "(unset)" : mask(env_key, raw)
       output.puts format("    %-24s: %s", label, value)
     end
 
@@ -329,6 +329,41 @@ module Lago
         fact("statement_timeout (live)", safe { ActiveRecord::Base.connection.select_value("SHOW statement_timeout") })
         fact("lock_timeout (live)", safe { ActiveRecord::Base.connection.select_value("SHOW lock_timeout") })
         fact("idle_in_tx_timeout (live)", safe { ActiveRecord::Base.connection.select_value("SHOW idle_in_transaction_session_timeout") })
+
+        output.puts
+        output.puts "  ## Migrations"
+        print_safe do
+          context = ApplicationRecord.connection_pool.migration_context
+          output.puts "    #{pending_migrations_line(context)}"
+        end
+      end
+    end
+
+    # Builds the "Pending migrations" row for a migration context. Prefers a
+    # listing of the pending migrations so the count and versions can be
+    # printed, and falls back to the boolean `needs_migration?` when neither
+    # listing method is exposed by the adapter/Rails version.
+    #
+    # `open_migrations` returns migration objects (each responding to `version`)
+    # while `pending_migration_versions` (Rails 8) returns the versions
+    # directly, so both are normalised to a list of version values.
+    def pending_migrations_line(context)
+      value = if context.respond_to?(:open_migrations)
+        pending_migrations_value(context.open_migrations.map(&:version))
+      elsif context.respond_to?(:pending_migration_versions)
+        pending_migrations_value(context.pending_migration_versions)
+      else
+        context.needs_migration? ? "yes" : "none"
+      end
+
+      format("%-24s: %s", "Pending migrations", value)
+    end
+
+    def pending_migrations_value(versions)
+      if versions.empty?
+        "none"
+      else
+        "#{versions.size} (#{versions.join(", ")})"
       end
     end
 
@@ -393,6 +428,42 @@ module Lago
         fact("Cache sentinels", ENV["LAGO_REDIS_CACHE_SENTINELS"].present? ? "configured" : "(none)")
         fact("SSL verify mode", "VERIFY_NONE")
         fact("Connection timeout", "1s")
+
+        output.puts
+        output.puts "  ## Sidekiq Processes"
+        print_safe do
+          ps = Sidekiq::ProcessSet.new
+          output.puts "    Running workers : #{ps.size}"
+          if ps.size.zero?
+            output.puts "    (no running workers)"
+          else
+            ps.first(20).each do |p|
+              beat = safe { Time.zone.at(p["beat"]).utc.iso8601 }
+              output.puts format(
+                "    %s pid=%s concurrency=%s busy=%s beat=%s queues=%s",
+                p["hostname"], p["pid"], p["concurrency"], p["busy"], beat, Array(p["queues"]).join(",")
+              )
+            end
+          end
+        end
+
+        output.puts
+        output.puts "  ## Sidekiq Stats"
+        print_safe do
+          stats = Sidekiq::Stats.new
+          {
+            "processed" => stats.processed,
+            "failed" => stats.failed,
+            "enqueued" => stats.enqueued,
+            "scheduled_size" => stats.scheduled_size,
+            "retry_size" => stats.retry_size,
+            "dead_size" => stats.dead_size,
+            "processes_size" => stats.processes_size,
+            "workers_size" => stats.workers_size
+          }.each do |key, value|
+            output.puts "    #{key}: #{value}"
+          end
+        end
       end
     end
 
@@ -414,6 +485,15 @@ module Lago
         setting("Username", "LAGO_CLICKHOUSE_USERNAME")
         setting("SSL", "LAGO_CLICKHOUSE_SSL")
         setting("Migrations enabled", "LAGO_CLICKHOUSE_MIGRATIONS_ENABLED")
+
+        if enabled && ENV["LAGO_CLICKHOUSE_MIGRATIONS_ENABLED"] == "true"
+          output.puts
+          output.puts "  ## Migrations"
+          print_safe do
+            context = Clickhouse::BaseRecord.connection_pool.migration_context
+            output.puts "    #{pending_migrations_line(context)}"
+          end
+        end
       end
     end
 
