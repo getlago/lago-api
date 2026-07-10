@@ -119,4 +119,4 @@ LEFT JOIN plans AS p ON s.plan_id = p.id
 -- LEFT JOIN so fees with no invoice (e.g. recurring non-invoiceable fees) are kept.
 -- IS DISTINCT FROM keeps those NULL-invoice rows while excluding deleted invoices.
 LEFT JOIN invoices AS i ON i.id = f.invoice_id
-WHERE i.status IS DISTINCT FROM 8;
+WHERE i.status IS DISTINCT FROM 8; -- exclude deleted invoices
