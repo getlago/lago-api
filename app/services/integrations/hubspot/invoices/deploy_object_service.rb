@@ -18,7 +18,7 @@ module Integrations
 
           custom_object_result = Integrations::Aggregator::CustomObjectService.call(integration:, name: "LagoInvoices")
           if custom_object_result.success?
-            save_object_type_id(custom_object_result.custom_object&.objectTypeId)
+            save_object_type_id(custom_object_result.custom_object&.object_type_id)
             return result
           end
 
