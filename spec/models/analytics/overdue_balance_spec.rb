@@ -174,22 +174,6 @@ RSpec.describe Analytics::OverdueBalance do
       end
     end
 
-    context "with billing entity code" do
-      let(:args) { {billing_entity_code: billing_entity2.code} }
-
-      it "returns the overdue balances for provided billing_entity only" do
-        expect(overdue_balances).to match_array([
-          hash_including({
-            "month" => Time.current.beginning_of_month - 2.months,
-            "currency" => "EUR",
-            "billing_entity_id" => billing_entity2.id,
-            "amount_cents" => 400,
-            "lago_invoice_ids" => "[[\"#{invoice4.id}\"]]"
-          })
-        ])
-      end
-    end
-
     context "with special invoice scenarios" do
       let(:args) { {} }
 

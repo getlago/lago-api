@@ -10497,7 +10497,7 @@ type Query {
   """
   Query gross revenue of an organization
   """
-  grossRevenues(billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): GrossRevenueCollection!
+  grossRevenues(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): GrossRevenueCollection!
 
   """
   Query a single integration
@@ -10599,7 +10599,7 @@ type Query {
   """
   Query invoiced usage of an organization
   """
-  invoicedUsages(billingEntityId: ID, currency: CurrencyEnum): InvoicedUsageCollection!
+  invoicedUsages(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum): InvoicedUsageCollection!
 
   """
   Query invoices
@@ -10640,7 +10640,7 @@ type Query {
   """
   Query MRR of an organization
   """
-  mrrs(billingEntityId: ID, currency: CurrencyEnum): MrrCollection!
+  mrrs(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum): MrrCollection!
 
   """
   Query a single order
