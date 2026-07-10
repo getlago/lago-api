@@ -45,11 +45,11 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
 
       context "when the advisory lock cannot be acquired" do
         before do
-          allow(Customers::LockService).to receive(:call).and_raise(Customers::FailedToAcquireLock)
+          allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
         end
 
         it "propagates the error so the job can retry" do
-          expect { update_service.call }.to raise_error(Customers::FailedToAcquireLock)
+          expect { update_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
         end
       end
     end

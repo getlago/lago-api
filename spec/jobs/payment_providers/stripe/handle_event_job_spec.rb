@@ -25,9 +25,9 @@ RSpec.describe PaymentProviders::Stripe::HandleEventJob do
     expect(PaymentProviders::Stripe::HandleEventService).to have_received(:call)
   end
 
-  context "when the service raises Customers::FailedToAcquireLock" do
+  context "when the service raises BaseLockService::FailedToAcquireLock" do
     before do
-      allow(PaymentProviders::Stripe::HandleEventService).to receive(:call).and_raise(Customers::FailedToAcquireLock)
+      allow(PaymentProviders::Stripe::HandleEventService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
     end
 
     it "retries the job instead of dying" do

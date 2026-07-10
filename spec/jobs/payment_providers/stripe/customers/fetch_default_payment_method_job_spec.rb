@@ -23,10 +23,10 @@ RSpec.describe PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodJob
         .with(provider_customer:)
     end
 
-    context "when the service raises Customers::FailedToAcquireLock" do
+    context "when the service raises BaseLockService::FailedToAcquireLock" do
       before do
         allow(PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodService)
-          .to receive(:call!).and_raise(Customers::FailedToAcquireLock)
+          .to receive(:call!).and_raise(BaseLockService::FailedToAcquireLock)
       end
 
       it "retries the job instead of dying" do
