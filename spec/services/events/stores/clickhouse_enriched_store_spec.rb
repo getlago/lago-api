@@ -61,7 +61,7 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       )
     end
 
-    let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
     let(:organization) { billable_metric.organization }
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
