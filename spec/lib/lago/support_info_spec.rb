@@ -28,6 +28,33 @@ RSpec.describe Lago::SupportInfo do
       expect(report).to include("END OF DIAGNOSTIC")
     end
 
+    it "lists every payment provider and integration" do
+      support_info.call
+
+      %w[Adyen Cashfree Flutterwave Gocardless Moneyhash Stripe].each do |name|
+        expect(report).to match(/^    #{Regexp.escape(name)}\s+: (enabled|disabled)$/)
+      end
+
+      ["Anrok (tax)", "Avalara (tax)", "Hubspot", "Netsuite", "Okta (SSO)", "Salesforce", "Xero", "SMTP", "Kafka"].each do |name|
+        expect(report).to match(/^    #{Regexp.escape(name)}\s+: (enabled|disabled)$/)
+      end
+    end
+
+    context "when the feature flags file does not exist" do
+      before do
+        allow(File).to receive(:exist?).and_call_original
+        allow(File).to receive(:exist?).with(Rails.root.join("app/config/feature_flags.yaml")).and_return(false)
+      end
+
+      it "skips the feature flags subsection and still completes" do
+        support_info.call
+
+        expect(report).not_to include("## Feature Flags")
+        expect(report).to include("## License")
+        expect(report).to include("END OF DIAGNOSTIC")
+      end
+    end
+
     it "labels the row counts as estimated" do
       support_info.call
 

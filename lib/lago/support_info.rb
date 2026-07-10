@@ -40,6 +40,14 @@ module Lago
       [^&\s]+
     /xi
 
+    # Extra context appended to integration display names so support readers
+    # know which integrations are tax or SSO related.
+    INTEGRATION_LABEL_SUFFIXES = {
+      "Anrok" => " (tax)",
+      "Avalara" => " (tax)",
+      "Okta" => " (SSO)"
+    }.freeze
+
     RECENT_ERRORS_LIMIT = 100
     RECENT_ERRORS_PATTERN = /ERROR|FATAL/i
     RECENT_ERRORS_TAIL_BYTES = 5 * 1024 * 1024
@@ -222,10 +230,13 @@ module Lago
           end
         end
 
-        output.puts
-        output.puts "  ## Feature Flags"
-        flags = safe { YAML.load_file(Rails.root.join("app/config/feature_flags.yaml")).keys }
-        Array(flags).each { |flag| output.puts "    - #{flag}" }
+        feature_flags_path = Rails.root.join("app/config/feature_flags.yaml")
+        if File.exist?(feature_flags_path)
+          output.puts
+          output.puts "  ## Feature Flags"
+          flags = safe { YAML.load_file(feature_flags_path).keys }
+          Array(flags).each { |flag| output.puts "    - #{flag}" }
+        end
 
         output.puts
         output.puts "  ## License"
@@ -233,32 +244,52 @@ module Lago
 
         output.puts
         output.puts "  ## Payment Providers"
-        {
-          "Stripe" => -> { PaymentProviders::StripeProvider.exists? },
-          "GoCardless" => -> { PaymentProviders::GocardlessProvider.exists? },
-          "Adyen" => -> { PaymentProviders::AdyenProvider.exists? },
-          "Cashfree" => -> { PaymentProviders::CashfreeProvider.exists? },
-          "Flutterwave" => -> { PaymentProviders::FlutterwaveProvider.exists? },
-          "Moneyhash" => -> { PaymentProviders::MoneyhashProvider.exists? }
-        }.each do |name, check|
-          output.puts "    #{name.ljust(14)}: #{enabled_label(check)}"
+        print_safe do
+          payment_provider_rows.each do |name, check|
+            output.puts "    #{name.ljust(14)}: #{enabled_label(check)}"
+          end
         end
 
         output.puts
         output.puts "  ## Integrations"
-        {
-          "Netsuite" => -> { Integrations::NetsuiteIntegration.exists? },
-          "Hubspot" => -> { Integrations::HubspotIntegration.exists? },
-          "Xero" => -> { Integrations::XeroIntegration.exists? },
-          "Salesforce" => -> { Integrations::SalesforceIntegration.exists? },
-          "Anrok (tax)" => -> { Integrations::AnrokIntegration.exists? },
-          "Avalara (tax)" => -> { Integrations::AvalaraIntegration.exists? },
-          "Okta (SSO)" => -> { Integrations::OktaIntegration.exists? },
-          "SMTP" => -> { ENV["LAGO_SMTP_ADDRESS"].present? },
-          "Kafka" => -> { ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].present? }
-        }.each do |name, check|
-          output.puts "    #{name.ljust(16)}: #{enabled_label(check)}"
+        print_safe do
+          integration_rows.each do |name, check|
+            output.puts "    #{name.ljust(16)}: #{enabled_label(check)}"
+          end
         end
+      end
+    end
+
+    # Payment providers are derived from the class hierarchy so newly added
+    # providers show up in the report without touching this file.
+    def payment_provider_rows
+      ensure_models_loaded
+      PaymentProviders::BaseProvider.descendants
+        .map { |klass| [klass.name.demodulize.delete_suffix("Provider"), -> { klass.exists? }] }
+        .sort_by(&:first)
+    end
+
+    # Integrations are derived from the class hierarchy, with the SMTP and
+    # Kafka rows appended since they are env-based rather than model-based.
+    def integration_rows
+      ensure_models_loaded
+      rows = Integrations::BaseIntegration.descendants.map do |klass|
+        name = klass.name.demodulize.delete_suffix("Integration")
+        ["#{name}#{INTEGRATION_LABEL_SUFFIXES[name]}", -> { klass.exists? }]
+      end
+
+      rows.sort_by(&:first) + [
+        ["SMTP", -> { ENV["LAGO_SMTP_ADDRESS"].present? }],
+        ["Kafka", -> { ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].present? }]
+      ]
+    end
+
+    # `descendants` only sees loaded classes; dev and test environments load
+    # lazily, so eager loading is forced once before reading the hierarchy.
+    def ensure_models_loaded
+      @models_loaded ||= begin
+        Rails.application.eager_load! unless Rails.application.config.eager_load
+        true
       end
     end
 
