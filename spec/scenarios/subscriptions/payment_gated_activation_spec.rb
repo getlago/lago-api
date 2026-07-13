@@ -363,7 +363,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
   end
 
-  describe "fixed-charge delta catch-up on activation" do
+  describe "fixed-charge changes during the incomplete period" do
     let(:add_on) { create(:add_on, organization:) }
     let(:fixed_charge) do
       create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"})
