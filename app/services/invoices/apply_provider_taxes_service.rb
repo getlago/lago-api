@@ -79,9 +79,10 @@ module Invoices
     def indexed_fees
       @indexed_fees ||= invoice.fees.each_with_object({}) do |fee, applied_taxes|
         fee.applied_taxes.each do |applied_tax|
-          tax = OpenStruct.new(
+          tax = Integrations::Aggregator::Taxes::TaxResult::TaxBreakdownItem.new(
             name: applied_tax.tax_name,
             rate: applied_tax.tax_rate,
+            tax_amount: applied_tax.amount_cents,
             type: applied_tax.tax_description
           )
           key = calculate_key(tax)

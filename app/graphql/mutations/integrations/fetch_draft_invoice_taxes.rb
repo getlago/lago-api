@@ -31,7 +31,7 @@ module Mutations
       # work with real invoice objects. In this case, it should also work with invoice that is not stored yet,
       # because we need to fetch taxes for one-off invoice UI form.
       def invoice(customer, args)
-        OpenStruct.new(
+        Invoice.new(
           issuing_date: Time.current.in_time_zone(customer.applicable_timezone).to_date,
           currency: args[:currency],
           customer:
@@ -43,7 +43,7 @@ module Mutations
           unit_amount_cents = fee[:unit_amount_cents]
           units = fee[:units]&.to_f || 1
 
-          OpenStruct.new(
+          ::Integrations::Aggregator::Taxes::Invoices::OneOffFee.new(
             add_on_id: fee[:add_on_id],
             item_id: fee[:add_on_id],
             sub_total_excluding_taxes_amount_cents: (unit_amount_cents * units).round
