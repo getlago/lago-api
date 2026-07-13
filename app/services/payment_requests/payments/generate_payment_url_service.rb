@@ -30,8 +30,8 @@ module PaymentRequests
           return result.single_validation_failure!(error_code: "missing_payment_provider_customer")
         end
 
-        payment_url_result = PaymentRequests::Payments::PaymentProviders::Factory.new_instance(payable:).generate_payment_url
-        payment_url_result.raise_if_error!
+        payment_url_result = PaymentRequests::Payments::PaymentProviders::Factory.for(payable)
+          .call!(:generate_payment_url, payable)
 
         return result.single_validation_failure!(error_code: "payment_provider_error") if payment_url_result.payment_url.blank?
 

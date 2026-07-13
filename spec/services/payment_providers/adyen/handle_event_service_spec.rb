@@ -63,8 +63,6 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
     end
 
     context "when succeeded authorisation event for processed one-time payment belonging to a Payment Request" do
-      let(:payment_service) { instance_double(PaymentRequests::Payments::AdyenService) }
-
       let(:event_json) do
         JSON.parse(event_response_json)["notificationItems"]
           .first&.dig("NotificationRequestItem").to_json
@@ -76,17 +74,14 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
       end
 
       before do
-        allow(PaymentRequests::Payments::AdyenService).to receive(:new)
-          .and_return(payment_service)
-        allow(payment_service).to receive(:update_payment_status)
+        allow(PaymentRequests::Payments::AdyenService).to receive(:call)
           .and_return(service_result)
       end
 
       it "routes the event to an other service" do
         event_service.call
 
-        expect(PaymentRequests::Payments::AdyenService).to have_received(:new)
-        expect(payment_service).to have_received(:update_payment_status)
+        expect(PaymentRequests::Payments::AdyenService).to have_received(:call).with(:update_payment_status, any_args)
       end
     end
 
@@ -205,8 +200,6 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
     end
 
     context "when cancellation event is for a payment request payment" do
-      let(:payment_service) { instance_double(PaymentRequests::Payments::AdyenService) }
-
       let(:event_json) do
         JSON.parse(event_response_json)["notificationItems"]
           .first&.dig("NotificationRequestItem").to_json
@@ -225,17 +218,15 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
           provider_payment_id: "PSPREF123", payable_payment_status: :pending,
           status: "Authorised")
 
-        allow(PaymentRequests::Payments::AdyenService).to receive(:new)
-          .and_return(payment_service)
-        allow(payment_service).to receive(:update_payment_status)
+        allow(PaymentRequests::Payments::AdyenService).to receive(:call)
           .and_return(service_result)
       end
 
       it "routes to the payment request payments service" do
         event_service.call
 
-        expect(PaymentRequests::Payments::AdyenService).to have_received(:new)
-        expect(payment_service).to have_received(:update_payment_status).with(
+        expect(PaymentRequests::Payments::AdyenService).to have_received(:call).with(
+          :update_payment_status,
           provider_payment_id: "PSPREF123",
           status: "Cancelled",
           metadata: {lago_payable_type: "PaymentRequest"}
