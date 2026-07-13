@@ -21,7 +21,7 @@ RSpec.shared_examples "a lago support diagnostic report" do
     expect(report).to include("6. CLICKHOUSE")
     expect(report).to include("7. KAFKA")
     expect(report).to include("8. SMTP")
-    expect(report).to include("9. DATA SHAPE (counts only, no content)")
+    expect(report).to include("9. DATA SHAPE")
     expect(report).to include("10. RECENT ERRORS")
     expect(report).to include("END OF DIAGNOSTIC")
   end

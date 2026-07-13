@@ -543,7 +543,7 @@ module Lago
     end
 
     def data_shape
-      section("9. DATA SHAPE (counts only, no content)") do
+      section("9. DATA SHAPE") do
         output.puts "  ## Key Table Row Counts (estimated)"
         {
           "Organizations" => -> { estimated_count(Organization) },
