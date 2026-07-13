@@ -9,7 +9,7 @@ RSpec.describe ::V1::OrganizationSerializer do
 
   let(:webhook_urls) { org.webhook_endpoints.map(&:webhook_url) }
   let(:org) { create(:organization) }
-  let(:tax) { create(:tax, :applied_to_billing_entity, organization: org) }
+  let(:tax) { create(:tax, organization: org, applied_to_organization: true) }
 
   before { tax }
 

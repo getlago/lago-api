@@ -47,12 +47,10 @@ module V1
     end
 
     def taxes
-      applied_taxes = model.default_billing_entity ? model.default_billing_entity.taxes.preload(:billing_entities) : Tax.none
       ::CollectionSerializer.new(
-        applied_taxes,
+        model.taxes.applied_to_organization,
         ::V1::TaxSerializer,
-        collection_name: "taxes",
-        default_billing_entity: model.default_billing_entity
+        collection_name: "taxes"
       ).serialize
     end
 
