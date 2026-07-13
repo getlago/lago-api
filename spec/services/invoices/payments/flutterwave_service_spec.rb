@@ -17,13 +17,12 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
 
   describe "#update_payment_status" do
     let(:flutterwave_payment) do
-      OpenStruct.new(
+      build(:flutterwave_payment,
         id: "flw_payment_123",
         metadata: {
           payment_type: "one-time",
           lago_invoice_id: invoice.id
-        }
-      )
+        })
     end
 
     context "when creating a new payment" do
@@ -83,10 +82,9 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       end
 
       let(:flutterwave_payment) do
-        OpenStruct.new(
+        build(:flutterwave_payment,
           id: "flw_payment_123",
-          metadata: {payment_type: "recurring"}
-        )
+          metadata: {payment_type: "recurring"})
       end
 
       before { existing_payment }
@@ -121,10 +119,9 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
 
     context "when payment is not found" do
       let(:flutterwave_payment) do
-        OpenStruct.new(
+        build(:flutterwave_payment,
           id: "nonexistent_payment",
-          metadata: {payment_type: "recurring"}
-        )
+          metadata: {payment_type: "recurring"})
       end
 
       it "returns not found failure" do
@@ -151,10 +148,9 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       end
 
       let(:flutterwave_payment) do
-        OpenStruct.new(
+        build(:flutterwave_payment,
           id: "flw_payment_123",
-          metadata: {payment_type: "recurring"}
-        )
+          metadata: {payment_type: "recurring"})
       end
 
       before { existing_payment }

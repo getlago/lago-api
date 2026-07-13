@@ -80,7 +80,7 @@ RSpec.describe Integrations::Hubspot::Invoices::DeployObjectService do
         instance_double(
           "CustomObjectResult",
           success?: true,
-          custom_object: instance_double("CustomObject", objectTypeId: "123")
+          custom_object: instance_double("CustomObject", object_type_id: "123")
         )
       end
 

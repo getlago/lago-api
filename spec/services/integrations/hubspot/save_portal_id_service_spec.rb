@@ -8,7 +8,7 @@ RSpec.describe Integrations::Hubspot::SavePortalIdService do
     let(:integration) { create(:hubspot_integration) }
     let(:service_call) { described_class.call(integration:) }
     let(:result) { BaseService::Result.new }
-    let(:account_information) { OpenStruct.new(id: portal_id) }
+    let(:account_information) { Integrations::Aggregator::AccountInformationService::AccountInformation.new(id: portal_id) }
 
     before do
       result.account_information = account_information

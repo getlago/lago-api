@@ -28,23 +28,16 @@ RSpec.describe ::V1::Customers::UsageSerializer do
       total_amount_cents: 6,
       taxes_amount_cents: 1,
       fees: [
-        OpenStruct.new(
-          billable_metric: billable_metric,
+        build(
+          :charge_fee,
           charge: charge,
-          charge_id: charge.id,
           subscription: subscription,
           units: "4.0",
           amount_cents: 5,
           amount_currency: "EUR",
           events_count: 1,
           charge_filter: nil,
-          grouped_by: {},
-          properties: {
-            "from_datetime" => from_datetime.iso8601,
-            "to_datetime" => to_datetime.iso8601,
-            "charges_duration" => 30
-          },
-          presentation_breakdowns: []
+          grouped_by: {}
         )
       ]
     )
