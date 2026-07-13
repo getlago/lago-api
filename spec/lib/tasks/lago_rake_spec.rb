@@ -7,6 +7,18 @@ require "rake"
 RSpec.describe "lago:support_info" do # rubocop:disable RSpec/DescribeClass
   let(:task) { Rake::Task["lago:support_info"] }
 
+  let(:report) do
+    original = $stdout
+    captured = StringIO.new
+    $stdout = captured
+    begin
+      task.invoke
+    ensure
+      $stdout = original
+    end
+    captured.string
+  end
+
   before do
     Rake.application.rake_require("tasks/lago")
     Rake::Task.define_task(:environment)
@@ -17,8 +29,5 @@ RSpec.describe "lago:support_info" do # rubocop:disable RSpec/DescribeClass
       .and_raise(StandardError, "clickhouse unavailable in specs")
   end
 
-  it "prints the support diagnostic report" do
-    expect { task.invoke }
-      .to output(/LAGO SUPPORT DIAGNOSTIC.*END OF DIAGNOSTIC/m).to_stdout
-  end
+  it_behaves_like "a lago support diagnostic report"
 end
