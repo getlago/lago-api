@@ -36,6 +36,20 @@ RSpec.shared_examples "a lago support diagnostic report" do
     end
   end
 
+  context "with premium integrations enabled on an organization" do
+    before { create(:organization, premium_integrations: %w[netsuite revenue_analytics]) }
+
+    it "lists every premium integration with a per-org count" do
+      expect(report).to include("## Premium Integrations (orgs with each enabled)")
+      expect(report).to match(/^    netsuite\s+: [1-9]\d*$/)
+      expect(report).to match(/^    revenue_analytics\s+: [1-9]\d*$/)
+
+      Organization::PREMIUM_INTEGRATIONS.each do |name|
+        expect(report).to match(/^    #{Regexp.escape(name)}\s+: \d+$/)
+      end
+    end
+  end
+
   context "when the feature flags file does not exist" do
     before do
       allow(File).to receive(:exist?).and_call_original

@@ -273,7 +273,24 @@ module Lago
             output.puts "    #{name.ljust(16)}: #{enabled_label(check)}"
           end
         end
+
+        output.puts
+        output.puts "  ## Premium Integrations (orgs with each enabled)"
+        print_safe do
+          counts = premium_integration_counts
+          Organization::PREMIUM_INTEGRATIONS.sort.each do |name|
+            output.puts "    #{name.ljust(28)}: #{counts.fetch(name, 0)}"
+          end
+        end
       end
+    end
+
+    # Counts, per premium integration, how many organizations have it enabled.
+    # Aggregate counts only, never organization content.
+    def premium_integration_counts
+      sql = "SELECT integration, COUNT(*) FROM organizations, " \
+        "unnest(premium_integrations) AS integration GROUP BY integration"
+      ActiveRecord::Base.connection.select_rows(sql).to_h { |name, count| [name, count.to_i] }
     end
 
     # Payment providers are derived from the class hierarchy so newly added
