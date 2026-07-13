@@ -31,6 +31,19 @@ RSpec.describe Tax do
         expect(described_class.applied_to_billing_entity(billing_entity)).to eq([tax])
       end
     end
+
+    describe ".applied_to_organization" do
+      let(:applied_tax) { create(:tax, organization: tax.organization, applied_to_organization: true) }
+
+      before do
+        tax
+        applied_tax
+      end
+
+      it "returns only the taxes flagged as applied to the organization" do
+        expect(described_class.applied_to_organization).to eq([applied_tax])
+      end
+    end
   end
 
   describe "customers_count" do
