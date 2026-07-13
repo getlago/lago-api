@@ -320,6 +320,37 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     end
   end
 
+  # to_h_with_all_values orders keys by the values' updated_at (ChargeFilterValue
+  # default scope), so two filters with the same keys can enumerate them in a
+  # different order. The identical/subset logic must compare keys
+  # order-independently; otherwise the same-keys branch is skipped and the older
+  # parent wrongly excludes the identical duplicate's events, counting zero.
+  context "when an identical child enumerates its keys in a different order" do
+    subject(:service_result) { described_class.call(charge: isolated_charge, filter: current_filter) }
+
+    let(:isolated_charge) { create(:standard_charge, billable_metric:) }
+    let(:parent_filter) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "parent", created_at: 2.days.ago) }
+    let(:duplicate) { create(:charge_filter, charge: isolated_charge, invoice_display_name: "duplicate", created_at: 1.day.ago) }
+
+    before do
+      create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: parent_filter, updated_at: 2.days.ago)
+      create(:charge_filter_value, values: ["25"], billable_metric_filter: filter_steps, charge_filter: parent_filter, updated_at: 1.day.ago)
+      # Reversed order: steps is updated before size, so the duplicate enumerates
+      # its keys as [steps, size] while the parent enumerates them as [size, steps].
+      create(:charge_filter_value, values: ["25"], billable_metric_filter: filter_steps, charge_filter: duplicate, updated_at: 2.days.ago)
+      create(:charge_filter_value, values: ["512"], billable_metric_filter: filter_size, charge_filter: duplicate, updated_at: 1.day.ago)
+    end
+
+    describe "for the older parent" do
+      let(:current_filter) { parent_filter }
+
+      it "recognizes the reordered duplicate and drops it from ignored_filters" do
+        expect(service_result.matching_filters).to eq({"size" => ["512"], "steps" => ["25"]})
+        expect(service_result.ignored_filters).to eq([])
+      end
+    end
+  end
+
   # When identical duplicates share the same created_at, the id part of the
   # [created_at, id] tie-break decides: exactly one filter counts the events.
   context "when identical filters share the same created_at" do

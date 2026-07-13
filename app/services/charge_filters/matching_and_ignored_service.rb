@@ -48,7 +48,11 @@ module ChargeFilters
         #       twice. When the child's values are identical to the filter's, only the oldest filter
         #       (tie-break on [created_at, id]) counts the events: newer identical children are dropped from
         #       ignored_filters, while older ones are kept verbatim so the current filter counts zero.
-        if res.keys == result.matching_filters.keys
+        # NOTE: keys are compared order-independently. to_h_with_all_values orders keys by the
+        #       values' updated_at (ChargeFilterValue default scope), so two filters with the same
+        #       keys can enumerate them in a different order; an order-sensitive comparison would skip
+        #       this branch and reintroduce double-counting (or zero every bucket for identical duplicates).
+        if res.keys.sort == result.matching_filters.keys.sort
           if identical_to_matching_filters?(res)
             next unless older_than_filter?(child)
           elsif !subset_of_matching_filters?(res)
