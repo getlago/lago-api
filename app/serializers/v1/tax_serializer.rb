@@ -10,7 +10,7 @@ module V1
         rate: model.rate,
         description: model.description,
         applied_to_organization: applied_to_organization?,
-        applied_to_billing_entities_codes: model.billing_entities.map(&:code),
+        applied_to_billing_entities_codes: model.billing_entities.map(&:code).sort,
         add_ons_count: 0,
         customers_count: 0,
         plans_count: 0,

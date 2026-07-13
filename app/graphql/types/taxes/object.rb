@@ -27,14 +27,14 @@ module Types
       field :auto_generated, Boolean, null: false
 
       def applied_to_organization
-        default_billing_entity = object.organization.default_billing_entity
+        default_billing_entity = context[:current_organization]&.default_billing_entity
         return false if default_billing_entity.nil?
 
         object.billing_entities.any? { |billing_entity| billing_entity.id == default_billing_entity.id }
       end
 
       def applied_to_billing_entities_codes
-        object.billing_entities.map(&:code)
+        object.billing_entities.map(&:code).sort
       end
 
       def add_ons_count
