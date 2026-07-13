@@ -12,7 +12,7 @@
 # - a stub of the ClickHouse connection, which is unavailable in specs.
 RSpec.shared_examples "a lago diagnostics report" do
   it "prints the banners and all ten section headers" do
-    expect(report).to include("LAGO SUPPORT DIAGNOSTIC")
+    expect(report).to include("LAGO DIAGNOSTICS")
     expect(report).to include("1. VERSION AND BUILD")
     expect(report).to include("2. ENVIRONMENT")
     expect(report).to include("3. CONFIGURATION")

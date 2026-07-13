@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module Lago
-  # Prints a support diagnostic report for self-hosted deployments.
+  # Prints a diagnostic report for self-hosted deployments.
   #
-  # The report is meant to be pasted into support tickets: it only contains
+  # The report is meant to be shared for troubleshooting: it only contains
   # versions, configuration (with secrets masked), queue health and row
   # counts, never customer data.
   #
@@ -58,7 +58,7 @@ module Lago
 
     def call
       output.puts SEP
-      output.puts "  LAGO SUPPORT DIAGNOSTIC"
+      output.puts "  LAGO DIAGNOSTICS"
       output.puts "  Generated : #{Time.current.utc.iso8601}"
       output.puts SEP
 
@@ -79,7 +79,7 @@ module Lago
       output.puts SEP
     end
 
-    # Masks secrets so the report can be shared in support tickets:
+    # Masks secrets so the report can be shared safely:
     # - values of secret-looking keys are fully replaced by `***`
     # - URL userinfo credentials are redacted while host/port stay visible
     #   (e.g. `postgresql://lago:pass@db:5432/lago` -> `postgresql://***@db:5432/lago`)

@@ -16,7 +16,7 @@ namespace :lago do
     puts(output.to_json)
   end
 
-  desc "Print a support diagnostic report for self-hosted deployments"
+  desc "Print a diagnostic report for self-hosted deployments"
   task diagnostics: :environment do
     require "lago/diagnostics"
 
