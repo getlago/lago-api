@@ -10,7 +10,6 @@ RSpec.describe Customers::GenerateCheckoutUrlService do
 
   describe ".call" do
     let(:stripe_provider) { create(:stripe_provider, organization:) }
-    let(:stripe_customer_service) { instance_double(PaymentProviderCustomers::StripeService) }
 
     context "when payment provider is linked" do
       before do
@@ -22,11 +21,8 @@ RSpec.describe Customers::GenerateCheckoutUrlService do
 
         customer.update(payment_provider: "stripe")
 
-        allow(PaymentProviderCustomers::StripeService).to receive(:new)
-          .and_return(stripe_customer_service)
-
-        allow(stripe_customer_service).to receive(:generate_checkout_url)
-          .with(send_webhook: false)
+        allow(PaymentProviderCustomers::StripeService).to receive(:call)
+          .with(:generate_checkout_url, anything, send_webhook: false)
           .and_return(BaseResult[:checkout_url].new.tap { |r| r.checkout_url = "http://foo.bar" })
       end
 

@@ -117,24 +117,26 @@ module PaymentProviders
       end
 
       def handle_card_token_deleted
-        PaymentProviderCustomers::MoneyhashService.new
-          .delete_payment_method(
+        PaymentProviderCustomers::MoneyhashService
+          .call!(
+            :delete_payment_method,
             organization_id: organization.id,
             customer_id: card_token.dig("custom_fields", "lago_customer_id"),
             payment_method_id: card_token["id"],
             metadata: card_token["custom_fields"]
-          ).raise_if_error!
+          )
       end
 
       def handle_card_token_created_or_updated
-        PaymentProviderCustomers::MoneyhashService.new
-          .update_payment_method(
+        PaymentProviderCustomers::MoneyhashService
+          .call!(
+            :update_payment_method,
             organization_id: organization.id,
             customer_id: card_token.dig("custom_fields", "lago_customer_id"),
             payment_method_id: card_token["id"],
             metadata: card_token["custom_fields"],
             card_details: extract_card_details
-          ).raise_if_error!
+          )
       end
 
       def card_token

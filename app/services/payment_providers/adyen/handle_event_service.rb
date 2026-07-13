@@ -39,10 +39,7 @@ module PaymentProviders
 
           return result if amount != 0
 
-          service = PaymentProviderCustomers::AdyenService.new
-
-          result = service.preauthorise(organization, event)
-          result.raise_if_error!
+          PaymentProviderCustomers::AdyenService.call!(:preauthorise, organization, event)
         when "CANCELLATION"
           # Adyen uses originalReference to point at the cancelled payment;
           # pspReference is the cancel modification's own id.
