@@ -95,14 +95,13 @@ module Invoices
       def call_async
         return result unless provider
 
-        if defer_for_checkout_customer?
-          AfterCommitEverywhere.after_commit do
-            Invoices::Payments::CreateJob
-              .set(wait: CHECKOUT_AUTO_PAYMENT_DELAY)
-              .perform_later(invoice:, payment_provider: provider, payment_method_params:)
-          end
-        else
-          Invoices::Payments::CreateJob.perform_after_commit(invoice:, payment_provider: provider, payment_method_params:)
+        forced_delay = nil
+        forced_delay = CHECKOUT_AUTO_PAYMENT_DELAY if defer_for_checkout_customer?
+
+        AfterCommitEverywhere.after_commit do
+          Invoices::Payments::CreateJob
+            .set(wait: forced_delay)
+            .perform_later(invoice:, payment_provider: provider, payment_method_params:)
         end
 
         result.payment_provider = provider
