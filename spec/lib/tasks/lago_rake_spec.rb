@@ -4,8 +4,8 @@ require "rails_helper"
 
 require "rake"
 
-RSpec.describe "lago:support_info" do # rubocop:disable RSpec/DescribeClass
-  let(:task) { Rake::Task["lago:support_info"] }
+RSpec.describe "lago:diagnostics" do # rubocop:disable RSpec/DescribeClass
+  let(:task) { Rake::Task["lago:diagnostics"] }
 
   let(:report) do
     original = $stdout
@@ -29,5 +29,5 @@ RSpec.describe "lago:support_info" do # rubocop:disable RSpec/DescribeClass
       .and_raise(StandardError, "clickhouse unavailable in specs")
   end
 
-  it_behaves_like "a lago support diagnostic report"
+  it_behaves_like "a lago diagnostics report"
 end

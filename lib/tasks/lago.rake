@@ -17,9 +17,9 @@ namespace :lago do
   end
 
   desc "Print a support diagnostic report for self-hosted deployments"
-  task support_info: :environment do
-    require "lago/support_info"
+  task diagnostics: :environment do
+    require "lago/diagnostics"
 
-    Lago::SupportInfo.new.call
+    Lago::Diagnostics.new.call
   end
 end

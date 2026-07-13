@@ -8,11 +8,11 @@ module Lago
   # counts, never customer data.
   #
   # @example
-  #   Lago::SupportInfo.new.call
+  #   Lago::Diagnostics.new.call
   #
   # @example Writing to a custom IO
-  #   Lago::SupportInfo.new(output: StringIO.new).call
-  class SupportInfo
+  #   Lago::Diagnostics.new(output: StringIO.new).call
+  class Diagnostics
     SEP = "=" * 72
     LINE = "-" * 72
 

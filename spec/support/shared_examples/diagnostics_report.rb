@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-# Behavioural examples for the `lago:support_info` diagnostic report.
+# Behavioural examples for the `lago:diagnostics` diagnostic report.
 #
-# Shared by the `Lago::SupportInfo` class spec and the `lago:support_info`
+# Shared by the `Lago::Diagnostics` class spec and the `lago:diagnostics`
 # rake task spec so both surfaces are exercised against the same report
 # content.
 #
@@ -10,7 +10,7 @@
 # - `let(:report)`: runs the diagnostic and returns the full output string.
 #   It must be lazily evaluated so the `before` stubs below apply first.
 # - a stub of the ClickHouse connection, which is unavailable in specs.
-RSpec.shared_examples "a lago support diagnostic report" do
+RSpec.shared_examples "a lago diagnostics report" do
   it "prints the banners and all ten section headers" do
     expect(report).to include("LAGO SUPPORT DIAGNOSTIC")
     expect(report).to include("1. VERSION AND BUILD")
@@ -292,7 +292,7 @@ RSpec.shared_examples "a lago support diagnostic report" do
 
   context "with a stubbed log file" do
     let(:log_path) { Rails.root.join("log", "#{Rails.env}.log") }
-    let(:log_file) { Tempfile.new("support_info_log") }
+    let(:log_file) { Tempfile.new("diagnostics_log") }
 
     before do
       log_file.write(log_content)
