@@ -128,6 +128,11 @@ RSpec.describe Customer do
       expect(customer).not_to be_valid
     end
 
+    it "does not validate the name length when the name is unchanged" do
+      customer.update_column(:name, "a" * 256)
+      expect(customer).to be_valid
+    end
+
     describe "of email" do
       let(:customer) { build_stubbed(:customer, email: "invalid @example.com") }
       let(:error) { customer.errors.where(:email, :invalid_email_format) }

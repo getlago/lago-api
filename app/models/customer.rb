@@ -147,7 +147,7 @@ class Customer < ApplicationRecord
   validates :country, :shipping_country, country_code: true, allow_nil: true
   validates :document_locale, language_code: true, unless: -> { document_locale.nil? }
   validates :currency, inclusion: {in: currency_list}, allow_nil: true
-  validates :name, length: {maximum: 255}
+  validates :name, length: {maximum: 255}, if: :name_changed?
   validates :external_id,
     presence: true,
     uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id},

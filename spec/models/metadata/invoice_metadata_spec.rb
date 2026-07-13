@@ -43,5 +43,13 @@ RSpec.describe Metadata::InvoiceMetadata do
 
       it { expect(metadata).not_to be_valid }
     end
+
+    context "when value length is invalid but value is unchanged" do
+      let(:metadata) { create(:invoice_metadata, invoice:) }
+
+      before { metadata.update_column(:value, "a" * 101) }
+
+      it { expect(metadata).to be_valid }
+    end
   end
 end
