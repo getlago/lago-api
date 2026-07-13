@@ -744,5 +744,46 @@ RSpec.describe Invoices::Payments::CreateService do
         }.not_to have_enqueued_job(Invoices::Payments::CreateJob)
       end
     end
+
+    context "when the customer has already used a checkout URL" do
+      let!(:payment_intent) { create(:payment_intent, invoice: create(:invoice, customer:, organization:)) }
+
+      it "delays the first auto-payment" do
+        allow(Invoices::Payments::CreateJob).to receive(:set).and_call_original
+
+        expect { create_service.call_async }
+          .to have_enqueued_job_after_commit(Invoices::Payments::CreateJob)
+          .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+
+        expect(Invoices::Payments::CreateJob)
+          .to have_received(:set).with(wait: described_class::CHECKOUT_AUTO_PAYMENT_DELAY)
+      end
+
+      context "when it is not the first payment attempt (retry)" do
+        before { invoice.update!(payment_attempts: 1) }
+
+        it "enqueues the payment immediately" do
+          allow(Invoices::Payments::CreateJob).to receive(:set).and_call_original
+
+          expect { create_service.call_async }
+            .to have_enqueued_job_after_commit(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+
+          expect(Invoices::Payments::CreateJob).not_to have_received(:set)
+        end
+      end
+    end
+
+    context "when the customer has never used a checkout URL" do
+      it "enqueues the payment immediately" do
+        allow(Invoices::Payments::CreateJob).to receive(:set).and_call_original
+
+        expect { create_service.call_async }
+          .to have_enqueued_job_after_commit(Invoices::Payments::CreateJob)
+          .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+
+        expect(Invoices::Payments::CreateJob).not_to have_received(:set)
+      end
+    end
   end
 end
