@@ -5,17 +5,17 @@ RSpec.describe PaymentIntents::ExpireService do
     subject(:result) { described_class.call(invoice:) }
 
     let(:invoice) { create(:invoice) }
-    let(:payment_provider_service) { instance_double("PaymentProviderService") }
+    let(:payment_provider_service) { class_double(Invoices::Payments::StripeService) }
 
     before do
       allow(Invoices::Payments::PaymentProviders::Factory)
-        .to receive(:new_instance)
-        .with(invoice:)
+        .to receive(:for)
+        .with(invoice)
         .and_return(payment_provider_service)
 
       allow(payment_provider_service)
-        .to receive(:expire_payment_url)
-        .and_return(BaseService::Result.new)
+        .to receive(:call!)
+        .and_return(Invoices::Payments::StripeService::RESULTS.fetch(:expire_payment_url).new)
     end
 
     context "when an active payment intent has a provider session id" do
@@ -23,7 +23,7 @@ RSpec.describe PaymentIntents::ExpireService do
 
       it "expires the provider checkout session and the payment intent" do
         expect { result }.to change { payment_intent.reload.status }.from("active").to("expired")
-        expect(payment_provider_service).to have_received(:expire_payment_url).with(payment_intent)
+        expect(payment_provider_service).to have_received(:call!).with(:expire_payment_url, invoice, payment_intent)
       end
     end
 
@@ -32,7 +32,7 @@ RSpec.describe PaymentIntents::ExpireService do
 
       it "expires the payment intent without calling the provider" do
         expect { result }.to change { payment_intent.reload.status }.from("active").to("expired")
-        expect(payment_provider_service).not_to have_received(:expire_payment_url)
+        expect(payment_provider_service).not_to have_received(:call!)
       end
     end
 
@@ -43,7 +43,7 @@ RSpec.describe PaymentIntents::ExpireService do
         result
 
         expect(expired_intent.reload.status).to eq("expired")
-        expect(payment_provider_service).not_to have_received(:expire_payment_url)
+        expect(payment_provider_service).not_to have_received(:call!)
       end
     end
   end
