@@ -8,7 +8,7 @@ module Invoices
       include Customers::PaymentProviderFinder
 
       # Delay the first auto-payment for hosted-checkout customers so their manual payment settles first.
-      CHECKOUT_AUTO_PAYMENT_DELAY = ENV.fetch("LAGO_CHECKOUT_AUTO_PAYMENT_DELAY_SECONDS", 600).to_i.seconds
+      CHECKOUT_AUTO_PAYMENT_DELAY = ENV.fetch("LAGO_CHECKOUT_AUTO_PAYMENT_DELAY_SECONDS", 10.minutes.to_i).to_i.seconds
 
       def initialize(invoice:, payment_provider: nil, payment_method_params: {})
         @invoice = invoice
