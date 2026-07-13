@@ -621,7 +621,12 @@ module Lago
       section("10. RECENT ERRORS") do
         log_path = Rails.root.join("log", "#{Rails.env}.log")
 
-        if File.exist?(log_path)
+        if ENV["RAILS_LOG_TO_STDOUT"] == "true"
+          output.puts "  Logs go to stdout (RAILS_LOG_TO_STDOUT=true), not to #{log_path}."
+          output.puts "  Check the container logs via:"
+          output.puts "    docker logs <container>"
+          output.puts "    kubectl logs <pod> -n <namespace>"
+        elsif File.exist?(log_path)
           output.puts "  ## Last #{RECENT_ERRORS_LIMIT} ERROR/FATAL lines (last 5 MB of #{log_path})"
           print_safe do
             lines = last_matching_lines(log_path, RECENT_ERRORS_PATTERN, RECENT_ERRORS_LIMIT)

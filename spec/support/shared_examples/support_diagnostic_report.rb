@@ -351,6 +351,20 @@ RSpec.shared_examples "a lago support diagnostic report" do
     end
   end
 
+  context "when logs are written to stdout" do
+    before do
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("RAILS_LOG_TO_STDOUT").and_return("true")
+    end
+
+    it "points to the container logs instead of scanning a file" do
+      expect(report).to include("Logs go to stdout (RAILS_LOG_TO_STDOUT=true)")
+      expect(report).to include("docker logs <container>")
+      expect(report).to include("kubectl logs <pod> -n <namespace>")
+      expect(report).not_to include("ERROR/FATAL lines")
+    end
+  end
+
   context "with a database URL containing credentials" do
     before do
       allow(ENV).to receive(:[]).and_call_original
