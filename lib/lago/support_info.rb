@@ -66,7 +66,7 @@ module Lago
       environment
       configuration
       database
-      redis
+      with_quiet_sidekiq_logger { redis }
       clickhouse
       kafka
       smtp
@@ -115,6 +115,24 @@ module Lago
     rescue => e
       message = "error: #{e.class} - #{e.message.split("\n").first}"
       label ? "#{label} #{message}" : message
+    end
+
+    # Sidekiq logs a "connecting to Redis" line at INFO the first time its
+    # connection pool is used. The report writes to `output`, so raise the
+    # Sidekiq log level while probing Redis to keep that line out of the
+    # middle of the report (it matters when `output` is $stdout, e.g. the
+    # rake task). The level is restored afterwards.
+    def with_quiet_sidekiq_logger
+      logger = (defined?(Sidekiq) && Sidekiq.respond_to?(:logger)) ? Sidekiq.logger : nil
+      return yield unless logger
+
+      previous_level = logger.level
+      logger.level = Logger::WARN
+      begin
+        yield
+      ensure
+        logger.level = previous_level
+      end
     end
 
     # Runs a block that prints by itself; if it raises, prints an error line

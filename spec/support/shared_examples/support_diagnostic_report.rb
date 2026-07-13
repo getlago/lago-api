@@ -378,6 +378,22 @@ RSpec.shared_examples "a lago support diagnostic report" do
     end
   end
 
+  context "when probing Redis" do
+    it "silences the Sidekiq logger during the probe and restores its level" do
+      original_level = Sidekiq.logger.level
+      probed_level = nil
+      allow(Sidekiq).to receive(:redis).and_wrap_original do |original, &block|
+        probed_level = Sidekiq.logger.level
+        original.call(&block)
+      end
+
+      report
+
+      expect(probed_level).to eq(Logger::WARN)
+      expect(Sidekiq.logger.level).to eq(original_level)
+    end
+  end
+
   context "when rendering the Redis settings" do
     before do
       allow(ENV).to receive(:[]).and_call_original
