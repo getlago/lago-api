@@ -151,13 +151,13 @@ module Lago
     def setting(label, env_key)
       raw = ENV[env_key]
       value = raw.to_s.strip.empty? ? "(unset)" : mask(env_key, raw)
-      output.puts format("    %-24s: %s", label, value)
+      output.puts format("    %-26s: %s", label, value)
     end
 
     # Prints one settings row for a value that is not env-backed (a hardcoded
     # default or a derived boolean), keeping the same alignment as `setting`.
     def fact(label, value)
-      output.puts format("    %-24s: %s", label, value)
+      output.puts format("    %-26s: %s", label, value)
     end
 
     # ── sections ────────────────────────────────────────────────────────────
@@ -391,7 +391,7 @@ module Lago
         context.needs_migration? ? "yes" : "none"
       end
 
-      format("%-24s: %s", "Pending migrations", value)
+      format("%-26s: %s", "Pending migrations", value)
     end
 
     def pending_migrations_value(versions)
@@ -538,11 +538,9 @@ module Lago
 
         output.puts "  Enabled        : #{enabled}"
         if enabled
-          servers = mask("LAGO_KAFKA_BOOTSTRAP_SERVERS", ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"])
-          output.puts "  Bootstrap servers : #{servers}"
-
           output.puts
           output.puts "  ## Settings"
+          setting("Bootstrap servers", "LAGO_KAFKA_BOOTSTRAP_SERVERS")
           setting("Security protocol", "LAGO_KAFKA_SECURITY_PROTOCOL")
           setting("SASL mechanisms", "LAGO_KAFKA_SASL_MECHANISMS")
           setting("Username", "LAGO_KAFKA_USERNAME")

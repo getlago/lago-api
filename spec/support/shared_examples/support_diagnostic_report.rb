@@ -133,7 +133,7 @@ RSpec.shared_examples "a lago support diagnostic report" do
     end
 
     it "reports Kafka as disabled without a bootstrap servers line" do
-      expect(report).not_to include("Bootstrap servers :")
+      expect(report).not_to match(/Bootstrap servers/)
     end
   end
 
@@ -144,7 +144,7 @@ RSpec.shared_examples "a lago support diagnostic report" do
     end
 
     it "reports Kafka as enabled with the bootstrap servers" do
-      expect(report).to include("Bootstrap servers : broker1:9092")
+      expect(report).to match(/^    Bootstrap servers\s+: broker1:9092$/)
     end
   end
 
