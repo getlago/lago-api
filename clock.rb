@@ -208,4 +208,8 @@ module Clockwork
         .perform_later
     end
   end
+
+  every(10.minutes, "refresh:entitlement_features_subscription_count") do
+    Scenic.database.refresh_materialized_view(:entitlement_features_subscriptions_count, concurrently: true)
+  end
 end

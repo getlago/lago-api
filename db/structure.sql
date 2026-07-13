@@ -865,6 +865,7 @@ DROP INDEX IF EXISTS public.idx_on_fixed_charge_id_06503ae1a5;
 DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb1a;
 DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_9946ccf514;
 DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_6a228dc433;
+DROP INDEX IF EXISTS public.idx_on_entitlement_feature_id_f4c7f65817;
 DROP INDEX IF EXISTS public.idx_on_entitlement_feature_id_821ae72311;
 DROP INDEX IF EXISTS public.idx_on_entitlement_entitlement_id_48c0b3356a;
 DROP INDEX IF EXISTS public.idx_on_enriched_store_migration_id_e409c5dc43;
@@ -1110,8 +1111,6 @@ DROP TABLE IF EXISTS public.integration_customers;
 DROP VIEW IF EXISTS public.exports_fees_taxes;
 DROP TABLE IF EXISTS public.fees_taxes;
 DROP VIEW IF EXISTS public.exports_fees;
-DROP TABLE IF EXISTS public.subscriptions;
-DROP TABLE IF EXISTS public.plans;
 DROP TABLE IF EXISTS public.fees;
 DROP VIEW IF EXISTS public.exports_entitlement_features;
 DROP VIEW IF EXISTS public.exports_entitlement_entitlements;
@@ -1130,8 +1129,11 @@ DROP VIEW IF EXISTS public.exports_billable_metrics;
 DROP VIEW IF EXISTS public.exports_applied_coupons;
 DROP TABLE IF EXISTS public.events;
 DROP TABLE IF EXISTS public.error_details;
-DROP TABLE IF EXISTS public.entitlement_subscription_feature_removals;
 DROP TABLE IF EXISTS public.entitlement_privileges;
+DROP MATERIALIZED VIEW IF EXISTS public.entitlement_features_subscriptions_count;
+DROP TABLE IF EXISTS public.subscriptions;
+DROP TABLE IF EXISTS public.plans;
+DROP TABLE IF EXISTS public.entitlement_subscription_feature_removals;
 DROP TABLE IF EXISTS public.entitlement_features;
 DROP TABLE IF EXISTS public.entitlement_entitlements;
 DROP TABLE IF EXISTS public.entitlement_entitlement_values;
@@ -2708,6 +2710,136 @@ CREATE TABLE public.entitlement_features (
 
 
 --
+-- Name: entitlement_subscription_feature_removals; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entitlement_subscription_feature_removals (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    entitlement_feature_id uuid,
+    subscription_id uuid NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    entitlement_privilege_id uuid,
+    CONSTRAINT check_exactly_one_feature_or_privilege_removal CHECK (((entitlement_feature_id IS NOT NULL) <> (entitlement_privilege_id IS NOT NULL)))
+);
+
+
+--
+-- Name: plans; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.plans (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    name character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    code character varying NOT NULL,
+    "interval" integer NOT NULL,
+    description character varying,
+    amount_cents bigint NOT NULL,
+    amount_currency character varying NOT NULL,
+    trial_period double precision,
+    pay_in_advance boolean DEFAULT false NOT NULL,
+    bill_charges_monthly boolean,
+    parent_id uuid,
+    deleted_at timestamp(6) without time zone,
+    pending_deletion boolean DEFAULT false NOT NULL,
+    invoice_display_name character varying,
+    bill_fixed_charges_monthly boolean DEFAULT false
+);
+
+
+--
+-- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscriptions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    customer_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    status integer NOT NULL,
+    canceled_at timestamp without time zone,
+    terminated_at timestamp without time zone,
+    started_at timestamp without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    previous_subscription_id uuid,
+    name character varying,
+    external_id character varying NOT NULL,
+    billing_time integer DEFAULT 0 NOT NULL,
+    subscription_at timestamp(6) without time zone,
+    ending_at timestamp(6) without time zone,
+    trial_ended_at timestamp(6) without time zone,
+    organization_id uuid NOT NULL,
+    on_termination_credit_note public.subscription_on_termination_credit_note,
+    on_termination_invoice public.subscription_on_termination_invoice DEFAULT 'generate'::public.subscription_on_termination_invoice NOT NULL,
+    payment_method_id uuid,
+    payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
+    skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
+    progressive_billing_disabled boolean DEFAULT false NOT NULL,
+    last_received_event_on date,
+    cancelation_reason public.subscription_cancelation_reasons,
+    incompleted_at timestamp(6) without time zone,
+    activated_at timestamp(6) without time zone,
+    billing_entity_id uuid,
+    consolidate_invoice boolean DEFAULT true NOT NULL,
+    skip_daily_usage boolean DEFAULT false NOT NULL,
+    cancellation_reason public.subscription_cancellation_reasons
+);
+
+
+--
+-- Name: entitlement_features_subscriptions_count; Type: MATERIALIZED VIEW; Schema: public; Owner: -
+--
+
+CREATE MATERIALIZED VIEW public.entitlement_features_subscriptions_count AS
+ WITH plan_subcriptions AS (
+         SELECT COALESCE(plans.parent_id, subscriptions.plan_id) AS plan_id,
+            count(*) AS count
+           FROM (public.subscriptions
+             JOIN public.plans ON ((plans.id = subscriptions.plan_id)))
+          WHERE ((plans.deleted_at IS NULL) AND (subscriptions.status = ANY (ARRAY[0, 1])))
+          GROUP BY COALESCE(plans.parent_id, subscriptions.plan_id)
+        ), plan_subcriptions_count AS (
+         SELECT plan_entitlements.entitlement_feature_id,
+            sum(plan_subcriptions.count) AS count
+           FROM ((public.entitlement_entitlements plan_entitlements
+             JOIN public.entitlement_features ON ((entitlement_features.id = plan_entitlements.entitlement_feature_id)))
+             JOIN plan_subcriptions ON ((plan_subcriptions.plan_id = plan_entitlements.plan_id)))
+          WHERE ((plan_entitlements.deleted_at IS NULL) AND (entitlement_features.deleted_at IS NULL) AND (plan_entitlements.plan_id IS NOT NULL))
+          GROUP BY plan_entitlements.entitlement_feature_id
+        ), direct_subscriptions_count AS (
+         SELECT subscription_entitlements.entitlement_feature_id,
+            count(*) AS count
+           FROM (((public.entitlement_entitlements subscription_entitlements
+             JOIN public.entitlement_features ON ((entitlement_features.id = subscription_entitlements.entitlement_feature_id)))
+             JOIN public.subscriptions ON ((subscriptions.id = subscription_entitlements.subscription_id)))
+             JOIN public.plans ON ((plans.id = subscriptions.plan_id)))
+          WHERE ((subscription_entitlements.deleted_at IS NULL) AND (subscription_entitlements.subscription_id IS NOT NULL) AND (entitlement_features.deleted_at IS NULL) AND (subscriptions.status = ANY (ARRAY[0, 1])) AND (plans.deleted_at IS NULL) AND (NOT (EXISTS ( SELECT 1
+                   FROM public.entitlement_entitlements plan_entitlements
+                  WHERE ((plan_entitlements.plan_id = COALESCE(plans.parent_id, plans.id)) AND (plan_entitlements.entitlement_feature_id = subscription_entitlements.entitlement_feature_id) AND (plan_entitlements.plan_id IS NOT NULL) AND (plan_entitlements.deleted_at IS NULL))))))
+          GROUP BY subscription_entitlements.entitlement_feature_id
+        ), feature_removals_count AS (
+         SELECT feature_removals.entitlement_feature_id,
+            count(*) AS count
+           FROM ((public.entitlement_subscription_feature_removals feature_removals
+             JOIN public.entitlement_features ON ((entitlement_features.id = feature_removals.entitlement_feature_id)))
+             JOIN public.subscriptions ON ((subscriptions.id = feature_removals.subscription_id)))
+          WHERE ((feature_removals.entitlement_feature_id IS NOT NULL) AND (feature_removals.deleted_at IS NULL) AND (entitlement_features.deleted_at IS NULL) AND (subscriptions.status = ANY (ARRAY[0, 1])))
+          GROUP BY feature_removals.entitlement_feature_id
+        )
+ SELECT COALESCE(plan_subcriptions_count.entitlement_feature_id, direct_subscriptions_count.entitlement_feature_id) AS entitlement_feature_id,
+    ((COALESCE(plan_subcriptions_count.count, (0)::numeric) + (COALESCE(direct_subscriptions_count.count, (0)::bigint))::numeric) - (COALESCE(feature_removals_count.count, (0)::bigint))::numeric) AS count
+   FROM ((plan_subcriptions_count
+     FULL JOIN direct_subscriptions_count ON ((plan_subcriptions_count.entitlement_feature_id = direct_subscriptions_count.entitlement_feature_id)))
+     LEFT JOIN feature_removals_count ON ((plan_subcriptions_count.entitlement_feature_id = feature_removals_count.entitlement_feature_id)))
+  WITH NO DATA;
+
+
+--
 -- Name: entitlement_privileges; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2722,23 +2854,6 @@ CREATE TABLE public.entitlement_privileges (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: entitlement_subscription_feature_removals; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.entitlement_subscription_feature_removals (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    entitlement_feature_id uuid,
-    subscription_id uuid NOT NULL,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    entitlement_privilege_id uuid,
-    CONSTRAINT check_exactly_one_feature_or_privilege_removal CHECK (((entitlement_feature_id IS NOT NULL) <> (entitlement_privilege_id IS NOT NULL)))
 );
 
 
@@ -3321,71 +3436,6 @@ CREATE TABLE public.fees (
     fixed_charge_id uuid,
     duplicated_in_advance boolean DEFAULT false,
     original_fee_id uuid
-);
-
-
---
--- Name: plans; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.plans (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    name character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    code character varying NOT NULL,
-    "interval" integer NOT NULL,
-    description character varying,
-    amount_cents bigint NOT NULL,
-    amount_currency character varying NOT NULL,
-    trial_period double precision,
-    pay_in_advance boolean DEFAULT false NOT NULL,
-    bill_charges_monthly boolean,
-    parent_id uuid,
-    deleted_at timestamp(6) without time zone,
-    pending_deletion boolean DEFAULT false NOT NULL,
-    invoice_display_name character varying,
-    bill_fixed_charges_monthly boolean DEFAULT false
-);
-
-
---
--- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.subscriptions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    customer_id uuid NOT NULL,
-    plan_id uuid NOT NULL,
-    status integer NOT NULL,
-    canceled_at timestamp without time zone,
-    terminated_at timestamp without time zone,
-    started_at timestamp without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    previous_subscription_id uuid,
-    name character varying,
-    external_id character varying NOT NULL,
-    billing_time integer DEFAULT 0 NOT NULL,
-    subscription_at timestamp(6) without time zone,
-    ending_at timestamp(6) without time zone,
-    trial_ended_at timestamp(6) without time zone,
-    organization_id uuid NOT NULL,
-    on_termination_credit_note public.subscription_on_termination_credit_note,
-    on_termination_invoice public.subscription_on_termination_invoice DEFAULT 'generate'::public.subscription_on_termination_invoice NOT NULL,
-    payment_method_id uuid,
-    payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
-    skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
-    progressive_billing_disabled boolean DEFAULT false NOT NULL,
-    last_received_event_on date,
-    cancelation_reason public.subscription_cancelation_reasons,
-    incompleted_at timestamp(6) without time zone,
-    activated_at timestamp(6) without time zone,
-    billing_entity_id uuid,
-    consolidate_invoice boolean DEFAULT true NOT NULL,
-    skip_daily_usage boolean DEFAULT false NOT NULL,
-    cancellation_reason public.subscription_cancellation_reasons
 );
 
 
@@ -6618,6 +6668,13 @@ CREATE INDEX idx_on_entitlement_entitlement_id_48c0b3356a ON public.entitlement_
 --
 
 CREATE INDEX idx_on_entitlement_feature_id_821ae72311 ON public.entitlement_subscription_feature_removals USING btree (entitlement_feature_id);
+
+
+--
+-- Name: idx_on_entitlement_feature_id_f4c7f65817; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_on_entitlement_feature_id_f4c7f65817 ON public.entitlement_features_subscriptions_count USING btree (entitlement_feature_id);
 
 
 --
@@ -12849,7 +12906,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260709135717'),
 ('20260708095857'),
 ('20260706173746'),
+('20260706095722'),
 ('20260703164249'),
+('20260702103547'),
 ('20260702074504'),
 ('20260701083110'),
 ('20260701083109'),
