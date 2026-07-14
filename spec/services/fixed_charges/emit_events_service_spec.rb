@@ -237,6 +237,47 @@ RSpec.describe FixedCharges::EmitEventsService do
           expect(event_2.timestamp).to eq(Time.zone.at(timestamp))
         end
       end
+
+      context "when there are incomplete subscriptions" do
+        let(:incomplete_subscription) do
+          create(
+            :subscription,
+            :incomplete,
+            :anniversary,
+            plan:,
+            customer: customer_1,
+            started_at: 1.day.ago,
+            subscription_at: 1.day.ago
+          )
+        end
+
+        before { incomplete_subscription }
+
+        it "defers the incomplete subscription event to the next billing period" do
+          expect { result }.to change(FixedChargeEvent, :count).by(3)
+
+          active_event = FixedChargeEvent.find_by(subscription: active_subscription_1, fixed_charge:)
+          incomplete_event = FixedChargeEvent.find_by(subscription: incomplete_subscription, fixed_charge:)
+
+          expect(active_event.timestamp).to be_within(1.second).of(Time.current)
+          expect(incomplete_event.timestamp)
+            .to be_within(1.second).of(incomplete_subscription.started_at.beginning_of_day + 1.month)
+        end
+      end
+
+      context "when a provided subscription is incomplete" do
+        let(:subscription) do
+          create(:subscription, :incomplete, :anniversary, plan:, started_at: 1.day.ago, subscription_at: 1.day.ago)
+        end
+
+        it "defers the event to the next billing period" do
+          expect { result }.to change(FixedChargeEvent, :count).by(1)
+
+          event = result.fixed_charge_events.sole
+          expect(event.subscription_id).to eq(subscription.id)
+          expect(event.timestamp).to be_within(1.second).of(subscription.started_at.beginning_of_day + 1.month)
+        end
+      end
     end
 
     context "when an active plan subscription has a per-subscription units override" do

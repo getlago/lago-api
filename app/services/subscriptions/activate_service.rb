@@ -151,8 +151,6 @@ module Subscriptions
     def enqueue_gating_catch_up_jobs
       return unless subscription.activation_rules.payment.any?
 
-      ActivationRules::BillFixedChargesDeltaJob.perform_later(subscription)
-
       unless subscription.previous_subscription
         ActivationRules::BillMissedPeriodsJob.perform_later(subscription)
       end

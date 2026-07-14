@@ -39,12 +39,6 @@ RSpec.describe Subscriptions::ActivateService do
       expect(Invoices::CreatePayInAdvanceFixedChargesJob).not_to have_been_enqueued
     end
 
-    it "does not enqueue the fixed-charge delta job" do
-      result
-
-      expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).not_to have_been_enqueued
-    end
-
     it "does not enqueue the missed-periods job" do
       result
 
@@ -325,12 +319,6 @@ RSpec.describe Subscriptions::ActivateService do
       expect { result }.not_to change(FixedChargeEvent, :count)
     end
 
-    it "enqueues the fixed-charge delta job" do
-      result
-
-      expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).to have_been_enqueued.with(subscription)
-    end
-
     it "enqueues the missed-periods job" do
       result
 
@@ -412,12 +400,6 @@ RSpec.describe Subscriptions::ActivateService do
 
         expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob)
           .to have_been_enqueued.with(subscription: subscription)
-      end
-
-      it "enqueues the fixed-charge delta job" do
-        result
-
-        expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).to have_been_enqueued.with(subscription)
       end
 
       it "does not enqueue the missed-periods job" do
@@ -529,12 +511,6 @@ RSpec.describe Subscriptions::ActivateService do
           .to have_been_enqueued.with(subscription:)
       end
 
-      it "enqueues the fixed-charge delta job" do
-        result
-
-        expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).to have_been_enqueued.with(subscription)
-      end
-
       context "when subscription should not sync with hubspot" do
         let(:customer) { create(:customer, organization:) }
 
@@ -556,12 +532,6 @@ RSpec.describe Subscriptions::ActivateService do
 
       expect(result.subscription).to be_active
       expect(BillSubscriptionJob).to have_been_enqueued
-    end
-
-    it "does not enqueue the fixed-charge delta job" do
-      result
-
-      expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).not_to have_been_enqueued
     end
 
     it "does not enqueue the missed-periods job" do
