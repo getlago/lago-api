@@ -7,6 +7,9 @@ module Invoices
 
       include Customers::PaymentProviderFinder
 
+      # Delay the first auto-payment for hosted-checkout customers so their manual payment settles first.
+      CHECKOUT_AUTO_PAYMENT_DELAY = ENV.fetch("LAGO_CHECKOUT_AUTO_PAYMENT_DELAY_SECONDS", 10.minutes.to_i).to_i.seconds
+
       def initialize(invoice:, payment_provider: nil, payment_method_params: {})
         @invoice = invoice
         @provider = payment_provider&.to_sym
@@ -92,7 +95,14 @@ module Invoices
       def call_async
         return result unless provider
 
-        Invoices::Payments::CreateJob.perform_after_commit(invoice:, payment_provider: provider, payment_method_params:)
+        forced_delay = nil
+        forced_delay = CHECKOUT_AUTO_PAYMENT_DELAY if defer_for_checkout_customer?
+
+        AfterCommitEverywhere.after_commit do
+          Invoices::Payments::CreateJob
+            .set(wait: forced_delay)
+            .perform_later(invoice:, payment_provider: provider, payment_method_params:)
+        end
 
         result.payment_provider = provider
         result
@@ -106,6 +116,13 @@ module Invoices
 
       def provider
         @provider ||= invoice.customer.payment_provider&.to_sym
+      end
+
+      # Only the first automatic attempt is delayed; retries keep payment_attempts positive.
+      def defer_for_checkout_customer?
+        return false unless invoice.payment_attempts.zero?
+
+        PaymentIntent.joins(:invoice).where(invoices: {customer_id: invoice.customer_id}).exists?
       end
 
       def should_process_payment?

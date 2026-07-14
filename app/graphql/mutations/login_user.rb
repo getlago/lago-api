@@ -11,7 +11,7 @@ module Mutations
     type Types::Payloads::LoginUserType
 
     def resolve(email:, password:)
-      result = UsersService.new.login(email, password)
+      result = UsersService.call(:login, email, password)
       result.success? ? result : result_error(result)
     end
   end

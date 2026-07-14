@@ -2481,4 +2481,151 @@ RSpec.describe Invoice do
       end
     end
   end
+
+  describe "meilisearch document" do
+    subject(:document) { described_class.meilisearch_settings.get_attributes(invoice) }
+
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        name: "Acme Corp",
+        firstname: "John",
+        lastname: "Doe",
+        legal_name: "Acme Corporation",
+        external_id: "ext-123",
+        email: "john@acme.test"
+      )
+    end
+    let(:invoice) do
+      create(
+        :invoice,
+        organization:,
+        customer:,
+        number: "INV-001",
+        invoice_type: "subscription",
+        currency: "EUR",
+        status: "finalized",
+        payment_status: "pending",
+        payment_overdue: true,
+        self_billed: false,
+        total_amount_cents: 1000,
+        total_paid_amount_cents: 400,
+        issuing_date: Date.new(2026, 1, 15)
+      )
+    end
+
+    it "exposes the searchable, filterable and denormalized attributes" do
+      expect(document).to eq(
+        "number" => "INV-001",
+        "organization_id" => organization.id,
+        "billing_entity_id" => invoice.billing_entity_id,
+        "currency" => "EUR",
+        "customer_id" => customer.id,
+        "invoice_type" => "subscription",
+        "status" => "finalized",
+        "payment_status" => "pending",
+        "payment_overdue" => true,
+        "self_billed" => false,
+        "total_amount_cents" => 1000,
+        "total_paid_amount_cents" => 400,
+        "created_at" => invoice.created_at.to_i,
+        "issuing_date" => Date.new(2026, 1, 15).to_time(:utc).to_i,
+        "due_amount_cents" => 600,
+        "partially_paid" => true,
+        "payment_dispute_lost" => false,
+        "customer_name" => "Acme Corp",
+        "customer_firstname" => "John",
+        "customer_lastname" => "Doe",
+        "customer_legal_name" => "Acme Corporation",
+        "customer_external_id" => "ext-123",
+        "customer_email" => "john@acme.test",
+        "subscription_ids" => [],
+        "settlement_types" => [],
+        "metadata" => [],
+        "metadata_keys" => []
+      )
+    end
+
+    context "with metadata, subscriptions and settlements" do
+      let(:subscription) { create(:subscription, organization:, customer:) }
+
+      before do
+        create(:invoice_metadata, invoice:, key: "po", value: "123")
+        create(:invoice_subscription, invoice:, subscription:)
+        create(:invoice_settlement, :with_payment, organization:, billing_entity: organization.default_billing_entity, target_invoice: invoice)
+      end
+
+      it "denormalizes the associated values" do
+        expect(document).to include(
+          "metadata" => ["po::123"],
+          "metadata_keys" => ["po"],
+          "subscription_ids" => [subscription.id],
+          "settlement_types" => ["payment"]
+        )
+      end
+    end
+
+    context "when the customer is discarded" do
+      before { customer.discard! }
+
+      it "omits the descriptive customer fields but keeps customer_id" do
+        expect(document).to include(
+          "customer_id" => customer.id,
+          "customer_name" => nil,
+          "customer_firstname" => nil,
+          "customer_lastname" => nil,
+          "customer_legal_name" => nil,
+          "customer_external_id" => nil,
+          "customer_email" => nil
+        )
+      end
+    end
+  end
+
+  describe "meilisearch index settings" do
+    it "declares the searchable, filterable, sortable and index settings" do
+      expect(described_class.meilisearch_settings.to_settings).to eq(
+        searchable_attributes: %i[number customer_name customer_firstname customer_lastname
+          customer_legal_name customer_external_id customer_email],
+        filterable_attributes: %i[id organization_id billing_entity_id currency customer_id
+          customer_external_id invoice_type status payment_status payment_dispute_lost
+          payment_overdue self_billed issuing_date total_amount_cents due_amount_cents
+          partially_paid subscription_ids settlement_types metadata metadata_keys],
+        sortable_attributes: %i[issuing_date created_at id],
+        pagination: {"maxTotalHits" => 100_000},
+        typo_tolerance: {"disableOnAttributes" => %w[number customer_external_id customer_email]}
+      )
+    end
+  end
+
+  describe "search indexing" do
+    context "when Meilisearch is enabled" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700")) }
+
+      it "enqueues a search index job after commit when a visible invoice is created" do
+        expect { create(:invoice, organization:) }
+          .to have_enqueued_job_after_commit(Invoices::SearchIndexJob)
+      end
+
+      it "enqueues a search index job after commit when a visible invoice is saved" do
+        invoice = create(:invoice, organization:)
+        ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+
+        expect { invoice.update!(payment_status: :succeeded) }
+          .to have_enqueued_job_after_commit(Invoices::SearchIndexJob).with(invoice.id)
+      end
+
+      it "does not enqueue a search index job for an invisible invoice" do
+        expect { create(:invoice, :invisible, organization:) }
+          .not_to have_enqueued_job(Invoices::SearchIndexJob)
+      end
+    end
+
+    context "when Meilisearch is disabled" do
+      it "does not enqueue a search index job" do
+        expect { create(:invoice, organization:) }.not_to have_enqueued_job(Invoices::SearchIndexJob)
+      end
+    end
+  end
 end

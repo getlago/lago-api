@@ -40,7 +40,7 @@ module Auth
       attr_reader :code, :state
 
       def generate_token
-        result.token = Auth::TokenService.encode(user: result.user, login_method: Organizations::AuthenticationMethods::OKTA)
+        result.token = Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::OKTA)
         result
       rescue => e
         result.service_failure!(code: "token_encoding_error", message: e.message)

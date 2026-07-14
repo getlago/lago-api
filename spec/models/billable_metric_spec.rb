@@ -51,6 +51,30 @@ RSpec.describe BillableMetric do
     end
   end
 
+  describe "#reset_field_name_for_count_agg" do
+    it "clears the field_name when the aggregation type is count_agg" do
+      billable_metric = build(:billable_metric, aggregation_type: :count_agg, field_name: "custom_field")
+
+      expect(billable_metric).to be_valid
+      expect(billable_metric.field_name).to be_nil
+    end
+
+    it "drops a stale field_name when switching an existing metric to count_agg" do
+      billable_metric = create(:sum_billable_metric, field_name: "custom_field")
+
+      billable_metric.update!(aggregation_type: :count_agg)
+
+      expect(billable_metric.reload.field_name).to be_nil
+    end
+
+    it "keeps the field_name for aggregation types that use it" do
+      billable_metric = build(:sum_billable_metric, field_name: "custom_field")
+
+      expect(billable_metric).to be_valid
+      expect(billable_metric.field_name).to eq("custom_field")
+    end
+  end
+
   describe "#validate_recurring" do
     let(:recurring) { false }
     let(:billable_metric) { build(:max_billable_metric, recurring:) }
