@@ -17,6 +17,7 @@ RSpec.describe Mutations::Wallets::Create, :premium do
           code
           name
           priority
+          purchaseOrderNumber
           rateAmount
           status
           currency
@@ -46,6 +47,7 @@ RSpec.describe Mutations::Wallets::Create, :premium do
               value
             }
             transactionName
+            purchaseOrderNumber
           }
           appliesTo {
             feeTypes
@@ -73,6 +75,7 @@ RSpec.describe Mutations::Wallets::Create, :premium do
           customerId: customer.id,
           name: "First Wallet",
           priority: 9,
+          purchaseOrderNumber: "PO-123",
           rateAmount: "1",
           paidCredits: "10.00",
           grantedCredits: "0.00",
@@ -96,7 +99,8 @@ RSpec.describe Mutations::Wallets::Create, :premium do
                 {key: "example_key", value: "example_value"},
                 {key: "another_key", value: "another_value"}
               ],
-              transactionName: "Monthly AI Credits Top-up"
+              transactionName: "Monthly AI Credits Top-up",
+              purchaseOrderNumber: "PO-456"
             }
           ],
           appliesTo: {

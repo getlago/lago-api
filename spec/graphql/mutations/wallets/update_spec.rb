@@ -21,6 +21,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
           code
           name
           priority
+          purchaseOrderNumber
           status
           expirationAt
           invoiceRequiresSuccessfulPayment
@@ -48,6 +49,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
               value
             }
             transactionName
+            purchaseOrderNumber
           }
           appliesTo {
             feeTypes
@@ -80,6 +82,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
           id: wallet.id,
           name: "New name",
           priority: 22,
+          purchaseOrderNumber: "PO-123",
           expirationAt: expiration_at.iso8601,
           invoiceRequiresSuccessfulPayment: true,
           paidTopUpMinAmountCents: 1_00,
@@ -101,7 +104,8 @@ RSpec.describe Mutations::Wallets::Update, :premium do
                 {key: "example_key", value: "example_value"},
                 {key: "another_key", value: "another_value"}
               ],
-              transactionName: "Updated Credits Transaction"
+              transactionName: "Updated Credits Transaction",
+              purchaseOrderNumber: "PO-456"
             }
           ],
           appliesTo: {
@@ -119,6 +123,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
       "code" => wallet.code,
       "name" => "New name",
       "priority" => 22,
+      "purchaseOrderNumber" => "PO-123",
       "status" => "active",
       "invoiceRequiresSuccessfulPayment" => true,
       "expirationAt" => expiration_at.iso8601,
@@ -132,6 +137,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
       {"key" => "another_key", "value" => "another_value"}
     )
     expect(result_data["recurringTransactionRules"][0]["transactionName"]).to eq("Updated Credits Transaction")
+    expect(result_data["recurringTransactionRules"][0]["purchaseOrderNumber"]).to eq("PO-456")
     expect(result_data["recurringTransactionRules"][0]).to include(
       "lagoId" => recurring_transaction_rule.id,
       "method" => "target",
