@@ -618,7 +618,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
         end
     end
 
-    it "bills an override unit increase applied immediately as a delta invoice on activation" do
+    it "rejects an override unit increase while the subscription is incomplete" do
       travel_to(Time.zone.local(2026, 3, 1, 10)) do
         fixed_charge
         create_subscription(subscription_params)
@@ -629,32 +629,28 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription).to be_incomplete
       expect(subscription.invoices.count).to eq(1)
 
-      # Mid-gap: the fixed charge units are overridden for this subscription only.
+      # Mid-gap: overriding the fixed charge units is rejected.
       travel_to(Time.zone.local(2026, 3, 10, 10)) do
-        Subscriptions::UpdateOrOverrideFixedChargeService.call!(
+        result = Subscriptions::UpdateOrOverrideFixedChargeService.call(
           subscription:,
           fixed_charge:,
           params: {units: 15, apply_units_immediately: true}
         )
         perform_all_enqueued_jobs
+
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({base: ["subscription_incomplete"]})
       end
 
-      subscription.reload
-      expect(subscription.plan).to eq(plan)
-
-      override = Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)
-      expect(override.units).to eq(15)
+      expect(Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)).to be_nil
+      expect(subscription.fixed_charge_events.where(timestamp: Time.zone.local(2026, 3, 10, 10))).to be_empty
       expect(subscription.invoices.count).to eq(1)
 
       travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
 
       subscription.reload
       expect(subscription).to be_active
-      expect(subscription.invoices.count).to eq(2)
-
-      delta_fee = subscription.invoices.order(:created_at).last.fees.fixed_charge.sole
-      expect(delta_fee.fixed_charge).to eq(fixed_charge)
-      expect(delta_fee.units).to eq(5)
+      expect(subscription.invoices.count).to eq(1)
     end
   end
 
