@@ -110,7 +110,15 @@ RSpec.describe Invoices::VoidService do
 
         context "when the invoice has applied credits from the wallet" do
           let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
-          let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, transaction_type: "outbound", amount: 100, credit_amount: 100) }
+          let(:wallet_transaction) do
+            create(:wallet_transaction,
+              wallet:,
+              invoice:,
+              purchase_order_number: "PO-123",
+              transaction_type: "outbound",
+              amount: 100,
+              credit_amount: 100)
+          end
 
           before do
             wallet_transaction
@@ -122,6 +130,7 @@ RSpec.describe Invoices::VoidService do
             expect(WalletTransactions::RecreditService).to have_received(:call).with(wallet_transaction: wallet_transaction)
             expect(wallet.wallet_transactions.count).to eq(2)
             expect(wallet.reload.credits_balance).to eq(200)
+            expect(wallet.wallet_transactions.inbound.last.purchase_order_number).to eq(wallet_transaction.purchase_order_number)
           end
         end
 

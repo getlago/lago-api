@@ -106,14 +106,12 @@ module Invoices
         invoice_type: :one_off,
         currency:,
         datetime: Time.zone.at(timestamp),
-        billing_entity:
+        billing_entity:,
+        purchase_order_number:
       )
       invoice_result.raise_if_error!
 
       @invoice = invoice_result.invoice
-      # NOTE: Persisted immediately so the value survives the tax-deferred path,
-      #       which skips the later `invoice.save!`.
-      @invoice.update!(purchase_order_number:) unless purchase_order_number.nil?
     end
 
     def resolve_billing_entity
