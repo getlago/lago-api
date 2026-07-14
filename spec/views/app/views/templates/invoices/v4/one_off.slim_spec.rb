@@ -195,4 +195,68 @@ RSpec.describe "templates/invoices/v4/one_off.slim" do
       expect(rendered_template).to match_html_snapshot
     end
   end
+
+  context "with a purchase order number" do
+    let(:add_on) { create(:add_on, organization:, name: "Setup Fee") }
+    let(:add_on_fee) do
+      create(
+        :one_off_fee,
+        invoice:,
+        add_on:,
+        amount_cents: 10000,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 10000,
+        invoice_display_name: "Setup Fee"
+      )
+    end
+
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        organization:,
+        number: "LAGO-202509-OO-PO",
+        payment_due_date: Date.parse("2025-09-15"),
+        issuing_date: Date.parse("2025-09-01"),
+        invoice_type: :one_off,
+        total_amount_cents: 10000,
+        currency: "USD",
+        fees_amount_cents: 10000,
+        sub_total_excluding_taxes_amount_cents: 10000,
+        sub_total_including_taxes_amount_cents: 10000,
+        coupons_amount_cents: 0,
+        purchase_order_number: "PO-12345"
+      )
+    end
+
+    before { add_on_fee }
+
+    it "renders the purchase order number under the invoice number" do
+      expect(rendered_template).to include("Purchase Order Number")
+      expect(rendered_template).to include("PO-12345")
+    end
+  end
+
+  context "without a purchase order number" do
+    let(:add_on) { create(:add_on, organization:, name: "Setup Fee") }
+    let(:add_on_fee) do
+      create(
+        :one_off_fee,
+        invoice:,
+        add_on:,
+        amount_cents: 10000,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 10000,
+        invoice_display_name: "Setup Fee"
+      )
+    end
+
+    before { add_on_fee }
+
+    it "does not render the purchase order number row" do
+      expect(rendered_template).not_to include("Purchase Order Number")
+    end
+  end
 end

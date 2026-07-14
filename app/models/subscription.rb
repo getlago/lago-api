@@ -1,18 +1,19 @@
 # frozen_string_literal: true
 
 class Subscription < ApplicationRecord
+  include HasPurchaseOrderNumber
   include PaperTrailTraceable
   include RansackUuidSearch
 
-  self.ignored_columns += %w[incompleted_at]
+  self.ignored_columns += %w[incompleted_at cancelation_reason]
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :plan, -> { with_discarded }
   belongs_to :previous_subscription, class_name: "Subscription", optional: true
   belongs_to :organization
   belongs_to :payment_method, optional: true
+  belongs_to :billing_entity, optional: true
 
-  has_one :billing_entity, through: :customer
   has_many :next_subscriptions, class_name: "Subscription", foreign_key: :previous_subscription_id
   has_many :events
   has_many :invoice_subscriptions
@@ -25,6 +26,7 @@ class Subscription < ApplicationRecord
   has_many :entitlement_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
   has_many :fixed_charges, -> { kept }, through: :plan
   has_many :fixed_charge_events
+  has_many :fixed_charge_units_overrides, class_name: "Subscription::FixedChargeUnitsOverride"
   has_many :add_ons, through: :fixed_charges
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
@@ -47,7 +49,7 @@ class Subscription < ApplicationRecord
   delegate :amount_currency, to: :plan, prefix: true
 
   validates :external_id, :billing_time, presence: true
-  validate :validate_external_id, on: :create
+  validate :validate_external_id, on: [:create, :update], if: -> { status_changed? }
 
   STATUSES = [
     :pending,
@@ -57,7 +59,7 @@ class Subscription < ApplicationRecord
     :incomplete
   ].freeze
 
-  CANCELATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout"}.freeze
+  CANCELLATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout"}.freeze
 
   BILLING_TIME = %i[
     calendar
@@ -71,13 +73,19 @@ class Subscription < ApplicationRecord
   enum :billing_time, BILLING_TIME
   enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES, prefix: true
   enum :on_termination_invoice, ON_TERMINATION_INVOICES, prefix: true
-  enum :cancelation_reason, CANCELATION_REASONS
+  enum :cancellation_reason, CANCELLATION_REASONS
 
   validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
   validates :started_at, presence: true, if: -> { incomplete? }
 
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
   scope :expirable, -> { incomplete.joins(:activation_rules).merge(Subscription::ActivationRule.expirable) }
+  scope :without_fixed_charge_units_override_for, ->(fixed_charge) {
+    overrides = Subscription::FixedChargeUnitsOverride
+      .where(fixed_charge:)
+      .where("subscription_fixed_charge_units_overrides.subscription_id = subscriptions.id")
+    where.not(overrides.arel.exists)
+  }
 
   # NOTE: SQL query to get subscription_at into customer timezone
   def self.subscription_at_in_timezone_sql
@@ -101,6 +109,14 @@ class Subscription < ApplicationRecord
 
   def self.ransackable_associations(_ = nil)
     %w[customer plan]
+  end
+
+  def billing_entity
+    super || customer&.billing_entity
+  end
+
+  def applicable_billing_entity_id
+    billing_entity_id || customer&.billing_entity_id
   end
 
   def mark_as_active!(timestamp = Time.current)
@@ -173,6 +189,12 @@ class Subscription < ApplicationRecord
     started_at.to_date < created_at.to_date
   end
 
+  # Falls back to started_at when the subscription has not started yet, so the billing period is
+  # computed from its first period rather than the period around Time.current.
+  def billing_reference_time
+    [Time.current, started_at].compact.max
+  end
+
   def initial_started_at
     customer.subscriptions
       .where(external_id:)
@@ -201,6 +223,9 @@ class Subscription < ApplicationRecord
 
   def downgrade_plan_date
     return unless next_subscription
+    if next_subscription.active? && downgraded?
+      return next_subscription.started_at&.to_date
+    end
     return unless next_subscription.pending?
 
     ::Subscriptions::DatesService.new_instance(self, Time.current)
@@ -298,6 +323,10 @@ class Subscription < ApplicationRecord
 
     usage_thresholds.presence || plan.usage_thresholds.presence || plan.applicable_usage_thresholds
   end
+
+  def last_subscription_fee
+    fees.subscription.order(created_at: :desc).first
+  end
 end
 
 # == Schema Information
@@ -308,8 +337,9 @@ end
 #  id                           :uuid             not null, primary key
 #  activated_at                 :datetime
 #  billing_time                 :integer          default("calendar"), not null
-#  cancelation_reason           :enum
 #  canceled_at                  :datetime
+#  cancellation_reason          :enum
+#  consolidate_invoice          :boolean          default(TRUE), not null
 #  ending_at                    :datetime
 #  last_received_event_on       :date
 #  name                         :string
@@ -317,6 +347,8 @@ end
 #  on_termination_invoice       :enum             default("generate"), not null
 #  payment_method_type          :enum             default("provider"), not null
 #  progressive_billing_disabled :boolean          default(FALSE), not null
+#  purchase_order_number        :string
+#  skip_daily_usage             :boolean          default(FALSE), not null
 #  skip_invoice_custom_sections :boolean          default(FALSE), not null
 #  started_at                   :datetime
 #  status                       :integer          not null
@@ -325,6 +357,7 @@ end
 #  trial_ended_at               :datetime
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
+#  billing_entity_id            :uuid
 #  customer_id                  :uuid             not null
 #  external_id                  :string           not null
 #  organization_id              :uuid             not null
@@ -334,12 +367,17 @@ end
 #
 # Indexes
 #
+#  idx_on_organization_id_external_id_gin_trgm_ops_fb8058a497  (organization_id,external_id) USING gin
+#  idx_on_organization_id_subscription_at_created_at_id        (organization_id,subscription_at DESC NULLS LAST,created_at DESC,id)
+#  index_pending_active_subscriptions_on_plan_id_and_status    (plan_id,status) WHERE (status = ANY (ARRAY[0, 1]))
+#  index_subscriptions_on_billing_entity_id                    (billing_entity_id)
 #  index_subscriptions_on_customer_id                          (customer_id)
 #  index_subscriptions_on_ending_at_active                     (ending_at) WHERE ((status = 1) AND (ending_at IS NOT NULL))
 #  index_subscriptions_on_external_id                          (external_id)
 #  index_subscriptions_on_last_received_event_on               (last_received_event_on)
 #  index_subscriptions_on_last_received_event_on_null          (id) WHERE (last_received_event_on IS NULL)
 #  index_subscriptions_on_organization_id                      (organization_id)
+#  index_subscriptions_on_organization_id_name_gin_trgm_ops    (organization_id,name) USING gin
 #  index_subscriptions_on_payment_method_id                    (payment_method_id)
 #  index_subscriptions_on_plan_id                              (plan_id)
 #  index_subscriptions_on_previous_subscription_id_and_status  (previous_subscription_id,status)
@@ -349,6 +387,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (payment_method_id => payment_methods.id)

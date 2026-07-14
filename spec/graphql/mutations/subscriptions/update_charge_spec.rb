@@ -119,6 +119,34 @@ RSpec.describe Mutations::Subscriptions::UpdateCharge, :premium do
     end
   end
 
+  context "with filters" do
+    let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, organization:, key: "region", values: %w[us eu]) }
+    let(:input) do
+      {
+        subscriptionId: subscription.id,
+        chargeCode: charge.code,
+        properties: {amount: "1"},
+        filters: [
+          {
+            invoiceDisplayName: "EU",
+            properties: {amount: "11"},
+            values: {billable_metric_filter.key => %w[eu]}
+          }
+        ]
+      }
+    end
+
+    before { billable_metric_filter }
+
+    it "creates the charge override with its filters" do
+      result_data = subject["data"]["updateSubscriptionCharge"]
+
+      override = Charge.find(result_data["id"])
+      expect(override.filters.count).to eq(1)
+      expect(override.filters.first.properties).to eq("amount" => "11")
+    end
+  end
+
   context "with taxes" do
     let(:tax) { create(:tax, organization:) }
     let(:input) do

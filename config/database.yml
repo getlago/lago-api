@@ -1,5 +1,9 @@
 default: &default
   adapter: postgresql
+  variables:
+    statement_timeout: <%= ENV.fetch("LAGO_DATABASE_STATEMENT_TIMEOUT", ":default") %>
+    idle_in_transaction_session_timeout: <%= ENV.fetch("LAGO_DATABASE_IDLE_TX_TIMEOUT", ":default") %>
+    lock_timeout: <%= ENV.fetch("LAGO_DATABASE_LOCK_TIMEOUT", ":default") %>
 
 development:
   primary:

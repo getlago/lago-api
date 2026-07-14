@@ -4,6 +4,8 @@ module Charges
   class UpdateService < BaseService
     include CascadeUpdatable
 
+    Result = BaseResult[:charge]
+
     def initialize(charge:, params:, cascade_options: {}, cascade_updates: false)
       @charge = charge
       @params = params.to_h.deep_symbolize_keys
@@ -54,11 +56,10 @@ module Charges
         )
 
         filters = params.delete(:filters)
-        unless filters.nil?
+        if filters && !cascade
           ChargeFilters::CreateOrUpdateBatchService.call(
             charge:,
-            filters_params: filters.map(&:with_indifferent_access),
-            cascade_options:
+            filters_params: filters.map(&:with_indifferent_access)
           ).raise_if_error!
         end
 

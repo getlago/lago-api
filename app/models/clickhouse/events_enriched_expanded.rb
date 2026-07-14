@@ -3,6 +3,14 @@
 module Clickhouse
   class EventsEnrichedExpanded < BaseRecord
     self.table_name = "events_enriched_expanded"
+    self.primary_key = [
+      :organization_id,
+      :code,
+      :external_subscription_id,
+      :charge_id,
+      :charge_filter_id,
+      :timestamp
+    ]
   end
 end
 

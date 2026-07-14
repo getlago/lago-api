@@ -47,7 +47,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
       it "returns a result with error" do
         result = payment_receipt_generate_service.call
 
-        expect(result.success).to be_falsey
+        expect(result).not_to be_success
         expect(result.error.error_code).to eq("payment_receipt_not_found")
       end
     end
@@ -154,18 +154,18 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
       before do
         payment_receipt.billing_entity.update(country:, einvoicing: true)
 
-        allow(EInvoices::Payments::FacturX::CreateService).to receive(:call).and_return(create_xml_result)
+        allow(EInvoices::Payments::Cii::CreateService).to receive(:call).and_return(create_xml_result)
         allow(Utils::PdfAttachmentService).to receive(:call)
       end
 
       context "with FR country" do
         let(:country) { "FR" }
 
-        it "generates the payment_receipt with attached facturx xml synchronously" do
+        it "generates the payment_receipt with attached cii xml synchronously" do
           result = described_class.call(payment_receipt:, context:)
 
           expect(Utils::PdfAttachmentService).to have_received(:call)
-          expect(EInvoices::Payments::FacturX::CreateService).to have_received(:call)
+          expect(EInvoices::Payments::Cii::CreateService).to have_received(:call)
           expect(result.payment_receipt.file).to be_present
         end
       end

@@ -3,6 +3,8 @@
 module Integrations
   module Hubspot
     class SavePortalIdService < BaseService
+      Result = BaseResult
+
       def initialize(integration:)
         @integration = integration
         super

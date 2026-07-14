@@ -166,6 +166,14 @@ module ScenariosHelper
     end
   end
 
+  ### Subscription Fixed Charges
+
+  def update_subscription_fixed_charge(subscription, fixed_charge_code, params, **kwargs)
+    api_call(**kwargs) do
+      put_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}/fixed_charges/#{fixed_charge_code}", {fixed_charge: params})
+    end
+  end
+
   ### Subscription Charge Filters
 
   def create_subscription_charge_filter(subscription, charge_code, params, **kwargs)
@@ -300,8 +308,8 @@ module ScenariosHelper
     valvat = instance_double(Valvat)
     allow(Valvat).to receive(:new).with(vat_number).and_return(valvat)
     allow(valvat).to receive(:exists?).with(detail: true, raise_error: true).and_return({
-      countryCode: vat_number[0..1].upcase,
-      vatNumber: vat_number.upcase
+      country_code: vat_number[0..1].upcase,
+      vat_number: vat_number.upcase
     })
   end
 
@@ -387,7 +395,8 @@ module ScenariosHelper
 
   def setup_stripe_for(customer:)
     stripe_provider = create(:stripe_provider, organization:)
-    create(:stripe_customer, customer_id: customer.id, payment_provider: stripe_provider)
+    stripe_customer = create(:stripe_customer, customer_id: customer.id, payment_provider: stripe_provider)
+    create(:payment_method, payment_provider_customer: stripe_customer, is_default: true)
     customer.update!(payment_provider: "stripe", payment_provider_code: stripe_provider.code)
   end
 

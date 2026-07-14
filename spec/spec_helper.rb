@@ -7,6 +7,13 @@ KnapsackPro::Adapters::RSpecAdapter.bind
 
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 ENV["RAILS_ENV"] = "test"
+
+# The dev container exposes Meilisearch to the app. Tests must not depend on
+# it: drop the env vars before boot so the initializer stays inactive and
+# `Lago::Meilisearch.indexing_enabled?` is false unless a spec sets them.
+ENV.delete("LAGO_MEILISEARCH_URL")
+ENV.delete("LAGO_MEILISEARCH_SEARCH_ENABLED")
+
 require_relative "../config/environment"
 
 # Explicitly require monkey patches after loading dependencies.
@@ -19,6 +26,8 @@ else
   require "debug"
 end
 
+require "sentry/test_helper"
+require "sentry/rspec"
 require "webmock/rspec"
 require "simplecov"
 require "money-rails/test_helpers"
@@ -60,6 +69,13 @@ end
 
 ENV["STRIPE_API_VERSION"] ||= "2020-08-27"
 
+Sentry.init do |config|
+  config.dsn = "https://fake@sentry.io/123"
+  config.enabled_environments = ["production"]
+  config.environment = :test
+  config.transport.transport_class = Sentry::DummyTransport
+end
+
 RSpec.configure do |config|
   config.include ActiveJob::TestHelper
   config.include FactoryBot::Syntax::Methods
@@ -77,6 +93,7 @@ RSpec.configure do |config|
   config.include ActiveStorageValidations::Matchers
   config.include Karafka::Testing::RSpec::Helpers
   config.include GraphQL::Testing::Helpers.for(LagoApiSchema)
+  config.include Sentry::TestHelper
 
   # NOTE: these files make real API calls and should be excluded from build
   #       run them manually when needed
@@ -159,14 +176,6 @@ RSpec.configure do |config|
       end
     end
 
-    if metadata[:with_bullet] || metadata[:bullet]
-      Bullet.enable = true
-      bullet_metadata = example.metadata[:bullet] || {}
-      Bullet.n_plus_one_query_enable = bullet_metadata.fetch(:n_plus_one_query, true)
-      Bullet.unused_eager_loading_enable = bullet_metadata.fetch(:unused_eager_loading, true)
-      Bullet.start_request
-    end
-
     if metadata[:cache]
       Rails.cache = if example.metadata[:cache].to_sym == :memory
         ActiveSupport::Cache.lookup_store(:memory_store)
@@ -178,14 +187,6 @@ RSpec.configure do |config|
         raise "Unknown cache store: #{example.metadata[:cache]}"
       end
     end
-  end
-
-  config.after do |example|
-    if example.metadata[:with_bullet] || example.metadata[:bullet]
-      Bullet.perform_out_of_channel_notifications if Bullet.notification?
-      Bullet.end_request
-    end
-    Bullet.enable = false
   end
 
   config.around do |example|
@@ -214,11 +215,42 @@ RSpec.configure do |config|
     end
   end
 
-  config.around do |example|
-    if example.metadata[:premium]
-      lago_premium!(&example)
+  config.around(:example, :premium) do |example|
+    lago_premium!(&example)
+  end
+
+  config.around(:each, :sentry) do |example|
+    present = ENV.key?("SENTRY_DSN")
+    value = ENV["SENTRY_DSN"]
+    ENV["SENTRY_DSN"] = "https://fake@sentry.io/123"
+
+    setup_sentry_test
+    example.run
+  ensure
+    teardown_sentry_test
+    if !present
+      ENV.delete("SENTRY_DSN")
     else
-      example.run
+      ENV["SENTRY_DSN"] = value
     end
+  end
+
+  config.around(:example, :bullet) do |example|
+    bullet = example.metadata[:bullet].is_a?(Hash) ? example.metadata[:bullet] : {}
+
+    example.example_group.before do
+      Bullet.enable = true
+      Bullet.n_plus_one_query_enable = bullet.fetch(:n_plus_one_query, true)
+      Bullet.unused_eager_loading_enable = bullet.fetch(:unused_eager_loading, true)
+      Bullet.start_request
+    end
+
+    example.example_group.after do
+      Bullet.perform_out_of_channel_notifications if Bullet.notification?
+      Bullet.end_request
+      Bullet.enable = false
+    end
+
+    example.run
   end
 end

@@ -3,6 +3,11 @@
 module BillableMetrics
   module Aggregations
     class SumService < BillableMetrics::Aggregations::BaseService
+      # NOTE: when set, the aggregation reuses these precomputed results instead of
+      #       querying the event store. Used by the prorated aggregation service which
+      #       already sums the (non-prorated) value and count while computing proration.
+      attr_accessor :injected_sum_result, :injected_grouped_sum_result
+
       def initialize(...)
         super
 
@@ -14,19 +19,20 @@ module BillableMetrics
       def compute_aggregation(options: {})
         return empty_result if should_bypass_aggregation?
 
-        aggregation = event_store.sum
+        sum_result = injected_sum_result || event_store.sum
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
-          handle_in_advance_current_usage(aggregation)
+          handle_in_advance_current_usage(sum_result.value)
         else
-          result.aggregation = aggregation
+          result.aggregation = sum_result.value
         end
 
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
-        result.count = event_store.count
+        result.count = sum_result.events_count
 
         if presentation_by.present?
-          result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by)
+          result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash)
+          result.pay_in_advance_breakdowns = build_pay_in_advance_breakdowns(value: event_value)
         end
 
         result.options = {running_total: running_total(options)}
@@ -46,29 +52,18 @@ module BillableMetrics
       def compute_grouped_by_aggregation(options: {})
         return empty_results if should_bypass_aggregation?
 
-        aggregations = event_store.grouped_sum
+        aggregations = injected_grouped_sum_result || event_store.grouped_sum
         return empty_results if aggregations.blank?
 
-        counts = event_store.grouped_count
-
         if presentation_by.present?
-          result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by)
+          result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash)
         end
 
-        merged_hash = {}
-        aggregations.each do |aggregation|
-          merged_hash[aggregation[:groups]] = {aggregation: aggregation[:value]}
-        end
-        counts.each do |count|
-          next unless merged_hash[count[:groups]]
-          merged_hash[count[:groups]] = merged_hash[count[:groups]].merge({count: count[:value]})
-        end
-
-        result.aggregations = merged_hash.map do |groups, merged_aggregation_count|
+        result.aggregations = aggregations.map do |aggregation|
           group_result = BaseService::Result.new
-          group_result.grouped_by = groups
+          group_result.grouped_by = aggregation.groups
 
-          aggregation_value = merged_aggregation_count[:aggregation]
+          aggregation_value = aggregation.value
 
           if options[:is_pay_in_advance] && options[:is_current_usage]
             handle_in_advance_current_usage(aggregation_value, target_result: group_result)
@@ -76,7 +71,7 @@ module BillableMetrics
             group_result.aggregation = aggregation_value
           end
 
-          group_result.count = merged_aggregation_count[:count] || 0
+          group_result.count = aggregation.events_count
           group_result.options = {running_total: running_total(options, grouped_by_values: group_result.grouped_by)}
           group_result
         end
@@ -145,7 +140,7 @@ module BillableMetrics
         return BigDecimal(0) unless event
         return BigDecimal(0) if event.properties.blank?
 
-        value = event.properties.fetch(billable_metric.field_name, 0).to_s
+        value = event_value.to_s
 
         cached_aggregation = find_cached_aggregation(
           with_from_datetime: from_datetime,

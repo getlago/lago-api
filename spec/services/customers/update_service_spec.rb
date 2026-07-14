@@ -46,8 +46,6 @@ RSpec.describe Customers::UpdateService do
     let(:account_type) { "customer" }
 
     it "updates a customer and calls SendWebhookJob" do
-      allow(SendWebhookJob).to receive(:perform_later)
-
       result = customers_service.call
       updated_customer = result.customer
       expect(updated_customer.name).to eq(update_args[:name])
@@ -60,13 +58,33 @@ RSpec.describe Customers::UpdateService do
 
       shipping_address = update_args[:shipping_address]
       expect(updated_customer.shipping_city).to eq(shipping_address[:city])
-      expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", updated_customer)
+      expect(SendWebhookJob).to have_been_enqueued.with("customer.updated", updated_customer)
     end
 
     it "produces an activity log" do
       described_class.call(customer:, args: update_args)
 
       expect(Utils::ActivityLog).to have_produced("customer.updated").after_commit.with(customer)
+    end
+
+    context "when Meilisearch is enabled" do
+      before do
+        customer
+        stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
+      end
+
+      it "reindexes the customer's invoices when a searchable field changes" do
+        expect { customers_service.call }
+          .to have_enqueued_job_after_commit(Customers::ReindexInvoicesJob).with(customer.id)
+      end
+
+      context "when no searchable field changes" do
+        let(:update_args) { {id: customer.id, net_payment_term: 8} }
+
+        it "does not reindex" do
+          expect { customers_service.call }.not_to have_enqueued_job(Customers::ReindexInvoicesJob)
+        end
+      end
     end
 
     context "with email containing unicode lookalike characters" do
@@ -121,6 +139,16 @@ RSpec.describe Customers::UpdateService do
           result = customers_service.call
           expect(result).to be_success
           expect(result.customer.billing_entity).to eq(billing_entity)
+        end
+
+        context "when multi_entity_billing feature flag is enabled" do
+          before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+          it "updates the billing entity" do
+            result = customers_service.call
+            expect(result).to be_success
+            expect(result.customer.billing_entity).to eq(billing_entity_2)
+          end
         end
       end
     end
@@ -618,6 +646,101 @@ RSpec.describe Customers::UpdateService do
           expect(result).to be_success
 
           expect(result.customer.taxes).to eq([])
+        end
+      end
+    end
+
+    context "when the billing entity changes and entities have different EU tax settings" do
+      let(:eu_billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
+      let(:other_eu_billing_entity) { create(:billing_entity, organization:, country: "DE", eu_tax_management: true) }
+      let(:non_eu_billing_entity) { create(:billing_entity, organization:, country: "US", eu_tax_management: false) }
+
+      let(:fr_tax) { create(:tax, organization:, code: "lago_eu_fr_standard", rate: 20.0) }
+      let(:de_tax) { create(:tax, organization:, code: "lago_eu_de_standard", rate: 19.0) }
+
+      let(:customer) { create(:customer, organization:, billing_entity: source_billing_entity, country: nil, zipcode: nil) }
+
+      let(:update_args) { {id: customer.id, billing_entity_code: target_billing_entity.code} }
+
+      before do
+        fr_tax
+        de_tax
+        create(:customer_applied_tax, organization:, customer:, tax: applied_tax) if applied_tax
+      end
+
+      context "when moving from an EU entity to a non-EU entity" do
+        let(:source_billing_entity) { eu_billing_entity }
+        let(:target_billing_entity) { non_eu_billing_entity }
+        let(:applied_tax) { fr_tax }
+
+        it "resets the EU tax so the customer falls back to the billing entity" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.billing_entity).to eq(non_eu_billing_entity)
+          expect(result.customer.taxes).to eq([])
+        end
+      end
+
+      context "when moving from a non-EU entity to an EU entity" do
+        let(:source_billing_entity) { non_eu_billing_entity }
+        let(:target_billing_entity) { eu_billing_entity }
+        let(:applied_tax) { nil }
+
+        it "assigns the new billing entity EU tax" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.billing_entity).to eq(eu_billing_entity)
+          expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_fr_standard"])
+        end
+      end
+
+      context "when moving between two EU entities in different countries" do
+        let(:source_billing_entity) { eu_billing_entity }
+        let(:target_billing_entity) { other_eu_billing_entity }
+        let(:applied_tax) { fr_tax }
+
+        it "re-evaluates the EU tax against the new billing entity" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.billing_entity).to eq(other_eu_billing_entity)
+          expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_de_standard"])
+        end
+      end
+
+      context "when the new EU entity requires a VIES check" do
+        let(:source_billing_entity) { eu_billing_entity }
+        let(:target_billing_entity) { other_eu_billing_entity }
+        let(:applied_tax) { fr_tax }
+
+        let(:customer) do
+          create(:customer, organization:, billing_entity: source_billing_entity, country: nil, zipcode: nil, tax_identification_number: "FR123456789")
+        end
+
+        it "resets the EU tax and schedules a VIES check for the new billing entity" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.taxes).to eq([])
+          expect(customer.reload.pending_vies_check).to have_attributes(
+            billing_entity: other_eu_billing_entity,
+            tax_identification_number: "FR123456789"
+          )
+        end
+      end
+
+      context "when the billing entity does not change" do
+        let(:source_billing_entity) { eu_billing_entity }
+        let(:target_billing_entity) { eu_billing_entity }
+        let(:applied_tax) { fr_tax }
+
+        it "keeps the existing customer tax" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_fr_standard"])
         end
       end
     end

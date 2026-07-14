@@ -86,6 +86,95 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         end
       end
 
+      context "with multi-entity billing" do
+        let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+        context "when multi_entity_billing flag is disabled" do
+          let(:subscription) do
+            build(
+              :subscription,
+              customer:,
+              plan:,
+              billing_entity: other_billing_entity,
+              billing_time:,
+              subscription_at: timestamp,
+              started_at: timestamp,
+              created_at: timestamp
+            )
+          end
+
+          it "ignores the subscription's billing entity and uses the customer's entity" do
+            travel_to(timestamp) do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.billing_entity).to eq(billing_entity)
+            end
+          end
+        end
+
+        context "when multi_entity_billing flag is enabled" do
+          before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+          context "when the subscription has its own billing entity" do
+            let(:subscription) do
+              build(
+                :subscription,
+                customer:,
+                plan:,
+                billing_entity: other_billing_entity,
+                billing_time:,
+                subscription_at: timestamp,
+                started_at: timestamp,
+                created_at: timestamp
+              )
+            end
+
+            it "uses the subscription's billing entity" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.billing_entity).to eq(other_billing_entity)
+              end
+            end
+          end
+
+          context "when the subscription has no explicit billing entity" do
+            it "falls back to the customer's billing entity" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.billing_entity).to eq(billing_entity)
+              end
+            end
+          end
+
+          context "when subscriptions have mismatched effective billing entities" do
+            let(:customer) { create(:customer, organization:, billing_entity:) }
+            let(:plan1) { create(:plan, organization:, interval: "monthly") }
+            let(:plan2) { create(:plan, organization:, interval: "monthly") }
+            let(:subscriptions) { [subscription1, subscription2] }
+            let(:subscription1) do
+              create(:subscription, plan: plan1, customer:, billing_entity:, subscription_at: timestamp, billing_time: "calendar")
+            end
+            let(:subscription2) do
+              create(:subscription, plan: plan2, customer:, billing_entity: other_billing_entity, subscription_at: timestamp, billing_time: "calendar")
+            end
+
+            before { organization.update!(premium_integrations: ["preview"]) }
+
+            it "returns a validation error" do
+              result = preview_service.call
+
+              expect(result).not_to be_success
+              expect(result.error.messages[:base]).to include("subscription_billing_entities_do_not_match")
+            end
+          end
+        end
+      end
+
       context "when billing periods do not match" do
         let(:customer) { create(:customer, organization:, billing_entity:) }
         let(:plan1) { create(:plan, organization:, interval: "monthly") }
@@ -293,6 +382,32 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 expect(fixed_charge_fee.units).to eq(100)
                 expect(fixed_charge_fee.amount_cents).to eq(54_839)
               end
+            end
+          end
+        end
+
+        context "with minimum commitment for non-persisted subscription" do
+          let(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: false, amount_cents: 0) }
+          let!(:commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_00) }
+
+          before { organization.update!(premium_integrations: ["preview"]) }
+
+          it "includes a non-persisted commitment fee" do
+            travel_to(timestamp) do
+              result = preview_service.call
+
+              expect(result).to be_success
+
+              commitment_fees = result.invoice.fees.select { |f| f.fee_type == "commitment" }
+              expect(commitment_fees.size).to eq(1)
+
+              commitment_fee = commitment_fees.first
+              expect(commitment_fee).not_to be_persisted
+              expect(commitment_fee.invoiceable_id).to eq(commitment.id)
+              # calendar billing: subscription started Mar 30, so days_active starts from Mar 30, not Jan 1
+              # days_active = 277 (Mar 30 => Dec 31), days_total = 366 (Jan 1 => Dec 31, 2024 leap year)
+              # proration = 277 / 366.0 => (100_000 * 0.7568...).round = 75_683
+              expect(commitment_fee.amount_cents).to eq(75_683)
             end
           end
         end
@@ -770,6 +885,30 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                   # 25 units falls in second tier: $5 flat + (25 * $0.8) = $25
                   expect(fixed_charge_fee.amount_cents).to eq(2500)
                 end
+              end
+            end
+          end
+
+          context "with minimum commitment" do
+            let(:timestamp) { Time.zone.parse("1 Jan 2024") }
+            let(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: false, amount_cents: 0) }
+            let!(:commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_00) }
+
+            it "includes a non-persisted commitment fee when preview fees are below the minimum" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+
+                commitment_fees = result.invoice.fees.select { |f| f.fee_type == "commitment" }
+                expect(commitment_fees.size).to eq(1)
+
+                commitment_fee = commitment_fees.first
+                expect(commitment_fee).not_to be_persisted
+                expect(commitment_fee.invoiceable_type).to eq("Commitment")
+                expect(commitment_fee.invoiceable_id).to eq(commitment.id)
+                expect(commitment_fee.amount_cents).to eq(commitment.amount_cents)
+                expect(commitment_fee.subscription).to eq(subscription)
               end
             end
           end
@@ -1625,7 +1764,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
           context "when there is Net::OpenTimeout error" do
             before do
               allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:new)
-                .and_raise(Net::OpenTimeout)
+                .and_raise(Integrations::Aggregator::TimeoutError)
             end
 
             it "uses zero taxes" do

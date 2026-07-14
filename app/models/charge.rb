@@ -78,6 +78,15 @@ class Charge < ApplicationRecord
     presentation_group_keys.map { |e| e.fetch("value", nil) }.compact
   end
 
+  def presentation_group_keys_values_displayed_in_invoice
+    return [] if presentation_group_keys.blank?
+
+    presentation_group_keys
+      .select { |e| e.dig("options", "display_in_invoice") == true }
+      .map { |e| e.fetch("value", nil) }
+      .compact
+  end
+
   def equal_properties?(charge)
     charge_model == charge.charge_model && properties == charge.properties
   end
@@ -212,15 +221,17 @@ end
 #
 # Indexes
 #
-#  idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb  (plan_id,billable_metric_id,pay_in_advance) WHERE (deleted_at IS NULL)
-#  index_charges_on_accepts_target_wallet                       (accepts_target_wallet) WHERE (accepts_target_wallet = true)
-#  index_charges_on_billable_metric_id                          (billable_metric_id) WHERE (deleted_at IS NULL)
-#  index_charges_on_deleted_at                                  (deleted_at)
-#  index_charges_on_organization_id                             (organization_id)
-#  index_charges_on_parent_id                                   (parent_id)
-#  index_charges_on_plan_id                                     (plan_id)
-#  index_charges_on_plan_id_and_code                            (plan_id,code) UNIQUE WHERE ((deleted_at IS NULL) AND (parent_id IS NULL))
-#  index_charges_pay_in_advance                                 (billable_metric_id) WHERE ((deleted_at IS NULL) AND (pay_in_advance = true))
+#  idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb   (plan_id,billable_metric_id,pay_in_advance) WHERE (deleted_at IS NULL)
+#  index_charges_on_accepts_target_wallet                        (accepts_target_wallet) WHERE (accepts_target_wallet = true)
+#  index_charges_on_billable_metric_id                           (billable_metric_id) WHERE (deleted_at IS NULL)
+#  index_charges_on_billable_metric_id_all                       (billable_metric_id)
+#  index_charges_on_deleted_at                                   (deleted_at)
+#  index_charges_on_organization_id                              (organization_id)
+#  index_charges_on_parent_id                                    (parent_id)
+#  index_charges_on_plan_id                                      (plan_id)
+#  index_charges_on_plan_id_and_billable_metric_id_and_prorated  (plan_id,billable_metric_id,prorated) WHERE (deleted_at IS NULL)
+#  index_charges_on_plan_id_and_code                             (plan_id,code) UNIQUE WHERE ((deleted_at IS NULL) AND (parent_id IS NULL))
+#  index_charges_pay_in_advance                                  (billable_metric_id) WHERE ((deleted_at IS NULL) AND (pay_in_advance = true))
 #
 # Foreign Keys
 #

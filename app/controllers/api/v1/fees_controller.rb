@@ -50,11 +50,17 @@ module Api
                 :fixed_charge_add_on,
                 :invoice,
                 :invoiceable,
-                :true_up_fee
+                :true_up_fee,
+                :presentation_breakdowns
               ),
               ::V1::FeeSerializer,
               collection_name: "fees",
-              meta: pagination_metadata(result.fees),
+              meta: pagination_metadata(
+                result.fees,
+                key: "fees",
+                organization_id: current_organization.id,
+                params: index_filters.merge(page: params[:page], per_page: params[:per_page])
+              ),
               includes: %i[applied_taxes]
             )
           )

@@ -18,13 +18,32 @@ module Entitlement
     validates :name, length: {maximum: 255}
     validates :description, length: {maximum: 600}
 
+    attr_writer :subscriptions_count
+
     def self.ransackable_attributes(_auth_object = nil)
       %w[code name description]
     end
 
     def subscriptions_count
+      return @subscriptions_count if defined?(@subscriptions_count)
+
       base_scope = Subscription.joins(:plan).where(status: [:active, :pending])
       base_scope.where(plan: plans).or(base_scope.where(plan: {parent: plans})).count
+    end
+
+    def self.preload_subscriptions_count(organization, features)
+      subscriptions_count = SubscriptionsCountQuery.call(
+        organization:,
+        filters: {
+          feature_ids: features.map(&:id)
+        }
+      )
+
+      features.each do |feature|
+        feature.subscriptions_count = subscriptions_count[feature.id] || 0
+      end
+
+      features
     end
   end
 end

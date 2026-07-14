@@ -8,12 +8,14 @@ module Types
 
       field :id, ID, null: false
 
+      field :billing_entity_id, ID, null: true
       field :customer, Types::Customers::Object
 
       field :code, String, null: true
       field :currency, Types::CurrencyEnum, null: false
       field :name, String, null: true
       field :priority, Integer, null: false
+      field :purchase_order_number, String, null: true
       field :status, Types::Wallets::StatusEnum, null: false
 
       field :rate_amount, GraphQL::Types::Float, null: false

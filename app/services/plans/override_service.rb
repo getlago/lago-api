@@ -17,6 +17,7 @@ module Plans
 
       ActiveRecord::Base.transaction do
         new_plan = plan.dup.tap do |p|
+          p.organization = plan.organization
           p.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
           p.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
           p.description = params[:description] if params.key?(:description)
@@ -35,8 +36,11 @@ module Plans
         charges_params_by_id = (params[:charges] || []).index_by { |p| p[:id] }
         fixed_charges_params_by_id = (params[:fixed_charges] || []).index_by { |p| p[:id] }
 
-        plan.charges.find_each do |charge|
-          charge_params = (charges_params_by_id[charge.id] || {}).merge(plan_id: new_plan.id)
+        charges = plan.charges
+          .includes(:organization, :billable_metric, {applied_pricing_unit: :pricing_unit}, filters: :values)
+
+        charges.find_each do |charge|
+          charge_params = (charges_params_by_id[charge.id] || {}).merge(plan: new_plan)
           Charges::OverrideService.call(charge:, params: charge_params)
         end
 

@@ -46,7 +46,11 @@ module Customers
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
 
-        customer.billing_entity = billing_entity if new_customer || (customer.editable? && params.key?(:billing_entity_code))
+        billing_entity_changed = false
+        if new_customer || (params.key?(:billing_entity_code) && allow_billing_entity_update?(customer))
+          customer.billing_entity = billing_entity
+          billing_entity_changed = !new_customer && customer.billing_entity_id_changed?
+        end
         customer.name = params[:name] if params.key?(:name)
         customer.country = params[:country]&.upcase if params.key?(:country)
         customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
@@ -94,15 +98,25 @@ module Customers
         customer.save!
         customer.error_details.tax_error.delete_all if address_changed
 
+        tax_attributes_changed = original_tax_values.any? { |key, value| params.key?(key) && params[key] != value }
+
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,
           new_record: new_customer,
-          tax_attributes_changed: original_tax_values.any? { |key, value| params.key?(key) && params[key] != value }
+          tax_attributes_changed: tax_attributes_changed || billing_entity_changed
         )
 
         if eu_tax_code_result.success?
           params[:tax_codes] ||= []
           params[:tax_codes] = (params[:tax_codes] + [eu_tax_code_result.tax_code]).uniq
+        end
+
+        # NOTE: EU-managed taxes (lago_eu_*) belong to the previous billing entity. When the
+        #       billing entity changes and no new EU tax applies (new entity does not manage
+        #       EU taxes, or a VIES check is still pending), reset them so the customer falls
+        #       back to the new billing entity's taxes.
+        if billing_entity_changed && !params.key?(:tax_codes)
+          params[:tax_codes] = customer.taxes.where.not("code ILIKE ?", "lago_eu%").pluck(:code)
         end
 
         if params.key?(:tax_codes)
@@ -175,6 +189,10 @@ module Customers
       input_types = integration_customers&.map { |c| c.to_h.deep_symbolize_keys }&.map { |c| c[:integration_type] }
 
       input_types.length == input_types.uniq.length
+    end
+
+    def allow_billing_entity_update?(customer)
+      organization.feature_flag_enabled?(:multi_entity_billing) || customer.editable?
     end
 
     def create_metadata(customer:, args:)

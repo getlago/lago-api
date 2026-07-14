@@ -8,11 +8,6 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }
   let(:organization) { create(:organization) }
 
-  before do
-    allow(::Payments::SetPaymentMethodAndCreateReceiptJob).to receive(:perform_later)
-      .and_invoke(->(args) { ::Payments::SetPaymentMethodAndCreateReceiptJob.perform_now(**args) })
-  end
-
   ["2020-08-27", "2024-09-30.acacia", "2025-04-30.basil"].each do |version|
     context "when payment intent event (api_version: #{version})" do
       let(:invoice) { create(:invoice, organization:) }
@@ -29,12 +24,16 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
           .with(
             organization_id: organization.id,
             status: "succeeded",
+            amount_cents: anything,
             stripe_payment: PaymentProviders::StripeProvider::StripePayment
           ).and_call_original
 
         payment = create(:payment, provider_payment_id: event.data.object.id, payable: invoice)
 
-        result = event_service.call
+        result = nil
+        perform_enqueued_jobs(only: Payments::SetPaymentMethodAndCreateReceiptJob) do
+          result = event_service.call
+        end
 
         expect(result).to be_success
         expect(payment.reload.provider_payment_method_id).to start_with "pm_"
@@ -48,7 +47,9 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         payable = create(:invoice, customer:, issuing_date: "2025-03-17", organization:)
         create(:payment, payable:, provider_payment_id: event.data.object.id)
 
-        expect { event_service.call }.not_to have_enqueued_job(PaymentReceipts::CreateJob)
+        expect do
+          perform_enqueued_jobs(only: Payments::SetPaymentMethodAndCreateReceiptJob) { event_service.call }
+        end.not_to have_enqueued_job(PaymentReceipts::CreateJob)
       end
 
       context "when issue_receipts_enabled is true", :premium do
@@ -59,7 +60,9 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
           payable = create(:invoice, customer:, issuing_date: "2025-03-17", organization:)
           create(:payment, payable:, provider_payment_id: event.data.object.id)
 
-          expect { event_service.call }.to have_enqueued_job(PaymentReceipts::CreateJob)
+          expect do
+            perform_enqueued_jobs(only: Payments::SetPaymentMethodAndCreateReceiptJob) { event_service.call }
+          end.to have_enqueued_job(PaymentReceipts::CreateJob)
         end
       end
     end
@@ -83,6 +86,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
             .with(
               organization_id: organization.id,
               status: "succeeded",
+              amount_cents: anything,
               stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
                 id: "pi_12345",
                 status: "succeeded",
@@ -102,7 +106,9 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
             status: 200, body: get_stripe_fixtures("retrieve_payment_method_response.json", version:)
           )
 
-          expect { event_service.call }.to have_enqueued_job(PaymentReceipts::CreateJob)
+          expect do
+            perform_enqueued_jobs(only: Payments::SetPaymentMethodAndCreateReceiptJob) { event_service.call }
+          end.to have_enqueued_job(PaymentReceipts::CreateJob)
         end
       end
 
@@ -111,6 +117,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
           .with(
             organization_id: organization.id,
             status: "succeeded",
+            amount_cents: anything,
             stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
               id: "pi_12345",
               status: "succeeded",
@@ -129,7 +136,10 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
           status: 200, body: get_stripe_fixtures("retrieve_payment_method_response.json", version:)
         )
 
-        result = event_service.call
+        result = nil
+        perform_enqueued_jobs(only: Payments::SetPaymentMethodAndCreateReceiptJob) do
+          result = event_service.call
+        end
 
         expect(result).to be_success
         expect(payment.reload.provider_payment_method_id).to start_with "pm_"

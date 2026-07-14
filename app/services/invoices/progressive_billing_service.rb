@@ -61,7 +61,7 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, Customers::FailedToAcquireLock
+    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, BaseLockService::FailedToAcquireLock
       raise
     rescue => e
       result.fail_with_error!(e)
@@ -77,8 +77,9 @@ module Invoices
       invoice_result = CreateGeneratingService.call(
         customer: subscription.customer,
         invoice_type: :progressive_billing,
-        currency: sorted_usage_thresholds.first.currency,
-        datetime: Time.zone.at(timestamp)
+        currency: subscription.plan.amount_currency,
+        datetime: Time.zone.at(timestamp),
+        billing_entity: subscription.billing_entity || subscription.customer.billing_entity
       ) do |invoice|
         CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :progressive_billing)
@@ -145,7 +146,7 @@ module Invoices
     end
 
     def should_deliver_email?
-      License.premium? && subscription.billing_entity.email_settings.include?("invoice.finalized")
+      License.premium? && invoice.billing_entity.email_settings.include?("invoice.finalized")
     end
 
     def create_credit_note_credit

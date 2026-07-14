@@ -9,9 +9,13 @@ RSpec.describe Mutations::Wallets::Update, :premium do
   let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:billable_metric, organization: membership.organization) }
   let(:subscription) { create(:subscription, customer:) }
-  let(:wallet) { create(:wallet, customer:) }
+  let(:wallet) { create(:wallet, customer:, purchase_order_number: wallet_purchase_order_number) }
+  let(:wallet_purchase_order_number) { nil }
   let(:expiration_at) { (Time.zone.now + 1.year) }
-  let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
+  let(:recurring_transaction_rule) do
+    create(:recurring_transaction_rule, wallet:, purchase_order_number: recurring_transaction_rule_purchase_order_number)
+  end
+  let(:recurring_transaction_rule_purchase_order_number) { nil }
 
   let(:mutation) do
     <<-GQL
@@ -21,6 +25,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
           code
           name
           priority
+          purchaseOrderNumber
           status
           expirationAt
           invoiceRequiresSuccessfulPayment
@@ -38,6 +43,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
             thresholdCredits
             paidCredits
             grantedCredits
+            grantsTargetTopUp
             targetOngoingBalance
             invoiceRequiresSuccessfulPayment
             ignorePaidTopUpLimits
@@ -47,6 +53,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
               value
             }
             transactionName
+            purchaseOrderNumber
           }
           appliesTo {
             feeTypes
@@ -79,6 +86,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
           id: wallet.id,
           name: "New name",
           priority: 22,
+          purchaseOrderNumber: "PO-123",
           expirationAt: expiration_at.iso8601,
           invoiceRequiresSuccessfulPayment: true,
           paidTopUpMinAmountCents: 1_00,
@@ -94,12 +102,14 @@ RSpec.describe Mutations::Wallets::Update, :premium do
               targetOngoingBalance: "300",
               invoiceRequiresSuccessfulPayment: true,
               ignorePaidTopUpLimits: true,
+              grantsTargetTopUp: false,
               expirationAt: expiration_at.iso8601,
               transactionMetadata: [
                 {key: "example_key", value: "example_value"},
                 {key: "another_key", value: "another_value"}
               ],
-              transactionName: "Updated Credits Transaction"
+              transactionName: "Updated Credits Transaction",
+              purchaseOrderNumber: "PO-456"
             }
           ],
           appliesTo: {
@@ -117,6 +127,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
       "code" => wallet.code,
       "name" => "New name",
       "priority" => 22,
+      "purchaseOrderNumber" => "PO-123",
       "status" => "active",
       "invoiceRequiresSuccessfulPayment" => true,
       "expirationAt" => expiration_at.iso8601,
@@ -130,6 +141,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
       {"key" => "another_key", "value" => "another_value"}
     )
     expect(result_data["recurringTransactionRules"][0]["transactionName"]).to eq("Updated Credits Transaction")
+    expect(result_data["recurringTransactionRules"][0]["purchaseOrderNumber"]).to eq("PO-456")
     expect(result_data["recurringTransactionRules"][0]).to include(
       "lagoId" => recurring_transaction_rule.id,
       "method" => "target",
@@ -139,12 +151,87 @@ RSpec.describe Mutations::Wallets::Update, :premium do
       "grantedCredits" => "22.2",
       "targetOngoingBalance" => "300.0",
       "invoiceRequiresSuccessfulPayment" => true,
-      "ignorePaidTopUpLimits" => true
+      "ignorePaidTopUpLimits" => true,
+      "grantsTargetTopUp" => false
     )
     expect(result_data["appliesTo"]["feeTypes"]).to eq(["subscription"])
     expect(result_data["appliesTo"]["billableMetrics"].first["id"]).to eq(billable_metric.id)
 
     expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+  end
+
+  context "when wallet purchase order number is present and recurring rule purchase order number is nil" do
+    let(:recurring_transaction_rule_purchase_order_number) { "PO-OLD-RULE" }
+
+    it "updates the wallet purchase order number and clears the recurring rule purchase order number" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: wallet.id,
+            priority: 22,
+            purchaseOrderNumber: "PO-WALLET-123",
+            recurringTransactionRules: [
+              {
+                lagoId: recurring_transaction_rule.id,
+                trigger: "interval",
+                interval: "weekly",
+                paidCredits: "22.2",
+                grantedCredits: "22.2",
+                purchaseOrderNumber: nil
+              }
+            ]
+          }
+        }
+      )
+
+      result_data = result["data"]["updateCustomerWallet"]
+
+      expect(result_data["purchaseOrderNumber"]).to eq("PO-WALLET-123")
+      expect(result_data["recurringTransactionRules"][0]["purchaseOrderNumber"]).to be_nil
+      expect(wallet.reload.purchase_order_number).to eq("PO-WALLET-123")
+      expect(recurring_transaction_rule.reload.purchase_order_number).to be_nil
+    end
+  end
+
+  context "when wallet purchase order number is nil and recurring rule purchase order number is present" do
+    let(:wallet_purchase_order_number) { "PO-OLD-WALLET" }
+
+    it "clears the wallet purchase order number and updates the recurring rule purchase order number" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: wallet.id,
+            priority: 22,
+            purchaseOrderNumber: nil,
+            recurringTransactionRules: [
+              {
+                lagoId: recurring_transaction_rule.id,
+                trigger: "interval",
+                interval: "weekly",
+                paidCredits: "22.2",
+                grantedCredits: "22.2",
+                purchaseOrderNumber: "PO-RULE-456"
+              }
+            ]
+          }
+        }
+      )
+
+      result_data = result["data"]["updateCustomerWallet"]
+
+      expect(result_data["purchaseOrderNumber"]).to be_nil
+      expect(result_data["recurringTransactionRules"][0]["purchaseOrderNumber"]).to eq("PO-RULE-456")
+      expect(wallet.reload.purchase_order_number).to be_nil
+      expect(recurring_transaction_rule.reload.purchase_order_number).to eq("PO-RULE-456")
+    end
   end
 
   context "with metadata" do
@@ -222,6 +309,33 @@ RSpec.describe Mutations::Wallets::Update, :premium do
       )
 
       expect_unprocessable_entity(result, details: {code: ["value_already_exist"]})
+    end
+  end
+
+  context "when updating billing_entity_id with multi_entity_billing enabled" do
+    let(:billing_entity) { create(:billing_entity, organization:) }
+
+    before do
+      organization.update!(feature_flags: ["multi_entity_billing"])
+    end
+
+    it "updates the wallet's billing entity" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: wallet.id,
+            billingEntityId: billing_entity.id,
+            priority: 22
+          }
+        }
+      )
+
+      expect(result["data"]["updateCustomerWallet"]["id"]).to eq(wallet.id)
+      expect(wallet.reload.billing_entity_id).to eq(billing_entity.id)
     end
   end
 end

@@ -1,6 +1,16 @@
 # frozen_string_literal: true
 
 class UsersService < BaseService
+  include TypedResults
+
+  RESULTS = {
+    login: BaseResult[:user, :token],
+    register: BaseResult[:user, :organization, :membership, :token],
+    register_from_invite: BaseResult[:user, :organization, :membership, :token]
+  }.freeze
+
+  private
+
   def login(email, password)
     # NOTE: Null byte injection. Prevent 500 errors.
     if email.include?("\u0000") || password.include?("\u0000")
@@ -46,8 +56,7 @@ class UsersService < BaseService
       result.user = User.create!(email:, password:)
 
       result.organization = Organizations::CreateService
-        .call(name: organization_name, document_numbering: "per_organization")
-        .raise_if_error!
+        .call!(name: organization_name, document_numbering: "per_organization")
         .organization
 
       result.membership = Membership.create!(
@@ -79,7 +88,16 @@ class UsersService < BaseService
 
   def register_from_invite(invite, password)
     ActiveRecord::Base.transaction do
-      result.user = User.find_or_create_by!(email: invite.email) { |u| u.password = password }
+      user = User.find_or_initialize_by(email: invite.email)
+
+      if user.new_record?
+        user.password = password
+        user.save!
+      elsif user.memberships.active.none?
+        user.update!(password:)
+      end
+
+      result.user = user
       result.organization = invite.organization
 
       result.membership = Membership.create!(
@@ -104,10 +122,8 @@ class UsersService < BaseService
     result
   end
 
-  private
-
   def generate_token
-    Auth::TokenService.encode(user: result.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+    Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
   rescue => e
     result.service_failure!(code: "token_encoding_error", message: e.message)
   end
@@ -118,7 +134,8 @@ class UsersService < BaseService
       event: "organization_registered",
       properties: {
         organization_name: organization.name,
-        organization_id: organization.id
+        organization_id: organization.id,
+        email: membership.user.email
       }
     )
   end

@@ -64,7 +64,6 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
     before do
       fee_subscription
       fee_charge
-      allow(SegmentTrackJob).to receive(:perform_later)
     end
 
     context "when invoice does not exist" do
@@ -314,7 +313,6 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
 
       before do
         fee_add_on
-        allow(SegmentTrackJob).to receive(:perform_later)
       end
 
       it "changes status from pending to finalized" do
@@ -447,7 +445,6 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
       before do
         invoice_subscription
         fee_fixed_charge
-        allow(SegmentTrackJob).to receive(:perform_later)
       end
 
       it "changes status from pending to finalized" do
@@ -554,6 +551,28 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
 
         expect(Invoices::Payments::CreateService).to have_received(:call_async)
         expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
+      end
+
+      context "when invoice total is zero after tax computation" do
+        let(:rule) { subscription.activation_rules.payment.sole }
+        let(:fee_subscription) do
+          create(:fee, invoice:, subscription:, fee_type: :subscription, amount_cents: 0)
+        end
+        let(:fee_charge) do
+          create(:fee, invoice:, charge:, fee_type: :charge, total_aggregated_units: 0, amount_cents: 0)
+        end
+
+        it "marks the payment activation rule as satisfied" do
+          finalize_service.call
+
+          expect(rule.reload).to be_satisfied
+        end
+
+        it "activates the subscription" do
+          finalize_service.call
+
+          expect(subscription.reload).to be_active
+        end
       end
     end
   end

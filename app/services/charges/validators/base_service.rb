@@ -59,6 +59,7 @@ module Charges
         raw_keys = properties["presentation_group_keys"]
         return if raw_keys.blank?
 
+        values = []
         valid_presentation_group_keys = raw_keys.is_a?(Array) && raw_keys.all? do |key|
           next false unless key.is_a?(Hash)
 
@@ -80,6 +81,8 @@ module Charges
             end
           end
 
+          values << key[:value] if value_valid
+
           keys_valid && value_key_present && value_valid && options_key_valid
         end
 
@@ -92,6 +95,10 @@ module Charges
 
         if raw_keys.size > 2
           add_error(field: "presentation_group_keys", error_code: "too_many_keys")
+        end
+
+        if values.size != values.uniq.size
+          add_error(field: "presentation_group_keys", error_code: "value_is_duplicated")
         end
       end
     end

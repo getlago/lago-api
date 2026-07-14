@@ -54,9 +54,11 @@ module Clockwork
 
   if ENV["LAGO_MEMCACHE_SERVERS"].present? || ENV["LAGO_REDIS_CACHE_URL"].present?
     unless ENV["LAGO_DISABLE_WALLET_REFRESH"] == "true"
-      every(5.minutes, "schedule:refresh_wallets_ongoing_balance") do
+      wallet_refresh_interval = ENV["LAGO_WALLET_ONGOING_BALANCE_REFRESH_INTERVAL_SECONDS"].presence || 5.minutes
+
+      every(wallet_refresh_interval.to_i.seconds, "schedule:refresh_wallets_ongoing_balance") do
         Clock::RefreshWalletsOngoingBalanceJob
-          .set(sentry: {"slug" => "lago_refresh_wallets_ongoing_balance", "cron" => "*/5 * * * *"})
+          .set(sentry: {"slug" => "lago_refresh_wallets_ongoing_balance", "cron" => "#{wallet_refresh_interval} interval"})
           .perform_later
       end
 
@@ -83,6 +85,12 @@ module Clockwork
   every(1.hour, "schedule:api_keys_track_usage", at: "*:15") do
     Clock::ApiKeys::TrackUsageJob
       .set(sentry: {"slug" => "lago_api_keys_track_usage", "cron" => "15 */1 * * *"})
+      .perform_later
+  end
+
+  every(1.hour, "schedule:expire_incomplete_subscriptions", at: "*:20") do
+    Clock::ExpireIncompleteSubscriptionsJob
+      .set(sentry: {"slug" => "lago_expire_incomplete_subscriptions", "cron" => "20 */1 * * *"})
       .perform_later
   end
 
@@ -137,6 +145,12 @@ module Clockwork
   every(1.hour, "schedule:top_up_wallet_interval_credits", at: "*:55") do
     Clock::CreateIntervalWalletTransactionsJob
       .set(sentry: {"slug" => "lago_top_up_wallet_interval_credits", "cron" => "55 */1 * * *"})
+      .perform_later
+  end
+
+  every(1.hour, "schedule:expire_order_forms", at: "*:40") do
+    Clock::ExpireOrderFormsJob
+      .set(sentry: {"slug" => "lago_expire_order_forms", "cron" => "40 */1 * * *"})
       .perform_later
   end
 

@@ -187,8 +187,39 @@ RSpec.describe Api::V1::Plans::ChargesController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:charge][:filters]).to be_present
         expect(json[:charge][:filters].length).to eq(1)
+        expect(json[:charge][:filters].first[:invoice_display_name]).to eq("Filter 1")
+        expect(json[:charge][:filters].first[:properties]).to include(amount: "50")
+      end
+
+      context "when filter properties include presentation_group_keys" do
+        let(:create_params) do
+          {
+            billable_metric_id: billable_metric.id,
+            code: "filtered_charge",
+            charge_model: "standard",
+            properties: {amount: "100"},
+            filters: [
+              {
+                invoice_display_name: "Filter 1",
+                properties: {
+                  amount: "50",
+                  presentation_group_keys: [
+                    {value: "region", options: {display_in_invoice: true}}
+                  ]
+                },
+                values: {billable_metric_filter.key => [billable_metric_filter.values.first]}
+              }
+            ]
+          }
+        end
+
+        it "ignores charge filter presentation_group_keys" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:charge][:filters].first[:properties]).not_to have_key(:presentation_group_keys)
+        end
       end
     end
 
@@ -243,14 +274,13 @@ RSpec.describe Api::V1::Plans::ChargesController do
 
       before do
         create(:subscription, plan: child_plan, status: :active)
-        allow(Charges::CreateChildrenJob).to receive(:perform_later)
       end
 
       it "triggers cascade creation to children" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(Charges::CreateChildrenJob).to have_received(:perform_later)
+        expect(Charges::CreateChildrenJob).to have_been_enqueued
       end
     end
 
@@ -295,6 +325,71 @@ RSpec.describe Api::V1::Plans::ChargesController do
             expect(response).to have_http_status(:success)
             expect(json[:charge][:accepts_target_wallet]).to be true
           end
+        end
+      end
+    end
+
+    context "with presentation_group_keys" do
+      context "when presentation_group_keys is an empty array" do
+        let(:create_params) do
+          {
+            billable_metric_id: billable_metric.id,
+            code: "new_charge_code",
+            charge_model: "standard",
+            properties: {amount: "100", presentation_group_keys: []}
+          }
+        end
+
+        it "creates a charge without storing presentation_group_keys" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:charge][:properties][:presentation_group_keys]).to be_nil
+        end
+      end
+
+      context "when presentation_group_keys contains only value" do
+        let(:create_params) do
+          {
+            billable_metric_id: billable_metric.id,
+            code: "new_charge_code",
+            charge_model: "standard",
+            properties: {amount: "100", presentation_group_keys: [{value: "region"}]}
+          }
+        end
+
+        it "creates a charge with presentation_group_keys" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:charge][:properties][:presentation_group_keys]).to eq([{value: "region"}])
+        end
+      end
+
+      context "when presentation_group_keys contains both value and options" do
+        let(:create_params) do
+          {
+            billable_metric_id: billable_metric.id,
+            code: "new_charge_code",
+            charge_model: "standard",
+            properties: {
+              amount: "100",
+              presentation_group_keys: [
+                {value: "region", options: {display_in_invoice: true}},
+                {value: "country"}
+              ]
+            }
+          }
+        end
+
+        it "creates a charge with presentation_group_keys including options" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:charge][:properties][:presentation_group_keys]).to eq([
+            {value: "region", options: {display_in_invoice: true}},
+            {value: "country"}
+          ])
         end
       end
     end
@@ -362,14 +457,13 @@ RSpec.describe Api::V1::Plans::ChargesController do
       before do
         create(:subscription, plan: child_plan, status: :active)
         child_charge
-        allow(Charges::UpdateChildrenJob).to receive(:perform_later)
       end
 
       it "passes cascade_updates to the service" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(Charges::UpdateChildrenJob).to have_received(:perform_later)
+        expect(Charges::UpdateChildrenJob).to have_been_enqueued
       end
     end
 
@@ -415,6 +509,69 @@ RSpec.describe Api::V1::Plans::ChargesController do
         end
       end
     end
+
+    context "with presentation_group_keys" do
+      context "when presentation_group_keys contains only value" do
+        let(:update_params) do
+          {
+            charge_model: "standard",
+            properties: {amount: "200", presentation_group_keys: [{value: "region"}]}
+          }
+        end
+
+        it "updates the charge with presentation_group_keys" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:charge][:properties][:presentation_group_keys]).to eq([{value: "region"}])
+        end
+      end
+
+      context "when presentation_group_keys contains both value and options" do
+        let(:update_params) do
+          {
+            charge_model: "standard",
+            properties: {
+              amount: "200",
+              presentation_group_keys: [
+                {value: "region", options: {display_in_invoice: true}},
+                {value: "country"}
+              ]
+            }
+          }
+        end
+
+        it "updates the charge with presentation_group_keys including options" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:charge][:properties][:presentation_group_keys]).to eq([
+            {value: "region", options: {display_in_invoice: true}},
+            {value: "country"}
+          ])
+        end
+      end
+
+      context "when removing existing presentation_group_keys" do
+        let(:charge) do
+          create(:standard_charge, plan:, organization:, billable_metric:,
+            properties: {"amount" => "100", "presentation_group_keys" => [{"value" => "region"}]})
+        end
+        let(:update_params) do
+          {
+            charge_model: "standard",
+            properties: {amount: "200", presentation_group_keys: []}
+          }
+        end
+
+        it "removes presentation_group_keys from the charge" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:charge][:properties][:presentation_group_keys]).to be_nil
+        end
+      end
+    end
   end
 
   describe "DELETE /api/v1/plans/:plan_code/charges/:code" do
@@ -456,16 +613,13 @@ RSpec.describe Api::V1::Plans::ChargesController do
       let(:child_plan) { create(:plan, organization:, parent: plan) }
       let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric:, parent: charge) }
 
-      before do
-        child_charge
-        allow(Charges::DestroyChildrenJob).to receive(:perform_later)
-      end
+      before { child_charge }
 
       it "cascades the deletion to children" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(Charges::DestroyChildrenJob).to have_received(:perform_later).with(charge.id)
+        expect(Charges::DestroyChildrenJob).to have_been_enqueued.with(charge.id)
       end
     end
   end

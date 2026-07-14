@@ -49,7 +49,7 @@ module Events
         event.external_subscription_id = event_params[:external_subscription_id]
         event.properties = event_params[:properties] || {}
         event.metadata = metadata || {}
-        event.timestamp = Time.zone.at(event_params[:timestamp] ? Float(event_params[:timestamp]) : timestamp)
+        event.timestamp = Time.zone.at(event_params[:timestamp] ? BigDecimal(event_params[:timestamp].to_s) : timestamp)
         event.precise_total_amount_cents = event_params[:precise_total_amount_cents]
 
         expression_result = CalculateExpressionService.call(organization:, event:)
@@ -99,7 +99,7 @@ module Events
 
     def enqueue_post_process_jobs
       jobs = result.events.map { |event| Events::PostProcessJob.new(event:) }
-      ActiveJob.perform_all_later(jobs)
+      ApplicationJob.perform_all_later(jobs)
     end
   end
 end

@@ -17,4 +17,35 @@ RSpec.describe Fees::CreatePayInAdvanceJob do
 
     expect(Fees::CreatePayInAdvanceService).to have_received(:call)
   end
+
+  describe ".retry_wait" do
+    it "grows polynomially and adds the jitter on each retry" do
+      jitter = described_class::RETRY_JITTER
+
+      expect(described_class.retry_wait(1)).to be_between(1**4 + jitter.min, 1**4 + jitter.max)
+      expect(described_class.retry_wait(2)).to be_between(2**4 + jitter.min, 2**4 + jitter.max)
+      expect(described_class.retry_wait(3)).to be_between(3**4 + jitter.min, 3**4 + jitter.max)
+    end
+
+    it "keeps the jitter within RETRY_JITTER" do
+      jitters = Array.new(50) { described_class.retry_wait(1) - (1**4) }
+
+      expect(jitters).to all(be_between(described_class::RETRY_JITTER.min, described_class::RETRY_JITTER.max))
+    end
+  end
+
+  describe "retry_on" do
+    before do
+      allow(Fees::CreatePayInAdvanceService).to receive(:call)
+        .and_raise(Events::Stores::Clickhouse::MemoryLimitError)
+    end
+
+    it "retries on a Clickhouse memory limit error" do
+      assert_performed_jobs(25, only: [described_class]) do
+        expect do
+          described_class.perform_later(charge:, event:)
+        end.to raise_error(Events::Stores::Clickhouse::MemoryLimitError)
+      end
+    end
+  end
 end

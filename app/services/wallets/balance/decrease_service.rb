@@ -15,28 +15,23 @@ module Wallets
 
       def call
         transaction_credits_amount = wallet_transaction.credit_amount
-        currency = wallet.currency_for_balance
 
         wallet.update!(
           balance_cents: wallet.balance_cents - wallet_transaction.amount_cents,
           credits_balance: wallet.credits_balance - transaction_credits_amount,
           last_balance_sync_at: Time.zone.now,
           consumed_credits: wallet.consumed_credits + transaction_credits_amount,
-          consumed_amount_cents: ((wallet.consumed_credits + transaction_credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor,
+          consumed_amount_cents: wallet.consumed_amount_cents + wallet_transaction.amount_cents,
           last_consumed_credit_at: Time.current
         )
 
         unless skip_refresh
-          Customers::RefreshWalletsService.call(
-            customer: wallet.customer,
-            include_generating_invoices: true
-          )
+          wallet.customer.flag_wallets_for_refresh
+          Customers::RefreshWalletJob.perform_after_commit(wallet.customer)
         end
 
-        after_commit do
-          SendWebhookJob.perform_later("wallet.updated", wallet)
-          UsageMonitoring::ProcessWalletAlertsJob.perform_later(wallet)
-        end
+        SendWebhookJob.perform_after_commit("wallet.updated", wallet)
+        UsageMonitoring::ProcessWalletAlertsJob.perform_after_commit(wallet)
 
         result.wallet = wallet
         result

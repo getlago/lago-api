@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 
 class WalletTransaction < ApplicationRecord
+  include HasPurchaseOrderNumber
   include PaperTrailTraceable
 
   belongs_to :wallet
   belongs_to :organization
+  belongs_to :billing_entity, optional: true
 
   # these two relationships are populated only for outbound transactions
   belongs_to :invoice, optional: true
@@ -106,6 +108,15 @@ class WalletTransaction < ApplicationRecord
     remaining_amount_cents.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount).to_s
   end
 
+  # Returns the resource that should drive invoice custom sections for this transaction.
+  # Priority chain: transaction first, then wallet.
+  def invoice_custom_section_resource
+    return self if skip_invoice_custom_sections || selected_invoice_custom_sections.any?
+    return wallet if wallet.skip_invoice_custom_sections || wallet.selected_invoice_custom_sections.any?
+
+    self
+  end
+
   def mark_as_failed!(timestamp = Time.zone.now)
     return if failed?
 
@@ -128,6 +139,7 @@ end
 #  name                                :string(255)
 #  payment_method_type                 :enum             default("provider"), not null
 #  priority                            :integer          default(50), not null
+#  purchase_order_number               :string
 #  remaining_amount_cents              :bigint
 #  settled_at                          :datetime
 #  skip_invoice_custom_sections        :boolean          default(FALSE), not null
@@ -137,6 +149,7 @@ end
 #  transaction_type                    :integer          not null
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null
+#  billing_entity_id                   :uuid
 #  credit_note_id                      :uuid
 #  invoice_id                          :uuid
 #  organization_id                     :uuid             not null
@@ -147,6 +160,7 @@ end
 # Indexes
 #
 #  idx_wallet_transactions_available_inbound       (wallet_id, priority, (\nCASE\n    WHEN (transaction_status = 1) THEN 0\n    ELSE 1\nEND), created_at) WHERE ((remaining_amount_cents > 0) AND (transaction_type = 0) AND (status = 1))
+#  index_wallet_transactions_on_billing_entity_id  (billing_entity_id)
 #  index_wallet_transactions_on_credit_note_id     (credit_note_id)
 #  index_wallet_transactions_on_invoice_id         (invoice_id)
 #  index_wallet_transactions_on_organization_id    (organization_id)
@@ -156,6 +170,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (credit_note_id => credit_notes.id)
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)

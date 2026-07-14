@@ -6,17 +6,22 @@ module Entitlement
 
     Result = BaseResult[:entitlements]
 
-    def initialize(organization:, plan:, entitlements_params:, partial:)
+    def initialize(organization:, plan:, entitlements_params:, partial:, send_webhook: true)
       @organization = organization
       @plan = plan
       @entitlements_params = entitlements_params.to_h.with_indifferent_access
       @partial = partial
+      @send_webhook = send_webhook
       super
     end
 
+    # NOTE: send_webhook gates the activity log too: both represent the same plan.updated event.
+    #       It is set to false when invoked from the plan create/update mutations, where the plan
+    #       service already emits the plan event, to avoid duplicates.
     activity_loggable(
       action: "plan.updated",
-      record: -> { plan }
+      record: -> { plan },
+      condition: -> { send_webhook }
     )
 
     def call
@@ -27,8 +32,8 @@ module Entitlement
         update_entitlements
       end
 
-      # NOTE: The webhooks is sent even if no changes were made to the plan
-      SendWebhookJob.perform_after_commit("plan.updated", plan)
+      # NOTE: The webhook is sent even if no changes were made to the plan
+      SendWebhookJob.perform_after_commit("plan.updated", plan) if send_webhook
 
       result.entitlements = plan.entitlements.includes(:feature, values: :privilege).reload
       result
@@ -53,7 +58,7 @@ module Entitlement
 
     private
 
-    attr_reader :organization, :plan, :entitlements_params, :partial
+    attr_reader :organization, :plan, :entitlements_params, :partial, :send_webhook
     alias_method :partial?, :partial
 
     def delete_missing_entitlements

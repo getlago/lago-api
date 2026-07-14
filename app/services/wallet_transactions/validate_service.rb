@@ -22,7 +22,8 @@ module WalletTransactions
     private
 
     MAX_AMOUNT = 10**25 - 1
-    private_constant :MAX_AMOUNT
+    MAX_METADATA_KEYS = 15
+    private_constant :MAX_AMOUNT, :MAX_METADATA_KEYS
 
     def valid_amount?(amount)
       ::Validators::DecimalAmountService.new(amount).valid_amount? &&
@@ -41,17 +42,31 @@ module WalletTransactions
     end
 
     def valid_paid_credits_amount?
-      return true if valid_amount?(args[:paid_credits])
+      unless valid_amount?(args[:paid_credits])
+        add_error(field: :paid_credits, error_code: "invalid_paid_credits")
+        add_error(field: :paid_credits, error_code: "invalid_amount")
+        return false
+      end
 
-      add_error(field: :paid_credits, error_code: "invalid_paid_credits")
-      add_error(field: :paid_credits, error_code: "invalid_amount")
+      valid_minimum_monetary_value?(args[:paid_credits], field: :paid_credits)
     end
 
     def valid_granted_credits_amount?
-      return true if valid_amount?(args[:granted_credits])
+      unless valid_amount?(args[:granted_credits])
+        add_error(field: :granted_credits, error_code: "invalid_granted_credits")
+        add_error(field: :granted_credits, error_code: "invalid_amount")
+        return false
+      end
 
-      add_error(field: :granted_credits, error_code: "invalid_granted_credits")
-      add_error(field: :granted_credits, error_code: "invalid_amount")
+      valid_minimum_monetary_value?(args[:granted_credits], field: :granted_credits)
+    end
+
+    def valid_minimum_monetary_value?(credits, field:)
+      return true unless result.current_wallet
+      return true unless WalletCredit.rounds_to_zero?(wallet: result.current_wallet, credit_amount: credits)
+
+      add_error(field:, error_code: "amount_rounds_to_zero")
+      false
     end
 
     def valid_voided_credits_amount?
@@ -70,7 +85,7 @@ module WalletTransactions
     end
 
     def valid_metadata?
-      validator = ::Validators::MetadataValidator.new(args[:metadata])
+      validator = ::Validators::MetadataValidator.new(args[:metadata], {max_keys: MAX_METADATA_KEYS})
       unless validator.valid?
         validator.errors.each do |field, error_code|
           add_error(field: field, error_code: error_code)

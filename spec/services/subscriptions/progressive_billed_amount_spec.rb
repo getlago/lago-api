@@ -276,6 +276,20 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
         expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
       end
     end
+
+    context "when the invoice using the progressive billing credit is voided" do
+      let(:amount_to_credit) { 20 }
+
+      before { invoice.update!(status: :voided) }
+
+      it "does not subtract the voided invoice credit" do
+        result = service.call
+        expect(result.progressive_billed_amount).to eq(20)
+        expect(result.progressive_billing_invoice).to eq(progressive_billing_invoice)
+        expect(result.to_credit_amount).to eq(20)
+        expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
+      end
+    end
   end
 
   context "with progressive billing invoice that has 100% coupon discount" do

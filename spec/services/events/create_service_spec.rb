@@ -46,7 +46,7 @@ RSpec.describe Events::CreateService do
         external_subscription_id:,
         transaction_id:,
         code:,
-        timestamp: Time.zone.at(timestamp),
+        timestamp: Time.zone.at(BigDecimal(timestamp.to_s)),
         properties: {"foo" => "bar"},
         precise_total_amount_cents: nil
       )
@@ -98,7 +98,7 @@ RSpec.describe Events::CreateService do
         result = create_service.call
 
         expect(result).to be_success
-        expect(result.event.timestamp).to eq(Time.zone.at(timestamp.to_f))
+        expect(result.event.timestamp).to eq(Time.zone.at(BigDecimal(timestamp)))
       end
     end
 
@@ -110,6 +110,28 @@ RSpec.describe Events::CreateService do
 
         expect(result).to be_success
         expect(result.event.timestamp.iso8601(3)).to eq("2023-09-04T15:45:12.344Z")
+      end
+    end
+
+    context "when timestamp is sent with decimal fractions represented by repeating floats" do
+      let(:timestamps) { %w[1780586634.1 1780586634.2 1780586634.3] }
+
+      it "creates events with the received timestamp precision" do
+        results = timestamps.map do |received_timestamp|
+          described_class.call(
+            organization:,
+            params: create_args.merge(timestamp: received_timestamp, transaction_id: SecureRandom.uuid),
+            timestamp: creation_timestamp,
+            metadata:
+          )
+        end
+
+        expect(results).to all(be_success)
+        expect(results.map { |result| result.event.timestamp.iso8601(9) }).to eq([
+          "2026-06-04T15:23:54.100000000Z",
+          "2026-06-04T15:23:54.200000000Z",
+          "2026-06-04T15:23:54.300000000Z"
+        ])
       end
     end
 
@@ -140,7 +162,7 @@ RSpec.describe Events::CreateService do
     end
 
     context "with an expression configured on the billable metric" do
-      let(:billable_metric) { create(:billable_metric, code:, organization:, field_name: "result", expression: "event.properties.left + event.properties.right") }
+      let(:billable_metric) { create(:sum_billable_metric, code:, organization:, field_name: "result", expression: "event.properties.left + event.properties.right") }
 
       let(:create_args) do
         {

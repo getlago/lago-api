@@ -26,7 +26,10 @@ module PaymentIntents
           return result.single_validation_failure!(error_code: "payment_provider_error")
         end
 
-        payment_intent.update!(payment_url: payment_url_result.payment_url)
+        payment_intent.update!(
+          payment_url: payment_url_result.payment_url,
+          provider_session_id: payment_url_result.provider_session_id
+        )
       end
 
       result.payment_intent = payment_intent

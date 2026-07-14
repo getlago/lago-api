@@ -27,6 +27,10 @@ module Invoices
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
         Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
+        # NOTE: Custom sections are applied before computing taxes so they are persisted even when
+        #       tax computation is deferred to a tax provider (the `next` below skips the rest of the block).
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: [subscription])
+
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
         if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
           tax_deferred = true
@@ -36,7 +40,6 @@ module Invoices
 
         create_credit_note_credit
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)
@@ -63,7 +66,7 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, Customers::FailedToAcquireLock
+    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, BaseLockService::FailedToAcquireLock
       raise
     rescue => e
       result.fail_with_error!(e)
@@ -83,7 +86,8 @@ module Invoices
         currency: subscription.plan_amount_currency,
         datetime: Time.zone.at(timestamp),
         charge_in_advance: true,
-        invoice_id: result.invoice_id
+        invoice_id: result.invoice_id,
+        billing_entity: subscription.billing_entity || customer.billing_entity
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :in_advance_charge)
@@ -109,7 +113,7 @@ module Invoices
     end
 
     def should_deliver_email?
-      License.premium? && customer.billing_entity.email_settings.include?("invoice.finalized")
+      License.premium? && invoice.billing_entity.email_settings.include?("invoice.finalized")
     end
 
     def should_create_applied_prepaid_credit?

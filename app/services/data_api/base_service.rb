@@ -16,7 +16,7 @@ module DataApi
     attr_reader :organization, :params
 
     def http_client
-      @http_client ||= LagoHttpClient::Client.new(endpoint_url)
+      @http_client ||= LagoHttpClient::Client.new(endpoint_url, retry_on_transient_errors: true)
     end
 
     def headers

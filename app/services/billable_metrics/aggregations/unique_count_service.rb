@@ -13,7 +13,7 @@ module BillableMetrics
       def compute_aggregation(options: {})
         return empty_result if should_bypass_aggregation?
 
-        aggregation = event_store.unique_count.ceil(5)
+        aggregation = event_store.unique_count.value.ceil(5)
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
           handle_in_advance_current_usage(aggregation)
@@ -22,6 +22,12 @@ module BillableMetrics
         end
 
         result.pay_in_advance_aggregation = BigDecimal(compute_pay_in_advance_aggregation)
+
+        if presentation_by.present?
+          result.breakdowns = event_store.grouped_unique_count(uniq_grouped_by_and_presentation_by).map(&:to_grouped_hash)
+          result.pay_in_advance_breakdowns = build_pay_in_advance_breakdowns(value: result.pay_in_advance_aggregation)
+        end
+
         result.options = {running_total: running_total(options, aggregation:)}
         result.count = result.aggregation
         result
@@ -43,17 +49,21 @@ module BillableMetrics
 
         result.aggregations = aggregations.map do |aggregation|
           group_result = BaseService::Result.new
-          group_result.grouped_by = aggregation[:groups]
+          group_result.grouped_by = aggregation.groups
 
           if options[:is_pay_in_advance] && options[:is_current_usage]
-            handle_in_advance_current_usage(aggregation[:value], target_result: group_result)
+            handle_in_advance_current_usage(aggregation.value, target_result: group_result)
           else
-            group_result.aggregation = aggregation[:value]
+            group_result.aggregation = aggregation.value
           end
 
-          group_result.count = aggregation[:value]
+          group_result.count = aggregation.events_count
           group_result.options = {running_total: running_total(options, aggregation: group_result.aggregation)}
           group_result
+        end
+
+        if presentation_by.present?
+          result.breakdowns = event_store.grouped_unique_count(uniq_grouped_by_and_presentation_by).map(&:to_grouped_hash)
         end
 
         result

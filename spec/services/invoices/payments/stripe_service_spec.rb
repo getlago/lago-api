@@ -42,6 +42,16 @@ RSpec.describe Invoices::Payments::StripeService do
       expect(::Stripe::Checkout::Session).to have_received(:create)
     end
 
+    it "captures the checkout session id on the result" do
+      allow(::Stripe::Checkout::Session).to receive(:create)
+        .and_return({"url" => "https://example.com", "id" => "cs_123"})
+
+      result = stripe_service.generate_payment_url(payment_intent)
+
+      expect(result.payment_url).to eq("https://example.com")
+      expect(result.provider_session_id).to eq("cs_123")
+    end
+
     describe "#payment_url_payload" do
       let(:payment_url_payload) { stripe_service.__send__(:payment_url_payload, payment_intent) }
 
@@ -127,6 +137,63 @@ RSpec.describe Invoices::Payments::StripeService do
     end
   end
 
+  describe "#expire_payment_url" do
+    let(:payment_intent) { create(:payment_intent, invoice:, provider_session_id:) }
+    let(:provider_session_id) { "cs_123" }
+    let(:session_status) { "open" }
+    let(:stripe_session) { ::Stripe::Checkout::Session.construct_from(status: session_status) }
+
+    before do
+      stripe_payment_provider
+      stripe_customer
+
+      allow(::Stripe::Checkout::Session).to receive(:retrieve).and_return(stripe_session)
+      allow(::Stripe::Checkout::Session).to receive(:expire)
+    end
+
+    it "expires the open checkout session" do
+      stripe_service.expire_payment_url(payment_intent)
+
+      expect(::Stripe::Checkout::Session).to have_received(:expire)
+        .with(provider_session_id, {}, {api_key: stripe_payment_provider.secret_key})
+    end
+
+    context "when the session is no longer open" do
+      let(:session_status) { "complete" }
+
+      it "does not expire the session" do
+        stripe_service.expire_payment_url(payment_intent)
+
+        expect(::Stripe::Checkout::Session).not_to have_received(:expire)
+      end
+    end
+
+    context "when the session can no longer be expired" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:expire)
+          .and_raise(::Stripe::InvalidRequestError.new("not open", {}))
+      end
+
+      it "treats it as a no-op success" do
+        result = stripe_service.expire_payment_url(payment_intent)
+
+        expect(result).to be_success
+      end
+    end
+
+    context "when the payment intent has no provider session id" do
+      let(:provider_session_id) { nil }
+
+      it "does nothing and returns success" do
+        result = stripe_service.expire_payment_url(payment_intent)
+
+        expect(result).to be_success
+        expect(::Stripe::Checkout::Session).not_to have_received(:retrieve)
+        expect(::Stripe::Checkout::Session).not_to have_received(:expire)
+      end
+    end
+  end
+
   describe "#update_payment_status" do
     let(:payment) do
       create(
@@ -146,7 +213,6 @@ RSpec.describe Invoices::Payments::StripeService do
     end
 
     before do
-      allow(SegmentTrackJob).to receive(:perform_later)
       payment
     end
 
@@ -292,6 +358,31 @@ RSpec.describe Invoices::Payments::StripeService do
           payment_status: "succeeded",
           ready_for_payment_processing: false
         )
+      end
+
+      context "when amount_cents kwarg is provided" do
+        it "records the Payment with the provider-reported amount, not the invoice due amount" do
+          result = stripe_service.update_payment_status(
+            organization_id: organization.id,
+            status: "succeeded",
+            amount_cents: 4242,
+            stripe_payment:
+          )
+
+          expect(result.payment.amount_cents).to eq(4242)
+        end
+      end
+
+      context "when amount_cents kwarg is not provided" do
+        it "falls back to the invoice's total due amount" do
+          result = stripe_service.update_payment_status(
+            organization_id: organization.id,
+            status: "succeeded",
+            stripe_payment:
+          )
+
+          expect(result.payment.amount_cents).to eq(invoice.total_due_amount_cents)
+        end
       end
 
       context "when invoice is not found" do

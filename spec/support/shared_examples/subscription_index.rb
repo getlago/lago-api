@@ -155,7 +155,66 @@ RSpec.shared_examples "a subscription index endpoint" do
     end
   end
 
-  context "with N+1 query detection", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+  context "with external_id filter" do
+    let(:params) { {external_id: subscription_external_id, status: %i[active terminated]} }
+    let(:subscription_external_id) { SecureRandom.uuid }
+
+    let!(:subscriptions) do
+      [
+        create(:subscription, :active, customer:, external_id: subscription_external_id),
+        create(:subscription, :terminated, customer:, external_id: subscription_external_id)
+      ]
+    end
+
+    it "returns subscriptions matching external_id" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:subscriptions].count).to eq(2)
+      expect(json[:subscriptions].pluck(:lago_id)).to match_array(subscriptions.map(&:id))
+    end
+  end
+
+  context "with billing_entity_codes filter" do
+    let(:us_entity) { create(:billing_entity, organization:, code: "us") }
+    let(:eu_entity) { create(:billing_entity, organization:, code: "eu") }
+    let!(:eu_subscription) { create(:subscription, customer:, plan:, billing_entity: eu_entity) }
+    let!(:us_subscription) { create(:subscription, customer:, plan:, billing_entity: us_entity) }
+
+    context "when filtering by a single code" do
+      let(:params) { {billing_entity_codes: [eu_entity.code]} }
+
+      it "returns only subscriptions stamped under that entity" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscriptions].pluck(:lago_id)).to eq([eu_subscription.id])
+      end
+    end
+
+    context "when filtering by multiple codes" do
+      let(:params) { {billing_entity_codes: [eu_entity.code, us_entity.code]} }
+
+      it "returns subscriptions stamped under any of the given entities" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscriptions].pluck(:lago_id)).to match_array([eu_subscription.id, us_subscription.id])
+      end
+    end
+
+    context "when a code does not exist" do
+      let(:params) { {billing_entity_codes: ["unknown"]} }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("billing_entity")
+      end
+    end
+  end
+
+  context "with N+1 query detection", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
     before do
       create(:subscription, customer:, plan: create(:plan, organization:))
 

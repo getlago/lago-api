@@ -2,6 +2,8 @@
 
 module DataExports
   class CombinePartsService < BaseService
+    Result = BaseResult[:data_export]
+
     def initialize(data_export:)
       @data_export = data_export
       super

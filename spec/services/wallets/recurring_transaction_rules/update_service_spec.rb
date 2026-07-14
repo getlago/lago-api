@@ -42,6 +42,48 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
       )
     end
 
+    context "when purchase_order_number is present" do
+      let(:params) do
+        [
+          {
+            lago_id: recurring_transaction_rule.id,
+            trigger: "interval",
+            interval: "weekly",
+            paid_credits: "105",
+            granted_credits: "105",
+            purchase_order_number: "PO-RULE-123"
+          }
+        ]
+      end
+
+      it "updates the existing rule purchase order number" do
+        rule = result.wallet.reload.recurring_transaction_rules.active.sole
+
+        expect(rule.id).to eq(recurring_transaction_rule.id)
+        expect(rule.purchase_order_number).to eq("PO-RULE-123")
+      end
+    end
+
+    context "when purchase_order_number is too long" do
+      let(:params) do
+        [
+          {
+            lago_id: recurring_transaction_rule.id,
+            trigger: "interval",
+            interval: "weekly",
+            paid_credits: "105",
+            granted_credits: "105",
+            purchase_order_number: "a" * 256
+          }
+        ]
+      end
+
+      it "returns a validation error" do
+        expect(result).to be_failure
+        expect(result.error.messages[:purchase_order_number]).to eq(["value_is_too_long"])
+      end
+    end
+
     context "when updating an inactive rule" do
       let(:params) do
         [
@@ -110,6 +152,29 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         )
         expect(rule.id).not_to eq(recurring_transaction_rule.id)
       end
+
+      context "when purchase_order_number is present" do
+        let(:params) do
+          [
+            {
+              granted_credits: "105",
+              interval: "weekly",
+              method: "target",
+              paid_credits: "105",
+              target_ongoing_balance: "300",
+              trigger: "interval",
+              purchase_order_number: "PO-REPLACEMENT-123"
+            }
+          ]
+        end
+
+        it "creates the replacement rule with the purchase order number" do
+          rule = result.wallet.reload.recurring_transaction_rules.active.sole
+
+          expect(rule.id).not_to eq(recurring_transaction_rule.id)
+          expect(rule.purchase_order_number).to eq("PO-REPLACEMENT-123")
+        end
+      end
     end
 
     context "when paid_credits and granted_credits are explicitly null" do
@@ -144,6 +209,131 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
           granted_credits: 0.0,
           threshold_credits: 0.0
         )
+      end
+    end
+
+    context "when updating grants_target_top_up" do
+      let(:recurring_transaction_rule) do
+        create(:recurring_transaction_rule, wallet:, method: :target, target_ongoing_balance: 300, grants_target_top_up: false)
+      end
+      let(:params) do
+        [
+          {
+            lago_id: recurring_transaction_rule.id,
+            method: "target",
+            trigger: "interval",
+            interval: "weekly",
+            target_ongoing_balance: "300",
+            grants_target_top_up: true
+          }
+        ]
+      end
+
+      it "updates the rule to grant credits" do
+        rule = result.wallet.reload.recurring_transaction_rules.active.first
+
+        expect(rule).to have_attributes(
+          id: recurring_transaction_rule.id,
+          method: "target",
+          grants_target_top_up: true
+        )
+      end
+
+      context "when flipping grants_target_top_up from true to false" do
+        let(:recurring_transaction_rule) do
+          create(:recurring_transaction_rule, wallet:, method: :target, target_ongoing_balance: 300, grants_target_top_up: true)
+        end
+        let(:params) do
+          [
+            {
+              lago_id: recurring_transaction_rule.id,
+              method: "target",
+              trigger: "interval",
+              interval: "weekly",
+              target_ongoing_balance: "300",
+              grants_target_top_up: false
+            }
+          ]
+        end
+
+        it "updates the rule to stop granting credits" do
+          rule = result.wallet.reload.recurring_transaction_rules.active.first
+
+          expect(rule).to have_attributes(
+            id: recurring_transaction_rule.id,
+            method: "target",
+            grants_target_top_up: false
+          )
+        end
+      end
+    end
+
+    context "when switching a granting target rule to fixed" do
+      let(:recurring_transaction_rule) do
+        create(:recurring_transaction_rule, wallet:, method: :target, target_ongoing_balance: 300, grants_target_top_up: true)
+      end
+      let(:params) do
+        [
+          {
+            lago_id: recurring_transaction_rule.id,
+            method: "fixed",
+            trigger: "interval",
+            interval: "weekly",
+            paid_credits: "10",
+            granted_credits: "10"
+          }
+        ]
+      end
+
+      it "clears grants_target_top_up to nil" do
+        rule = result.wallet.reload.recurring_transaction_rules.active.first
+
+        expect(rule).to have_attributes(method: "fixed", grants_target_top_up: nil)
+      end
+    end
+
+    context "when switching a fixed rule to target without specifying grants_target_top_up" do
+      let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:, method: :fixed) }
+      let(:params) do
+        [
+          {
+            lago_id: recurring_transaction_rule.id,
+            method: "target",
+            trigger: "interval",
+            interval: "weekly",
+            target_ongoing_balance: "300"
+          }
+        ]
+      end
+
+      it "defaults grants_target_top_up to false" do
+        rule = result.wallet.reload.recurring_transaction_rules.active.first
+
+        expect(rule).to have_attributes(method: "target", grants_target_top_up: false)
+      end
+    end
+
+    context "when updating a legacy target rule that carries a nil grants_target_top_up" do
+      let(:recurring_transaction_rule) do
+        create(:recurring_transaction_rule, wallet:, method: :target, target_ongoing_balance: 300).tap do |r|
+          r.update_column(:grants_target_top_up, nil) # rubocop:disable Rails/SkipsModelValidations
+        end
+      end
+      let(:params) do
+        [
+          {
+            lago_id: recurring_transaction_rule.id,
+            trigger: "interval",
+            interval: "monthly",
+            target_ongoing_balance: "300"
+          }
+        ]
+      end
+
+      it "normalises the nil to false on save without changing the method" do
+        rule = result.wallet.reload.recurring_transaction_rules.active.first
+
+        expect(rule).to have_attributes(method: "target", grants_target_top_up: false)
       end
     end
 

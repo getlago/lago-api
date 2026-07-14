@@ -46,6 +46,18 @@ RSpec.describe BillableMetrics::UpdateService do
       expect(Utils::ActivityLog).to have_produced("billable_metric.updated").after_commit.with(billable_metric)
     end
 
+    it "enqueues a billable_metric.updated webhook" do
+      expect { described_class.call(billable_metric:, params:) }.to have_enqueued_job_after_commit(SendWebhookJob)
+        .with("billable_metric.updated", billable_metric)
+    end
+
+    it "uses with_lock to prevent race conditions" do
+      allow(billable_metric).to receive(:with_lock).and_call_original
+      described_class.call(billable_metric:, params:)
+
+      expect(billable_metric).to have_received(:with_lock)
+    end
+
     context "with filters arguments" do
       let(:filters) do
         [
@@ -77,6 +89,26 @@ RSpec.describe BillableMetrics::UpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
+      end
+    end
+
+    context "when the filters change but a metric attribute is invalid" do
+      let(:existing_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[US EU]) }
+      let(:params) { {name: nil, filters: [{key: "region", values: %w[US]}]} }
+
+      before { existing_filter }
+
+      it "rolls back the filter changes" do
+        result = described_class.call(billable_metric:, params:)
+
+        expect(result).not_to be_success
+        expect(existing_filter.reload.values).to eq(%w[US EU])
+      end
+
+      it "does not enqueue the refresh draft invoices job" do
+        described_class.call(billable_metric:, params:)
+
+        expect(BillableMetricFilters::RefreshDraftInvoicesJob).not_to have_been_enqueued
       end
     end
 
@@ -126,6 +158,32 @@ RSpec.describe BillableMetrics::UpdateService do
           rounding_function: "ceil",
           rounding_precision: 2
         )
+      end
+    end
+
+    context "with two threads racing on the same invoice", transaction: false do
+      let(:params) { {filters: [{key: "region", values: %w[US]}]} }
+
+      before do
+        allow(billable_metric).to receive(:save!).and_wrap_original do |original, *args|
+          sleep(0.05)
+          original.call(*args)
+        end
+      end
+
+      it "serializes the requests and creates the filter exactly once" do
+        results = Concurrent::Array.new
+
+        threads = Array.new(2) do
+          Thread.new do
+            results << described_class.call(billable_metric:, params:)
+          end
+        end
+
+        threads.each(&:join)
+
+        expect(results.count(&:success?)).to eq(2)
+        expect(billable_metric.filters.where(key: "region").count).to eq(1)
       end
     end
   end

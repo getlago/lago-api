@@ -4,9 +4,19 @@ module Subscriptions
   class ChargeCacheService < CacheService
     CACHE_KEY_VERSION = "1"
 
+    def self.expire_for_subscriptions(subscription_ids)
+      Subscription
+        .where(id: subscription_ids)
+        .preload(plan: {charges: :filters})
+        .find_each do |subscription|
+          subscription.plan.charges.each do |charge|
+            expire_for_subscription_charge(subscription:, charge:)
+          end
+        end
+    end
+
     def self.expire_for_subscription(subscription)
-      subscription.plan.charges.includes(:filters)
-        .find_each { expire_for_subscription_charge(subscription:, charge: it) }
+      expire_for_subscriptions([subscription.id])
     end
 
     def self.expire_for_subscription_charge(subscription:, charge:)

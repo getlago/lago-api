@@ -57,7 +57,7 @@ module PaymentRequests
         result
       end
 
-      def update_payment_status(organization_id:, provider_payment_id:, status:, metadata: {})
+      def update_payment_status(organization_id:, provider_payment_id:, status:, amount_cents: nil, metadata: {})
         payment_obj = Payment.find_or_initialize_by(provider_payment_id: provider_payment_id)
         payment = if payment_obj.persisted?
           payment_obj
@@ -122,11 +122,7 @@ module PaymentRequests
       end
 
       def moneyhash_payment_method_id
-        if organization.feature_flag_enabled?(:multiple_payment_methods)
-          customer.default_payment_method&.provider_method_id
-        else
-          customer.moneyhash_customer.payment_method_id
-        end
+        customer.default_payment_method&.provider_method_id || customer.moneyhash_customer.payment_method_id
       end
 
       def should_process_payment?
@@ -204,6 +200,8 @@ module PaymentRequests
 
       def update_invoices_payment_status(payment_status:, deliver_webhook: true, processing: false)
         result.payable.invoices.each do |invoice|
+          next if invoice.payment_succeeded? && payment_status.to_sym != :succeeded
+
           Invoices::UpdateService.call(
             invoice: invoice,
             params: {

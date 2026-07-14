@@ -35,7 +35,6 @@ RSpec.describe Customers::UpsertFromApiService do
   end
 
   before do
-    allow(SendWebhookJob).to receive(:perform_later)
     allow(CurrentContext).to receive(:source).and_return("api")
   end
 
@@ -99,7 +98,7 @@ RSpec.describe Customers::UpsertFromApiService do
   it "calls SendWebhookJob with customer.created" do
     customer = result.customer
 
-    expect(SendWebhookJob).to have_received(:perform_later).with("customer.created", customer)
+    expect(SendWebhookJob).to have_been_enqueued.with("customer.created", customer)
   end
 
   it "produces an activity log" do
@@ -285,6 +284,16 @@ RSpec.describe Customers::UpsertFromApiService do
         expect(result.customer).to eq(customer)
         expect(result.customer.billing_entity).to eq(billing_entity_2)
       end
+
+      context "when multi_entity_billing feature flag is enabled" do
+        before { organization.enable_feature_flag!(:multi_entity_billing) }
+
+        it "updates the billing_entity of the customer" do
+          expect(result).to be_success
+          expect(result.customer).to eq(customer)
+          expect(result.customer.billing_entity).to eq(billing_entity)
+        end
+      end
     end
 
     context "when not sending billing_entity_code" do
@@ -299,6 +308,94 @@ RSpec.describe Customers::UpsertFromApiService do
         expect(result).to be_success
         expect(result.customer).to eq(customer)
         expect(result.customer.billing_entity).to eq(billing_entity_2)
+      end
+    end
+  end
+
+  context "when the billing entity changes and entities have different EU tax settings" do
+    let(:eu_billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
+    let(:other_eu_billing_entity) { create(:billing_entity, organization:, country: "DE", eu_tax_management: true) }
+    let(:non_eu_billing_entity) { create(:billing_entity, organization:, country: "US", eu_tax_management: false) }
+
+    let(:fr_tax) { create(:tax, organization:, code: "lago_eu_fr_standard", rate: 20.0) }
+    let(:de_tax) { create(:tax, organization:, code: "lago_eu_de_standard", rate: 19.0) }
+
+    let(:customer) do
+      create(:customer, organization:, external_id:, billing_entity: source_billing_entity, country: nil, zipcode: nil, tax_identification_number: nil)
+    end
+
+    let(:create_args) { {external_id:, billing_entity_code: target_billing_entity.code} }
+
+    before do
+      fr_tax
+      de_tax
+      customer
+      create(:customer_applied_tax, organization:, customer:, tax: applied_tax) if applied_tax
+    end
+
+    context "when moving from an EU entity to a non-EU entity" do
+      let(:source_billing_entity) { eu_billing_entity }
+      let(:target_billing_entity) { non_eu_billing_entity }
+      let(:applied_tax) { fr_tax }
+
+      it "resets the EU tax so the customer falls back to the billing entity" do
+        expect(result).to be_success
+        expect(result.customer.billing_entity).to eq(non_eu_billing_entity)
+        expect(result.customer.taxes).to eq([])
+      end
+    end
+
+    context "when moving from a non-EU entity to an EU entity" do
+      let(:source_billing_entity) { non_eu_billing_entity }
+      let(:target_billing_entity) { eu_billing_entity }
+      let(:applied_tax) { nil }
+
+      it "assigns the new billing entity EU tax" do
+        expect(result).to be_success
+        expect(result.customer.billing_entity).to eq(eu_billing_entity)
+        expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_fr_standard"])
+      end
+    end
+
+    context "when moving between two EU entities in different countries" do
+      let(:source_billing_entity) { eu_billing_entity }
+      let(:target_billing_entity) { other_eu_billing_entity }
+      let(:applied_tax) { fr_tax }
+
+      it "re-evaluates the EU tax against the new billing entity" do
+        expect(result).to be_success
+        expect(result.customer.billing_entity).to eq(other_eu_billing_entity)
+        expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_de_standard"])
+      end
+    end
+
+    context "when the new EU entity requires a VIES check" do
+      let(:source_billing_entity) { eu_billing_entity }
+      let(:target_billing_entity) { other_eu_billing_entity }
+      let(:applied_tax) { fr_tax }
+
+      let(:customer) do
+        create(:customer, organization:, external_id:, billing_entity: source_billing_entity, country: nil, zipcode: nil, tax_identification_number: "FR123456789")
+      end
+
+      it "resets the EU tax and schedules a VIES check for the new billing entity" do
+        expect(result).to be_success
+        expect(result.customer.taxes).to eq([])
+        expect(result.customer.pending_vies_check).to have_attributes(
+          billing_entity: other_eu_billing_entity,
+          tax_identification_number: "FR123456789"
+        )
+      end
+    end
+
+    context "when the billing entity does not change" do
+      let(:source_billing_entity) { eu_billing_entity }
+      let(:target_billing_entity) { eu_billing_entity }
+      let(:applied_tax) { fr_tax }
+
+      it "keeps the existing customer tax" do
+        expect(result).to be_success
+        expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_fr_standard"])
       end
     end
   end
@@ -532,7 +629,7 @@ RSpec.describe Customers::UpsertFromApiService do
     it "calls SendWebhookJob with customer.updated" do
       result
 
-      expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", customer)
+      expect(SendWebhookJob).to have_been_enqueued.with("customer.updated", customer)
     end
 
     it "produces an activity log" do

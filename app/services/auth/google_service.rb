@@ -2,7 +2,18 @@
 
 module Auth
   class GoogleService < BaseService
+    include TypedResults
+
     BASE_SCOPE = %w[profile email openid].freeze
+
+    RESULTS = {
+      authorize_url: BaseResult[:url],
+      login: BaseResult[:user, :token],
+      register_user: BaseResult[:user, :organization, :membership, :token],
+      accept_invite: Invites::AcceptService::Result
+    }.freeze
+
+    private
 
     def authorize_url(request)
       ensure_google_auth_setup
@@ -86,10 +97,8 @@ module Auth
       result.single_validation_failure!(error_code: "invalid_google_code")
     end
 
-    private
-
     def generate_token
-      result.token = Auth::TokenService.encode(user: result.user, login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH)
+      result.token = Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH)
       result
     rescue => e
       result.service_failure!(code: "token_encoding_error", message: e.message)
@@ -110,8 +119,7 @@ module Auth
         result.user = User.create!(email:, password: SecureRandom.hex)
 
         result.organization = Organizations::CreateService
-          .call(name: organization_name, document_numbering: "per_organization")
-          .raise_if_error!
+          .call!(name: organization_name, document_numbering: "per_organization")
           .organization
 
         result.membership = Membership.create!(
@@ -142,7 +150,8 @@ module Auth
         event: "organization_registered",
         properties: {
           organization_name: organization.name,
-          organization_id: organization.id
+          organization_id: organization.id,
+          email: membership.user.email
         }
       )
     end

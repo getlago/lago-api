@@ -28,7 +28,10 @@ module V1
         current_billing_period_ending_at: dates_service.charges_to_datetime&.iso8601,
         on_termination_credit_note: model.on_termination_credit_note,
         on_termination_invoice: model.on_termination_invoice,
-        progressive_billing_disabled: model.progressive_billing_disabled
+        progressive_billing_disabled: model.progressive_billing_disabled,
+        consolidate_invoice: model.consolidate_invoice,
+        cancellation_reason: model.cancellation_reason,
+        activated_at: model.activated_at&.iso8601
       }
 
       payload = payload.merge(customer:) if include?(:customer)
@@ -38,16 +41,7 @@ module V1
       payload = payload.merge(usage_threshold:) if include?(:usage_threshold)
       payload = payload.merge(applicable_usage_thresholds) if include?(:applicable_usage_thresholds)
       payload = payload.merge(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
-
-      if organization.feature_flag_enabled?(:payment_gated_subscriptions)
-        payload[:cancelation_reason] = model.cancelation_reason
-        payload[:activated_at] = model.activated_at&.iso8601
-        payload[:activation_rules] = model.activation_rules.map do |rule|
-          ::V1::Subscriptions::ActivationRuleSerializer.new(rule).serialize
-        end
-      end
-
-      payload
+      payload.merge(activation_rules)
     end
 
     private
@@ -78,6 +72,14 @@ module V1
       ).serialize
     end
 
+    def activation_rules
+      ::CollectionSerializer.new(
+        model.activation_rules,
+        ::V1::Subscriptions::ActivationRuleSerializer,
+        collection_name: "activation_rules"
+      ).serialize
+    end
+
     # NOTE: This attribute is only used when sending the `subscription.usage_threshold_reached` webhook
     #      Ideally, this shouldn't even be part of the `subscription` object
     def usage_threshold
@@ -85,7 +87,7 @@ module V1
     end
 
     def dates_service
-      @dates_service ||= ::Subscriptions::DatesService.new_instance(model, Time.current, current_usage: true)
+      @dates_service ||= ::Subscriptions::DatesService.new_instance(model, model.billing_reference_time, current_usage: true)
     end
 
     def applicable_usage_thresholds

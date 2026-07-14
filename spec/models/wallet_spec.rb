@@ -6,11 +6,13 @@ RSpec.describe Wallet do
   subject(:wallet) { build(:wallet) }
 
   it_behaves_like "paper_trail traceable"
+  it_behaves_like "a model with a purchase order number"
 
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:customer)
+      expect(subject).to belong_to(:billing_entity).optional
       expect(subject).to have_many(:applied_invoice_custom_sections).class_name("Wallet::AppliedInvoiceCustomSection").dependent(:destroy)
       expect(subject).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
       expect(subject).to have_one(:metadata).class_name("Metadata::ItemMetadata").dependent(:destroy)
@@ -21,6 +23,28 @@ RSpec.describe Wallet do
 
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
+  describe "#billing_entity" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+
+    context "when wallet has a billing_entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:wallet) { create(:wallet, customer:, billing_entity:) }
+
+      it "returns the wallet billing_entity" do
+        expect(wallet.billing_entity).to eq(billing_entity)
+      end
+    end
+
+    context "when wallet does not have a billing_entity" do
+      let(:wallet) { create(:wallet, customer:, billing_entity: nil) }
+
+      it "falls back to the customer billing_entity" do
+        expect(wallet.billing_entity).to eq(customer.billing_entity)
+      end
+    end
   end
 
   describe ".with_positive_balance" do
@@ -226,6 +250,54 @@ RSpec.describe Wallet do
 
       wallet.paid_top_up_max_amount_cents = nil
       expect(wallet.paid_top_up_max_credits).to be_nil
+    end
+  end
+
+  describe "REFRESH_RELEVANT_ATTRIBUTES" do
+    # If this list changes, you MUST decide whether the new/removed column
+    # should trigger Customers::RefreshWalletsService and update
+    # Wallet::REFRESH_RELEVANT_ATTRIBUTES accordingly.
+    non_refresh_relevant_attributes = %w[
+      id
+      balance_cents
+      balance_currency
+      consumed_amount_cents
+      consumed_amount_currency
+      consumed_credits
+      credits_balance
+      credits_ongoing_balance
+      credits_ongoing_usage_balance
+      depleted_ongoing_balance
+      expiration_at
+      invoice_requires_successful_payment
+      last_balance_sync_at
+      last_consumed_credit_at
+      last_ongoing_balance_sync_at
+      lock_version
+      name
+      ongoing_balance_cents
+      ongoing_usage_balance_cents
+      paid_top_up_max_amount_cents
+      paid_top_up_min_amount_cents
+      payment_method_type
+      rate_amount
+      ready_to_be_refreshed
+      skip_invoice_custom_sections
+      status
+      terminated_at
+      traceable
+      created_at
+      updated_at
+      billing_entity_id
+      customer_id
+      organization_id
+      payment_method_id
+      purchase_order_number
+    ].freeze
+
+    it "covers every column that does not need to trigger a refresh" do
+      expect(described_class.column_names - described_class::REFRESH_RELEVANT_ATTRIBUTES)
+        .to match_array(non_refresh_relevant_attributes)
     end
   end
 end

@@ -251,6 +251,14 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           entitlement3
           entitlement_value2
           entitlement_value3
+
+          # NOTE: SendWebhookJob.perform_later checks organization.webhook_endpoints,
+          #       which Bullet flags as an N+1. It is not part of this test.
+          Bullet.add_safelist(type: :n_plus_one_query, class_name: "Organization", association: :webhook_endpoints)
+        end
+
+        after do
+          Bullet.delete_safelist(type: :n_plus_one_query, class_name: "Organization", association: :webhook_endpoints)
         end
 
         it "does not trigger N+1 queries when updating multiple features and privileges" do

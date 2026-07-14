@@ -142,6 +142,24 @@ RSpec.describe DailyUsages::FillFromInvoiceService do
         end
       end
 
+      context "when the only consumed charge is free (zero amount)" do
+        before do
+          invoice.fees.charge.destroy_all
+          charge = create(:standard_charge, plan: subscription.plan, properties: {"amount" => "0"})
+          create(:charge_fee, invoice:, charge:, units: 5, amount_cents: 0, taxes_amount_cents: 0, subscription:)
+        end
+
+        it "creates a daily usage based on consumed units" do
+          travel_to(timestamp) do
+            expect { fill_service.call }.to change(DailyUsage, :count).by(1)
+
+            daily_usage = subscription.daily_usages.order(:created_at).last
+            expect(daily_usage.usage["amount_cents"]).to eq(0)
+            expect(daily_usage.usage["charges_usage"].count).to eq(1)
+          end
+        end
+      end
+
       context "when the daily usage already exists" do
         before do
           create(
@@ -179,7 +197,11 @@ RSpec.describe DailyUsages::FillFromInvoiceService do
           )
         end
 
-        before { invoice_subscription2 }
+        before do
+          invoice_subscription2
+          charge = create(:standard_charge, plan: subscription2.plan)
+          create(:charge_fee, invoice:, charge:, units: 12, amount_cents: 1200, subscription: subscription2)
+        end
 
         it "creates daily usages for all the subscriptions" do
           expect { fill_service.call }.to change(DailyUsage, :count).by(2)
@@ -266,7 +288,7 @@ RSpec.describe DailyUsages::FillFromInvoiceService do
 
     let(:charge) { create(:standard_charge, plan: subscription.plan) }
 
-    it "returns an OpenStruct with correct datetime attributes" do
+    it "returns a Struct with correct datetime attributes" do
       expect(usage.from_datetime).to eq(invoice_subscription.charges_from_datetime.change(usec: 0))
       expect(usage.to_datetime).to eq(invoice_subscription.charges_to_datetime.change(usec: 0))
     end

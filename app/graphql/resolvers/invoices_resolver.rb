@@ -58,6 +58,7 @@ module Resolvers
     )
       result = InvoicesQuery.call(
         organization: current_organization,
+        meilisearch: true,
         pagination: {page:, limit:},
         search_term:,
         filters: {
@@ -84,7 +85,21 @@ module Resolvers
 
       return result_error(result) unless result.success?
 
-      Invoice.preload_offset_amounts(result.invoices)
+      invoices = result.invoices
+
+      ActiveRecord::Associations::Preloader.new(
+        records: invoices.to_a,
+        associations: [
+          :fees,
+          :regenerated_invoice,
+          :error_details,
+          :billing_entity,
+          :customer_payments,
+          {customer: :billing_entity}
+        ]
+      ).call
+
+      Invoice.preload_offset_amounts(invoices)
     end
   end
 end

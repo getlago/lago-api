@@ -20,6 +20,7 @@ RSpec.describe Types::Invoices::Object do
     expect(subject).to have_field(:payment_dispute_losable).of_type("Boolean!")
     expect(subject).to have_field(:payment_dispute_lost_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:payment_status).of_type("InvoicePaymentStatusTypeEnum!")
+    expect(subject).to have_field(:purchase_order_number).of_type("String")
     expect(subject).to have_field(:status).of_type("InvoiceStatusTypeEnum!")
     expect(subject).to have_field(:voidable).of_type("Boolean!")
 
@@ -138,6 +139,21 @@ RSpec.describe Types::Invoices::Object do
         "Alpha Plan",
         "Zebra Plan"
       ])
+    end
+  end
+
+  describe "#payments" do
+    subject(:payments) { run_graphql_field("Invoice.payments", invoice) }
+
+    let(:invoice) { create(:invoice) }
+
+    before do
+      create(:payment, payable: invoice, payable_payment_status: :succeeded, amount_cents: 100, updated_at: 1.hour.ago)
+      create(:payment, payable: invoice, payable_payment_status: :succeeded, amount_cents: 200, updated_at: 2.hours.ago)
+    end
+
+    it "returns payments ordered by updated_at" do
+      expect(payments.map(&:amount_cents)).to eq([100, 200])
     end
   end
 end

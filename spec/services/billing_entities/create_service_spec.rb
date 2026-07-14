@@ -125,6 +125,7 @@ RSpec.describe BillingEntities::CreateService do
             code: "billing-entity",
             address_line1: "Address Line 1",
             address_line2: "Address Line 2",
+            phone: "+49 30 1234567",
             city: "City",
             country: "fr",
             default_currency: "CHF",
@@ -164,6 +165,7 @@ RSpec.describe BillingEntities::CreateService do
           expect(result.billing_entity.name).to eq("Billing Entity")
           expect(result.billing_entity.address_line1).to eq("Address Line 1")
           expect(result.billing_entity.address_line2).to eq("Address Line 2")
+          expect(result.billing_entity.phone).to eq("+49 30 1234567")
           expect(result.billing_entity.city).to eq("City")
           expect(result.billing_entity.country).to eq("FR")
           expect(result.billing_entity.default_currency).to eq("CHF")

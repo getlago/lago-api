@@ -28,6 +28,12 @@ RSpec.describe Api::V1::WalletsController do
         end
       end
     end
+
+    it_behaves_like "a wallet create endpoint with billing_entity_id" do
+      subject do
+        post_with_token(organization, "/api/v1/wallets", {wallet: create_params})
+      end
+    end
   end
 
   describe "PUT /api/v1/wallets/:id" do
@@ -73,6 +79,42 @@ RSpec.describe Api::V1::WalletsController do
         it "returns a not found error" do
           subject
           expect(response).to have_http_status(:not_found)
+        end
+      end
+    end
+
+    context "when filtering by billing_entity_codes" do
+      let(:billing_entity_eu) { create(:billing_entity, organization:, code: "EU") }
+      let(:billing_entity_us) { create(:billing_entity, organization:, code: "US") }
+      let(:wallet_eu) { create(:wallet, customer:, billing_entity: billing_entity_eu) }
+      let(:wallet_us) { create(:wallet, customer:, billing_entity: billing_entity_us) }
+
+      before do
+        wallet_eu
+        wallet_us
+      end
+
+      it "returns only wallets under the requested billing entity" do
+        get_with_token(organization, "/api/v1/wallets?billing_entity_codes[]=EU")
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallets].map { |w| w[:lago_id] }).to contain_exactly(wallet_eu.id)
+      end
+
+      context "when filtering by multiple billing_entity_codes" do
+        it "returns wallets matching any of the provided codes" do
+          get_with_token(organization, "/api/v1/wallets?billing_entity_codes[]=EU&billing_entity_codes[]=US")
+
+          expect(response).to have_http_status(:success)
+          expect(json[:wallets].map { |w| w[:lago_id] }).to contain_exactly(wallet_eu.id, wallet_us.id)
+        end
+      end
+
+      context "when one of the billing_entity_codes is unknown" do
+        it "returns a not found error" do
+          get_with_token(organization, "/api/v1/wallets?billing_entity_codes[]=EU&billing_entity_codes[]=BOGUS")
+
+          expect(response).to be_not_found_error("billing_entity")
         end
       end
     end

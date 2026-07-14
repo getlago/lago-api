@@ -3,6 +3,8 @@
 module Invoices
   module Metadata
     class UpdateService < BaseService
+      Result = BaseResult[:invoice]
+
       def initialize(invoice:, params:)
         @invoice = invoice
         @params = params

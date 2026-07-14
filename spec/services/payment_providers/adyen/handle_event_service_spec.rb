@@ -9,17 +9,14 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
 
   describe "#call" do
     let(:payment_service) { instance_double(Invoices::Payments::AdyenService) }
-    let(:payment_provider_service) { instance_double(PaymentProviderCustomers::AdyenService) }
     let(:service_result) { BaseService::Result.new }
 
     before do
       allow(Invoices::Payments::AdyenService).to receive(:new)
         .and_return(payment_service)
-      allow(PaymentProviderCustomers::AdyenService).to receive(:new)
-        .and_return(payment_provider_service)
-      allow(payment_service).to receive(:update_payment_status)
+      allow(PaymentProviderCustomers::AdyenService).to receive(:call)
         .and_return(service_result)
-      allow(payment_provider_service).to receive(:preauthorise)
+      allow(payment_service).to receive(:update_payment_status)
         .and_return(service_result)
     end
 
@@ -37,8 +34,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
       it "routes the event to an other service" do
         event_service.call
 
-        expect(PaymentProviderCustomers::AdyenService).to have_received(:new)
-        expect(payment_provider_service).to have_received(:preauthorise)
+        expect(PaymentProviderCustomers::AdyenService).to have_received(:call).with(:preauthorise, any_args)
       end
     end
 
@@ -58,6 +54,14 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
 
         expect(Invoices::Payments::AdyenService).to have_received(:new)
         expect(payment_service).to have_received(:update_payment_status)
+      end
+
+      it "passes the amount value as a dedicated kwarg for the Payment row to use" do
+        event_service.call
+
+        expect(payment_service).to have_received(:update_payment_status).with(
+          hash_including(amount_cents: 71)
+        )
       end
     end
 
@@ -132,6 +136,113 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
 
         expect(CreditNotes::Refunds::AdyenService).to have_received(:new)
         expect(refund_service).to have_received(:update_status)
+      end
+    end
+
+    context "when succeeded cancellation event" do
+      let(:event_json) do
+        JSON.parse(event_response_json)["notificationItems"]
+          .first&.dig("NotificationRequestItem").to_json
+      end
+
+      let(:event_response_json) do
+        path = Rails.root.join("spec/fixtures/adyen/webhook_cancellation_response.json")
+        File.read(path)
+      end
+
+      let(:invoice) { create(:invoice, organization:) }
+
+      before do
+        create(:payment, payable: invoice, organization:,
+          provider_payment_id: "PSPREF123", payable_payment_status: :pending,
+          status: "Authorised")
+      end
+
+      it "routes the event to the invoice payments service with originalReference" do
+        event_service.call
+
+        expect(Invoices::Payments::AdyenService).to have_received(:new)
+        expect(payment_service).to have_received(:update_payment_status).with(
+          provider_payment_id: "PSPREF123",
+          status: "Cancelled",
+          metadata: {lago_payable_type: "Invoice"}
+        )
+      end
+    end
+
+    context "when failed cancellation event" do
+      let(:event_json) do
+        JSON.parse(event_response_json)["notificationItems"]
+          .first&.dig("NotificationRequestItem")
+          &.merge("success" => "false").to_json
+      end
+
+      let(:event_response_json) do
+        path = Rails.root.join("spec/fixtures/adyen/webhook_cancellation_response.json")
+        File.read(path)
+      end
+
+      it "does not route the event to a payment service" do
+        event_service.call
+
+        expect(payment_service).not_to have_received(:update_payment_status)
+      end
+    end
+
+    context "when cancellation event references an unknown payment" do
+      let(:event_json) do
+        JSON.parse(event_response_json)["notificationItems"]
+          .first&.dig("NotificationRequestItem").to_json
+      end
+
+      let(:event_response_json) do
+        path = Rails.root.join("spec/fixtures/adyen/webhook_cancellation_response.json")
+        File.read(path)
+      end
+
+      it "does not route the event to a payment service" do
+        event_service.call
+
+        expect(payment_service).not_to have_received(:update_payment_status)
+      end
+    end
+
+    context "when cancellation event is for a payment request payment" do
+      let(:payment_service) { instance_double(PaymentRequests::Payments::AdyenService) }
+
+      let(:event_json) do
+        JSON.parse(event_response_json)["notificationItems"]
+          .first&.dig("NotificationRequestItem").to_json
+      end
+
+      let(:event_response_json) do
+        path = Rails.root.join("spec/fixtures/adyen/webhook_cancellation_response.json")
+        File.read(path)
+      end
+
+      let(:customer) { create(:customer, organization:) }
+      let(:payment_request) { create(:payment_request, organization:, customer:) }
+
+      before do
+        create(:payment, payable: payment_request, organization:, customer:,
+          provider_payment_id: "PSPREF123", payable_payment_status: :pending,
+          status: "Authorised")
+
+        allow(PaymentRequests::Payments::AdyenService).to receive(:new)
+          .and_return(payment_service)
+        allow(payment_service).to receive(:update_payment_status)
+          .and_return(service_result)
+      end
+
+      it "routes to the payment request payments service" do
+        event_service.call
+
+        expect(PaymentRequests::Payments::AdyenService).to have_received(:new)
+        expect(payment_service).to have_received(:update_payment_status).with(
+          provider_payment_id: "PSPREF123",
+          status: "Cancelled",
+          metadata: {lago_payable_type: "PaymentRequest"}
+        )
       end
     end
 

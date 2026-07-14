@@ -117,7 +117,7 @@
             <tr class="fee">
               <td>
                 <div class="body-1">Prorated Fixed Charge</div>
-                <div class="body-3">The fee is prorated on days of usage, the displayed unit price is an average</div>
+                <div class="body-3">The fee is prorated for the period; the displayed unit price is an average</div>
               </td>
               <td class="body-2">0.5</td>
               <td class="body-2">$50.00</td>

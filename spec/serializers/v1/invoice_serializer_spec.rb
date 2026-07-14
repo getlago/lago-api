@@ -27,6 +27,7 @@ RSpec.describe ::V1::InvoiceSerializer do
       "billing_entity_code" => invoice.billing_entity.code,
       "sequential_id" => invoice.sequential_id,
       "number" => invoice.number,
+      "purchase_order_number" => invoice.purchase_order_number,
       "issuing_date" => invoice.issuing_date.iso8601,
       "payment_due_date" => invoice.payment_due_date.iso8601,
       "net_payment_term" => invoice.net_payment_term,
@@ -134,6 +135,32 @@ RSpec.describe ::V1::InvoiceSerializer do
         subscription_alpha.id,
         subscription_zebra.id
       ])
+    end
+  end
+
+  context "when includes fees" do
+    let(:charge) do
+      create(:standard_charge, properties: {
+        "amount" => "100",
+        "presentation_group_keys" => [{"value" => "department", "options" => {"display_in_invoice" => true}}]
+      })
+    end
+    let(:fee1) { create(:charge_fee, charge:, invoice:, presentation_breakdowns: [build(:presentation_breakdown)]) }
+    let(:fee2) { create(:fee, invoice:) }
+
+    let(:includes) { %i[fees] }
+
+    before do
+      fee1
+      fee2
+    end
+
+    it "returns fees and presentation breakdowns" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["invoice"]["fees"].count).to eq(2)
+      expect(result["invoice"]["fees"].first["presentation_breakdowns"]).to eq([{"presentation_by" => {"department" => "engineering"}, "units" => "60.0"}])
+      expect(result["invoice"]["fees"].second["presentation_breakdowns"]).to eq([])
     end
   end
 

@@ -18,7 +18,7 @@ RSpec.describe Resolvers::Customers::UsageResolver do
           chargesUsage {
             billableMetric { name code aggregationType }
             charge { chargeModel }
-            filters { id units amountCents pricingUnitAmountCents invoiceDisplayName values eventsCount }
+            filters { id units amountCents pricingUnitAmountCents invoiceDisplayName values eventsCount presentationBreakdowns { presentationBy units } }
             units
             amountCents
             pricingUnitAmountCents
@@ -28,7 +28,9 @@ RSpec.describe Resolvers::Customers::UsageResolver do
               eventsCount
               groupedBy
               filters { id units amountCents pricingUnitAmountCents invoiceDisplayName values eventsCount }
+              presentationBreakdowns { presentationBy units }
             }
+            presentationBreakdowns { presentationBy units }
           }
         }
       }
@@ -77,13 +79,13 @@ RSpec.describe Resolvers::Customers::UsageResolver do
       billable_metric: sum_metric,
       properties: {
         amount: 1.to_s,
-        grouped_by: ["agent_name"]
+        pricing_group_keys: ["agent_name"]
       }
     )
   end
 
   let(:billable_metric_filter) do
-    create(:billable_metric_filter, billable_metric: metric, key: "cloud", values: %w[aws gcp])
+    create(:billable_metric_filter, billable_metric: sum_metric, key: "cloud", values: %w[aws gcp])
   end
 
   let(:charge_filter) { create(:charge_filter, charge: standard_charge, invoice_display_name: nil) }
@@ -184,6 +186,198 @@ RSpec.describe Resolvers::Customers::UsageResolver do
     expect(grouped_usage["groupedBy"]).to eq({"agent_name" => "frodo"})
   end
 
+  context "with presentation group keys" do
+    let(:properties) do
+      {
+        amount: 1.to_s,
+        presentation_group_keys: [{value: "cloud"}]
+      }
+    end
+    let(:standard_charge) do
+      create(
+        :standard_charge,
+        plan: subscription.plan,
+        billable_metric: sum_metric,
+        properties: properties
+      )
+    end
+
+    it "returns the presentation breakdowns" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          customerId: customer.id,
+          subscriptionId: subscription.id
+        }
+      )
+
+      charges_usage = result["data"]["customerUsage"]["chargesUsage"]
+      expect(charges_usage.first["presentationBreakdowns"]).to be_empty
+      expect(charges_usage.second["filters"].first["presentationBreakdowns"]).to be_empty
+      expect(charges_usage.second["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+    end
+
+    context "without charge filters" do
+      let(:charge_filter_value) { nil }
+
+      it "returns presentation breakdowns directly on the charge" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {
+            customerId: customer.id,
+            subscriptionId: subscription.id
+          }
+        )
+
+        charges_usage = result["data"]["customerUsage"]["chargesUsage"]
+        expect(charges_usage.first["presentationBreakdowns"]).to be_empty
+        expect(charges_usage.first["filters"]).to be_empty
+        expect(charges_usage.second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+        expect(charges_usage.second["filters"]).to be_empty
+      end
+    end
+
+    context "with pricing group keys" do
+      let(:properties) do
+        {
+          amount: 1.to_s,
+          pricing_group_keys: ["item_id"],
+          presentation_group_keys: [{value: "cloud"}]
+        }
+      end
+
+      it "returns the presentation breakdowns" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {
+            customerId: customer.id,
+            subscriptionId: subscription.id
+          }
+        )
+
+        charges_usage = result["data"]["customerUsage"]["chargesUsage"]
+        expect(charges_usage.first["presentationBreakdowns"]).to be_empty
+        expect(charges_usage.second["presentationBreakdowns"]).to be_empty
+
+        grouped_usage = charges_usage.second["groupedUsage"]
+        expect(grouped_usage.first["presentationBreakdowns"]).to be_empty
+        expect(grouped_usage.second["presentationBreakdowns"]).to be_empty
+        expect(charges_usage.second["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+      end
+
+      context "without charge filters" do
+        let(:charge_filter_value) { nil }
+
+        it "returns presentation breakdowns in grouped_usage" do
+          result = execute_graphql(
+            current_user: membership.user,
+            current_organization: organization,
+            permissions: required_permission,
+            query:,
+            variables: {
+              customerId: customer.id,
+              subscriptionId: subscription.id
+            }
+          )
+
+          charges_usage = result["data"]["customerUsage"]["chargesUsage"]
+          expect(charges_usage.second["presentationBreakdowns"]).to be_empty
+
+          grouped_usage = charges_usage.second["groupedUsage"]
+          expect(grouped_usage.first["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+        end
+      end
+    end
+
+    context "with two charges without pricing_group_keys" do
+      let(:presentation_metric) { create(:sum_billable_metric, organization:) }
+
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          billable_metric: presentation_metric,
+          properties: {
+            amount: "1",
+            presentation_group_keys: [{value: "cloud"}]
+          }
+        )
+      end
+
+      before do
+        create_list(
+          :event,
+          3,
+          organization:,
+          customer:,
+          subscription:,
+          code: presentation_metric.code,
+          timestamp: Time.zone.now,
+          properties: {cloud: "gcp", item_id: 1}
+        )
+      end
+
+      it "returns presentation breakdowns for both charges with no grouped_usage" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {
+            customerId: customer.id,
+            subscriptionId: subscription.id
+          }
+        )
+
+        charges_usage = result["data"]["customerUsage"]["chargesUsage"]
+        presentation_charge_usage = charges_usage.find { |u| u["billableMetric"]["code"] == presentation_metric.code }
+        sum_charge_usage = charges_usage.find { |u| u["billableMetric"]["code"] == sum_metric.code }
+
+        expect(presentation_charge_usage["groupedUsage"]).to be_empty
+        expect(presentation_charge_usage["presentationBreakdowns"]).to eq([
+          {"presentationBy" => {"cloud" => "gcp"}, "units" => "3.0"}
+        ])
+
+        expect(sum_charge_usage["groupedUsage"]).to be_empty
+        expect(sum_charge_usage["presentationBreakdowns"]).to be_empty
+        expect(sum_charge_usage["filters"].second["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+      end
+
+      context "without charge filters" do
+        let(:charge_filter_value) { nil }
+
+        it "returns presentation breakdowns directly on both charges" do
+          result = execute_graphql(
+            current_user: membership.user,
+            current_organization: organization,
+            permissions: required_permission,
+            query:,
+            variables: {
+              customerId: customer.id,
+              subscriptionId: subscription.id
+            }
+          )
+
+          charges_usage = result["data"]["customerUsage"]["chargesUsage"]
+          presentation_charge_usage = charges_usage.find { |u| u["billableMetric"]["code"] == presentation_metric.code }
+          sum_charge_usage = charges_usage.find { |u| u["billableMetric"]["code"] == sum_metric.code }
+
+          expect(presentation_charge_usage["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "gcp"}, "units" => "3.0"}])
+          expect(sum_charge_usage["presentationBreakdowns"]).to eq([{"presentationBy" => {"cloud" => "aws"}, "units" => "4.0"}])
+        end
+      end
+    end
+  end
+
   context "with filters" do
     let(:cloud_bm_filter) do
       create(:billable_metric_filter, billable_metric: metric, key: "cloud", values: %w[aws google])
@@ -278,7 +472,8 @@ RSpec.describe Resolvers::Customers::UsageResolver do
           "pricingUnitAmountCents" => "0",
           "invoiceDisplayName" => nil,
           "values" => {},
-          "eventsCount" => 4
+          "eventsCount" => 4,
+          "presentationBreakdowns" => []
         },
         {
           "id" => aws_filter.id,
@@ -289,7 +484,8 @@ RSpec.describe Resolvers::Customers::UsageResolver do
           "values" => {
             "cloud" => ["aws"]
           },
-          "eventsCount" => 3
+          "eventsCount" => 3,
+          "presentationBreakdowns" => []
         },
         {
           "id" => google_filter.id,
@@ -300,7 +496,8 @@ RSpec.describe Resolvers::Customers::UsageResolver do
           "values" => {
             "cloud" => ["google"]
           },
-          "eventsCount" => 1
+          "eventsCount" => 1,
+          "presentationBreakdowns" => []
         }
       )
     end

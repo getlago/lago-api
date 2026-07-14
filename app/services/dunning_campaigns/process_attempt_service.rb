@@ -2,12 +2,14 @@
 
 module DunningCampaigns
   class ProcessAttemptService < BaseService
-    def initialize(customer:, dunning_campaign_threshold:)
+    Result = BaseResult[:customer, :payment_request]
+
+    def initialize(customer:, dunning_campaign_threshold:, billing_entity:)
       @customer = customer
       @dunning_campaign_threshold = dunning_campaign_threshold
       @dunning_campaign = dunning_campaign_threshold.dunning_campaign
       @organization = customer.organization
-      @billing_entity = customer.billing_entity
+      @billing_entity = billing_entity
 
       super
     end
@@ -16,8 +18,6 @@ module DunningCampaigns
       return result unless organization.auto_dunning_enabled?
       return result unless applicable_dunning_campaign?
       return result unless dunning_campaign_threshold_reached?
-      return result unless days_between_attempts_passed?
-      return result if max_attempts_reached?
 
       ActiveRecord::Base.transaction do
         payment_request_result = PaymentRequests::CreateService.call(
@@ -28,12 +28,6 @@ module DunningCampaigns
           },
           dunning_campaign:
         ).raise_if_error!
-
-        customer.increment(:last_dunning_campaign_attempt)
-        customer.last_dunning_campaign_attempt_at = Time.zone.now
-        customer.save!
-
-        send_campaign_finished_webhook if max_attempts_reached?
 
         result.customer = customer
         result.payment_request = payment_request_result.payment_request
@@ -52,39 +46,27 @@ module DunningCampaigns
       return false if customer.exclude_from_dunning_campaign?
 
       custom_campaign = customer.applied_dunning_campaign
-      default_campaign = billing_entity.applied_dunning_campaign
+      # Dunning campaign is resolved at the customer level (from their own billing entity), not from the invoice's BE.
+      default_campaign = customer.billing_entity.applied_dunning_campaign
 
       custom_campaign == dunning_campaign || (!custom_campaign && default_campaign == dunning_campaign)
     end
 
     def dunning_campaign_threshold_reached?
-      overdue_invoices.sum(:total_amount_cents) >= dunning_campaign_threshold.amount_cents
+      overdue_invoices_in_currency.sum(:total_amount_cents) >= dunning_campaign_threshold.amount_cents
     end
 
-    def days_between_attempts_passed?
-      return true unless customer.last_dunning_campaign_attempt_at
-
-      (customer.last_dunning_campaign_attempt_at + dunning_campaign.days_between_attempts.days).past?
-    end
-
-    def max_attempts_reached?
-      customer.last_dunning_campaign_attempt >= dunning_campaign.max_attempts
-    end
-
-    def overdue_invoices
-      customer
+    def overdue_invoices_in_currency
+      @overdue_invoices_in_currency ||= customer
         .invoices
+        .non_self_billed
         .payment_overdue
         .where(ready_for_payment_processing: true)
         .where(currency: dunning_campaign_threshold.currency)
     end
 
-    def send_campaign_finished_webhook
-      SendWebhookJob.perform_later(
-        "dunning_campaign.finished",
-        customer,
-        dunning_campaign_code: dunning_campaign.code
-      )
+    def overdue_invoices
+      overdue_invoices_in_currency.where(billing_entity_id: billing_entity.id)
     end
   end
 end

@@ -1403,4 +1403,114 @@ describe "Pay in advance fixed charge units change mid-period", :premium do
       end
     end
   end
+
+  # Bug repro: hitting the dedicated subscription-scoped endpoint
+  # PUT /api/v1/subscriptions/:external_id/fixed_charges/:code with
+  # apply_units_immediately: true silently skips the mid-period delta invoice.
+  # The plan-level endpoint and the plan_overrides path both dispatch
+  # Invoices::CreatePayInAdvanceFixedChargesJob; this one doesn't.
+  describe "when updating subscription fixed charge via the dedicated endpoint" do
+    let(:subscription_date) { DateTime.new(2024, 12, 1) }
+    let(:subscription) { customer.subscriptions.first }
+
+    before do
+      fixed_charge
+
+      travel_to subscription_date do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "sub_endpoint_#{customer.external_id}",
+            plan_code: plan.code,
+            billing_time: "calendar",
+            subscription_at: subscription_date.iso8601
+          }
+        )
+        perform_all_enqueued_jobs
+      end
+    end
+
+    context "when increasing units to 15 with apply_units_immediately: true" do
+      before do
+        travel_to subscription_date + 1.hour do
+          update_subscription_fixed_charge(
+            subscription,
+            fixed_charge.code,
+            {
+              units: "15",
+              apply_units_immediately: true
+            }
+          )
+          perform_all_enqueued_jobs
+        end
+      end
+
+      it "writes a per-subscription units override row without cloning the plan" do
+        subscription.reload
+        expect(subscription.plan).to eq(plan)
+        expect(plan.fixed_charges.reload).to contain_exactly(fixed_charge)
+
+        override = Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)
+        expect(override).to be_present
+        expect(override.units).to eq(15)
+      end
+
+      it "appends a FixedChargeEvent on the parent fixed_charge with units=15 at the update time" do
+        events = FixedChargeEvent.where(subscription:, fixed_charge:).order(:created_at)
+
+        # Two events on the parent fixed_charge:
+        #   1. units=10 from subscription creation.
+        #   2. units=15 at the update time, emitted by the units-only fast
+        #      path on UpdateOrOverrideFixedChargeService.
+        expect(events.count).to eq(2)
+        update_event = events.last
+        expect(update_event.units).to eq(15)
+        expect(update_event.timestamp).to be_within(5.seconds).of(subscription_date + 1.hour)
+      end
+
+      it "generates a mid-period delta invoice for 5 units (15 - 10)" do
+        invoices = subscription.reload.invoices.order(:created_at)
+
+        # Expected behaviour (matches the plan-level endpoint and the
+        # plan_overrides path on Subscriptions::UpdateService):
+        # 1. Initial invoice (10 units, $100)
+        # 2. Mid-period delta invoice (5 units, $50)
+        #
+        # Current behaviour on main: only the initial invoice exists
+        # because UpdateOrOverrideFixedChargeService never dispatches
+        # Invoices::CreatePayInAdvanceFixedChargesJob.
+        expect(invoices.count).to eq(2)
+
+        initial_invoice = invoices.first
+        expect(initial_invoice.fees.fixed_charge.first.units).to eq(10)
+        expect(initial_invoice.fees.fixed_charge.first.amount_cents).to eq(10_000)
+
+        delta_invoice = invoices.last
+        expect(delta_invoice.fees.fixed_charge.count).to eq(1)
+
+        delta_fee = delta_invoice.fees.fixed_charge.first
+        expect(delta_fee.units).to eq(5)
+        expect(delta_fee.amount_cents).to eq(5_000)
+      end
+
+      it "next regular billing cycle bills the new units (15), not the old (10)" do
+        expect {
+          travel_to subscription_date + 1.month + 1.minute do
+            perform_billing
+          end
+        }.to change { subscription.reload.invoices.count }.by(1)
+
+        next_period_invoice = subscription.reload.invoices.order(:created_at).last
+        next_period_fee = next_period_invoice.fees.fixed_charge.first
+
+        # The stale units=10 event sitting at the next-period boundary
+        # (see the FixedChargeEvent assertion above) is what the aggregation
+        # reads, so next-cycle billing also defaults to 10 units. The gap
+        # is broader than just the missing immediate-billing dispatch —
+        # subsequent periods also under-bill.
+        expect(next_period_fee.units).to eq(15)
+        expect(next_period_fee.amount_cents).to eq(15_000)
+      end
+    end
+  end
 end

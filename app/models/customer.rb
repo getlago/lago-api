@@ -37,6 +37,15 @@ class Customer < ApplicationRecord
     align_with_finalization_date: "align_with_finalization_date"
   }.freeze
 
+  SEARCHABLE_CUSTOMER_FIELDS = %w[
+    name
+    firstname
+    lastname
+    legal_name
+    external_id
+    email
+  ].freeze
+
   attribute :finalize_zero_amount_invoice, :integer
   enum :finalize_zero_amount_invoice, FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, prefix: :finalize_zero_amount_invoice
   attribute :customer_type, :string
@@ -48,6 +57,8 @@ class Customer < ApplicationRecord
   enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: {allow_nil: true}
 
   before_save :ensure_slug
+  after_update :flag_invoices_for_search_reindex, if: -> { Lago::Meilisearch.indexing_enabled? && search_indexed_fields_changed? }
+  after_commit :enqueue_invoices_reindex_job, if: -> { @invoices_search_reindex_needed }
 
   belongs_to :organization
   belongs_to :billing_entity, optional: true
@@ -63,6 +74,9 @@ class Customer < ApplicationRecord
   has_many :applied_add_ons
   has_many :add_ons, through: :applied_add_ons
   has_many :daily_usages
+  has_many :quotes
+  has_many :order_forms
+  has_many :orders
   has_many :wallets
   has_many :wallet_transactions, through: :wallets
   has_many :payment_provider_customers,
@@ -294,6 +308,17 @@ class Customer < ApplicationRecord
     }
   end
 
+  def effective_shipping_address
+    {
+      address_line1: shipping_address_line1.presence || address_line1,
+      address_line2: shipping_address_line2.presence || address_line2,
+      city: shipping_city.presence || city,
+      zipcode: shipping_zipcode.presence || zipcode,
+      state: shipping_state.presence || state,
+      country: shipping_country.presence || country
+    }
+  end
+
   def same_billing_and_shipping_address?
     return true if shipping_address.values.all?(&:blank?)
 
@@ -315,14 +340,31 @@ class Customer < ApplicationRecord
       country.blank?
   end
 
-  def overdue_balance_cents
-    invoices.non_self_billed.payment_overdue.where(currency:).sum(:total_amount_cents)
+  def overdue_balance_cents(for_currency = currency)
+    invoices.non_self_billed.payment_overdue.where(currency: for_currency).sum(:total_amount_cents)
+  end
+
+  def overdue_balances
+    invoices.non_self_billed.payment_overdue
+      .group(:currency).sum(:total_amount_cents)
   end
 
   def reset_dunning_campaign!
     update!(
+      dunning_currency_attempts: {},
       last_dunning_campaign_attempt: 0,
       last_dunning_campaign_attempt_at: nil
+    )
+  end
+
+  def reset_dunning_campaign_for_currency!(currency)
+    attempts = dunning_currency_attempts.dup
+    attempts[currency.to_s] = 0
+    all_reset = attempts.values.all?(&:zero?)
+    update!(
+      dunning_currency_attempts: attempts,
+      last_dunning_campaign_attempt: 0,
+      last_dunning_campaign_attempt_at: (all_reset ? nil : last_dunning_campaign_attempt_at)
     )
   end
 
@@ -349,6 +391,22 @@ class Customer < ApplicationRecord
 
     self.slug = "#{organization.document_number_prefix}-#{formatted_sequential_id}"
   end
+
+  # `deleted_at` is included because invoice documents embed customer fields
+  # only while the customer is kept: discarding must blank them, undiscarding
+  # must restore them.
+  def search_indexed_fields_changed?
+    (saved_changes.keys & (SEARCHABLE_CUSTOMER_FIELDS + ["deleted_at"])).any?
+  end
+
+  def flag_invoices_for_search_reindex
+    @invoices_search_reindex_needed = true
+  end
+
+  def enqueue_invoices_reindex_job
+    @invoices_search_reindex_needed = false
+    Customers::ReindexInvoicesJob.perform_later(id)
+  end
 end
 
 # == Schema Information
@@ -367,6 +425,7 @@ end
 #  customer_type                                :enum
 #  deleted_at                                   :datetime
 #  document_locale                              :string
+#  dunning_currency_attempts                    :jsonb            not null
 #  email                                        :string
 #  exclude_from_dunning_campaign                :boolean          default(FALSE), not null
 #  finalize_zero_amount_invoice                 :integer          default("inherit"), not null
@@ -411,15 +470,23 @@ end
 #
 # Indexes
 #
-#  index_customers_on_account_type                     (account_type)
-#  index_customers_on_applied_dunning_campaign_id      (applied_dunning_campaign_id)
-#  index_customers_on_awaiting_wallet_refresh          (awaiting_wallet_refresh)
-#  index_customers_on_billing_entity_id                (billing_entity_id)
-#  index_customers_on_deleted_at                       (deleted_at)
-#  index_customers_on_external_id                      (organization_id,external_id)
-#  index_customers_on_external_id_and_organization_id  (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
-#  index_customers_on_org_id_and_sequential_id_unique  (organization_id,sequential_id) UNIQUE WHERE (sequential_id IS NOT NULL)
-#  index_customers_on_sequential_id                    (sequential_id)
+#  index_customers_by_cursor                                    (organization_id,created_at DESC,id)
+#  index_customers_on_account_type                              (account_type)
+#  index_customers_on_applied_dunning_campaign_id               (applied_dunning_campaign_id)
+#  index_customers_on_awaiting_wallet_refresh                   (awaiting_wallet_refresh)
+#  index_customers_on_billing_entity_id                         (billing_entity_id)
+#  index_customers_on_deleted_at                                (deleted_at)
+#  index_customers_on_external_id                               (organization_id,external_id)
+#  index_customers_on_external_id_and_organization_id           (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_customers_on_org_id_and_sequential_id_unique           (organization_id,sequential_id) UNIQUE WHERE (sequential_id IS NOT NULL)
+#  index_customers_on_organization_id_email_gin_trgm_ops        (organization_id,email) WHERE (deleted_at IS NULL) USING gin
+#  index_customers_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) WHERE (deleted_at IS NULL) USING gin
+#  index_customers_on_organization_id_firstname_gin_trgm_ops    (organization_id,firstname) WHERE (deleted_at IS NULL) USING gin
+#  index_customers_on_organization_id_kept                      (organization_id) WHERE (deleted_at IS NULL)
+#  index_customers_on_organization_id_lastname_gin_trgm_ops     (organization_id,lastname) WHERE (deleted_at IS NULL) USING gin
+#  index_customers_on_organization_id_legal_name_gin_trgm_ops   (organization_id,legal_name) WHERE (deleted_at IS NULL) USING gin
+#  index_customers_on_organization_id_name_gin_trgm_ops         (organization_id,name) WHERE (deleted_at IS NULL) USING gin
+#  index_customers_on_sequential_id                             (sequential_id)
 #
 # Foreign Keys
 #

@@ -76,7 +76,32 @@ module Fees
       )
 
       # Sum up all the units that have been billed for this period
-      existing_fees.sum(:units).to_d
+      already_paid_units = existing_fees.sum(:units).to_d
+
+      if organization.feature_flag_enabled?(:fixed_charge_usage_delta_migration)
+        already_paid_units += superseded_usage_charge_units(boundaries)
+      end
+
+      already_paid_units
+    end
+
+    def superseded_usage_charge_units(boundaries)
+      superseded_charge_ids = Charge.with_discarded.discarded
+        .where(plan_id: subscription.plan_id)
+        .joins(:billable_metric)
+        .where(billable_metrics: {recurring: true})
+        .select(:id)
+
+      Fee.where(
+        organization:,
+        subscription:,
+        fee_type: :charge,
+        charge_id: superseded_charge_ids,
+        true_up_parent_fee_id: nil
+      ).where(
+        "(properties->>'charges_from_datetime')::timestamptz = ?",
+        boundaries.fixed_charges_from_datetime.iso8601(3)
+      ).sum(:units).to_d
     end
 
     def build_delta_fee(delta_units, boundaries)
@@ -98,7 +123,7 @@ module Fees
 
       Fee.new(
         organization:,
-        billing_entity_id: subscription.customer.billing_entity_id,
+        billing_entity_id: subscription.applicable_billing_entity_id,
         subscription:,
         fixed_charge:,
         amount_cents:,
@@ -141,7 +166,7 @@ module Fees
     def build_zero_amount_fee(boundaries)
       Fee.new(
         organization:,
-        billing_entity_id: subscription.customer.billing_entity_id,
+        billing_entity_id: subscription.applicable_billing_entity_id,
         subscription:,
         fixed_charge:,
         amount_cents: 0,

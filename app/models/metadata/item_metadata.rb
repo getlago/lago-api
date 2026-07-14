@@ -31,7 +31,8 @@ module Metadata
           errors.add(:value, "key '#{key}' must be a String up to #{MAX_KEY_LENGTH} characters")
         end
 
-        if val.present? && !(val.is_a?(String) && val.length <= MAX_VALUE_LENGTH)
+        valid_value = val.nil? || (val.is_a?(String) && val.length <= MAX_VALUE_LENGTH)
+        unless valid_value
           errors.add(:value, "value for key '#{key}' must be empty or a String up to #{MAX_VALUE_LENGTH} characters")
         end
       end
@@ -44,13 +45,13 @@ end
 # Table name: item_metadata
 # Database name: primary
 #
-#  id                                             :uuid             not null, primary key
-#  owner_type(Polymorphic owner type)             :string           not null
-#  value(item_metadata key-value pairs)           :jsonb            not null
-#  created_at                                     :datetime         not null
-#  updated_at                                     :datetime         not null
-#  organization_id(Reference to the organization) :uuid             not null
-#  owner_id(Polymorphic owner id)                 :uuid             not null
+#  id              :uuid             not null, primary key
+#  owner_type      :string           not null
+#  value           :jsonb            not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  organization_id :uuid             not null
+#  owner_id        :uuid             not null
 #
 # Indexes
 #

@@ -3,14 +3,19 @@
 module PaymentProviderCustomers
   class StripeService < BaseService
     include Customers::PaymentProviderFinder
+    include TypedResults
 
-    def initialize(stripe_customer = nil)
+    RESULTS = {
+      create: BaseResult[:stripe_customer],
+      update: BaseResult,
+      generate_checkout_url: BaseResult[:checkout_url],
+      delete_payment_method: BaseResult[:stripe_customer, :payment_method]
+    }.freeze
+
+    private
+
+    def create(stripe_customer)
       @stripe_customer = stripe_customer
-
-      super(nil)
-    end
-
-    def create
       return result unless customer
 
       result.stripe_customer = stripe_customer
@@ -33,7 +38,8 @@ module PaymentProviderCustomers
       result
     end
 
-    def update
+    def update(stripe_customer)
+      @stripe_customer = stripe_customer
       return result if !stripe_payment_provider || stripe_customer.provider_customer_id.blank?
 
       ::Stripe::Customer.update(stripe_customer.provider_customer_id, stripe_update_payload, {api_key:})
@@ -60,12 +66,10 @@ module PaymentProviderCustomers
       # NOTE: check if payment_method was the default one
       stripe_customer.payment_method_id = nil if stripe_customer.payment_method_id == payment_method_id
 
-      if customer.organization.feature_flag_enabled?(:multiple_payment_methods)
-        payment_method = customer.payment_methods.find_by(provider_method_id: payment_method_id)
-        if payment_method
-          destroy_result = PaymentMethods::DestroyService.call(payment_method:)
-          result.payment_method = destroy_result.payment_method
-        end
+      payment_method = customer.payment_methods.find_by(provider_method_id: payment_method_id)
+      if payment_method
+        destroy_result = PaymentMethods::DestroyService.call(payment_method:)
+        result.payment_method = destroy_result.payment_method
       end
 
       result.stripe_customer = stripe_customer
@@ -74,7 +78,8 @@ module PaymentProviderCustomers
       result.record_validation_failure!(record: e.record)
     end
 
-    def generate_checkout_url(send_webhook: true)
+    def generate_checkout_url(stripe_customer, send_webhook: true)
+      @stripe_customer = stripe_customer
       return result unless customer # NOTE: Customer is nil when deleted.
       return result if customer.organization.webhook_endpoints.none? && send_webhook && payment_provider(customer)
 
@@ -103,8 +108,6 @@ module PaymentProviderCustomers
       message = ["Stripe authentication failed.", e.message.presence].compact.join(" ")
       result.unauthorized_failure!(message:)
     end
-
-    private
 
     attr_accessor :stripe_customer
 

@@ -209,5 +209,24 @@ RSpec.describe Api::V1::FeesController do
         expect(json[:error_details]).to eq({fee_type: %w[value_is_invalid]})
       end
     end
+
+    context "with unknown params", cache: :memory do
+      before do
+        create(:fee, subscription:, invoice: nil)
+      end
+
+      it "ignores unknown params for caching" do
+        # First request populates the cache
+        get_with_token(organization, "/api/v1/fees", page: 1, per_page: 1)
+        expect(json[:meta][:total_count]).to eq(2)
+
+        # Add a third fee
+        create(:fee, subscription:, invoice: nil)
+
+        # Request with unknown param should return cached count (2), not fresh count (3)
+        get_with_token(organization, "/api/v1/fees", page: 1, per_page: 1, unknown_param: "value")
+        expect(json[:meta][:total_count]).to eq(2)
+      end
+    end
   end
 end

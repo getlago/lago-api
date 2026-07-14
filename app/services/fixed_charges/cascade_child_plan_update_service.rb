@@ -46,18 +46,8 @@ module FixedCharges
         end
       end
 
-      jobs = []
       if plan.fixed_charges.pay_in_advance.exists?
-        plan.subscriptions.active.find_each do |subscription|
-          jobs << Invoices::CreatePayInAdvanceFixedChargesJob.new(
-            subscription,
-            timestamp
-          )
-        end
-      end
-
-      after_commit do
-        ActiveJob.perform_all_later(jobs)
+        Invoices::CreateAllPayInAdvanceFixedChargesJob.perform_after_commit(plan, timestamp)
       end
 
       result.plan = plan

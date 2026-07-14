@@ -13,7 +13,7 @@ gem "active_storage_validations"
 gem "bootsnap", require: false
 gem "clockwork", require: false
 gem "parallel"
-gem "puma", "~> 6.5"
+gem "puma", "~> 7.2"
 gem "rails", "~> 8.0"
 gem "redis"
 gem "sidekiq"
@@ -28,10 +28,11 @@ gem "sidekiq-throttled", "1.4.0" # '1.5.0' was losing some jobs
 gem "throttling"
 gem "device_detector"
 gem "dry-validation"
+gem "json_schemer"
 
 # Security
 gem "bcrypt"
-gem "googleauth", "~> 1.11.0"
+gem "googleauth", "~> 1.16.2"
 gem "jwt"
 gem "oauth2"
 gem "rack-cors"
@@ -41,6 +42,7 @@ gem "after_commit_everywhere"
 gem "clickhouse-activerecord", "~> 1.6.1"
 gem "discard", "~> 1.2"
 gem "kaminari-activerecord"
+gem "meilisearch-rails"
 gem "paper_trail"
 gem "pg"
 gem "ransack"
@@ -151,7 +153,7 @@ group :development, :test do
   gem "rubocop-factory_bot", require: false
   gem "rubocop-thread_safety", require: false
 
-  gem "vernier", "~> 1.0", require: false
+  gem "vernier", "~> 1.10", require: false
   gem "super_diff", "~> 0.18.0"
 end
 

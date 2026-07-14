@@ -40,7 +40,7 @@ module V1
 
     def charges
       ::CollectionSerializer.new(
-        model.charges.includes(:applied_pricing_unit, :billable_metric, :taxes),
+        model.charges.includes(:applied_pricing_unit, :billable_metric, :taxes, filters: [:charge, {values: :billable_metric_filter}]),
         ::V1::ChargeSerializer,
         collection_name: "charges",
         includes: include?(:taxes) ? %i[taxes] : []
@@ -58,7 +58,7 @@ module V1
 
     def entitlements
       ::CollectionSerializer.new(
-        model.entitlements.includes(:feature, values: :privilege),
+        model.entitlements.joins(:feature).includes(:feature, values: :privilege),
         ::V1::Entitlement::PlanEntitlementSerializer,
         collection_name: "entitlements"
       ).serialize

@@ -93,12 +93,12 @@ RSpec.describe FixedCharges::UpdateService do
           expect { result }.not_to change { fixed_charge.reload.code }
         end
 
-        it "does not apply taxes" do
+        it "applies taxes" do
           tax = create(:tax, organization: plan.organization, code: "tax1")
           params[:tax_codes] = [tax.code]
 
+          expect { result }.to change { fixed_charge.reload.applied_taxes.count }.from(0).to(1)
           expect(result).to be_success
-          expect(fixed_charge.reload.applied_taxes).to be_empty
         end
       end
 
@@ -287,12 +287,48 @@ RSpec.describe FixedCharges::UpdateService do
 
           let!(:subscription) { create(:subscription, plan:) }
 
-          it "enqueues pay in advance billing job" do
+          it "enqueues a single fan out billing job for the plan" do
             result
+
+            expect(Invoices::CreateAllPayInAdvanceFixedChargesJob)
+              .to have_been_enqueued
+              .with(plan, timestamp, fixed_charge)
+          end
+
+          it "enqueues pay in advance billing job" do
+            perform_enqueued_jobs(only: Invoices::CreateAllPayInAdvanceFixedChargesJob) { result }
 
             expect(Invoices::CreatePayInAdvanceFixedChargesJob)
               .to have_been_enqueued
               .with(subscription, timestamp)
+          end
+
+          context "when the subscription has a per-subscription units override" do
+            let(:other_subscription) { create(:subscription, plan:) }
+
+            before do
+              other_subscription
+              create(:subscription_fixed_charge_units_override,
+                subscription:,
+                fixed_charge:,
+                organization:)
+            end
+
+            it "does not enqueue the billing job for the overridden subscription" do
+              perform_enqueued_jobs(only: Invoices::CreateAllPayInAdvanceFixedChargesJob) { result }
+
+              expect(Invoices::CreatePayInAdvanceFixedChargesJob)
+                .not_to have_been_enqueued
+                .with(subscription, timestamp)
+            end
+
+            it "still enqueues the billing job for other plan subscriptions" do
+              perform_enqueued_jobs(only: Invoices::CreateAllPayInAdvanceFixedChargesJob) { result }
+
+              expect(Invoices::CreatePayInAdvanceFixedChargesJob)
+                .to have_been_enqueued
+                .with(other_subscription, timestamp)
+            end
           end
         end
 
@@ -322,7 +358,7 @@ RSpec.describe FixedCharges::UpdateService do
           it "does not enqueue pay in advance billing job" do
             result
 
-            expect(Invoices::CreatePayInAdvanceFixedChargesJob)
+            expect(Invoices::CreateAllPayInAdvanceFixedChargesJob)
               .not_to have_been_enqueued
           end
         end
@@ -362,13 +398,12 @@ RSpec.describe FixedCharges::UpdateService do
         before do
           create(:subscription, plan: child_plan, status: :active)
           child_fixed_charge
-          allow(FixedCharges::UpdateChildrenJob).to receive(:perform_later)
         end
 
         it "triggers cascade update via FixedCharges::UpdateChildrenJob" do
           result
 
-          expect(FixedCharges::UpdateChildrenJob).to have_received(:perform_later).with(
+          expect(FixedCharges::UpdateChildrenJob).to have_been_enqueued.with(
             params: hash_including("charge_model", "properties", "units"),
             old_parent_attrs: hash_including("id" => fixed_charge.id)
           )
@@ -380,7 +415,7 @@ RSpec.describe FixedCharges::UpdateService do
           it "does not trigger cascade update" do
             result
 
-            expect(FixedCharges::UpdateChildrenJob).not_to have_received(:perform_later)
+            expect(FixedCharges::UpdateChildrenJob).not_to have_been_enqueued
           end
         end
       end
@@ -392,13 +427,12 @@ RSpec.describe FixedCharges::UpdateService do
         before do
           create(:subscription, plan: child_plan, status: :active)
           child_fixed_charge
-          allow(FixedCharges::UpdateChildrenJob).to receive(:perform_later)
         end
 
         it "does not trigger cascade update" do
           result
 
-          expect(FixedCharges::UpdateChildrenJob).not_to have_received(:perform_later)
+          expect(FixedCharges::UpdateChildrenJob).not_to have_been_enqueued
         end
       end
     end

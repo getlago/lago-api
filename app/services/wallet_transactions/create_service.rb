@@ -20,6 +20,7 @@ module WalletTransactions
           :invoice_requires_successful_payment,
           :name,
           :priority,
+          :purchase_order_number,
           :settled_at,
           :source,
           :status,
@@ -28,6 +29,7 @@ module WalletTransactions
           :voided_invoice_id
         ),
         organization_id: wallet.organization_id,
+        billing_entity_id: billing_entity_id_for_snapshot,
         amount:,
         credit_amount:,
         metadata: transaction_params[:metadata] || [],
@@ -57,6 +59,10 @@ module WalletTransactions
       return nil unless transaction_params[:transaction_status]&.to_sym == :granted
 
       wallet_credit.amount_cents
+    end
+
+    def billing_entity_id_for_snapshot
+      transaction_params[:billing_entity_id] || wallet.billing_entity&.id
     end
   end
 end

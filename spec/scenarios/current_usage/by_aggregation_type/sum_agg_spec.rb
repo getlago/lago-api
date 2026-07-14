@@ -16,265 +16,257 @@ describe "Aggregation - Sum Scenarios", transaction: false do
 
       before { charge }
 
-      [true, false].each do |ff_enabled|
-        context "with non_persistable_charge_cache_optimization #{ff_enabled ? "enabled" : "disabled"}" do
-          before do
-            organization.enable_feature_flag!(:non_persistable_charge_cache_optimization) if ff_enabled
+      context "with in advance charge and groups" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            billable_metric:,
+            plan:,
+            prorated: true,
+            pay_in_advance: true,
+            properties: {
+              amount: "29",
+              grouped_by: %w[key_1 key_2 key_3]
+            }
+          )
+        end
+
+        it "creates fees for each events" do
+          travel_to(DateTime.new(2024, 2, 1)) do
+            create_subscription(
+              {
+                external_customer_id: customer.external_id,
+                external_id: customer.external_id,
+                plan_code: plan.code
+              }
+            )
           end
 
-          context "with in advance charge and groups" do
-            let(:charge) do
-              create(
-                :standard_charge,
-                billable_metric:,
-                plan:,
-                prorated: true,
-                pay_in_advance: true,
+          subscription = customer.subscriptions.first
+
+          travel_to(DateTime.new(2024, 2, 6, 1)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                external_subscription_id: subscription.external_id,
                 properties: {
-                  amount: "29",
-                  grouped_by: %w[key_1 key_2 key_3]
+                  "item_id" => 10,
+                  "key_1" => "2024",
+                  "key_2" => "Feb",
+                  "key_3" => "06"
                 }
-              )
-            end
+              }
+            )
 
-            it "creates fees for each events" do
-              travel_to(DateTime.new(2024, 2, 1)) do
-                create_subscription(
-                  {
-                    external_customer_id: customer.external_id,
-                    external_id: customer.external_id,
-                    plan_code: plan.code
-                  }
-                )
-              end
+            expect(Fee.count).to eq(1)
 
-              subscription = customer.subscriptions.first
-
-              travel_to(DateTime.new(2024, 2, 6, 1)) do
-                create_event(
-                  {
-                    code: billable_metric.code,
-                    external_subscription_id: subscription.external_id,
-                    properties: {
-                      "item_id" => 10,
-                      "key_1" => "2024",
-                      "key_2" => "Feb",
-                      "key_3" => "06"
-                    }
-                  }
-                )
-
-                expect(Fee.count).to eq(1)
-
-                fetch_current_usage(customer:)
-                expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
-                expect(json[:customer_usage][:charges_usage].first[:units]).to eq("10.0")
-              end
-
-              travel_to(DateTime.new(2024, 2, 6, 2)) do
-                create_event(
-                  {
-                    code: billable_metric.code,
-                    external_subscription_id: subscription.external_id,
-                    properties: {
-                      "item_id" => -5,
-                      "key_1" => "2024",
-                      "key_2" => "Feb",
-                      "key_3" => "06"
-                    }
-                  }
-                )
-
-                expect(Fee.count).to eq(2)
-
-                fetch_current_usage(customer:)
-                expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
-                expect(json[:customer_usage][:charges_usage].first[:units]).to eq("5.0")
-              end
-
-              travel_to(DateTime.new(2024, 2, 6, 3)) do
-                create_event(
-                  {
-                    code: billable_metric.code,
-                    external_subscription_id: subscription.external_id,
-                    properties: {
-                      "item_id" => 2,
-                      "key_1" => "2024",
-                      "key_2" => "Feb",
-                      "key_3" => "06"
-                    }
-                  }
-                )
-
-                expect(Fee.count).to eq(3)
-
-                fetch_current_usage(customer:)
-                expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
-                expect(json[:customer_usage][:charges_usage].first[:units]).to eq("7.0")
-              end
-            end
+            fetch_current_usage(customer:)
+            expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
+            expect(json[:customer_usage][:charges_usage].first[:units]).to eq("10.0")
           end
 
-          context "with multiple subscriptions attached to the same plan" do
-            let(:charge) do
-              create(
-                :standard_charge,
-                billable_metric:,
-                plan:,
-                prorated: true,
-                pay_in_advance: true,
+          travel_to(DateTime.new(2024, 2, 6, 2)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                external_subscription_id: subscription.external_id,
                 properties: {
-                  amount: "29",
-                  grouped_by: %w[key_1 key_2 key_3]
+                  "item_id" => -5,
+                  "key_1" => "2024",
+                  "key_2" => "Feb",
+                  "key_3" => "06"
                 }
-              )
-            end
+              }
+            )
 
-            it "creates fees for each events" do
-              travel_to(DateTime.new(2024, 2, 1)) do
-                create_subscription(
-                  {
-                    external_customer_id: customer.external_id,
-                    external_id: "#{customer.external_id}_1",
-                    plan_code: plan.code
-                  }
-                )
-              end
+            expect(Fee.count).to eq(2)
 
-              subscription1 = customer.subscriptions.first
+            fetch_current_usage(customer:)
+            expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
+            expect(json[:customer_usage][:charges_usage].first[:units]).to eq("5.0")
+          end
 
-              travel_to(DateTime.new(2024, 2, 1, 1)) do
-                create_subscription(
-                  {
-                    external_customer_id: customer.external_id,
-                    external_id: "#{customer.external_id}_2",
-                    plan_code: plan.code
-                  }
-                )
-              end
+          travel_to(DateTime.new(2024, 2, 6, 3)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                external_subscription_id: subscription.external_id,
+                properties: {
+                  "item_id" => 2,
+                  "key_1" => "2024",
+                  "key_2" => "Feb",
+                  "key_3" => "06"
+                }
+              }
+            )
 
-              subscription2 = customer.subscriptions.order(:created_at).last
+            expect(Fee.count).to eq(3)
 
-              travel_to(DateTime.new(2024, 2, 6, 0, 1)) do
-                create_event(
-                  {
-                    code: billable_metric.code,
-                    external_subscription_id: subscription1.external_id,
-                    properties: {
-                      "item_id" => 10,
-                      "key_1" => "2024",
-                      "key_2" => "Feb",
-                      "key_3" => "06"
-                    }
-                  }
-                )
+            fetch_current_usage(customer:)
+            expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
+            expect(json[:customer_usage][:charges_usage].first[:units]).to eq("7.0")
+          end
+        end
+      end
 
-                expect(Fee.count).to eq(1)
+      context "with multiple subscriptions attached to the same plan" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            billable_metric:,
+            plan:,
+            prorated: true,
+            pay_in_advance: true,
+            properties: {
+              amount: "29",
+              grouped_by: %w[key_1 key_2 key_3]
+            }
+          )
+        end
 
-                fetch_current_usage(customer:, subscription: subscription1)
-                expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
-                expect(json[:customer_usage][:charges_usage].first[:units]).to eq("10.0")
-              end
+        it "creates fees for each events" do
+          travel_to(DateTime.new(2024, 2, 1)) do
+            create_subscription(
+              {
+                external_customer_id: customer.external_id,
+                external_id: "#{customer.external_id}_1",
+                plan_code: plan.code
+              }
+            )
+          end
 
-              travel_to(DateTime.new(2024, 2, 6, 0, 2)) do
-                create_event(
-                  {
-                    code: billable_metric.code,
-                    external_subscription_id: subscription1.external_id,
-                    properties: {
-                      "item_id" => -5,
-                      "key_1" => "2024",
-                      "key_2" => "Feb",
-                      "key_3" => "06"
-                    }
-                  }
-                )
+          subscription1 = customer.subscriptions.first
 
-                expect(Fee.count).to eq(2)
+          travel_to(DateTime.new(2024, 2, 1, 1)) do
+            create_subscription(
+              {
+                external_customer_id: customer.external_id,
+                external_id: "#{customer.external_id}_2",
+                plan_code: plan.code
+              }
+            )
+          end
 
-                fetch_current_usage(customer:, subscription: subscription1)
-                expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
-                expect(json[:customer_usage][:charges_usage].first[:units]).to eq("5.0")
-              end
+          subscription2 = customer.subscriptions.order(:created_at).last
 
-              travel_to(DateTime.new(2024, 2, 6, 0, 3)) do
-                create_event(
-                  {
-                    code: billable_metric.code,
-                    external_subscription_id: subscription1.external_id,
-                    properties: {
-                      "item_id" => 2,
-                      "key_1" => "2024",
-                      "key_2" => "Feb",
-                      "key_3" => "06"
-                    }
-                  }
-                )
+          travel_to(DateTime.new(2024, 2, 6, 0, 1)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                external_subscription_id: subscription1.external_id,
+                properties: {
+                  "item_id" => 10,
+                  "key_1" => "2024",
+                  "key_2" => "Feb",
+                  "key_3" => "06"
+                }
+              }
+            )
 
-                expect(Fee.count).to eq(3)
+            expect(Fee.count).to eq(1)
 
-                fetch_current_usage(customer:, subscription: subscription1)
-                expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
-                expect(json[:customer_usage][:charges_usage].first[:units]).to eq("7.0")
-              end
+            fetch_current_usage(customer:, subscription: subscription1)
+            expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
+            expect(json[:customer_usage][:charges_usage].first[:units]).to eq("10.0")
+          end
 
-              travel_to(DateTime.new(2024, 2, 6, 1, 0, 1)) do
-                create_event(
-                  {
-                    code: billable_metric.code,
-                    external_subscription_id: subscription2.external_id,
-                    properties: {
-                      "item_id" => 10,
-                      "key_1" => "2024",
-                      "key_2" => "Feb",
-                      "key_3" => "06"
-                    }
-                  }
-                )
+          travel_to(DateTime.new(2024, 2, 6, 0, 2)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                external_subscription_id: subscription1.external_id,
+                properties: {
+                  "item_id" => -5,
+                  "key_1" => "2024",
+                  "key_2" => "Feb",
+                  "key_3" => "06"
+                }
+              }
+            )
 
-                fetch_current_usage(customer:, subscription: subscription2)
-                expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
-                expect(json[:customer_usage][:charges_usage].first[:units]).to eq("10.0")
-              end
+            expect(Fee.count).to eq(2)
 
-              travel_to(DateTime.new(2024, 2, 6, 1, 0, 2)) do
-                create_event(
-                  {
-                    code: billable_metric.code,
-                    external_subscription_id: subscription2.external_id,
-                    properties: {
-                      "item_id" => -5,
-                      "key_1" => "2024",
-                      "key_2" => "Feb",
-                      "key_3" => "06"
-                    }
-                  }
-                )
+            fetch_current_usage(customer:, subscription: subscription1)
+            expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
+            expect(json[:customer_usage][:charges_usage].first[:units]).to eq("5.0")
+          end
 
-                fetch_current_usage(customer:, subscription: subscription2)
-                expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
-                expect(json[:customer_usage][:charges_usage].first[:units]).to eq("5.0")
-              end
+          travel_to(DateTime.new(2024, 2, 6, 0, 3)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                external_subscription_id: subscription1.external_id,
+                properties: {
+                  "item_id" => 2,
+                  "key_1" => "2024",
+                  "key_2" => "Feb",
+                  "key_3" => "06"
+                }
+              }
+            )
 
-              travel_to(DateTime.new(2024, 2, 6, 1, 0, 3)) do
-                create_event(
-                  {
-                    code: billable_metric.code,
-                    external_subscription_id: subscription2.external_id,
-                    properties: {
-                      "item_id" => 2,
-                      "key_1" => "2024",
-                      "key_2" => "Feb",
-                      "key_3" => "06"
-                    }
-                  }
-                )
+            expect(Fee.count).to eq(3)
 
-                fetch_current_usage(customer:, subscription: subscription2)
-                expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
-                expect(json[:customer_usage][:charges_usage].first[:units]).to eq("7.0")
-              end
-            end
+            fetch_current_usage(customer:, subscription: subscription1)
+            expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
+            expect(json[:customer_usage][:charges_usage].first[:units]).to eq("7.0")
+          end
+
+          travel_to(DateTime.new(2024, 2, 6, 1, 0, 1)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                external_subscription_id: subscription2.external_id,
+                properties: {
+                  "item_id" => 10,
+                  "key_1" => "2024",
+                  "key_2" => "Feb",
+                  "key_3" => "06"
+                }
+              }
+            )
+
+            fetch_current_usage(customer:, subscription: subscription2)
+            expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
+            expect(json[:customer_usage][:charges_usage].first[:units]).to eq("10.0")
+          end
+
+          travel_to(DateTime.new(2024, 2, 6, 1, 0, 2)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                external_subscription_id: subscription2.external_id,
+                properties: {
+                  "item_id" => -5,
+                  "key_1" => "2024",
+                  "key_2" => "Feb",
+                  "key_3" => "06"
+                }
+              }
+            )
+
+            fetch_current_usage(customer:, subscription: subscription2)
+            expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
+            expect(json[:customer_usage][:charges_usage].first[:units]).to eq("5.0")
+          end
+
+          travel_to(DateTime.new(2024, 2, 6, 1, 0, 3)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                external_subscription_id: subscription2.external_id,
+                properties: {
+                  "item_id" => 2,
+                  "key_1" => "2024",
+                  "key_2" => "Feb",
+                  "key_3" => "06"
+                }
+              }
+            )
+
+            fetch_current_usage(customer:, subscription: subscription2)
+            expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
+            expect(json[:customer_usage][:charges_usage].first[:units]).to eq("7.0")
           end
         end
       end

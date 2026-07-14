@@ -8,6 +8,7 @@ module Analytics
       def query(organization_id, **args)
         if args[:billing_entity_id].present?
           and_billing_entity_id_sql = sanitize_sql(["AND i.billing_entity_id = :billing_entity_id", args[:billing_entity_id]])
+          and_fee_billing_entity_id_sql = sanitize_sql(["AND f.billing_entity_id = :billing_entity_id", args[:billing_entity_id]])
         end
 
         if args[:external_customer_id].present?
@@ -55,6 +56,7 @@ module Analytics
               i.issuing_date,
               i.total_amount_cents::float AS amount_cents,
               i.currency,
+              i.billing_entity_id,
               COALESCE(COUNT(DISTINCT i.id), 0) AS invoices_count,
               COALESCE(SUM(refund_amount_cents::float),0) AS total_refund_amount_cents
             FROM invoices i
@@ -66,7 +68,7 @@ module Analytics
             AND i.payment_dispute_lost_at IS NULL
             #{and_external_customer_id_sql}
             #{and_billing_entity_id_sql}
-            GROUP BY i.id, i.issuing_date, i.total_amount_cents, i.currency
+            GROUP BY i.id, i.issuing_date, i.total_amount_cents, i.currency, i.billing_entity_id
             ORDER BY i.issuing_date ASC
           ),
           instant_charges AS (
@@ -75,6 +77,7 @@ module Analytics
               f.created_at AS issuing_date,
               f.amount_cents AS amount_cents,
               f.amount_currency AS currency,
+              f.billing_entity_id,
               0 AS invoices_count,
               0 AS total_refund_amount_cents
             FROM fees f
@@ -84,11 +87,13 @@ module Analytics
             AND f.invoice_id IS NULL
             AND f.pay_in_advance IS TRUE
             #{and_external_customer_id_sql}
+            #{and_fee_billing_entity_id_sql}
           ),
           combined_data AS (
             SELECT
               DATE_TRUNC('month', issuing_date) AS month,
               currency,
+              billing_entity_id,
               COALESCE(SUM(invoices_count), 0) AS invoices_count,
               COALESCE(SUM(amount_cents), 0) AS amount_cents,
               COALESCE(SUM(total_refund_amount_cents), 0) AS total_refund_amount_cents
@@ -97,11 +102,12 @@ module Analytics
               UNION ALL
               SELECT * FROM instant_charges
             ) AS gross_revenue
-            GROUP BY month, currency, total_refund_amount_cents
+            GROUP BY month, currency, billing_entity_id, total_refund_amount_cents
           )
           SELECT
             am.month,
             #{select_currency_sql},
+            cd.billing_entity_id,
             COALESCE(SUM(invoices_count), 0) AS invoices_count,
             SUM(cd.amount_cents - cd.total_refund_amount_cents) AS amount_cents
           FROM all_months am
@@ -110,7 +116,7 @@ module Analytics
           #{and_months_sql}
           #{and_currency_sql}
           AND cd.amount_cents IS NOT NULL
-          GROUP BY am.month, cd.currency
+          GROUP BY am.month, cd.currency, cd.billing_entity_id
           ORDER BY am.month;
         SQL
 
@@ -127,12 +133,6 @@ module Analytics
           args[:currency],
           args[:months]
         ].join("/")
-      end
-
-      def expire_cache_for_customer(organization_id, external_customer_id)
-        Rails.cache.delete_matched(
-          "gross-revenue/#{Date.current.strftime("%Y-%m-%d")}/#{organization_id}*#{external_customer_id}*"
-        )
       end
     end
   end

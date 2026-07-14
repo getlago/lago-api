@@ -34,12 +34,25 @@ RSpec.describe WalletTransactions::RecreditService do
       expect(service.call).to be_success
     end
 
+    context "when the credits to restore round to zero monetary value" do
+      let(:wallet) { create(:wallet, rate_amount: "0.01") }
+      let(:wallet_transaction) do
+        create(:wallet_transaction, wallet:, transaction_type: :outbound, credit_amount: 0.4)
+      end
+
+      it "skips the recredit without creating a transaction" do
+        expect { service.call }.not_to change(WalletTransaction.inbound, :count)
+        expect(service.call).to be_success
+      end
+    end
+
     context "when wallet transaction has an invoice" do
       let(:voided_invoice) { create(:invoice, :voided, organization: wallet.organization) }
       let(:wallet_transaction) do
         create(:wallet_transaction,
           wallet:,
           invoice: voided_invoice,
+          purchase_order_number: "PO-123",
           transaction_type: :outbound,
           credit_amount: 5.0)
       end
@@ -52,6 +65,7 @@ RSpec.describe WalletTransactions::RecreditService do
           voided_invoice_id: voided_invoice.id,
           transaction_type: "inbound",
           transaction_status: "granted",
+          purchase_order_number: wallet_transaction.purchase_order_number,
           credit_amount: wallet_transaction.credit_amount
         )
       end

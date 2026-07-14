@@ -19,6 +19,8 @@ module Types
         field :charge, Types::Charges::Object, null: false
         field :filters, [Types::Customers::Usage::ProjectedChargeFilter], null: true
         field :grouped_usage, [Types::Customers::Usage::ProjectedGroupedUsage], null: false
+        field :presentation_breakdowns, [Types::Customers::Usage::PresentationBreakdown], null: true
+        field :projected_presentation_breakdowns, [Types::Customers::Usage::PresentationBreakdown], null: true
 
         def id
           SecureRandom.uuid
@@ -67,11 +69,25 @@ module Types
         end
 
         def projected_units
-          calculate_projection(:projected_units, BigDecimal("0"))
+          calculate_projection(:projected_units, BigDecimal(0))
         end
 
         def projected_amount_cents
           calculate_projection(:projected_amount_cents, 0)
+        end
+
+        def presentation_breakdowns
+          @presentation_breakdowns ||= Types::Fees::PresentationBreakdownBuilder.call(
+            object,
+            filter: Types::Fees::PresentationBreakdownBuilder::UNGROUPED,
+            filter_breakdown: Types::Fees::PresentationBreakdownBuilder::ALL
+          )
+        end
+
+        def projected_presentation_breakdowns
+          return [] if presentation_breakdowns.empty?
+
+          calculate_projection(:projected_presentation_breakdowns, [])
         end
 
         private
@@ -89,7 +105,7 @@ module Types
         def calculate_filtered_projection(attribute, zero_value)
           filter_groups = object.group_by(&:charge_filter_id).values
 
-          filter_groups.sum do |filter_fee_group|
+          filter_groups.sum(zero_value) do |filter_fee_group|
             next zero_value unless filter_fee_group.first.charge_filter_id
 
             result = ::Fees::ProjectionService.call!(fees: filter_fee_group)

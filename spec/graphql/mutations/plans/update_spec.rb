@@ -49,6 +49,7 @@ RSpec.describe Mutations::Plans::Update do
             },
             properties {
               amount,
+              presentationGroupKeys { value options { displayInInvoice } }
               freeUnits,
               packageSize,
               rate,
@@ -61,7 +62,9 @@ RSpec.describe Mutations::Plans::Update do
             filters {
               invoiceDisplayName
               values
-              properties { amount }
+              properties {
+                amount
+              }
             }
           },
           fixedCharges {
@@ -130,7 +133,17 @@ RSpec.describe Mutations::Plans::Update do
             {
               billableMetricId: billable_metrics[0].id,
               chargeModel: "standard",
-              properties: {amount: "100.00"},
+              properties: {
+                amount: "100.00",
+                presentationGroupKeys: [
+                  {
+                    value: "region",
+                    options: {
+                      displayInInvoice: true
+                    }
+                  }
+                ]
+              },
               appliedPricingUnit: {
                 code: pricing_unit.code,
                 conversionRate: 0.1
@@ -138,7 +151,9 @@ RSpec.describe Mutations::Plans::Update do
               filters: [
                 {
                   invoiceDisplayName: "Payment method",
-                  properties: {amount: "10.00"},
+                  properties: {
+                    amount: "10.00"
+                  },
                   values: {billable_metric_filter.key => %w[card]}
                 }
               ]
@@ -257,6 +272,9 @@ RSpec.describe Mutations::Plans::Update do
 
       standard_charge = result_data["charges"][0]
       expect(standard_charge["properties"]["amount"]).to eq("100.00")
+      expect(standard_charge.dig("properties", "presentationGroupKeys")).to eq([
+        {"value" => "region", "options" => {"displayInInvoice" => true}}
+      ])
       expect(standard_charge["chargeModel"]).to eq("standard")
 
       applied_pricing_unit = standard_charge["appliedPricingUnit"]
@@ -356,6 +374,9 @@ RSpec.describe Mutations::Plans::Update do
 
       standard_charge = result_data["charges"][0]
       expect(standard_charge["properties"]["amount"]).to eq("100.00")
+      expect(standard_charge.dig("properties", "presentationGroupKeys")).to eq([
+        {"value" => "region", "options" => {"displayInInvoice" => true}}
+      ])
       expect(standard_charge["chargeModel"]).to eq("standard")
 
       expect(standard_charge["appliedPricingUnit"]).to be_nil
@@ -461,8 +482,111 @@ RSpec.describe Mutations::Plans::Update do
         organization: organization,
         plan:,
         entitlements_params: {},
-        partial: false
+        partial: false,
+        send_webhook: false
       )
+    end
+  end
+
+  context "with the plan.updated webhook" do
+    let(:base_input) do
+      {
+        id: plan.id,
+        name: "Updated plan",
+        code: "updated_plan",
+        interval: "monthly",
+        payInAdvance: false,
+        amountCents: 200,
+        amountCurrency: "EUR",
+        charges: []
+      }
+    end
+
+    context "when entitlements are not provided" do
+      it "enqueues a single plan.updated webhook" do
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {input: base_input}
+        )
+
+        expect(SendWebhookJob).to have_been_enqueued.with("plan.updated", plan).once
+      end
+    end
+
+    context "when entitlements are provided", :premium do
+      let(:input_with_entitlements) do
+        base_input.merge(
+          entitlements: [
+            {featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "22"}]}
+          ]
+        )
+      end
+
+      it "enqueues a single plan.updated webhook" do
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {input: input_with_entitlements}
+        )
+
+        expect(SendWebhookJob).to have_been_enqueued.with("plan.updated", plan).once
+      end
+
+      it "does not emit the webhook from Plans::UpdateService so entitlements are persisted first" do
+        allow(::Plans::UpdateService).to receive(:call).and_call_original
+
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {input: input_with_entitlements}
+        )
+
+        expect(::Plans::UpdateService).to have_received(:call).with(plan:, params: anything, send_webhook: false)
+      end
+    end
+  end
+
+  context "when charges are not provided" do
+    let(:existing_charge) do
+      create(:standard_charge, plan:, billable_metric: billable_metrics[0], properties: {amount: "42.00"})
+    end
+
+    before do
+      existing_charge
+    end
+
+    it "updates the plan without changing charges" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: plan.id,
+            name: "Updated plan",
+            code: "updated_plan",
+            interval: "monthly",
+            payInAdvance: true,
+            amountCents: 200,
+            amountCurrency: "EUR"
+          }
+        }
+      )
+
+      result_data = result["data"]["updatePlan"]
+
+      expect(result_data["name"]).to eq("Updated plan")
+      expect(result_data["charges"].count).to eq(1)
+      expect(result_data["charges"].first["id"]).to eq(existing_charge.id)
+      expect(result_data["charges"].first["properties"]["amount"]).to eq("42.00")
     end
   end
 
@@ -632,9 +756,9 @@ RSpec.describe Mutations::Plans::Update do
       expect(FixedChargeEvent.pluck(:fixed_charge_id, :timestamp, :units))
         .to contain_exactly(
           [fixed_charge_2.id, be_within(1.minute).of(Time.current), BigDecimal("20.55")],
-          [fixed_charge_3.id, be_within(1.minute).of(Time.current), BigDecimal("30")],
-          [fixed_charge_4.id, be_within(1.minute).of(1.month.from_now.beginning_of_month), BigDecimal("40")],
-          [fixed_charge_5.id, be_within(1.minute).of(1.month.from_now.beginning_of_month), BigDecimal("50")]
+          [fixed_charge_3.id, be_within(1.minute).of(Time.current), BigDecimal(30)],
+          [fixed_charge_4.id, be_within(1.minute).of(1.month.from_now.beginning_of_month), BigDecimal(40)],
+          [fixed_charge_5.id, be_within(1.minute).of(1.month.from_now.beginning_of_month), BigDecimal(50)]
         )
     end
   end

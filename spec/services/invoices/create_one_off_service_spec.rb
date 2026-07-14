@@ -30,7 +30,6 @@ RSpec.describe Invoices::CreateOneOffService do
     before do
       tax
 
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
       CurrentContext.source = "api"
     end
@@ -70,6 +69,17 @@ RSpec.describe Invoices::CreateOneOffService do
 
         expect(result).to be_success
         expect(result.invoice.voided_invoice_id).to eq(voided_invoice_id)
+      end
+    end
+
+    context "when purchase_order_number is passed" do
+      let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, purchase_order_number: "PO-123"} }
+
+      it "stamps the purchase order number on the invoice" do
+        result = described_class.call(**args)
+
+        expect(result).to be_success
+        expect(result.invoice.purchase_order_number).to eq("PO-123")
       end
     end
 
@@ -130,7 +140,7 @@ RSpec.describe Invoices::CreateOneOffService do
     it "calls SegmentTrackJob" do
       invoice = described_class.call(**args).invoice
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "invoice_created",
         properties: {
@@ -240,6 +250,22 @@ RSpec.describe Invoices::CreateOneOffService do
         result = described_class.call(**args)
 
         expect(Utils::ActivityLog).not_to have_produced("invoice.one_off_created").with(result.invoice)
+      end
+
+      context "with custom sections applied at the billing entity level" do
+        let(:custom_section) { create(:invoice_custom_section, organization:) }
+
+        before do
+          create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: custom_section)
+        end
+
+        it "applies the custom sections even though tax resolution is deferred" do
+          result = described_class.call(**args)
+
+          expect(result).to be_success
+          expect(result.invoice.status).to eq("pending")
+          expect(result.invoice.applied_invoice_custom_sections.pluck(:code)).to eq([custom_section.code])
+        end
       end
     end
 
@@ -404,6 +430,82 @@ RSpec.describe Invoices::CreateOneOffService do
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
         end
+      end
+    end
+
+    context "when multi_entity_billing feature flag is enabled" do
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+      before do
+        organization.enable_feature_flag!(:multi_entity_billing)
+        create(:tax, :applied_to_billing_entity, billing_entity: other_billing_entity, organization:, rate: 20)
+      end
+
+      context "when billing_entity_id is provided" do
+        let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, billing_entity_id: other_billing_entity.id} }
+
+        it "stamps the invoice with the resolved billing entity" do
+          result = described_class.call(**args)
+
+          expect(result).to be_success
+          expect(result.invoice.billing_entity).to eq(other_billing_entity)
+        end
+      end
+
+      context "when billing_entity_code is provided" do
+        let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, billing_entity_code: other_billing_entity.code} }
+
+        it "stamps the invoice with the resolved billing entity" do
+          result = described_class.call(**args)
+
+          expect(result).to be_success
+          expect(result.invoice.billing_entity).to eq(other_billing_entity)
+        end
+      end
+
+      context "when neither billing_entity_id nor billing_entity_code is provided" do
+        it "falls back to the customer's billing entity" do
+          result = described_class.call(**args)
+
+          expect(result).to be_success
+          expect(result.invoice.billing_entity).to eq(customer.billing_entity)
+        end
+      end
+
+      context "when billing_entity_id is unknown" do
+        let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, billing_entity_id: SecureRandom.uuid} }
+
+        it "returns a not found error" do
+          result = described_class.call(**args)
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq("billing_entity_not_found")
+        end
+      end
+
+      context "when billing_entity_code is unknown" do
+        let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, billing_entity_code: "unknown_code"} }
+
+        it "returns a not found error" do
+          result = described_class.call(**args)
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq("billing_entity_not_found")
+        end
+      end
+    end
+
+    context "when multi_entity_billing feature flag is disabled" do
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+      let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, billing_entity_id: other_billing_entity.id} }
+
+      it "ignores the billing_entity param and falls back to the customer's billing entity" do
+        result = described_class.call(**args)
+
+        expect(result).to be_success
+        expect(result.invoice.billing_entity).to eq(customer.billing_entity)
       end
     end
 

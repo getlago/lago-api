@@ -11,6 +11,7 @@ module Types
         field :created_at, GraphQL::Types::ISO8601DateTime, null: false
         field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true
         field :granted_credits, String, null: false
+        field :grants_target_top_up, Boolean, null: true
         field :ignore_paid_top_up_limits, Boolean, null: false
         field :interval, Types::Wallets::RecurringTransactionRules::IntervalEnum, null: true
         field :invoice_requires_successful_payment, Boolean, null: false
@@ -18,6 +19,7 @@ module Types
         field :paid_credits, String, null: false
         field :payment_method, Types::PaymentMethods::Object
         field :payment_method_type, Types::PaymentMethods::MethodTypeEnum
+        field :purchase_order_number, String, null: true
         field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
         field :skip_invoice_custom_sections, Boolean
         field :started_at, GraphQL::Types::ISO8601DateTime, null: true

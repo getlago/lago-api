@@ -15,7 +15,8 @@ RSpec.describe Invoices::PaidCreditService do
     let(:customer) { create(:customer, organization:, payment_provider: :stripe) }
     let(:subscription) { create(:subscription, plan:, customer:) }
     let(:plan) { create(:plan, organization:) }
-    let(:wallet) { create(:wallet, customer:) }
+    let(:wallet) { create(:wallet, customer:, purchase_order_number: wallet_purchase_order_number) }
+    let(:wallet_purchase_order_number) { nil }
     let(:wallet_transaction) do
       create(:wallet_transaction, wallet:, amount: "15.00", credit_amount: "15.00", invoice_requires_successful_payment:)
     end
@@ -56,6 +57,80 @@ RSpec.describe Invoices::PaidCreditService do
         .to change(wallet_transaction, :invoice).from(nil).to(Invoice)
     end
 
+    context "when wallet_transaction has purchase_order_number" do
+      let(:wallet_transaction) do
+        create(
+          :wallet_transaction,
+          wallet:,
+          amount: "15.00",
+          credit_amount: "15.00",
+          invoice_requires_successful_payment:,
+          purchase_order_number: "PO-123"
+        )
+      end
+
+      it "stamps the generated invoice with the purchase order number" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.purchase_order_number).to eq("PO-123")
+      end
+    end
+
+    context "when wallet has purchase_order_number" do
+      let(:wallet_purchase_order_number) { "PO-WALLET-123" }
+
+      it "stamps the generated invoice with the wallet purchase order number" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.purchase_order_number).to eq("PO-WALLET-123")
+      end
+
+      context "when wallet_transaction also has purchase_order_number" do
+        let(:wallet_transaction) do
+          create(
+            :wallet_transaction,
+            wallet:,
+            amount: "15.00",
+            credit_amount: "15.00",
+            invoice_requires_successful_payment:,
+            purchase_order_number: "PO-TRANSACTION-123"
+          )
+        end
+
+        it "prioritizes the wallet transaction purchase order number" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.purchase_order_number).to eq("PO-TRANSACTION-123")
+        end
+      end
+    end
+
+    context "with billing entity resolution" do
+      it "stamps the customer's billing_entity when wallet has none" do
+        invoice = invoice_service.call.invoice
+
+        expect(invoice.billing_entity).to eq(customer.billing_entity)
+      end
+
+      context "when wallet has its own billing_entity and transaction has no snapshot" do
+        let(:other_billing_entity) { create(:billing_entity, organization:) }
+        let(:wallet_transaction) do
+          create(:wallet_transaction, wallet:, amount: "15.00", credit_amount: "15.00", invoice_requires_successful_payment:, billing_entity: nil)
+        end
+
+        before { wallet.update!(billing_entity: other_billing_entity) }
+
+        it "stamps the wallet's billing_entity on the invoice" do
+          invoice = invoice_service.call.invoice
+
+          expect(invoice.billing_entity).to eq(other_billing_entity)
+        end
+      end
+    end
+
     it "enqueues a SendWebhookJob" do
       expect do
         invoice_service.call
@@ -74,6 +149,53 @@ RSpec.describe Invoices::PaidCreditService do
 
     it_behaves_like "applies invoice_custom_sections" do
       let(:service_call) { invoice_service.call }
+    end
+
+    it_behaves_like "applies invoice_custom_sections from resource" do
+      let(:service_call) { invoice_service.call }
+      let(:resource_with_custom_section) { wallet_transaction }
+      let(:applied_section_factory) { :wallet_transaction_applied_invoice_custom_section }
+      let(:resource_association_key) { :wallet_transaction }
+    end
+
+    it_behaves_like "applies invoice_custom_sections from resource" do
+      let(:service_call) { invoice_service.call }
+      let(:resource_with_custom_section) { wallet }
+      let(:applied_section_factory) { :wallet_applied_invoice_custom_section }
+      let(:resource_association_key) { :wallet }
+    end
+
+    context "when wallet_transaction has skip_invoice_custom_sections" do
+      let(:wallet_transaction) do
+        create(:wallet_transaction, wallet:, amount: "15.00", credit_amount: "15.00",
+          invoice_requires_successful_payment:, skip_invoice_custom_sections: true)
+      end
+
+      before do
+        create(:billing_entity_applied_invoice_custom_section, organization:,
+          billing_entity:, invoice_custom_section: create(:invoice_custom_section, organization:))
+        create(:wallet_applied_invoice_custom_section, organization:, wallet:,
+          invoice_custom_section: create(:invoice_custom_section, organization:))
+      end
+
+      it "skips all sections without falling back to wallet or customer sections" do
+        result = invoice_service.call
+        expect(result.invoice.applied_invoice_custom_sections).to be_empty
+      end
+    end
+
+    context "when wallet has skip_invoice_custom_sections and wallet_transaction has no opinion" do
+      let(:wallet) { create(:wallet, customer:, skip_invoice_custom_sections: true) }
+
+      before do
+        create(:billing_entity_applied_invoice_custom_section, organization:,
+          billing_entity:, invoice_custom_section: create(:invoice_custom_section, organization:))
+      end
+
+      it "skips all sections without falling back to customer sections" do
+        result = invoice_service.call
+        expect(result.invoice.applied_invoice_custom_sections).to be_empty
+      end
     end
 
     it "does not enqueue an SendEmailJob" do
@@ -133,8 +255,16 @@ RSpec.describe Invoices::PaidCreditService do
 
     context "with provided invoice" do
       let(:invoice) do
-        create(:invoice, organization: customer.organization, customer:, invoice_type: :credit, status: :generating)
+        create(
+          :invoice,
+          organization: customer.organization,
+          customer:,
+          invoice_type: :credit,
+          status: :generating,
+          purchase_order_number: invoice_purchase_order_number
+        )
       end
+      let(:invoice_purchase_order_number) { nil }
 
       it "does not re-create an invoice" do
         result = invoice_service.call
@@ -150,6 +280,39 @@ RSpec.describe Invoices::PaidCreditService do
         expect(result.invoice.total_amount_cents).to eq(1500)
 
         expect(result.invoice).to be_finalized
+      end
+
+      context "when wallet_transaction has purchase_order_number" do
+        let(:wallet_transaction) do
+          create(
+            :wallet_transaction,
+            wallet:,
+            amount: "15.00",
+            credit_amount: "15.00",
+            invoice_requires_successful_payment:,
+            purchase_order_number: "PO-123"
+          )
+        end
+        let(:invoice_purchase_order_number) { "PO-EXISTING" }
+
+        it "does not overwrite the provided invoice purchase order number" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.purchase_order_number).to eq("PO-EXISTING")
+        end
+      end
+
+      context "when wallet has purchase_order_number" do
+        let(:wallet_purchase_order_number) { "PO-WALLET-123" }
+        let(:invoice_purchase_order_number) { "PO-EXISTING" }
+
+        it "does not overwrite the provided invoice purchase order number" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.purchase_order_number).to eq("PO-EXISTING")
+        end
       end
     end
 
@@ -167,6 +330,32 @@ RSpec.describe Invoices::PaidCreditService do
         expect(SegmentTrackJob).not_to have_been_enqueued
         expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
         expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when wallet_transaction was snapshotted on a different billing entity" do
+      let(:snapshot_billing_entity) { create(:billing_entity, organization:) }
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+      let(:wallet_transaction) do
+        create(
+          :wallet_transaction,
+          wallet:,
+          billing_entity: snapshot_billing_entity,
+          amount: "15.00",
+          credit_amount: "15.00",
+          invoice_requires_successful_payment:
+        )
+      end
+
+      before do
+        wallet.update!(billing_entity: other_billing_entity)
+      end
+
+      it "issues the invoice under the transaction's snapshotted entity, not the wallet's current one" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.billing_entity_id).to eq(snapshot_billing_entity.id)
       end
     end
   end

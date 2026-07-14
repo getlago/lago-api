@@ -259,10 +259,25 @@ RSpec.describe PaymentRequests::Payments::CreateService do
             .to have_enqueued_mail(PaymentRequestMailer, :requested)
             .with(params: {payment_request:}, args: [])
         end
+
+        context "when invoices were already paid through another path" do
+          before do
+            invoice_1.payment_succeeded!
+            invoice_2.payment_succeeded!
+          end
+
+          it "leaves already-succeeded invoices untouched" do
+            expect { create_service.call }
+              .to not_change { invoice_1.reload.payment_status }
+              .and not_change { invoice_2.reload.payment_status }
+
+            expect(invoice_1.reload).to be_payment_succeeded
+            expect(invoice_2.reload).to be_payment_succeeded
+          end
+        end
       end
 
       context "when manual payment method is passed in params" do
-        let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
         let(:payment_method_params) { {payment_method_type: "manual"} }
 
         it "does not attach payment method to payment" do
@@ -274,7 +289,6 @@ RSpec.describe PaymentRequests::Payments::CreateService do
       end
 
       context "when valid payment method is passed in params" do
-        let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
         let(:payment_method) { create(:payment_method, customer:, is_default: false) }
         let(:payment_method_params) { {payment_method_id: payment_method.id} }
 
@@ -287,8 +301,6 @@ RSpec.describe PaymentRequests::Payments::CreateService do
       end
 
       context "when payment method is NOT passed in params" do
-        let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
-
         it "creates payment with customer default payment method" do
           result = create_service.call
 
@@ -406,6 +418,24 @@ RSpec.describe PaymentRequests::Payments::CreateService do
         expect(result.payable).to eq(payment_request)
         expect(result.payment).to be_nil
         expect(provider_class).not_to have_received(:new)
+      end
+    end
+
+    context "when the provider raises AlreadyPaidError" do
+      before do
+        allow(provider_service).to receive(:call!).and_raise(Invoices::Payments::AlreadyPaidError)
+      end
+
+      it "skips silently and drops the unused pending payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+        expect(payment_request.reload.payments).to be_empty
+      end
+
+      it "does not send the payment request email" do
+        expect { create_service.call }.not_to have_enqueued_mail(PaymentRequestMailer, :requested)
       end
     end
 

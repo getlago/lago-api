@@ -24,7 +24,7 @@ module Integrations
           def subscription_url
             url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
 
-            URI.join(url, "/customer/#{integration_customer.customer.id}/subscription/#{subscription.id}/overview").to_s
+            URI.join(url, "/#{integration_customer.customer.organization.slug}/customer/#{integration_customer.customer.id}/subscription/#{subscription.id}/overview").to_s
           end
         end
       end

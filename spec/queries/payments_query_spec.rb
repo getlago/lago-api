@@ -49,7 +49,7 @@ RSpec.describe PaymentsQuery do
   end
 
   context "with search_term" do
-    let(:customer) { create(:customer, firstname: "first", lastname: "last", external_id: "external_c_id", email: "email@example.com", name: "The name") }
+    let(:customer) { create(:customer, organization:, firstname: "first", lastname: "last", external_id: "external_c_id", email: "email@example.com", name: "The name") }
     let(:invoice) { create(:invoice, :finalized, organization:, customer:, number: "number-test-123") }
     let(:invoice3) { create(:invoice, :finalized, organization:, customer:) }
     let(:payment_one) { create(:payment, payable: invoice) }
@@ -71,6 +71,24 @@ RSpec.describe PaymentsQuery do
         expect(result).to be_success
         expect(returned_ids.count).to eq(1)
         expect(returned_ids).to contain_exactly(payment_one.id)
+      end
+    end
+
+    context "when search_term is a partial id" do
+      let(:search_term) { payment_one.id.first(13) }
+
+      it "does not match payments on a partial id" do
+        expect(result).to be_success
+        expect(returned_ids).not_to include(payment_one.id)
+      end
+    end
+
+    context "when search_term is a uuid matching no payment" do
+      let(:search_term) { "00000000-0000-0000-0000-000000000000" }
+
+      it "returns an empty result set" do
+        expect(result).to be_success
+        expect(returned_ids).to be_empty
       end
     end
 
@@ -181,6 +199,26 @@ RSpec.describe PaymentsQuery do
 
   context "when filtering by an invalid external_customer_id" do
     let(:filters) { {external_customer_id: "invalid-external-id"} }
+
+    it "returns an empty result set" do
+      expect(result).to be_success
+      expect(returned_ids).to be_empty
+    end
+  end
+
+  context "when filtering by currency" do
+    let(:filters) { {currency: "USD"} }
+    let(:usd_invoice) { create(:invoice, organization:, currency: "USD") }
+    let!(:usd_payment) { create(:payment, payable: usd_invoice, amount_currency: "USD") }
+
+    it "returns only payments matching the currency" do
+      expect(result).to be_success
+      expect(returned_ids).to contain_exactly(usd_payment.id)
+    end
+  end
+
+  context "when filtering by a currency that matches no payments" do
+    let(:filters) { {currency: "GBP"} }
 
     it "returns an empty result set" do
       expect(result).to be_success

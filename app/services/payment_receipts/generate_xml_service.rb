@@ -2,6 +2,8 @@
 
 module PaymentReceipts
   class GenerateXmlService < BaseService
+    Result = BaseResult[:payment_receipt]
+
     def initialize(payment_receipt:, context: nil)
       @payment_receipt = payment_receipt
       @context = context
@@ -61,7 +63,7 @@ module PaymentReceipts
     end
 
     def e_invoicing_enabled?
-      payment_receipt.billing_entity.einvoicing && BillingEntity::EINVOICING_COUNTRIES.include?(payment_receipt.billing_entity.country.try(:upcase))
+      payment_receipt.billing_entity.eligible_for_einvoicing?
     end
   end
 end

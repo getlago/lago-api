@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class RecurringTransactionRule < ApplicationRecord
+  include HasPurchaseOrderNumber
   include PaperTrailTraceable
 
   belongs_to :wallet
@@ -15,6 +16,10 @@ class RecurringTransactionRule < ApplicationRecord
     source: :invoice_custom_section
 
   validates :transaction_name, length: {minimum: 1, maximum: 255}, allow_nil: true
+  validates :grants_target_top_up, inclusion: {in: [true, false]}, allow_nil: true, if: :target?
+  validates :grants_target_top_up, exclusion: {in: [true, false]}, unless: :target?
+  validate :target_ongoing_balance_not_below_threshold,
+    if: -> { target_ongoing_balance_changed? || threshold_credits_changed? || method_changed? || trigger_changed? }
 
   STATUSES = [
     :active,
@@ -51,6 +56,10 @@ class RecurringTransactionRule < ApplicationRecord
   }
   scope :expired, -> { where("recurring_transaction_rules.expiration_at::timestamp(0) <= ?", Time.current) }
 
+  def currently_active?
+    active? && (expiration_at.nil? || expiration_at > Time.current)
+  end
+
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp
     terminated!
@@ -64,9 +73,18 @@ class RecurringTransactionRule < ApplicationRecord
     end
   end
 
+  def invoice_custom_section_params
+    section_ids = applied_invoice_custom_sections.pluck(:invoice_custom_section_id)
+    return if section_ids.none? && !skip_invoice_custom_sections
+
+    {skip_invoice_custom_sections:, invoice_custom_section_ids: section_ids}
+  end
+
   def compute_paid_credits(ongoing_balance:)
     if target?
-      compute_target_paid_credits(ongoing_balance:)
+      return 0.0 if grants_target_top_up?
+
+      compute_target_top_up_amount(ongoing_balance:)
     else
       paid_credits
     end
@@ -74,20 +92,38 @@ class RecurringTransactionRule < ApplicationRecord
 
   def compute_granted_credits
     if target?
+      return compute_target_top_up_amount(ongoing_balance: wallet.credits_ongoing_balance) if grants_target_top_up?
+
       0.0
     else
       granted_credits
     end
   end
 
+  def resolved_purchase_order_number
+    purchase_order_number.presence || wallet.purchase_order_number
+  end
+
   private
 
-  def compute_target_paid_credits(ongoing_balance:)
+  def target_ongoing_balance_not_below_threshold
+    return unless target? && threshold?
+    return if target_ongoing_balance.nil? || threshold_credits.nil?
+
+    if target_ongoing_balance < threshold_credits
+      errors.add(:target_ongoing_balance, :must_be_greater_than_or_equal_threshold)
+    end
+  end
+
+  def compute_target_top_up_amount(ongoing_balance:)
     if ongoing_balance >= target_ongoing_balance
       return 0.0
     end
 
     gap = target_ongoing_balance - ongoing_balance
+
+    # NOTE: granted top-ups skip the paid_top_up_min limit since no payment occurs
+    return gap if grants_target_top_up?
 
     # NOTE: in case of target rule, we don't apply max because reaching target balance is the most important
     apply_min_top_up_limits(credit_amount: gap)
@@ -102,12 +138,14 @@ end
 #  id                                  :uuid             not null, primary key
 #  expiration_at                       :datetime
 #  granted_credits                     :decimal(30, 5)   default(0.0), not null
+#  grants_target_top_up                :boolean
 #  ignore_paid_top_up_limits           :boolean          default(FALSE), not null
 #  interval                            :integer          default("weekly")
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null
 #  method                              :integer          default("fixed"), not null
 #  paid_credits                        :decimal(30, 5)   default(0.0), not null
 #  payment_method_type                 :enum             default("provider"), not null
+#  purchase_order_number               :string
 #  skip_invoice_custom_sections        :boolean          default(FALSE), not null
 #  started_at                          :datetime
 #  status                              :integer          default("active")

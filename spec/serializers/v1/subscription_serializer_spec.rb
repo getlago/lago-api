@@ -97,11 +97,43 @@ RSpec.describe ::V1::SubscriptionSerializer do
           "trial_ended_at" => nil,
           "current_billing_period_started_at" => "2024-05-01T00:00:00Z",
           "current_billing_period_ending_at" => "2024-05-31T23:59:59Z",
-          "progressive_billing_disabled" => false
+          "progressive_billing_disabled" => false,
+          "consolidate_invoice" => true,
+          "activated_at" => subscription.activated_at.iso8601,
+          "activation_rules" => []
         )
 
         expect(result["subscription"]["customer"]["lago_id"]).to be_present
         expect(result["subscription"]["plan"]["minimum_commitment"]).to be_nil
+      end
+    end
+  end
+
+  context "when the subscription starts in the future (e.g. a scheduled downgrade in an invoice preview)" do
+    let(:plan) { create(:plan, interval: "monthly", pay_in_advance: true) }
+    let(:future_start) { Time.zone.parse("2026-07-03T00:00:00Z") }
+    let(:subscription) do
+      create(
+        :subscription,
+        :anniversary,
+        plan:,
+        status: :active,
+        subscription_at: future_start,
+        started_at: future_start,
+        activated_at: future_start,
+        created_at: future_start
+      )
+    end
+
+    it "serializes the real first billing period instead of collapsing both bounds onto started_at" do
+      travel_to(Time.zone.parse("2026-06-04T10:00:00Z")) do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["subscription"]).to include(
+          "started_at" => "2026-07-03T00:00:00.000Z",
+          "current_billing_period_started_at" => "2026-07-03T00:00:00Z",
+          "current_billing_period_ending_at" => "2026-08-02T23:59:59Z"
+        )
       end
     end
   end
@@ -218,62 +250,39 @@ RSpec.describe ::V1::SubscriptionSerializer do
     end
   end
 
-  context "when payment_gated_subscriptions feature flag is enabled" do
-    let(:organization) { create(:organization, feature_flags: ["payment_gated_subscriptions"]) }
-    let(:activated_at) { Time.zone.parse("2026-04-13T10:00:00Z") }
+  context "with a canceled subscription" do
     let(:subscription) do
       create(
         :subscription,
-        organization:,
-        cancelation_reason: Subscription::CANCELATION_REASONS[:payment_failed],
-        activated_at:
+        :canceled,
+        cancellation_reason: Subscription::CANCELLATION_REASONS[:payment_failed]
       )
     end
 
-    it "serializes cancelation_reason and activated_at" do
+    it "serializes the cancellation reason" do
       result = JSON.parse(serializer.to_json)
 
-      expect(result["subscription"]).to include(
-        "cancelation_reason" => Subscription::CANCELATION_REASONS[:payment_failed],
-        "activated_at" => activated_at.iso8601
-      )
-    end
-
-    context "when subscription does not have activation_rules" do
-      it "serializes activation_rules as an empty array" do
-        result = JSON.parse(serializer.to_json)
-
-        expect(result["subscription"]["activation_rules"]).to eq([])
-      end
-    end
-
-    context "when subscription has activation_rules" do
-      let(:activation_rule) { create(:subscription_activation_rule, subscription:, organization:) }
-
-      before { activation_rule }
-
-      it "serializes activation_rules" do
-        result = JSON.parse(serializer.to_json)
-
-        expect(result["subscription"]["activation_rules"]).to contain_exactly(
-          include(
-            "lago_id" => activation_rule.id,
-            "type" => Subscription::ActivationRule::TYPES[:payment],
-            "timeout_hours" => activation_rule.timeout_hours,
-            "status" => activation_rule.status
-          )
-        )
-      end
+      expect(result["subscription"]["cancellation_reason"])
+        .to eq(Subscription::CANCELLATION_REASONS[:payment_failed])
     end
   end
 
-  context "when payment_gated_subscriptions feature flag is disabled" do
-    it "does not serialize feature-flagged fields" do
+  context "with activation rules" do
+    let(:activation_rule) { create(:subscription_activation_rule, subscription:) }
+
+    before { activation_rule }
+
+    it "serializes the activation rules" do
       result = JSON.parse(serializer.to_json)
 
-      expect(result["subscription"]).not_to have_key("cancelation_reason")
-      expect(result["subscription"]).not_to have_key("activated_at")
-      expect(result["subscription"]).not_to have_key("activation_rules")
+      expect(result["subscription"]["activation_rules"]).to contain_exactly(
+        include(
+          "lago_id" => activation_rule.id,
+          "type" => Subscription::ActivationRule::TYPES[:payment],
+          "timeout_hours" => activation_rule.timeout_hours,
+          "status" => activation_rule.status
+        )
+      )
     end
   end
 end

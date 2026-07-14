@@ -47,20 +47,36 @@ module WalletActions
     render_wallet(wallet)
   end
 
-  def wallet_index(external_customer_id:, currency:)
+  def wallet_index(external_customer_id:, currency:, billing_entity_codes: nil)
+    if billing_entity_codes.present?
+      billing_entities = current_organization.all_billing_entities.where(code: billing_entity_codes)
+      return not_found_error(resource: "billing_entity") if billing_entities.count != billing_entity_codes.uniq.count
+    end
+
     result = WalletsQuery.call(
       organization: current_organization,
       pagination: {
         page: params[:page],
         limit: params[:per_page] || PER_PAGE
       },
-      filters: {external_customer_id: external_customer_id, currency:}
+      filters: {
+        external_customer_id: external_customer_id,
+        currency:,
+        billing_entity_ids: billing_entities&.ids
+      }.compact
     )
 
     if result.success?
       render(
         json: ::CollectionSerializer.new(
-          result.wallets.includes(:recurring_transaction_rules),
+          result.wallets.includes(
+            :billing_entity,
+            :metadata,
+            :billable_metrics,
+            {customer: :billing_entity},
+            {applied_invoice_custom_sections: :invoice_custom_section},
+            {recurring_transaction_rules: {applied_invoice_custom_sections: :invoice_custom_section}}
+          ),
           ::V1::WalletSerializer,
           collection_name: "wallets",
           meta: pagination_metadata(result.wallets),
@@ -90,6 +106,8 @@ module WalletActions
       :ignore_paid_top_up_limits_on_creation,
       :transaction_name,
       :transaction_priority,
+      :billing_entity_code,
+      :billing_entity_id,
       metadata: {},
       transaction_metadata: [
         :key,
@@ -97,6 +115,7 @@ module WalletActions
       ],
       recurring_transaction_rules: [
         :granted_credits,
+        :grants_target_top_up,
         :interval,
         :method,
         :paid_credits,
@@ -145,6 +164,7 @@ module WalletActions
       :invoice_requires_successful_payment,
       :paid_top_up_min_amount_cents,
       :paid_top_up_max_amount_cents,
+      :billing_entity_code,
       metadata: {},
       recurring_transaction_rules: [
         :lago_id,
@@ -157,6 +177,7 @@ module WalletActions
         :trigger,
         :paid_credits,
         :granted_credits,
+        :grants_target_top_up,
         :invoice_requires_successful_payment,
         :ignore_paid_top_up_limits,
         :transaction_name,

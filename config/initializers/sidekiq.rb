@@ -16,7 +16,7 @@ require "lago/redis_config_builder"
 LIVENESS_PORT = 8080
 
 redis_config = Lago::RedisConfigBuilder.new
-  .with_options(pool_timeout: 5, timeout: 5)
+  .with_options(pool_timeout: 5)
   .sidekiq
 
 if ENV["LAGO_SIDEKIQ_WEB"] == "true"

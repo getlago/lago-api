@@ -3,6 +3,8 @@
 module CreditNotes
   module Refunds
     class StripeService < BaseService
+      Result = BaseResult[:credit_note, :refund]
+
       include Customers::PaymentProviderFinder
 
       INVALID_PAYMENT_METHOD_ERROR = "charge_not_refundable"
@@ -22,6 +24,8 @@ module CreditNotes
         refund = Refund.new(
           organization_id: credit_note.organization_id,
           credit_note:,
+          refundable: credit_note,
+          reason: :credit_note,
           payment:,
           payment_provider: payment.payment_provider,
           payment_provider_customer: payment_provider_customer(customer),

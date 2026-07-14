@@ -28,22 +28,16 @@ RSpec.describe ::V1::Customers::ProjectedUsageSerializer do
       total_amount_cents: 6,
       taxes_amount_cents: 1,
       fees: [
-        OpenStruct.new(
-          billable_metric: billable_metric,
+        build(
+          :charge_fee,
           charge: charge,
-          charge_id: charge.id,
           subscription: subscription,
           units: "4.0",
           amount_cents: 5,
           amount_currency: "EUR",
           events_count: 1,
           charge_filter: nil,
-          grouped_by: {},
-          properties: {
-            "from_datetime" => from_datetime.iso8601,
-            "to_datetime" => to_datetime.iso8601,
-            "charges_duration" => 30
-          }
+          grouped_by: {}
         )
       ]
     )
@@ -57,7 +51,8 @@ RSpec.describe ::V1::Customers::ProjectedUsageSerializer do
       "Fees::ProjectionService::Result",
       projected_units: BigDecimal("60.0"),
       projected_amount_cents: 75,
-      projected_pricing_unit_amount_cents: BigDecimal("0")
+      projected_pricing_unit_amount_cents: BigDecimal(0),
+      projected_presentation_breakdowns: []
     )
 
     allow(::Fees::ProjectionService).to receive(:call).and_return(

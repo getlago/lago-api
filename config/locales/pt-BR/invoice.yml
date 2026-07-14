@@ -38,7 +38,7 @@ pt-BR:
       discount_reason: Desconto da parte de %{tax_rate}
       payment_information: "%{payment_label} de %{currency} %{amount} aplicado"
       standard_payment: Pagamento padrão
-    fee_prorated: A taxa é proporcional aos dias de uso, o preço unitário exibido é uma média
+    fee_prorated: A taxa é proporcional ao período; o preço unitário exibido é uma média
     fees_from_to_date: Taxas de %{from_date} até %{to_date}
     free_credits: Créditos gratuitos
     from_to_date: De %{from_date} até %{to_date}
@@ -80,6 +80,7 @@ pt-BR:
     prepaid_credits: Créditos pré-pagos
     prepaid_credits_with_value: Créditos pré-pagos - %{wallet_name}
     progressive_billing_credit: Uso já faturado
+    purchase_order_number: Número do pedido de compra
     quarter: trimestre
     quarterly: Trimestral
     reached_usage_threshold: Esta cobrança progressiva é gerada porque seu uso cumulativo atingiu %{usage_amount}, excedendo o limite de %{threshold_amount}.
@@ -129,6 +130,7 @@ pt-BR:
     units: Unidades
     units_prorated_per_period: Unidades proporcionais por segundo por %{period}
     usage_based_fees: Taxas baseadas em uso
+    usage_breakdown_by: Detalhamento de uso por %{keys}
     volume:
       fee_per_unit: Taxa por unidade
       flat_fee_for_all_units: Taxa fixa para todas as unidades

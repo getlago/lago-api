@@ -17,6 +17,11 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::BasePayload do
       let(:fee1) { create(:fee, invoice:, amount_cents: 1000, created_at: 1.day.ago) }
       let(:fee2) { create(:fee, invoice:, amount_cents: 2000, created_at: 2.days.ago) }
 
+      before do
+        fee1
+        fee2
+      end
+
       it "returns fees with positive amount_cents ordered by created_at" do
         expect(fees_call).to eq([fee2, fee1])
       end
@@ -26,18 +31,28 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::BasePayload do
       let(:fee1) { create(:fee, invoice:, amount_cents: 0, created_at: 1.day.ago) }
       let(:fee2) { create(:fee, invoice:, amount_cents: -1000, created_at: 2.days.ago) }
 
+      before do
+        fee1
+        fee2
+      end
+
       it "returns all fees ordered by created_at" do
         expect(fees_call).to eq([fee2, fee1])
       end
     end
 
     context "when there are fees with positive and zero amount_cents" do
-      let(:fee1) { create(:fee, invoice:, amount_cents: 0, created_at: 1.day.ago) }
       let(:fee2) { create(:fee, invoice:, amount_cents: 100, created_at: 2.days.ago) }
       let(:fee3) { create(:fee, invoice:, amount_cents: 200, created_at: 3.days.ago) }
 
+      before do
+        create(:fee, invoice:, amount_cents: 0, created_at: 1.day.ago)
+        fee2
+        fee3
+      end
+
       it "returns only positive fees ordered by created_at" do
-        expect(fees_call).to eq([fee2, fee1])
+        expect(fees_call).to eq([fee3, fee2])
       end
     end
   end

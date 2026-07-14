@@ -45,7 +45,8 @@ RSpec.describe Wallets::ThresholdTopUpService do
             invoice_requires_successful_payment: false,
             metadata: [],
             name: "Recurring Transaction Rule",
-            ignore_paid_top_up_limits: true
+            ignore_paid_top_up_limits: true,
+            purchase_order_number: nil
           },
           unique_transaction: true
         )
@@ -99,6 +100,58 @@ RSpec.describe Wallets::ThresholdTopUpService do
       end
     end
 
+    context "when rule has invoice custom sections" do
+      let(:invoice_custom_section) { create(:invoice_custom_section, organization: wallet.organization) }
+
+      before do
+        create(:recurring_rule_applied_invoice_custom_section,
+          recurring_transaction_rule:,
+          invoice_custom_section:)
+      end
+
+      it "forwards invoice_custom_section params to the job" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(
+              invoice_custom_section: {
+                skip_invoice_custom_sections: false,
+                invoice_custom_section_ids: [invoice_custom_section.id]
+              }
+            ),
+            unique_transaction: true
+          )
+      end
+    end
+
+    context "when rule has skip_invoice_custom_sections" do
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "6.0",
+          paid_credits: "10.0",
+          granted_credits: "3.0",
+          skip_invoice_custom_sections: true
+        )
+      end
+
+      it "forwards the skip flag to the job without fallback to other sections" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(
+              invoice_custom_section: {
+                skip_invoice_custom_sections: true,
+                invoice_custom_section_ids: []
+              }
+            ),
+            unique_transaction: true
+          )
+      end
+    end
+
     context "when rule does not contain transaction_name" do
       let(:recurring_transaction_rule) do
         create(
@@ -117,6 +170,76 @@ RSpec.describe Wallets::ThresholdTopUpService do
           .with(
             organization_id: wallet.organization.id,
             params: hash_including(name: nil),
+            unique_transaction: true
+          )
+      end
+    end
+
+    context "when rule has purchase_order_number" do
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "6.0",
+          paid_credits: "10.0",
+          granted_credits: "3.0",
+          purchase_order_number: "PO-RULE-123"
+        )
+      end
+
+      it "calls wallet transaction create job with the rule purchase order number" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(purchase_order_number: "PO-RULE-123"),
+            unique_transaction: true
+          )
+      end
+    end
+
+    context "when rule purchase_order_number is blank and wallet has purchase_order_number" do
+      let(:wallet) do
+        create(
+          :wallet,
+          balance_cents: 1000,
+          ongoing_balance_cents: 550,
+          ongoing_usage_balance_cents: 450,
+          credits_balance: 10.0,
+          credits_ongoing_balance: 5.5,
+          credits_ongoing_usage_balance: 4.0,
+          paid_top_up_min_amount_cents: 205_50,
+          purchase_order_number: "PO-WALLET-123"
+        )
+      end
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "6.0",
+          paid_credits: "10.0",
+          granted_credits: "3.0",
+          purchase_order_number: "   "
+        )
+      end
+
+      it "calls wallet transaction create job with the wallet purchase order number" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(purchase_order_number: "PO-WALLET-123"),
+            unique_transaction: true
+          )
+      end
+    end
+
+    context "when neither rule nor wallet has purchase_order_number" do
+      it "calls wallet transaction create job without purchase order number" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(purchase_order_number: nil),
             unique_transaction: true
           )
       end
@@ -182,10 +305,37 @@ RSpec.describe Wallets::ThresholdTopUpService do
               invoice_requires_successful_payment: false,
               metadata: [],
               name: "Recurring Transaction Rule",
-              ignore_paid_top_up_limits: false
+              ignore_paid_top_up_limits: false,
+              purchase_order_number: nil
             },
             unique_transaction: true
           )
+      end
+
+      context "when grants_target_top_up is true" do
+        let(:recurring_transaction_rule) do
+          create(
+            :recurring_transaction_rule,
+            wallet:,
+            trigger: "threshold",
+            threshold_credits: "6.0",
+            method: "target",
+            target_ongoing_balance: "200",
+            grants_target_top_up: true
+          )
+        end
+
+        it "enqueues the raw gap as granted credits, bypassing the paid_top_up_min limit" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+            .with(
+              organization_id: wallet.organization.id,
+              params: hash_including(
+                paid_credits: "0.0",
+                granted_credits: "194.5"
+              ),
+              unique_transaction: true
+            )
+        end
       end
     end
   end

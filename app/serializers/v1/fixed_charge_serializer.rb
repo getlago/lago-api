@@ -14,7 +14,7 @@ module V1
         pay_in_advance: model.pay_in_advance,
         prorated: model.prorated,
         properties: model.properties,
-        units: model.units,
+        units: effective_units,
         lago_parent_id: model.parent_id
       }
 
@@ -24,6 +24,15 @@ module V1
     end
 
     private
+
+    # Subscription-scoped callers pre-resolve override units into the
+    # `effective_units_by_id` option (one query per request, regardless of
+    # collection size). Plan-scoped callers (plan endpoints, plan webhooks)
+    # don't pass the option and naturally fall back to the plan-level units
+    # on the FixedCharge record.
+    def effective_units
+      options.fetch(:effective_units_by_id, {})[model.id] || model.units
+    end
 
     def taxes
       ::CollectionSerializer.new(

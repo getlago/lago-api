@@ -8,6 +8,8 @@ module InboundWebhooks
       paystack: PaymentProviders::Paystack::ValidateIncomingWebhookService
     }
 
+    Result = BaseResult
+
     def initialize(organization_id:, code:, payload:, webhook_source:, signature:)
       @organization_id = organization_id
       @code = code

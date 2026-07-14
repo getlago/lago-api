@@ -37,7 +37,7 @@ sv:
       discount_reason: Rabatt %{tax_rate} andel
       payment_information: "%{payment_label} på %{currency} %{amount} tillämpad"
       standard_payment: Standardbetaling
-    fee_prorated: Avgiften är proraterad för användningsdagar, det visade enhetspriset är ett genomsnitt
+    fee_prorated: Avgiften är proraterad för perioden; det visade enhetspriset är ett genomsnitt
     fees_from_to_date: Avgifter från %{from_date} till %{to_date}
     free_credits: Gratis krediter
     from_to_date: Från %{from_date} till %{to_date}
@@ -79,6 +79,7 @@ sv:
     prepaid_credits: Förbetald kontobalans
     prepaid_credits_with_value: Förbetald kontobalans - %{wallet_name}
     progressive_billing_credit: Redan fakturerad användning
+    purchase_order_number: Inköpsordernummer
     quarter: kvartal
     quarterly: Kvartalsvis
     reached_usage_threshold: Denna progressiva fakturering skapas eftersom din ackumulerade användning har nått %{usage_amount} och överstiger %{threshold_amount} tröskeln.
@@ -127,6 +128,7 @@ sv:
     units: Enheter
     units_prorated_per_period: Proportionella enheter per sekund per %{period}
     usage_based_fees: Avgifter baserade på användning
+    usage_breakdown_by: Användningsfördelning per %{keys}
     volume:
       fee_per_unit: Avgift per enhet
       flat_fee_for_all_units: Fast avgift för alla enheter

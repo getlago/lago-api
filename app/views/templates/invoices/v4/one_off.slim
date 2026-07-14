@@ -218,6 +218,8 @@ html
       }
       .invoice-information-table tr td:first-child {
         padding: 0 16px 0 0;
+        white-space: nowrap;
+        width: 1%;
       }
       .invoice-information-table tr td:last-child {
         width: 55%;
@@ -229,7 +231,6 @@ html
       }
       .invoice-information-table {
         border-collapse: collapse;
-        table-layout: fixed;
         width: 100%;
       }
 
@@ -313,6 +314,25 @@ html
         border-bottom: 1px solid #d9dee7;
         padding-bottom: 24px;
       }
+      .presentation-breakdowns .breakdown-details-table tr td {
+        border-bottom: none;
+        border-top: none;
+        color: #66758f;
+        padding-bottom: 8px;
+        padding-top: 0;
+      }
+      .presentation-breakdowns .breakdown-details-table tr.fee td {
+        color: #19212e;
+        padding-bottom: 6px;
+        padding-top: 8px;
+      }
+      .presentation-breakdowns .breakdown-details-table tr.section-end td {
+        border-bottom: 1px solid #d9dee7;
+        padding-bottom: 8px;
+      }
+      .presentation-breakdowns .breakdown-details-table tr.presentation-group td:first-child {
+        padding-left: 8px;
+      }
 
       .powered-by {
         width: 100%;
@@ -349,6 +369,10 @@ html
             tr
               td.body-1 = I18n.t('invoice.invoice_number')
               td.body-2 = number
+            - if purchase_order_number.present?
+              tr
+                td.body-1 = I18n.t('invoice.purchase_order_number')
+                td.body-2 = purchase_order_number
             tr
               td.body-1 = I18n.t('invoice.issue_date')
               td.body-2 = I18n.l(issuing_date, format: :default)

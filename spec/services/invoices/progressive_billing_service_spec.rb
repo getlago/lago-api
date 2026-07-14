@@ -31,8 +31,6 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
   end
 
   before do
-    allow(SegmentTrackJob).to receive(:perform_later)
-
     tax
     charge
     event
@@ -74,6 +72,26 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
 
       result2 = create_service.call
       expect(result2).not_to be_success
+    end
+
+    context "with billing entity resolution" do
+      it "stamps the customer's billing_entity when subscription has none" do
+        invoice = create_service.call.invoice
+
+        expect(invoice.billing_entity).to eq(customer.billing_entity)
+      end
+
+      context "when subscription has its own billing_entity" do
+        let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+        before { subscription.update!(billing_entity: other_billing_entity) }
+
+        it "stamps the subscription's billing_entity on the invoice" do
+          invoice = create_service.call.invoice
+
+          expect(invoice.billing_entity).to eq(other_billing_entity)
+        end
+      end
     end
 
     context "when there is tax provider integration" do
@@ -225,6 +243,20 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end
 
+    context "when the subscription overrides the plan's currency" do
+      let(:organization) { create(:organization) }
+      let(:plan) { create(:plan, organization:, amount_currency: "USD") }
+      let(:override_plan) { create(:plan, organization:, parent: plan, amount_currency: "EUR") }
+      let(:subscription) { create(:subscription, plan: override_plan, customer:, started_at: timestamp - 1.week) }
+
+      it "uses the subscription's plan currency, not the threshold's parent-plan currency" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.currency).to eq("EUR")
+      end
+    end
+
     context "with lago_premium", :premium do
       it "enqueues an GenerateDocumentsJob with email true" do
         expect { create_service.call }
@@ -244,7 +276,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
     it "calls SegmentTrackJob" do
       invoice = create_service.call.invoice
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "invoice_created",
         properties: {
@@ -284,9 +316,9 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       context "with a failed to acquire lock error" do
         it "propagates the error" do
           allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
-            .to receive(:call).and_raise(Customers::FailedToAcquireLock)
+            .to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
 
-          expect { create_service.call }.to raise_error(Customers::FailedToAcquireLock)
+          expect { create_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
         end
       end
     end

@@ -28,6 +28,7 @@ module DataExports
           customer_country
           customer_tax_identification_number
           invoice_number
+          purchase_order_number
           invoice_type
           payment_status
           status
@@ -76,6 +77,7 @@ module DataExports
           serialized_invoice.dig(:customer, :country),
           serialized_invoice.dig(:customer, :tax_identification_number),
           serialized_invoice[:number],
+          serialized_invoice[:purchase_order_number],
           serialized_invoice[:invoice_type],
           serialized_invoice[:payment_status],
           serialized_invoice[:status],

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe RecurringTransactionRule do
+  it_behaves_like "a model with a purchase order number"
+
   describe "associations" do
     it { is_expected.to belong_to(:wallet) }
     it { is_expected.to belong_to(:organization) }
@@ -23,6 +25,80 @@ RSpec.describe RecurringTransactionRule do
 
   describe "validations" do
     it { is_expected.to validate_length_of(:transaction_name).is_at_least(1).is_at_most(255).allow_nil }
+
+    describe "grants_target_top_up validation" do
+      context "when method is target" do
+        it "accepts nil so legacy rows created before the column stay valid" do
+          rule = build(:recurring_transaction_rule, method: :target)
+          rule.grants_target_top_up = nil
+          expect(rule).to be_valid
+        end
+
+        it "accepts true" do
+          rule = build(:recurring_transaction_rule, method: :target, grants_target_top_up: true)
+          expect(rule).to be_valid
+        end
+
+        it "accepts false" do
+          rule = build(:recurring_transaction_rule, method: :target, grants_target_top_up: false)
+          expect(rule).to be_valid
+        end
+      end
+
+      context "when method is not target" do
+        it "rejects true" do
+          rule = build(:recurring_transaction_rule, method: :fixed, grants_target_top_up: true)
+          expect(rule).not_to be_valid
+          expect(rule.errors[:grants_target_top_up]).to be_present
+        end
+
+        it "rejects false" do
+          rule = build(:recurring_transaction_rule, method: :fixed, grants_target_top_up: false)
+          expect(rule).not_to be_valid
+          expect(rule.errors[:grants_target_top_up]).to be_present
+        end
+
+        it "accepts nil" do
+          rule = build(:recurring_transaction_rule, method: :fixed)
+          expect(rule).to be_valid
+        end
+      end
+    end
+
+    describe "target_ongoing_balance validation" do
+      context "when method is target and trigger is threshold" do
+        it "rejects a target below the threshold" do
+          rule = build(:recurring_transaction_rule, method: :target, trigger: :threshold, target_ongoing_balance: 50, threshold_credits: 100)
+          expect(rule).not_to be_valid
+          expect(rule.errors[:target_ongoing_balance]).to be_present
+        end
+
+        it "accepts a target equal to the threshold" do
+          rule = build(:recurring_transaction_rule, method: :target, trigger: :threshold, target_ongoing_balance: 100, threshold_credits: 100)
+          expect(rule).to be_valid
+        end
+
+        it "accepts a target above the threshold" do
+          rule = build(:recurring_transaction_rule, method: :target, trigger: :threshold, target_ongoing_balance: 150, threshold_credits: 100)
+          expect(rule).to be_valid
+        end
+
+        it "does not block saving a legacy invalid record when the relevant fields are unchanged" do
+          rule = build(:recurring_transaction_rule, method: :target, trigger: :threshold, target_ongoing_balance: 50, threshold_credits: 100)
+          rule.save!(validate: false)
+
+          expect { rule.mark_as_terminated! }.not_to raise_error
+          expect(rule.reload).to be_terminated
+        end
+      end
+
+      context "when trigger is interval" do
+        it "ignores the threshold comparison" do
+          rule = build(:recurring_transaction_rule, method: :target, trigger: :interval, target_ongoing_balance: 50, threshold_credits: 100)
+          expect(rule).to be_valid
+        end
+      end
+    end
   end
 
   describe "scopes" do
@@ -38,6 +114,28 @@ RSpec.describe RecurringTransactionRule do
     end
   end
 
+  describe "#currently_active?" do
+    it "returns true for active rules with no expiration" do
+      rule = build_stubbed(:recurring_transaction_rule, status: :active, expiration_at: nil)
+      expect(rule.currently_active?).to be true
+    end
+
+    it "returns true for active rules expiring in the future" do
+      rule = build_stubbed(:recurring_transaction_rule, status: :active, expiration_at: 1.day.from_now)
+      expect(rule.currently_active?).to be true
+    end
+
+    it "returns false for active rules whose expiration has passed" do
+      rule = build_stubbed(:recurring_transaction_rule, status: :active, expiration_at: 1.day.ago)
+      expect(rule.currently_active?).to be false
+    end
+
+    it "returns false for terminated rules" do
+      rule = build_stubbed(:recurring_transaction_rule, status: :terminated, expiration_at: nil)
+      expect(rule.currently_active?).to be false
+    end
+  end
+
   describe "#mark_as_terminated!" do
     let(:recurring_transaction_rule) { create(:recurring_transaction_rule, status: :active) }
 
@@ -45,6 +143,20 @@ RSpec.describe RecurringTransactionRule do
       expect { recurring_transaction_rule.mark_as_terminated! }
         .to change(recurring_transaction_rule, :status)
         .from("active").to("terminated")
+    end
+
+    context "when the rule is a legacy target rule with a nil grants_target_top_up" do
+      let(:recurring_transaction_rule) do
+        create(:recurring_transaction_rule, method: :target, status: :active).tap do |r|
+          r.update_column(:grants_target_top_up, nil) # rubocop:disable Rails/SkipsModelValidations
+        end
+      end
+
+      it "terminates without raising on the nil value" do
+        expect { recurring_transaction_rule.mark_as_terminated! }
+          .to change(recurring_transaction_rule, :status)
+          .from("active").to("terminated")
+      end
     end
   end
 
@@ -116,6 +228,53 @@ RSpec.describe RecurringTransactionRule do
       it "returns zero" do
         expect(subject).to eq 0.0
       end
+
+      context "when grants_target_top_up is nil (legacy row)" do
+        let(:rule) do
+          create(:recurring_transaction_rule, method: :target).tap do |r|
+            r.update_column(:grants_target_top_up, nil) # rubocop:disable Rails/SkipsModelValidations
+          end
+        end
+
+        it "returns zero, behaving like a paid target rule" do
+          expect(subject).to eq 0.0
+        end
+      end
+
+      context "when grants_target_top_up is true" do
+        let(:rule) do
+          create(
+            :recurring_transaction_rule,
+            wallet:,
+            method: :target,
+            grants_target_top_up: true,
+            target_ongoing_balance: 101.0
+          )
+        end
+        let(:wallet) do
+          create(:wallet, rate_amount: 0.5, paid_top_up_min_amount_cents: 25_00, credits_ongoing_balance: 100.0)
+        end
+
+        it "returns the raw gap, bypassing the paid_top_up_min limit" do
+          expect(subject).to eq 1.0
+        end
+
+        it "makes the rule grant the gap-fill instead of paying for it" do
+          expect(rule.compute_paid_credits(ongoing_balance: 100.0)).to eq 0.0
+          expect(rule.compute_granted_credits).to eq 1.0
+        end
+      end
+
+      context "when grants_target_top_up is true but the balance already exceeds the target" do
+        let(:rule) do
+          create(:recurring_transaction_rule, wallet:, method: :target, grants_target_top_up: true, target_ongoing_balance: 100.0)
+        end
+        let(:wallet) { create(:wallet, rate_amount: 0.5, credits_ongoing_balance: 150.0) }
+
+        it "grants nothing rather than a negative amount" do
+          expect(subject).to eq 0.0
+        end
+      end
     end
   end
 
@@ -159,6 +318,36 @@ RSpec.describe RecurringTransactionRule do
 
         it "returns the gag with applied limits from wallet" do
           expect(subject).to eq 50.0 # min amount 25 x 2 because of wallet's rate 0.5
+        end
+      end
+
+      context "when grants_target_top_up is nil (legacy row)" do
+        let(:rule) do
+          create(:recurring_transaction_rule, wallet:, method: :target, target_ongoing_balance:).tap do |r|
+            r.update_column(:grants_target_top_up, nil) # rubocop:disable Rails/SkipsModelValidations
+          end
+        end
+        let(:target_ongoing_balance) { 101.0 }
+
+        it "returns the limited gap, behaving like a paid target rule" do
+          expect(subject).to eq 50.0
+        end
+      end
+
+      context "when grants_target_top_up is true" do
+        let(:rule) do
+          create(
+            :recurring_transaction_rule,
+            wallet:,
+            method: :target,
+            grants_target_top_up: true,
+            target_ongoing_balance:
+          )
+        end
+        let(:target_ongoing_balance) { 101.0 }
+
+        it "returns zero" do
+          expect(subject).to eq 0.0
         end
       end
     end

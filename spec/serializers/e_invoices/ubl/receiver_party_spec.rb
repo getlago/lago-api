@@ -45,6 +45,14 @@ RSpec.describe EInvoices::Ubl::ReceiverParty do
         expect(subject).to contains_xml_node("#{xpath}/cbc:AdditionalStreetName").with_value(customer.address_line2)
       end
 
+      context "when address_line2 is blank" do
+        before { customer.update!(address_line2: nil) }
+
+        it "omits AdditionalStreetName" do
+          expect(subject).not_to contains_xml_node("#{xpath}/cbc:AdditionalStreetName")
+        end
+      end
+
       it "expects to have city" do
         expect(subject).to contains_xml_node("#{xpath}/cbc:CityName").with_value(customer.city)
       end

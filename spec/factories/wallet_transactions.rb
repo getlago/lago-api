@@ -4,6 +4,7 @@ FactoryBot.define do
   factory :wallet_transaction do
     wallet
     organization { wallet&.organization || association(:organization) }
+    billing_entity { wallet&.billing_entity }
     transaction_type { "inbound" }
     status { "settled" }
     amount { "1.00" }
@@ -16,6 +17,10 @@ FactoryBot.define do
     trait :failed do
       status { "failed" }
       failed_at { Time.current }
+    end
+
+    trait :with_purchase_order_number do
+      purchase_order_number { "PO-123" }
     end
 
     trait :with_invoice do

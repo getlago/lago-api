@@ -4,6 +4,7 @@ class BaseQuery < BaseService
   # nil values force Kaminari to apply its default values for page and limit.
   DEFAULT_PAGINATION_PARAMS = {page: nil, limit: nil}
   DEFAULT_ORDER = {created_at: :desc}
+  UUID_REGEX = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
 
   Pagination = Struct.new(:page, :limit, keyword_init: true)
   Filters = BaseFilters
@@ -50,13 +51,11 @@ class BaseQuery < BaseService
 
   def parse_datetime_filter(field_name)
     value = filters[field_name]
-    return value if [Time, ActiveSupport::TimeWithZone, Date, DateTime].include?(value.class)
+    return value if Utils::Datetime.datetime_like?(value)
 
-    DateTime.iso8601(value)
-  # Date::Error inherits from ArgumentError so it is caught here too.
-  # A bare ArgumentError is raised e.g. for strings longer than 128 chars
-  # ("string length exceeds the limit 128").
-  rescue ArgumentError
+    parsed_value = Utils::Datetime.parse_iso8601(value)
+    return parsed_value if parsed_value
+
     result.single_validation_failure!(field: field_name.to_sym, error_code: "invalid_date")
       .raise_if_error!
   end

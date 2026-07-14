@@ -4,6 +4,8 @@ module DailyUsages
   class FillFromInvoiceService < BaseService
     Usage = Struct.new(:from_datetime, :to_datetime, :issuing_date, :currency, :amount_cents, :total_amount_cents, :taxes_amount_cents, :fees)
 
+    Result = BaseResult[:daily_usages]
+
     def initialize(invoice:, subscriptions:)
       @invoice = invoice
       @subscriptions = subscriptions
@@ -21,7 +23,7 @@ module DailyUsages
         next if existing_daily_usage(invoice_subscription).present?
 
         usage = invoice_usage(subscription, invoice_subscription)
-        if usage.total_amount_cents.positive?
+        if usage.fees.any?
           daily_usage = DailyUsage.new(
             organization: invoice.organization,
             customer: invoice.customer,
@@ -54,7 +56,7 @@ module DailyUsages
       in_adv_fees = in_advance_fees(subscription, invoice_subscription)
 
       fees = in_adv_fees +
-        invoice.fees.charge.select { |f| f.subscription_id == subscription.id && f.units.positive? }
+        invoice.fees.charge.select { |f| f.subscription_id == subscription.id && f.non_zero? }
 
       amount_cents = in_adv_fees.sum(:amount_cents) + invoice.fees.charge.sum(:amount_cents)
       taxes_amount_cents = in_adv_fees.sum(:taxes_amount_cents) + invoice.fees.charge.sum(:taxes_amount_cents)

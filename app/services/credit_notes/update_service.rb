@@ -2,6 +2,8 @@
 
 module CreditNotes
   class UpdateService < BaseService
+    Result = BaseResult[:credit_note]
+
     def initialize(credit_note:, partial_metadata: false, **params)
       @params = params&.with_indifferent_access
       @credit_note = credit_note
@@ -21,7 +23,11 @@ module CreditNotes
         end
 
         update_metadata!
-        credit_note.save! if credit_note.changed?
+        if credit_note.changed?
+          credit_note.save!
+        elsif metadata_changed
+          credit_note.touch # rubocop:disable Rails/SkipsModelValidations
+        end
       end
 
       handle_changes
@@ -46,16 +52,16 @@ module CreditNotes
 
     # @return [Boolean] if the metadata was changed in any way
     def update_metadata!
+      return unless params.key?(:metadata)
+
       value = params[:metadata]&.then { |m| m.respond_to?(:to_unsafe_h) ? m.to_unsafe_h : m.to_h }
-      Metadata::UpdateItemService.call!(owner: credit_note, value:, partial: partial_metadata.present?)
-      @metadata_changed = result.metadata_changed
+      metadata_result = Metadata::UpdateItemService.call!(owner: credit_note, value:, partial: partial_metadata.present?)
+      @metadata_changed = metadata_result.metadata_changed
     end
 
     def handle_changes
       if credit_note.previous_changes.key?(:refund_status)
         Utils::SegmentTrack.refund_status_changed(credit_note.refund_status, credit_note.id, credit_note.organization.id)
-      elsif metadata_changed
-        # Potential place for future tracking of credit note metadata changes
       end
     end
   end

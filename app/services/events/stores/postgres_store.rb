@@ -11,7 +11,7 @@ module Events
         scope = scope.order(timestamp: :asc) if ordered
 
         scope = scope.from_datetime(from_datetime) if force_from || use_from_boundary
-        scope = scope.to_datetime(applicable_to_datetime) if applicable_to_datetime
+        scope = apply_to_boundary(scope) if applicable_to_datetime
 
         if numeric_property
           scope = scope.where(presence_condition)
@@ -22,20 +22,36 @@ module Events
         filters_scope(scope)
       end
 
-      def distinct_codes
-        Event.where(external_subscription_id: subscription.external_id)
-          .where(organization_id: subscription.organization.id)
-          .from_datetime(from_datetime)
-          .to_datetime(applicable_to_datetime)
-          .pluck("DISTINCT(code)")
-      end
-
-      def distinct_charges_and_filters
-        EnrichedEvent.where(organization_id: subscription.organization_id)
+      def distinct_charges_and_filters(codes: nil)
+        scope = EnrichedEvent.where(organization_id: subscription.organization_id)
           .where(subscription_id: subscription.id)
           .where(timestamp: from_datetime..to_datetime)
-          .distinct
-          .pluck(:charge_id, :charge_filter_id)
+
+        scope = scope.where(code: codes) unless codes.nil?
+        scope.distinct.pluck(:charge_id, :charge_filter_id)
+      end
+
+      # Returns the distinct [code, properties] combinations present in the events of the
+      # period. Only properties present in the filter_keys are considered, so the result holds
+      # only the dimensions that can be matched against charge filters.
+      # An empty hash represents the default (no filter) bucket.
+      def distinct_codes_and_property_combinations(codes:, filter_keys:)
+        scope = Event.where(external_subscription_id: subscription.external_id)
+          .where(organization_id: subscription.organization_id)
+          .where(code: codes)
+          .from_datetime(from_datetime)
+          .to_datetime(applicable_to_datetime)
+
+        scope
+          .select(Arel.sql(<<~SQL.squish))
+            DISTINCT events.code AS code,
+            coalesce((
+              SELECT jsonb_object_agg(props.key, props.value)
+              FROM jsonb_each_text(events.properties) AS props(key, value)
+              WHERE props.key = ANY(#{filter_keys_array_sql(filter_keys)})
+            ), '{}'::jsonb) AS combination
+          SQL
+          .map { |row| [row.code, parse_combination(row)] }
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)
@@ -76,13 +92,17 @@ module Events
         events(ordered: true).pluck(Arel.sql("(#{sanitized_property_name})::numeric * (#{ratio_sql})::numeric"))
       end
 
-      def grouped_count
+      def count
+        build_aggregation_result_from_value(events.count)
+      end
+
+      def grouped_count(columns = grouped_by)
         results = events
-          .group(sanitized_grouped_by)
+          .group(columns.map { sanitized_property_name(it) })
           .count
           .map { |group, value| [group, value].flatten }
 
-        prepare_grouped_result(results)
+        grouped_results_with_value_as_count(prepare_grouped_result(results, columns: columns))
       end
 
       # NOTE: check if an event created before the current on belongs to an active (as in present and not removed)
@@ -105,7 +125,7 @@ module Events
         sql = sanitize_sql_for_conditions([query.query])
         result = select_one(sql)
 
-        result["aggregation"]
+        build_aggregation_result_from_value(result["aggregation"])
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
@@ -130,7 +150,7 @@ module Events
         )
         result = select_one(sql)
 
-        result["aggregation"]
+        build_aggregation_result_from_value(result["aggregation"])
       end
 
       def prorated_unique_count_breakdown(with_remove: false)
@@ -148,14 +168,20 @@ module Events
         select_all(sql).to_a
       end
 
-      def grouped_unique_count
-        query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
+      def grouped_unique_count(columns = grouped_by)
+        # NOTE: Important to use a dup to avoid mutate the current object (self) to associate the columns
+        duplicated_unique_count_store = dup
+        duplicated_unique_count_store.grouped_by = columns
+
+        query = Events::Stores::Postgres::UniqueCountQuery.new(store: duplicated_unique_count_store)
 
         sql = sanitize_sql_for_conditions(
           [query.grouped_query]
         )
 
-        prepare_grouped_result(select_all(sql).rows)
+        grouped_results_with_value_as_count(
+          prepare_grouped_result(select_all(sql).rows, columns: columns)
+        )
       end
 
       def grouped_prorated_unique_count
@@ -170,37 +196,62 @@ module Events
             }
           ]
         )
-        prepare_grouped_result(select_all(sql).rows)
+        grouped_results_with_value_as_count(prepare_grouped_result(select_all(sql).rows))
       end
 
-      def max
-        events.maximum("(#{sanitized_property_name})::numeric")
+      def max(with_count: true)
+        AggregationResult.new(
+          value: events.maximum("(#{sanitized_property_name})::numeric") || 0,
+          events_count: with_count ? events.count : nil
+        )
       end
 
-      def grouped_max
+      def grouped_max(columns = grouped_by, with_count: true)
+        groups = columns.map { sanitized_property_name(it) }
+
         results = events
-          .group(sanitized_grouped_by)
-          .maximum("(#{sanitized_property_name})::numeric")
-          .map { |group, value| [group, value].flatten }
-
-        prepare_grouped_result(results)
-      end
-
-      def last
-        events.order(timestamp: :desc, created_at: :desc).first&.properties&.[](aggregation_property)
-      end
-
-      def grouped_last
-        groups = sanitized_grouped_by
-
-        sql = events
-          .order(Arel.sql((groups + ["events.timestamp DESC, created_at DESC"]).join(", ")))
-          .select(
-            "DISTINCT ON (#{groups.join(", ")}) #{groups.join(", ")}, (#{sanitized_property_name})::numeric AS value"
+          .group(groups)
+          .pluck(
+            Arel.sql(
+              (groups + [
+                "MAX((#{sanitized_property_name})::numeric)",
+                with_count ? "COUNT(*)" : "NULL"
+              ]).join(", ")
+            )
           )
-          .to_sql
 
-        prepare_grouped_result(select_all(sql).rows)
+        prepare_grouped_aggregated_values(results, columns: columns)
+      end
+
+      def last(with_count: true)
+        AggregationResult.new(
+          value: events.order(timestamp: :desc, created_at: :desc).first&.properties&.[](aggregation_property),
+          events_count: with_count ? events.count : nil
+        )
+      end
+
+      def grouped_last(columns = grouped_by, with_count: true)
+        sanitized_columns = columns.map { sanitized_property_name(it) }
+        distinct_on_columns = grouped_by.present? ? grouped_by.map { sanitized_property_name(it) } : []
+
+        sql = if distinct_on_columns.empty?
+          count_select = with_count ? "COUNT(*) OVER ()" : "NULL"
+          events
+            .order(Arel.sql("events.timestamp DESC, created_at DESC"))
+            .select("#{sanitized_columns.join(", ")}, (#{sanitized_property_name})::numeric AS value, #{count_select} AS events_count")
+            .limit(1)
+            .to_sql
+        else
+          count_select = with_count ? "COUNT(*) OVER (PARTITION BY #{distinct_on_columns.join(", ")})" : "NULL"
+          events
+            .order(Arel.sql((distinct_on_columns + ["events.timestamp DESC, created_at DESC"]).join(", ")))
+            .select(
+              "DISTINCT ON (#{distinct_on_columns.join(", ")}) #{sanitized_columns.join(", ")}, (#{sanitized_property_name})::numeric AS value, #{count_select} AS events_count"
+            )
+            .to_sql
+        end
+
+        prepare_grouped_aggregated_values(select_all(sql).rows, columns: columns)
       end
 
       def sum_precise_total_amount_cents
@@ -216,17 +267,28 @@ module Events
         prepare_grouped_result(results)
       end
 
-      def sum
-        events.sum("(#{sanitized_property_name})::numeric")
+      def sum(with_count: true)
+        AggregationResult.new(
+          value: events.sum("(#{sanitized_property_name})::numeric"),
+          events_count: with_count ? events.count : nil
+        )
       end
 
-      def grouped_sum(columns = grouped_by)
-        results = events
-          .group(columns.map { sanitized_property_name(it) })
-          .sum("(#{sanitized_property_name})::numeric")
-          .map { |group, value| [group, value].flatten }
+      def grouped_sum(columns = grouped_by, with_count: true)
+        groups = columns.map { sanitized_property_name(it) }
 
-        prepare_grouped_result(results, columns: columns)
+        results = events
+          .group(groups)
+          .pluck(
+            Arel.sql(
+              (groups + [
+                "SUM((#{sanitized_property_name})::numeric)",
+                with_count ? "COUNT(*)" : "NULL"
+              ]).join(", ")
+            )
+          )
+
+        prepare_grouped_aggregated_values(results, columns: columns)
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -237,12 +299,12 @@ module Events
         end
 
         sql = <<-SQL
-          SUM(
-            (#{sanitized_property_name})::numeric * (#{ratio})::numeric
-          ) AS sum_result
+          SUM((#{sanitized_property_name})::numeric * (#{ratio})::numeric) AS prorated_value,
+          SUM((#{sanitized_property_name})::numeric) AS value,
+          COUNT(*) AS events_count
         SQL
 
-        connection.execute(Arel.sql(events.select(sql).to_sql)).first["sum_result"]
+        build_prorated_aggregation_result(select_one(events.select(sql).to_sql))
       end
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
@@ -254,9 +316,9 @@ module Events
 
         sum_sql = <<-SQL
           #{sanitized_grouped_by.join(", ")},
-          SUM(
-            (#{sanitized_property_name})::numeric * (#{ratio})::numeric
-          ) AS sum_result
+          SUM((#{sanitized_property_name})::numeric * (#{ratio})::numeric) AS prorated_value,
+          SUM((#{sanitized_property_name})::numeric) AS value,
+          COUNT(*) AS events_count
         SQL
 
         sql = events
@@ -264,7 +326,7 @@ module Events
           .select(sum_sql)
           .to_sql
 
-        prepare_grouped_result(select_all(sql).rows)
+        prepare_grouped_prorated_result(select_all(sql).rows)
       end
 
       def sum_date_breakdown
@@ -293,32 +355,36 @@ module Events
         )
 
         result = select_one(sql)
-        result["aggregation"]
+
+        build_weighted_aggregation_result(
+          value: result["aggregation"] || 0,
+          variation_with_initial: result["variation_with_initial"] || 0,
+          rows_count: result["rows_count"].to_i,
+          initial_value:
+        )
       end
 
-      def grouped_weighted_sum(initial_values: [])
-        query = Events::Stores::Postgres::WeightedSumQuery.new(store: self)
+      def grouped_weighted_sum(columns = grouped_by, initial_value: 0, initial_values: [])
+        # NOTE: Important to use a dup to avoid mutate the current object (self) to associate the columns
+        duplicated_weighted_sum_store = dup
+        duplicated_weighted_sum_store.grouped_by = columns
 
-        # NOTE: build the list of initial values for each groups
-        #       from the events in the period
-        formated_initial_values = grouped_count.map do |group|
-          value = 0
-          previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
-          value = previous_group[:value] if previous_group
-          {groups: group[:groups], value:}
+        baseline_initial_values = if initial_values.present?
+          initial_values
+        elsif initial_value.to_d.nonzero?
+          [{groups: {}, value: initial_value}]
+        else
+          []
         end
 
-        # NOTE: add the initial values for groups that are not in the events
-        initial_values.each do |intial_value|
-          next if formated_initial_values.find { |g| g[:groups] == intial_value[:groups] }
+        query = Events::Stores::Postgres::WeightedSumQuery.new(store: duplicated_weighted_sum_store)
 
-          formated_initial_values << intial_value
-        end
-        return [] if formated_initial_values.empty?
+        formatted_initial_values = duplicated_weighted_sum_store.formatted_weighted_sum_initial_values(baseline_initial_values)
+        return [] if formatted_initial_values.empty?
 
         sql = sanitize_sql_for_conditions(
           [
-            sanitize_colon(query.grouped_query(initial_values: formated_initial_values)),
+            sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
             {
               from_datetime:,
               to_datetime: to_datetime.ceil
@@ -326,7 +392,27 @@ module Events
           ]
         )
 
-        prepare_grouped_result(select_all(sql).rows)
+        prepare_grouped_weighted_values(select_all(sql).rows, formatted_initial_values, columns: columns)
+      end
+
+      def formatted_weighted_sum_initial_values(initial_values)
+        # NOTE: build the list of initial values for each groups
+        #       from the events in the period
+        formatted_initial_values = grouped_count.map do |group|
+          value = 0
+          previous_group = initial_values.find { |g| g[:groups] == group.groups }
+          value = previous_group[:value] if previous_group
+          {groups: group.groups, value:}
+        end
+
+        # NOTE: add the initial values for groups that are not in the events
+        initial_values.each do |initial_value|
+          next if formatted_initial_values.find { |g| g[:groups] == initial_value[:groups] }
+
+          formatted_initial_values << initial_value
+        end
+
+        formatted_initial_values
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
@@ -344,6 +430,25 @@ module Events
             ]
           )
         ).rows
+      end
+
+      # NOTE: For a pay-in-advance event, the upper boundary is the event's own timestamp.
+      #       Events sharing the same timestamp are tie-broken
+      #       by ingestion order (created_at, id) so each gets a distinct position. Otherwise
+      #       they would all count each other and be priced as the last unit of the batch.
+      def apply_to_boundary(scope)
+        boundary_event = filters[:event] if boundaries[:max_timestamp]
+
+        if boundary_event&.id
+          scope.where(
+            "events.timestamp < :to OR (events.timestamp = :to AND (events.created_at, events.id) <= " \
+            "(SELECT boundary_event.created_at, boundary_event.id FROM events boundary_event WHERE boundary_event.id = :boundary_event_id))",
+            to: applicable_to_datetime,
+            boundary_event_id: boundary_event.id
+          )
+        else
+          scope.to_datetime(applicable_to_datetime)
+        end
       end
 
       def filters_scope(scope)
@@ -428,10 +533,9 @@ module Events
       def prepare_grouped_result(rows, timestamp: false, columns: grouped_by)
         rows.map do |row|
           last_group = timestamp ? -2 : -1
-          groups = row[...last_group].map(&:presence)
 
           result = {
-            groups: columns.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
+            groups: build_groups(row[...last_group], columns:),
             value: row.last
           }
 
@@ -441,12 +545,67 @@ module Events
         end
       end
 
+      # NOTE: Same as prepare_grouped_result but the last two columns of each row are
+      #       the aggregated value and the events count, returned as GroupedAggregationResult.
+      def prepare_grouped_aggregated_values(rows, columns: grouped_by)
+        rows.map do |row|
+          GroupedAggregationResult.new(
+            groups: build_groups(row[...-2], columns:),
+            value: row[-2],
+            events_count: row[-1]&.to_i
+          )
+        end
+      end
+
+      # NOTE: Same as prepare_grouped_aggregated_values but the last three columns of each
+      #       row are the prorated value, the non-prorated value and the events count,
+      #       returned as GroupedProratedAggregationResult.
+      def prepare_grouped_prorated_result(rows, columns: grouped_by)
+        rows.map do |row|
+          build_grouped_prorated_aggregation_result(
+            groups: build_groups(row[...-3], columns:),
+            prorated_value: row[-3],
+            value: row[-2],
+            events_count: row[-1]
+          )
+        end
+      end
+
+      # NOTE: parses the grouped weighted_sum rows. The last three columns of each row are the weighted
+      #       aggregation, the sum of the differences (including the initial value) and the rows count
+      #       (including the 2 boundary rows). Correction is delegated to build_grouped_weighted_result.
+      def prepare_grouped_weighted_values(rows, initial_values, columns: grouped_by)
+        rows.map do |row|
+          build_grouped_weighted_result(
+            groups: build_groups(row[...-3], columns:),
+            value: row[-3],
+            variation_with_initial: row[-2] || 0,
+            rows_count: row[-1].to_i,
+            initial_values:
+          )
+        end
+      end
+
       def operation_type_sql
         "COALESCE(events.properties->>'operation_type', 'add')"
       end
 
       def created_at_ordering_column
         "events.created_at"
+      end
+
+      def filter_keys_array_sql(filter_keys)
+        return "ARRAY[]::text[]" if filter_keys.empty?
+
+        quoted = filter_keys.map { ActiveRecord::Base.connection.quote(it) }.join(", ")
+        "ARRAY[#{quoted}]::text[]"
+      end
+
+      def parse_combination(row)
+        combination = row.read_attribute(:combination)
+        return combination if combination.is_a?(Hash)
+
+        combination.present? ? JSON.parse(combination) : {}
       end
     end
   end

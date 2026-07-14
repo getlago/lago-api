@@ -20,13 +20,14 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:bypass_aggregation) { false }
   let(:filters) do
-    {event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters:}
+    {event: pay_in_advance_event, grouped_by:, presentation_by:, charge_filter:, matching_filters:, ignored_filters:}
   end
 
   let(:subscription) { create(:subscription, started_at: Time.current.beginning_of_month - 6.months) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:grouped_by) { nil }
+  let(:presentation_by) { nil }
   let(:charge_filter) { nil }
   let(:matching_filters) { nil }
   let(:ignored_filters) { nil }
@@ -108,6 +109,52 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       expect(result.pay_in_advance_aggregation).to be_zero
       expect(result.count).to eq(6)
       expect(result.options).to eq({running_total: [2.5, 5]})
+    end
+  end
+
+  context "when a sum result is injected" do
+    let(:injected_sum_result) { Events::Stores::BaseStore::AggregationResult.new(value: 999, events_count: 7) }
+
+    before { sum_service.injected_sum_result = injected_sum_result }
+
+    it "uses the injected result instead of querying the event store" do
+      result = sum_service.aggregate(options: {})
+
+      expect(result.aggregation).to eq(999)
+      expect(result.count).to eq(7)
+    end
+  end
+
+  context "when a grouped sum result is injected" do
+    let(:grouped_by) { %w[region] }
+    let(:injected_grouped_sum_result) do
+      [
+        Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "us"}, value: 100, events_count: 3),
+        Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "eu"}, value: 50, events_count: 2)
+      ]
+    end
+
+    before { sum_service.injected_grouped_sum_result = injected_grouped_sum_result }
+
+    it "builds the group results from the injected values" do
+      result = sum_service.aggregate(options: {})
+
+      expect(result.aggregations.map { |agg| [agg.grouped_by, agg.aggregation, agg.count] }).to match_array(
+        [
+          [{"region" => "us"}, 100, 3],
+          [{"region" => "eu"}, 50, 2]
+        ]
+      )
+    end
+
+    context "when the injected grouped result is blank" do
+      let(:injected_grouped_sum_result) { [] }
+
+      it "returns empty results" do
+        result = sum_service.aggregate(options: {})
+
+        expect(result.aggregations.map(&:aggregation)).to eq([0])
+      end
     end
   end
 
@@ -623,6 +670,19 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       expect(result.pay_in_advance_aggregation).to eq(10)
     end
 
+    context "with presentation group keys" do
+      let(:presentation_by) { ["cloud", "region"] }
+      let(:properties) { {"total_count" => 10, "cloud" => "aws", "region" => "eu"} }
+
+      it "assigns pay_in_advance_breakdowns based on the pay_in_advance event" do
+        result = sum_service.aggregate
+
+        expect(result.pay_in_advance_breakdowns).to eq([
+          {groups: {"cloud" => "aws", "region" => "eu"}, value: 10}
+        ])
+      end
+    end
+
     context "when current period aggregation is greater than period maximum" do
       let(:latest_events) do
         create(
@@ -1005,6 +1065,90 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         result.aggregations.each_with_index do |aggregation, index|
           expect(aggregation.options[:running_total]).to eq([12])
         end
+      end
+    end
+  end
+
+  context "with presentation group keys" do
+    let(:presentation_by) { ["cloud"] }
+    let(:old_events) { [] }
+
+    let(:latest_events) do
+      [
+        create_list(
+          :event,
+          3,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: to_datetime - 1.day,
+          properties: {total_count: 10, cloud: "aws"}
+        ),
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: to_datetime - 1.day,
+          properties: {total_count: 12, cloud: "gcp"}
+        )
+      ].flatten
+    end
+
+    it "returns the aggregations per group" do
+      result = sum_service.aggregate
+
+      expect(result.breakdowns).to match_array([
+        {groups: {"cloud" => "aws"}, value: 30},
+        {groups: {"cloud" => "gcp"}, value: 12}
+      ])
+    end
+
+    context "with grouped_by" do
+      let(:grouped_by) { ["agent_name"] }
+
+      let(:latest_events) do
+        [
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: to_datetime - 1.day,
+            properties: {total_count: 2, agent_name: "frodo", cloud: "aws"}
+          ),
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: to_datetime - 1.day,
+            properties: {total_count: 7, agent_name: "frodo", cloud: "gcp"}
+          ),
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: to_datetime - 1.day,
+            properties: {total_count: 3, agent_name: "aragorn", cloud: "aws"}
+          )
+        ]
+      end
+
+      it "returns the aggregations per group" do
+        result = sum_service.aggregate
+
+        expect(result.breakdowns).to match_array([
+          {groups: {"agent_name" => "frodo", "cloud" => "aws"}, value: 2},
+          {groups: {"agent_name" => "frodo", "cloud" => "gcp"}, value: 7},
+          {groups: {"agent_name" => "aragorn", "cloud" => "aws"}, value: 3}
+        ])
       end
     end
   end

@@ -48,21 +48,17 @@ module Invoices
       attr_reader :subscriptions
 
       def adjusted_subscription(subscription)
-        subscription.terminated_at = rotation_date(subscription)
+        date_service = Subscriptions::DatesService.new_instance(subscription, Time.current, current_usage: true)
+
+        subscription.terminated_at = date_service.end_of_period + 1.day
         subscription.status = :terminated
 
         subscription.next_subscription.assign_attributes(
           status: :active,
-          started_at: rotation_date(subscription)
+          started_at: date_service.next_period_started_at
         )
 
         subscription
-      end
-
-      def rotation_date(subscription)
-        @rotation_date ||= Subscriptions::DatesService
-          .new_instance(subscription, Time.current, current_usage: true)
-          .end_of_period + 1.day
       end
     end
   end

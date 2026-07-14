@@ -61,6 +61,28 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
     expect { compute_amounts.call }.to change(invoice, :total_amount_cents).from(0).to(559)
   end
 
+  context "when invoice is not persisted and has no persisted fees" do
+    subject { described_class.new(invoice: draft_invoice) }
+
+    let(:draft_invoice) { build(:invoice, organization:, customer:, fees: fees) }
+    let(:fees) do
+      [build(:fee, amount_cents: 100), build(:fee, amount_cents: 150)]
+    end
+
+    it "avoids persisting fees" do
+      result = subject.call
+
+      expect(result.invoice.fees.length).to eq(2)
+      expect(result.invoice.fees.map(&:id)).to eq([nil, nil])
+    end
+
+    it "calculates taxes amounts" do
+      result = subject.call
+
+      expect(result.invoice.taxes_rate).to eq(30)
+    end
+  end
+
   context "when invoice is one_off" do
     let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :one_off) }
 
@@ -108,14 +130,13 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
     let(:fee2) { create(:fee, invoice: nil) }
 
     let(:fee_taxes) do
-      OpenStruct.new(
+      build(:tax_result,
         item_id: fee1.id,
         item_code: "lago_default_b2b",
         tax_breakdown: [
-          OpenStruct.new(name: "tax 1", type: "type1", rate: "0.50", tax_amount: 75.5),
-          OpenStruct.new(name: "tax 2", type: "type2", rate: "0.30", tax_amount: 45.3)
-        ]
-      )
+          build(:tax_breakdown_item, name: "tax 1", type: "type1", rate: "0.50", tax_amount: 75.5),
+          build(:tax_breakdown_item, name: "tax 2", type: "type2", rate: "0.30", tax_amount: 45.3)
+        ])
     end
 
     before do
@@ -137,6 +158,23 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
       expect(invoice.sub_total_including_taxes_amount_cents).to eq(272)
       expect(invoice.taxes_rate).to eq(80)
       expect(invoice.total_amount_cents).to eq(272)
+    end
+
+    context "when provider taxes are not provided" do
+      subject(:compute_amounts) { described_class.new(invoice:, provider_taxes: nil) }
+
+      before do
+        allow(invoice).to receive(:should_apply_provider_tax?).and_return(true)
+        allow(Invoices::ApplyProviderTaxesService).to receive(:call!)
+        allow(Invoices::ApplyTaxesService).to receive(:call!).and_call_original
+      end
+
+      it "applies regular taxes without fetching provider taxes" do
+        compute_amounts.call
+
+        expect(Invoices::ApplyProviderTaxesService).not_to have_received(:call!)
+        expect(Invoices::ApplyTaxesService).to have_received(:call!).with(invoice:)
+      end
     end
   end
 end

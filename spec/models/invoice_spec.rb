@@ -8,6 +8,7 @@ RSpec.describe Invoice do
   let(:organization) { create(:organization) }
 
   it_behaves_like "paper_trail traceable"
+  it_behaves_like "a model with a purchase order number"
 
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_many(:error_details) }
@@ -89,6 +90,10 @@ RSpec.describe Invoice do
     end
   end
 
+  it_behaves_like "a model with a purchase order number" do
+    subject { build(:invoice) }
+  end
+
   describe "finalized_at" do
     let(:invoice) { create(:invoice, :draft) }
 
@@ -97,6 +102,31 @@ RSpec.describe Invoice do
         invoice.finalized!
 
         expect(invoice.finalized_at).to eq(Time.current)
+      end
+    end
+  end
+
+  describe "#progressive_billing_last_applied_usage_threshold" do
+    context "when invoice is progressive billing" do
+      let(:invoice) { create(:invoice, invoice_type: :progressive_billing) }
+
+      it "returns the last applied usage threshold" do
+        create(:applied_usage_threshold, invoice:, organization:, created_at: 2.days.ago)
+        applied_usage_threshold = create(:applied_usage_threshold, invoice:, organization:, created_at: 1.day.ago)
+
+        expect(invoice.progressive_billing_last_applied_usage_threshold).to eq(applied_usage_threshold)
+      end
+
+      it "returns nil when no applied usage threshold exists" do
+        expect(invoice.progressive_billing_last_applied_usage_threshold).to be_nil
+      end
+    end
+
+    context "when invoice is not progressive billing" do
+      it "returns nil" do
+        create(:applied_usage_threshold, invoice:, organization:)
+
+        expect(invoice.progressive_billing_last_applied_usage_threshold).to be_nil
       end
     end
   end
@@ -170,6 +200,36 @@ RSpec.describe Invoice do
         expect(invoice.sequential_id).to eq(1)
         expect(invoice.billing_entity_sequential_id).to be_nil
         expect(invoice.organization_sequential_id).to be_zero
+      end
+    end
+
+    context "when the same customer has invoices across multiple billing entities" do
+      let(:billing_entity_2) { create(:billing_entity, organization:) }
+
+      before do
+        create(:invoice, customer:, organization:, billing_entity:, sequential_id: 1, billing_entity_sequential_id: 1, organization_sequential_id: 0)
+        create(:invoice, customer:, organization:, billing_entity:, sequential_id: 2, billing_entity_sequential_id: 2, organization_sequential_id: 0)
+        create(:invoice, customer:, organization:, billing_entity: billing_entity_2, sequential_id: 1, billing_entity_sequential_id: 1, organization_sequential_id: 0)
+      end
+
+      it "scopes sequential_id per (customer, billing_entity)" do
+        invoice_in_entity_2 = build(
+          :invoice,
+          customer:,
+          organization:,
+          billing_entity: billing_entity_2,
+          billing_entity_sequential_id: nil,
+          organization_sequential_id: 0,
+          status: :generating
+        )
+        invoice_in_entity_2.save!
+        invoice_in_entity_2.finalized!
+
+        invoice.save!
+        invoice.finalized!
+
+        expect(invoice_in_entity_2.sequential_id).to eq(2)
+        expect(invoice.sequential_id).to eq(3)
       end
     end
 
@@ -1051,40 +1111,50 @@ RSpec.describe Invoice do
 
   describe "#document_invoice_name" do
     let(:organization) { create(:organization, name: "LAGO", country: "FR") }
+    let(:billing_entity) { create(:billing_entity, organization:, country: "FR") }
     let(:customer) { create(:customer, organization:) }
-    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:, billing_entity:) }
 
     it "returns the correct name for EU country" do
       expect(invoice.document_invoice_name).to eq("Invoice")
     end
 
     context "when invoice is self billed" do
-      let(:invoice) { create(:invoice, :self_billed, customer:, organization:) }
+      let(:invoice) { create(:invoice, :self_billed, customer:, organization:, billing_entity:) }
 
       it "returns the correct name for EU country" do
         expect(invoice.document_invoice_name).to eq("Self-billing invoice")
       end
     end
 
-    context "when organization country is Australia" do
-      let(:organization) { create(:organization, name: "LAGO", country: "AU") }
+    context "when billing entity country is Australia" do
+      let(:billing_entity) { create(:billing_entity, organization:, country: "AU") }
 
       it "returns the correct name that includes keyword tax" do
         expect(invoice.document_invoice_name).to eq("Tax invoice")
       end
     end
 
-    context "when the organization country is in TAX_INVOICE_LABEL_COUNTRIES" do
+    context "when the billing entity country is in TAX_INVOICE_LABEL_COUNTRIES" do
       let(:country) { Invoice::TAX_INVOICE_LABEL_COUNTRIES.sample }
-      let(:organization) { create(:organization, name: "LAGO", country:) }
+      let(:billing_entity) { create(:billing_entity, organization:, country:) }
 
       it "returns the correct tax invoice name" do
         expect(invoice.document_invoice_name).to eq(I18n.t("invoice.document_tax_name"))
       end
     end
 
+    context "when the billing entity country differs from the organization country" do
+      let(:organization) { create(:organization, name: "LAGO", country: "FR") }
+      let(:billing_entity) { create(:billing_entity, organization:, country: "SG") }
+
+      it "uses the billing entity country to determine the tax invoice name" do
+        expect(invoice.document_invoice_name).to eq("Tax invoice")
+      end
+    end
+
     context "when it is credit invoice" do
-      let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :credit) }
+      let(:invoice) { create(:invoice, customer:, organization:, billing_entity:, invoice_type: :credit) }
 
       it "returns the correct name for EU country" do
         expect(invoice.document_invoice_name).to eq("Advance invoice")
@@ -1136,6 +1206,47 @@ RSpec.describe Invoice do
       end
 
       context "when subscription is gated" do
+        let(:subscription) { create(:subscription, :incomplete) }
+
+        before do
+          create(:subscription_activation_rule, subscription:, status: "pending")
+        end
+
+        it { is_expected.to be(true) }
+      end
+
+      context "when subscription is not gated" do
+        let(:subscription) { create(:subscription, :incomplete) }
+
+        it { is_expected.to be(false) }
+      end
+    end
+  end
+
+  describe "#subscription_payment_gated?" do
+    subject(:subscription_payment_gated?) { invoice.subscription_payment_gated? }
+
+    before { invoice }
+
+    context "when invoice is not open" do
+      let(:invoice) { create(:invoice) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when invoice is open" do
+      let(:invoice) do
+        create(
+          :invoice,
+          :open,
+          :with_subscriptions,
+          subscriptions: [subscription],
+          organization: subscription.organization,
+          customer: subscription.customer
+        )
+      end
+
+      context "when subscription is payment-gated" do
         let(:subscription) { create(:subscription, :incomplete) }
 
         before do
@@ -2367,6 +2478,153 @@ RSpec.describe Invoice do
 
       it "returns issuing_date value" do
         expect(subject).to eq(invoice.issuing_date)
+      end
+    end
+  end
+
+  describe "meilisearch document" do
+    subject(:document) { described_class.meilisearch_settings.get_attributes(invoice) }
+
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        name: "Acme Corp",
+        firstname: "John",
+        lastname: "Doe",
+        legal_name: "Acme Corporation",
+        external_id: "ext-123",
+        email: "john@acme.test"
+      )
+    end
+    let(:invoice) do
+      create(
+        :invoice,
+        organization:,
+        customer:,
+        number: "INV-001",
+        invoice_type: "subscription",
+        currency: "EUR",
+        status: "finalized",
+        payment_status: "pending",
+        payment_overdue: true,
+        self_billed: false,
+        total_amount_cents: 1000,
+        total_paid_amount_cents: 400,
+        issuing_date: Date.new(2026, 1, 15)
+      )
+    end
+
+    it "exposes the searchable, filterable and denormalized attributes" do
+      expect(document).to eq(
+        "number" => "INV-001",
+        "organization_id" => organization.id,
+        "billing_entity_id" => invoice.billing_entity_id,
+        "currency" => "EUR",
+        "customer_id" => customer.id,
+        "invoice_type" => "subscription",
+        "status" => "finalized",
+        "payment_status" => "pending",
+        "payment_overdue" => true,
+        "self_billed" => false,
+        "total_amount_cents" => 1000,
+        "total_paid_amount_cents" => 400,
+        "created_at" => invoice.created_at.to_i,
+        "issuing_date" => Date.new(2026, 1, 15).to_time(:utc).to_i,
+        "due_amount_cents" => 600,
+        "partially_paid" => true,
+        "payment_dispute_lost" => false,
+        "customer_name" => "Acme Corp",
+        "customer_firstname" => "John",
+        "customer_lastname" => "Doe",
+        "customer_legal_name" => "Acme Corporation",
+        "customer_external_id" => "ext-123",
+        "customer_email" => "john@acme.test",
+        "subscription_ids" => [],
+        "settlement_types" => [],
+        "metadata" => [],
+        "metadata_keys" => []
+      )
+    end
+
+    context "with metadata, subscriptions and settlements" do
+      let(:subscription) { create(:subscription, organization:, customer:) }
+
+      before do
+        create(:invoice_metadata, invoice:, key: "po", value: "123")
+        create(:invoice_subscription, invoice:, subscription:)
+        create(:invoice_settlement, :with_payment, organization:, billing_entity: organization.default_billing_entity, target_invoice: invoice)
+      end
+
+      it "denormalizes the associated values" do
+        expect(document).to include(
+          "metadata" => ["po::123"],
+          "metadata_keys" => ["po"],
+          "subscription_ids" => [subscription.id],
+          "settlement_types" => ["payment"]
+        )
+      end
+    end
+
+    context "when the customer is discarded" do
+      before { customer.discard! }
+
+      it "omits the descriptive customer fields but keeps customer_id" do
+        expect(document).to include(
+          "customer_id" => customer.id,
+          "customer_name" => nil,
+          "customer_firstname" => nil,
+          "customer_lastname" => nil,
+          "customer_legal_name" => nil,
+          "customer_external_id" => nil,
+          "customer_email" => nil
+        )
+      end
+    end
+  end
+
+  describe "meilisearch index settings" do
+    it "declares the searchable, filterable, sortable and index settings" do
+      expect(described_class.meilisearch_settings.to_settings).to eq(
+        searchable_attributes: %i[number customer_name customer_firstname customer_lastname
+          customer_legal_name customer_external_id customer_email],
+        filterable_attributes: %i[id organization_id billing_entity_id currency customer_id
+          customer_external_id invoice_type status payment_status payment_dispute_lost
+          payment_overdue self_billed issuing_date total_amount_cents due_amount_cents
+          partially_paid subscription_ids settlement_types metadata metadata_keys],
+        sortable_attributes: %i[issuing_date created_at id],
+        pagination: {"maxTotalHits" => 100_000},
+        typo_tolerance: {"disableOnAttributes" => %w[number customer_external_id customer_email]}
+      )
+    end
+  end
+
+  describe "search indexing" do
+    context "when Meilisearch is enabled" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700")) }
+
+      it "enqueues a search index job after commit when a visible invoice is created" do
+        expect { create(:invoice, organization:) }
+          .to have_enqueued_job_after_commit(Invoices::SearchIndexJob)
+      end
+
+      it "enqueues a search index job after commit when a visible invoice is saved" do
+        invoice = create(:invoice, organization:)
+        ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+
+        expect { invoice.update!(payment_status: :succeeded) }
+          .to have_enqueued_job_after_commit(Invoices::SearchIndexJob).with(invoice.id)
+      end
+
+      it "does not enqueue a search index job for an invisible invoice" do
+        expect { create(:invoice, :invisible, organization:) }
+          .not_to have_enqueued_job(Invoices::SearchIndexJob)
+      end
+    end
+
+    context "when Meilisearch is disabled" do
+      it "does not enqueue a search index job" do
+        expect { create(:invoice, organization:) }.not_to have_enqueued_job(Invoices::SearchIndexJob)
       end
     end
   end

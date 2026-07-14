@@ -19,6 +19,7 @@ RSpec.describe Resolvers::CustomersResolver do
         $activeSubscriptionsCountFrom: Int,
         $activeSubscriptionsCountTo: Int,
         $customerType: CustomerTypeEnum,
+        $externalId: String,
         $hasCustomerType: Boolean,
         $hasTaxIdentificationNumber: Boolean,
         $countries: [CountryCode!],
@@ -37,6 +38,7 @@ RSpec.describe Resolvers::CustomersResolver do
           activeSubscriptionsCountFrom: $activeSubscriptionsCountFrom,
           activeSubscriptionsCountTo: $activeSubscriptionsCountTo,
           customerType: $customerType,
+          externalId: $externalId,
           hasCustomerType: $hasCustomerType,
           hasTaxIdentificationNumber: $hasTaxIdentificationNumber,
           countries: $countries,
@@ -84,6 +86,18 @@ RSpec.describe Resolvers::CustomersResolver do
       result = execute_graphql(current_user: membership.user, query:)
 
       expect_graphql_error(result:, message: "Missing organization id")
+    end
+  end
+
+  context "when filtering by external id" do
+    let(:customer) { create(:customer, organization:) }
+
+    before do
+      customer
+    end
+
+    it "returns the customer with matching external_id" do
+      test_customers_resolver(customer, variables: {externalId: customer.external_id})
     end
   end
 
@@ -268,6 +282,147 @@ RSpec.describe Resolvers::CustomersResolver do
         customer_with_metadata,
         variables: {metadata: [{key: "key_1", value: "value_1"}, {key: "key_2", value: ""}]}
       )
+    end
+  end
+
+  context "with N+1 query detection on associations", bullet: {unused_eager_loading: false} do
+    let(:query) do
+      <<~GQL
+        query(
+          $searchTerm: String,
+          $page: Int,
+          $limit: Int,
+          $accountType: [CustomerAccountTypeEnum!],
+          $billingEntityIds: [ID!],
+          $activeSubscriptionsCountFrom: Int,
+          $activeSubscriptionsCountTo: Int,
+          $customerType: CustomerTypeEnum,
+          $hasCustomerType: Boolean,
+          $hasTaxIdentificationNumber: Boolean,
+          $countries: [CountryCode!],
+          $states: [String!],
+          $zipcodes: [String!],
+          $currencies: [CurrencyEnum!],
+          $withDeleted: Boolean,
+          $metadata: [CustomerMetadataFilter!]
+        ) {
+          customers(
+            limit: $limit,
+            searchTerm: $searchTerm,
+            page: $page,
+            accountType: $accountType,
+            billingEntityIds: $billingEntityIds,
+            activeSubscriptionsCountFrom: $activeSubscriptionsCountFrom,
+            activeSubscriptionsCountTo: $activeSubscriptionsCountTo,
+            customerType: $customerType,
+            hasCustomerType: $hasCustomerType,
+            hasTaxIdentificationNumber: $hasTaxIdentificationNumber,
+            countries: $countries,
+            states: $states,
+            zipcodes: $zipcodes,
+            currencies: $currencies,
+            withDeleted: $withDeleted,
+            metadata: $metadata
+          ) {
+            collection {
+              id
+              activeSubscriptionsCount
+              shippingAddress {
+                addressLine1
+                addressLine2
+                city
+                country
+                state
+                zipcode
+              }
+              metadata {
+                id
+                key
+                value
+                displayInInvoice
+              }
+              billingEntity {
+                id
+                code
+                name
+              }
+              netsuiteCustomer {
+                id
+                integrationId
+                externalCustomerId
+                integrationCode
+                integrationType
+                subsidiaryId
+                syncWithProvider
+              }
+              anrokCustomer {
+                id
+                integrationId
+                externalCustomerId
+                integrationCode
+                integrationType
+                syncWithProvider
+              }
+              avalaraCustomer {
+                id
+                integrationId
+                externalCustomerId
+                integrationCode
+                integrationType
+                syncWithProvider
+              }
+              xeroCustomer {
+                id
+                integrationId
+                externalCustomerId
+                integrationCode
+                integrationType
+                syncWithProvider
+              }
+              hubspotCustomer {
+                id
+                integrationId
+                externalCustomerId
+                integrationCode
+                integrationType
+                syncWithProvider
+                targetedObject
+              }
+              salesforceCustomer {
+                id
+                integrationId
+                externalCustomerId
+                integrationCode
+                integrationType
+                syncWithProvider
+              }
+              providerCustomer {
+                id
+                providerCustomerId
+                syncWithProvider
+                providerPaymentMethods
+              }
+            }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      create(:customer, organization:, billing_entity: billing_entity1)
+      create(:customer, organization:, billing_entity: billing_entity2)
+    end
+
+    it "does not trigger N+1 queries on associations" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect(result["data"]["customers"]["collection"].count).to eq(2)
     end
   end
 end

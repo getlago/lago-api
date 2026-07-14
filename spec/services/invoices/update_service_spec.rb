@@ -31,6 +31,39 @@ RSpec.describe Invoices::UpdateService do
       )
     end
 
+    context "when Meilisearch is enabled" do
+      before do
+        invoice
+        stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
+      end
+
+      it "enqueues a search reindex for the invoice" do
+        expect { result }.to have_enqueued_job_after_commit(Invoices::SearchIndexJob).with(invoice.id)
+      end
+    end
+
+    context "when the invoice settles with an open checkout session" do
+      before { create(:payment_intent, invoice:) }
+
+      it "enqueues a job to expire the checkout session" do
+        expect { result }.to have_enqueued_job_after_commit(PaymentIntents::ExpireJob).with(invoice)
+      end
+
+      context "when the invoice was already succeeded" do
+        let(:invoice) { create(:invoice, payment_status: :succeeded) }
+
+        it "does not enqueue the expire job" do
+          expect { result }.not_to have_enqueued_job(PaymentIntents::ExpireJob)
+        end
+      end
+    end
+
+    context "when the invoice settles without an open checkout session" do
+      it "does not enqueue the expire job" do
+        expect { result }.not_to have_enqueued_job(PaymentIntents::ExpireJob)
+      end
+    end
+
     context "when invoices is included in a payment request" do
       let(:customer) do
         create(
@@ -62,10 +95,11 @@ RSpec.describe Invoices::UpdateService do
           create(:payment_request, customer:, invoices: [invoice], dunning_campaign:)
         end
 
-        it "resets customer dunning campaign status counters" do
+        it "resets customer dunning campaign status counters for the invoice currency" do
           expect { result && customer.reload }
             .to change(customer, :last_dunning_campaign_attempt).to(0)
             .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+            .and change(customer, :dunning_currency_attempts).to({"EUR" => 0})
         end
       end
     end

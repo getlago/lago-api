@@ -6,22 +6,28 @@ module Wallets
 
     def call
       recurring_transaction_rules.each do |rule|
-        paid_credits = rule.compute_paid_credits(ongoing_balance: rule.wallet.credits_ongoing_balance)
+        ongoing_balance = rule.wallet.credits_ongoing_balance
+        paid_credits = rule.compute_paid_credits(ongoing_balance:)
         granted_credits = rule.compute_granted_credits
 
         next if rule.target? && paid_credits.zero? && granted_credits.zero?
 
+        params = {
+          wallet_id: rule.wallet.id,
+          paid_credits: paid_credits.to_s,
+          granted_credits: granted_credits.to_s,
+          source: :interval,
+          invoice_requires_successful_payment: rule.invoice_requires_successful_payment?,
+          metadata: rule.transaction_metadata,
+          name: rule.transaction_name,
+          purchase_order_number: rule.resolved_purchase_order_number
+        }
+
+        params[:invoice_custom_section] = rule.invoice_custom_section_params if rule.invoice_custom_section_params
+
         WalletTransactions::CreateJob.perform_later(
           organization_id: rule.wallet.organization.id,
-          params: {
-            wallet_id: rule.wallet.id,
-            paid_credits: paid_credits.to_s,
-            granted_credits: granted_credits.to_s,
-            source: :interval,
-            invoice_requires_successful_payment: rule.invoice_requires_successful_payment?,
-            metadata: rule.transaction_metadata,
-            name: rule.transaction_name
-          }
+          params:
         )
       end
 

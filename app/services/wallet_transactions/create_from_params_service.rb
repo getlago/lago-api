@@ -73,8 +73,8 @@ module WalletTransactions
 
       result.wallet_transactions = transactions
       result
-    rescue BaseService::FailedResult
-      result
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     rescue ActiveRecord::StaleObjectError
       if @update_attempts <= MAX_WALLET_UPDATE_ATTEMPTS
         sleep(rand(0.1..0.5))
@@ -122,6 +122,7 @@ module WalletTransactions
         metadata:,
         priority:,
         name:,
+        purchase_order_number: params[:purchase_order_number],
         payment_method: params[:payment_method]
       ).wallet_transaction
 
@@ -133,7 +134,7 @@ module WalletTransactions
     def handle_granted_credits(wallet:, credits_amount:, reset_consumed_credits: false, voided_invoice_id: nil)
       return if credits_amount.zero?
 
-      wallet_credit = WalletCredit.new(wallet:, credit_amount: credits_amount, invoiceable: false)
+      wallet_credit = WalletCredit.new(wallet:, credit_amount: credits_amount)
       ActiveRecord::Base.transaction do
         wallet_transaction = WalletTransactions::CreateService.call!(
           wallet:,
@@ -146,6 +147,7 @@ module WalletTransactions
           metadata:,
           priority:,
           name:,
+          purchase_order_number: params[:purchase_order_number],
           voided_invoice_id:
         ).wallet_transaction
 

@@ -73,7 +73,6 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
 
       before do
         allow(http_client).to receive(:post_with_response).and_raise(http_error)
-        allow(SendWebhookJob).to receive(:perform_later)
       end
 
       it "delivers error webhook and returns service failure" do
@@ -87,7 +86,7 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       it "sends webhook notification about payment failure" do
         flutterwave_service.call
 
-        expect(SendWebhookJob).to have_received(:perform_later).with(
+        expect(SendWebhookJob).to have_been_enqueued.with(
           "payment_request.payment_failure",
           payment_request,
           provider_customer_id: flutterwave_customer.provider_customer_id,
@@ -102,13 +101,12 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
 
   describe "#update_payment_status" do
     let(:flutterwave_payment) do
-      OpenStruct.new(
+      build(:flutterwave_payment,
         id: "flw_payment_123",
         metadata: {
           payment_type: "one-time",
           lago_payable_id: payment_request.id
-        }
-      )
+        })
     end
 
     context "when creating a new payment" do
@@ -144,10 +142,9 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       end
 
       let(:flutterwave_payment) do
-        OpenStruct.new(
+        build(:flutterwave_payment,
           id: "flw_payment_123",
-          metadata: {payment_type: "recurring"}
-        )
+          metadata: {payment_type: "recurring"})
       end
 
       before { existing_payment }
@@ -167,10 +164,9 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
 
     context "when payment is not found" do
       let(:flutterwave_payment) do
-        OpenStruct.new(
+        build(:flutterwave_payment,
           id: "nonexistent_payment",
-          metadata: {payment_type: "recurring"}
-        )
+          metadata: {payment_type: "recurring"})
       end
 
       it "returns not found failure" do
@@ -197,10 +193,9 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       end
 
       let(:flutterwave_payment) do
-        OpenStruct.new(
+        build(:flutterwave_payment,
           id: "flw_payment_123",
-          metadata: {payment_type: "recurring"}
-        )
+          metadata: {payment_type: "recurring"})
       end
 
       before { existing_payment }
@@ -222,13 +217,12 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
 
     context "when payment fails" do
       let(:flutterwave_payment) do
-        OpenStruct.new(
+        build(:flutterwave_payment,
           id: "flw_payment_123",
           metadata: {
             payment_type: "one-time",
             lago_payable_id: payment_request.id
-          }
-        )
+          })
       end
 
       before do
@@ -247,6 +241,25 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
           flutterwave_payment: flutterwave_payment
         )
         expect(PaymentRequestMailer).to have_received(:with).with(payment_request: payment_request)
+      end
+    end
+
+    context "when a failed webhook arrives after the invoice was already paid through another path" do
+      before do
+        payment_request.payment_failed!
+        invoice.payment_succeeded!
+      end
+
+      it "leaves the already-succeeded invoice untouched" do
+        expect do
+          flutterwave_service.update_payment_status(
+            organization_id: organization.id,
+            status: :failed,
+            flutterwave_payment: flutterwave_payment
+          )
+        end.not_to change { invoice.reload.payment_status }
+
+        expect(invoice.reload).to be_payment_succeeded
       end
     end
   end

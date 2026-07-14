@@ -106,17 +106,17 @@ RSpec.describe CreditNotes::GeneratePdfService do
       before do
         credit_note.billing_entity.update(country:, einvoicing: true)
 
-        allow(EInvoices::CreditNotes::FacturX::CreateService).to receive(:call).and_return(create_xml_result)
+        allow(EInvoices::CreditNotes::Cii::CreateService).to receive(:call).and_return(create_xml_result)
         allow(Utils::PdfAttachmentService).to receive(:call)
       end
 
       context "with FR country" do
         let(:country) { "FR" }
 
-        it "generates the invoice with attached facturx xml synchronously" do
+        it "generates the invoice with attached cii xml synchronously" do
           result = described_class.call(credit_note:, context:)
 
-          expect(EInvoices::CreditNotes::FacturX::CreateService).to have_received(:call)
+          expect(EInvoices::CreditNotes::Cii::CreateService).to have_received(:call)
           expect(Utils::PdfAttachmentService).to have_received(:call)
           expect(result.credit_note.file).to be_present
         end
@@ -130,7 +130,7 @@ RSpec.describe CreditNotes::GeneratePdfService do
       it "returns a result with error" do
         result = credit_note_generate_service.call
 
-        expect(result.success).to be_falsey
+        expect(result).not_to be_success
         expect(result.error.error_code).to eq("credit_note_not_found")
       end
     end
@@ -141,7 +141,7 @@ RSpec.describe CreditNotes::GeneratePdfService do
       it "returns a not found error" do
         result = credit_note_generate_service.call
 
-        expect(result.success).to be_falsey
+        expect(result).not_to be_success
         expect(result.error.error_code).to eq("credit_note_not_found")
       end
     end

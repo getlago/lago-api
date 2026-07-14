@@ -23,6 +23,7 @@ RSpec.describe ::V1::WalletSerializer do
       "lago_id" => wallet.id,
       "lago_customer_id" => wallet.customer_id,
       "external_customer_id" => wallet.customer.external_id,
+      "billing_entity_code" => wallet.billing_entity.code,
       "status" => wallet.status,
       "currency" => wallet.currency,
       "name" => wallet.name,
@@ -50,5 +51,26 @@ RSpec.describe ::V1::WalletSerializer do
     expect(result["wallet"]["applied_invoice_custom_sections"].first["lago_id"]).to eq(applied_invoice_custom_section.id)
     expect(result["wallet"]["payment_method"]["payment_method_id"]).to eq(nil)
     expect(result["wallet"]["payment_method"]["payment_method_type"]).to eq("provider")
+  end
+
+  describe "recurring_transaction_rules filtering" do
+    let(:active_rule) { create(:recurring_transaction_rule, wallet:) }
+    let(:active_future_expiration_rule) { create(:recurring_transaction_rule, wallet:, expiration_at: 1.day.from_now) }
+    let(:active_past_expiration_rule) { create(:recurring_transaction_rule, wallet:, expiration_at: 1.day.ago) }
+    let(:terminated_rule) { create(:recurring_transaction_rule, wallet:, status: :terminated) }
+
+    before do
+      active_rule
+      active_future_expiration_rule
+      active_past_expiration_rule
+      terminated_rule
+    end
+
+    it "includes only active rules that have not expired" do
+      result = JSON.parse(serializer.to_json)
+      ids = result["wallet"]["recurring_transaction_rules"].map { |r| r["lago_id"] }
+
+      expect(ids).to match_array([recurring_transaction_rule.id, active_rule.id, active_future_expiration_rule.id])
+    end
   end
 end

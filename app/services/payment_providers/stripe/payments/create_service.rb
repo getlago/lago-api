@@ -70,11 +70,7 @@ module PaymentProviders
         end
 
         def stripe_payment_method
-          payment_method_id = if invoice.organization.feature_flag_enabled?(:multiple_payment_methods)
-            payment&.payment_method&.provider_method_id
-          else
-            provider_customer.payment_method_id
-          end
+          payment_method_id = payment&.payment_method&.provider_method_id
 
           if payment_method_id
             # NOTE: Check if payment method still exists
@@ -86,28 +82,19 @@ module PaymentProviders
           end
 
           # NOTE: Retrieve list of existing payment_methods
-          payment_method = ::Stripe::Customer.list_payment_methods(
-            provider_customer.provider_customer_id,
-            {},
-            {api_key: payment_provider.secret_key}
-          ).first
-
-          if invoice.organization.feature_flag_enabled?(:multiple_payment_methods)
-            # TODO: Double check
-            # payment.payment_method.update!(provider_method_id: payment_method&.id) if payment.payment_method
-          else
-            provider_customer.update!(payment_method_id: payment_method&.id)
-          end
+          payment_method = customer_payment_methods.first
 
           payment_method&.id
         end
 
-        def update_payment_method_id
-          stripe_customer = ::Stripe::Customer.retrieve(
+        def stripe_customer
+          @stripe_customer ||= ::Stripe::Customer.retrieve(
             provider_customer.provider_customer_id,
             {api_key: payment_provider.secret_key}
           )
+        end
 
+        def update_payment_method_id
           # TODO: stripe customer should be updated/deleted
           # TODO: deliver error webhook
           # TODO(payment): update payment status
@@ -118,11 +105,23 @@ module PaymentProviders
           end
         end
 
+        def customer_payment_methods
+          @customer_payment_methods ||= ::Stripe::Customer.list_payment_methods(
+            provider_customer.provider_customer_id,
+            {},
+            {api_key: payment_provider.secret_key}
+          )
+        end
+
         def create_payment_intent
           update_payment_method_id
+          payload = payment_intent_payload
+
+          # payable have been settled by another payment path
+          raise Invoices::Payments::AlreadyPaidError if invoice.reload.payment_succeeded?
 
           ::Stripe::PaymentIntent.create(
-            payment_intent_payload,
+            payload,
             {
               api_key: payment_provider.secret_key,
               idempotency_key: "payment-#{payment.id}"
@@ -143,6 +142,17 @@ module PaymentProviders
           )
         end
 
+        def shared_payment_token
+          # NOTE: Only use the shared payment token if no other payment method exist (no default, nothing in the list)
+          return nil unless invoice.organization.feature_flag_enabled?(:stripe_shared_payment_token)
+          return nil if stripe_customer.deleted?
+          return nil if stripe_customer.invoice_settings.default_payment_method
+          return nil if stripe_customer.default_source
+          return nil if customer_payment_methods.any?
+
+          stripe_customer.invoice_settings[:default_shared_payment_token]
+        end
+
         def payment_intent_payload
           payload = {
             amount: payment.amount_cents,
@@ -159,6 +169,10 @@ module PaymentProviders
 
           if provider_customer.provider_payment_methods == ["customer_balance"]
             payload.merge!(customer_balance_fields)
+          elsif shared_payment_token
+            payload[:payment_method_data] = {shared_payment_granted_token: shared_payment_token}
+            payload.delete(:return_url)
+            payload.delete(:off_session)
           else
             payload[:payment_method] = stripe_payment_method
           end

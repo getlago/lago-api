@@ -42,7 +42,7 @@ RSpec.describe Invoices::GeneratePdfService do
       it "returns a result with error" do
         result = described_class.call(invoice:, context:)
 
-        expect(result.success).to be_falsey
+        expect(result).to be_failure
         expect(result.error.error_code).to eq("invoice_not_found")
       end
     end
@@ -53,7 +53,7 @@ RSpec.describe Invoices::GeneratePdfService do
       it "returns a result with error" do
         result = described_class.call(invoice:, context:)
 
-        expect(result.success).to be_falsey
+        expect(result).to be_failure
         expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         expect(result.error.code).to eq("is_draft")
       end
@@ -198,18 +198,18 @@ RSpec.describe Invoices::GeneratePdfService do
       before do
         invoice.billing_entity.update(country:, einvoicing: true)
 
-        allow(EInvoices::Invoices::FacturX::CreateService).to receive(:call).and_return(create_xml_result)
+        allow(EInvoices::Invoices::Cii::CreateService).to receive(:call).and_return(create_xml_result)
         allow(Utils::PdfAttachmentService).to receive(:call)
       end
 
       context "with FR country" do
         let(:country) { "FR" }
 
-        it "generates the invoice with attached facturx xml synchronously" do
+        it "generates the invoice with attached cii xml synchronously" do
           result = described_class.call(invoice:, context:)
 
           expect(Utils::PdfAttachmentService).to have_received(:call)
-          expect(EInvoices::Invoices::FacturX::CreateService).to have_received(:call)
+          expect(EInvoices::Invoices::Cii::CreateService).to have_received(:call)
           expect(result.invoice.file).to be_present
         end
       end

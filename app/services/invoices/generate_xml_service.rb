@@ -2,6 +2,8 @@
 
 module Invoices
   class GenerateXmlService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(invoice:, context: nil)
       @invoice = invoice
       @context = context
@@ -62,7 +64,7 @@ module Invoices
     end
 
     def e_invoicing_enabled?
-      invoice.billing_entity.einvoicing && BillingEntity::EINVOICING_COUNTRIES.include?(invoice.billing_entity.country.try(:upcase))
+      invoice.billing_entity.eligible_for_einvoicing?
     end
   end
 end

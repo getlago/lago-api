@@ -47,6 +47,8 @@ class BillableMetric < ApplicationRecord
   enum :rounding_function, ROUNDING_FUNCTIONS
   enum :weighted_interval, WEIGHTED_INTERVAL
 
+  before_validation :reset_field_name_for_count_agg
+
   validate :validate_recurring
   validate :validate_expression
 
@@ -88,7 +90,21 @@ class BillableMetric < ApplicationRecord
     AGGREGATION_TYPES_PAYABLE_IN_ADVANCE.include?(aggregation_type.to_sym)
   end
 
+  # NOTE: Replaces billable_metric.plans.exists?
+  #       to force planner to use Index Scan (index_charges_on_billable_metric_id) instead of Seq Scan on charges
+  def attached_to_plan?
+    charges
+      .where("EXISTS (SELECT 1 FROM plans WHERE plans.id = charges.plan_id AND plans.deleted_at IS NULL)")
+      .exists?
+  end
+
   private
+
+  # NOTE: count_agg does not aggregate on a property, so a field_name coming
+  #       from a previous aggregation type must be dropped rather than persisted.
+  def reset_field_name_for_count_agg
+    self.field_name = nil if count_agg?
+  end
 
   def should_have_field_name?
     !count_agg? && !custom_agg?
@@ -134,6 +150,7 @@ end
 #
 # Indexes
 #
+#  idx_billable_metrics_id_agg_type                    (id)
 #  index_billable_metrics_on_deleted_at                (deleted_at)
 #  index_billable_metrics_on_org_id_and_code_and_expr  (organization_id,code,expression) WHERE ((expression IS NOT NULL) AND ((expression)::text <> ''::text))
 #  index_billable_metrics_on_organization_id           (organization_id)

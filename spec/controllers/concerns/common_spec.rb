@@ -53,5 +53,13 @@ RSpec.describe Common do
         expect(subject).to be false
       end
     end
+
+    context "when a malformed date raises a bare ArgumentError" do
+      let(:date) { "1" * 129 }
+
+      it "returns false" do
+        expect(subject).to be false
+      end
+    end
   end
 end

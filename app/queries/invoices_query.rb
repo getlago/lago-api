@@ -24,11 +24,26 @@ class InvoicesQuery < BaseQuery
     :settlements
   ]
 
+  def initialize(meilisearch: false, **kwargs)
+    @use_meilisearch_flag = meilisearch
+    super(**kwargs)
+  end
+
   def call
     return result unless validate_filters.success?
 
-    invoices = base_scope.result.includes(:customer, file_attachment: :blob, xml_file_attachment: :blob)
-    invoices = with_customers_filter(invoices)
+    result.invoices = use_meilisearch? ? meilisearch_invoices : postgres_invoices
+    result
+  rescue BaseService::FailedResult
+    result
+  end
+
+  private
+
+  attr_reader :use_meilisearch_flag
+
+  def postgres_invoices
+    invoices = base_scope.includes(:customer).preload(file_attachment: :blob, xml_file_attachment: :blob)
 
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
     invoices = with_currency(invoices) if filters.currency
@@ -49,53 +64,177 @@ class InvoicesQuery < BaseQuery
     invoices = with_settlements(invoices) if valid_settlements.present?
 
     invoices = paginate(invoices)
-    invoices = apply_consistent_ordering(
+    apply_consistent_ordering(
       invoices,
       default_order: {issuing_date: :desc, created_at: :desc}
     )
-
-    result.invoices = invoices
-    result
-  rescue BaseService::FailedResult
-    result
   end
 
-  private
+  def meilisearch_invoices
+    search_params = {
+      filter: meilisearch_filter,
+      sort: ["issuing_date:desc", "created_at:desc", "id:asc"],
+      page: current_page,
+      hits_per_page: per_page,
+      matching_strategy: "all"
+    }
+
+    if search_term.present? && search_term.match?(BaseQuery::UUID_REGEX)
+      query = ""
+      search_params[:filter] << Lago::Meilisearch::Filter.eq("id", search_term)
+    else
+      query = search_term.to_s
+      search_params[:attributes_to_search_on] = ["number"] unless search_customers?
+    end
+
+    invoices = Invoice.search(query, search_params)
+
+    ActiveRecord::Associations::Preloader.new(
+      records: invoices.to_a,
+      associations: [:customer, {file_attachment: :blob}, {xml_file_attachment: :blob}]
+    ).call
+
+    invoices
+  # NOTE: If any error happens, we fallback to PG search
+  rescue Meilisearch::Error => e
+    Sentry.capture_exception(e)
+    postgres_invoices
+  end
+
+  def use_meilisearch?
+    use_meilisearch_flag &&
+      Lago::Meilisearch.search_enabled? &&
+      organization.feature_flag_enabled?(:meilisearch) &&
+      (search_term.present? || filters_present?)
+  end
+
+  def filters_present?
+    filters.to_h.values.any? { |value| filter_value_present?(value) }
+  end
+
+  def filter_value_present?(value)
+    return false if value.nil?
+    return !value.empty? if value.respond_to?(:empty?)
+
+    true
+  end
+
+  def current_page
+    page = pagination&.page.to_i
+    page.positive? ? page : 1
+  end
+
+  def per_page
+    limit = pagination&.limit.to_i
+    limit.positive? ? limit : Kaminari.config.default_per_page
+  end
+
+  def meilisearch_filter
+    ms = Lago::Meilisearch::Filter
+    conditions = [
+      ms.eq("organization_id", organization.id),
+      ms.in_list("status", meilisearch_statuses)
+    ]
+
+    conditions << ms.in_list("billing_entity_id", filters.billing_entity_ids) if filters.billing_entity_ids.present?
+    conditions << ms.eq("currency", filters.currency) if filters.currency
+    conditions << ms.eq("customer_external_id", filters.customer_external_id) if filters.customer_external_id
+    conditions << ms.eq("customer_id", filters.customer_id) if filters.customer_id.present?
+    conditions << ms.in_list("invoice_type", Array(filters.invoice_type)) if filters.invoice_type.present?
+    conditions << ms.gte("issuing_date", issuing_date_from.to_time.to_i) if filters.issuing_date_from
+    conditions << ms.lte("issuing_date", issuing_date_to.to_time.to_i) if filters.issuing_date_to
+    conditions << ms.gte("total_amount_cents", filters.amount_from.to_i) if filters.amount_from.present?
+    conditions << ms.lte("total_amount_cents", filters.amount_to.to_i) if filters.amount_to.present?
+    conditions << ms.in_list("payment_status", Array(filters.payment_status)) if filters.payment_status.present?
+    conditions << ms.eq("payment_dispute_lost", ms.boolean(filters.payment_dispute_lost)) unless filters.payment_dispute_lost.nil?
+    conditions << ms.eq("payment_overdue", ms.boolean(filters.payment_overdue)) unless filters.payment_overdue.nil?
+    conditions << ms.eq("self_billed", ms.boolean(filters.self_billed)) unless filters.self_billed.nil?
+    conditions << positive_due_amount_filter unless filters.positive_due_amount.nil?
+    conditions << ms.eq("partially_paid", ms.boolean(filters.partially_paid)) unless filters.partially_paid.nil?
+    conditions << ms.eq("subscription_ids", filters.subscription_id) if filters.subscription_id.present?
+    conditions << ms.in_list("settlement_types", valid_settlements) if valid_settlements.present?
+    conditions.concat(metadata_filters) if filters.metadata.present?
+
+    conditions
+  end
+
+  def meilisearch_statuses
+    visible_keys = Invoice::VISIBLE_STATUS.keys.map(&:to_s)
+    if filters.status.present?
+      Array(filters.status).map(&:to_s) & visible_keys
+    else
+      visible_keys
+    end
+  end
+
+  def positive_due_amount_filter
+    ms = Lago::Meilisearch::Filter
+    if ms.boolean(filters.positive_due_amount)
+      ms.gt("due_amount_cents", 0)
+    else
+      ms.lte("due_amount_cents", 0)
+    end
+  end
+
+  def metadata_filters
+    ms = Lago::Meilisearch::Filter
+    conditions = []
+    presence_filters = filters.metadata.select { |_k, v| v.present? }
+    absence_filters = filters.metadata.select { |_k, v| v.blank? }
+
+    presence_filters.each { |key, value| conditions << ms.eq("metadata", "#{key}::#{value}") }
+    conditions << ms.not_in_list("metadata_keys", absence_filters.keys) if absence_filters.any?
+
+    conditions
+  end
 
   def filters_contract
     @filters_contract ||= Queries::InvoicesQueryFiltersContract.new
   end
 
   def base_scope
-    organization.invoices.ransack(search_params)
+    scope = organization.invoices
+    return scope if search_term.blank?
+
+    scope = scope.with(matching_customers: matching_customers) if search_customers?
+    scope
+      .with(matching_invoices: matching_invoices)
+      .where("invoices.id IN (SELECT id FROM matching_invoices)")
   end
 
-  def search_params
-    return if search_term.blank?
-
-    {
-      m: "or",
-      id_cont: search_term,
-      number_cont: search_term
-    }
+  def search_customers?
+    filters.customer_id.blank? && filters.customer_external_id.blank?
   end
 
-  def with_customers_filter(scope)
-    return scope if search_term.blank? || filters.customer_id.present?
+  def matching_customers
+    escaped_term = "%#{Customer.sanitize_sql_like(search_term)}%"
 
-    matching_customer_ids = organization.customers
-      .ransack(
-        m: "or",
-        name_cont: search_term,
-        firstname_cont: search_term,
-        lastname_cont: search_term,
-        external_id_cont: search_term,
-        email_cont: search_term
-      ).result.select(:id)
+    organization.customers
+      .where(
+        "customers.name ILIKE :term OR customers.firstname ILIKE :term " \
+        "OR customers.lastname ILIKE :term OR customers.external_id ILIKE :term " \
+        "OR customers.email ILIKE :term",
+        term: escaped_term
+      )
+      .select(:id)
+  end
 
-    scope.or(
-      organization.invoices.where(customer_id: matching_customer_ids)
-    )
+  def matching_invoices
+    escaped_term = "%#{Invoice.sanitize_sql_like(search_term)}%"
+    search_base = organization.invoices
+
+    branches = [
+      search_base.where("invoices.number ILIKE ?", escaped_term).select(:id)
+    ]
+
+    branches << search_base.where(id: search_term).select(:id) if search_term.match?(BaseQuery::UUID_REGEX)
+
+    if search_customers?
+      branches << search_base.where("invoices.customer_id IN (SELECT id FROM matching_customers)").select(:id)
+    end
+
+    union_sql = branches.map(&:to_sql).join(" UNION ")
+    Invoice.unscoped.from("(#{union_sql}) AS invoices").select(:id)
   end
 
   def with_billing_entity_ids(scope)

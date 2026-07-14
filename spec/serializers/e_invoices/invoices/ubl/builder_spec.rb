@@ -29,8 +29,43 @@ RSpec.describe EInvoices::Invoices::Ubl::Builder do
         expect(subject).to contains_xml_node("//cbc:UBLVersionID").with_value(2.1)
       end
 
-      it "has CustomizationID tag" do
-        expect(subject).to contains_xml_node("//cbc:CustomizationID").with_value("urn:cen.eu:en16931:2017")
+      context "when CustomizationID tag" do
+        context "with a non-DE billing entity" do
+          before { invoice.billing_entity.update!(country: "FR") }
+
+          it "uses the EN 16931 profile" do
+            expect(subject).to contains_xml_node("//cbc:CustomizationID")
+              .with_value("urn:cen.eu:en16931:2017")
+          end
+        end
+
+        context "with a German billing entity" do
+          before { invoice.billing_entity.update!(country: "DE") }
+
+          it "uses the XRechnung 3.0 profile" do
+            expect(subject).to contains_xml_node("//cbc:CustomizationID")
+              .with_value("urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0")
+          end
+        end
+      end
+
+      context "when ProfileID tag" do
+        context "with a non-DE billing entity" do
+          before { invoice.billing_entity.update!(country: "FR") }
+
+          it "does not insert ProfileID" do
+            expect(subject).not_to contains_xml_node("//cbc:ProfileID")
+          end
+        end
+
+        context "with a German billing entity" do
+          before { invoice.billing_entity.update!(country: "DE") }
+
+          it "insert the Peppol BIS Billing 3.0 ProfileID" do
+            expect(subject).to contains_xml_node("//cbc:ProfileID")
+              .with_value("urn:fdc:peppol.eu:2017:poacc:billing:01:1.0")
+          end
+        end
       end
 
       it "has ID tag" do
@@ -70,6 +105,20 @@ RSpec.describe EInvoices::Invoices::Ubl::Builder do
 
       it "has DocumentCurrencyCode tag" do
         expect(subject).to contains_xml_node("//cbc:DocumentCurrencyCode").with_value(invoice.currency)
+      end
+    end
+
+    context "when OrderReference tag" do
+      it "is absent without a purchase order number" do
+        expect(subject).not_to contains_xml_node("//cac:OrderReference")
+      end
+
+      context "with a purchase order number" do
+        before { invoice.update!(purchase_order_number: "PO-12345") }
+
+        it "contains the purchase order number" do
+          expect(subject).to contains_xml_node("//cac:OrderReference/cbc:ID").with_value("PO-12345")
+        end
       end
     end
 
@@ -152,6 +201,20 @@ RSpec.describe EInvoices::Invoices::Ubl::Builder do
 
       it "has the STANDARD_PAYMENT" do
         expect(subject).to contains_xml_node("//cac:PaymentMeans//cbc:PaymentMeansCode").with_value(1)
+      end
+
+      it "emits exactly one PaymentMeans block" do
+        expect(subject.xpath("//cac:PaymentMeans").length).to eq(1)
+      end
+
+      context "with prepaid credit and credit notes applied" do
+        before do
+          invoice.update(net_payment_term: 2, prepaid_credit_amount: 10, credit_notes_amount: 20)
+        end
+
+        it "still emits exactly one PaymentMeans block" do
+          expect(subject.xpath("//cac:PaymentMeans").length).to eq(1)
+        end
       end
     end
 

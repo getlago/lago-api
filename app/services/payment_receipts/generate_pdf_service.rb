@@ -2,6 +2,8 @@
 
 module PaymentReceipts
   class GeneratePdfService < BaseService
+    Result = BaseResult[:payment_receipt]
+
     def initialize(payment_receipt:, context: nil)
       @payment_receipt = payment_receipt
       @context = context
@@ -33,7 +35,7 @@ module PaymentReceipts
     def generate_pdf
       I18n.with_locale(payment_receipt.payment.customer.preferred_document_locale) do
         pdf_file = build_pdf_file
-        xml_file = attach_facturx(pdf_file) if should_generate_facturx_einvoice_xml?
+        xml_file = attach_cii(pdf_file) if should_generate_cii_einvoice_xml?
         attach_pdf_to_payment_receipt(pdf_file)
         payment_receipt.save!
       ensure
@@ -52,9 +54,9 @@ module PaymentReceipts
       pdf_file
     end
 
-    def attach_facturx(pdf_file)
+    def attach_cii(pdf_file)
       xml_file = Tempfile.new([payment_receipt.number, ".xml"])
-      xml_file.write(EInvoices::Payments::FacturX::CreateService.call(payment: payment_receipt.payment).xml)
+      xml_file.write(EInvoices::Payments::Cii::CreateService.call(payment: payment_receipt.payment).xml)
       xml_file.flush
 
       Utils::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)
@@ -69,8 +71,8 @@ module PaymentReceipts
       )
     end
 
-    def should_generate_facturx_einvoice_xml?
-      payment_receipt.billing_entity.einvoicing && BillingEntity::EINVOICING_COUNTRIES.include?(payment_receipt.billing_entity.country.try(:upcase))
+    def should_generate_cii_einvoice_xml?
+      payment_receipt.billing_entity.eligible_for_einvoicing?
     end
 
     def should_generate_pdf?

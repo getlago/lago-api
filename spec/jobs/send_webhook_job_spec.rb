@@ -75,14 +75,13 @@ RSpec.describe SendWebhookJob do
 
       before do
         allow(Webhooks::Invoices::CreatedService).to receive(:new)
-        allow(SendHttpWebhookJob).to receive(:perform_later)
       end
 
       it "calls the webhook invoice service" do
         webhook = create(:webhook, webhook_endpoint: create(:webhook_endpoint, organization:))
         send_webhook_job.perform_now("invoice.created", invoice, {}, webhook.id)
 
-        expect(SendHttpWebhookJob).to have_received(:perform_later).with(webhook)
+        expect(SendHttpWebhookJob).to have_been_enqueued.with(webhook)
         expect(Webhooks::Invoices::CreatedService).not_to have_received(:new)
       end
     end
@@ -724,6 +723,22 @@ RSpec.describe SendWebhookJob do
         expect(Webhooks::Payments::SucceededService).to have_received(:new)
         expect(webhook_service).to have_received(:call)
       end
+    end
+
+    context "with billable metric webhooks" do
+      let(:object) { create(:billable_metric, organization:) }
+
+      it_behaves_like "a webhook service",
+        "billable_metric.created",
+        Webhooks::BillableMetrics::CreatedService
+
+      it_behaves_like "a webhook service",
+        "billable_metric.updated",
+        Webhooks::BillableMetrics::UpdatedService
+
+      it_behaves_like "a webhook service",
+        "billable_metric.deleted",
+        Webhooks::BillableMetrics::DeletedService
     end
 
     context "when webhook_type is dunning_campaign.finished" do

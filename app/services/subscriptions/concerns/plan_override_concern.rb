@@ -7,7 +7,7 @@ module Subscriptions
 
       private
 
-      def ensure_plan_override
+      def ensure_plan_override(params: {})
         current_plan = subscription.plan
 
         if current_plan.parent_id
@@ -15,7 +15,7 @@ module Subscriptions
         else
           override_result = Plans::OverrideService.call!(
             plan: current_plan,
-            params: {},
+            params:,
             subscription:
           )
           subscription.update!(plan: override_result.plan)

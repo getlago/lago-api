@@ -49,7 +49,7 @@ module ChargeFilters
     def filtered_properties
       ChargeModels::FilterPropertiesService.call(
         chargeable: charge,
-        properties: params[:properties]
+        properties: params[:properties]&.deep_symbolize_keys&.except(:presentation_group_keys)
       ).properties
     end
   end

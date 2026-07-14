@@ -67,7 +67,7 @@ module Webhooks
       # Question: When can this be a hash?
       webhook.object_id = object.is_a?(Hash) ? object.fetch(:id, nil) : object&.id
       webhook.object_type = object.is_a?(Hash) ? object.fetch(:class, nil) : object&.class&.to_s
-      webhook.payload = payload
+      webhook.store_payload(payload)
       webhook.pending!
       webhook
     end

@@ -2,6 +2,9 @@
 
 module Subscriptions
   class CreateService < BaseService
+    include Subscriptions::Concerns::BillingEntityResolutionConcern
+    include Subscriptions::Concerns::FixedChargeUnitsOverrideDetectionConcern
+
     Result = BaseResult[:subscription, :payment_method]
 
     def initialize(customer:, plan:, params:)
@@ -59,6 +62,12 @@ module Subscriptions
 
           @current_subscription = editable_subscriptions
             .find_by("id = ? OR external_id = ?", params[:subscription_id], external_id)
+
+          if current_subscription.nil? &&
+              customer.organization.subscriptions.active.exists?(external_id:)
+            result.validation_failure!(errors: {external_id: ["value_already_exist"]})
+            result.raise_if_error!
+          end
 
           subscription = handle_subscription
 
@@ -119,28 +128,20 @@ module Subscriptions
       plan.yearly_amount_cents < current_subscription.plan.yearly_amount_cents
     end
 
-    def should_be_billed_today?(sub)
-      sub.active? && sub.subscription_at.today? && plan.pay_in_advance? && !sub.in_trial_period?
-    end
-
-    def fixed_charges_billed_today?(sub)
-      return false if !(sub.active? && sub.started_at.today?)
-      return false if sub.fixed_charges.pay_in_advance.none?
-
-      !sub.plan.pay_in_advance? || sub.in_trial_period?
-    end
-
     def create_subscription
       new_subscription = Subscription.new(
         organization_id: customer.organization_id,
         customer:,
-        plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
+        plan: target_plan_for_new_subscription,
         subscription_at:,
         name:,
         external_id:,
         billing_time: billing_time || :calendar,
         ending_at: params[:ending_at],
-        progressive_billing_disabled: params[:progressive_billing_disabled] || false
+        purchase_order_number: params[:purchase_order_number],
+        progressive_billing_disabled: params[:progressive_billing_disabled] || false,
+        consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : true,
+        billing_entity: resolve_billing_entity(organization: customer.organization, params:)
       )
 
       if params.key?(:payment_method)
@@ -148,57 +149,57 @@ module Subscriptions
         new_subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
-      if new_subscription.subscription_at > Time.current
-        new_subscription.pending!
-        apply_activation_rules(new_subscription)
-      elsif new_subscription.subscription_at < Time.current
-        new_subscription.mark_as_active!(new_subscription.subscription_at)
+      if units_only_plan_overrides_change?
+        new_subscription.status = :pending
+        new_subscription.save!
+        create_fixed_charge_units_overrides(new_subscription)
+      end
+
+      timezone = customer.applicable_timezone
+      today = Time.current.in_time_zone(timezone).to_date
+      subscription_date = new_subscription.subscription_at.in_time_zone(timezone).to_date
+
+      if subscription_date == today
+        handle_today_subscription(new_subscription)
+      elsif subscription_date < today
+        handle_past_subscription(new_subscription)
       else
-        new_subscription.mark_as_active!
-      end
-
-      if new_subscription.active?
-        EmitFixedChargeEventsService.call!(
-          subscriptions: [new_subscription],
-          timestamp: new_subscription.started_at + 1.second
-        )
-
-        after_commit do
-          if fixed_charges_billed_today?(new_subscription)
-            Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(
-              new_subscription,
-              new_subscription.started_at + 1.second
-            )
-          end
-        end
-      end
-
-      if should_be_billed_today?(new_subscription)
-        # NOTE: Since job is launched from inside a db transaction
-        #       we must wait for it to be committed before processing the job.
-        #       We do not set offset anymore but instead retry jobs
-        after_commit do
-          BillSubscriptionJob.perform_later(
-            [new_subscription],
-            Time.zone.now.to_i,
-            invoicing_reason: :subscription_starting,
-            skip_charges: true
-          )
-        end
-      end
-
-      if new_subscription.active?
-        after_commit do
-          SendWebhookJob.perform_later("subscription.started", new_subscription)
-          Utils::ActivityLog.produce(new_subscription, "subscription.started")
-        end
-      end
-
-      if new_subscription.should_sync_hubspot_subscription?
-        after_commit { Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription: new_subscription) }
+        handle_future_subscription(new_subscription)
       end
 
       new_subscription
+    end
+
+    def handle_today_subscription(new_subscription)
+      new_subscription.pending!
+      apply_activation_rules(new_subscription)
+      ActivateService.call!(
+        subscription: new_subscription,
+        timestamp: new_subscription.subscription_at
+      )
+    end
+
+    def handle_past_subscription(new_subscription)
+      new_subscription.mark_as_active!(new_subscription.subscription_at)
+
+      EmitFixedChargeEventsService.call!(
+        subscriptions: [new_subscription],
+        timestamp: new_subscription.started_at + 1.second
+      )
+
+      after_commit do
+        SendWebhookJob.perform_later("subscription.started", new_subscription)
+        Utils::ActivityLog.produce(new_subscription, "subscription.started")
+
+        if new_subscription.should_sync_hubspot_subscription?
+          Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription: new_subscription)
+        end
+      end
+    end
+
+    def handle_future_subscription(new_subscription)
+      new_subscription.pending!
+      apply_activation_rules(new_subscription)
     end
 
     def upgrade_subscription
@@ -206,53 +207,7 @@ module Subscriptions
     end
 
     def downgrade_subscription
-      if current_subscription.starting_in_the_future?
-        update_pending_subscription
-
-        return current_subscription
-      end
-
-      cancel_pending_subscription if pending_subscription?
-
-      # NOTE: When downgrading a subscription, we keep the current one active
-      #       until the next billing day. The new subscription will become active at this date
-      new_sub = current_subscription.next_subscriptions.create!(
-        organization_id: customer.organization_id,
-        customer:,
-        plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
-        name:,
-        external_id: current_subscription.external_id,
-        subscription_at: current_subscription.subscription_at,
-        status: :pending,
-        billing_time: current_subscription.billing_time,
-        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
-        progressive_billing_disabled: params[:progressive_billing_disabled] || false
-      )
-
-      if params.key?(:payment_method)
-        new_sub.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
-        new_sub.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
-        new_sub.save!
-      end
-
-      InvoiceCustomSections::AttachToResourceService.call(resource: new_sub, params:)
-
-      after_commit do
-        SendWebhookJob.perform_later("subscription.updated", current_subscription)
-        Utils::ActivityLog.produce(current_subscription, "subscription.updated")
-      end
-
-      current_subscription
-    end
-
-    def pending_subscription?
-      return false unless current_subscription&.next_subscription
-
-      current_subscription.next_subscription.pending?
-    end
-
-    def cancel_pending_subscription
-      current_subscription.next_subscription.mark_as_canceled!
+      PlanDowngradeService.call!(customer:, current_subscription:, plan:, params:).subscription
     end
 
     def subscription_type
@@ -266,16 +221,6 @@ module Subscriptions
       return false unless old_plan
 
       old_plan.amount_currency != new_plan.amount_currency
-    end
-
-    def update_pending_subscription
-      current_subscription.plan = plan
-      current_subscription.name = name if name.present?
-      current_subscription.save!
-
-      if current_subscription.should_sync_hubspot_subscription?
-        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: current_subscription)
-      end
     end
 
     def apply_activation_rules(subscription)
@@ -297,6 +242,37 @@ module Subscriptions
 
     def override_plan(plan)
       Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
+    end
+
+    def target_plan_for_new_subscription
+      return plan if units_only_plan_overrides_change?
+      return override_plan(plan) if params.key?(:plan_overrides)
+
+      plan
+    end
+
+    def units_only_plan_overrides_change?
+      return @units_only_plan_overrides_change if defined?(@units_only_plan_overrides_change)
+
+      @units_only_plan_overrides_change = !plan.parent_id &&
+        params.key?(:plan_overrides) &&
+        units_only_fixed_charges_plan_overrides?(params[:plan_overrides])
+    end
+
+    def create_fixed_charge_units_overrides(subscription)
+      params[:plan_overrides][:fixed_charges].each do |entry|
+        entry = entry.to_h.symbolize_keys
+
+        fixed_charge = plan.fixed_charges.find_by(id: entry[:id])
+        result.not_found_failure!(resource: "fixed_charge").raise_if_error! unless fixed_charge
+
+        ::Subscription::FixedChargeUnitsOverride.create!(
+          subscription:,
+          fixed_charge:,
+          organization: subscription.organization,
+          units: entry[:units]
+        )
+      end
     end
 
     def payment_method

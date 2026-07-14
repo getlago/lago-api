@@ -59,7 +59,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       standard_charge
       event
 
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
@@ -199,7 +198,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
     it "calls SegmentTrackJob" do
       invoice = finalize_service.call.invoice
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "invoice_created",
         properties: {
@@ -250,7 +249,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
         invoice = finalize_service.call.invoice
         credit_note = invoice.credit_notes.first
 
-        expect(SegmentTrackJob).to have_received(:perform_later).with(
+        expect(SegmentTrackJob).to have_been_enqueued.with(
           membership_id: CurrentContext.membership,
           event: "credit_note_issued",
           properties: {
@@ -290,9 +289,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
         invoice.update(issuing_date: Time.current + 3.months)
 
         allow(Invoices::ApplyProviderTaxesService).to receive(:call).and_call_original
-        allow(SendWebhookJob).to receive(:perform_later).and_call_original
-        allow(Invoices::GenerateDocumentsJob).to receive(:perform_later).and_call_original
-        allow(Integrations::Aggregator::Invoices::CreateJob).to receive(:perform_later).and_call_original
         allow(Invoices::Payments::CreateService).to receive(:new).and_call_original
         allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
       end
@@ -315,9 +311,9 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
 
         it "does not send any updates" do
           finalize_service.call
-          expect(SendWebhookJob).not_to have_received(:perform_later).with("invoice.created", invoice)
-          expect(Invoices::GenerateDocumentsJob).not_to have_received(:perform_later)
-          expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_received(:perform_later)
+          expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", invoice)
+          expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
+          expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_been_enqueued
           expect(Invoices::Payments::CreateService).not_to have_received(:new)
           expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
         end
@@ -342,6 +338,34 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       end
 
       it "does not update the invoice" do
+        expect { finalize_service.call }.not_to change { invoice.reload.status }
+      end
+    end
+
+    context "when invoice is a draft awaiting taxes" do
+      let(:invoice) do
+        create(
+          :invoice,
+          :draft,
+          :with_subscriptions,
+          organization:,
+          customer:,
+          subscriptions: [subscription],
+          currency: "EUR",
+          tax_status: :pending,
+          issuing_date: Time.zone.at(timestamp).to_date
+        )
+      end
+
+      it "returns a forbidden failure with cannot_finalize_with_pending_taxes code" do
+        result = finalize_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("cannot_finalize_with_pending_taxes")
+      end
+
+      it "does not change the invoice status" do
         expect { finalize_service.call }.not_to change { invoice.reload.status }
       end
     end

@@ -4,6 +4,7 @@ class CustomersQuery < BaseQuery
   Result = BaseResult[:customers]
   Filters = BaseFilters[
     :organization_id,
+    :external_id,
     :account_type,
     :billing_entity_ids,
     :with_deleted,
@@ -19,11 +20,14 @@ class CustomersQuery < BaseQuery
     :has_customer_type
   ]
 
+  SEARCHABLE_FIELDS = %i[name firstname lastname legal_name external_id email].freeze
+
   def call
     return result unless validate_filters.success?
 
-    customers = base_scope.result
+    customers = base_scope
 
+    customers = with_external_id(customers) if filters.external_id.present?
     customers = with_customer_type(customers) if filters.customer_type.present? || filters.key?(:has_customer_type)
     customers = with_account_type(customers) if filters.account_type.present?
     customers = with_billing_entity_ids(customers) if filters.billing_entity_ids.present?
@@ -52,7 +56,30 @@ class CustomersQuery < BaseQuery
   end
 
   def base_scope
-    Customer.where(organization:).ransack(search_params)
+    scope = Customer.where(organization:)
+
+    return scope if search_term.blank?
+    return scope if filters.external_id.present?
+
+    scope.where(id: matching_ids_by_search)
+  end
+
+  def matching_ids_by_search
+    search_base = Customer.where(organization:)
+    search_base = search_base.with_discarded if filters.with_deleted
+
+    escaped_term = "%#{Customer.sanitize_sql_like(search_term)}%"
+
+    branches = SEARCHABLE_FIELDS.map do |field|
+      search_base.where("customers.#{field} ILIKE ?", escaped_term).select(:id)
+    end
+
+    union_sql = branches.map(&:to_sql).join(" UNION ")
+    Customer.unscoped.from("(#{union_sql}) AS customers").select(:id)
+  end
+
+  def with_external_id(scope)
+    scope.where(external_id: filters.external_id)
   end
 
   def with_currencies(scope)
@@ -88,20 +115,6 @@ class CustomersQuery < BaseQuery
     end
 
     scope
-  end
-
-  def search_params
-    return if search_term.blank?
-
-    {
-      m: "or",
-      name_cont: search_term,
-      firstname_cont: search_term,
-      lastname_cont: search_term,
-      legal_name_cont: search_term,
-      external_id_cont: search_term,
-      email_cont: search_term
-    }
   end
 
   def with_has_tax_identification_number(scope)

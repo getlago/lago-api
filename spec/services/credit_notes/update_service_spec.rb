@@ -21,11 +21,9 @@ RSpec.describe CreditNotes::UpdateService do
   end
 
   it "call SegmentTrackJob" do
-    allow(SegmentTrackJob).to receive(:perform_later)
-
     credit_note_service.call
 
-    expect(SegmentTrackJob).to have_received(:perform_later).with(
+    expect(SegmentTrackJob).to have_been_enqueued.with(
       membership_id: CurrentContext.membership,
       event: "refund_status_changed",
       properties: {
@@ -77,6 +75,12 @@ RSpec.describe CreditNotes::UpdateService do
         expect(result).to be_success
         expect(credit_note.reload.metadata).to be_nil
       end
+
+      it "touches the credit note" do
+        travel_to(1.minute.from_now) do
+          expect { credit_note_service.call }.to change { credit_note.reload.updated_at }
+        end
+      end
     end
 
     context "when creating metadata" do
@@ -99,6 +103,12 @@ RSpec.describe CreditNotes::UpdateService do
         expect(result).to be_success
         expect(credit_note.reload.metadata.value).to eq({"baz" => "qux"})
       end
+
+      it "touches the credit note" do
+        travel_to(1.minute.from_now) do
+          expect { credit_note_service.call }.to change { credit_note.reload.updated_at }
+        end
+      end
     end
 
     context "when merging metadata" do
@@ -112,6 +122,35 @@ RSpec.describe CreditNotes::UpdateService do
 
         expect(result).to be_success
         expect(credit_note.reload.metadata.value).to eq({"foo" => "bar", "baz" => "qux"})
+      end
+    end
+
+    context "when there is no metadata change" do
+      let(:params) { {} }
+
+      before { create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar"}) }
+
+      it "does not touch the credit note" do
+        expect { credit_note_service.call }.not_to change { credit_note.reload.updated_at }
+      end
+
+      it "keeps the existing metadata" do
+        credit_note_service.call
+
+        expect(credit_note.reload.metadata.value).to eq({"foo" => "bar"})
+      end
+    end
+
+    context "when metadata param is omitted" do
+      let(:params) { {refund_status: "succeeded"} }
+
+      before { create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar"}) }
+
+      it "keeps the existing metadata" do
+        result = credit_note_service.call
+
+        expect(result).to be_success
+        expect(credit_note.reload.metadata.value).to eq({"foo" => "bar"})
       end
     end
   end

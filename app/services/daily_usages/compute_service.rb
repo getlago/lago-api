@@ -2,6 +2,8 @@
 
 module DailyUsages
   class ComputeService < BaseService
+    Result = BaseResult[:daily_usage]
+
     def initialize(subscription:, timestamp:)
       @subscription = subscription
       @timestamp = timestamp
@@ -19,9 +21,9 @@ module DailyUsages
         return result
       end
 
-      if current_usage.total_amount_cents.positive?
-        current_usage.fees = current_usage.fees.select { |f| f.units.positive? }
+      current_usage.fees = current_usage.fees.select(&:non_zero?)
 
+      if current_usage.fees.any?
         daily_usage = DailyUsage.new(
           organization: subscription.organization,
           customer: subscription.customer,

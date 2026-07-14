@@ -2,6 +2,8 @@
 
 module Charges
   class PayInAdvanceAggregationService < BaseService
+    Result = BaseResult
+
     def initialize(charge:, boundaries:, properties:, event:, charge_filter: nil)
       @charge = charge
       @boundaries = boundaries
@@ -51,6 +53,9 @@ module Charges
         grouped_by_values["target_wallet_code"] = event.properties["target_wallet_code"]
       end
       filters[:grouped_by_values] = grouped_by_values if grouped_by_values.present?
+
+      presentation_group_keys_values = charge.presentation_group_keys_values
+      filters[:presentation_by] = presentation_group_keys_values if presentation_group_keys_values.present?
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)

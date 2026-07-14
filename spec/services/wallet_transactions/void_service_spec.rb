@@ -126,6 +126,23 @@ RSpec.describe WalletTransactions::VoidService do
       end
     end
 
+    context "with an inbound_wallet_transaction reference" do
+      let(:original_billing_entity) { create(:billing_entity, organization:) }
+      let(:new_billing_entity) { create(:billing_entity, organization:) }
+      let(:inbound_wallet_transaction) do
+        create(:wallet_transaction, wallet:, billing_entity: original_billing_entity)
+      end
+      let(:args) { {inbound_wallet_transaction:} }
+
+      before do
+        wallet.update!(billing_entity: new_billing_entity)
+      end
+
+      it "inherits the original transaction's billing entity, not the wallet's current one" do
+        expect(result.wallet_transaction.billing_entity_id).to eq(original_billing_entity.id)
+      end
+    end
+
     context "when wallet is traceable" do
       let(:wallet) do
         create(
@@ -678,8 +695,8 @@ RSpec.describe WalletTransactions::VoidService do
       context "when it fails to acquire the lock" do
         let(:lock_released_after) { 2.seconds }
 
-        it "raises a Customers::FailedToAcquireLock error" do
-          expect { subject }.to raise_error(Customers::FailedToAcquireLock)
+        it "raises a BaseLockService::FailedToAcquireLock error" do
+          expect { subject }.to raise_error(BaseLockService::FailedToAcquireLock)
         end
       end
 

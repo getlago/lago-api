@@ -39,7 +39,7 @@ zh-TW:
       discount_reason: 折扣 %{tax_rate} 部分
       payment_information: 已套用 %{currency} %{amount} 的%{payment_label}
       standard_payment: 標準付款
-    fee_prorated: 費用依使用天數按比例計算，顯示的單價為平均值
+    fee_prorated: 費用依期間按比例計算，顯示的單價為平均值
     fees_from_to_date: 費用期間：%{from_date} 至 %{to_date}
     from_to_date: "%{from_date} 至 %{to_date}"
     graduated:
@@ -80,6 +80,7 @@ zh-TW:
     prepaid_credits: 預付點數
     prepaid_credits_with_value: 預付點數 - %{wallet_name}
     progressive_billing_credit: 已計費的使用量
+    purchase_order_number: 採購訂單編號
     quarter: 季
     quarterly: 每季
     reached_usage_threshold: 此累進計費因您的累積使用量已達到 %{usage_amount}，超過 %{threshold_amount} 的門檻而產生。

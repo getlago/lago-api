@@ -50,7 +50,6 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
           "currency" => "chf",
           "status" => "paid"
         ))
-      allow(SegmentTrackJob).to receive(:perform_later)
     end
 
     it "creates a gocardless refund" do
@@ -61,6 +60,8 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
       expect(result.refund.id).to be_present
 
       expect(result.refund.credit_note).to eq(credit_note)
+      expect(result.refund.refundable).to eq(credit_note)
+      expect(result.refund.reason).to eq("credit_note")
       expect(result.refund.payment).to eq(payment)
       expect(result.refund.payment_provider).to eq(gocardless_payment_provider)
       expect(result.refund.payment_provider_customer).to eq(gocardless_customer)
@@ -75,7 +76,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
     it "call SegmentTrackJob" do
       gocardless_service.create
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "refund_status_changed",
         properties: {
@@ -240,14 +241,12 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
     end
 
     it "calls SegmentTrackJob" do
-      allow(SegmentTrackJob).to receive(:perform_later)
-
       gocardless_service.update_status(
         provider_refund_id: refund.provider_refund_id,
         status: "paid"
       )
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "refund_status_changed",
         properties: {

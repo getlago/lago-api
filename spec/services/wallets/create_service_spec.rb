@@ -63,6 +63,10 @@ RSpec.describe Wallets::CreateService do
       expect(Utils::ActivityLog).to have_produced("wallet.created").after_commit.with(wallet)
     end
 
+    it "flags the customer for ongoing balance refresh" do
+      expect { service_result }.to change { customer.reload.awaiting_wallet_refresh }.from(false).to(true)
+    end
+
     it "enqueues the WalletTransaction::CreateJob" do
       expect { service_result }.to have_enqueued_job_after_commit(WalletTransactions::CreateJob).with({
         organization_id: organization.id,
@@ -74,7 +78,8 @@ RSpec.describe Wallets::CreateService do
           metadata: nil,
           name: nil,
           priority: nil,
-          ignore_paid_top_up_limits: ignore_paid_top_up_limits_on_creation
+          ignore_paid_top_up_limits: ignore_paid_top_up_limits_on_creation,
+          purchase_order_number: nil
         }
       })
     end
@@ -157,6 +162,39 @@ RSpec.describe Wallets::CreateService do
       it "returns an error" do
         expect(service_result).not_to be_success
         expect(service_result.error.messages[:paid_credits]).to eq(["invalid_paid_credits", "invalid_amount"])
+      end
+    end
+
+    context "when purchase_order_number is too long" do
+      let(:params) do
+        super().merge(purchase_order_number: "a" * 256)
+      end
+
+      it "returns a validation error" do
+        expect { service_result }.not_to change(Wallet, :count)
+
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:purchase_order_number]).to eq(["value_is_too_long"])
+      end
+    end
+
+    context "when the initial credits round to zero monetary value" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "0.01",
+          granted_credits: "0.4"
+        }
+      end
+
+      it "does not create the wallet and returns a validation error" do
+        expect { service_result }.not_to change(Wallet, :count)
+        expect(service_result).not_to be_success
+        expect(service_result.error).to be_a(BaseService::ValidationFailure)
+        expect(service_result.error.messages[:granted_credits]).to eq(["amount_rounds_to_zero"])
       end
     end
 
@@ -503,6 +541,62 @@ RSpec.describe Wallets::CreateService do
         wallet = service_result.wallet
         expect(wallet.name).to eq("New Wallet")
         expect(wallet.reload.recurring_transaction_rules.count).to eq(1)
+      end
+
+      context "when wallet and recurring transaction rule have purchase order numbers" do
+        let(:params) do
+          super().merge(purchase_order_number: "PO-WALLET")
+        end
+        let(:rules) do
+          [
+            {
+              interval: "monthly",
+              method: "target",
+              paid_credits: "10.0",
+              granted_credits: "5.0",
+              target_ongoing_balance: "100.0",
+              trigger: "interval",
+              purchase_order_number: "PO-RULE"
+            }
+          ]
+        end
+
+        it "persists both purchase order numbers and enqueues the initial top-up with the rule value" do
+          expect { service_result }.to have_enqueued_job(WalletTransactions::CreateJob).with(
+            organization_id: organization.id,
+            params: hash_including(purchase_order_number: "PO-RULE")
+          )
+
+          wallet = service_result.wallet.reload
+          expect(wallet.purchase_order_number).to eq("PO-WALLET")
+          expect(wallet.recurring_transaction_rules.sole.purchase_order_number).to eq("PO-RULE")
+        end
+      end
+
+      context "when recurring transaction rule purchase order number is blank" do
+        let(:params) do
+          super().merge(purchase_order_number: "PO-WALLET")
+        end
+        let(:rules) do
+          [
+            {
+              interval: "monthly",
+              method: "target",
+              paid_credits: "10.0",
+              granted_credits: "5.0",
+              target_ongoing_balance: "100.0",
+              trigger: "interval",
+              purchase_order_number: "   "
+            }
+          ]
+        end
+
+        it "enqueues the initial top-up with the wallet purchase order number" do
+          expect { service_result }.to have_enqueued_job(WalletTransactions::CreateJob).with(
+            organization_id: organization.id,
+            params: hash_including(purchase_order_number: "PO-WALLET")
+          )
+        end
       end
 
       context "when recurring transaction rule has transaction_name" do
@@ -986,6 +1080,210 @@ RSpec.describe Wallets::CreateService do
             expect(wallet.code).to eq("existing_name")
           end
         end
+      end
+    end
+
+    context "when multi_entity_billing is enabled" do
+      let!(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
+
+      before do
+        organization.update!(feature_flags: ["multi_entity_billing"])
+      end
+
+      context "when billing_entity_code is provided" do
+        let(:params) do
+          {
+            name: "New Wallet",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits: "0.00",
+            granted_credits: "0.00",
+            billing_entity_code: "be_code"
+          }
+        end
+
+        it "assigns the billing entity to the wallet" do
+          expect(service_result).to be_success
+
+          wallet = service_result.wallet
+          expect(wallet.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+
+      context "when billing_entity_id is provided" do
+        let(:params) do
+          {
+            name: "New Wallet",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits: "0.00",
+            granted_credits: "0.00",
+            billing_entity_id: billing_entity.id
+          }
+        end
+
+        it "assigns the billing entity to the wallet" do
+          expect(service_result).to be_success
+
+          wallet = service_result.wallet
+          expect(wallet.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+
+      context "when neither billing_entity_code nor billing_entity_id is provided" do
+        it "creates the wallet without a billing entity" do
+          expect(service_result).to be_success
+
+          wallet = service_result.wallet
+          expect(wallet.billing_entity_id).to be_nil
+        end
+      end
+
+      context "when billing_entity_code does not match any entity" do
+        let(:params) do
+          {
+            name: "New Wallet",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits: "0.00",
+            granted_credits: "0.00",
+            billing_entity_code: "nonexistent"
+          }
+        end
+
+        it "returns a not found error" do
+          expect(service_result).not_to be_success
+          expect(service_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(service_result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when billing_entity_id belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+        let!(:other_billing_entity) { create(:billing_entity, organization: other_organization) }
+
+        let(:params) do
+          {
+            name: "New Wallet",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits: "0.00",
+            granted_credits: "0.00",
+            billing_entity_id: other_billing_entity.id
+          }
+        end
+
+        it "returns a not found error" do
+          expect(service_result).not_to be_success
+          expect(service_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(service_result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when billing_entity_code belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+        let!(:other_billing_entity) { create(:billing_entity, organization: other_organization, code: "other_org_be") }
+
+        let(:params) do
+          {
+            name: "New Wallet",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits: "0.00",
+            granted_credits: "0.00",
+            billing_entity_code: "other_org_be"
+          }
+        end
+
+        before { other_billing_entity }
+
+        it "returns a not found error" do
+          expect(service_result).not_to be_success
+          expect(service_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(service_result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when billing_entity_id does not match any entity" do
+        let(:params) do
+          {
+            name: "New Wallet",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits: "0.00",
+            granted_credits: "0.00",
+            billing_entity_id: SecureRandom.uuid
+          }
+        end
+
+        it "returns a not found error" do
+          expect(service_result).not_to be_success
+          expect(service_result.error).to be_a(BaseService::NotFoundFailure)
+          expect(service_result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when both billing_entity_id and billing_entity_code are provided" do
+        let!(:other_billing_entity) { create(:billing_entity, organization:, code: "other_be") }
+
+        let(:params) do
+          {
+            name: "New Wallet",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits: "0.00",
+            granted_credits: "0.00",
+            billing_entity_id: billing_entity.id,
+            billing_entity_code: other_billing_entity.code
+          }
+        end
+
+        it "billing_entity_id takes precedence" do
+          expect(service_result).to be_success
+
+          wallet = service_result.wallet
+          expect(wallet.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+    end
+
+    context "when multi_entity_billing is not enabled" do
+      let(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
+
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          paid_credits: "0.00",
+          granted_credits: "0.00",
+          billing_entity_code: "be_code"
+        }
+      end
+
+      before { billing_entity }
+
+      it "does not assign the billing entity even if code is provided" do
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.billing_entity_id).to be_nil
       end
     end
 

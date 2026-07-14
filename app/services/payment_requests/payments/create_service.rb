@@ -6,6 +6,8 @@ module PaymentRequests
       include Customers::PaymentProviderFinder
       include Updatable
 
+      Result = BaseResult[:payable, :payment, :payment_provider]
+
       def initialize(payable:, payment_provider: nil, payment_method_params: {})
         @payable = payable
         @provider = payment_provider&.to_sym
@@ -47,10 +49,8 @@ module PaymentRequests
           payable_payment_status: "pending"
         )
 
-        if organization.feature_flag_enabled?(:multiple_payment_methods)
-          payment.payment_method_id = determine_payment_method&.id
-          payment.save!
-        end
+        payment.payment_method_id = determine_payment_method&.id
+        payment.save!
 
         result.payment = payment
 
@@ -73,6 +73,11 @@ module PaymentRequests
 
         PaymentRequestMailer.with(payment_request: payable).requested.deliver_later if payable.payment_failed?
 
+        result
+      rescue Invoices::Payments::AlreadyPaidError
+        # The payment request was settled by another payment so we can drop the unused pending payment
+        result.payment&.destroy if result.payment&.provider_payment_id.nil?
+        result.payment = nil
         result
       rescue BaseService::ServiceFailure => e
         PaymentRequestMailer.with(payment_request: payable).requested.deliver_later
@@ -136,6 +141,8 @@ module PaymentRequests
 
       def update_invoices_payment_status(payment_status:)
         payable.invoices.each do |invoice|
+          next if invoice.payment_succeeded? && payment_status.to_sym != :succeeded
+
           Invoices::UpdateService.call!(
             invoice:,
             params: {

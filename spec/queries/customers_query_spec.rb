@@ -90,6 +90,22 @@ RSpec.describe CustomersQuery do
     expect(returned_ids).to include(customer_third.id)
   end
 
+  context "when filtering by external_id" do
+    let(:filters) { {external_id: customer_first.external_id} }
+
+    it "returns the customer with matching external_id" do
+      expect(result.customers).to match_array([customer_first])
+    end
+
+    context "when search_term is present" do
+      let(:search_term) { customer_second.external_id }
+
+      it "ignores the search_term" do
+        expect(result.customers).to match_array([customer_first])
+      end
+    end
+  end
+
   context "when filtering by customer_type" do
     context "when filtering by company" do
       let(:filters) { {customer_type: "company"} }
@@ -249,6 +265,48 @@ RSpec.describe CustomersQuery do
 
       it "returns only one customer" do
         expect(returned_ids).to eq([customer_first.id])
+      end
+    end
+
+    context "when the term matches several customers across different fields" do
+      let(:search_term) { "example" }
+
+      it "returns all matching customers without duplicates" do
+        expect(returned_ids).to match_array([customer_first.id, customer_second.id, customer_third.id])
+      end
+    end
+
+    context "when the term matches no customer" do
+      let(:search_term) { "nonexistent" }
+
+      it "returns no customer" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when the term contains LIKE wildcards" do
+      let(:search_term) { "d_fgh" }
+
+      it "matches the wildcards literally" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when a matching customer is discarded" do
+      let(:search_term) { "defgh" }
+
+      before { customer_first.discard! }
+
+      it "excludes the discarded customer by default" do
+        expect(returned_ids).to be_empty
+      end
+
+      context "with with_deleted filter" do
+        let(:filters) { {with_deleted: true} }
+
+        it "returns the discarded customer" do
+          expect(returned_ids).to eq([customer_first.id])
+        end
       end
     end
   end

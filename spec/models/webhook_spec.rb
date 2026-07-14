@@ -30,6 +30,105 @@ RSpec.describe Webhook do
         expect(subject).to eq(original_payload)
       end
     end
+
+    context "when payload stored on object storage" do
+      let(:webhook) { create(:webhook, payload: nil) }
+
+      before do
+        webhook.store_payload(original_payload)
+        webhook.save!
+      end
+
+      it "returns the payload read from object storage" do
+        expect(described_class.find(webhook.id).payload).to eq(original_payload)
+      end
+    end
+  end
+
+  describe "#response" do
+    subject { webhook.response }
+
+    context "when response stored on object storage" do
+      let(:webhook) { create(:webhook, response: nil) }
+      let(:original_response) { {"status" => "ok"} }
+
+      before do
+        webhook.store_response(original_response)
+        webhook.save!
+      end
+
+      it "returns the response read from object storage" do
+        expect(described_class.find(webhook.id).response).to eq(original_response)
+      end
+    end
+
+    context "when response stored in the database" do
+      let(:webhook) { create(:webhook, :failed) }
+
+      it "returns the response from the database" do
+        expect(subject).to eq(webhook.read_attribute(:response))
+      end
+    end
+  end
+
+  describe "#store_payload" do
+    subject(:webhook) { create(:webhook, payload: nil) }
+
+    let(:content) { {"foo" => "bar"} }
+
+    it "uploads the gzipped payload to object storage and stores the key" do
+      key = webhook.store_payload(content)
+
+      expect(key).to match(%r{\Awebhooks/\d{4}/\d{2}/\d{2}/[0-9a-f-]+/payload\.json\.gz\z})
+      expect(webhook.payload_key).to eq(key)
+      expect(ActiveSupport::Gzip.decompress(described_class.payload_storage.download(key))).to eq(content.to_json)
+    end
+
+    it "does not store the payload in the database" do
+      webhook.store_payload(content)
+      webhook.save!
+
+      expect(webhook.reload.read_attribute(:payload)).to be_nil
+      expect(webhook.payload).to eq(content)
+    end
+  end
+
+  describe "#store_response" do
+    subject(:webhook) { create(:webhook, payload: nil) }
+
+    let(:content) { {"status" => "ok"} }
+
+    it "uploads the gzipped response alongside the payload and stores the key" do
+      webhook.store_payload({"foo" => "bar"})
+      key = webhook.store_response(content)
+
+      expect(key).to match(%r{\Awebhooks/\d{4}/\d{2}/\d{2}/[0-9a-f-]+/response\.json\.gz\z})
+      expect(File.dirname(key)).to eq(File.dirname(webhook.payload_key))
+      expect(ActiveSupport::Gzip.decompress(described_class.payload_storage.download(key))).to eq(content.to_json)
+    end
+
+    it "does not store the response in the database" do
+      webhook.store_response(content)
+      webhook.save!
+
+      expect(webhook.reload.read_attribute(:response)).to be_nil
+      expect(webhook.response).to eq(content)
+    end
+
+    context "when the upload fails" do
+      before do
+        allow(described_class.payload_storage).to receive(:upload).and_raise(StandardError.new("boom"))
+      end
+
+      it "falls back to storing the response in the database" do
+        webhook.store_response(content)
+        webhook.save!
+
+        expect(webhook.response_key).to be_nil
+        expect(webhook.reload.read_attribute(:response)).to eq(content)
+        expect(webhook.response).to eq(content)
+      end
+    end
   end
 
   describe "#generate_headers" do

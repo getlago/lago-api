@@ -16,6 +16,8 @@ module Integrations
             end
 
             def body
+              shipping = customer.effective_shipping_address
+
               [
                 {
                   "issuing_date" => invoice.issuing_date,
@@ -23,11 +25,11 @@ module Integrations
                   "contact" => {
                     "external_id" => integration_customer&.external_customer_id,
                     "name" => customer.name,
-                    "address_line_1" => customer.shipping_address_line1 || customer.address_line1,
-                    "city" => customer.shipping_city || customer.city,
-                    "zip" => customer.shipping_zipcode || customer.zipcode,
-                    "region" => customer.shipping_state || customer.state,
-                    "country" => customer.shipping_country || customer.country,
+                    "address_line_1" => shipping[:address_line1],
+                    "city" => shipping[:city],
+                    "zip" => shipping[:zipcode],
+                    "region" => shipping[:state],
+                    "country" => shipping[:country],
                     "taxable" => customer.tax_identification_number.present?,
                     "tax_number" => customer.tax_identification_number
                   },
@@ -55,12 +57,11 @@ module Integrations
               elsif fee.subscription?
                 subscription_item
               end
-              mapped_item ||= empty_struct
 
               {
                 "item_key" => fee.item_key,
                 "item_id" => fee.id || fee.item_id,
-                "item_code" => mapped_item.external_id,
+                "item_code" => mapped_item&.external_id,
                 "unit" => fee.units,
                 "amount" => item_amount(fee)
               }
@@ -69,10 +70,6 @@ module Integrations
             private
 
             attr_reader :customer, :integration_customer, :invoice, :fees
-
-            def empty_struct
-              @empty_struct ||= OpenStruct.new
-            end
 
             def item_amount(fee)
               amount = fee.sub_total_excluding_taxes_amount_cents&.to_i&.fdiv(subunit_to_unit(fee))

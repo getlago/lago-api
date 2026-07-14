@@ -59,6 +59,17 @@ RSpec.describe Invoices::VoidService do
           expect(result.invoice).to be_voided
           expect(result.invoice.voided_at).to be_present
         end
+
+        context "when Meilisearch is enabled" do
+          before do
+            invoice
+            stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
+          end
+
+          it "enqueues a search reindex for the invoice" do
+            expect { void_service.call }.to have_enqueued_job_after_commit(Invoices::SearchIndexJob).with(invoice.id)
+          end
+        end
       end
 
       context "when the payment status is not succeeded" do
@@ -99,7 +110,15 @@ RSpec.describe Invoices::VoidService do
 
         context "when the invoice has applied credits from the wallet" do
           let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
-          let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, transaction_type: "outbound", amount: 100, credit_amount: 100) }
+          let(:wallet_transaction) do
+            create(:wallet_transaction,
+              wallet:,
+              invoice:,
+              purchase_order_number: "PO-123",
+              transaction_type: "outbound",
+              amount: 100,
+              credit_amount: 100)
+          end
 
           before do
             wallet_transaction
@@ -111,6 +130,7 @@ RSpec.describe Invoices::VoidService do
             expect(WalletTransactions::RecreditService).to have_received(:call).with(wallet_transaction: wallet_transaction)
             expect(wallet.wallet_transactions.count).to eq(2)
             expect(wallet.reload.credits_balance).to eq(200)
+            expect(wallet.wallet_transactions.inbound.last.purchase_order_number).to eq(wallet_transaction.purchase_order_number)
           end
         end
 
@@ -214,6 +234,105 @@ RSpec.describe Invoices::VoidService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
           expect(result.error.code).to eq("not_voidable")
+        end
+      end
+
+      context "when the invoice has progressive billing credits", :premium do
+        let(:params) { {generate_credit_note: true, credit_amount: 200} }
+        let(:organization) { create(:organization) }
+        let(:customer) { create(:customer, organization:) }
+        let(:plan) { create(:plan, organization:) }
+        let(:subscription) { create(:subscription, customer:, organization:, plan:) }
+        let(:invoice) do
+          create(
+            :invoice,
+            customer:,
+            organization:,
+            invoice_type: :subscription,
+            status: :finalized,
+            payment_status: :pending,
+            fees_amount_cents: 400,
+            progressive_billing_credit_amount_cents: 200,
+            sub_total_excluding_taxes_amount_cents: 200,
+            sub_total_including_taxes_amount_cents: 200,
+            total_amount_cents: 200
+          )
+        end
+        let(:charge) { create(:standard_charge, plan:) }
+        let(:invoice_subscription) do
+          create(:invoice_subscription, invoice:, subscription:, organization:)
+        end
+        let(:fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            subscription:,
+            charge:,
+            amount_cents: 400,
+            precise_amount_cents: 400,
+            precise_coupons_amount_cents: 0,
+            taxes_amount_cents: 0,
+            taxes_precise_amount_cents: 0
+          )
+        end
+
+        before do
+          invoice_subscription
+          fee
+        end
+
+        it "creates the requested credit note from the net remaining amount" do
+          result = void_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_voided
+
+          credit_note = invoice.credit_notes.find_by!(credit_status: :available)
+          expect(credit_note.total_amount_cents).to eq(200)
+          expect(credit_note.credit_amount_cents).to eq(200)
+          expect(credit_note.items.sole.amount_cents).to eq(200)
+        end
+      end
+    end
+
+    describe "guard against concurrent calls" do
+      let(:invoice) { create(:invoice, status: :finalized) }
+
+      context "with two threads racing on the same invoice", transaction: false do
+        # Separate in-memory instances of the same database record
+        let!(:invoice_instances) do
+          Array.new(2) do
+            inv = Invoice.find(invoice.id)
+
+            allow(inv).to receive(:void!).and_wrap_original do |original, *args|
+              sleep(0.05)
+              original.call(*args)
+            end
+
+            inv
+          end
+        end
+
+        it "voids the invoice exactly once and rejects other attempts" do
+          allow(LifetimeUsages::FlagRefreshFromInvoiceService).to receive(:call).and_call_original
+
+          results = Concurrent::Array.new
+
+          threads = invoice_instances.map do |inv|
+            Thread.new do
+              results << described_class.new(invoice: inv).call
+            end
+          end
+
+          threads.each(&:join)
+
+          successes = results.count(&:success?)
+          rejections = results.count { |r| !r.success? && r.error.code == "not_voidable" }
+
+          expect(successes).to eq(1)
+          expect(rejections).to eq(1)
+          expect(invoice.reload).to be_voided
+          expect(LifetimeUsages::FlagRefreshFromInvoiceService).to have_received(:call).once
         end
       end
     end

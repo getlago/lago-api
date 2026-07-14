@@ -2,6 +2,8 @@
 
 module Invoices
   class UpdateService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(invoice:, params:, webhook_notification: false)
       @invoice = invoice
       @params = params
@@ -48,7 +50,7 @@ module Invoices
           invoice.payment_overdue = false
 
           if invoice.payment_requests.where.not(dunning_campaign_id: nil).exists?
-            invoice.customer.reset_dunning_campaign!
+            invoice.customer.reset_dunning_campaign_for_currency!(invoice.currency)
           end
         end
 
@@ -74,12 +76,22 @@ module Invoices
         handle_prepaid_credits(params[:payment_status])
         handle_payment_gated_activation(params[:payment_status])
         update_fees_payment_status
+        expire_open_checkout_urls(old_payment_status)
         if old_payment_status != params[:payment_status] && invoice.visible?
           deliver_webhook
           log_activity
         end
       end
       update_hubspot_invoice if invoice.should_update_hubspot_invoice?
+    end
+
+    # when the invoice is settled, cancel any still-open hosted checkout session
+    def expire_open_checkout_urls(old_payment_status)
+      return unless invoice.payment_succeeded?
+      return if old_payment_status.to_s == "succeeded"
+      return unless PaymentIntent.active.exists?(invoice:)
+
+      PaymentIntents::ExpireJob.perform_after_commit(invoice)
     end
 
     def update_fees_payment_status

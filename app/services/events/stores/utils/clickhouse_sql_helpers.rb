@@ -32,6 +32,36 @@ module Events
         def quote(value)
           ::Clickhouse::BaseRecord.connection.quote(value)
         end
+
+        # NOTE: A numeric literal containing a decimal point (e.g. 2500.0) is parsed as a Float64 by
+        #       ClickHouse and loses precision when cast to Decimal. Rendering the value as a
+        #       fixed-point string makes toDecimalXX read an exact decimal literal instead.
+        def decimal_literal(value)
+          BigDecimal(value.to_s).to_s("F")
+        end
+
+        def sql_condition(template, *values)
+          ActiveRecord::Base.sanitize_sql_for_conditions([template, *values])
+        end
+
+        # When the boundary is the pay-in-advance event's own timestamp, tie-break events
+        # sharing it by transaction_id so each gets a distinct position instead of all being
+        # priced as the batch's last unit. transaction_id trails every events sort key, so
+        # the comparison stays index-aligned. Any other boundary keeps the plain <=.
+        def upper_timestamp_boundary_sql(to_datetime, prefix: "")
+          boundary_transaction_id = (filters[:event]&.transaction_id if to_datetime == boundaries[:max_timestamp])
+
+          if boundary_transaction_id
+            sql_condition(
+              "(#{prefix}timestamp < ? OR (#{prefix}timestamp = ? AND #{prefix}transaction_id <= ?))",
+              to_datetime,
+              to_datetime,
+              boundary_transaction_id
+            )
+          else
+            sql_condition("#{prefix}timestamp <= ?", to_datetime)
+          end
+        end
       end
     end
   end

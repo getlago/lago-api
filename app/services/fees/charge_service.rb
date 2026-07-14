@@ -2,6 +2,8 @@
 
 module Fees
   class ChargeService < BaseService
+    Result = BaseResult[:fees, :cached_aggregations]
+
     # optional params:
     # | usage_filters - UsageFilters
     #  - context (:current_usage, :invoice_preview, :recurring) - to be moved in usage_filters
@@ -21,7 +23,10 @@ module Fees
       apply_taxes: false,
       calculate_projected_usage: false,
       with_zero_units_filters: true,
-      usage_filters: UsageFilters::NONE
+      usage_filters: UsageFilters::NONE,
+      skip_adjusted_fees: false,
+      plan: nil,
+      customer: nil
     )
       @invoice = invoice
       @charge = charge
@@ -40,6 +45,10 @@ module Fees
       # Allow the service to ignore events aggregation
       @filtered_aggregations = filtered_aggregations
       @usage_filters = usage_filters
+      @skip_adjusted_fees = skip_adjusted_fees
+
+      @plan = plan
+      @customer = customer
 
       super(nil)
     end
@@ -101,32 +110,12 @@ module Fees
     end
 
     def init_charge_fees(properties:, charge_filter: nil)
-      fees = cache_middleware.call(charge_filter:) do
-        aggregation_result = aggregator(charge_filter:).aggregate(options: options(properties))
-
-        unless aggregation_result.success?
-          result.fail_with_error!(aggregation_result.error)
-          return []
-        end
-
-        if billable_metric.recurring?
-          persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter)
-        end
-
-        charge_model_result = apply_charge_model(aggregation_result:, properties:)
-        unless charge_model_result.success?
-          result.fail_with_error!(charge_model_result.error)
-          return []
-        end
-
-        charge_fees = fees_from_charge_model_result(
-          charge_model_result,
-          properties:,
-          charge_filter:,
-          breakdowns: aggregation_result.breakdowns
-        )
-
-        filter_non_persistable_fees_for_caching(charge_fees)
+      if skip_unused_filter?(charge_filter)
+        fees = []
+      else
+        fees = compute_fees_with_cache(properties:, charge_filter:)
+        # NOTE: nil means the aggregation or the charge model failed, result carries the error
+        return if fees.nil?
       end
 
       if fees.empty? && skip_caching_of_non_persistable_fee?
@@ -137,13 +126,60 @@ module Fees
       fees.each do |fee|
         fee.association(:billable_metric).target = billable_metric
         fee.association(:charge_filter).target = charge_filter if charge_filter&.id
+        fee.association(:charge).target = charge
       end
 
       result.fees.concat(fees.compact)
     end
 
+    # NOTE: When the billing period pre-filtering (Events::BillingPeriodFilterService) reports
+    #       that no event matches this filter in the period, the fee can only have zero units.
+    #       The cache round-trip and the bypassed aggregation are skipped and the zero-units fee
+    #       is hydrated in memory instead. Scoped to current usage: on invoicing, adjusted fees
+    #       on draft invoices can target filters without any usage.
+    #       Recurring metrics always aggregate as usage carries over from previous periods.
+    def skip_unused_filter?(charge_filter)
+      return false unless current_usage
+      return false if filtered_aggregations.nil?
+      return false if billable_metric.recurring?
+
+      !filtered_aggregations.include?(charge_filter&.id)
+    end
+
+    def compute_fees_with_cache(properties:, charge_filter:)
+      cache_middleware.call(charge_filter:) do
+        aggregation_result = aggregator(charge_filter:).aggregate(options: options(properties))
+
+        unless aggregation_result.success?
+          result.fail_with_error!(aggregation_result.error)
+          return
+        end
+
+        charge_model_result = apply_charge_model(aggregation_result:, properties:)
+        unless charge_model_result.success?
+          result.fail_with_error!(charge_model_result.error)
+          return
+        end
+
+        breakdowns_by_group = breakdowns_by_grouped_by(aggregation_result.breakdowns, charge_model_result)
+
+        if billable_metric.recurring?
+          persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter, breakdowns_by_group)
+        end
+
+        charge_fees = fees_from_charge_model_result(
+          charge_model_result,
+          properties:,
+          charge_filter:,
+          breakdowns_by_group:
+        )
+
+        filter_non_persistable_fees_for_caching(charge_fees)
+      end
+    end
+
     def skip_caching_of_non_persistable_fee?
-      current_usage && organization.feature_flag_enabled?(:non_persistable_charge_cache_optimization)
+      current_usage
     end
 
     def hydrate_non_persistable_fees(properties:, charge_filter:)
@@ -157,37 +193,59 @@ module Fees
         calculate_projected_usage:
       ).apply
 
-      fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns: [])
+      fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns_by_group: {})
     end
 
-    def fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns:)
+    def fees_from_charge_model_result(charge_model_result, properties:, charge_filter:, breakdowns_by_group:)
       charge_model_result.grouped_results.map do |amount_result|
         # TODO: check if this is still needed as we now skip certain zero units fees
         next if current_usage && charge_filter && amount_result.units.zero? && !with_zero_units_filters
 
-        fee = init_fee(amount_result, properties:, charge_filter:)
+        adjusted = applicable_adjusted_fee(amount_result:, charge_filter:)
+        fee = init_fee(amount_result, properties:, charge_filter:, adjusted:)
         next if fee.nil?
 
-        build_breakdowns_for_fee(fee:, breakdowns:)
+        if adjusted.nil? || amount_result.units == fee.units
+          build_breakdowns_for_fee(fee:, breakdowns_by_group:)
+        end
 
         fee
       end.compact
     end
 
-    def build_breakdowns_for_fee(fee:, breakdowns:)
-      Array(breakdowns).each do |breakdown|
-        if fee.grouped_by.empty?
-          presentation_by = breakdown[:groups]
-        else
-          next unless fee.grouped_by.all? { |k, v| breakdown[:groups][k] == v }
-          presentation_by = breakdown[:groups].reject { |k, _| fee.grouped_by.key?(k) }
-        end
+    def applicable_adjusted_fee(amount_result:, charge_filter:)
+      return nil if current_usage
+      return nil unless invoice&.draft?
 
+      adjusted = adjusted_fee(charge_filter:, grouped_by: amount_result.grouped_by)
+      return nil if adjusted.nil? || adjusted.adjusted_display_name?
+
+      adjusted
+    end
+
+    def build_breakdowns_for_fee(fee:, breakdowns_by_group:)
+      grouped_by = fee.grouped_by
+
+      (breakdowns_by_group[grouped_by] || []).map do |breakdown|
         fee.presentation_breakdowns.build(
-          presentation_by:,
+          presentation_by: breakdown[:groups],
           units: breakdown[:value],
           organization_id: charge.organization_id
         )
+      end
+    end
+
+    def breakdowns_by_grouped_by(breakdowns, charge_model_result)
+      charge_model_result.grouped_results.each_with_object({}) do |grouped_result, memo|
+        grouped_by = grouped_result.grouped_by || {}
+        next if memo.key?(grouped_by)
+
+        grouped_by_keys = grouped_by.keys
+        memo[grouped_by] = Array(breakdowns)
+          .lazy
+          .select { |b| b[:groups].slice(*grouped_by_keys) == grouped_by }
+          .map { |b| {groups: b[:groups].except(*grouped_by_keys), value: b[:value]} }
+          .to_a
       end
     end
 
@@ -197,22 +255,21 @@ module Fees
       charge_fees.filter { |f| should_persist_fee?(f, charge_fees) }
     end
 
-    def init_fee(amount_result, properties:, charge_filter:)
-      # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
+    def init_fee(amount_result, properties:, charge_filter:, adjusted:)
+      # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted (see applicable_adjusted_fee method).
       # Base fee creation flow handles case when only name has been adjusted
-      if !current_usage && invoice&.draft? && (adjusted = adjusted_fee(
-        charge_filter:,
-        grouped_by: amount_result.grouped_by
-      )) && !adjusted.adjusted_display_name?
+      if adjusted
         adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
           adjusted_fee: adjusted,
           boundaries:,
           properties:
         )
-        return result.fail_with_error!(adjustement_result.error) unless adjustement_result.success?
+        unless adjustement_result.success?
+          result.fail_with_error!(adjustement_result.error)
+          return nil
+        end
 
-        result.fees << adjustement_result.fee
-        return
+        return adjustement_result.fee
       end
 
       # Prevent trying to create a fee with negative units or amount.
@@ -252,8 +309,8 @@ module Fees
 
       new_fee = Fee.new(
         invoice:,
-        organization_id: organization.id,
-        billing_entity_id: subscription.customer.billing_entity_id,
+        organization_id: subscription.organization_id,
+        billing_entity_id: subscription.applicable_billing_entity_id,
         subscription:,
         charge:,
         amount_cents:,
@@ -286,7 +343,7 @@ module Fees
       end
 
       if apply_taxes
-        taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
+        taxes_result = Fees::ApplyTaxesService.call(fee: new_fee, plan: @plan, customer: @customer)
         taxes_result.raise_if_error!
       end
 
@@ -303,6 +360,7 @@ module Fees
     end
 
     def adjusted_fee(charge_filter:, grouped_by:)
+      return if @skip_adjusted_fees
       @adjusted_fee ||= {}
 
       key = [
@@ -404,7 +462,7 @@ module Fees
       )
     end
 
-    def persist_recurring_value(aggregation_results, charge_filter)
+    def persist_recurring_value(aggregation_results, charge_filter, breakdowns_by_group)
       return if current_usage
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
@@ -414,16 +472,19 @@ module Fees
 
       # NOTE: persist current recurring value for next period
       aggregation_results.each do |aggregation_result|
+        grouped_by = aggregation_result.grouped_by || {}
+
         result.cached_aggregations << CachedAggregation.find_or_initialize_by(
           organization_id: billable_metric.organization_id,
           external_subscription_id: subscription.external_id,
           charge_id: charge.id,
           charge_filter_id: charge_filter&.id,
-          grouped_by: aggregation_result.grouped_by || {},
+          grouped_by:,
           timestamp: aggregation_result.recurring_updated_at
         ) do |aggregation|
           aggregation.current_aggregation = aggregation_result.total_aggregated_units || aggregation_result.aggregation
           aggregation.current_amount = aggregation_result.custom_aggregation&.[](:amount)
+          aggregation.presentation_breakdowns = breakdowns_by_group.fetch(grouped_by, [])
           aggregation.save!
         end
       end
@@ -460,9 +521,10 @@ module Fees
         # when pricing group keys on a charge are "workspace" and "user", and filter_by_group is {"workspace" => ["A"]},
         # we want to remove the grouping keys "workspace", but keep the grouping key "user", so the usage will still be granular within the workspace
         usage_filters.filter_by_group.keys.each { |key| filters[:grouped_by]&.delete(key) }
-        filters[:matching_filters] ||= {}
+        # NOTE: filters[:matching_filters] may come from ChargeFilter#to_h_with_all_values
+        # which returns a frozen hash, so we must not mutate it in place.
         # expected matching_filters format is { "workspace" => ["A", "B"], "user" => ["U1", "U2"] }
-        filters[:matching_filters].merge!(usage_filters.filter_by_group)
+        filters[:matching_filters] = (filters[:matching_filters] || {}).merge(usage_filters.filter_by_group)
       end
 
       filters

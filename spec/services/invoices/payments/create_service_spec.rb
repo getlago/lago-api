@@ -6,7 +6,7 @@ RSpec.describe Invoices::Payments::CreateService do
   subject(:create_service) { described_class.new(invoice:, payment_provider: provider, payment_method_params:) }
 
   let(:organization) { create(:organization) }
-  let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100) }
+  let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100, invoice_type: :one_off) }
   let(:customer) { create(:customer, organization:, payment_provider: provider, payment_provider_code:) }
   let(:provider) { "stripe" }
   let(:payment_provider_code) { "stripe_1" }
@@ -134,7 +134,7 @@ RSpec.describe Invoices::Payments::CreateService do
     end
 
     context "with subscription invoice" do
-      let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
+      let(:organization) { create(:organization) }
       let(:subscription_payment_method) { create(:payment_method, customer:, is_default: false) }
       let(:plan) { create(:plan, organization:) }
       let(:subscription) do
@@ -196,10 +196,48 @@ RSpec.describe Invoices::Payments::CreateService do
           expect(result.payment).to be_nil
         end
       end
+
+      context "when no payment method is determined but the provider customer is pending backfill" do
+        let(:subscription) do
+          create(:subscription, customer:, plan:, organization:, payment_method: nil)
+        end
+        let(:default_payment_method) { nil }
+        let(:provider_customer) do
+          create(:stripe_customer, payment_provider:, customer:).tap do |pc|
+            pc.update!(settings: pc.settings.merge("payment_method_id" => "pm_legacy"))
+          end
+        end
+
+        it "creates a payment relying on the provider fallback method" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_present
+          expect(result.payment.payment_method_id).to be_nil
+        end
+
+        context "when the backfilled payment method has since been discarded" do
+          before do
+            create(
+              :payment_method,
+              customer:,
+              payment_provider_customer: provider_customer,
+              provider_method_id: "pm_legacy"
+            ).discard!
+          end
+
+          it "does not create a payment" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.payment).to be_nil
+          end
+        end
+      end
     end
 
     context "with credit invoice" do
-      let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
+      let(:organization) { create(:organization) }
       let(:wallet) { create(:wallet, customer:, organization:) }
       let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, source: :manual) }
       let(:invoice) do
@@ -308,7 +346,7 @@ RSpec.describe Invoices::Payments::CreateService do
     end
 
     context "with one-off invoice" do
-      let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
+      let(:organization) { create(:organization) }
       let(:invoice) do
         create(:invoice, customer:, organization:, total_amount_cents: 100, invoice_type: :one_off)
       end
@@ -394,7 +432,8 @@ RSpec.describe Invoices::Payments::CreateService do
           organization:,
           customer:,
           total_amount_cents: 0,
-          currency: "EUR"
+          currency: "EUR",
+          invoice_type: :one_off
         )
       end
 
@@ -437,6 +476,24 @@ RSpec.describe Invoices::Payments::CreateService do
 
     it_behaves_like "syncs payment" do
       let(:service_call) { create_service.call }
+    end
+
+    context "when the provider raises AlreadyPaidError" do
+      before do
+        allow(provider_service).to receive(:call!).and_raise(Invoices::Payments::AlreadyPaidError)
+      end
+
+      it "skips silently and drops the unused pending payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+        expect(invoice.reload.payments).to be_empty
+      end
+
+      it "does not deliver an error webhook" do
+        expect { create_service.call }.not_to have_enqueued_job(SendWebhookJob)
+      end
     end
 
     context "when provider service raises a service failure" do
@@ -511,7 +568,8 @@ RSpec.describe Invoices::Payments::CreateService do
 
       context "when invoice is credit? and open?" do
         let(:invoice) { create(:invoice, :credit, :open, customer:, organization:, total_amount_cents: 100) }
-        let(:wallet_transaction) { create(:wallet_transaction) }
+        let(:wallet) { create(:wallet, customer:, organization:) }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, source: :manual) }
         let(:fee) { create(:fee, fee_type: :credit, invoice: invoice, invoiceable: wallet_transaction) }
 
         before do
@@ -684,6 +742,39 @@ RSpec.describe Invoices::Payments::CreateService do
           expect(result).to be_success
           expect(result.payment_provider).to be_nil
         }.not_to have_enqueued_job(Invoices::Payments::CreateJob)
+      end
+    end
+
+    context "when the customer has already used a checkout URL" do
+      before { create(:payment_intent, invoice: create(:invoice, customer:, organization:)) }
+
+      it "delays the first auto-payment" do
+        freeze_time do
+          expect { ApplicationRecord.transaction { create_service.call_async } }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+        end
+      end
+
+      context "when it is not the first payment attempt (retry)" do
+        before { invoice.update!(payment_attempts: 1) }
+
+        it "enqueues the payment immediately" do
+          expect { ApplicationRecord.transaction { create_service.call_async } }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            .at(:no_wait)
+        end
+      end
+    end
+
+    context "when the customer has never used a checkout URL" do
+      it "enqueues the payment immediately" do
+        expect { ApplicationRecord.transaction { create_service.call_async } }
+          .to have_enqueued_job(Invoices::Payments::CreateJob)
+          .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+          .at(:no_wait)
       end
     end
   end

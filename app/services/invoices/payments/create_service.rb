@@ -3,7 +3,12 @@
 module Invoices
   module Payments
     class CreateService < BaseService
+      Result = BaseResult[:invoice, :payment, :payment_provider]
+
       include Customers::PaymentProviderFinder
+
+      # Delay the first auto-payment for hosted-checkout customers so their manual payment settles first.
+      CHECKOUT_AUTO_PAYMENT_DELAY = ENV.fetch("LAGO_CHECKOUT_AUTO_PAYMENT_DELAY_SECONDS", 10.minutes.to_i).to_i.seconds
 
       def initialize(invoice:, payment_provider: nil, payment_method_params: {})
         @invoice = invoice
@@ -44,10 +49,8 @@ module Invoices
           payable_payment_status: "pending"
         )
 
-        if multiple_payment_methods_enabled?
-          payment.payment_method_id = determine_payment_method&.id
-          payment.save!
-        end
+        payment.payment_method_id = determine_payment_method&.id
+        payment.save!
 
         result.payment = payment
 
@@ -69,6 +72,11 @@ module Invoices
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment.should_sync_payment?
 
         result
+      rescue Invoices::Payments::AlreadyPaidError
+        # NOTE: The invoice was settled by another payment so we can drop the unused pending payment
+        result.payment&.destroy if result.payment&.provider_payment_id.nil?
+        result.payment = nil
+        result
       rescue BaseService::ServiceFailure => e
         result.payment = e.result.payment
 
@@ -87,7 +95,14 @@ module Invoices
       def call_async
         return result unless provider
 
-        Invoices::Payments::CreateJob.perform_after_commit(invoice:, payment_provider: provider, payment_method_params:)
+        forced_delay = nil
+        forced_delay = CHECKOUT_AUTO_PAYMENT_DELAY if defer_for_checkout_customer?
+
+        AfterCommitEverywhere.after_commit do
+          Invoices::Payments::CreateJob
+            .set(wait: forced_delay)
+            .perform_later(invoice:, payment_provider: provider, payment_method_params:)
+        end
 
         result.payment_provider = provider
         result
@@ -103,8 +118,11 @@ module Invoices
         @provider ||= invoice.customer.payment_provider&.to_sym
       end
 
-      def multiple_payment_methods_enabled?
-        customer.organization.feature_flag_enabled?(:multiple_payment_methods)
+      # Only the first automatic attempt is delayed; retries keep payment_attempts positive.
+      def defer_for_checkout_customer?
+        return false unless invoice.payment_attempts.zero?
+
+        PaymentIntent.joins(:invoice).where(invoices: {customer_id: invoice.customer_id}).exists?
       end
 
       def should_process_payment?
@@ -112,11 +130,19 @@ module Invoices
         return false if invoice.payment_succeeded? || invoice.voided?
         return false if current_payment_provider.blank?
 
-        if multiple_payment_methods_enabled?
-          current_payment_provider_customer&.provider_customer_id && determine_payment_method.present?
-        else
-          current_payment_provider_customer&.provider_customer_id
-        end
+        current_payment_provider_customer&.provider_customer_id &&
+          (determine_payment_method.present? || provider_payment_method_pending_backfill?)
+      end
+
+      # NOTE: While the OSS payment methods backfill is still running
+      #       (rake migrations:backfill_*_payment_methods), a provider customer can have a
+      #       provider-side payment method/mandate with no matching PaymentMethod record yet.
+      #       In that window determine_payment_method is nil, but the payment can still be
+      #       processed since the provider service falls back to the provider-side method.
+      def provider_payment_method_pending_backfill?
+        legacy_id = current_payment_provider_customer&.legacy_provider_method_id
+        legacy_id.present? &&
+          current_payment_provider_customer.payment_methods.with_discarded.where(provider_method_id: legacy_id).none?
       end
 
       def current_payment_provider

@@ -2,6 +2,8 @@
 
 module Fees
   class UpdateService < BaseService
+    Result = BaseResult[:fee]
+
     def initialize(fee:, params:)
       @fee = fee
       @params = params

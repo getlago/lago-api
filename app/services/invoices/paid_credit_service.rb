@@ -2,6 +2,8 @@
 
 module Invoices
   class PaidCreditService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(wallet_transaction:, timestamp:, invoice: nil)
       @customer = wallet_transaction.wallet.customer
       @wallet_transaction = wallet_transaction
@@ -24,7 +26,7 @@ module Invoices
       ActiveRecord::Base.transaction do
         create_credit_fee(invoice)
         compute_amounts(invoice)
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: [wallet_transaction.invoice_custom_section_resource])
 
         if License.premium? && wallet_transaction.invoice_requires_successful_payment?
           invoice.open!
@@ -66,7 +68,9 @@ module Invoices
         customer:,
         invoice_type: :credit,
         currency:,
-        datetime: Time.zone.at(timestamp)
+        datetime: Time.zone.at(timestamp),
+        billing_entity: wallet_transaction.billing_entity || wallet_transaction.wallet.billing_entity || customer.billing_entity,
+        purchase_order_number: wallet_transaction.purchase_order_number || wallet_transaction.wallet.purchase_order_number
       )
       invoice_result.raise_if_error!
 
@@ -99,7 +103,7 @@ module Invoices
 
     def should_deliver_email?
       License.premium? &&
-        customer.billing_entity.email_settings.include?("invoice.finalized")
+        invoice.billing_entity.email_settings.include?("invoice.finalized")
     end
   end
 end

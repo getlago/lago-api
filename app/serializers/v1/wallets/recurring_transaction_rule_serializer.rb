@@ -8,6 +8,7 @@ module V1
           lago_id: model.id,
           paid_credits: model.paid_credits,
           granted_credits: model.granted_credits,
+          grants_target_top_up: model.grants_target_top_up?,
           interval: model.interval,
           method: model.method,
           started_at: model.started_at&.iso8601,

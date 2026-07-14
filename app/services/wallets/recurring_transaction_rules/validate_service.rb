@@ -3,6 +3,8 @@
 module Wallets
   module RecurringTransactionRules
     class ValidateService < BaseService
+      Result = BaseResult
+
       def initialize(params:)
         @params = params
         super
@@ -11,9 +13,11 @@ module Wallets
       def call
         return false unless valid_trigger?
         return false unless valid_method?
+        return false unless valid_target_above_threshold?
         return false unless valid_credits?
         return false unless valid_metadata?
         return false unless valid_expiration_at?
+        return false unless valid_grants_target_top_up?
 
         true
       end
@@ -48,6 +52,13 @@ module Wallets
         true
       end
 
+      def valid_target_above_threshold?
+        return true unless method == "target" && trigger == "threshold"
+        return true if params[:target_ongoing_balance].nil? || params[:threshold_credits].nil?
+
+        BigDecimal(params[:target_ongoing_balance].to_s) >= BigDecimal(params[:threshold_credits].to_s)
+      end
+
       def valid_credits?
         return true unless params[:paid_credits] || params[:granted_credits]
 
@@ -67,6 +78,12 @@ module Wallets
         return true if Validators::ExpirationDateValidator.valid?(params[:expiration_at])
 
         false
+      end
+
+      def valid_grants_target_top_up?
+        return true if params[:grants_target_top_up].nil?
+
+        method == "target"
       end
     end
   end

@@ -2,6 +2,8 @@
 
 module Fees
   class EstimatePayInAdvanceService < BaseService
+    Result = BaseResult[:fees]
+
     def initialize(organization:, params:)
       @organization = organization
       # NOTE: validation is shared with event creation and is expecting a transaction_id
@@ -12,7 +14,10 @@ module Fees
 
     def call
       validation_result = Events::ValidateCreationService.call(organization:, event_params:, customer:, subscriptions:)
-      return validation_result unless validation_result.success?
+      unless validation_result.success?
+        result.fail_with_error!(validation_result.error)
+        return result
+      end
 
       if charges.none?
         return result.single_validation_failure!(field: :code, error_code: "does_not_match_an_instant_charge")

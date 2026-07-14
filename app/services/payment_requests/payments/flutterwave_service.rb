@@ -21,7 +21,7 @@ module PaymentRequests
         result.service_failure!(code: "action_script_runtime_error", message: e.message)
       end
 
-      def update_payment_status(organization_id:, status:, flutterwave_payment:)
+      def update_payment_status(organization_id:, status:, flutterwave_payment:, amount_cents: nil)
         payment = if flutterwave_payment.metadata[:payment_type] == "one-time"
           create_payment(flutterwave_payment)
         else
@@ -182,6 +182,8 @@ module PaymentRequests
 
       def update_invoices_payment_status(payment_status:, deliver_webhook: true)
         payable.invoices.each do |invoice|
+          next if invoice.payment_succeeded? && !payment_status_succeeded?(payment_status)
+
           Invoices::UpdateService.call(
             invoice:,
             params: {
@@ -201,7 +203,7 @@ module PaymentRequests
         return unless payment_status_succeeded?(payment_status)
         return unless payable.try(:dunning_campaign)
 
-        customer.reset_dunning_campaign!
+        customer.reset_dunning_campaign_for_currency!(payable.currency)
       end
     end
   end

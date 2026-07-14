@@ -7,10 +7,6 @@ RSpec.describe BillableMetrics::CreateService do
   let(:organization) { membership.organization }
 
   describe "create" do
-    before do
-      allow(SegmentTrackJob).to receive(:perform_later)
-    end
-
     let(:create_args) do
       {
         name: "New Metric",
@@ -28,6 +24,12 @@ RSpec.describe BillableMetrics::CreateService do
     it "creates a billable metric" do
       expect { described_class.call(create_args) }
         .to change(BillableMetric, :count).by(1)
+    end
+
+    it "enqueues a billable_metric.created webhook" do
+      result = described_class.call(create_args)
+
+      expect(SendWebhookJob).to have_been_enqueued.with("billable_metric.created", result.billable_metric)
     end
 
     context "with code already used by a deleted metric" do
@@ -86,7 +88,7 @@ RSpec.describe BillableMetrics::CreateService do
     it "calls SegmentTrackJob" do
       metric = described_class.call(create_args).billable_metric
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "billable_metric_created",
         properties: {

@@ -29,6 +29,7 @@ RSpec.describe BillingEntities::UpdateService do
       einvoicing:,
       address_line1: "Line 1",
       address_line2: "Line 2",
+      phone: "+49 30 1234567",
       state: "Foobar",
       zipcode: "FOO1234",
       city: "Foobar",
@@ -59,6 +60,7 @@ RSpec.describe BillingEntities::UpdateService do
       expect(result.billing_entity.address_line1).to eq("Line 1")
       expect(result.billing_entity.einvoicing).to eq(true)
       expect(result.billing_entity.address_line2).to eq("Line 2")
+      expect(result.billing_entity.phone).to eq("+49 30 1234567")
       expect(result.billing_entity.state).to eq("Foobar")
       expect(result.billing_entity.zipcode).to eq("FOO1234")
       expect(result.billing_entity.city).to eq("Foobar")
@@ -240,11 +242,10 @@ RSpec.describe BillingEntities::UpdateService do
     end
 
     context "when enable einvoicing" do
+      before { billing_entity.update(einvoicing: true) }
+
       context "when country is not supported" do
         let(:country) { "BR" }
-        let(:einvoicing) { true }
-
-        before { billing_entity.update(einvoicing: true) }
 
         it "returns an error" do
           result = update_service.call
@@ -256,15 +257,24 @@ RSpec.describe BillingEntities::UpdateService do
 
       context "when country is nil" do
         let(:country) { nil }
-        let(:einvoicing) { true }
-
-        before { billing_entity.update(einvoicing: true) }
 
         it "returns an error" do
           result = update_service.call
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:einvoicing]).to eq(["country_must_be_present"])
+        end
+      end
+
+      context "when country is supported" do
+        let(:country) { "DE" }
+
+        it "enables einvoicing on the billing entity" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.billing_entity.einvoicing).to be true
+          expect(result.billing_entity.country).to eq(country)
         end
       end
     end

@@ -5,6 +5,8 @@ module Customers
     extend Forwardable
     include Customers::PaymentProviderFinder
 
+    Result = BaseResult[:customer]
+
     def initialize(customer:, args:)
       @customer = customer
       @args = args
@@ -96,10 +98,15 @@ module Customers
       # NOTE: Some fields are not editable if customer is attached to subscriptions:
       #       external_id,
       #       account_type,
-      #       billing_entity_id
+      #       billing_entity_id (gated by editable? unless multi_entity_billing flag is enabled)
+      billing_entity_changed = false
+      if args.key?(:billing_entity_code) && allow_billing_entity_update?
+        customer.billing_entity = billing_entity
+        billing_entity_changed = customer.billing_entity_id_changed?
+      end
+
       if customer.editable?
         customer.external_id = args[:external_id] if args.key?(:external_id)
-        customer.billing_entity = billing_entity if args.key?(:billing_entity_code)
 
         if organization.revenue_share_enabled?
           customer.account_type = args[:account_type] if args.key?(:account_type)
@@ -145,15 +152,25 @@ module Customers
         customer.error_details.tax_error.delete_all if @address_changed
         customer.reload
 
+        tax_attributes_changed = original_tax_values.any? { |key, value| args.key?(key) && args[key] != value }
+
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,
           new_record: false,
-          tax_attributes_changed: original_tax_values.any? { |key, value| args.key?(key) && args[key] != value }
+          tax_attributes_changed: tax_attributes_changed || billing_entity_changed
         )
 
         if eu_tax_code_result.success?
           args[:tax_codes] ||= []
           args[:tax_codes] = (args[:tax_codes] + [eu_tax_code_result.tax_code]).uniq
+        end
+
+        # NOTE: EU-managed taxes (lago_eu_*) belong to the previous billing entity. When the
+        #       billing entity changes and no new EU tax applies (new entity does not manage
+        #       EU taxes, or a VIES check is still pending), reset them so the customer falls
+        #       back to the new billing entity's taxes.
+        if billing_entity_changed && args[:tax_codes].nil?
+          args[:tax_codes] = customer.taxes.where.not("code ILIKE ?", "lago_eu%").pluck(:code)
         end
 
         if args[:tax_codes]
@@ -211,6 +228,10 @@ module Customers
       return true if metadata.count <= ::Metadata::CustomerMetadata::COUNT_PER_CUSTOMER
 
       false
+    end
+
+    def allow_billing_entity_update?
+      organization.feature_flag_enabled?(:multi_entity_billing) || customer.editable?
     end
 
     def assign_premium_attributes(customer, args)

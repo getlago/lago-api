@@ -75,6 +75,26 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       expect { invoice_service.call }.to change(InvoiceSubscription, :count).by(1)
     end
 
+    context "with billing entity resolution" do
+      it "stamps the customer's billing_entity when subscription has none" do
+        invoice = invoice_service.call.invoice
+
+        expect(invoice.billing_entity).to eq(customer.billing_entity)
+      end
+
+      context "when subscription has its own billing_entity" do
+        let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+        before { subscription.update!(billing_entity: other_billing_entity) }
+
+        it "stamps the subscription's billing_entity on the invoice" do
+          invoice = invoice_service.call.invoice
+
+          expect(invoice.billing_entity).to eq(other_billing_entity)
+        end
+      end
+    end
+
     it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
@@ -331,6 +351,13 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       let(:service_call) { invoice_service.call }
     end
 
+    it_behaves_like "applies invoice_custom_sections from resource" do
+      let(:service_call) { invoice_service.call }
+      let(:resource_with_custom_section) { subscription }
+      let(:applied_section_factory) { :subscription_applied_invoice_custom_section }
+      let(:resource_association_key) { :subscription }
+    end
+
     context "when fee build service fails" do
       before do
         allow(Fees::BuildPayInAdvanceFixedChargeService)
@@ -464,6 +491,22 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
         expect(SendWebhookJob).to have_been_enqueued.with("fee.created", anything)
         expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
       end
+
+      context "with custom sections applied at the billing entity level" do
+        let(:custom_section) { create(:invoice_custom_section, organization:) }
+
+        before do
+          create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: custom_section)
+        end
+
+        it "applies the custom sections even though tax resolution is deferred" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.status).to eq("pending")
+          expect(result.invoice.applied_invoice_custom_sections.pluck(:code)).to eq([custom_section.code])
+        end
+      end
     end
 
     context "when an error occurs" do
@@ -504,9 +547,9 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
 
         it "propagates the error" do
           allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
-            .to receive(:call).and_raise(Customers::FailedToAcquireLock)
+            .to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
 
-          expect { invoice_service.call }.to raise_error(Customers::FailedToAcquireLock)
+          expect { invoice_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
         end
       end
 
@@ -695,6 +738,47 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
         invoice_service.call
 
         expect(Invoices::Payments::CreateService).to have_received(:call_async)
+      end
+
+      context "when invoice total is zero" do
+        let(:fixed_charge_event) do
+          create(:fixed_charge_event, subscription:, fixed_charge:, units: 0,
+            timestamp: Time.zone.at(timestamp))
+        end
+        let(:rule) { subscription.activation_rules.payment.sole }
+
+        it "marks the payment activation rule as satisfied" do
+          invoice_service.call
+
+          expect(rule.reload).to be_satisfied
+        end
+
+        it "activates the subscription" do
+          invoice_service.call
+
+          expect(subscription.reload).to be_active
+        end
+      end
+
+      context "when tax is pending" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+        let(:rule) { subscription.activation_rules.payment.sole }
+
+        before { integration_customer }
+
+        it "does not fire the zero-amount activation shortcut" do
+          invoice_service.call
+
+          expect(rule.reload).to be_pending
+          expect(subscription.reload).to be_incomplete
+        end
+
+        it "keeps the invoice open" do
+          result = invoice_service.call
+
+          expect(result.invoice).to be_open
+        end
       end
     end
   end

@@ -133,6 +133,69 @@ RSpec.describe WalletTransactions::ValidateService do
       end
     end
 
+    context "when inbound credits round to zero monetary value" do
+      let(:wallet) { create(:wallet, customer:, rate_amount: "0.01", credits_balance: 10) }
+
+      context "with paid_credits that round to zero" do
+        let(:paid_credits) { "0.4" }
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:paid_credits]).to eq(["amount_rounds_to_zero"])
+        end
+      end
+
+      context "with granted_credits that round to zero" do
+        let(:paid_credits) { "0.0" }
+        let(:granted_credits) { "0.4" }
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:granted_credits]).to eq(["amount_rounds_to_zero"])
+        end
+      end
+
+      context "when the credits produce a non-zero monetary value" do
+        let(:paid_credits) { "1.0" }
+
+        it "returns true" do
+          expect(validate_service).to be_valid
+          expect(result.error).to be_nil
+        end
+      end
+
+      context "with strictly-zero credits" do
+        let(:paid_credits) { "0.0" }
+        let(:granted_credits) { "0.0" }
+
+        it "returns true and preserves the existing no-op behavior" do
+          expect(validate_service).to be_valid
+          expect(result.error).to be_nil
+        end
+      end
+
+      context "with voided_credits that round to zero" do
+        let(:paid_credits) { "0.0" }
+        let(:granted_credits) { "0.0" }
+        let(:voided_credits) { "0.4" }
+
+        it "returns true since outbound transactions are unaffected" do
+          expect(validate_service).to be_valid
+          expect(result.error).to be_nil
+        end
+      end
+    end
+
+    context "when the wallet uses a three-decimal currency" do
+      let(:wallet) { create(:wallet, customer:, currency: "KWD", rate_amount: "0.001", credits_balance: 10) }
+      let(:paid_credits) { "1.0" }
+
+      it "keeps a sub-cent but non-zero monetary value valid" do
+        expect(validate_service).to be_valid
+        expect(result.error).to be_nil
+      end
+    end
+
     context "with invalid voided_credits" do
       let(:voided_credits) { "foobar" }
 
@@ -167,6 +230,44 @@ RSpec.describe WalletTransactions::ValidateService do
       it "returns false and result has errors for metadata" do
         expect(validate_service).not_to be_valid
         expect(result.error.messages[:metadata]).to eq(["nested_structure_not_allowed"])
+      end
+    end
+
+    context "with the maximum number of metadata key-value pairs" do
+      let(:args) do
+        {
+          wallet_id:,
+          customer_id: customer.external_id,
+          organization_id: organization.id,
+          paid_credits:,
+          granted_credits:,
+          voided_credits:,
+          metadata: (1..15).map { |i| {"key" => "key#{i}", "value" => "value#{i}"} }
+        }
+      end
+
+      it "returns true" do
+        expect(validate_service).to be_valid
+        expect(result.error).to be_nil
+      end
+    end
+
+    context "with too many metadata key-value pairs" do
+      let(:args) do
+        {
+          wallet_id:,
+          customer_id: customer.external_id,
+          organization_id: organization.id,
+          paid_credits:,
+          granted_credits:,
+          voided_credits:,
+          metadata: (1..16).map { |i| {"key" => "key#{i}", "value" => "value#{i}"} }
+        }
+      end
+
+      it "returns false and result has errors for metadata" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:metadata]).to eq(["too_many_keys"])
       end
     end
 

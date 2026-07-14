@@ -207,6 +207,29 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
+      context "when updating consolidate_invoice" do
+        let(:params) { {consolidate_invoice: false} }
+
+        it "updates consolidate_invoice to false" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.consolidate_invoice).to be(false)
+        end
+
+        context "when re-enabling consolidation" do
+          let(:subscription) { create(:subscription, consolidate_invoice: false) }
+          let(:params) { {consolidate_invoice: true} }
+
+          it "updates consolidate_invoice to true" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.consolidate_invoice).to be(true)
+          end
+        end
+      end
+
       context "when updating payment method" do
         let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
         let(:params) { {payment_method: payment_method_params} }
@@ -641,6 +664,81 @@ RSpec.describe Subscriptions::UpdateService do
               expect(result.error.result.error.messages).to eq({amount_cents: ["invalid_amount"]})
             end
           end
+
+          context "with a partial fixed_charges payload" do
+            let(:fixed_charge) { create(:fixed_charge, plan:, units: 5) }
+            let(:other_fixed_charge) { create(:fixed_charge, plan:, units: 7) }
+            let(:params) do
+              {
+                plan_overrides: {
+                  fixed_charges: [
+                    {id: fixed_charge.id, units: 20}
+                  ]
+                }
+              }
+            end
+
+            before do
+              fixed_charge
+              other_fixed_charge
+            end
+
+            it "updates only the listed fixed charge and preserves the others" do
+              result = update_service.call
+
+              expect(result).to be_success
+              expect(fixed_charge.reload.units).to eq(20)
+              expect(other_fixed_charge.reload.units).to eq(7)
+              expect(plan.reload.fixed_charges.pluck(:id)).to match_array([fixed_charge.id, other_fixed_charge.id])
+            end
+
+            context "when an entry references a fixed_charge id not on the plan" do
+              let(:foreign_fixed_charge) { create(:fixed_charge, plan: parent_plan) }
+              let(:params) do
+                {
+                  plan_overrides: {
+                    fixed_charges: [
+                      {id: foreign_fixed_charge.id, units: 20}
+                    ]
+                  }
+                }
+              end
+
+              it "fails with a not found error and does not mutate the plan" do
+                result = update_service.call
+
+                expect(result).not_to be_success
+                expect(result.error).to be_a(BaseService::NotFoundFailure)
+                expect(result.error.resource).to eq("fixed_charge")
+                expect(fixed_charge.reload.units).to eq(5)
+                expect(other_fixed_charge.reload.units).to eq(7)
+              end
+            end
+
+            context "when a valid entry is mixed with an unknown fixed_charge id" do
+              let(:foreign_fixed_charge) { create(:fixed_charge, plan: parent_plan) }
+              let(:params) do
+                {
+                  plan_overrides: {
+                    fixed_charges: [
+                      {id: fixed_charge.id, units: 20},
+                      {id: foreign_fixed_charge.id, units: 99}
+                    ]
+                  }
+                }
+              end
+
+              it "fails with a not found error and rolls back the valid override" do
+                result = update_service.call
+
+                expect(result).not_to be_success
+                expect(result.error).to be_a(BaseService::NotFoundFailure)
+                expect(result.error.resource).to eq("fixed_charge")
+                expect(fixed_charge.reload.units).to eq(5)
+                expect(other_fixed_charge.reload.units).to eq(7)
+              end
+            end
+          end
         end
       end
 
@@ -701,30 +799,24 @@ RSpec.describe Subscriptions::UpdateService do
           subscription
         end
 
-        it "creates override fixed charges for both fixed charges" do
-          expect { update_service.call }.to change(FixedCharge, :count).by(2)
+        it "writes an override row for fc2 and leaves fc1 untouched" do
+          expect { update_service.call }
+            .to not_change(FixedCharge, :count)
+            .and not_change(Plan, :count)
 
-          fc1_override = FixedCharge.find_sole_by(parent_id: fixed_charge1.id)
-          fc2_override = FixedCharge.find_sole_by(parent_id: fixed_charge2.id)
-
-          expect(fc1_override.units).to eq(fixed_charge1.units)
-          expect(fc2_override.units).to eq(300)
+          expect(subscription.fixed_charge_units_overrides.pluck(:fixed_charge_id, :units)).to contain_exactly(
+            [fixed_charge2.id, 300]
+          )
         end
 
-        it "creates 2 fixed charge events with correct timestamps and units" do
+        it "emits one fixed charge event for fc2 at the current time with the override units" do
           travel_to(Time.zone.local(2025, 10, 10, 15, 33)) do # Friday
-            expect { update_service.call }.to change(FixedChargeEvent, :count).by(2)
+            expect { update_service.call }.to change(FixedChargeEvent, :count).by(1)
 
-            fc1_override = FixedCharge.find_sole_by(parent_id: fixed_charge1.id)
-            fc2_override = FixedCharge.find_sole_by(parent_id: fixed_charge2.id)
-
-            next_billing_period_start = Time.zone.local(2025, 10, 13) # Next Monday
-            events = subscription.fixed_charge_events.pluck(%i[fixed_charge_id units timestamp])
-
-            expect(events).to contain_exactly(
-              [fc1_override.id, fixed_charge1.units, be_within(1.second).of(next_billing_period_start)],
-              [fc2_override.id, 300, be_within(1.second).of(Time.current)]
-            )
+            event = subscription.fixed_charge_events.sole
+            expect(event.fixed_charge_id).to eq(fixed_charge2.id)
+            expect(event.units).to eq(300)
+            expect(event.timestamp).to be_within(1.second).of(Time.current)
           end
         end
 
@@ -875,14 +967,15 @@ RSpec.describe Subscriptions::UpdateService do
           subscription
         end
 
-        it "creates override fixed charges for both fixed charges" do
-          expect { update_service.call }.to change(FixedCharge, :count).by(2)
+        it "writes override rows for both fixed charges without cloning the plan" do
+          expect { update_service.call }
+            .to not_change(FixedCharge, :count)
+            .and not_change(Plan, :count)
 
-          fc1_override = FixedCharge.find_sole_by(parent_id: fixed_charge1.id)
-          fc2_override = FixedCharge.find_sole_by(parent_id: fixed_charge2.id)
-
-          expect(fc1_override.units).to eq(200)
-          expect(fc2_override.units).to eq(300)
+          expect(subscription.fixed_charge_units_overrides.pluck(:fixed_charge_id, :units)).to contain_exactly(
+            [fixed_charge1.id, 200],
+            [fixed_charge2.id, 300]
+          )
         end
 
         it "does not create fixed charge events for pending subscription" do
@@ -892,9 +985,160 @@ RSpec.describe Subscriptions::UpdateService do
             subscription.reload
 
             expect(subscription).to be_pending
-            expect(subscription.plan.parent_id).to eq(plan.id)
+            expect(subscription.plan).to eq(plan)
             expect(subscription.fixed_charge_events.count).to be_zero
           end
+        end
+      end
+
+      context "with existing units override on the (subscription, fixed_charge) pair", :premium do
+        let(:organization) { membership.organization }
+        let(:plan) { create(:plan, organization:) }
+        let(:fixed_charge) { create(:fixed_charge, plan:, units: 5) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) { create(:subscription, plan:, customer:) }
+        let(:params) do
+          {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 25}]}}
+        end
+
+        before do
+          fixed_charge
+          subscription
+          create(:subscription_fixed_charge_units_override, subscription:, fixed_charge:, organization:, units: 10)
+        end
+
+        it "updates the existing override row rather than creating a new one" do
+          expect { update_service.call }
+            .not_to change(::Subscription::FixedChargeUnitsOverride, :count)
+
+          override = ::Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)
+          expect(override.units).to eq(25)
+        end
+      end
+
+      context "when apply_units_immediately is true on a pay-in-advance fixed charge", :premium do
+        let(:organization) { membership.organization }
+        let(:plan) { create(:plan, organization:) }
+        let(:fixed_charge) { create(:fixed_charge, plan:, units: 5, pay_in_advance: true) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) { create(:subscription, plan:, customer:) }
+        let(:params) do
+          {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 25, apply_units_immediately: true}]}}
+        end
+
+        before do
+          fixed_charge
+          subscription
+        end
+
+        it "enqueues the pay-in-advance billing job" do
+          expect { update_service.call }
+            .to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+            .with(subscription, kind_of(Integer))
+        end
+
+        context "when the subscription is not active" do
+          let(:subscription) { create(:subscription, :pending, plan:, customer:, subscription_at: 7.days.from_now) }
+
+          it "does not enqueue the pay-in-advance billing job" do
+            expect { update_service.call }
+              .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
+        end
+      end
+
+      context "when a units-only entry references a fixed_charge id not on the plan", :premium do
+        let(:organization) { membership.organization }
+        let(:plan) { create(:plan, organization:) }
+        let(:fixed_charge) { create(:fixed_charge, plan:, units: 5) }
+        let(:other_plan) { create(:plan, organization:) }
+        let(:foreign_fixed_charge) { create(:fixed_charge, plan: other_plan) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) { create(:subscription, plan:, customer:) }
+        let(:params) do
+          {plan_overrides: {fixed_charges: [{id: foreign_fixed_charge.id, units: 25}]}}
+        end
+
+        before do
+          fixed_charge
+          foreign_fixed_charge
+          subscription
+        end
+
+        it "fails with a not found error without writing an override row" do
+          result = nil
+          expect { result = update_service.call }
+            .not_to change(::Subscription::FixedChargeUnitsOverride, :count)
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("fixed_charge")
+        end
+      end
+
+      context "when the subscription is already on an overridden plan", :premium do
+        let(:organization) { membership.organization }
+        let(:parent_plan) { create(:plan, organization:) }
+        let(:plan) { create(:plan, organization:, parent: parent_plan) }
+        let(:fixed_charge) { create(:fixed_charge, plan:, units: 5) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) { create(:subscription, plan:, customer:) }
+        let(:params) do
+          {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 25}]}}
+        end
+
+        before do
+          fixed_charge
+          subscription
+        end
+
+        it "routes through Plans::UpdateService rather than the units-only branch" do
+          expect { update_service.call }
+            .not_to change(::Subscription::FixedChargeUnitsOverride, :count)
+        end
+      end
+
+      context "when the subscription has existing units overrides and params trigger plan override", :premium do
+        let(:organization) { membership.organization }
+        let(:plan) { create(:plan, organization:) }
+        let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
+        let(:fixed_charge2) { create(:fixed_charge, plan:, units: 8) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) { create(:subscription, plan:, customer:) }
+        let(:params) do
+          {
+            plan_overrides: {
+              amount_cents: 12_345,
+              fixed_charges: [{id: fixed_charge1.id, units: 99}]
+            }
+          }
+        end
+
+        before do
+          fixed_charge1
+          fixed_charge2
+          subscription
+          create(:subscription_fixed_charge_units_override, subscription:, fixed_charge: fixed_charge1, organization:, units: 11)
+          create(:subscription_fixed_charge_units_override, subscription:, fixed_charge: fixed_charge2, organization:, units: 22)
+        end
+
+        it "discards the override rows and promotes their units into the new plan override" do
+          expect { update_service.call }
+            .to change(Plan, :count).by(1)
+            .and change { ::Subscription::FixedChargeUnitsOverride.kept.where(subscription:).count }.from(2).to(0)
+
+          subscription.reload
+          overridden_plan = subscription.plan
+          expect(overridden_plan.parent_id).to eq(plan.id)
+          expect(overridden_plan.amount_cents).to eq(12_345)
+
+          # Caller's explicit entry wins on fc1 (99 not the captured 11)
+          fc1_overridden = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge1.id)
+          expect(fc1_overridden.units).to eq(99)
+
+          # fc2 had only an override row, no caller entry — gets the captured units (22)
+          fc2_overridden = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge2.id)
+          expect(fc2_overridden.units).to eq(22)
         end
       end
     end
@@ -948,6 +1192,8 @@ RSpec.describe Subscriptions::UpdateService do
     end
 
     context "with activation_rules" do
+      before { create(:payment_method, customer: subscription.customer, organization: subscription.organization) }
+
       context "when subscription is pending" do
         context "when activation rules exist" do
           let(:subscription) { create(:subscription, :pending, :with_activation_rules, activation_rules_config: [{type: "payment", timeout_hours: 48}], subscription_at: Time.current + 5.days) }
@@ -1106,6 +1352,212 @@ RSpec.describe Subscriptions::UpdateService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:activation_rules]).to include("subscription_not_pending")
+        end
+      end
+    end
+
+    context "when updating billing_entity" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:subscription) { create(:subscription, customer:, plan:, organization:) }
+      let(:new_billing_entity) { create(:billing_entity, organization:) }
+
+      context "with multi_entity_billing feature flag enabled" do
+        before { organization.update!(feature_flags: ["multi_entity_billing"]) }
+
+        context "with billing_entity_id" do
+          let(:params) { {billing_entity_id: new_billing_entity.id} }
+
+          it "assigns the new billing entity to the subscription" do
+            update_service.call
+
+            expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+          end
+
+          it "sends subscription.updated webhook" do
+            expect { update_service.call }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.updated", subscription)
+          end
+        end
+
+        context "with billing_entity_code" do
+          let(:params) { {billing_entity_code: new_billing_entity.code} }
+
+          it "assigns the new billing entity to the subscription" do
+            update_service.call
+
+            expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+          end
+        end
+
+        context "with both billing_entity_id and billing_entity_code" do
+          let(:other_entity) { create(:billing_entity, organization:) }
+          let(:params) { {billing_entity_id: new_billing_entity.id, billing_entity_code: other_entity.code} }
+
+          it "prefers billing_entity_id over billing_entity_code" do
+            update_service.call
+
+            expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+          end
+        end
+
+        context "with unknown billing_entity_id" do
+          let(:params) { {billing_entity_id: SecureRandom.uuid} }
+
+          it "returns not_found_failure for billing_entity" do
+            result = update_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.resource).to eq("billing_entity")
+          end
+
+          it "does not persist any change" do
+            expect { update_service.call }.not_to change { subscription.reload.attributes }
+          end
+
+          it "does not enqueue the subscription.updated webhook" do
+            expect { update_service.call }.not_to have_enqueued_job(SendWebhookJob).with("subscription.updated", subscription)
+          end
+        end
+
+        context "with unknown billing_entity_code" do
+          let(:params) { {billing_entity_code: "nonexistent"} }
+
+          it "returns not_found_failure for billing_entity" do
+            result = update_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.resource).to eq("billing_entity")
+          end
+        end
+
+        context "with a billing entity from another organization" do
+          let(:other_org) { create(:organization) }
+          let(:foreign_entity) { create(:billing_entity, organization: other_org) }
+          let(:params) { {billing_entity_id: foreign_entity.id} }
+
+          it "returns not_found_failure (scoping enforced)" do
+            result = update_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.resource).to eq("billing_entity")
+          end
+        end
+
+        context "when the subscription already has a billing_entity attached" do
+          let(:current_entity) { create(:billing_entity, organization:) }
+          let(:other_entity) { create(:billing_entity, organization:) }
+          let(:subscription) { create(:subscription, customer:, plan:, organization:, billing_entity: current_entity) }
+
+          context "when billing_entity_id is nil" do
+            let(:params) { {billing_entity_id: nil} }
+
+            it "clears the billing_entity_id" do
+              update_service.call
+
+              expect(subscription.reload.billing_entity_id).to be_nil
+            end
+          end
+
+          context "when billing_entity_id points at a different entity" do
+            let(:params) { {billing_entity_id: other_entity.id} }
+
+            it "switches to the new entity" do
+              update_service.call
+
+              expect(subscription.reload.billing_entity_id).to eq(other_entity.id)
+            end
+          end
+
+          context "when billing_entity_id is unknown" do
+            let(:params) { {billing_entity_id: SecureRandom.uuid} }
+
+            it "returns not_found_failure and leaves billing_entity_id unchanged" do
+              result = update_service.call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::NotFoundFailure)
+              expect(result.error.resource).to eq("billing_entity")
+              expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
+            end
+          end
+
+          context "when billing_entity_code is nil" do
+            let(:params) { {billing_entity_code: nil} }
+
+            it "clears the billing_entity_id" do
+              update_service.call
+
+              expect(subscription.reload.billing_entity_id).to be_nil
+            end
+          end
+
+          context "when billing_entity_code points at a different entity" do
+            let(:params) { {billing_entity_code: other_entity.code} }
+
+            it "switches to the new entity" do
+              update_service.call
+
+              expect(subscription.reload.billing_entity_id).to eq(other_entity.id)
+            end
+          end
+
+          context "when no billing_entity key is sent" do
+            let(:params) { {name: "renamed"} }
+
+            it "leaves billing_entity_id unchanged" do
+              update_service.call
+
+              expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
+            end
+          end
+
+          context "when billing_entity_code is unknown" do
+            let(:params) { {billing_entity_code: "nonexistent"} }
+
+            it "returns not_found_failure and leaves billing_entity_id unchanged" do
+              result = update_service.call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::NotFoundFailure)
+              expect(result.error.resource).to eq("billing_entity")
+              expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
+            end
+          end
+        end
+      end
+
+      context "with multi_entity_billing feature flag disabled" do
+        let(:params) { {billing_entity_id: new_billing_entity.id} }
+
+        it "silently ignores billing_entity_id" do
+          update_service.call
+
+          expect(subscription.reload.billing_entity_id).to be_nil
+        end
+
+        it "returns success" do
+          expect(update_service.call).to be_success
+        end
+
+        context "when the subscription already has a billing_entity attached" do
+          let(:current_entity) { create(:billing_entity, organization:) }
+          let(:subscription) { create(:subscription, customer:, plan:, organization:, billing_entity: current_entity) }
+
+          it "leaves billing_entity_id unchanged when an id is sent" do
+            update_service.call
+
+            expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
+          end
+
+          it "leaves billing_entity_id unchanged when nil is sent" do
+            described_class.new(subscription:, params: {billing_entity_id: nil}).call
+
+            expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
+          end
         end
       end
     end

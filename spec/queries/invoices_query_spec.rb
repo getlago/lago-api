@@ -399,16 +399,28 @@ RSpec.describe InvoicesQuery do
     end
   end
 
-  context "when searching for a part of an invoice id" do
-    let(:search_term) { invoice_fourth.id.scan(/.{10}/).first }
+  context "when searching for a full invoice id (UUID)" do
+    let(:search_term) { invoice_fourth.id }
 
-    it "returns 1 invoices" do
-      expect(returned_ids.count).to eq(1)
-      expect(returned_ids).not_to include(invoice_first.id)
-      expect(returned_ids).not_to include(invoice_second.id)
-      expect(returned_ids).not_to include(invoice_third.id)
-      expect(returned_ids).to include(invoice_fourth.id)
-      expect(returned_ids).not_to include(invoice_fifth.id)
+    it "returns the matching invoice" do
+      expect(returned_ids).to eq([invoice_fourth.id])
+    end
+  end
+
+  context "when searching for a partial UUID-like string" do
+    let(:search_term) { invoice_fourth.id.first(10) }
+
+    it "does not match by invoice id" do
+      expect(returned_ids).to be_empty
+    end
+  end
+
+  context "when searching for a non-UUID string that resembles part of an id" do
+    let(:search_term) { "abcdef12" }
+
+    it "does not raise and returns no id-matched invoices" do
+      expect { result }.not_to raise_error
+      expect(returned_ids).to be_empty
     end
   end
 
@@ -893,6 +905,200 @@ RSpec.describe InvoicesQuery do
 
       it "returns only invoices in that status" do
         expect(returned_ids).to match_array([invoice_first.id, invoice_second.id, invoice_third.id, invoice_sixth.id])
+      end
+    end
+  end
+
+  describe "Meilisearch path" do
+    subject(:meili_result) do
+      described_class.call(organization:, meilisearch:, pagination: {page: 1, limit: 10}, search_term:, filters:)
+    end
+
+    let(:meilisearch) { true }
+    let(:search_term) { nil }
+    let(:filters) { {} }
+    let(:ms_customer) { create(:customer, organization:, name: "Acme Corp") }
+    let(:ms_invoice_first) { create(:invoice, organization:, customer: ms_customer, status: "finalized", number: "INV-001", issuing_date: 1.day.ago) }
+    let(:ms_invoice_second) { create(:invoice, organization:, customer: ms_customer, status: "finalized", number: "INV-002", issuing_date: 2.days.ago) }
+    # Mimics the kaminari-paginated collection meilisearch-rails returns.
+    let(:search_results) do
+      Kaminari.paginate_array([ms_invoice_second, ms_invoice_first], total_count: 42).page(1).per(10)
+    end
+
+    before do
+      ms_invoice_first
+      ms_invoice_second
+      organization.enable_feature_flag!(:meilisearch)
+      stub_const(
+        "ENV",
+        ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700", "LAGO_MEILISEARCH_SEARCH_ENABLED" => "true")
+      )
+      allow(Invoice).to receive(:search).and_return(search_results)
+    end
+
+    context "when a search term is present" do
+      let(:search_term) { "Acme" }
+
+      it "queries Meilisearch and returns the page in the returned order" do
+        expect(meili_result.invoices.map(&:id)).to eq([ms_invoice_second.id, ms_invoice_first.id])
+        expect(Invoice).to have_received(:search).with("Acme", hash_including(page: 1, hits_per_page: 10, matching_strategy: "all"))
+      end
+
+      it "reports the Meilisearch total count and pagination" do
+        expect(meili_result.invoices.total_count).to eq(42)
+        expect(meili_result.invoices.current_page).to eq(1)
+        expect(meili_result.invoices.limit_value).to eq(10)
+        expect(meili_result.invoices.total_pages).to eq(5)
+      end
+
+      it "scopes the filter to the organization and visible statuses" do
+        meili_result
+
+        expect(Invoice).to have_received(:search) do |_query, options|
+          expect(options[:filter]).to include(%(organization_id = "#{organization.id}"))
+          expect(options[:filter]).to include(%(status IN ["draft", "finalized", "voided", "failed", "pending"]))
+        end
+      end
+    end
+
+    context "when only filters are present (no search term)" do
+      let(:filters) { {status: ["finalized"]} }
+
+      it "still queries Meilisearch with an empty query" do
+        meili_result
+
+        expect(Invoice).to have_received(:search).with("", hash_including(:filter))
+      end
+    end
+
+    context "when the search term is a UUID" do
+      let(:search_term) { ms_invoice_first.id }
+
+      it "performs an exact id lookup instead of a text search" do
+        meili_result
+
+        expect(Invoice).to have_received(:search) do |query, options|
+          expect(query).to eq("")
+          expect(options[:filter]).to include(%(id = "#{ms_invoice_first.id}"))
+          expect(options).not_to have_key(:attributes_to_search_on)
+        end
+      end
+    end
+
+    context "when every filter is provided" do
+      let(:billing_entity_id) { SecureRandom.uuid }
+      let(:customer_id) { SecureRandom.uuid }
+      let(:subscription_id) { SecureRandom.uuid }
+      let(:filters) do
+        {
+          billing_entity_ids: [billing_entity_id],
+          currency: "EUR",
+          customer_external_id: "ext-123",
+          customer_id: customer_id,
+          invoice_type: ["subscription"],
+          issuing_date_from: "2026-01-01T00:00:00Z",
+          issuing_date_to: "2026-01-31T00:00:00Z",
+          status: ["finalized"],
+          payment_status: ["pending"],
+          payment_dispute_lost: false,
+          payment_overdue: true,
+          amount_from: 100,
+          amount_to: 5000,
+          metadata: {po: "123", missing_key: ""},
+          partially_paid: true,
+          positive_due_amount: true,
+          self_billed: false,
+          subscription_id: subscription_id,
+          settlements: ["payment"]
+        }
+      end
+
+      it "maps every filter to its Meilisearch filter expression" do
+        meili_result
+
+        expect(Invoice).to have_received(:search) do |_query, options|
+          expect(options[:filter]).to eq(
+            [
+              %(organization_id = "#{organization.id}"),
+              %(status IN ["finalized"]),
+              %(billing_entity_id IN ["#{billing_entity_id}"]),
+              %(currency = "EUR"),
+              %(customer_external_id = "ext-123"),
+              %(customer_id = "#{customer_id}"),
+              %(invoice_type IN ["subscription"]),
+              "issuing_date >= #{DateTime.iso8601("2026-01-01T00:00:00Z").to_time.to_i}",
+              "issuing_date <= #{DateTime.iso8601("2026-01-31T00:00:00Z").to_time.to_i}",
+              "total_amount_cents >= 100",
+              "total_amount_cents <= 5000",
+              %(payment_status IN ["pending"]),
+              "payment_dispute_lost = false",
+              "payment_overdue = true",
+              "self_billed = false",
+              "due_amount_cents > 0",
+              "partially_paid = true",
+              %(subscription_ids = "#{subscription_id}"),
+              %(settlement_types IN ["payment"]),
+              %(metadata = "po::123"),
+              %(metadata_keys NOT IN ["missing_key"])
+            ]
+          )
+        end
+      end
+    end
+
+    context "when neither a search term nor filters are present" do
+      it "uses the Postgres path" do
+        expect(meili_result.invoices.map(&:id)).to include(ms_invoice_first.id, ms_invoice_second.id)
+        expect(Invoice).not_to have_received(:search)
+      end
+    end
+
+    context "when the meilisearch flag is off" do
+      let(:meilisearch) { false }
+      let(:search_term) { "Acme" }
+
+      it "uses the Postgres path even with a search term" do
+        expect(Invoice).not_to have_received(:search)
+      end
+    end
+
+    context "when the organization does not have the meilisearch feature flag" do
+      let(:search_term) { "Acme" }
+
+      before { organization.disable_feature_flag!(:meilisearch) }
+
+      it "uses the Postgres path even with a search term" do
+        expect(meili_result.invoices.map(&:id)).to include(ms_invoice_first.id, ms_invoice_second.id)
+        expect(Invoice).not_to have_received(:search)
+      end
+    end
+
+    context "when search is disabled (LAGO_MEILISEARCH_SEARCH_ENABLED off)" do
+      let(:search_term) { "Acme" }
+
+      before do
+        stub_const(
+          "ENV",
+          ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700", "LAGO_MEILISEARCH_SEARCH_ENABLED" => "false")
+        )
+      end
+
+      it "uses the Postgres path even with a search term" do
+        expect(meili_result.invoices.map(&:id)).to include(ms_invoice_first.id, ms_invoice_second.id)
+        expect(Invoice).not_to have_received(:search)
+      end
+    end
+
+    context "when Meilisearch raises an error", :sentry do
+      let(:search_term) { "Acme" }
+
+      before do
+        allow(Invoice).to receive(:search).and_raise(Meilisearch::CommunicationError.new("boom"))
+      end
+
+      it "falls back to the Postgres path and reports the error" do
+        expect(meili_result.invoices.map(&:id)).to include(ms_invoice_first.id, ms_invoice_second.id)
+        expect(sentry_events).to include_sentry_event(exception: Meilisearch::CommunicationError, message: "boom")
       end
     end
   end

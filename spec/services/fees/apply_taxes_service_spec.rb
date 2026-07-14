@@ -353,5 +353,89 @@ RSpec.describe Fees::ApplyTaxesService do
         )
       end
     end
+
+    context "with explicit customer and plan arguments" do
+      let(:other_customer) { create(:customer, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:passed_plan) { create(:plan, organization:) }
+      let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+
+      context "when a plan is passed" do
+        let(:charge) { create(:standard_charge, plan:) }
+        let(:fee) { create(:charge_fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, charge:, subscription:) }
+
+        it "uses the passed plan's taxes, not the subscription plan's" do
+          create(:plan_applied_tax, plan:, tax: tax2)
+          create(:plan_applied_tax, plan: passed_plan, tax: tax1)
+
+          result = described_class.new(fee:, plan: passed_plan).call
+
+          expect(result).to be_success
+          expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax1.code)
+        end
+      end
+
+      context "when a customer is passed" do
+        let(:fee) { create(:fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, subscription:) }
+
+        it "uses the passed customer's taxes, not the invoice customer's" do
+          create(:customer_applied_tax, customer: other_customer, tax: tax1)
+
+          result = described_class.new(fee:, customer: other_customer).call
+
+          expect(result).to be_success
+          expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax1.code)
+        end
+      end
+    end
+
+    context "when customer and plan are passed as nil" do
+      let(:plan) { create(:plan, organization:) }
+      let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+
+      context "when the fee has an invoice" do
+        let(:fee) { create(:fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, subscription:) }
+
+        it "falls back to the subscription's plan taxes" do
+          create(:plan_applied_tax, plan:, tax: tax1)
+
+          result = described_class.new(fee:, customer: nil, plan: nil).call
+
+          expect(result).to be_success
+          expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax1.code)
+        end
+
+        it "falls back to the invoice customer's taxes" do
+          create(:customer_applied_tax, customer:, tax: tax2)
+
+          result = described_class.new(fee:, customer: nil, plan: nil).call
+
+          expect(result).to be_success
+          expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax2.code)
+        end
+      end
+
+      context "when the fee has no invoice" do
+        let(:fee) { build(:fee, invoice: nil, amount_cents: 1000, precise_amount_cents: 1000.0, subscription:) }
+
+        it "falls back to the subscription's customer taxes" do
+          create(:customer_applied_tax, customer:, tax: tax1)
+
+          result = described_class.new(fee:, customer: nil, plan: nil).call
+
+          expect(result).to be_success
+          expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax1.code)
+        end
+
+        it "falls back to the subscription's plan taxes" do
+          create(:plan_applied_tax, plan:, tax: tax2)
+
+          result = described_class.new(fee:, customer: nil, plan: nil).call
+
+          expect(result).to be_success
+          expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax2.code)
+        end
+      end
+    end
   end
 end
