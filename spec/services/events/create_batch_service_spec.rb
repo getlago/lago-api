@@ -261,7 +261,7 @@ RSpec.describe Events::CreateBatchService do
     end
 
     context "with an expression configured on the billable metric" do
-      let(:billable_metric) { create(:billable_metric, code:, organization:, field_name: "result", expression: "concat(event.properties.foo, '-bar')") }
+      let(:billable_metric) { create(:sum_billable_metric, code:, organization:, field_name: "result", expression: "concat(event.properties.foo, '-bar')") }
 
       before do
         billable_metric

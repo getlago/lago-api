@@ -126,7 +126,7 @@ module Wallets
         name: params[:transaction_name],
         priority: params[:transaction_priority],
         ignore_paid_top_up_limits: params[:ignore_paid_top_up_limits_on_creation],
-        purchase_order_number: recurring_transaction_rule&.resolved_purchase_order_number || wallet.purchase_order_number
+        purchase_order_number: recurring_transaction_rule&.resolved_purchase_order_number
       }
 
       WalletTransactions::CreateJob.perform_after_commit(

@@ -414,6 +414,86 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
         expect(result.current_usage_units).to eq(5)
       end
     end
+
+    context "when the aggregated state turned negative after an upfront payment" do
+      let(:old_events) { nil }
+      let(:latest_events) do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: to_datetime - 3.days,
+          properties: {
+            total_count: -5
+          }
+        )
+      end
+
+      let(:cached_aggregation) do
+        create(
+          :cached_aggregation,
+          organization: billable_metric.organization,
+          charge:,
+          external_subscription_id: subscription.external_id,
+          event_transaction_id: latest_events.transaction_id,
+          timestamp: latest_events.timestamp,
+          current_aggregation: "-5",
+          max_aggregation: "20",
+          max_aggregation_with_proration: "8.5"
+        )
+      end
+
+      before { cached_aggregation }
+
+      it "does not inflate the aggregation with the negative units" do
+        result = sum_service.aggregate(options:)
+
+        expect(result.aggregation).to eq(8.5)
+        expect(result.current_usage_units).to eq(0)
+      end
+    end
+
+    context "when the aggregated state is negative from the start with nothing invoiced" do
+      let(:old_events) { nil }
+      let(:latest_events) do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: to_datetime - 3.days,
+          properties: {
+            total_count: -10
+          }
+        )
+      end
+
+      let(:cached_aggregation) do
+        create(
+          :cached_aggregation,
+          organization: billable_metric.organization,
+          charge:,
+          external_subscription_id: subscription.external_id,
+          event_transaction_id: latest_events.transaction_id,
+          timestamp: latest_events.timestamp,
+          current_aggregation: "-10",
+          max_aggregation: "-10",
+          max_aggregation_with_proration: "0"
+        )
+      end
+
+      before { cached_aggregation }
+
+      it "returns zero" do
+        result = sum_service.aggregate(options:)
+
+        expect(result.aggregation).to eq(0)
+        expect(result.current_usage_units).to eq(0)
+      end
+    end
   end
 
   context "when current usage context and charge is pay in advance and just upgraded" do

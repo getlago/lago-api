@@ -39,6 +39,67 @@ RSpec.describe QuoteVersions::UpdateService do
       end
     end
 
+    context "when the quote is one_off", :premium do
+      let(:quote) { create(:quote, organization:, order_type: :one_off) }
+      let(:add_on) { create(:add_on, organization:) }
+      let(:update_params) { {billing_items:, currency: "EUR"} }
+      let(:billing_items) do
+        {
+          "addOns" => [
+            {
+              "id" => add_on.id,
+              "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+              "type" => "add_on",
+              "payload" => {
+                "code" => add_on.code,
+                "units" => 2,
+                "unitAmountCents" => 10_000,
+                "totalAmountCents" => 20_000
+              }
+            }
+          ]
+        }
+      end
+
+      it "updates the billing items" do
+        expect(result).to be_success
+        expect(result.quote_version.reload.billing_items).to eq(billing_items)
+      end
+
+      context "when the payload is invalid" do
+        let(:billing_items) do
+          {
+            "addOns" => [
+              {"id" => "not-a-uuid", "localId" => "3d08b2df", "type" => "add_on", "payload" => {"units" => 0}}
+            ]
+          }
+        end
+
+        it "returns a validation failure and does not persist the changes" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq(
+            {
+              "billing_items.addOns.0.id": ["invalid_format"],
+              "billing_items.addOns.0.payload.units": ["invalid_value"]
+            }
+          )
+
+          expect(quote_version.reload.billing_items).to be_nil
+        end
+      end
+
+      context "when the currency is invalid" do
+        let(:update_params) { {currency: "DOUBLOON"} }
+
+        it "returns a validation failure" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({currency: ["invalid_currency"]})
+        end
+      end
+    end
+
     context "when approved quote version", :premium do
       let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }
 

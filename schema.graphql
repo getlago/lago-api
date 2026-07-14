@@ -5868,9 +5868,10 @@ Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
   enriched_events_aggregation
+  fixed_charge_usage_delta_migration
+  meilisearch
   multi_currency
   multi_entity_billing
-  multiple_payment_methods
   order_forms
   payment_gated_subscriptions
   postgres_enriched_events
@@ -10321,7 +10322,7 @@ type Query {
   """
   Query invoice collections of a customer portal user
   """
-  customerPortalInvoiceCollections(expireCache: Boolean, months: Int): FinalizedInvoiceCollectionCollection!
+  customerPortalInvoiceCollections(expireCache: Boolean): FinalizedInvoiceCollectionCollection!
 
   """
   Query invoices of a customer
@@ -10336,7 +10337,7 @@ type Query {
   """
   Query overdue balances of a customer portal user
   """
-  customerPortalOverdueBalances(expireCache: Boolean, months: Int): OverdueBalanceCollection!
+  customerPortalOverdueBalances(expireCache: Boolean): OverdueBalanceCollection!
 
   """
   Query a single subscription from the customer portal
@@ -10501,7 +10502,7 @@ type Query {
   """
   Query gross revenue of an organization
   """
-  grossRevenues(billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): GrossRevenueCollection!
+  grossRevenues(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): GrossRevenueCollection!
 
   """
   Query a single integration
@@ -10571,7 +10572,7 @@ type Query {
   """
   Query invoice collections of an organization
   """
-  invoiceCollections(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, isCustomerTinEmpty: Boolean): FinalizedInvoiceCollectionCollection!
+  invoiceCollections(billingEntityCode: String, currency: CurrencyEnum, isCustomerTinEmpty: Boolean): FinalizedInvoiceCollectionCollection!
 
   """
   Query invoice's credit note
@@ -10603,7 +10604,7 @@ type Query {
   """
   Query invoiced usage of an organization
   """
-  invoicedUsages(billingEntityId: ID, currency: CurrencyEnum): InvoicedUsageCollection!
+  invoicedUsages(billingEntityCode: String, currency: CurrencyEnum): InvoicedUsageCollection!
 
   """
   Query invoices
@@ -10644,7 +10645,7 @@ type Query {
   """
   Query MRR of an organization
   """
-  mrrs(billingEntityId: ID, currency: CurrencyEnum): MrrCollection!
+  mrrs(billingEntityCode: String, currency: CurrencyEnum): MrrCollection!
 
   """
   Query a single order
@@ -10684,7 +10685,7 @@ type Query {
   """
   Query overdue balances of an organization
   """
-  overdueBalances(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, isCustomerTinEmpty: Boolean, months: Int): OverdueBalanceCollection!
+  overdueBalances(billingEntityCode: String, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, isCustomerTinEmpty: Boolean, months: Int): OverdueBalanceCollection!
 
   """
   Query a password reset by token

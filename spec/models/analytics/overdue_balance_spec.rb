@@ -15,7 +15,7 @@ RSpec.describe Analytics::OverdueBalance do
 
     context "with no arguments" do
       let(:args) { {} }
-      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}////" }
+      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}/////" }
 
       it "returns the cache key" do
         expect(overdue_balance_cache_key).to eq(cache_key)
@@ -26,7 +26,7 @@ RSpec.describe Analytics::OverdueBalance do
       let(:args) { {external_customer_id:, currency:, months:} }
 
       let(:cache_key) do
-        "overdue-balance/#{date}/#{organization_id}//#{external_customer_id}/#{currency}/#{months}"
+        "overdue-balance/#{date}/#{organization_id}//#{external_customer_id}/#{currency}/#{months}/"
       end
 
       it "returns the cache key" do
@@ -36,7 +36,7 @@ RSpec.describe Analytics::OverdueBalance do
       context "with billing_entity_id" do
         let(:args) { {billing_entity_id:, external_customer_id:, currency:, months:} }
         let(:cache_key) do
-          "overdue-balance/#{date}/#{organization_id}/#{billing_entity_id}/#{external_customer_id}/#{currency}/#{months}"
+          "overdue-balance/#{date}/#{organization_id}/#{billing_entity_id}/#{external_customer_id}/#{currency}/#{months}/"
         end
 
         it "returns the cache key" do
@@ -49,7 +49,7 @@ RSpec.describe Analytics::OverdueBalance do
       let(:args) { {external_customer_id:} }
 
       let(:cache_key) do
-        "overdue-balance/#{date}/#{organization_id}//#{external_customer_id}//"
+        "overdue-balance/#{date}/#{organization_id}//#{external_customer_id}///"
       end
 
       it "returns the cache key" do
@@ -59,7 +59,7 @@ RSpec.describe Analytics::OverdueBalance do
 
     context "with currency" do
       let(:args) { {currency:} }
-      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}///#{currency}/" }
+      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}///#{currency}//" }
 
       it "returns the cache key" do
         expect(overdue_balance_cache_key).to eq(cache_key)
@@ -68,9 +68,18 @@ RSpec.describe Analytics::OverdueBalance do
 
     context "with billing_entity_id" do
       let(:args) { {billing_entity_id:} }
-      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}/#{billing_entity_id}///" }
+      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}/#{billing_entity_id}////" }
 
       it "returns the cache key" do
+        expect(overdue_balance_cache_key).to eq(cache_key)
+      end
+    end
+
+    context "with is_customer_tin_empty" do
+      let(:args) { {is_customer_tin_empty: true} }
+      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}/////true" }
+
+      it "includes is_customer_tin_empty so filtered and unfiltered requests do not share a cache entry" do
         expect(overdue_balance_cache_key).to eq(cache_key)
       end
     end
@@ -169,22 +178,6 @@ RSpec.describe Analytics::OverdueBalance do
             "billing_entity_id" => billing_entity1.id,
             "amount_cents" => 100,
             "lago_invoice_ids" => "[[\"#{invoice1.id}\"]]"
-          })
-        ])
-      end
-    end
-
-    context "with billing entity code" do
-      let(:args) { {billing_entity_code: billing_entity2.code} }
-
-      it "returns the overdue balances for provided billing_entity only" do
-        expect(overdue_balances).to match_array([
-          hash_including({
-            "month" => Time.current.beginning_of_month - 2.months,
-            "currency" => "EUR",
-            "billing_entity_id" => billing_entity2.id,
-            "amount_cents" => 400,
-            "lago_invoice_ids" => "[[\"#{invoice4.id}\"]]"
           })
         ])
       end
@@ -299,6 +292,36 @@ RSpec.describe Analytics::OverdueBalance do
         end
       end
 
+      context "with is_customer_tin_empty filter" do
+        let(:customer_with_tin) { create(:customer, organization:, tax_identification_number: "123456789") }
+        let(:tin_invoice) do
+          create(:invoice, customer: customer_with_tin, organization:, payment_overdue: true,
+            payment_due_date: 1.month.ago, total_amount_cents: 700, billing_entity: billing_entity1, issuing_date: 1.month.ago)
+        end
+
+        before { tin_invoice }
+
+        context "when is_customer_tin_empty is true" do
+          let(:args) { {is_customer_tin_empty: true} }
+
+          it "returns only overdue balances for customers without a tax identification number" do
+            invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
+            expect(invoice_ids).to match_array([invoice1.id, invoice4.id])
+            expect(overdue_balances.map { |r| r["amount_cents"] }).to match_array([400, 100])
+          end
+        end
+
+        context "when is_customer_tin_empty is false" do
+          let(:args) { {is_customer_tin_empty: false} }
+
+          it "returns only overdue balances for customers with a tax identification number" do
+            invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
+            expect(invoice_ids).to eq([tin_invoice.id])
+            expect(overdue_balances.map { |r| r["amount_cents"] }).to eq([700])
+          end
+        end
+      end
+
       context "with deleted customer" do
         let(:deleted_customer) { create(:customer, organization:, deleted_at: 1.day.ago) }
         let(:args) { {external_customer_id: deleted_customer.external_id} }
@@ -311,6 +334,96 @@ RSpec.describe Analytics::OverdueBalance do
         it "excludes invoices from deleted customers" do
           expect(overdue_balances).to be_empty
         end
+      end
+    end
+  end
+
+  describe ".expire_cache_for_customer", cache: :redis do
+    subject(:expire_cache) { described_class.expire_cache_for_customer(organization_id, external_customer_id) }
+
+    let(:organization_id) { SecureRandom.uuid }
+    let(:external_customer_id) { "customer_01" }
+    let(:version_key) { described_class.cache_version_key(organization_id, external_customer_id) }
+
+    before { allow(Rails.cache).to receive(:delete_matched).and_call_original }
+
+    it "bumps the stored version token" do
+      initial_version = described_class.cache_version(organization_id, external_customer_id)
+
+      travel 1.second do
+        expire_cache
+      end
+
+      expect(Rails.cache.read(version_key, raw: true)).not_to eq(initial_version)
+    end
+
+    it "does not scan the keyspace" do
+      expire_cache
+
+      expect(Rails.cache).not_to have_received(:delete_matched)
+    end
+
+    it "uses an independent version namespace per model" do
+      expect(described_class.cache_version_key(organization_id, external_customer_id))
+        .not_to eq(Analytics::GrossRevenue.cache_version_key(organization_id, external_customer_id))
+    end
+  end
+
+  describe ".versioned_cache_key" do
+    let(:organization_id) { SecureRandom.uuid }
+
+    context "without external_customer_id" do
+      it "returns the cache key without a version suffix" do
+        expect(described_class.versioned_cache_key(organization_id))
+          .to eq(described_class.cache_key(organization_id))
+      end
+    end
+  end
+
+  describe ".cache_version", cache: :redis do
+    let(:organization_id) { SecureRandom.uuid }
+    let(:external_customer_id) { "customer_01" }
+
+    it "seeds the token once and keeps it stable across reads" do
+      first = described_class.cache_version(organization_id, external_customer_id)
+
+      travel 1.second do
+        expect(described_class.cache_version(organization_id, external_customer_id)).to eq(first)
+      end
+    end
+  end
+
+  describe "cache invalidation through .find_all_by", cache: :redis do
+    let(:organization) { create(:organization, created_at: 3.months.ago) }
+    let(:customer) { create(:customer, organization:) }
+    let(:billing_entity) { organization.default_billing_entity }
+
+    before do
+      create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
+        total_amount_cents: 100, billing_entity:, issuing_date: 1.month.ago)
+    end
+
+    def overdue_amounts(expire_cache: false)
+      args = {external_customer_id: customer.external_id}
+      args[:expire_cache] = true if expire_cache
+      described_class.find_all_by(organization.id, **args).sum { |row| row["amount_cents"] }
+    end
+
+    it "serves stale results until expired, then recomputes" do
+      expect(overdue_amounts).to eq(100)
+
+      create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
+        total_amount_cents: 250, billing_entity:, issuing_date: 1.month.ago)
+
+      expect(overdue_amounts).to eq(100)
+
+      travel 1.second do
+        expect(overdue_amounts(expire_cache: true)).to eq(350)
+
+        # The expiring read seeded a fresh token and recomputed. A subsequent
+        # plain read must neither reseed the token nor bust the cache: it still
+        # hits the cache written against the new token and returns 350.
+        expect(overdue_amounts).to eq(350)
       end
     end
   end

@@ -28,6 +28,17 @@ RSpec.describe Api::V1::Plans::EntitlementsController do
       expect(json[:entitlements].first[:privileges].sole[:value]).to eq(30)
     end
 
+    context "when the entitlement feature is discarded" do
+      before { feature.discard! }
+
+      it "does not return the orphaned entitlement" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:entitlements]).to eq([])
+      end
+    end
+
     context "when plan has children (subscription plan overrides)" do
       it "always retrieve the parent plan" do
         # NOTE: It should be possible to create entitlements on a child plan,

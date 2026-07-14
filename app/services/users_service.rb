@@ -1,6 +1,16 @@
 # frozen_string_literal: true
 
 class UsersService < BaseService
+  include TypedResults
+
+  RESULTS = {
+    login: BaseResult[:user, :token],
+    register: BaseResult[:user, :organization, :membership, :token],
+    register_from_invite: BaseResult[:user, :organization, :membership, :token]
+  }.freeze
+
+  private
+
   def login(email, password)
     # NOTE: Null byte injection. Prevent 500 errors.
     if email.include?("\u0000") || password.include?("\u0000")
@@ -112,10 +122,8 @@ class UsersService < BaseService
     result
   end
 
-  private
-
   def generate_token
-    Auth::TokenService.encode(user: result.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+    Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
   rescue => e
     result.service_failure!(code: "token_encoding_error", message: e.message)
   end
