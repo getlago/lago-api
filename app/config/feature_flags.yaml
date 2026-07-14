@@ -37,3 +37,7 @@ stripe_shared_payment_token:
 fixed_charge_usage_delta_migration:
   description: "Count fees from discarded recurring usage charges as already-paid units when computing pay-in-advance fixed charge deltas (temporary bridge for usage-to-fixed-charge migrations)"
   owners: ["@osmarluz"]
+
+multi_connection:
+  description: "Allow organizations to configure multiple connections of the same type per customer"
+  owners: ["@lovrocolic", "@mariohd"]

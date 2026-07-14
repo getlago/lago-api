@@ -5870,6 +5870,7 @@ enum FeatureFlagEnum {
   enriched_events_aggregation
   fixed_charge_usage_delta_migration
   meilisearch
+  multi_connection
   multi_currency
   multi_entity_billing
   order_forms
