@@ -139,6 +139,18 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       end
     end
 
+    context "when the event subscription has a purchase order number" do
+      let(:subscription) do
+        create(:subscription, customer:, plan:, purchase_order_number: "PO-SUB-123")
+      end
+
+      it "copies it to the invoice" do
+        invoice = invoice_service.call.invoice
+
+        expect(invoice.purchase_order_number).to eq("PO-SUB-123")
+      end
+    end
+
     it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
