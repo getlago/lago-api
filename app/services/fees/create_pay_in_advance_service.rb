@@ -50,6 +50,8 @@ module Fees
     private
 
     def skip_missing_subscription
+      # NOTE: `event.subscription` is nil when the subscription was terminated before the
+      # event's timestamp (e.g. enqueued while active, terminated before the job ran).
       message = "Fees::CreatePayInAdvanceService skipped: no active subscription for event"
       context = {
         organization_id: event.organization_id,
