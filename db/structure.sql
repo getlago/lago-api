@@ -3385,7 +3385,8 @@ CREATE TABLE public.subscriptions (
     billing_entity_id uuid,
     consolidate_invoice boolean DEFAULT true NOT NULL,
     skip_daily_usage boolean DEFAULT false NOT NULL,
-    cancellation_reason public.subscription_cancellation_reasons
+    cancellation_reason public.subscription_cancellation_reasons,
+    purchase_order_number character varying
 );
 
 
@@ -4264,6 +4265,7 @@ CREATE TABLE public.wallet_transactions (
     remaining_amount_cents bigint,
     voided_invoice_id uuid,
     billing_entity_id uuid,
+    purchase_order_number character varying,
     CONSTRAINT remaining_amount_cents_non_negative CHECK (((remaining_amount_cents >= 0) OR (remaining_amount_cents IS NULL)))
 );
 
@@ -4353,7 +4355,8 @@ CREATE TABLE public.wallets (
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     traceable boolean DEFAULT false NOT NULL,
     code character varying,
-    billing_entity_id uuid
+    billing_entity_id uuid,
+    purchase_order_number character varying
 );
 
 
@@ -5061,7 +5064,8 @@ CREATE TABLE public.recurring_transaction_rules (
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
-    grants_target_top_up boolean
+    grants_target_top_up boolean,
+    purchase_order_number character varying
 );
 
 
@@ -12849,6 +12853,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260709135717'),
 ('20260708095857'),
 ('20260706173746'),
+('20260706131152'),
 ('20260703164249'),
 ('20260702074504'),
 ('20260701083110'),

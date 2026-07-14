@@ -122,6 +122,7 @@ module WalletTransactions
         metadata:,
         priority:,
         name:,
+        purchase_order_number: params[:purchase_order_number],
         payment_method: params[:payment_method]
       ).wallet_transaction
 
@@ -146,6 +147,7 @@ module WalletTransactions
           metadata:,
           priority:,
           name:,
+          purchase_order_number: params[:purchase_order_number],
           voided_invoice_id:
         ).wallet_transaction
 

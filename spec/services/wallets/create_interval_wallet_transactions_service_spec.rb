@@ -44,7 +44,8 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
             source: :interval,
             invoice_requires_successful_payment: false,
             metadata: [],
-            name: "Recurring Transaction Rule"
+            name: "Recurring Transaction Rule",
+            purchase_order_number: nil
           }.merge(attrs)
         )
     end
@@ -444,6 +445,85 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
               organization_id: customer.organization_id,
               params: hash_including(name: "Monthly Credits Refill")
             )
+        end
+      end
+    end
+
+    context "when rule has purchase_order_number" do
+      let(:interval) { :weekly }
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          trigger: :interval,
+          wallet:,
+          interval:,
+          created_at: created_at + 1.second,
+          started_at:,
+          purchase_order_number: "PO-RULE-123"
+        )
+      end
+
+      let(:current_date) do
+        DateTime.parse("20 Jun 2022").prev_occurring(created_at.strftime("%A").downcase.to_sym)
+      end
+
+      it "enqueues a job with the rule purchase order number" do
+        travel_to(current_date) do
+          create_interval_transactions_service.call
+
+          expect_to_have_scheduled_wallet_transaction(purchase_order_number: "PO-RULE-123")
+        end
+      end
+    end
+
+    context "when rule purchase_order_number is blank and wallet has purchase_order_number" do
+      let(:interval) { :weekly }
+      let(:wallet) do
+        create(
+          :wallet,
+          customer:,
+          created_at:,
+          credits_ongoing_balance: 50,
+          paid_top_up_min_amount_cents: 200_00,
+          purchase_order_number: "PO-WALLET-123"
+        )
+      end
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          trigger: :interval,
+          wallet:,
+          interval:,
+          created_at: created_at + 1.second,
+          started_at:,
+          purchase_order_number: nil
+        )
+      end
+
+      let(:current_date) do
+        DateTime.parse("20 Jun 2022").prev_occurring(created_at.strftime("%A").downcase.to_sym)
+      end
+
+      it "enqueues a job with the wallet purchase order number" do
+        travel_to(current_date) do
+          create_interval_transactions_service.call
+
+          expect_to_have_scheduled_wallet_transaction(purchase_order_number: "PO-WALLET-123")
+        end
+      end
+    end
+
+    context "when neither rule nor wallet has purchase_order_number" do
+      let(:interval) { :weekly }
+      let(:current_date) do
+        DateTime.parse("20 Jun 2022").prev_occurring(created_at.strftime("%A").downcase.to_sym)
+      end
+
+      it "enqueues a job without purchase order number" do
+        travel_to(current_date) do
+          create_interval_transactions_service.call
+
+          expect_to_have_scheduled_wallet_transaction(purchase_order_number: nil)
         end
       end
     end

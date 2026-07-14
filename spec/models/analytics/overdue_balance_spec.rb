@@ -15,7 +15,7 @@ RSpec.describe Analytics::OverdueBalance do
 
     context "with no arguments" do
       let(:args) { {} }
-      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}////" }
+      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}/////" }
 
       it "returns the cache key" do
         expect(overdue_balance_cache_key).to eq(cache_key)
@@ -26,7 +26,7 @@ RSpec.describe Analytics::OverdueBalance do
       let(:args) { {external_customer_id:, currency:, months:} }
 
       let(:cache_key) do
-        "overdue-balance/#{date}/#{organization_id}//#{external_customer_id}/#{currency}/#{months}"
+        "overdue-balance/#{date}/#{organization_id}//#{external_customer_id}/#{currency}/#{months}/"
       end
 
       it "returns the cache key" do
@@ -36,7 +36,7 @@ RSpec.describe Analytics::OverdueBalance do
       context "with billing_entity_id" do
         let(:args) { {billing_entity_id:, external_customer_id:, currency:, months:} }
         let(:cache_key) do
-          "overdue-balance/#{date}/#{organization_id}/#{billing_entity_id}/#{external_customer_id}/#{currency}/#{months}"
+          "overdue-balance/#{date}/#{organization_id}/#{billing_entity_id}/#{external_customer_id}/#{currency}/#{months}/"
         end
 
         it "returns the cache key" do
@@ -49,7 +49,7 @@ RSpec.describe Analytics::OverdueBalance do
       let(:args) { {external_customer_id:} }
 
       let(:cache_key) do
-        "overdue-balance/#{date}/#{organization_id}//#{external_customer_id}//"
+        "overdue-balance/#{date}/#{organization_id}//#{external_customer_id}///"
       end
 
       it "returns the cache key" do
@@ -59,7 +59,7 @@ RSpec.describe Analytics::OverdueBalance do
 
     context "with currency" do
       let(:args) { {currency:} }
-      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}///#{currency}/" }
+      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}///#{currency}//" }
 
       it "returns the cache key" do
         expect(overdue_balance_cache_key).to eq(cache_key)
@@ -68,9 +68,18 @@ RSpec.describe Analytics::OverdueBalance do
 
     context "with billing_entity_id" do
       let(:args) { {billing_entity_id:} }
-      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}/#{billing_entity_id}///" }
+      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}/#{billing_entity_id}////" }
 
       it "returns the cache key" do
+        expect(overdue_balance_cache_key).to eq(cache_key)
+      end
+    end
+
+    context "with is_customer_tin_empty" do
+      let(:args) { {is_customer_tin_empty: true} }
+      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}/////true" }
+
+      it "includes is_customer_tin_empty so filtered and unfiltered requests do not share a cache entry" do
         expect(overdue_balance_cache_key).to eq(cache_key)
       end
     end
@@ -169,22 +178,6 @@ RSpec.describe Analytics::OverdueBalance do
             "billing_entity_id" => billing_entity1.id,
             "amount_cents" => 100,
             "lago_invoice_ids" => "[[\"#{invoice1.id}\"]]"
-          })
-        ])
-      end
-    end
-
-    context "with billing entity code" do
-      let(:args) { {billing_entity_code: billing_entity2.code} }
-
-      it "returns the overdue balances for provided billing_entity only" do
-        expect(overdue_balances).to match_array([
-          hash_including({
-            "month" => Time.current.beginning_of_month - 2.months,
-            "currency" => "EUR",
-            "billing_entity_id" => billing_entity2.id,
-            "amount_cents" => 400,
-            "lago_invoice_ids" => "[[\"#{invoice4.id}\"]]"
           })
         ])
       end
@@ -296,6 +289,36 @@ RSpec.describe Analytics::OverdueBalance do
           invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
           expect(invoice_ids).to include(invoice1.id)
           expect(invoice_ids).not_to include(other_invoice.id)
+        end
+      end
+
+      context "with is_customer_tin_empty filter" do
+        let(:customer_with_tin) { create(:customer, organization:, tax_identification_number: "123456789") }
+        let(:tin_invoice) do
+          create(:invoice, customer: customer_with_tin, organization:, payment_overdue: true,
+            payment_due_date: 1.month.ago, total_amount_cents: 700, billing_entity: billing_entity1, issuing_date: 1.month.ago)
+        end
+
+        before { tin_invoice }
+
+        context "when is_customer_tin_empty is true" do
+          let(:args) { {is_customer_tin_empty: true} }
+
+          it "returns only overdue balances for customers without a tax identification number" do
+            invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
+            expect(invoice_ids).to match_array([invoice1.id, invoice4.id])
+            expect(overdue_balances.map { |r| r["amount_cents"] }).to match_array([400, 100])
+          end
+        end
+
+        context "when is_customer_tin_empty is false" do
+          let(:args) { {is_customer_tin_empty: false} }
+
+          it "returns only overdue balances for customers with a tax identification number" do
+            invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
+            expect(invoice_ids).to eq([tin_invoice.id])
+            expect(overdue_balances.map { |r| r["amount_cents"] }).to eq([700])
+          end
         end
       end
 

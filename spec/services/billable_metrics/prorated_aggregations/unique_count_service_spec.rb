@@ -551,6 +551,29 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
           expect(result.current_usage_units).to eq(1)
         end
       end
+
+      context "when cached aggregation is negative" do
+        let(:previous_event) { nil }
+
+        let(:cached_aggregation) do
+          create(
+            :cached_aggregation,
+            organization:,
+            charge:,
+            event_transaction_id: event.transaction_id,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 5.days,
+            current_aggregation: "-1",
+            max_aggregation: "1",
+            max_aggregation_with_proration: "0.8"
+          )
+        end
+
+        it "does not inflate the aggregation with the negative units" do
+          expect(result.aggregation).to eq(1.8)
+          expect(result.current_usage_units).to eq(1)
+        end
+      end
     end
 
     context "when event is given" do

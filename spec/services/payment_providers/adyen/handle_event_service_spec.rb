@@ -9,17 +9,14 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
 
   describe "#call" do
     let(:payment_service) { instance_double(Invoices::Payments::AdyenService) }
-    let(:payment_provider_service) { instance_double(PaymentProviderCustomers::AdyenService) }
     let(:service_result) { BaseService::Result.new }
 
     before do
       allow(Invoices::Payments::AdyenService).to receive(:new)
         .and_return(payment_service)
-      allow(PaymentProviderCustomers::AdyenService).to receive(:new)
-        .and_return(payment_provider_service)
-      allow(payment_service).to receive(:update_payment_status)
+      allow(PaymentProviderCustomers::AdyenService).to receive(:call)
         .and_return(service_result)
-      allow(payment_provider_service).to receive(:preauthorise)
+      allow(payment_service).to receive(:update_payment_status)
         .and_return(service_result)
     end
 
@@ -37,8 +34,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
       it "routes the event to an other service" do
         event_service.call
 
-        expect(PaymentProviderCustomers::AdyenService).to have_received(:new)
-        expect(payment_provider_service).to have_received(:preauthorise)
+        expect(PaymentProviderCustomers::AdyenService).to have_received(:call).with(:preauthorise, any_args)
       end
     end
 

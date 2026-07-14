@@ -744,5 +744,38 @@ RSpec.describe Invoices::Payments::CreateService do
         }.not_to have_enqueued_job(Invoices::Payments::CreateJob)
       end
     end
+
+    context "when the customer has already used a checkout URL" do
+      before { create(:payment_intent, invoice: create(:invoice, customer:, organization:)) }
+
+      it "delays the first auto-payment" do
+        freeze_time do
+          expect { ApplicationRecord.transaction { create_service.call_async } }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+        end
+      end
+
+      context "when it is not the first payment attempt (retry)" do
+        before { invoice.update!(payment_attempts: 1) }
+
+        it "enqueues the payment immediately" do
+          expect { ApplicationRecord.transaction { create_service.call_async } }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            .at(:no_wait)
+        end
+      end
+    end
+
+    context "when the customer has never used a checkout URL" do
+      it "enqueues the payment immediately" do
+        expect { ApplicationRecord.transaction { create_service.call_async } }
+          .to have_enqueued_job(Invoices::Payments::CreateJob)
+          .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+          .at(:no_wait)
+      end
+    end
   end
 end

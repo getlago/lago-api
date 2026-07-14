@@ -6,8 +6,8 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
   let(:service) { described_class.new(code:, state:) }
   let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo") }
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
-  let(:okta_token_response) { OpenStruct.new(body: {access_token: "access_token"}) }
-  let(:okta_userinfo_response) { OpenStruct.new({email: "foo@bar.com"}) }
+  let(:okta_token_response) { {"access_token" => "access_token"} }
+  let(:okta_userinfo_response) { {"email" => "foo@bar.com"} }
   let(:state) { SecureRandom.uuid }
   let(:code) { "code" }
 
@@ -94,7 +94,7 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
     end
 
     context "when okta userinfo email is different from the state one" do
-      let(:okta_userinfo_response) { OpenStruct.new({email: "foo@test.com"}) }
+      let(:okta_userinfo_response) { {"email" => "foo@test.com"} }
 
       it "returns error" do
         result = service.call

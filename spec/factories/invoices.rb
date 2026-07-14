@@ -45,6 +45,10 @@ FactoryBot.define do
       end
     end
 
+    trait :with_purchase_order_number do
+      purchase_order_number { "PO-123" }
+    end
+
     trait :failed do
       status { :failed }
     end
