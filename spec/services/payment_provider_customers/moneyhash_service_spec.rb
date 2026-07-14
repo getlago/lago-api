@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviderCustomers::MoneyhashService do
-  subject(:moneyhash_service) { described_class.new(moneyhash_customer) }
-
   let(:customer) { create(:customer, name: customer_name, organization:) }
   let(:moneyhash_provider) { create(:moneyhash_provider) }
   let(:organization) { moneyhash_provider.organization }
@@ -14,17 +12,15 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
     create(:moneyhash_customer, customer:, provider_customer_id: nil, payment_provider: moneyhash_provider)
   end
 
-  describe "#create" do
+  describe ".call(:create)" do
     context "when provider_customer_id is already present" do
-      before {
-        moneyhash_customer.update(provider_customer_id: SecureRandom.uuid)
-        allow(moneyhash_service).to receive(:create_moneyhash_customer) # rubocop:disable RSpec/SubjectStub
-      }
+      before { moneyhash_customer.update(provider_customer_id: SecureRandom.uuid) }
 
       it "does not call moneyhash customers API" do
-        result = moneyhash_service.create
+        expect_any_instance_of(described_class).not_to receive(:create_moneyhash_customer) # rubocop:disable RSpec/AnyInstance
+
+        result = described_class.call(:create, moneyhash_customer)
         expect(result).to be_success
-        expect(moneyhash_service).not_to have_received(:create_moneyhash_customer) # rubocop:disable RSpec/SubjectStub
       end
     end
 
@@ -37,32 +33,30 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
       let(:endpoint) { "#{PaymentProviders::MoneyhashProvider.api_base_url}/api/v1.1/payments/intent/" }
 
       before do
-        allow(moneyhash_service).to receive(:create_moneyhash_customer).and_return(moneyhash_result) # rubocop:disable RSpec/SubjectStub
-        allow(moneyhash_service).to receive(:deliver_success_webhook) # rubocop:disable RSpec/SubjectStub
-
         allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
         allow(lago_client).to receive(:post_with_response).and_return(response)
         allow(response).to receive(:body).and_return(checkout_url_response.to_json)
       end
 
       it "creates the moneyhash customer, checkout_url, and sends a success webhook" do
-        result = moneyhash_service.create
+        allow_any_instance_of(described_class).to receive(:create_moneyhash_customer).and_return(moneyhash_result) # rubocop:disable RSpec/AnyInstance
+        allow_any_instance_of(described_class).to receive(:deliver_success_webhook) # rubocop:disable RSpec/AnyInstance
+
+        result = described_class.call(:create, moneyhash_customer)
         expect(result).to be_success
         expect(moneyhash_customer.reload.provider_customer_id).to eq(moneyhash_result["data"]["id"])
         expect(result.checkout_url).to eq("#{checkout_url_response["data"]["embed_url"]}?lago_request=generate_checkout_url")
-        expect(moneyhash_service).to have_received(:create_moneyhash_customer) # rubocop:disable RSpec/SubjectStub
-        expect(moneyhash_service).to have_received(:deliver_success_webhook) # rubocop:disable RSpec/SubjectStub
       end
     end
 
-    describe "#update" do
+    describe ".call(:update)" do
       it "returns a success result" do
-        result = moneyhash_service.update
+        result = described_class.call(:update, moneyhash_customer)
         expect(result).to be_success
       end
     end
 
-    describe "#update_payment_method" do
+    describe ".call(:update_payment_method)" do
       let(:custom_fields) do
         {
           lago_mit: false,
@@ -76,17 +70,16 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
 
       let(:payment_method_id) { SecureRandom.uuid }
 
-      let(:moneyhash_customer) do
+      let!(:moneyhash_customer) do
         create(:moneyhash_customer, customer:, provider_customer_id: SecureRandom.uuid)
       end
 
       it "updates the payment method for existing customer" do
-        result = moneyhash_service.update_payment_method(
+        result = described_class.call(:update_payment_method,
           organization_id: organization.id,
           customer_id: customer.id,
           payment_method_id: payment_method_id,
-          metadata: custom_fields
-        )
+          metadata: custom_fields)
         expect(result).to be_success
         expect(moneyhash_customer.reload.payment_method_id).to eq(payment_method_id)
       end
@@ -94,11 +87,10 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
       it "deletes the payment method for existing customer" do
         moneyhash_customer.update(payment_method_id: SecureRandom.uuid)
 
-        result = moneyhash_service.update_payment_method(
+        result = described_class.call(:update_payment_method,
           organization_id: organization.id,
           customer_id: customer.id,
-          payment_method_id: nil
-        )
+          payment_method_id: nil)
         expect(result).to be_success
         expect(moneyhash_customer.reload.payment_method_id).to be_nil
       end
@@ -106,24 +98,22 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
       it "overrides the payment method for existing customer" do
         moneyhash_customer.update(payment_method_id: SecureRandom.uuid)
 
-        result = moneyhash_service.update_payment_method(
+        result = described_class.call(:update_payment_method,
           organization_id: organization.id,
           customer_id: customer.id,
           payment_method_id: payment_method_id,
-          metadata: custom_fields
-        )
+          metadata: custom_fields)
         expect(result).to be_success
         expect(moneyhash_customer.reload.payment_method_id).to eq(payment_method_id)
       end
 
       it "returns result directly when lago_customer_id is not present" do
         custom_fields.delete("lago_customer_id")
-        result = moneyhash_service.update_payment_method(
+        result = described_class.call(:update_payment_method,
           organization_id: organization.id,
           customer_id: customer.id,
           payment_method_id: payment_method_id,
-          metadata: custom_fields
-        )
+          metadata: custom_fields)
 
         expect(result).to be_success
       end
@@ -131,12 +121,11 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
       it "returns result directly when customer is not found" do
         custom_fields["lago_customer_id"] = SecureRandom.uuid
 
-        result = moneyhash_service.update_payment_method(
+        result = described_class.call(:update_payment_method,
           organization_id: organization.id,
           customer_id: SecureRandom.uuid,
           payment_method_id: payment_method_id,
-          metadata: custom_fields
-        )
+          metadata: custom_fields)
 
         expect(result).to be_success
       end
@@ -145,12 +134,11 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
         customer = create(:customer, organization:)
         custom_fields["lago_customer_id"] = customer.id
 
-        result = moneyhash_service.update_payment_method(
+        result = described_class.call(:update_payment_method,
           organization_id: organization.id,
           customer_id: customer.id,
           payment_method_id: payment_method_id,
-          metadata: custom_fields
-        )
+          metadata: custom_fields)
 
         expect(result).to be_failure
         expect(result.error.to_s).to eq("moneyhash_customer_not_found")
@@ -158,12 +146,11 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
 
       it "creates a PaymentMethod record" do
         expect {
-          moneyhash_service.update_payment_method(
+          described_class.call(:update_payment_method,
             organization_id: organization.id,
             customer_id: customer.id,
             payment_method_id: payment_method_id,
-            metadata: custom_fields
-          )
+            metadata: custom_fields)
         }.to change(PaymentMethod, :count).by(1)
 
         payment_method = PaymentMethod.last
@@ -177,12 +164,11 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
       end
 
       it "returns the payment_method in the result" do
-        result = moneyhash_service.update_payment_method(
+        result = described_class.call(:update_payment_method,
           organization_id: organization.id,
           customer_id: customer.id,
           payment_method_id: payment_method_id,
-          metadata: custom_fields
-        )
+          metadata: custom_fields)
 
         expect(result).to be_success
         expect(result.payment_method).to be_present
@@ -201,13 +187,12 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
         end
 
         it "stores card details in PaymentMethod.details" do
-          result = moneyhash_service.update_payment_method(
+          result = described_class.call(:update_payment_method,
             organization_id: organization.id,
             customer_id: customer.id,
             payment_method_id: payment_method_id,
             metadata: custom_fields,
-            card_details: card_details
-          )
+            card_details: card_details)
 
           expect(result).to be_success
           expect(result.payment_method.details).to include(
@@ -224,13 +209,12 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
         it "does not call UpdateDetailsService" do
           allow(PaymentMethods::UpdateDetailsService).to receive(:call)
 
-          moneyhash_service.update_payment_method(
+          described_class.call(:update_payment_method,
             organization_id: organization.id,
             customer_id: customer.id,
             payment_method_id: payment_method_id,
             metadata: custom_fields,
-            card_details: {}
-          )
+            card_details: {})
 
           expect(PaymentMethods::UpdateDetailsService).not_to have_received(:call)
         end
@@ -246,12 +230,11 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
         )
 
         expect {
-          moneyhash_service.update_payment_method(
+          described_class.call(:update_payment_method,
             organization_id: organization.id,
             customer_id: customer.id,
             payment_method_id: payment_method_id,
-            metadata: custom_fields
-          )
+            metadata: custom_fields)
         }.not_to change(PaymentMethod, :count)
 
         expect(existing_payment_method.reload.is_default).to be(true)
@@ -259,17 +242,16 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
 
       it "does not create PaymentMethod when payment_method_id is nil" do
         expect {
-          moneyhash_service.update_payment_method(
+          described_class.call(:update_payment_method,
             organization_id: organization.id,
             customer_id: customer.id,
             payment_method_id: nil,
-            metadata: custom_fields
-          )
+            metadata: custom_fields)
         }.not_to change(PaymentMethod, :count)
       end
     end
 
-    describe "#generate_checkout_url currency fallback" do
+    describe ".call(:generate_checkout_url) currency fallback" do
       let(:lago_client) { instance_double(LagoHttpClient::Client) }
       let(:checkout_url_response) { JSON.parse(File.read(Rails.root.join("spec/fixtures/moneyhash/checkout_url_response.json"))) }
       let(:response) { instance_double(Net::HTTPOK) }
@@ -286,7 +268,7 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
         let(:customer) { create(:customer, name: customer_name, organization:, currency: nil) }
 
         it "falls back to the organization default currency" do
-          moneyhash_service.generate_checkout_url(send_webhook: false)
+          described_class.call(:generate_checkout_url, moneyhash_customer, send_webhook: false)
           expect(lago_client).to have_received(:post_with_response).with(
             hash_including(amount_currency: organization.default_currency),
             anything
@@ -295,7 +277,7 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
       end
     end
 
-    describe "#delete_payment_method" do
+    describe ".call(:delete_payment_method)" do
       let(:custom_fields) do
         {
           lago_customer_id: customer.id
@@ -304,17 +286,16 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
 
       let(:payment_method_id) { SecureRandom.uuid }
 
-      let(:moneyhash_customer) do
+      let!(:moneyhash_customer) do
         create(:moneyhash_customer, customer:, provider_customer_id: SecureRandom.uuid, payment_method_id:)
       end
 
       it "clears the default payment_method_id when it matches" do
-        result = moneyhash_service.delete_payment_method(
+        result = described_class.call(:delete_payment_method,
           organization_id: organization.id,
           customer_id: customer.id,
           payment_method_id: payment_method_id,
-          metadata: custom_fields
-        )
+          metadata: custom_fields)
 
         expect(result).to be_success
         expect(moneyhash_customer.reload.payment_method_id).to be_nil
@@ -323,12 +304,11 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
       it "does not clear payment_method_id when it does not match" do
         other_payment_method_id = SecureRandom.uuid
 
-        result = moneyhash_service.delete_payment_method(
+        result = described_class.call(:delete_payment_method,
           organization_id: organization.id,
           customer_id: customer.id,
           payment_method_id: other_payment_method_id,
-          metadata: custom_fields
-        )
+          metadata: custom_fields)
 
         expect(result).to be_success
         expect(moneyhash_customer.reload.payment_method_id).to eq(payment_method_id)
@@ -346,24 +326,22 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
 
         it "soft-deletes the PaymentMethod record" do
           expect {
-            moneyhash_service.delete_payment_method(
+            described_class.call(:delete_payment_method,
               organization_id: organization.id,
               customer_id: customer.id,
               payment_method_id: payment_method_id,
-              metadata: custom_fields
-            )
+              metadata: custom_fields)
           }.to change { payment_method.reload.discarded? }.from(false).to(true)
         end
 
         it "does not fail when PaymentMethod record does not exist" do
           payment_method.destroy!
 
-          result = moneyhash_service.delete_payment_method(
+          result = described_class.call(:delete_payment_method,
             organization_id: organization.id,
             customer_id: customer.id,
             payment_method_id: payment_method_id,
-            metadata: custom_fields
-          )
+            metadata: custom_fields)
 
           expect(result).to be_success
         end
@@ -373,12 +351,11 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
         other_customer = create(:customer, organization:)
         custom_fields["lago_customer_id"] = other_customer.id
 
-        result = moneyhash_service.delete_payment_method(
+        result = described_class.call(:delete_payment_method,
           organization_id: organization.id,
           customer_id: other_customer.id,
           payment_method_id: payment_method_id,
-          metadata: custom_fields
-        )
+          metadata: custom_fields)
 
         expect(result).to be_failure
         expect(result.error.to_s).to eq("moneyhash_customer_not_found")

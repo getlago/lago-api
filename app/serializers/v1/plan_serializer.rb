@@ -58,7 +58,7 @@ module V1
 
     def entitlements
       ::CollectionSerializer.new(
-        model.entitlements.includes(:feature, values: :privilege),
+        model.entitlements.joins(:feature).includes(:feature, values: :privilege),
         ::V1::Entitlement::PlanEntitlementSerializer,
         collection_name: "entitlements"
       ).serialize

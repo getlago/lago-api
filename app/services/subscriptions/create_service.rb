@@ -138,6 +138,7 @@ module Subscriptions
         external_id:,
         billing_time: billing_time || :calendar,
         ending_at: params[:ending_at],
+        purchase_order_number: params[:purchase_order_number],
         progressive_billing_disabled: params[:progressive_billing_disabled] || false,
         consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : true,
         billing_entity: resolve_billing_entity(organization: customer.organization, params:)

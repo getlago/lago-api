@@ -33,3 +33,7 @@ meilisearch:
 stripe_shared_payment_token:
   description: "Use Stripe Shared Payment Token for agent-initiated payments when no other payment method is attached"
   owners: ["@ancorcruz"]
+
+fixed_charge_usage_delta_migration:
+  description: "Count fees from discarded recurring usage charges as already-paid units when computing pay-in-advance fixed charge deltas (temporary bridge for usage-to-fixed-charge migrations)"
+  owners: ["@osmarluz"]

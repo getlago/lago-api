@@ -80,6 +80,7 @@ RSpec.describe WalletTransactions::CreateService do
           invoice_id: invoice.id,
           priority: 25,
           name: "Custom Transaction Name",
+          purchase_order_number: "PO-123",
           payment_method: payment_method_params
         }
       end
@@ -103,6 +104,7 @@ RSpec.describe WalletTransactions::CreateService do
         expect(wallet_transaction.credit_amount).to eq(credit_amount)
         expect(wallet_transaction.priority).to eq 25
         expect(wallet_transaction.name).to eq("Custom Transaction Name")
+        expect(wallet_transaction.purchase_order_number).to eq("PO-123")
         expect(wallet_transaction.payment_method_id).to eq(payment_method.id)
         expect(wallet_transaction.payment_method_type).to eq("provider")
       end

@@ -635,7 +635,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
         end
     end
 
-    it "defers an override unit increase applied immediately to the next billing period" do
+    it "rejects an override unit increase while the subscription is incomplete" do
       travel_to(Time.zone.local(2026, 3, 1, 10)) do
         fixed_charge
         create_subscription(subscription_params)
@@ -646,22 +646,21 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(subscription).to be_incomplete
       expect(subscription.invoices.count).to eq(1)
 
-      # Mid-gap: the fixed charge units are overridden for this subscription only.
-      # The event is deferred to the next period start (April 1).
+      # Mid-gap: overriding the fixed charge units is rejected.
       travel_to(Time.zone.local(2026, 3, 10, 10)) do
-        Subscriptions::UpdateOrOverrideFixedChargeService.call!(
+        result = Subscriptions::UpdateOrOverrideFixedChargeService.call(
           subscription:,
           fixed_charge:,
           params: {units: 15, apply_units_immediately: true}
         )
         perform_all_enqueued_jobs
+
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({base: ["subscription_incomplete"]})
       end
 
-      subscription.reload
-      expect(subscription.plan).to eq(plan)
-
-      override = Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)
-      expect(override.units).to eq(15)
+      expect(Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)).to be_nil
+      expect(subscription.fixed_charge_events.where(timestamp: Time.zone.local(2026, 3, 10, 10))).to be_empty
       expect(subscription.invoices.count).to eq(1)
 
       travel_to(Time.zone.local(2026, 3, 20, 10)) { simulate_stripe_webhook(status: "succeeded") }
@@ -669,13 +668,6 @@ describe "Payment Gated Subscription Activation Scenarios" do
       subscription.reload
       expect(subscription).to be_active
       expect(subscription.invoices.count).to eq(1)
-
-      # The regular billing run at the boundary picks up the overridden units.
-      travel_to(Time.zone.local(2026, 4, 1, 1)) { perform_billing }
-
-      expect(subscription.invoices.count).to eq(2)
-      periodic_invoice = subscription.invoices.order(:created_at).last
-      expect(periodic_invoice.fees.fixed_charge.sole.units).to eq(15)
     end
   end
 
