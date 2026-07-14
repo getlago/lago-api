@@ -745,7 +745,7 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
-    context "when the customer has already used a checkout URL" do
+    context "when the organization has used a checkout URL" do
       before { create(:payment_intent, invoice: create(:invoice, customer:, organization:)) }
 
       it "delays the first auto-payment" do
@@ -769,7 +769,23 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
-    context "when the customer has never used a checkout URL" do
+    context "when another customer of the same organization has used a checkout URL" do
+      before do
+        other_customer = create(:customer, organization:)
+        create(:payment_intent, invoice: create(:invoice, customer: other_customer, organization:))
+      end
+
+      it "still delays the first auto-payment (covers the customer's first invoice)" do
+        freeze_time do
+          expect { ApplicationRecord.transaction { create_service.call_async } }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+        end
+      end
+    end
+
+    context "when the organization has never used a checkout URL" do
       it "enqueues the payment immediately" do
         expect { ApplicationRecord.transaction { create_service.call_async } }
           .to have_enqueued_job(Invoices::Payments::CreateJob)
