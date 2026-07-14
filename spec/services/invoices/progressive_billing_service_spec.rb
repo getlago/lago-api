@@ -94,6 +94,24 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       end
     end
 
+    context "when the subscription has a purchase order number" do
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          started_at: timestamp - 1.week,
+          purchase_order_number: "PO-SUB-123"
+        )
+      end
+
+      it "copies it to the invoice" do
+        invoice = create_service.call.invoice
+
+        expect(invoice.purchase_order_number).to eq("PO-SUB-123")
+      end
+    end
+
     context "when there is tax provider integration" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
