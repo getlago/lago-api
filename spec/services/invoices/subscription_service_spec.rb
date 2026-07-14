@@ -219,6 +219,26 @@ RSpec.describe Invoices::SubscriptionService do
       end
     end
 
+    context "when the subscription has a purchase_order_number" do
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          purchase_order_number: "PO-123"
+        )
+      end
+
+      it "stamps the purchase_order_number on the invoice" do
+        invoice = invoice_service.call.invoice
+
+        expect(invoice.purchase_order_number).to eq("PO-123")
+      end
+    end
+
     it_behaves_like "syncs invoice" do
       let(:service_call) { invoice_service.call }
     end

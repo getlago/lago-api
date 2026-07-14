@@ -246,6 +246,63 @@ RSpec.describe Invoices::AdvanceChargesService do
       end
     end
 
+    context "when re-expanded subscriptions carry different purchase order numbers" do
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+
+      let(:charge) do
+        create(
+          :charge,
+          plan:,
+          billable_metric:,
+          prorated: true,
+          pay_in_advance: true,
+          invoiceable: false,
+          regroup_paid_fees: "invoice",
+          properties: {amount: "1"}
+        )
+      end
+
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          purchase_order_number: "PO-1"
+        )
+      end
+
+      # Same external_id as `subscription` (an upgrade rotation), so the re-expansion
+      # by external_id pulls it in alongside `subscription` despite a different PO.
+      let(:subscription_2) do
+        create(
+          :subscription,
+          external_id: subscription.external_id,
+          customer:,
+          status: :terminated,
+          terminated_at: Time.current,
+          started_at: Time.current - 1.year,
+          plan:,
+          purchase_order_number: "PO-2"
+        )
+      end
+
+      before do
+        create(:fee, :succeeded, organization_id: organization.id, succeeded_at: fee_boundaries[:charges_to_datetime] - 2.days, invoice_id: nil, subscription:, amount_cents: 100, taxes_amount_cents: 0, properties: fee_boundaries, charge:)
+        create(:fee, :succeeded, organization_id: organization.id, succeeded_at: fee_boundaries[:charges_to_datetime] - 2.days, invoice_id: nil, subscription: subscription_2, amount_cents: 200, taxes_amount_cents: 0, properties: fee_boundaries, charge:)
+      end
+
+      it "creates a separate advance-charges invoice per purchase order number" do
+        expect { invoice_service.call }
+          .to change { Invoice.where(invoice_type: :advance_charges).count }.by(2)
+
+        invoices = Invoice.where(invoice_type: :advance_charges)
+        expect(invoices.map(&:purchase_order_number)).to match_array(%w[PO-1 PO-2])
+      end
+    end
+
     context "with integration requiring sync" do
       before do
         tax
