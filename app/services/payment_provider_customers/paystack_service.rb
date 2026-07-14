@@ -3,6 +3,14 @@
 module PaymentProviderCustomers
   class PaystackService < BaseService
     include Customers::PaymentProviderFinder
+    include TypedResults
+
+    RESULTS = {
+      create: BaseResult[:paystack_customer],
+      update: BaseResult,
+      generate_checkout_url: BaseResult[:paystack_customer, :checkout_url],
+      update_payment_method: BaseResult[:paystack_customer, :payment_method]
+    }.freeze
 
     AUTHORIZATION_AMOUNTS_CENTS = {
       "NGN" => 5000,
@@ -13,13 +21,10 @@ module PaymentProviderCustomers
       "XOF" => 100
     }.freeze
 
-    def initialize(paystack_customer = nil)
+    private
+
+    def create(paystack_customer)
       @paystack_customer = paystack_customer
-
-      super(nil)
-    end
-
-    def create
       return result unless customer
 
       result.paystack_customer = paystack_customer
@@ -42,7 +47,8 @@ module PaymentProviderCustomers
       result.third_party_failure!(third_party: "Paystack", error_code: e.code, error_message: e.message)
     end
 
-    def update
+    def update(paystack_customer)
+      @paystack_customer = paystack_customer
       return result if !paystack_payment_provider || paystack_customer.provider_customer_id.blank?
 
       client.update_customer(paystack_customer.provider_customer_id, update_customer_payload)
@@ -52,12 +58,13 @@ module PaymentProviderCustomers
       result.third_party_failure!(third_party: "Paystack", error_code: e.code, error_message: e.message)
     end
 
-    def generate_checkout_url(send_webhook: true)
+    def generate_checkout_url(paystack_customer, send_webhook: true)
+      @paystack_customer = paystack_customer
       return result unless customer
       return result.not_found_failure!(resource: "paystack_payment_provider") unless paystack_payment_provider
       return unsupported_currency_result unless supported_currency?(authorization_currency)
 
-      create if paystack_customer.provider_customer_id.blank?
+      create(paystack_customer) if paystack_customer.provider_customer_id.blank?
       return result unless result.success?
 
       paystack_result = client.initialize_transaction(setup_transaction_payload)
@@ -84,19 +91,20 @@ module PaymentProviderCustomers
       paystack_customer.payment_method_id = payment_method_id
       paystack_customer.save!
 
-      if paystack_customer.organization.feature_flag_enabled?(:multiple_payment_methods)
-        find_or_create_result = PaymentMethods::FindOrCreateFromProviderService.call(
-          customer: paystack_customer.customer,
-          payment_provider_customer: paystack_customer,
-          provider_method_id: payment_method_id,
-          params: {
-            provider_payment_methods: ["card"],
-            details: card_details
-          },
-          set_as_default: true
-        )
+      find_or_create_result = PaymentMethods::FindOrCreateFromProviderService.call(
+        customer: paystack_customer.customer,
+        payment_provider_customer: paystack_customer,
+        provider_method_id: payment_method_id,
+        params: {provider_payment_methods: PaymentProviderCustomers::PaystackCustomer::PAYMENT_METHODS},
+        set_as_default: true
+      )
+      result.payment_method = find_or_create_result.payment_method
 
-        result.payment_method = find_or_create_result.payment_method
+      if card_details.present? && result.payment_method.present?
+        PaymentMethods::UpdateDetailsService.call(
+          payment_method: result.payment_method,
+          insert: card_details
+        )
       end
 
       result.paystack_customer = paystack_customer
@@ -104,8 +112,6 @@ module PaymentProviderCustomers
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end
-
-    private
 
     attr_accessor :paystack_customer
 

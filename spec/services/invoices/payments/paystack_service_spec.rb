@@ -60,6 +60,19 @@ RSpec.describe Invoices::Payments::PaystackService do
       )
     end
 
+    it "uses the provider-reported amount for a partial payment" do
+      result = service.update_payment_status(
+        organization_id: organization.id,
+        status: paystack_payment.status,
+        paystack_payment:,
+        amount_cents: 20_000
+      )
+
+      expect(result).to be_success
+      expect(result.payment.amount_cents).to eq(20_000)
+      expect(invoice.reload.total_paid_amount_cents).to eq(20_000)
+    end
+
     context "when the charge failed" do
       let(:paystack_payment) do
         PaymentProviders::PaystackProvider::PaystackPayment.new(

@@ -51,7 +51,6 @@ RSpec.describe CreditNotes::Refunds::PaystackService do
 
   before do
     payment
-    allow(SegmentTrackJob).to receive(:perform_later)
   end
 
   describe "#create" do
@@ -75,6 +74,8 @@ RSpec.describe CreditNotes::Refunds::PaystackService do
       expect(result).to be_success
       expect(result.refund).to have_attributes(
         credit_note:,
+        refundable: credit_note,
+        reason: "credit_note",
         payment:,
         payment_provider:,
         payment_provider_customer: paystack_customer,
@@ -104,7 +105,11 @@ RSpec.describe CreditNotes::Refunds::PaystackService do
     before { refund }
 
     it "keeps needs-attention as pending" do
-      result = described_class.new.update_status(provider_refund_id: "3018284", status: "needs-attention")
+      result = described_class.new.update_status(
+        organization_id: organization.id,
+        provider_refund_id: "3018284",
+        status: "needs-attention"
+      )
 
       expect(result).to be_success
       expect(result.refund.reload.status).to eq("needs-attention")
@@ -112,7 +117,11 @@ RSpec.describe CreditNotes::Refunds::PaystackService do
     end
 
     it "marks processed refunds as succeeded" do
-      result = described_class.new.update_status(provider_refund_id: "3018284", status: "processed")
+      result = described_class.new.update_status(
+        organization_id: organization.id,
+        provider_refund_id: "3018284",
+        status: "processed"
+      )
 
       expect(result).to be_success
       expect(result.refund.reload.status).to eq("processed")
@@ -121,7 +130,11 @@ RSpec.describe CreditNotes::Refunds::PaystackService do
     end
 
     it "delivers an error webhook for failed refunds" do
-      result = described_class.new.update_status(provider_refund_id: "3018284", status: "failed")
+      result = described_class.new.update_status(
+        organization_id: organization.id,
+        provider_refund_id: "3018284",
+        status: "failed"
+      )
 
       expect(result).not_to be_success
       expect(result.error.code).to eq("refund_failed")
@@ -137,12 +150,67 @@ RSpec.describe CreditNotes::Refunds::PaystackService do
     end
 
     it "treats reversed refunds as failed" do
-      result = described_class.new.update_status(provider_refund_id: "3018284", status: "reversed")
+      result = described_class.new.update_status(
+        organization_id: organization.id,
+        provider_refund_id: "3018284",
+        status: "reversed"
+      )
 
       expect(result).not_to be_success
       expect(result.error.code).to eq("refund_failed")
       expect(result.refund.reload.status).to eq("reversed")
       expect(result.credit_note).to be_failed
+    end
+
+    context "when another organization has the same transaction reference" do
+      let(:other_organization) { create(:organization) }
+      let(:other_provider) { create(:paystack_provider, organization: other_organization) }
+      let(:other_customer) do
+        create(:customer, organization: other_organization, payment_provider: "paystack")
+      end
+      let(:other_provider_customer) do
+        create(
+          :paystack_customer,
+          customer: other_customer,
+          organization: other_organization,
+          payment_provider: other_provider
+        )
+      end
+      let(:other_invoice) do
+        create(:invoice, organization: other_organization, customer: other_customer)
+      end
+      let(:other_payment) do
+        create(
+          :payment,
+          organization: other_organization,
+          customer: other_customer,
+          payable: other_invoice,
+          payment_provider: other_provider,
+          payment_provider_customer: other_provider_customer,
+          provider_payment_data: {"reference" => "lago-ref"}
+        )
+      end
+
+      before do
+        create(
+          :refund,
+          organization: other_organization,
+          payment: other_payment,
+          payment_provider: other_provider,
+          payment_provider_customer: other_provider_customer
+        )
+      end
+
+      it "updates the refund in the requested organization" do
+        result = described_class.new.update_status(
+          organization_id: organization.id,
+          transaction_reference: "lago-ref",
+          status: "processed"
+        )
+
+        expect(result).to be_success
+        expect(result.refund).to eq(refund)
+      end
     end
   end
 end

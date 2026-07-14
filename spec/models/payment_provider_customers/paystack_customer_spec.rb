@@ -23,9 +23,9 @@ RSpec.describe PaymentProviderCustomers::PaystackCustomer do
     end
   end
 
-  describe "#provider_payment_methods" do
-    it "returns card as the reusable payment method" do
-      expect(paystack_customer.provider_payment_methods).to eq(["card"])
+  describe "PAYMENT_METHODS" do
+    it "contains card as the reusable payment method" do
+      expect(described_class::PAYMENT_METHODS).to eq(["card"])
     end
   end
 end

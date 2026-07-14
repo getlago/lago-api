@@ -13,15 +13,15 @@ module Invoices
         super
       end
 
-      def update_payment_status(organization_id:, status:, paystack_payment:)
+      def update_payment_status(organization_id:, status:, paystack_payment:, amount_cents: nil)
         payment = Payment.find_by(provider_payment_id: paystack_payment.id)
         return result if payment&.payable&.organization_id.present? && payment.payable.organization_id != organization_id
 
         if !payment && paystack_payment.metadata[:payment_type] == "one-time"
-          payment = create_payment(paystack_payment)
+          payment = create_payment(paystack_payment, amount_cents:)
         end
 
-        payment ||= handle_missing_payment(organization_id, paystack_payment)
+        payment ||= handle_missing_payment(organization_id, paystack_payment, amount_cents:)
         return result unless payment
 
         result.payment = payment
@@ -34,8 +34,10 @@ module Invoices
         payment.provider_payment_data = provider_payment_data(paystack_payment)
         payment.save!
 
-        update_payment_method(paystack_payment.authorization) if payment.payable_payment_status == "succeeded"
-        deliver_webhook if payment.payable_payment_status.to_sym == :succeeded
+        if payment.payable_payment_status.to_sym == :succeeded
+          update_payment_method(paystack_payment.authorization)
+          deliver_webhook
+        end
 
         update_invoice_payment_status(
           payment_status: payment.payable_payment_status,
@@ -72,7 +74,7 @@ module Invoices
 
       delegate :organization, :customer, to: :invoice
 
-      def create_payment(paystack_payment, invoice: nil)
+      def create_payment(paystack_payment, invoice: nil, amount_cents: nil)
         @invoice = invoice || Invoice.find_by(id: paystack_payment.metadata[:lago_payable_id] || paystack_payment.metadata[:lago_invoice_id])
         unless @invoice
           result.not_found_failure!(resource: "invoice")
@@ -87,14 +89,14 @@ module Invoices
           customer:,
           payment_provider_id: paystack_payment_provider.id,
           payment_provider_customer_id: customer.paystack_customer.id,
-          amount_cents: @invoice.total_due_amount_cents,
+          amount_cents: amount_cents || @invoice.total_due_amount_cents,
           amount_currency: @invoice.currency,
           provider_payment_id: paystack_payment.id,
           provider_payment_data: provider_payment_data(paystack_payment)
         )
       end
 
-      def handle_missing_payment(organization_id, paystack_payment)
+      def handle_missing_payment(organization_id, paystack_payment, amount_cents: nil)
         if paystack_payment.metadata[:lago_payment_id].present?
           payment = Payment.find_by(id: paystack_payment.metadata[:lago_payment_id], organization_id:)
           return payment if payment
@@ -109,7 +111,7 @@ module Invoices
         return if invoice.nil?
         return if invoice.payment_failed?
 
-        create_payment(paystack_payment, invoice:)
+        create_payment(paystack_payment, invoice:, amount_cents:)
       end
 
       def payment_url_payload(payment_intent)
@@ -146,13 +148,14 @@ module Invoices
       def update_payment_method(authorization)
         return unless reusable_card_authorization?(authorization)
 
-        PaymentProviderCustomers::PaystackService.new.update_payment_method(
+        PaymentProviderCustomers::PaystackService.call!(
+          :update_payment_method,
           organization_id: result.invoice.organization_id,
           customer_id: result.invoice.customer_id,
           payment_method_id: authorization["authorization_code"],
           metadata: paystack_metadata.stringify_keys,
           card_details: card_details(authorization)
-        ).raise_if_error!
+        )
       end
 
       def reusable_card_authorization?(authorization)

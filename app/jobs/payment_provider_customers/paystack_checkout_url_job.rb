@@ -7,8 +7,7 @@ module PaymentProviderCustomers
     retry_on ActiveJob::DeserializationError
 
     def perform(paystack_customer)
-      result = PaymentProviderCustomers::PaystackService.new(paystack_customer).generate_checkout_url
-      result.raise_if_error!
+      PaymentProviderCustomers::PaystackService.call!(:generate_checkout_url, paystack_customer)
     end
   end
 end

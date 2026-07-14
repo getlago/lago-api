@@ -57,6 +57,7 @@ module PaymentProviders
         payment_service_class(verified_metadata).new(payable).update_payment_status(
           organization_id: organization.id,
           status: verified_transaction["status"],
+          amount_cents: verified_transaction["amount"],
           paystack_payment: PaymentProviders::PaystackProvider::PaystackPayment.new(
             id: verified_transaction["id"].to_s,
             status: verified_transaction["status"],
@@ -76,6 +77,7 @@ module PaymentProviders
         refund_data = event["data"] || {}
 
         refund_result = CreditNotes::Refunds::PaystackService.new.update_status(
+          organization_id: organization.id,
           provider_refund_id: refund_data["id"] || refund_data["refund_reference"],
           transaction_reference: refund_data["transaction_reference"],
           status: refund_data["status"],
@@ -111,13 +113,14 @@ module PaymentProviders
         )
         return result unless paystack_customer
 
-        PaymentProviderCustomers::PaystackService.new.update_payment_method(
+        PaymentProviderCustomers::PaystackService.call!(
+          :update_payment_method,
           organization_id: organization.id,
           customer_id: paystack_customer.customer_id,
           payment_method_id: authorization["authorization_code"],
           metadata: metadata.stringify_keys,
           card_details: card_details(authorization)
-        ).raise_if_error!
+        )
       end
 
       def reusable_card_authorization?(authorization)

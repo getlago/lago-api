@@ -2,10 +2,8 @@
 
 module PaymentProviderCustomers
   class PaystackCustomer < BaseCustomer
-    settings_accessors :authorization_code, :payment_method_id
+    PAYMENT_METHODS = %w[card].freeze
 
-    def provider_payment_methods
-      ["card"]
-    end
+    settings_accessors :authorization_code, :payment_method_id
   end
 end

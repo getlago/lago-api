@@ -5,6 +5,8 @@ module CreditNotes
     class PaystackService < BaseService
       include Customers::PaymentProviderFinder
 
+      Result = BaseResult[:credit_note, :refund]
+
       PENDING_STATUSES = %w[pending processing needs-attention].freeze
       SUCCESS_STATUSES = %w[processed].freeze
       FAILED_STATUSES = %w[failed reversed].freeze
@@ -26,6 +28,8 @@ module CreditNotes
         refund = Refund.new(
           organization_id: credit_note.organization_id,
           credit_note:,
+          refundable: credit_note,
+          reason: :credit_note,
           payment:,
           payment_provider: payment.payment_provider,
           payment_provider_customer: payment_provider_customer(customer),
@@ -55,9 +59,9 @@ module CreditNotes
         result.service_failure!(code: "paystack_error", message: e.message)
       end
 
-      def update_status(status:, provider_refund_id: nil, transaction_reference: nil, metadata: {})
-        refund = find_refund(provider_refund_id:, transaction_reference:)
-        return handle_missing_refund(metadata) unless refund
+      def update_status(organization_id:, status:, provider_refund_id: nil, transaction_reference: nil, metadata: {})
+        refund = find_refund(organization_id:, provider_refund_id:, transaction_reference:)
+        return handle_missing_refund(organization_id, metadata) unless refund
 
         result.refund = refund
         @credit_note = result.credit_note = refund.credit_note
@@ -131,15 +135,16 @@ module CreditNotes
         }.compact
       end
 
-      def find_refund(provider_refund_id:, transaction_reference:)
+      def find_refund(organization_id:, provider_refund_id:, transaction_reference:)
         if provider_refund_id.present?
-          refund = Refund.find_by(provider_refund_id: provider_refund_id.to_s)
+          refund = Refund.find_by(organization_id:, provider_refund_id: provider_refund_id.to_s)
           return refund if refund
         end
 
         return if transaction_reference.blank?
 
-        payment = Payment.find_by("provider_payment_data ->> 'reference' = ?", transaction_reference)
+        payment = Payment.where(organization_id:)
+          .find_by("provider_payment_data ->> 'reference' = ?", transaction_reference)
         return unless payment
 
         payment.refunds.order(created_at: :desc).first
@@ -171,11 +176,11 @@ module CreditNotes
         )
       end
 
-      def handle_missing_refund(metadata)
+      def handle_missing_refund(organization_id, metadata)
         return result unless metadata&.key?(:lago_invoice_id) || metadata&.key?("lago_invoice_id")
 
         lago_invoice_id = metadata[:lago_invoice_id] || metadata["lago_invoice_id"]
-        return result unless Invoice.find_by(id: lago_invoice_id)
+        return result unless Invoice.find_by(id: lago_invoice_id, organization_id:)
 
         result.not_found_failure!(resource: "paystack_refund")
       end

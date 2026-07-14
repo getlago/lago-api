@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviderCustomers::PaystackService do
-  subject(:service) { described_class.new(paystack_customer) }
-
   let(:organization) { create(:organization) }
   let(:payment_provider) { create(:paystack_provider, organization:) }
   let(:customer) { create(:customer, organization:, email: "customer@example.com", currency: "NGN") }
@@ -30,7 +28,7 @@ RSpec.describe PaymentProviderCustomers::PaystackService do
     end
 
     it "initializes a card-only setup transaction" do
-      result = service.generate_checkout_url(send_webhook: false)
+      result = described_class.call(:generate_checkout_url, paystack_customer, send_webhook: false)
 
       expect(result).to be_success
       expect(result.checkout_url).to eq("https://checkout.paystack.com/test")
@@ -52,7 +50,7 @@ RSpec.describe PaymentProviderCustomers::PaystackService do
       let(:customer) { create(:customer, organization:, email: "customer@example.com", currency: "EUR") }
 
       it "returns a validation failure without calling Paystack" do
-        result = service.generate_checkout_url(send_webhook: false)
+        result = described_class.call(:generate_checkout_url, paystack_customer, send_webhook: false)
 
         expect(result).not_to be_success
         expect(result.error.messages[:currency]).to eq(["unsupported_currency"])
@@ -64,8 +62,11 @@ RSpec.describe PaymentProviderCustomers::PaystackService do
   describe "#update_payment_method" do
     let(:payment_method_id) { "AUTH_test" }
 
+    before { paystack_customer }
+
     it "stores the reusable authorization on the provider customer" do
-      result = service.update_payment_method(
+      result = described_class.call(
+        :update_payment_method,
         organization_id: organization.id,
         customer_id: customer.id,
         payment_method_id:,
@@ -77,11 +78,10 @@ RSpec.describe PaymentProviderCustomers::PaystackService do
       expect(paystack_customer.payment_method_id).to eq(payment_method_id)
     end
 
-    context "when multiple payment methods are enabled" do
-      before { organization.update!(feature_flags: ["multiple_payment_methods"]) }
-
+    context "with card details" do
       it "creates the default payment method with card details" do
-        result = service.update_payment_method(
+        result = described_class.call(
+          :update_payment_method,
           organization_id: organization.id,
           customer_id: customer.id,
           payment_method_id:,

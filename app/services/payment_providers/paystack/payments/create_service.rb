@@ -99,11 +99,9 @@ module PaymentProviders
         end
 
         def authorization_code
-          if payment.organization.feature_flag_enabled?(:multiple_payment_methods)
-            payment.payment_method&.provider_method_id
-          else
-            provider_customer.payment_method_id.presence || provider_customer.authorization_code
-          end
+          payment.payment_method&.provider_method_id ||
+            provider_customer.payment_method_id.presence ||
+            provider_customer.authorization_code
         end
 
         def provider_payment_data(paystack_payment)
@@ -119,13 +117,14 @@ module PaymentProviders
         def update_payment_method(authorization)
           return unless reusable_card_authorization?(authorization)
 
-          PaymentProviderCustomers::PaystackService.new.update_payment_method(
+          PaymentProviderCustomers::PaystackService.call!(
+            :update_payment_method,
             organization_id: payment.organization_id,
             customer_id: customer.id,
             payment_method_id: authorization["authorization_code"],
             metadata: enriched_metadata.stringify_keys,
             card_details: card_details(authorization)
-          ).raise_if_error!
+          )
         end
 
         def reusable_card_authorization?(authorization)

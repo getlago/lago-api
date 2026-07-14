@@ -152,7 +152,7 @@ RSpec.describe PaymentProviders::Paystack::Payments::CreateService do
     end
   end
 
-  context "when multiple payment methods are enabled" do
+  context "when the payment has a selected payment method" do
     let(:payment_method) do
       create(
         :payment_method,
@@ -165,7 +165,6 @@ RSpec.describe PaymentProviders::Paystack::Payments::CreateService do
     end
 
     before do
-      organization.update!(feature_flags: ["multiple_payment_methods"])
       payment.update!(payment_method:)
     end
 
