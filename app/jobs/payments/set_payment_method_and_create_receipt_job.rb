@@ -17,7 +17,7 @@ module Payments
 
       # Now that the payment method is saved in the payment, we generate the PaymentReceipt
       if payment.customer.organization.issue_receipts_enabled?
-        PaymentReceipts::CreateJob.perform_later(payment)
+        PaymentReceipts::CreateJob.perform_after_commit(payment)
       end
     end
 
