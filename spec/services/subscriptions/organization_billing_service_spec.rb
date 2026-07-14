@@ -442,6 +442,98 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
     end
 
+    context "when grouping subscriptions by purchase order number" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :anniversary }
+      let(:current_date) { subscription_at.next_month }
+
+      before { subscription.destroy }
+
+      context "when subscriptions have different purchase order numbers" do
+        let(:po1_subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            purchase_order_number: "PO-1"
+          )
+        end
+        let(:po2_subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            purchase_order_number: "PO-2"
+          )
+        end
+
+        before do
+          po1_subscription
+          po2_subscription
+        end
+
+        it "produces separate billing jobs per purchase order number" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([po1_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([po2_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+      end
+
+      context "when subscriptions share the same purchase order number" do
+        let(:subscription1) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            purchase_order_number: "PO-1"
+          )
+        end
+        let(:subscription2) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            purchase_order_number: "PO-1"
+          )
+        end
+
+        before do
+          subscription1
+          subscription2
+        end
+
+        it "groups them into a single billing job" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(
+              contain_exactly(subscription1, subscription2),
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic
+            )
+        end
+      end
+    end
+
     context "when grouping subscriptions by currency" do
       let(:organization) { create(:organization, feature_flags: ["multi_currency"]) }
       let(:interval) { :monthly }

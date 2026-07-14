@@ -185,6 +185,40 @@ RSpec.describe Invoices::SubscriptionService do
       end
     end
 
+    context "when batched subscriptions carry different purchase order numbers" do
+      let(:other_subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          purchase_order_number: "PO-2"
+        )
+      end
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          purchase_order_number: "PO-1"
+        )
+      end
+      let(:subscriptions) { [subscription, other_subscription] }
+
+      it "returns a validation failure rather than producing a mixed-PO invoice" do
+        result = invoice_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:purchase_order_number]).to eq(["mixed_purchase_order_numbers"])
+      end
+    end
+
     it_behaves_like "syncs invoice" do
       let(:service_call) { invoice_service.call }
     end
