@@ -69,6 +69,8 @@ module Wallets
 
         result.recurring_transaction_rule = rule
         result
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
       rescue BaseService::FailedResult
         result
       end
