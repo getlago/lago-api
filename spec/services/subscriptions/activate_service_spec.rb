@@ -684,6 +684,29 @@ RSpec.describe Subscriptions::ActivateService do
         expect(BillNonInvoiceableFeesJob).to have_been_enqueued
           .with([previous_subscription, subscription], anything)
       end
+
+      context "when the previous and new subscriptions carry different purchase order numbers" do
+        before do
+          previous_subscription.update!(purchase_order_number: "PO-1")
+          subscription.update!(purchase_order_number: "PO-2")
+        end
+
+        it "splits the upgrade bill into one job per purchase order number" do
+          result
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([previous_subscription], anything, invoicing_reason: :upgrading)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], anything, invoicing_reason: :upgrading)
+        end
+
+        it "splits BillNonInvoiceableFeesJob per purchase order number" do
+          result
+
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([previous_subscription], anything)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([subscription], anything)
+        end
+      end
     end
 
     context "when activation_rules gate the new subscription" do
