@@ -79,5 +79,18 @@ RSpec.describe Mutations::FinanceAssistant::Ask do
         session_id:
       )
     end
+
+    context "when the service fails" do
+      let(:service_result) do
+        BaseResult[:answer].new.tap do |result|
+          result.service_failure!(code: "finance_assistant_error", message: "boom")
+        end
+      end
+
+      it "returns a graphql error and no answer" do
+        expect(result["data"]["askFinanceAssistant"]).to be_nil
+        expect_graphql_error(result:, message: "finance_assistant_error")
+      end
+    end
   end
 end
