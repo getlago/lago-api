@@ -5864,6 +5864,17 @@ enum EventsStoreEnum {
 }
 
 """
+Execute Order input arguments
+"""
+input ExecuteOrderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  id: ID!
+}
+
+"""
 Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
@@ -8099,6 +8110,16 @@ type Mutation {
   ): PaymentReceipt
 
   """
+  Execute an order
+  """
+  executeOrder(
+    """
+    Parameters for ExecuteOrder
+    """
+    input: ExecuteOrderInput!
+  ): Order
+
+  """
   Fetches taxes for one-off invoice
   """
   fetchDraftInvoiceTaxes(
@@ -9547,6 +9568,7 @@ enum PermissionEnum {
   order_forms_sign
   order_forms_view
   order_forms_void
+  orders_execute
   orders_update
   orders_view
   organization_emails_update
@@ -9665,6 +9687,7 @@ type Permissions {
   orderFormsSign: Boolean!
   orderFormsView: Boolean!
   orderFormsVoid: Boolean!
+  ordersExecute: Boolean!
   ordersUpdate: Boolean!
   ordersView: Boolean!
   organizationEmailsUpdate: Boolean!
