@@ -1025,6 +1025,91 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
     end
 
+    context "when grouping subscriptions by purchase order number" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :anniversary }
+      let(:current_date) { subscription_at.next_month }
+      let(:first_purchase_order_number) { "PO-123" }
+      let(:second_purchase_order_number) { "PO-123" }
+
+      let(:first_subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: current_date - 10.days,
+          billing_time:,
+          created_at:,
+          purchase_order_number: first_purchase_order_number
+        )
+      end
+      let(:second_subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: current_date - 10.days,
+          billing_time:,
+          created_at:,
+          purchase_order_number: second_purchase_order_number
+        )
+      end
+
+      before do
+        subscription.destroy
+        first_subscription
+        second_subscription
+      end
+
+      it "groups subscriptions with the same purchase order number into a single billing job" do
+        billing_service.call
+
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with(
+            contain_exactly(first_subscription, second_subscription),
+            current_date.to_i,
+            invoicing_reason: :subscription_periodic
+          )
+        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+          .with(contain_exactly(first_subscription, second_subscription), current_date)
+      end
+
+      context "when subscriptions have different purchase order numbers" do
+        let(:second_purchase_order_number) { "PO-456" }
+
+        it "produces separate billing jobs per purchase order number" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([first_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([second_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([first_subscription], current_date)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([second_subscription], current_date)
+        end
+      end
+
+      context "when subscriptions have nil purchase order numbers" do
+        let(:first_purchase_order_number) { nil }
+        let(:second_purchase_order_number) { nil }
+
+        it "groups them into a single billing job" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(
+              contain_exactly(first_subscription, second_subscription),
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic
+            )
+        end
+      end
+    end
+
     context "when a subscription opts out of invoice consolidation" do
       let(:interval) { :monthly }
       let(:billing_time) { :anniversary }
