@@ -5008,6 +5008,7 @@ input DataExportCreditNoteFiltersInput {
   invoiceNumber: String
   issuingDateFrom: ISO8601Date
   issuingDateTo: ISO8601Date
+  purchaseOrderNumber: String
   reason: [CreditNoteReasonEnum!]
   refundStatus: [CreditNoteRefundStatusEnum!]
   searchTerm: String
@@ -5034,6 +5035,7 @@ input DataExportInvoiceFiltersInput {
   paymentDisputeLost: Boolean
   paymentOverdue: Boolean
   paymentStatus: [InvoicePaymentStatusTypeEnum!]
+  purchaseOrderNumber: String
   searchTerm: String
   selfBilled: Boolean
   status: [InvoiceStatusTypeEnum!]
@@ -10306,6 +10308,7 @@ type Query {
     issuingDateTo: ISO8601Date
     limit: Int
     page: Int
+    purchaseOrderNumber: String
     reason: [CreditNoteReasonEnum!]
     refundStatus: [CreditNoteRefundStatusEnum!]
     searchTerm: String
@@ -10664,6 +10667,7 @@ type Query {
     paymentOverdue: Boolean
     paymentStatus: [InvoicePaymentStatusTypeEnum!]
     positiveDueAmount: Boolean
+    purchaseOrderNumber: String
     searchTerm: String
     selfBilled: Boolean
     settlements: [InvoiceSettlementTypeEnum!]

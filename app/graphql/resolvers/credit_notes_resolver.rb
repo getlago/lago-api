@@ -24,6 +24,7 @@ module Resolvers
     argument :invoice_number, String, required: false
     argument :issuing_date_from, GraphQL::Types::ISO8601Date, required: false
     argument :issuing_date_to, GraphQL::Types::ISO8601Date, required: false
+    argument :purchase_order_number, String, required: false
     argument :reason, [Types::CreditNotes::ReasonTypeEnum], required: false
     argument :refund_status, [Types::CreditNotes::RefundStatusTypeEnum], required: false
     argument :self_billed, Boolean, required: false
@@ -33,7 +34,8 @@ module Resolvers
 
     FILTER_KEYS = %i[
       amount_from amount_to billing_entity_ids credit_status currency customer_external_id
-      customer_id invoice_number issuing_date_from issuing_date_to reason refund_status self_billed types
+      customer_id invoice_number purchase_order_number issuing_date_from issuing_date_to reason
+      refund_status self_billed types
     ].freeze
 
     def resolve(**args)
