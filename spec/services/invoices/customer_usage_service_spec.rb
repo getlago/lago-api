@@ -89,6 +89,28 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         .with(hash_including(skip_adjusted_fees: true))
     end
 
+    it "passes the preloaded charges to the billing period filter service" do
+      passed_charges = nil
+      allow(Events::BillingPeriodFilterService).to receive(:call!).and_wrap_original do |original, **kwargs|
+        passed_charges = kwargs[:charges]
+        original.call(**kwargs)
+      end
+
+      usage_service.call
+
+      expect(passed_charges).to eq([charge])
+    end
+
+    it "loads the charge filters only once" do
+      queries = []
+      callback = ->(_name, _start, _finish, _id, payload) { queries << payload[:sql] }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        usage_service.call
+      end
+
+      expect(queries.grep(/FROM "charge_filters"/).size).to eq(1)
+    end
+
     context "when initializes an invoice" do
       let(:current_date) { DateTime.parse("2025-06-15") }
       let(:timestamp) { current_date }

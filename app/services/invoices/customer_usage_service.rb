@@ -75,7 +75,7 @@ module Invoices
         .plan
         .charges
         .joins(:billable_metric)
-        .includes(:taxes, :applied_pricing_unit, billable_metric: :organization, filters: {values: :billable_metric_filter})
+        .includes(:taxes, :applied_pricing_unit, billable_metric: [:organization, :filters], filters: {values: :billable_metric_filter})
       if usage_filters.filter_by_charge_id.present?
         charges = charges.where(id: usage_filters.filter_by_charge_id)
       elsif usage_filters.filter_by_charge_code.present?
@@ -120,7 +120,7 @@ module Invoices
     def compute_charge_fees
       fees = []
       filters = event_filters(subscription, boundaries).charges
-      charges.find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
+      charges.each { |c| fees += charge_usage(c, filters[c.id] || []) }
       return fees if usage_filters.has_charge_filter?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
@@ -270,8 +270,10 @@ module Invoices
     end
 
     def event_filters(subscription, boundaries)
+      # NOTE: passing the pre-loaded charges avoids re-loading the same
+      #       charges/filters/values associations from the database
       Events::BillingPeriodFilterService.call!(
-        subscription:, boundaries:
+        subscription:, boundaries:, charges:
       )
     end
 
