@@ -50,6 +50,17 @@ RSpec.describe FinanceAssistant::AskService do
     expect(request).to have_been_requested
   end
 
+  context "when the question is blank" do
+    let(:question) { "" }
+
+    it "returns a validation failure without calling the finance assistant" do
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages[:question]).to eq(["value_is_mandatory"])
+      expect(WebMock).not_to have_requested(:post, "#{finance_assistant_url}/ask")
+    end
+  end
+
   context "without finance assistant URL" do
     before do
       ENV["LAGO_FINANCE_ASSISTANT_URL"] = nil

@@ -17,6 +17,7 @@ module FinanceAssistant
 
     def call
       return result.forbidden_failure! if finance_assistant_url.blank?
+      return result.single_validation_failure!(error_code: "value_is_mandatory", field: :question) if question.blank?
 
       response = http_client.post_with_response(request_body, headers)
       body = JSON.parse(response.body.presence || "{}")
