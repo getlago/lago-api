@@ -29,7 +29,6 @@ module Subscriptions
         subscription_groups = group_by_payment_method(billing_subscriptions)
         subscription_groups = group_by_currency(subscription_groups)
         subscription_groups = group_by_billing_entity(subscription_groups)
-        subscription_groups = group_by_purchase_order_number(subscription_groups)
         subscription_groups = split_consolidation_opted_out(subscription_groups)
 
         subscription_groups.each do |subscriptions|
@@ -550,15 +549,6 @@ module Subscriptions
 
       subscription_groups.flat_map do |subscriptions|
         subscriptions.group_by { |sub| sub.billing_entity_id || sub.customer.billing_entity_id }.values
-      end
-    end
-
-    # NOTE: A purchase order number ties an invoice to a specific buyer authorization.
-    #       Subscriptions carrying different PO numbers must never be consolidated onto
-    #       the same invoice.
-    def group_by_purchase_order_number(subscription_groups)
-      subscription_groups.flat_map do |subscriptions|
-        subscriptions.group_by(&:purchase_order_number).values
       end
     end
 
