@@ -131,7 +131,10 @@ class CreditNotesQuery < BaseQuery
   end
 
   def with_purchase_order_number(scope)
-    scope.joins(:invoice).where(invoices: {purchase_order_number: filters.purchase_order_number})
+    # NOTE: scope invoices to the org so index_invoices_on_organization_id_purchase_order_number is usable
+    scope
+      .joins(:invoice)
+      .where(invoices: {organization_id: organization.id, purchase_order_number: filters.purchase_order_number})
   end
 
   def with_issuing_date_range(scope)
