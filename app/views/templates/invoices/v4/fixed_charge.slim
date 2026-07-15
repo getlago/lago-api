@@ -420,6 +420,10 @@ html
             tr
               td.body-1 = I18n.t('invoice.invoice_number')
               td.body-2 = number
+            - if purchase_order_number.present?
+              tr
+                td.body-1 = I18n.t('invoice.purchase_order_number')
+                td.body-2 = purchase_order_number
             tr
               td.body-1 = I18n.t('invoice.issue_date')
               td.body-2 = I18n.l(issuing_date, format: :default)
