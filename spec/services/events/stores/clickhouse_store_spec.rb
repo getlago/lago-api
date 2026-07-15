@@ -55,9 +55,10 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     # Regression test for https://github.com/getlago/lago-api/pull/5359
     #
     # Two rows share the same (transaction_id, timestamp) but carry different
-    # filterable properties. Deduplication via argMax(enriched_at) must resolve
-    # to a single row FIRST — otherwise the same logical event could be counted
-    # in multiple filter/group buckets (once per property value it ever had).
+    # filterable properties. Deduplication must resolve to a single row (the
+    # latest enrichment) FIRST — otherwise the same logical event could be
+    # counted in multiple filter/group buckets (once per property value it ever
+    # had).
     describe "filters applied after deduplication" do
       subject(:event_store) do
         described_class.new(
@@ -139,11 +140,11 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
   end
 
-  # Pins the query shape behind #count. The deduplicated + unfiltered count must
-  # avoid the INNER ANY JOIN (which only fetches the value column and caused
-  # ClickHouse OOM on large subscriptions); filtered and non-deduplicated counts
-  # must keep using the JOIN-based path so the filter is applied to the latest
-  # enriched row per dedup key.
+  # Pins the query shape behind #count. Deduplication relies on the `FINAL`
+  # modifier (ReplacingMergeTree collapses duplicated sorting keys at read time).
+  # The deduplicated + unfiltered count queries the table directly; filtered
+  # counts go through the events CTE so the filter is applied to the
+  # deduplicated rows; non-deduplicated counts must not use `FINAL`.
   describe "#count_query" do
     subject(:event_store) do
       described_class.new(code: billable_metric.code, subscription:, boundaries:, filters:, deduplicate:)
@@ -165,54 +166,62 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     let(:filters) { {} }
 
     context "when deduplicated and unfiltered" do
-      it "counts distinct dedup keys without a JOIN" do
+      it "counts directly on the deduplicated table without a CTE" do
         sql = event_store.count_query
 
-        expect(sql).not_to include("JOIN")
-        expect(sql).to include("GROUP BY #{described_class::DEDUP_KEY_COLUMNS.join(", ")}")
+        expect(sql).not_to include("WITH")
+        expect(sql).to include("FROM events_enriched FINAL")
       end
     end
 
     context "when grouped_by_values is set" do
       let(:filters) { {grouped_by_values: {"region" => "europe"}} }
 
-      it "uses the JOIN-based deduplication path" do
-        expect(event_store.count_query).to include("INNER ANY JOIN")
+      it "uses the CTE-based deduplication path" do
+        sql = event_store.count_query
+
+        expect(sql).to include("WITH")
+        expect(sql).to include("FROM events_enriched FINAL")
       end
     end
 
     context "when matching_filters are set" do
       let(:filters) { {matching_filters: {"region" => ["europe"]}} }
 
-      it "uses the JOIN-based deduplication path" do
-        expect(event_store.count_query).to include("INNER ANY JOIN")
+      it "uses the CTE-based deduplication path" do
+        sql = event_store.count_query
+
+        expect(sql).to include("WITH")
+        expect(sql).to include("FROM events_enriched FINAL")
       end
     end
 
     context "when ignored_filters are set" do
       let(:filters) { {ignored_filters: [{"region" => ["europe"]}]} }
 
-      it "uses the JOIN-based deduplication path" do
-        expect(event_store.count_query).to include("INNER ANY JOIN")
+      it "uses the CTE-based deduplication path" do
+        sql = event_store.count_query
+
+        expect(sql).to include("WITH")
+        expect(sql).to include("FROM events_enriched FINAL")
       end
     end
 
     context "when deduplication is disabled" do
       let(:deduplicate) { false }
 
-      it "does not build the deduplication CTEs" do
+      it "does not deduplicate" do
         sql = event_store.count_query
 
-        expect(sql).not_to include("JOIN")
-        expect(sql).not_to include("latest_enriched")
+        expect(sql).not_to include("FINAL")
       end
     end
 
     context "when grouped_by is set without grouped_by_values or filters" do
       let(:filters) { {grouped_by: ["region"]} }
 
-      it "still uses the JOIN-free fast path (grouped_by alone does not filter a count)" do
-        expect(event_store.count_query).not_to include("JOIN")
+      it "still uses the CTE-free fast path (grouped_by alone does not filter a count)" do
+        expect(event_store.count_query).not_to include("WITH")
       end
     end
 
@@ -221,7 +230,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
         event_store.use_from_boundary = false
         sql = event_store.count_query
 
-        expect(sql).not_to include("JOIN")
+        expect(sql).not_to include("WITH")
         expect(sql.upcase).not_to include("NULL")
         expect(sql).not_to include("timestamp >=")
         expect(sql).to include("timestamp <=")
@@ -229,10 +238,10 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
   end
 
-  # Real-data equivalence: the deduplicated + unfiltered #count uses the JOIN-free
-  # fast path. These assert it returns the SAME number as the original JOIN-based
-  # query on identical data, across re-enrichment duplicates and boundary edges.
-  describe "#count fast-path equivalence with the JOIN-based query" do
+  # Real-data equivalence: the deduplicated + unfiltered #count uses the CTE-free
+  # fast path. These assert it returns the SAME number as the CTE-based query on
+  # identical data, across re-enrichment duplicates and boundary edges.
+  describe "#count fast-path equivalence with the CTE-based query" do
     subject(:event_store) do
       described_class.new(code: billable_metric.code, subscription:, boundaries:, filters: {}, deduplicate: true)
     end
@@ -266,7 +275,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       )
     end
 
-    def join_based_count
+    def cte_based_count
       sql = event_store.send(
         :with_ctes,
         event_store.events_cte_queries(deduplicated_columns: %w[value]),
@@ -283,7 +292,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       insert_event(transaction_id: SecureRandom.uuid, timestamp: ts + 1.day, enriched_at: Time.current)
 
       expect(event_store.count.value).to eq(2)
-      expect(event_store.count.value).to eq(join_based_count)
+      expect(event_store.count.value).to eq(cte_based_count)
     end
 
     it "treats the same transaction_id at different timestamps as distinct events" do
@@ -292,7 +301,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       insert_event(transaction_id: txn, timestamp: ts + 1.hour, enriched_at: Time.current)
 
       expect(event_store.count.value).to eq(2)
-      expect(event_store.count.value).to eq(join_based_count)
+      expect(event_store.count.value).to eq(cte_based_count)
     end
 
     it "excludes events outside the boundaries" do
@@ -300,12 +309,12 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       insert_event(transaction_id: SecureRandom.uuid, timestamp: boundaries[:to_datetime] + 2.days, enriched_at: Time.current)
 
       expect(event_store.count.value).to eq(1)
-      expect(event_store.count.value).to eq(join_based_count)
+      expect(event_store.count.value).to eq(cte_based_count)
     end
 
     it "returns zero when there are no events" do
       expect(event_store.count.value).to eq(0)
-      expect(event_store.count.value).to eq(join_based_count)
+      expect(event_store.count.value).to eq(cte_based_count)
     end
   end
 
