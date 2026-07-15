@@ -117,9 +117,9 @@ RSpec.describe Subscriptions::PlanUpgradeService do
         )
       end
 
-      it "does not carry the purchase_order_number over to the new subscription" do
+      it "inherits the purchase_order_number when params omit it" do
         expect(result).to be_success
-        expect(result.subscription.purchase_order_number).to be_nil
+        expect(result.subscription.purchase_order_number).to eq("PO-OLD")
       end
 
       context "when params provide a purchase_order_number" do
@@ -128,6 +128,15 @@ RSpec.describe Subscriptions::PlanUpgradeService do
         it "sets it on the new subscription" do
           expect(result).to be_success
           expect(result.subscription.purchase_order_number).to eq("PO-NEW")
+        end
+      end
+
+      context "when params provide an explicit nil purchase_order_number" do
+        let(:params) { {name: subscription_name, purchase_order_number: nil} }
+
+        it "clears it on the new subscription" do
+          expect(result).to be_success
+          expect(result.subscription.purchase_order_number).to be_nil
         end
       end
     end
