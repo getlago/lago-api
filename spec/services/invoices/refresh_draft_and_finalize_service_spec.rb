@@ -143,6 +143,42 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       expect(result.invoice.fees.subscription.count).to eq(1)
     end
 
+    context "when the subscription purchase order number changed before finalization" do
+      let(:invoice) do
+        create(
+          :invoice,
+          :draft,
+          :with_subscriptions,
+          organization:,
+          customer:,
+          subscriptions: [subscription],
+          currency: "EUR",
+          issuing_date: Time.zone.at(timestamp).to_date,
+          purchase_order_number: "PO-ORIGINAL"
+        )
+      end
+
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at: started_at,
+          started_at:,
+          created_at: started_at,
+          purchase_order_number: "PO-UPDATED"
+        )
+      end
+
+      it "keeps the draft invoice purchase order number" do
+        result = finalize_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to be_finalized
+        expect(result.invoice.purchase_order_number).to eq("PO-ORIGINAL")
+      end
+    end
+
     it_behaves_like "syncs invoice" do
       let(:service_call) { finalize_service.call }
     end
