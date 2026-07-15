@@ -7,7 +7,7 @@
   / First graduated range
   tr.details
     td.body-2 = I18n.t('invoice.graduated.fee_per_unit_for_the_first', to: first_range['to_value'])
-    td.body-2 = first_range['units']
+    td.body-2 = RoundingHelper.round_decimal_part(first_range['units'].to_d)
     td.body-2 = first_range['rate'] + '%'
     td.body-2 == TaxHelper.applied_taxes(self)
     td.body-2 = FeeDisplayHelper.format_as_currency(self, first_range['per_unit_total_amount'])
@@ -15,7 +15,7 @@
 - next_ranges.each do |range|
   tr.details
     td.body-2 = I18n.t('invoice.graduated.fee_per_unit_for_the_next', from: range['from_value'], to: range['to_value'])
-    td.body-2 = range['units']
+    td.body-2 = RoundingHelper.round_decimal_part(range['units'].to_d)
     td.body-2 = range['rate'] + '%'
     td.body-2 == TaxHelper.applied_taxes(self)
     td.body-2 = FeeDisplayHelper.format_as_currency(self, range['per_unit_total_amount'])
@@ -24,7 +24,7 @@
   / Last graduated range
   tr.details
     td.body-2 = I18n.t('invoice.graduated.fee_per_unit_for_the_last', from: last_range['from_value'])
-    td.body-2 = last_range['units']
+    td.body-2 = RoundingHelper.round_decimal_part(last_range['units'].to_d)
     td.body-2 = last_range['rate'] + '%'
     td.body-2 == TaxHelper.applied_taxes(self)
     td.body-2 = FeeDisplayHelper.format_as_currency(self, last_range['per_unit_total_amount'])
