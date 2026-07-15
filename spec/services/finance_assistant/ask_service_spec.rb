@@ -18,7 +18,7 @@ RSpec.describe FinanceAssistant::AskService do
     ENV["LAGO_FINANCE_ASSISTANT_URL"] = previous_url
   end
 
-  it "proxies the question to the finance assistant with the organization header" do
+  it "proxies the question to the finance assistant with the api key header" do
     request = stub_request(:post, "#{finance_assistant_url}/ask")
       .with(
         body: {
@@ -27,7 +27,7 @@ RSpec.describe FinanceAssistant::AskService do
         },
         headers: {
           "Content-Type" => "application/json",
-          "X-Organization-Id" => organization.id
+          "X-LAGO-API-KEY" => organization.api_keys.with_most_permissions.value
         }
       )
       .to_return(

@@ -57,10 +57,7 @@ module FinanceAssistant
     end
 
     def headers
-      {
-        "X-LAGO-API-KEY" => organization.api_keys.with_most_permissions.value,
-        "X-Organization-Id" => organization.id
-      }
+      {"X-LAGO-API-KEY" => organization.api_keys.with_most_permissions.value}
     end
 
     def http_client
