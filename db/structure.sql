@@ -543,9 +543,9 @@ DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
-DROP INDEX IF EXISTS public.index_invoices_on_purchase_order_number;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_due_date;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_purchase_order_number;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
@@ -8876,6 +8876,13 @@ CREATE INDEX index_invoices_on_organization_id_number_gin_trgm_ops ON public.inv
 
 
 --
+-- Name: index_invoices_on_organization_id_purchase_order_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_purchase_order_number ON public.invoices USING btree (organization_id, purchase_order_number);
+
+
+--
 -- Name: index_invoices_on_payment_due_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8887,13 +8894,6 @@ CREATE INDEX index_invoices_on_payment_due_date ON public.invoices USING btree (
 --
 
 CREATE INDEX index_invoices_on_payment_method_id ON public.invoices USING btree (payment_method_id);
-
-
---
--- Name: index_invoices_on_purchase_order_number; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_invoices_on_purchase_order_number ON public.invoices USING btree (purchase_order_number);
 
 
 --
