@@ -19,6 +19,7 @@ class InvoicesQuery < BaseQuery
     :metadata,
     :partially_paid,
     :positive_due_amount,
+    :purchase_order_number,
     :self_billed,
     :subscription_id,
     :settlements
@@ -59,6 +60,7 @@ class InvoicesQuery < BaseQuery
     invoices = with_metadata(invoices) if filters.metadata.present?
     invoices = with_partially_paid(invoices) unless filters.partially_paid.nil?
     invoices = with_positive_due_amount(invoices) unless filters.positive_due_amount.nil?
+    invoices = with_purchase_order_number(invoices) if filters.purchase_order_number.present?
     invoices = with_self_billed(invoices) unless filters.self_billed.nil?
     invoices = with_subscription_id(invoices) if filters.subscription_id.present?
     invoices = with_settlements(invoices) if valid_settlements.present?
@@ -152,6 +154,7 @@ class InvoicesQuery < BaseQuery
     conditions << positive_due_amount_filter unless filters.positive_due_amount.nil?
     conditions << ms.eq("partially_paid", ms.boolean(filters.partially_paid)) unless filters.partially_paid.nil?
     conditions << ms.eq("subscription_ids", filters.subscription_id) if filters.subscription_id.present?
+    conditions << ms.eq("purchase_order_number", filters.purchase_order_number) if filters.purchase_order_number.present?
     conditions << ms.in_list("settlement_types", valid_settlements) if valid_settlements.present?
     conditions.concat(metadata_filters) if filters.metadata.present?
 
@@ -259,6 +262,10 @@ class InvoicesQuery < BaseQuery
 
   def with_invoice_type(scope)
     scope.where(invoice_type: filters.invoice_type)
+  end
+
+  def with_purchase_order_number(scope)
+    scope.where(purchase_order_number: filters.purchase_order_number)
   end
 
   def with_status(scope)
