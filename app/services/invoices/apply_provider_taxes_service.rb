@@ -4,6 +4,9 @@ module Invoices
   class ApplyProviderTaxesService < BaseService
     Result = BaseResult[:applied_taxes, :invoice]
 
+    # Minimal tax descriptor used only to group fees under a common key in indexed_fees.
+    GroupingTax = Data.define(:name, :rate, :type)
+
     def initialize(invoice:, provider_taxes: nil)
       @invoice = invoice
       @provider_taxes = provider_taxes || fetch_provider_taxes_result.fees
@@ -79,7 +82,7 @@ module Invoices
     def indexed_fees
       @indexed_fees ||= invoice.fees.each_with_object({}) do |fee, applied_taxes|
         fee.applied_taxes.each do |applied_tax|
-          tax = OpenStruct.new(
+          tax = GroupingTax.new(
             name: applied_tax.tax_name,
             rate: applied_tax.tax_rate,
             type: applied_tax.tax_description
