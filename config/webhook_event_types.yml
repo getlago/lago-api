@@ -163,6 +163,11 @@ invoice_voided:
   description: An invoice has been voided
   category: Invoices
   deprecated: false
+invoice_deleted:
+  name: invoice.deleted
+  description: A draft invoice has been deleted
+  category: Invoices
+  deprecated: false
 invoice_payment_dispute_lost:
   name: invoice.payment_dispute_lost
   description: A payment dispute has been lost for an invoice payment
