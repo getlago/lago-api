@@ -20,8 +20,8 @@ class QuoteVersion < ApplicationRecord
 
   # The quote sharing feature (public share link via `share_token`) is not ready yet:
   # no share endpoint, no consumer of the token. Ignore the column so the app stops
-  # reading/writing it; the column and its unique index remain in the database for when
-  # the feature lands.
+  # reading/writing it; the column stays in the database for when the feature lands
+  # (its now-unused unique index has been dropped).
   self.ignored_columns += %w[share_token]
 
   belongs_to :organization
