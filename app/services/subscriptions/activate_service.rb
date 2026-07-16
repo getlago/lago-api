@@ -158,7 +158,7 @@ module Subscriptions
       return unless subscription.activation_rules.payment.any?
 
       unless subscription.previous_subscription
-        ActivationRules::BillMissedPeriodsJob.perform_later(subscription)
+        ActivationRules::BillCurrentPeriodJob.perform_later(subscription)
       end
     end
 
