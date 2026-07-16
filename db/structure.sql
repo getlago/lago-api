@@ -545,6 +545,7 @@ DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_due_date;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_purchase_order_number;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
@@ -8875,6 +8876,13 @@ CREATE INDEX index_invoices_on_organization_id_number_gin_trgm_ops ON public.inv
 
 
 --
+-- Name: index_invoices_on_organization_id_purchase_order_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_purchase_order_number ON public.invoices USING btree (organization_id, purchase_order_number);
+
+
+--
 -- Name: index_invoices_on_payment_due_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12844,6 +12852,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260715165959'),
 ('20260709141039'),
 ('20260709141038'),
 ('20260709141037'),
