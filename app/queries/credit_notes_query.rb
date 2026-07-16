@@ -131,10 +131,11 @@ class CreditNotesQuery < BaseQuery
   end
 
   def with_purchase_order_number(scope)
-    # NOTE: scope invoices to the org so index_invoices_on_organization_id_purchase_order_number is usable
+    # NOTE: case-insensitive match; scoping invoices to the org + lower() hits
+    # index_invoices_on_organization_id_lower_purchase_order_number.
     scope
       .joins(:invoice)
-      .where(invoices: {organization_id: organization.id, purchase_order_number: filters.purchase_order_number})
+      .where("invoices.organization_id = ? AND lower(invoices.purchase_order_number) = lower(?)", organization.id, filters.purchase_order_number)
   end
 
   def with_issuing_date_range(scope)

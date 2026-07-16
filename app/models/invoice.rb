@@ -788,8 +788,8 @@ end
 #  index_invoices_on_customer_billing_entity_sequential            (customer_id,billing_entity_id,sequential_id) UNIQUE
 #  index_invoices_on_number                                        (number)
 #  index_invoices_on_organization_id_and_customer_id               (customer_id,organization_id)
+#  index_invoices_on_organization_id_lower_purchase_order_number   (organization_id, lower((purchase_order_number)::text))
 #  index_invoices_on_organization_id_number_gin_trgm_ops           (organization_id,number) USING gin
-#  index_invoices_on_organization_id_purchase_order_number         (organization_id,purchase_order_number)
 #  index_invoices_on_payment_due_date                              (payment_due_date) WHERE ((status = 1) AND (payment_status <> 1) AND (payment_overdue = false) AND (payment_dispute_lost_at IS NULL))
 #  index_invoices_on_payment_method_id                             (payment_method_id)
 #  index_invoices_on_ready_to_be_refreshed                         (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)
