@@ -121,6 +121,8 @@ module Invoices
       # Only the first automatic attempt is delayed; retries keep payment_attempts positive.
       def defer_for_checkout_customer?
         return false unless invoice.payment_attempts.zero?
+        # Payment-gated subscriptions activate synchronously, so charge now instead of deferring.
+        return false if invoice.subscription_payment_gated?
 
         PaymentIntent.joins(:invoice).where(invoices: {customer_id: invoice.customer_id}).exists?
       end

@@ -767,6 +767,17 @@ RSpec.describe Invoices::Payments::CreateService do
             .at(:no_wait)
         end
       end
+
+      context "when the invoice gates a payment-gated subscription" do
+        before { allow(invoice).to receive(:subscription_payment_gated?).and_return(true) }
+
+        it "enqueues the payment immediately" do
+          expect { ApplicationRecord.transaction { create_service.call_async } }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            .at(:no_wait)
+        end
+      end
     end
 
     context "when the customer has never used a checkout URL" do
