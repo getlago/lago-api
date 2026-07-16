@@ -127,6 +127,7 @@ module Api
           :voided_credits,
           :invoice_requires_successful_payment,
           :name,
+          :purchase_order_number,
           :ignore_paid_top_up_limits,
           :priority,
           payment_method: [
