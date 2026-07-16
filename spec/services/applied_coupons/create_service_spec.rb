@@ -268,5 +268,33 @@ RSpec.describe AppliedCoupons::CreateService do
         expect(create_result.error.messages[:frequency_duration_remaining]).to eq(["value_is_mandatory", "is not a number"])
       end
     end
+
+    context "when there is a concurrent lock" do
+      before do
+        stub_const("Customers::LockService::ACQUIRE_LOCK_TIMEOUT", 1.second)
+      end
+
+      around do |test|
+        with_advisory_lock("customer-#{customer.id}-coupon", lock_released_after:) do
+          test.run
+        end
+      end
+
+      context "when it fails to acquire the lock" do
+        let(:lock_released_after) { 2.seconds }
+
+        it "raises a BaseLockService::FailedToAcquireLock error" do
+          expect { create_result }.to raise_error(BaseLockService::FailedToAcquireLock, "Failed to acquire lock customer-#{customer.id}-coupon")
+        end
+      end
+
+      context "when the lock is acquired" do
+        let(:lock_released_after) { 0.5.seconds }
+
+        it "successfully applies coupon to the customer" do
+          expect { create_result }.not_to raise_error
+        end
+      end
+    end
   end
 end
