@@ -11153,6 +11153,7 @@ input RegenerateInvoiceInput {
   """
   clientMutationId: String
   fees: [VoidedInvoiceFeeInput!]!
+  purchaseOrderNumber: String
   voidedInvoiceId: ID!
 }
 
