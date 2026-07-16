@@ -3050,7 +3050,8 @@ CREATE VIEW public.exports_credit_notes AS
     ( SELECT json_agg(json_build_object('lago_id', ed.id, 'error_code', ed.error_code, 'details', ed.details)) AS json_agg
            FROM public.error_details ed
           WHERE (((ed.owner_type)::text = 'CreditNote'::text) AND (ed.owner_id = cn.id))) AS error_details
-   FROM public.credit_notes cn;
+   FROM public.credit_notes cn
+  WHERE (cn.status <> 2);
 
 
 --
@@ -12837,6 +12838,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260716114156'),
+('20260715142900'),
 ('20260709141039'),
 ('20260709141038'),
 ('20260709141037'),

@@ -54,6 +54,22 @@ RSpec.describe Mutations::CreditNotes::Update do
     end
   end
 
+  context "when credit note is deleted" do
+    let(:credit_note) { create(:credit_note, :deleted, customer:, invoice:) }
+
+    it "returns an error" do
+      result = execute_query(
+        query: mutation,
+        input: {
+          id: credit_note.id,
+          refundStatus: "succeeded"
+        }
+      )
+
+      expect_not_found(result)
+    end
+  end
+
   context "with metadata" do
     let(:mutation) do
       <<~GQL
