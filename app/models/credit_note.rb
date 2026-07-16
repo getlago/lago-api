@@ -64,7 +64,7 @@ class CreditNote < ApplicationRecord
   TYPES = %w[credit refund offset].freeze
 
   REASON = %i[duplicated_charge product_unsatisfactory order_change order_cancellation fraudulent_charge other].freeze
-  STATUS = %i[draft finalized].freeze
+  STATUS = %i[draft finalized deleted].freeze
 
   enum :credit_status, CREDIT_STATUS
   enum :refund_status, REFUND_STATUS, validate: {allow_nil: true}
