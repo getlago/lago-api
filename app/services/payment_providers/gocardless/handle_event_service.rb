@@ -24,11 +24,17 @@ module PaymentProviders
         case event.resource_type
         when "payments"
           if PAYMENT_ACTIONS.include?(event.action)
-            payment_service_klass(event)
-              .new.update_payment_status(
-                provider_payment_id: event.links.payment,
-                status: event.action
-              ).raise_if_error!
+            klass = payment_service_klass(event)
+            args = {provider_payment_id: event.links.payment, status: event.action}
+
+            # NOTE: Temporary branch until PaymentRequests::Payments services are migrated to
+            #       TypedResults too. Once they are, call `klass.call(:update_payment_status, **args)` directly.
+            service_result = if klass.include?(TypedResults)
+              klass.call(:update_payment_status, **args)
+            else
+              klass.new.update_payment_status(**args)
+            end
+            service_result.raise_if_error!
           end
         when "refunds"
           if REFUND_ACTIONS.include?(event.action)
