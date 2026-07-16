@@ -73,8 +73,17 @@ module Invoices
 
         result
       rescue Invoices::Payments::AlreadyPaidError
-        # NOTE: The invoice was settled by another payment so we can drop the unused pending payment
-        result.payment&.destroy if result.payment&.provider_payment_id.nil?
+        # NOTE: The invoice was settled by another payment so we can drop the unused pending payment.
+        #
+        # Reload from the DB before destroying: a concurrent attempt shares this same row (only one
+        # pending/processing provider payment exists per payable) and may have already advanced it by
+        # setting a provider_payment_id or marking it succeeded. `result.payment` here is a stale
+        # in-memory copy, so relying on it can destroy a payment that maps to a real provider charge
+        # and orphan the PaymentReceipts::CreateJob already enqueued for it.
+        persisted_payment = result.payment && Payment.find_by(id: result.payment.id)
+        if persisted_payment && persisted_payment.provider_payment_id.nil? && persisted_payment.payable_payment_status != "succeeded"
+          persisted_payment.destroy
+        end
         result.payment = nil
         result
       rescue BaseService::ServiceFailure => e
