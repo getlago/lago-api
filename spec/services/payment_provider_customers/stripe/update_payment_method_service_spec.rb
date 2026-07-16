@@ -49,7 +49,7 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
         end
 
         it "propagates the error so the job can retry" do
-          expect { update_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
+          expect { update_service.call }.to raise_error(BaseService::LockAcquisitionFailure)
         end
       end
     end

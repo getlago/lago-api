@@ -37,6 +37,33 @@ RSpec.describe PaymentMethods::SetAsDefaultService do
         expect(payment_method2.reload.is_default).to eq(false)
         expect(payment_method3.reload.is_default).to eq(false)
       end
+
+      it "touches the updated_at of the demoted payment methods" do
+        expect { default_service.call }.to change { payment_method2.reload.updated_at }
+      end
+
+      context "when the advisory lock cannot be acquired" do
+        before do
+          allow(Customers::LockService).to receive(:call)
+            .and_raise(BaseLockService::FailedToAcquireLock, "Failed to acquire lock customer-#{customer.id}-payment_method")
+        end
+
+        it "returns a lock acquisition failure that wraps the original exception" do
+          result = default_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+          expect(result.error.code).to eq("lock_acquisition_failed")
+          expect(result.error.original_error).to be_a(BaseLockService::FailedToAcquireLock)
+        end
+
+        it "does not change the default payment method" do
+          default_service.call
+
+          expect(payment_method.reload.is_default).to eq(false)
+          expect(payment_method2.reload.is_default).to eq(true)
+        end
+      end
     end
 
     context "when billing entity is nil" do
