@@ -2548,6 +2548,7 @@ RSpec.describe Invoice do
         "self_billed" => false,
         "total_amount_cents" => 1000,
         "total_paid_amount_cents" => 400,
+        "purchase_order_number" => nil,
         "created_at" => invoice.created_at.to_i,
         "issuing_date" => Date.new(2026, 1, 15).to_time(:utc).to_i,
         "due_amount_cents" => 600,
@@ -2610,7 +2611,7 @@ RSpec.describe Invoice do
         filterable_attributes: %i[id organization_id billing_entity_id currency customer_id
           customer_external_id invoice_type status payment_status payment_dispute_lost
           payment_overdue self_billed issuing_date total_amount_cents due_amount_cents
-          partially_paid subscription_ids settlement_types metadata metadata_keys],
+          partially_paid subscription_ids settlement_types metadata metadata_keys purchase_order_number],
         sortable_attributes: %i[issuing_date created_at id],
         pagination: {"maxTotalHits" => 100_000},
         typo_tolerance: {"disableOnAttributes" => %w[number customer_external_id customer_email]}
