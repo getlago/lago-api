@@ -18,7 +18,11 @@ class QuoteVersion < ApplicationRecord
 
   CASCADE_VOID_REASONS = VOID_REASONS.slice(:cascade_of_expired, :cascade_of_voided).freeze
 
-  before_save :ensure_share_token
+  # The quote sharing feature (public share link via `share_token`) is not ready yet:
+  # no share endpoint, no consumer of the token. Ignore the column so the app stops
+  # reading/writing it; the column and its unique index remain in the database for when
+  # the feature lands.
+  self.ignored_columns += %w[share_token]
 
   belongs_to :organization
   belongs_to :quote
@@ -30,11 +34,6 @@ class QuoteVersion < ApplicationRecord
   enum :void_reason, VOID_REASONS,
     instance_methods: false,
     validate: {allow_nil: true}
-
-  validates :share_token,
-    on: :update,
-    presence: true,
-    if: -> { draft? || approved? }
 
   validates :void_reason, :voided_at,
     presence: true,
@@ -50,14 +49,6 @@ class QuoteVersion < ApplicationRecord
   )
 
   def version = sequential_id
-
-  private
-
-  def ensure_share_token
-    return if voided?
-
-    self.share_token ||= SecureRandom.uuid
-  end
 end
 
 # == Schema Information
@@ -72,7 +63,6 @@ end
 #  currency          :string
 #  end_date          :date
 #  mention_variables :jsonb
-#  share_token       :string
 #  start_date        :date
 #  status            :enum             default("draft"), not null
 #  void_reason       :enum
@@ -89,7 +79,6 @@ end
 #  index_quote_versions_on_quote_id                    (quote_id)
 #  index_unique_quote_versions_on_quote_active_status  (quote_id) UNIQUE WHERE (status = ANY (ARRAY['draft'::quote_status, 'approved'::quote_status]))
 #  index_unique_quote_versions_on_quote_sequential_id  (quote_id,sequential_id) UNIQUE
-#  index_unique_quote_versions_on_share_token          (share_token) UNIQUE
 #
 # Foreign Keys
 #

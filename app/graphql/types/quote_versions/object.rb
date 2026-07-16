@@ -15,7 +15,6 @@ module Types
       field :mention_variables, GraphQL::Types::JSON, null: false
       field :organization, Types::Organizations::OrganizationType, null: false
       field :quote, Types::Quotes::Object, null: false
-      field :share_token, String, null: true
       field :start_date, GraphQL::Types::ISO8601Date, null: true
       field :status, Types::QuoteVersions::StatusEnum, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

@@ -11082,7 +11082,6 @@ type QuoteVersion {
   mentionVariables: JSON!
   organization: Organization!
   quote: Quote!
-  shareToken: String
   startDate: ISO8601Date
   status: StatusEnum!
   updatedAt: ISO8601DateTime!
