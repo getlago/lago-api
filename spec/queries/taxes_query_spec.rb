@@ -102,6 +102,21 @@ RSpec.describe TaxesQuery do
     end
   end
 
+  context "when applied taxes exceed the page size and filtering on not applied to BE" do
+    let(:filters) { {applied_to_organization: false} }
+    let(:pagination) { {page: 1, limit: 2} }
+
+    before do
+      3.times do |i|
+        create(:tax, :applied_to_billing_entity, organization:, code: "extra-#{i}", name: "extra-#{i}")
+      end
+    end
+
+    it "excludes every applied tax regardless of the page limit" do
+      expect(returned_ids).to eq([tax_third.id])
+    end
+  end
+
   context "with a filter on applied to BE" do
     let(:filters) { {applied_to_organization: true} }
 
