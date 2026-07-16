@@ -34,6 +34,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         billing_time: "anniversary",
         subscription_at:,
         ending_at:,
+        purchase_order_number: "PO-123",
         invoice_custom_section: {
           invoice_custom_section_codes: [section_1.code]
         },
@@ -84,6 +85,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           billing_time: "anniversary",
           subscription_at: Time.current.iso8601,
           ending_at: (Time.current + 1.year).iso8601,
+          purchase_order_number: "PO-123",
           previous_plan_code: nil,
           next_plan_code: nil,
           downgrade_plan_date: nil
@@ -1698,6 +1700,21 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
         subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
         expect(subscription.consolidate_invoice).to be(false)
+      end
+    end
+
+    context "when updating purchase_order_number" do
+      let(:update_params) { {purchase_order_number: "PO-123"} }
+      let(:subscription) { create(:subscription, customer:, plan:) }
+
+      it "updates purchase_order_number" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:purchase_order_number]).to eq("PO-123")
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.purchase_order_number).to eq("PO-123")
       end
     end
 
