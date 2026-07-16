@@ -280,6 +280,36 @@ RSpec.describe FixedCharges::EmitEventsService do
       end
     end
 
+    context "when the subscription cycle does not bill fixed charges this period" do
+      # Yearly plan billing charges monthly but fixed charges per period: outside the first
+      # month of the yearly period fixed_charges_to_datetime is nil, which used to crash the
+      # deferred (apply_units_immediately: false) path with `nil + 1.second`.
+      let(:plan) do
+        create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+      end
+      let(:subscription) do
+        create(
+          :subscription,
+          :active,
+          :calendar,
+          plan:,
+          customer: customer_1,
+          subscription_at: Time.zone.parse("2023-01-01"),
+          started_at: Time.zone.parse("2023-01-01")
+        )
+      end
+
+      around { |example| travel_to(Time.zone.parse("2024-06-15")) { example.run } }
+
+      it "schedules the event at the first second of the next fixed-charges period" do
+        expect { result }.to change(FixedChargeEvent, :count).by(1)
+
+        event = result.fixed_charge_events.first
+        expect(event.subscription_id).to eq(subscription.id)
+        expect(event.timestamp).to be_within(1.second).of(Time.zone.parse("2025-01-01 00:00:00 UTC"))
+      end
+    end
+
     context "when an active plan subscription has a per-subscription units override" do
       before do
         create(:subscription_fixed_charge_units_override,

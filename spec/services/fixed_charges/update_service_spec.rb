@@ -93,12 +93,12 @@ RSpec.describe FixedCharges::UpdateService do
           expect { result }.not_to change { fixed_charge.reload.code }
         end
 
-        it "does not apply taxes" do
+        it "applies taxes" do
           tax = create(:tax, organization: plan.organization, code: "tax1")
           params[:tax_codes] = [tax.code]
 
+          expect { result }.to change { fixed_charge.reload.applied_taxes.count }.from(0).to(1)
           expect(result).to be_success
-          expect(fixed_charge.reload.applied_taxes).to be_empty
         end
       end
 

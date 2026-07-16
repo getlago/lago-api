@@ -15,9 +15,8 @@ module PaymentIntents
       payment_intents.find_each do |payment_intent|
         if payment_intent.provider_session_id.present?
           Invoices::Payments::PaymentProviders::Factory
-            .new_instance(invoice:)
-            .expire_payment_url(payment_intent)
-            .raise_if_error!
+            .for(invoice)
+            .call!(:expire_payment_url, invoice, payment_intent)
         end
 
         payment_intent.expired!

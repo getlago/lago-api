@@ -143,8 +143,14 @@ module Subscriptions
 
     def bill_rotation_subscriptions(billable_subscriptions, billing_at:, non_invoiceable_subscriptions: [subscription.previous_subscription])
       after_commit do
-        BillSubscriptionJob.perform_later(billable_subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
-        BillNonInvoiceableFeesJob.perform_later(non_invoiceable_subscriptions, billing_at)
+        # NOTE: On upgrade/downgrade the previous and new subscriptions may carry different
+        #       purchase order numbers. Split them so each PO produces its own invoice.
+        billable_subscriptions.group_by(&:purchase_order_number).each_value do |subscriptions|
+          BillSubscriptionJob.perform_later(subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
+        end
+        non_invoiceable_subscriptions.group_by(&:purchase_order_number).each_value do |subscriptions|
+          BillNonInvoiceableFeesJob.perform_later(subscriptions, billing_at)
+        end
       end
     end
 

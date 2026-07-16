@@ -30,6 +30,7 @@ module Subscriptions
         subscription_groups = group_by_currency(subscription_groups)
         subscription_groups = group_by_billing_entity(subscription_groups)
         subscription_groups = split_consolidation_opted_out(subscription_groups)
+        subscription_groups = group_by_purchase_order_number(subscription_groups)
 
         subscription_groups.each do |subscriptions|
           BillSubscriptionJob.perform_later(
@@ -549,6 +550,12 @@ module Subscriptions
 
       subscription_groups.flat_map do |subscriptions|
         subscriptions.group_by { |sub| sub.billing_entity_id || sub.customer.billing_entity_id }.values
+      end
+    end
+
+    def group_by_purchase_order_number(subscription_groups)
+      subscription_groups.flat_map do |subscriptions|
+        subscriptions.group_by(&:purchase_order_number).values
       end
     end
 

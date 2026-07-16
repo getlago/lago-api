@@ -60,7 +60,8 @@ module PaymentProviders
         end
 
         def update_payment_status!(status)
-          payment_service_klass.new.update_payment_status(
+          klass = payment_service_klass
+          args = {
             organization_id: organization.id,
             status:,
             amount_cents: event.data.object.try(:amount),
@@ -70,7 +71,17 @@ module PaymentProviders
               metadata:,
               error_code: event.data.object.to_hash.dig(:last_payment_error, :code)
             )
-          ).raise_if_error!
+          }
+
+          # NOTE: Temporary branch until PaymentRequests::Payments services are migrated to
+          #       TypedResults too. Once they are, call `klass.call(:update_payment_status, **args)` directly.
+          service_result = if klass.include?(TypedResults)
+            klass.call(:update_payment_status, **args)
+          else
+            klass.new.update_payment_status(**args)
+          end
+
+          service_result.raise_if_error!
         end
       end
     end

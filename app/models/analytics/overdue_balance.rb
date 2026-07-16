@@ -80,6 +80,7 @@ module Analytics
             WHERE i.organization_id = :organization_id
             AND i.self_billed IS FALSE
             AND i.payment_overdue IS TRUE
+            AND i.status != #{Invoice.statuses[:deleted]}
             #{and_external_customer_id_sql}
             #{and_is_customer_tin_empty_sql}
             #{and_billing_entity_id_sql}

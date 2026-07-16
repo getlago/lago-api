@@ -96,7 +96,7 @@ module Invoices
         return result unless provider
 
         forced_delay = nil
-        forced_delay = CHECKOUT_AUTO_PAYMENT_DELAY if defer_for_checkout_customer?
+        forced_delay = CHECKOUT_AUTO_PAYMENT_DELAY if defer_for_checkout_organization?
 
         AfterCommitEverywhere.after_commit do
           Invoices::Payments::CreateJob
@@ -118,11 +118,15 @@ module Invoices
         @provider ||= invoice.customer.payment_provider&.to_sym
       end
 
-      # Only the first automatic attempt is delayed; retries keep payment_attempts positive.
-      def defer_for_checkout_customer?
+      # Delay the first automatic payment for every customer of an organization that uses hosted
+      # checkout (has ever generated a checkout URL), so an auto-payment can't race a customer's
+      # manual checkout and double-charge them. Scoping to the organization — not the customer —
+      # also covers a customer's very first invoice, which has no prior checkout signal of its own.
+      # Only the first attempt is delayed;
+      def defer_for_checkout_organization?
         return false unless invoice.payment_attempts.zero?
 
-        PaymentIntent.joins(:invoice).where(invoices: {customer_id: invoice.customer_id}).exists?
+        PaymentIntent.where(organization_id: invoice.organization_id).exists?
       end
 
       def should_process_payment?

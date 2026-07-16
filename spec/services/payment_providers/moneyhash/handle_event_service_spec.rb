@@ -111,12 +111,10 @@ RSpec.describe PaymentProviders::Moneyhash::HandleEventService do
   end
 
   describe "amount_cents handling in metadata" do
-    let(:payment_service) { instance_double(Invoices::Payments::MoneyhashService) }
     let(:service_result) { BaseService::Result.new }
 
     before do
-      allow(Invoices::Payments::MoneyhashService).to receive(:new).and_return(payment_service)
-      allow(payment_service).to receive(:update_payment_status).and_return(service_result)
+      allow(Invoices::Payments::MoneyhashService).to receive(:call).and_return(service_result)
     end
 
     context "when handling an intent event with a scalar amount in major units" do
@@ -125,8 +123,8 @@ RSpec.describe PaymentProviders::Moneyhash::HandleEventService do
       it "passes amount_cents converted to minor units as a dedicated kwarg" do
         event_service.call
 
-        expect(payment_service).to have_received(:update_payment_status).with(
-          hash_including(amount_cents: 500)
+        expect(Invoices::Payments::MoneyhashService).to have_received(:call).with(
+          :update_payment_status, hash_including(amount_cents: 500)
         )
       end
     end
@@ -137,8 +135,8 @@ RSpec.describe PaymentProviders::Moneyhash::HandleEventService do
       it "extracts the value from the amount hash and converts to cents" do
         event_service.call
 
-        expect(payment_service).to have_received(:update_payment_status).with(
-          hash_including(amount_cents: 710)
+        expect(Invoices::Payments::MoneyhashService).to have_received(:call).with(
+          :update_payment_status, hash_including(amount_cents: 710)
         )
       end
 
