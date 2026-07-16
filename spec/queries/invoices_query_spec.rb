@@ -804,10 +804,11 @@ RSpec.describe InvoicesQuery do
   end
 
   context "when filtering by purchase_order_number" do
-    let(:filters) { {purchase_order_number: "PO-123"} }
-    let!(:invoice_with_po) { create(:invoice, organization:, billing_entity: billing_entity1, status: "finalized", customer: customer_first, purchase_order_number: "PO-123") }
+    let(:purchase_order_number) { "PO-123" }
+    let(:filters) { {purchase_order_number: purchase_order_number.downcase} }
+    let!(:invoice_with_po) { create(:invoice, organization:, billing_entity: billing_entity1, status: "finalized", customer: customer_first, purchase_order_number:) }
 
-    it "returns invoices with the matching purchase order number" do
+    it "returns invoices matching the purchase order number case-insensitively" do
       expect(returned_ids).to eq([invoice_with_po.id])
     end
   end

@@ -4,8 +4,8 @@ class AddInvoicesOrganizationPurchaseOrderNumberIndex < ActiveRecord::Migration[
   disable_ddl_transaction!
 
   def change
-    add_index :invoices, [:organization_id, :purchase_order_number],
-      name: "index_invoices_on_organization_id_purchase_order_number",
+    add_index :invoices, "organization_id, lower(purchase_order_number)",
+      name: "index_invoices_on_organization_id_lower_purchase_order_number",
       algorithm: :concurrently,
       using: :btree,
       if_not_exists: true

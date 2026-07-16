@@ -265,7 +265,9 @@ class InvoicesQuery < BaseQuery
   end
 
   def with_purchase_order_number(scope)
-    scope.where(purchase_order_number: filters.purchase_order_number)
+    # NOTE: case-insensitive match; organization_id (from base scope) + lower() hit
+    # index_invoices_on_organization_id_lower_purchase_order_number.
+    scope.where("lower(invoices.purchase_order_number) = lower(?)", filters.purchase_order_number)
   end
 
   def with_status(scope)
