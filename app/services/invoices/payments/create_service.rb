@@ -125,6 +125,8 @@ module Invoices
       # Only the first attempt is delayed;
       def defer_for_checkout_organization?
         return false unless invoice.payment_attempts.zero?
+        # Payment-gated subscriptions activate synchronously, so charge now instead of deferring.
+        return false if invoice.subscription_payment_gated?
 
         PaymentIntent.where(organization_id: invoice.organization_id).exists?
       end
