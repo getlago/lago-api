@@ -10,11 +10,16 @@ module Events
       super
     end
 
-    # Return the list of charges and filters that will be used in the billing or usage computation
-    # The result will be a hash where the key is the charge id and the value is an array of filter ids
-    # filter ids could also include "nil" as a default filter
+    # Return the charges and filters that will be used in the billing or usage computation.
+    #
+    # result.charges is a nested hash: { charge_id => { filter_id => last_seen_at } }.
+    # The inner keys are the filter ids that received usage in the period (nil is the default,
+    # no-filter bucket). Each value is the ingestion timestamp of the most recent event for that
+    # charge/filter (created_at on PG, enriched_at on CH), or nil when no event was seen (e.g. a
+    # recurring charge whose usage carries over). The last-seen timestamps let the cache layer
+    # lazily invalidate stale usage.
     def call
-      result.charges = deduplicate_filters(charges_and_filters)
+      result.charges = charges_and_filters
       result
     end
 
@@ -45,10 +50,8 @@ module Events
       charges_and_filters_from_pre_enriched_events
     end
 
-    # Return the list of all charges and filters that received usage in the period
-    # It also includes the recurring charges and filters
-    # The result will be a hash where the key is the charge id and the value is an array of filter ids
-    # filter ids also include "nil" as a default filter
+    # Return all charges and filters that received usage in the period, including recurring ones.
+    # Shape: { charge_id => { filter_id => last_seen_at } } (nil filter is the default bucket).
     #
     # For non-recurring charges, the exact filters are resolved by matching the distinct
     # property combinations actually present in the events against the charge filters, so
@@ -59,9 +62,8 @@ module Events
         filter_keys: billable_metric_filter_keys
       )
 
-      combinations_by_code = combinations
-        .group_by(&:first)
-        .transform_values { |rows| rows.map(&:last) }
+      # Group the [code, properties, last_seen_at] tuples by code
+      combinations_by_code = combinations.group_by(&:first)
 
       # Recurring charges must always be billed as usage carries over from previous periods
       result = recurring_event_charges_and_filters
@@ -69,7 +71,7 @@ module Events
       non_recurring_charges_with_events(combinations_by_code.keys).each do |charge|
         code = charge.billable_metric.code
 
-        combinations_by_code[code].each do |properties|
+        combinations_by_code[code].each do |(_code, properties, last_seen_at)|
           event = ::Event.new(code:, properties:)
           matching = ChargeFilters::EventMatchingService.call(charge:, event:).matching_charge_filters
 
@@ -77,9 +79,9 @@ module Events
           # Otherwise include every matching filter and let the aggregation cascade
           # assign the event to the most specific one (the others aggregate to zero).
           if matching.empty?
-            result[charge.id] << nil
+            record(result, charge.id, nil, last_seen_at)
           else
-            matching.each { |filter| result[charge.id] << filter.id }
+            matching.each { |filter| record(result, charge.id, filter.id, last_seen_at) }
           end
         end
       end
@@ -87,15 +89,35 @@ module Events
       result
     end
 
+    # Add a charge/filter to the accumulator, keeping the most recent last_seen_at (nil means
+    # no event was seen for that charge/filter yet, e.g. recurring usage carried over).
+    #
+    # Filters are stored as hash keys, so a given (charge, filter) is deduplicated by
+    # construction: writing the same pair twice only refreshes its timestamp, it never adds a
+    # duplicate. This replaces the previous explicit uniq pass on the filter lists.
+    def record(accumulator, charge_id, filter_id, last_seen_at)
+      bucket = (accumulator[charge_id] ||= {})
+      current = bucket[filter_id]
+
+      if !bucket.key?(filter_id) || (last_seen_at && (current.nil? || last_seen_at > current))
+        bucket[filter_id] = last_seen_at
+      end
+    end
+
     # Recurring charges and all their filters (including the default bucket).
     # They are always returned, even without events, as usage carries over.
     def recurring_event_charges_and_filters
+      result = {}
+
       plan.charges.joins(:billable_metric).left_joins(:filters)
         .where(billable_metrics: {recurring: true})
         .group("charges.id, charge_filters.id")
         .pluck("charges.id", "charge_filters.id")
-        .then { group_by_charge_id(it) }
-        .then { add_default_filter(it) }
+        .each { |charge_id, filter_id| record(result, charge_id, filter_id, nil) }
+
+      # Recurring charges always expose the default (no-filter) bucket
+      result.each_key { |charge_id| record(result, charge_id, nil, nil) }
+      result
     end
 
     # Non-recurring charges of the plan whose billable metric received events in the period
@@ -114,14 +136,13 @@ module Events
         .pluck(:key)
     end
 
-    # Return the list of charges and filters that matches the event pre enriched in clickhouse or Postgres for the period
-    # It also includes the recurring charges and filters
-    # The result will be a hash where the key is the charge id and the value is an array of filter ids
-    # filter ids also include "nil" as a default filter when applicable
+    # Return the charges and filters matching the events pre-enriched in ClickHouse or Postgres for
+    # the period, including the recurring ones.
+    # Shape: { charge_id => { filter_id => last_seen_at } } (nil filter is the default bucket).
     def charges_and_filters_from_pre_enriched_events
       values = event_store.distinct_charges_and_filters(codes: plan_codes)
 
-      charge_filter_ids = values.map(&:last).reject(&:blank?)
+      charge_filter_ids = values.map { |v| v[1] }.reject(&:blank?)
       charge_ids = values.map(&:first).uniq
 
       existing_charge_ids = plan.charges.where(id: charge_ids).pluck(:id)
@@ -129,19 +150,19 @@ module Events
 
       result = recurring_charges_and_filters
 
-      values.each do |charge_id, filter_id|
+      values.each do |charge_id, filter_id, last_seen_at|
         # Charge has been removed from the plan
         next unless existing_charge_ids.include?(charge_id)
 
         # Charge has no filters or only default bucket received usage in the period
         if filter_id.blank?
-          result[charge_id] << nil
+          record(result, charge_id, nil, last_seen_at)
           next
         end
 
         # Keep only existing filters
         next unless existing_charge_filters.include?(filter_id)
-        result[charge_id] << filter_id
+        record(result, charge_id, filter_id, last_seen_at)
       end
 
       result
@@ -149,7 +170,7 @@ module Events
 
     def recurring_charges_and_filters
       # First period: no previous usage exists, events from current period are enough
-      return Hash.new { |h, k| h[k] = [] } if subscription.started_at >= boundaries.charges_from_datetime
+      return {} if subscription.started_at >= boundaries.charges_from_datetime
 
       # If the subscription was upgraded, use the upgrade chain to filter recurring charges
       return recurring_charges_and_filters_from_upgrade_chain if subscription.previous_subscription_id.present?
@@ -161,7 +182,7 @@ module Events
     def recurring_charges_and_filters_from_previous_fees
       pairs = current_subscription_recurring_fees
 
-      return Hash.new { |h, k| h[k] = [] } if pairs.empty?
+      return {} if pairs.empty?
 
       filter_ids = pairs.map(&:last).compact
       if filter_ids.any?
@@ -169,13 +190,12 @@ module Events
         pairs = pairs.select { |_, f_id| f_id.nil? || existing_filter_ids.include?(f_id) }
       end
 
-      pairs.then { group_by_charge_id(it) }
+      group_by_charge_id(pairs)
     end
 
     def recurring_charges_and_filters_from_upgrade_chain
       # First, let's fetch fees from the current subscription created before the current period
-      result = current_subscription_recurring_fees
-        .then { group_by_charge_id(it) }
+      result = group_by_charge_id(current_subscription_recurring_fees)
 
       # Then, include all filters for charges whose billable metric had previous usage
       previous_bm_ids = previous_subscriptions_billable_metric_ids
@@ -184,8 +204,8 @@ module Events
       current_recurring_charges.each do |charge|
         next unless previous_bm_ids.include?(charge.billable_metric_id)
 
-        filter_ids = charge.filters.map(&:id)
-        result[charge.id] = (result[charge.id] + filter_ids + [nil]).uniq
+        charge.filters.each { |filter| record(result, charge.id, filter.id, nil) }
+        record(result, charge.id, nil, nil)
       end
       result
     end
@@ -240,22 +260,11 @@ module Events
         .pluck(:charge_id, :charge_filter_id)
     end
 
-    # Group all charges and filters by charge_id
+    # Group charge/filter pairs (without a known timestamp) into the nested accumulator shape
     def group_by_charge_id(rows)
-      rows.each_with_object(Hash.new { |h, k| h[k] = [] }) do |(charge_id, filter_id), hash|
-        hash[charge_id] << filter_id
+      rows.each_with_object({}) do |(charge_id, filter_id), accumulator|
+        record(accumulator, charge_id, filter_id, nil)
       end
-    end
-
-    # Include "default" bucket for recurring charges
-    def add_default_filter(charges_and_filters)
-      charges_and_filters.each_value { it << nil }
-      charges_and_filters
-    end
-
-    # Make sure all filters are unique for each charge
-    def deduplicate_filters(charges_and_filters)
-      charges_and_filters.transform_values(&:uniq)
     end
 
     def fetch_existing_filters(charge_filter_ids)

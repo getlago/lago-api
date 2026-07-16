@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Fees::ChargeService, :premium do
+  # The charge usage cache wraps its payload with a creation time; unwrap it for assertions.
+  def read_cached_usage(key)
+    cached = Rails.cache.read(key)
+    cached.is_a?(Hash) ? cached["value"] : cached
+  end
+
   subject(:charge_subscription_service) do
     described_class.new(
       invoice:,
@@ -3489,7 +3495,7 @@ RSpec.describe Fees::ChargeService, :premium do
             it "caches an empty array" do
               charge_subscription_service.call
 
-              cached_value = Rails.cache.read(cache_key)
+              cached_value = read_cached_usage(cache_key)
               expect(cached_value).to eq("[]")
             end
 
@@ -3524,7 +3530,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee with correct amount_details on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3560,7 +3566,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee with correct amount_details on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3590,7 +3596,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee with correct amount_details on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3626,7 +3632,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee without raising on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3666,7 +3672,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee with correct amount_details on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3699,7 +3705,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee with correct amount_details on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3735,7 +3741,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee with correct grouped_by on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3761,7 +3767,7 @@ RSpec.describe Fees::ChargeService, :premium do
             it "caches the fee data" do
               charge_subscription_service.call
 
-              cached_value = Rails.cache.read(cache_key)
+              cached_value = read_cached_usage(cache_key)
               parsed = JSON.parse(cached_value)
               expect(parsed.length).to eq(1)
               expect(parsed.first["events_count"]).to eq(1)
@@ -3805,7 +3811,7 @@ RSpec.describe Fees::ChargeService, :premium do
 
               it "keeps presentation_breakdowns on subsequent calls from cache" do
                 first_result = charge_subscription_service.call
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 second_result = charge_subscription_service.call
 
                 expect(first_result).to be_success
@@ -3868,14 +3874,14 @@ RSpec.describe Fees::ChargeService, :premium do
                 europe_cache_key = Subscriptions::ChargeCacheService.new(
                   subscription:, charge:, charge_filter: europe_filter
                 ).cache_key
-                europe_cached = JSON.parse(Rails.cache.read(europe_cache_key))
+                europe_cached = JSON.parse(read_cached_usage(europe_cache_key))
                 expect(europe_cached.length).to eq(1)
                 expect(europe_cached.first["events_count"]).to eq(1)
 
                 usa_cache_key = Subscriptions::ChargeCacheService.new(
                   subscription:, charge:, charge_filter: usa_filter
                 ).cache_key
-                expect(Rails.cache.read(usa_cache_key)).to eq("[]")
+                expect(read_cached_usage(usa_cache_key)).to eq("[]")
               end
 
               it "returns consistent results on subsequent calls from cache" do

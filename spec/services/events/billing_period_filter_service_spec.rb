@@ -28,7 +28,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         result = filter_service.call
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.charges.transform_values(&:keys)).to eq({})
       end
     end
 
@@ -51,7 +51,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         result = filter_service.call
 
         expect(result).to be_success
-        expect(result.charges).to eq({recurring_charge.id => [charge_filter.id]})
+        expect(result.charges.transform_values(&:keys)).to eq({recurring_charge.id => [charge_filter.id]})
       end
     end
 
@@ -73,7 +73,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         result = filter_service.call
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.charges.transform_values(&:keys)).to eq({})
       end
     end
 
@@ -97,7 +97,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         result = filter_service.call
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.charges.transform_values(&:keys)).to eq({})
       end
     end
 
@@ -140,7 +140,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({recurring_charge.id => [nil]})
+          expect(result.charges.transform_values(&:keys)).to eq({recurring_charge.id => [nil]})
         end
       end
 
@@ -166,7 +166,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({recurring_charge.id => [nil]})
+          expect(result.charges.transform_values(&:keys)).to eq({recurring_charge.id => [nil]})
         end
       end
 
@@ -192,7 +192,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.charges.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -214,7 +214,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+          expect(result.charges.transform_values(&:keys)).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
         end
       end
 
@@ -237,7 +237,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+          expect(result.charges.transform_values(&:keys)).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
         end
       end
 
@@ -268,7 +268,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+          expect(result.charges.transform_values(&:keys)).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
         end
 
         context "when previous fees have no units" do
@@ -287,7 +287,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to eq({})
+            expect(result.charges.transform_values(&:keys)).to eq({})
           end
         end
       end
@@ -297,7 +297,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.charges.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -328,7 +328,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+          expect(result.charges.transform_values(&:keys)).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
         end
       end
     end
@@ -355,7 +355,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         result = filter_service.call
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.charges.transform_values(&:keys)).to eq({})
       end
     end
   end
@@ -401,7 +401,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         result = filter_service.call
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.charges.transform_values(&:keys)).to eq({})
       end
 
       context "with events matching the boundaries" do
@@ -429,7 +429,14 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({charge.id => [nil]})
+          expect(result.charges.transform_values(&:keys)).to eq({charge.id => [nil]})
+        end
+
+        it "returns the last seen timestamp per charge/filter" do
+          result = filter_service.call
+
+          expect(result.charges[charge.id].keys).to eq([nil])
+          expect(result.charges[charge.id][nil]).to be_present
         end
 
         context "with multiple charges for the same billable_metric" do
@@ -441,7 +448,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+            expect(result.charges.transform_values(&:keys)).to eq({charge.id => [nil], charge_2.id => [nil]})
           end
         end
 
@@ -466,7 +473,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+            expect(result.charges.transform_values(&:keys)).to eq({charge.id => [nil], charge_2.id => [nil]})
           end
         end
 
@@ -486,7 +493,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id, charge_filter2.id)})
+            expect(result.charges.transform_values(&:keys)).to match({charge.id => contain_exactly(charge_filter.id, charge_filter2.id)})
           end
         end
 
@@ -510,7 +517,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [charge_filter.id]})
+            expect(result.charges.transform_values(&:keys)).to eq({charge.id => [charge_filter.id]})
           end
         end
 
@@ -538,7 +545,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id, nil)})
+            expect(result.charges.transform_values(&:keys)).to match({charge.id => contain_exactly(charge_filter.id, nil)})
           end
         end
       end
@@ -563,7 +570,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({recurring_charge.id => [charge_filter.id, nil]})
+          expect(result.charges.transform_values(&:keys)).to eq({recurring_charge.id => [charge_filter.id, nil]})
         end
       end
 
@@ -582,7 +589,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.charges.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -601,7 +608,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.charges.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -625,7 +632,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         result = filter_service.call
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.charges.transform_values(&:keys)).to eq({})
       end
 
       context "with events matching the boundaries" do
@@ -675,7 +682,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({charge.id => [nil]})
+          expect(result.charges.transform_values(&:keys)).to eq({charge.id => [nil]})
         end
 
         context "with multiple charges for the same billable_metric" do
@@ -725,7 +732,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+            expect(result.charges.transform_values(&:keys)).to eq({charge.id => [nil], charge_2.id => [nil]})
           end
         end
 
@@ -760,7 +767,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+            expect(result.charges.transform_values(&:keys)).to eq({charge.id => [nil], charge_2.id => [nil]})
           end
         end
 
@@ -780,7 +787,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id)})
+            expect(result.charges.transform_values(&:keys)).to match({charge.id => contain_exactly(charge_filter.id)})
           end
 
           context "when events matches the default bucket" do
@@ -826,7 +833,7 @@ RSpec.describe Events::BillingPeriodFilterService do
               result = filter_service.call
 
               expect(result).to be_success
-              expect(result.charges).to match({charge.id => [nil]})
+              expect(result.charges.transform_values(&:keys)).to match({charge.id => [nil]})
             end
           end
         end
@@ -862,7 +869,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.charges.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -890,7 +897,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.charges.transform_values(&:keys)).to eq({})
         end
       end
     end
@@ -904,7 +911,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         result = filter_service.call
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.charges.transform_values(&:keys)).to eq({})
       end
 
       context "with events matching the boundaries" do
@@ -949,7 +956,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({charge.id => [nil]})
+          expect(result.charges.transform_values(&:keys)).to eq({charge.id => [nil]})
         end
 
         context "with multiple charges for the same billable_metric" do
@@ -980,7 +987,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+            expect(result.charges.transform_values(&:keys)).to eq({charge.id => [nil], charge_2.id => [nil]})
           end
         end
 
@@ -1034,7 +1041,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+            expect(result.charges.transform_values(&:keys)).to eq({charge.id => [nil], charge_2.id => [nil]})
           end
         end
 
@@ -1054,7 +1061,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_service.call
 
             expect(result).to be_success
-            expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id)})
+            expect(result.charges.transform_values(&:keys)).to match({charge.id => contain_exactly(charge_filter.id)})
           end
 
           context "when events matches the default bucket" do
@@ -1085,7 +1092,7 @@ RSpec.describe Events::BillingPeriodFilterService do
               result = filter_service.call
 
               expect(result).to be_success
-              expect(result.charges).to match({charge.id => [nil]})
+              expect(result.charges.transform_values(&:keys)).to match({charge.id => [nil]})
             end
           end
         end
@@ -1130,7 +1137,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.charges.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -1167,7 +1174,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.charges.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -1203,7 +1210,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.charges.transform_values(&:keys)).to eq({})
         end
       end
 
