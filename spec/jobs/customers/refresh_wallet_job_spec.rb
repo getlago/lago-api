@@ -40,7 +40,7 @@ RSpec.describe Customers::RefreshWalletJob do
     let(:wallet_ids) { nil }
 
     before do
-      allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, target_wallet_ids: wallet_ids).and_return(result)
+      allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_return(result)
     end
 
     context "when customer is not awaiting wallet refresh" do
@@ -54,9 +54,9 @@ RSpec.describe Customers::RefreshWalletJob do
       context "when wallet_ids are provided" do
         let(:wallet_ids) { create_list(:wallet, 2, customer:).map(&:id) }
 
-        it "calls the Customers::RefreshWalletsService service scoped to the given wallets" do
+        it "still refreshes the whole customer" do
           subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: wallet_ids)
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
         end
       end
     end
@@ -67,16 +67,16 @@ RSpec.describe Customers::RefreshWalletJob do
       context "when refresh customer's wallets succeeds" do
         it "calls the Customers::RefreshWalletsService service" do
           subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: nil)
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
         end
       end
 
       context "when wallet_ids are provided" do
         let(:wallet_ids) { create_list(:wallet, 2, customer:).map(&:id) }
 
-        it "calls the Customers::RefreshWalletsService service scoped to the given wallets" do
+        it "refreshes the whole customer" do
           subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: wallet_ids)
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
         end
       end
 
@@ -114,7 +114,7 @@ RSpec.describe Customers::RefreshWalletJob do
         ].each do |error_class|
           context "when the error is #{error_class.name.demodulize.underscore.humanize.downcase}" do
             before do
-              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, target_wallet_ids: nil).and_raise(error_class)
+              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(error_class)
             end
 
             it "raises the error and retries the job" do

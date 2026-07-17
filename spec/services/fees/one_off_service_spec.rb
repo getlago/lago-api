@@ -224,6 +224,54 @@ RSpec.describe Fees::OneOffService do
       end
     end
 
+    context "when one boundary raises a bare ArgumentError while parsing" do
+      let(:fees) do
+        [
+          {
+            add_on_code: add_on_first.code,
+            unit_amount_cents: 1200,
+            units: 2,
+            description: "desc-123",
+            from_datetime: "1" * 129,
+            to_datetime: "2022-01-31T23:59:59Z",
+            tax_codes: [tax2.code]
+          }
+        ]
+      end
+
+      it "returns validation failure" do
+        result = one_off_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:boundaries]).to include("values_are_invalid")
+      end
+    end
+
+    context "when one boundary is in ISO8601 week-date format" do
+      let(:fees) do
+        [
+          {
+            add_on_code: add_on_first.code,
+            unit_amount_cents: 1200,
+            units: 2,
+            description: "desc-123",
+            from_datetime: "2022-W04-1",
+            to_datetime: "2022-01-31T23:59:59Z",
+            tax_codes: [tax2.code]
+          }
+        ]
+      end
+
+      it "returns validation failure" do
+        result = one_off_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:boundaries]).to include("values_are_invalid")
+      end
+    end
+
     context "when one boundary is missing" do
       let(:fees) do
         [
@@ -315,6 +363,32 @@ RSpec.describe Fees::OneOffService do
           first_fee = result.fees[0]
           expect(first_fee.applied_taxes).to be_empty
           expect(first_fee.taxes_amount_cents).to eq 0
+        end
+      end
+    end
+
+    context "when an add-on is soft-deleted" do
+      before { add_on_first.discard! }
+
+      it "fails to resolve it by default" do
+        travel_to(current_time) do
+          result = one_off_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+        end
+      end
+
+      context "with with_discarded_add_ons enabled" do
+        subject(:one_off_service) { described_class.new(invoice:, fees:, with_discarded_add_ons: true) }
+
+        it "still bills the discarded add-on" do
+          travel_to(current_time) do
+            result = one_off_service.call
+
+            expect(result).to be_success
+            expect(result.fees.map(&:add_on_id)).to include(add_on_first.id)
+          end
         end
       end
     end

@@ -17,6 +17,10 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventJob do
 
   let(:service_result) { BaseService::Result.new }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [{payment_provider:, event_json:}] }
+  end
+
   it "delegate to the event service" do
     allow(PaymentProviders::Gocardless::HandleEventService).to receive(:call)
       .with(payment_provider:, event_json:)

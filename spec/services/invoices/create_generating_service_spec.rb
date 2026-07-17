@@ -61,6 +61,19 @@ RSpec.describe Invoices::CreateGeneratingService do
       end
     end
 
+    context "when purchase_order_number is passed" do
+      subject(:create_service) do
+        described_class.new(customer:, invoice_type:, currency:, datetime:, purchase_order_number: "PO-123")
+      end
+
+      it "stamps the purchase order number on the invoice" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.purchase_order_number).to eq("PO-123")
+      end
+    end
+
     context "with applicable net payment term" do
       let(:customer) { create(:customer, net_payment_term: 3) }
 

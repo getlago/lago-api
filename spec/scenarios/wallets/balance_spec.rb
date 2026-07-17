@@ -641,7 +641,7 @@ describe "Use wallet's credits and recalculate balances", :premium, transaction:
     end
 
     context "when each wallet limited to 2 billable metrics" do
-      it "applies usage once per metric following wallets priority" do
+      it "cascades each metric across its applicable wallets by priority" do
         time_0 = DateTime.new(2022, 12, 1)
         w1 = w2 = w3 = w4 = nil
         travel_to time_0 do
@@ -707,20 +707,18 @@ describe "Use wallet's credits and recalculate balances", :premium, transaction:
 
           recalculate_wallet_balances
 
-          # W1: storage+seats -> applies 10 + 20 = 30 -> 10 - 30 = -20
-          expect_wallet(w1, balance: 1000, balance_usage: 3000, ongoing_balance: -2000, credits: 10, credits_usage: 30, ongoing_credits: -20)
-          # W2: seats already applied, applies API 30 -> 20 - 30 = -10
+          # Each metric fills its highest-priority applicable wallet, then spills to the next;
+          # the last applicable wallet absorbs the overflow and may go negative.
+          expect_wallet(w1, balance: 1000, balance_usage: 1000, ongoing_balance: 0, credits: 10, credits_usage: 10, ongoing_credits: 0)
           expect_wallet(w2, balance: 2000, balance_usage: 3000, ongoing_balance: -1000, credits: 20, credits_usage: 30, ongoing_credits: -10)
-          # W3: api already applied, applies SMS 40 -> 30 - 40 = -10
           expect_wallet(w3, balance: 3000, balance_usage: 4000, ongoing_balance: -1000, credits: 30, credits_usage: 40, ongoing_credits: -10)
-          # W4: sms and storage already applied -> nothing -> stays 40
-          expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
+          expect_wallet(w4, balance: 4000, balance_usage: 2000, ongoing_balance: 2000, credits: 40, credits_usage: 20, ongoing_credits: 20)
         end
       end
     end
 
     context "when each wallet limited to 2 billable metrics with filtered events" do
-      it "applies usage once per metric even when events include filters" do
+      it "cascades each metric across its applicable wallets even when events include filters" do
         time_0 = DateTime.new(2022, 12, 1)
         w1 = w2 = w3 = w4 = nil
         travel_to time_0 do
@@ -796,20 +794,18 @@ describe "Use wallet's credits and recalculate balances", :premium, transaction:
 
           recalculate_wallet_balances
 
-          # W1: storage+seats -> applies 10 + 20 = 30 -> 10 - 30 = -20
-          expect_wallet(w1, balance: 1000, balance_usage: 3000, ongoing_balance: -2000, credits: 10, credits_usage: 30, ongoing_credits: -20)
-          # W2: seats already applied, applies API 30 -> 20 - 30 = -10
+          # Each metric fills its highest-priority applicable wallet, then spills to the next;
+          # the last applicable wallet absorbs the overflow and may go negative.
+          expect_wallet(w1, balance: 1000, balance_usage: 1000, ongoing_balance: 0, credits: 10, credits_usage: 10, ongoing_credits: 0)
           expect_wallet(w2, balance: 2000, balance_usage: 3000, ongoing_balance: -1000, credits: 20, credits_usage: 30, ongoing_credits: -10)
-          # W3: api already applied, applies SMS 40 -> 30 - 40 = -10
           expect_wallet(w3, balance: 3000, balance_usage: 4000, ongoing_balance: -1000, credits: 30, credits_usage: 40, ongoing_credits: -10)
-          # W4: sms and storage already applied -> nothing -> stays 40
-          expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
+          expect_wallet(w4, balance: 4000, balance_usage: 2000, ongoing_balance: 2000, credits: 40, credits_usage: 20, ongoing_credits: 20)
         end
       end
     end
 
     context "when wallets are limited to charges (fee type)" do
-      it "applies all charges to the first wallet limited to charge type" do
+      it "cascades charges across the charge-type wallets by priority" do
         time_0 = DateTime.new(2022, 12, 1)
         w1 = w2 = w3 = w4 = nil
         travel_to time_0 do
@@ -875,12 +871,12 @@ describe "Use wallet's credits and recalculate balances", :premium, transaction:
 
           recalculate_wallet_balances
 
-          # Total usage = 100
-          # Second wallet takes it all, cause 1st limited to subscription fee only
+          # Total charge usage = 100. W1 (subscription only) takes nothing; the charge cascades
+          # W2 -> W3 -> W4, and the last charge-type wallet (W4) absorbs the overflow (negative).
           expect_wallet(w1, balance: 1000, balance_usage: 0, ongoing_balance: 1000, credits: 10, credits_usage: 0, ongoing_credits: 10)
-          expect_wallet(w2, balance: 2000, balance_usage: 100_00, ongoing_balance: -8000, credits: 20, credits_usage: 100, ongoing_credits: -80)
-          expect_wallet(w3, balance: 3000, balance_usage: 0, ongoing_balance: 3000, credits: 30, credits_usage: 0, ongoing_credits: 30)
-          expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
+          expect_wallet(w2, balance: 2000, balance_usage: 2000, ongoing_balance: 0, credits: 20, credits_usage: 20, ongoing_credits: 0)
+          expect_wallet(w3, balance: 3000, balance_usage: 3000, ongoing_balance: 0, credits: 30, credits_usage: 30, ongoing_credits: 0)
+          expect_wallet(w4, balance: 4000, balance_usage: 5000, ongoing_balance: -1000, credits: 40, credits_usage: 50, ongoing_credits: -10)
         end
       end
     end
@@ -892,7 +888,7 @@ describe "Use wallet's credits and recalculate balances", :premium, transaction:
         usage_threshold
       end
 
-      it "apply unrestricted rule to first wallet only" do
+      it "cascades unrestricted usage across wallets by priority" do
         time_0 = DateTime.new(2022, 12, 1)
         w1 = w2 = w3 = w4 = nil
         travel_to time_0 do
@@ -954,12 +950,12 @@ describe "Use wallet's credits and recalculate balances", :premium, transaction:
 
           recalculate_wallet_balances
 
-          # Total usage = 100 - 10(progressive billing already billed) = 90
-          # First (unrestricted) wallet takes it all
-          expect_wallet(w1, balance: 0, balance_usage: 9000, ongoing_balance: -9000, credits: 0, credits_usage: 90, ongoing_credits: -90)
-          expect_wallet(w2, balance: 2000, balance_usage: 0, ongoing_balance: 2000, credits: 20, credits_usage: 0, ongoing_credits: 20)
-          expect_wallet(w3, balance: 3000, balance_usage: 0, ongoing_balance: 3000, credits: 30, credits_usage: 0, ongoing_credits: 30)
-          expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
+          # Net usage = 100 - 10 (already progressively billed) = 90. W1's balance was consumed
+          # to 0 by the progressive-billing invoice, so the 90 cascades across W2 -> W3 -> W4.
+          expect_wallet(w1, balance: 0, balance_usage: 0, ongoing_balance: 0, credits: 0, credits_usage: 0, ongoing_credits: 0)
+          expect_wallet(w2, balance: 2000, balance_usage: 2000, ongoing_balance: 0, credits: 20, credits_usage: 20, ongoing_credits: 0)
+          expect_wallet(w3, balance: 3000, balance_usage: 3000, ongoing_balance: 0, credits: 30, credits_usage: 30, ongoing_credits: 0)
+          expect_wallet(w4, balance: 4000, balance_usage: 4000, ongoing_balance: 0, credits: 40, credits_usage: 40, ongoing_credits: 0)
         end
       end
     end

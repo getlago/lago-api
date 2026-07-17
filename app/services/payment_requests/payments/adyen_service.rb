@@ -6,16 +6,19 @@ module PaymentRequests
       include Lago::Adyen::ErrorHandlable
       include Customers::PaymentProviderFinder
       include Updatable
+      include TypedResults
 
       PROVIDER_NAME = "Adyen"
 
-      def initialize(payable = nil)
+      RESULTS = {
+        generate_payment_url: BaseResult[:payment_url],
+        update_payment_status: BaseResult[:payment, :payable]
+      }.freeze
+
+      private
+
+      def generate_payment_url(payable)
         @payable = payable
-
-        super(nil)
-      end
-
-      def generate_payment_url
         result_url = client.checkout.payment_links_api.payment_links(
           Lago::Adyen::Params.new(payment_url_params).to_h
         )
@@ -38,8 +41,9 @@ module PaymentRequests
         end
         return result.not_found_failure!(resource: "adyen_payment") unless payment
 
+        @payable = payment.payable
         result.payment = payment
-        result.payable = payment.payable
+        result.payable = @payable
         return result if payment.payable.payment_succeeded?
 
         payment.status = status
@@ -62,9 +66,7 @@ module PaymentRequests
         result.fail_with_error!(e)
       end
 
-      private
-
-      attr_accessor :payable
+      attr_reader :payable
 
       delegate :organization, :customer, to: :payable
 

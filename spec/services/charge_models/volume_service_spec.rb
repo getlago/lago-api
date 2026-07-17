@@ -34,16 +34,43 @@ RSpec.describe ChargeModels::VolumeService do
   context "when aggregation is 0" do
     let(:aggregation) { 0 }
 
-    it "does not apply the flat amount" do
-      expect(apply_volume_service.amount).to eq(0)
+    it "applies the flat amount from the first tier" do
+      expect(apply_volume_service.amount).to eq(10)
       expect(apply_volume_service.unit_amount).to eq(0)
       expect(apply_volume_service.amount_details).to eq(
         {
-          flat_unit_amount: 0.0,
+          flat_unit_amount: 10,
           per_unit_amount: 0.0,
           per_unit_total_amount: 0.0
         }
       )
+    end
+
+    context "when first tier flat amount is zero" do
+      let(:charge) do
+        create(
+          :volume_charge,
+          properties: {
+            volume_ranges: [
+              {from_value: 0, to_value: 1, per_unit_amount: "0", flat_amount: "0"},
+              {from_value: 2, to_value: 100, per_unit_amount: "2", flat_amount: "10"},
+              {from_value: 101, to_value: nil, per_unit_amount: "0.5", flat_amount: "50"}
+            ]
+          }
+        )
+      end
+
+      it "returns zero amount" do
+        expect(apply_volume_service.amount).to eq(0)
+        expect(apply_volume_service.unit_amount).to eq(0)
+        expect(apply_volume_service.amount_details).to eq(
+          {
+            flat_unit_amount: 0,
+            per_unit_amount: 0.0,
+            per_unit_total_amount: 0.0
+          }
+        )
+      end
     end
   end
 

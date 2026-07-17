@@ -3,6 +3,8 @@
 module EInvoices
   module Invoices::Ubl
     class CreateService < ::BaseService
+      Result = BaseResult[:xml]
+
       def initialize(invoice:)
         super
 

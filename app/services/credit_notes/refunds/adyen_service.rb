@@ -3,6 +3,8 @@
 module CreditNotes
   module Refunds
     class AdyenService < BaseService
+      Result = BaseResult[:credit_note, :refund]
+
       include Customers::PaymentProviderFinder
 
       def initialize(credit_note = nil)

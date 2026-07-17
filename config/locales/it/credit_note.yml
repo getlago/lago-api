@@ -17,6 +17,7 @@ it:
     offset_invoice_notice: Fattura %{invoice_number} compensata il %{issuing_date}
     powered_by: Elaborato da
     prepaid_credits_for_wallet: Crediti prepagati - %{wallet_name}
+    purchase_order_number: Numero d'ordine d'acquisto
     refunded: Rimborsato
     refunded_notice: Rimborsato il %{issuing_date}
     self_billed:

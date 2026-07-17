@@ -5,6 +5,10 @@ require "rails_helper"
 describe Clock::SubscriptionsToBeTerminatedJob, job: true do
   subject { described_class }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [] }
+  end
+
   describe ".perform" do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }

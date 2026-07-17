@@ -4,14 +4,17 @@ module Invoices
   module Payments
     class StripeService < BaseService
       include Customers::PaymentProviderFinder
+      include TypedResults
 
       PROVIDER_NAME = "Stripe"
 
-      def initialize(invoice = nil)
-        @invoice = invoice
+      RESULTS = {
+        update_payment_status: BaseResult[:payment, :invoice],
+        generate_payment_url: BaseResult[:payment_url, :provider_session_id],
+        expire_payment_url: BaseResult
+      }.freeze
 
-        super
-      end
+      private
 
       def update_payment_status(organization_id:, status:, stripe_payment:, amount_cents: nil)
         payment = Payment.find_by(provider_payment_id: stripe_payment.id)
@@ -60,7 +63,8 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url(payment_intent)
+      def generate_payment_url(invoice, payment_intent)
+        @invoice = invoice
         res = ::Stripe::Checkout::Session.create(
           payment_url_payload(payment_intent),
           {
@@ -78,7 +82,8 @@ module Invoices
       end
 
       # NOTE: Expires the hosted Stripe Checkout open Session so it can no longer be paid.
-      def expire_payment_url(payment_intent)
+      def expire_payment_url(invoice, payment_intent)
+        @invoice = invoice
         return result if payment_intent.provider_session_id.blank?
 
         session = ::Stripe::Checkout::Session.retrieve(
@@ -98,8 +103,6 @@ module Invoices
       rescue ::Stripe::InvalidRequestError # the other ones are on the retry job
         result
       end
-
-      private
 
       attr_accessor :invoice
 

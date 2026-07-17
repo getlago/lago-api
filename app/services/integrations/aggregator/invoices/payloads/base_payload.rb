@@ -149,6 +149,12 @@ module Integrations
 
             output
           end
+
+          def invoice_url
+            url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+
+            URI.join(url, "/#{invoice.customer.organization.slug}/customer/#{invoice.customer.id}/", "invoice/#{invoice.id}/overview").to_s
+          end
         end
       end
     end

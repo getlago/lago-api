@@ -482,13 +482,11 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         end
 
         it "returns a success" do
-          allow(PaymentProviders::CancelPaymentAuthorizationJob).to receive(:perform_later)
-
           subject
           expect(json[:authorization]).to include(stripe_pi)
           expect(json[:subscription]).to include(status: "active")
 
-          expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_received(:perform_later).with(
+          expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_been_enqueued.with(
             payment_provider: stripe_customer.payment_provider, id: stripe_pi[:id]
           )
         end
@@ -753,44 +751,40 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         }
       end
 
-      context "when feature flag is enabled" do
-        before { organization.enable_feature_flag!(:payment_gated_subscriptions) }
+      it "creates subscription with activation rules and returns them" do
+        subject
 
-        it "creates subscription with activation rules and returns them" do
+        expect(response).to have_http_status(:ok)
+        expect(json[:subscription][:status]).to eq("pending")
+        expect(json[:subscription][:cancellation_reason]).to be_nil
+        expect(json[:subscription][:activated_at]).to be_nil
+        expect(json[:subscription][:activation_rules].size).to eq(1)
+        expect(json[:subscription][:activation_rules].first).to include(
+          lago_id: String,
+          type: "payment",
+          timeout_hours: 48,
+          status: "inactive",
+          expires_at: nil
+        )
+      end
+
+      context "when timeout_hours is omitted" do
+        let(:params) do
+          {
+            external_customer_id: customer.external_id,
+            plan_code: plan.code,
+            external_id: SecureRandom.uuid,
+            billing_time: "anniversary",
+            subscription_at:,
+            activation_rules: [{type: "payment"}]
+          }
+        end
+
+        it "persists rule with default timeout_hours of 0" do
           subject
 
           expect(response).to have_http_status(:ok)
-          expect(json[:subscription][:status]).to eq("pending")
-          expect(json[:subscription][:cancellation_reason]).to be_nil
-          expect(json[:subscription][:activated_at]).to be_nil
-          expect(json[:subscription][:activation_rules].size).to eq(1)
-          expect(json[:subscription][:activation_rules].first).to include(
-            lago_id: String,
-            type: "payment",
-            timeout_hours: 48,
-            status: "inactive",
-            expires_at: nil
-          )
-        end
-
-        context "when timeout_hours is omitted" do
-          let(:params) do
-            {
-              external_customer_id: customer.external_id,
-              plan_code: plan.code,
-              external_id: SecureRandom.uuid,
-              billing_time: "anniversary",
-              subscription_at:,
-              activation_rules: [{type: "payment"}]
-            }
-          end
-
-          it "persists rule with default timeout_hours of 0" do
-            subject
-
-            expect(response).to have_http_status(:ok)
-            expect(json[:subscription][:activation_rules].first[:timeout_hours]).to eq(0)
-          end
+          expect(json[:subscription][:activation_rules].first[:timeout_hours]).to eq(0)
         end
       end
 
@@ -1760,31 +1754,27 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
       before { create(:payment_method, customer:, organization:) }
 
-      context "when feature flag is enabled" do
-        before { organization.enable_feature_flag!(:payment_gated_subscriptions) }
+      it "persists and returns activation rules" do
+        subject
 
-        it "persists and returns activation rules" do
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:activation_rules].size).to eq(1)
+        expect(json[:subscription][:activation_rules].first).to include(
+          lago_id: String,
+          type: "payment",
+          timeout_hours: 24,
+          status: "inactive"
+        )
+      end
+
+      context "when timeout_hours is omitted" do
+        let(:update_params) { {activation_rules: [{type: "payment"}]} }
+
+        it "persists rule with default timeout_hours of 0" do
           subject
 
           expect(response).to have_http_status(:success)
-          expect(json[:subscription][:activation_rules].size).to eq(1)
-          expect(json[:subscription][:activation_rules].first).to include(
-            lago_id: String,
-            type: "payment",
-            timeout_hours: 24,
-            status: "inactive"
-          )
-        end
-
-        context "when timeout_hours is omitted" do
-          let(:update_params) { {activation_rules: [{type: "payment"}]} }
-
-          it "persists rule with default timeout_hours of 0" do
-            subject
-
-            expect(response).to have_http_status(:success)
-            expect(json[:subscription][:activation_rules].first[:timeout_hours]).to eq(0)
-          end
+          expect(json[:subscription][:activation_rules].first[:timeout_hours]).to eq(0)
         end
       end
 

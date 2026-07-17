@@ -2,6 +2,8 @@
 
 module IntegrationMappings
   class DestroyService < BaseService
+    Result = BaseResult[:integration_mapping]
+
     def initialize(integration_mapping:)
       @integration_mapping = integration_mapping
 

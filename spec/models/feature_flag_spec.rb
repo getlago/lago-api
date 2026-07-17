@@ -3,13 +3,18 @@
 require "rails_helper"
 
 RSpec.describe FeatureFlag do
+  let(:valid_flag) { "test_flag" }
+
+  before do
+    stub_const(
+      "#{described_class}::DEFINITION",
+      {valid_flag => {"description" => "A flag used for testing"}}.with_indifferent_access.freeze
+    )
+  end
+
   describe ".valid?" do
     it "returns true for a valid flag" do
-      expect(described_class.valid?("multiple_payment_methods")).to be(true)
-    end
-
-    it "returns true for the multi_entity_billing flag" do
-      expect(described_class.valid?("multi_entity_billing")).to be(true)
+      expect(described_class.valid?(valid_flag)).to be(true)
     end
 
     it "returns false for an invalid flag" do
@@ -30,7 +35,7 @@ RSpec.describe FeatureFlag do
       before { allow(Rails.env).to receive(:production?).and_return(false) }
 
       it "does not raise an error for valid flags" do
-        expect { described_class.validate!("multiple_payment_methods") }.not_to raise_error
+        expect { described_class.validate!(valid_flag) }.not_to raise_error
       end
 
       it "raises an error for invalid flags" do
@@ -41,9 +46,9 @@ RSpec.describe FeatureFlag do
   end
 
   describe ".sanitize!" do
-    let(:organization_with_valid_flags) { create(:organization, feature_flags: ["multiple_payment_methods"]) }
+    let(:organization_with_valid_flags) { create(:organization, feature_flags: [valid_flag]) }
     let(:organization_with_invalid_flags) { create(:organization, feature_flags: ["invalid_flag", "another_invalid"]) }
-    let(:organization_with_mixed_flags) { create(:organization, feature_flags: ["multiple_payment_methods", "invalid_flag"]) }
+    let(:organization_with_mixed_flags) { create(:organization, feature_flags: [valid_flag, "invalid_flag"]) }
     let(:organization_without_flags) { create(:organization, feature_flags: []) }
 
     before do
@@ -56,9 +61,9 @@ RSpec.describe FeatureFlag do
     it "removes invalid flags from organizations" do
       described_class.sanitize!
 
-      expect(organization_with_valid_flags.reload.feature_flags).to eq(["multiple_payment_methods"])
+      expect(organization_with_valid_flags.reload.feature_flags).to eq([valid_flag])
       expect(organization_with_invalid_flags.reload.feature_flags).to eq([])
-      expect(organization_with_mixed_flags.reload.feature_flags).to eq(["multiple_payment_methods"])
+      expect(organization_with_mixed_flags.reload.feature_flags).to eq([valid_flag])
       expect(organization_without_flags.reload.feature_flags).to eq([])
     end
 

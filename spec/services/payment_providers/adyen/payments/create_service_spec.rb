@@ -91,10 +91,6 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService do
     context "when payment has a payment method" do
       let(:payment_method) { create(:payment_method, payment_provider_customer: adyen_customer, provider_method_id: "pm_test") }
 
-      before do
-        organization.enable_feature_flag!(:multiple_payment_methods)
-      end
-
       it "uses payment method provider id" do
         result = create_service.call
 

@@ -152,6 +152,7 @@ module Types
 
     field :void_order_form, mutation: Mutations::OrderForms::Void
 
+    field :execute_order, mutation: Mutations::Orders::Execute
     field :update_order, mutation: Mutations::Orders::Update
 
     field :download_payment_receipt, mutation: Mutations::PaymentReceipts::Download

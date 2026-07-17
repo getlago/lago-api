@@ -5,6 +5,8 @@ module Customers
     extend Forwardable
     include Customers::PaymentProviderFinder
 
+    Result = BaseResult[:customer]
+
     def initialize(customer:, args:)
       @customer = customer
       @args = args

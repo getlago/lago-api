@@ -9,8 +9,6 @@ module ChargeModels
     end
 
     def compute_amount
-      return 0 if units.zero?
-
       per_unit_total_amount + flat_unit_amount
     end
 
@@ -36,17 +34,9 @@ module ChargeModels
     end
 
     def amount_details
-      if number_of_units.zero?
-        return {
-          flat_unit_amount: BigDecimal(0),
-          per_unit_amount: BigDecimal(0),
-          per_unit_total_amount: BigDecimal(0)
-        }
-      end
-
       {
         flat_unit_amount:,
-        per_unit_amount: per_unit_amount.to_s,
+        per_unit_amount: number_of_units.zero? ? BigDecimal(0) : per_unit_amount.to_s,
         per_unit_total_amount:
       }
     end

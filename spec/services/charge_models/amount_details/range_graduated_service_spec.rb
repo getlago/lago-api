@@ -54,6 +54,24 @@ RSpec.describe ChargeModels::AmountDetails::RangeGraduatedService do
     end
   end
 
+  context "when total units is 0" do
+    let(:total_units) { 0 }
+
+    it "applies the flat amount from the range" do
+      expect(service.call).to eq(
+        {
+          from_value: 0,
+          to_value: 10,
+          flat_unit_amount: 2,
+          per_unit_amount: 0,
+          units: "0.0",
+          per_unit_total_amount: 0,
+          total_with_flat_amount: 2
+        }
+      )
+    end
+  end
+
   context "with decimal adjacent model" do
     subject(:service) { described_class.new(range:, total_units:, adjacent_model: true) }
 

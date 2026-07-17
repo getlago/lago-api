@@ -130,14 +130,13 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
     let(:fee2) { create(:fee, invoice: nil) }
 
     let(:fee_taxes) do
-      OpenStruct.new(
+      build(:tax_result,
         item_id: fee1.id,
         item_code: "lago_default_b2b",
         tax_breakdown: [
-          OpenStruct.new(name: "tax 1", type: "type1", rate: "0.50", tax_amount: 75.5),
-          OpenStruct.new(name: "tax 2", type: "type2", rate: "0.30", tax_amount: 45.3)
-        ]
-      )
+          build(:tax_breakdown_item, name: "tax 1", type: "type1", rate: "0.50", tax_amount: 75.5),
+          build(:tax_breakdown_item, name: "tax 2", type: "type2", rate: "0.30", tax_amount: 45.3)
+        ])
     end
 
     before do
@@ -159,6 +158,23 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
       expect(invoice.sub_total_including_taxes_amount_cents).to eq(272)
       expect(invoice.taxes_rate).to eq(80)
       expect(invoice.total_amount_cents).to eq(272)
+    end
+
+    context "when provider taxes are not provided" do
+      subject(:compute_amounts) { described_class.new(invoice:, provider_taxes: nil) }
+
+      before do
+        allow(invoice).to receive(:should_apply_provider_tax?).and_return(true)
+        allow(Invoices::ApplyProviderTaxesService).to receive(:call!)
+        allow(Invoices::ApplyTaxesService).to receive(:call!).and_call_original
+      end
+
+      it "applies regular taxes without fetching provider taxes" do
+        compute_amounts.call
+
+        expect(Invoices::ApplyProviderTaxesService).not_to have_received(:call!)
+        expect(Invoices::ApplyTaxesService).to have_received(:call!).with(invoice:)
+      end
     end
   end
 end

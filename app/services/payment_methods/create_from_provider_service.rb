@@ -2,6 +2,8 @@
 
 module PaymentMethods
   class CreateFromProviderService < BaseService
+    Result = BaseResult[:payment_method]
+
     def initialize(customer:, params:, provider_method_id:, payment_provider_id: nil, payment_provider_customer: nil, details: nil)
       @customer = customer
       @params = params || {}

@@ -2,6 +2,8 @@
 
 module PaymentProviders
   class FindService < BaseService
+    Result = BaseResult[:payment_provider]
+
     attr_reader :id, :code, :organization_id, :payment_provider_type, :scope
 
     def initialize(organization_id:, code: nil, id: nil, payment_provider_type: nil)

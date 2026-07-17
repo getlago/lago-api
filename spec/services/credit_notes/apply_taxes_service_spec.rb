@@ -154,8 +154,8 @@ RSpec.describe CreditNotes::ApplyTaxesService do
   end
 
   context "when taxes from tax provider are applied" do
-    let(:provider_tax_1) { OpenStruct.new(name: "provider tax 1", type: "providerTax1", rate: 12.0, code: "provider_tax_1") }
-    let(:provider_tax_2) { OpenStruct.new(name: "provider tax 2", type: "providerTax2", rate: 8.0, code: "provider_tax_2") }
+    let(:provider_tax_1) { build(:tax_breakdown_item, name: "provider tax 1", type: "providerTax1", rate: 12.0) }
+    let(:provider_tax_2) { build(:tax_breakdown_item, name: "provider tax 2", type: "providerTax2", rate: 8.0) }
 
     let(:fee_applied_tax11) do
       create(
@@ -215,7 +215,7 @@ RSpec.describe CreditNotes::ApplyTaxesService do
             credit_note: nil,
             tax: nil,
             tax_description: provider_tax_1.type,
-            tax_code: provider_tax_1.code,
+            tax_code: provider_tax_1.name.parameterize(separator: "_"),
             tax_name: provider_tax_1.name,
             tax_rate: provider_tax_1.rate,
             amount_currency: invoice.currency,
@@ -226,7 +226,7 @@ RSpec.describe CreditNotes::ApplyTaxesService do
             credit_note: nil,
             tax: nil,
             tax_description: provider_tax_2.type,
-            tax_code: provider_tax_2.code,
+            tax_code: provider_tax_2.name.parameterize(separator: "_"),
             tax_name: provider_tax_2.name,
             tax_rate: provider_tax_2.rate,
             amount_currency: invoice.currency,
@@ -263,8 +263,8 @@ RSpec.describe CreditNotes::ApplyTaxesService do
         )
       end
 
-      let(:provider_tax_1) { OpenStruct.new(name: "provider tax 1", type: "providerTax1", rate: 20.0, code: "provider_tax_1") }
-      let(:provider_tax_2) { OpenStruct.new(name: "provider tax 2", type: "providerTax2", rate: 10.0, code: "provider_tax_2") }
+      let(:provider_tax_1) { build(:tax_breakdown_item, name: "provider tax 1", type: "providerTax1", rate: 20.0) }
+      let(:provider_tax_2) { build(:tax_breakdown_item, name: "provider tax 2", type: "providerTax2", rate: 10.0) }
 
       describe "call" do
         it "creates applied taxes" do
@@ -279,7 +279,7 @@ RSpec.describe CreditNotes::ApplyTaxesService do
             credit_note: nil,
             tax: nil,
             tax_description: provider_tax_1.type,
-            tax_code: provider_tax_1.code,
+            tax_code: provider_tax_1.name.parameterize(separator: "_"),
             tax_name: provider_tax_1.name,
             tax_rate: provider_tax_1.rate,
             amount_currency: invoice.currency,
@@ -290,7 +290,7 @@ RSpec.describe CreditNotes::ApplyTaxesService do
             credit_note: nil,
             tax: nil,
             tax_description: provider_tax_2.type,
-            tax_code: provider_tax_2.code,
+            tax_code: provider_tax_2.name.parameterize(separator: "_"),
             tax_name: provider_tax_2.name,
             tax_rate: provider_tax_2.rate,
             amount_currency: invoice.currency,

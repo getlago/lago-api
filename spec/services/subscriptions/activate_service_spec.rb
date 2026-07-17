@@ -39,16 +39,10 @@ RSpec.describe Subscriptions::ActivateService do
       expect(Invoices::CreatePayInAdvanceFixedChargesJob).not_to have_been_enqueued
     end
 
-    it "does not enqueue the fixed-charge delta job" do
+    it "does not enqueue the current-period job" do
       result
 
-      expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).not_to have_been_enqueued
-    end
-
-    it "does not enqueue the missed-periods job" do
-      result
-
-      expect(Subscriptions::ActivationRules::BillMissedPeriodsJob).not_to have_been_enqueued
+      expect(Subscriptions::ActivationRules::BillCurrentPeriodJob).not_to have_been_enqueued
     end
 
     context "when subscription has fixed charges" do
@@ -325,16 +319,10 @@ RSpec.describe Subscriptions::ActivateService do
       expect { result }.not_to change(FixedChargeEvent, :count)
     end
 
-    it "enqueues the fixed-charge delta job" do
+    it "enqueues the current-period job" do
       result
 
-      expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).to have_been_enqueued.with(subscription)
-    end
-
-    it "enqueues the missed-periods job" do
-      result
-
-      expect(Subscriptions::ActivationRules::BillMissedPeriodsJob).to have_been_enqueued.with(subscription)
+      expect(Subscriptions::ActivationRules::BillCurrentPeriodJob).to have_been_enqueued.with(subscription)
     end
 
     context "when subscription should sync with hubspot" do
@@ -414,16 +402,10 @@ RSpec.describe Subscriptions::ActivateService do
           .to have_been_enqueued.with(subscription: subscription)
       end
 
-      it "enqueues the fixed-charge delta job" do
+      it "does not enqueue the current-period job" do
         result
 
-        expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).to have_been_enqueued.with(subscription)
-      end
-
-      it "does not enqueue the missed-periods job" do
-        result
-
-        expect(Subscriptions::ActivationRules::BillMissedPeriodsJob).not_to have_been_enqueued
+        expect(Subscriptions::ActivationRules::BillCurrentPeriodJob).not_to have_been_enqueued
       end
 
       context "when subscription should not sync with hubspot" do
@@ -516,10 +498,10 @@ RSpec.describe Subscriptions::ActivateService do
           .to have_been_enqueued.with(subscription: previous_subscription)
       end
 
-      it "does not enqueue the missed-periods job" do
+      it "does not enqueue the current-period job" do
         result
 
-        expect(Subscriptions::ActivationRules::BillMissedPeriodsJob).not_to have_been_enqueued
+        expect(Subscriptions::ActivationRules::BillCurrentPeriodJob).not_to have_been_enqueued
       end
 
       it "enqueues Hubspot::CreateJob for the new subscription" do
@@ -527,12 +509,6 @@ RSpec.describe Subscriptions::ActivateService do
 
         expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob)
           .to have_been_enqueued.with(subscription:)
-      end
-
-      it "enqueues the fixed-charge delta job" do
-        result
-
-        expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).to have_been_enqueued.with(subscription)
       end
 
       context "when subscription should not sync with hubspot" do
@@ -558,16 +534,10 @@ RSpec.describe Subscriptions::ActivateService do
       expect(BillSubscriptionJob).to have_been_enqueued
     end
 
-    it "does not enqueue the fixed-charge delta job" do
+    it "does not enqueue the current-period job" do
       result
 
-      expect(Subscriptions::ActivationRules::BillFixedChargesDeltaJob).not_to have_been_enqueued
-    end
-
-    it "does not enqueue the missed-periods job" do
-      result
-
-      expect(Subscriptions::ActivationRules::BillMissedPeriodsJob).not_to have_been_enqueued
+      expect(Subscriptions::ActivationRules::BillCurrentPeriodJob).not_to have_been_enqueued
     end
   end
 
@@ -713,6 +683,29 @@ RSpec.describe Subscriptions::ActivateService do
 
         expect(BillNonInvoiceableFeesJob).to have_been_enqueued
           .with([previous_subscription, subscription], anything)
+      end
+
+      context "when the previous and new subscriptions carry different purchase order numbers" do
+        before do
+          previous_subscription.update!(purchase_order_number: "PO-1")
+          subscription.update!(purchase_order_number: "PO-2")
+        end
+
+        it "splits the upgrade bill into one job per purchase order number" do
+          result
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([previous_subscription], anything, invoicing_reason: :upgrading)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], anything, invoicing_reason: :upgrading)
+        end
+
+        it "splits BillNonInvoiceableFeesJob per purchase order number" do
+          result
+
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([previous_subscription], anything)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([subscription], anything)
+        end
       end
     end
 

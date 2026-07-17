@@ -10,6 +10,7 @@ module V1
         number: model.number,
         lago_invoice_id: model.invoice_id,
         invoice_number: model.invoice.number,
+        purchase_order_number: model.purchase_order_number,
         issuing_date: model.issuing_date.iso8601,
         credit_status: model.credit_status,
         refund_status: model.refund_status,
