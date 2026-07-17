@@ -185,6 +185,141 @@ RSpec.describe Invoices::SubscriptionService do
       end
     end
 
+    context "when batched subscriptions carry different purchase order numbers" do
+      let(:other_subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          purchase_order_number: "PO-2"
+        )
+      end
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          purchase_order_number: "PO-1"
+        )
+      end
+      let(:subscriptions) { [subscription, other_subscription] }
+
+      it "returns a validation failure rather than producing a mixed-PO invoice" do
+        result = invoice_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:purchase_order_number]).to eq(["mixed_purchase_order_numbers"])
+      end
+    end
+
+    context "when the subscription has a purchase_order_number" do
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          purchase_order_number: "PO-123"
+        )
+      end
+
+      it "stamps the purchase_order_number on the invoice" do
+        invoice = invoice_service.call.invoice
+
+        expect(invoice.purchase_order_number).to eq("PO-123")
+      end
+    end
+
+    context "when multiple subscriptions share the same purchase_order_number" do
+      let(:other_subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          purchase_order_number: "PO-1"
+        )
+      end
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          purchase_order_number: "PO-1"
+        )
+      end
+      let(:subscriptions) { [subscription, other_subscription] }
+
+      it "stamps the shared purchase_order_number on the single invoice" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.purchase_order_number).to eq("PO-1")
+      end
+    end
+
+    context "when the subscription has no purchase_order_number" do
+      it "leaves the invoice purchase_order_number nil" do
+        invoice = invoice_service.call.invoice
+
+        expect(invoice.purchase_order_number).to be_nil
+      end
+    end
+
+    context "when retrying an existing generating invoice" do
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          purchase_order_number: "PO-CURRENT"
+        )
+      end
+
+      let(:existing_invoice) do
+        create(
+          :invoice,
+          customer:,
+          organization:,
+          invoice_type: :subscription,
+          status: :generating,
+          purchase_order_number: "PO-STAMPED"
+        )
+      end
+
+      before do
+        create(:invoice_subscription, invoice: existing_invoice, subscription:, timestamp:)
+      end
+
+      it "preserves the stamped purchase_order_number instead of re-resolving from the subscription" do
+        described_class.new(
+          subscriptions:,
+          timestamp: timestamp.to_i,
+          invoicing_reason:,
+          invoice: existing_invoice
+        ).call
+
+        expect(existing_invoice.reload.purchase_order_number).to eq("PO-STAMPED")
+      end
+    end
+
     it_behaves_like "syncs invoice" do
       let(:service_call) { invoice_service.call }
     end
@@ -616,7 +751,7 @@ RSpec.describe Invoices::SubscriptionService do
       let(:customer) { create(:customer, :with_salesforce_integration, :with_hubspot_integration, organization:, account_type: "partner") }
       let(:salesforce_service) { instance_double(Integrations::Aggregator::Invoices::CreateService) }
       let(:hubspot_service) { instance_double(Integrations::Aggregator::Invoices::Hubspot::CreateService) }
-      let(:result) { BaseService::Result.new }
+      let(:result) { Integrations::Aggregator::Invoices::CreateService::Result.new }
 
       before do
         allow(Integrations::Aggregator::Invoices::CreateService).to receive(:new).and_return(salesforce_service)
@@ -870,9 +1005,9 @@ RSpec.describe Invoices::SubscriptionService do
       context "with a failed to acquire lock error" do
         it "propagates the error" do
           allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
-            .to receive(:call).and_raise(Customers::FailedToAcquireLock)
+            .to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
 
-          expect { invoice_service.call }.to raise_error(Customers::FailedToAcquireLock)
+          expect { invoice_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
         end
       end
     end

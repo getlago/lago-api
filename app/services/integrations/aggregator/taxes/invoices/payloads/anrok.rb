@@ -50,12 +50,11 @@ module Integrations
               elsif fee.subscription?
                 subscription_item
               end
-              mapped_item ||= empty_struct
 
               {
                 "item_key" => fee.item_key,
                 "item_id" => fee.id || fee.item_id,
-                "item_code" => mapped_item.external_id,
+                "item_code" => mapped_item&.external_id,
                 "amount_cents" => fee.sub_total_excluding_taxes_amount_cents&.to_i
               }
             end
@@ -63,10 +62,6 @@ module Integrations
             private
 
             attr_reader :customer, :integration_customer, :invoice, :fees
-
-            def empty_struct
-              @empty_struct ||= OpenStruct.new
-            end
 
             def issuing_date
               # NOTE: Anrok API requires issuing date to be 30 days in the future at  most.

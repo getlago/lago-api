@@ -8,7 +8,6 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
   let(:organization) { create(:organization) }
 
   let(:payment_service) { instance_double(Invoices::Payments::StripeService) }
-  let(:provider_customer_service) { instance_double(PaymentProviderCustomers::StripeService) }
   let(:service_result) { BaseService::Result.new }
 
   before do
@@ -60,9 +59,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
     let(:event_json) { get_stripe_fixtures("webhooks/payment_method_detached.json") }
 
     before do
-      allow(PaymentProviderCustomers::StripeService).to receive(:new)
-        .and_return(provider_customer_service)
-      allow(provider_customer_service).to receive(:delete_payment_method)
+      allow(PaymentProviderCustomers::StripeService).to receive(:call)
         .and_return(service_result)
     end
 
@@ -71,8 +68,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
 
       expect(result).to be_success
 
-      expect(PaymentProviderCustomers::StripeService).to have_received(:new)
-      expect(provider_customer_service).to have_received(:delete_payment_method)
+      expect(PaymentProviderCustomers::StripeService).to have_received(:call).with(:delete_payment_method, any_args)
     end
   end
 

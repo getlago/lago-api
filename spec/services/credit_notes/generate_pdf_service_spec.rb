@@ -101,7 +101,7 @@ RSpec.describe CreditNotes::GeneratePdfService do
     context "when einvoicing is enabled" do
       let(:fake_xml) { "<xml>content</xml>" }
       let(:country) { nil }
-      let(:create_xml_result) { BaseService::Result.new.tap { |result| result.xml = fake_xml } }
+      let(:create_xml_result) { EInvoices::CreditNotes::Cii::CreateService::Result.new.tap { |result| result.xml = fake_xml } }
 
       before do
         credit_note.billing_entity.update(country:, einvoicing: true)

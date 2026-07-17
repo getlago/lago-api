@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Invoices::Payments::StripeService do
-  subject(:stripe_service) { described_class.new(invoice) }
+  subject(:stripe_service) do
+    described_class.new.tap { it.instance_variable_set(:@invoice, invoice) }
+  end
 
   let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
@@ -25,7 +27,7 @@ RSpec.describe Invoices::Payments::StripeService do
 
   let(:total_paid_amount_cents) { 0 }
 
-  describe "#generate_payment_url" do
+  describe ".call(:generate_payment_url)" do
     let(:payment_intent) { create(:payment_intent) }
 
     before do
@@ -37,7 +39,7 @@ RSpec.describe Invoices::Payments::StripeService do
     end
 
     it "generates payment url" do
-      stripe_service.generate_payment_url(payment_intent)
+      described_class.call(:generate_payment_url, invoice, payment_intent)
 
       expect(::Stripe::Checkout::Session).to have_received(:create)
     end
@@ -46,7 +48,7 @@ RSpec.describe Invoices::Payments::StripeService do
       allow(::Stripe::Checkout::Session).to receive(:create)
         .and_return({"url" => "https://example.com", "id" => "cs_123"})
 
-      result = stripe_service.generate_payment_url(payment_intent)
+      result = described_class.call(:generate_payment_url, invoice, payment_intent)
 
       expect(result.payment_url).to eq("https://example.com")
       expect(result.provider_session_id).to eq("cs_123")
@@ -126,7 +128,7 @@ RSpec.describe Invoices::Payments::StripeService do
       end
 
       it "returns a failed result" do
-        result = stripe_service.generate_payment_url(payment_intent)
+        result = described_class.call(:generate_payment_url, invoice, payment_intent)
 
         expect(result).not_to be_success
 
@@ -137,7 +139,7 @@ RSpec.describe Invoices::Payments::StripeService do
     end
   end
 
-  describe "#expire_payment_url" do
+  describe ".call(:expire_payment_url)" do
     let(:payment_intent) { create(:payment_intent, invoice:, provider_session_id:) }
     let(:provider_session_id) { "cs_123" }
     let(:session_status) { "open" }
@@ -152,7 +154,7 @@ RSpec.describe Invoices::Payments::StripeService do
     end
 
     it "expires the open checkout session" do
-      stripe_service.expire_payment_url(payment_intent)
+      described_class.call(:expire_payment_url, invoice, payment_intent)
 
       expect(::Stripe::Checkout::Session).to have_received(:expire)
         .with(provider_session_id, {}, {api_key: stripe_payment_provider.secret_key})
@@ -162,7 +164,7 @@ RSpec.describe Invoices::Payments::StripeService do
       let(:session_status) { "complete" }
 
       it "does not expire the session" do
-        stripe_service.expire_payment_url(payment_intent)
+        described_class.call(:expire_payment_url, invoice, payment_intent)
 
         expect(::Stripe::Checkout::Session).not_to have_received(:expire)
       end
@@ -175,7 +177,7 @@ RSpec.describe Invoices::Payments::StripeService do
       end
 
       it "treats it as a no-op success" do
-        result = stripe_service.expire_payment_url(payment_intent)
+        result = described_class.call(:expire_payment_url, invoice, payment_intent)
 
         expect(result).to be_success
       end
@@ -185,7 +187,7 @@ RSpec.describe Invoices::Payments::StripeService do
       let(:provider_session_id) { nil }
 
       it "does nothing and returns success" do
-        result = stripe_service.expire_payment_url(payment_intent)
+        result = described_class.call(:expire_payment_url, invoice, payment_intent)
 
         expect(result).to be_success
         expect(::Stripe::Checkout::Session).not_to have_received(:retrieve)
@@ -194,7 +196,7 @@ RSpec.describe Invoices::Payments::StripeService do
     end
   end
 
-  describe "#update_payment_status" do
+  describe ".call(:update_payment_status)" do
     let(:payment) do
       create(
         :payment,
@@ -217,7 +219,8 @@ RSpec.describe Invoices::Payments::StripeService do
     end
 
     it "updates the payment and invoice status" do
-      result = stripe_service.update_payment_status(
+      result = described_class.call(
+        :update_payment_status,
         organization_id: organization.id,
         status: "succeeded",
         stripe_payment:
@@ -235,7 +238,8 @@ RSpec.describe Invoices::Payments::StripeService do
 
     it "enqueues a SendWebhookJob for payment.succeeded" do
       expect do
-        stripe_service.update_payment_status(
+        described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: "succeeded",
           stripe_payment:
@@ -254,7 +258,8 @@ RSpec.describe Invoices::Payments::StripeService do
       end
 
       it "updates the payment and invoice status" do
-        result = stripe_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: "failed",
           stripe_payment:
@@ -278,7 +283,8 @@ RSpec.describe Invoices::Payments::StripeService do
           old_value = payment.payable.ready_for_payment_processing
           create(:payment, payable: invoice, status: "requires_action")
 
-          result = stripe_service.update_payment_status(
+          result = described_class.call(
+            :update_payment_status,
             organization_id: organization.id,
             status: "failed",
             stripe_payment:
@@ -300,7 +306,8 @@ RSpec.describe Invoices::Payments::StripeService do
       before { invoice.payment_succeeded! }
 
       it "does not update the status of invoice and payment" do
-        result = stripe_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: "succeeded",
           stripe_payment:
@@ -313,7 +320,8 @@ RSpec.describe Invoices::Payments::StripeService do
 
     context "with invalid status" do
       it "does not update the status of invoice and payment" do
-        result = stripe_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: "foo-bar",
           stripe_payment:
@@ -344,7 +352,8 @@ RSpec.describe Invoices::Payments::StripeService do
       end
 
       it "creates a payment and updates invoice payment status" do
-        result = stripe_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: "succeeded",
           stripe_payment:
@@ -362,7 +371,8 @@ RSpec.describe Invoices::Payments::StripeService do
 
       context "when amount_cents kwarg is provided" do
         it "records the Payment with the provider-reported amount, not the invoice due amount" do
-          result = stripe_service.update_payment_status(
+          result = described_class.call(
+            :update_payment_status,
             organization_id: organization.id,
             status: "succeeded",
             amount_cents: 4242,
@@ -375,7 +385,8 @@ RSpec.describe Invoices::Payments::StripeService do
 
       context "when amount_cents kwarg is not provided" do
         it "falls back to the invoice's total due amount" do
-          result = stripe_service.update_payment_status(
+          result = described_class.call(
+            :update_payment_status,
             organization_id: organization.id,
             status: "succeeded",
             stripe_payment:
@@ -396,7 +407,8 @@ RSpec.describe Invoices::Payments::StripeService do
         end
 
         it "raises a not found failure" do
-          result = stripe_service.update_payment_status(
+          result = described_class.call(
+            :update_payment_status,
             organization_id: organization.id,
             status: "succeeded",
             stripe_payment:
@@ -413,7 +425,8 @@ RSpec.describe Invoices::Payments::StripeService do
       let(:payment) { nil }
 
       it "returns an empty result" do
-        result = stripe_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: "succeeded",
           stripe_payment:
@@ -434,7 +447,8 @@ RSpec.describe Invoices::Payments::StripeService do
         end
 
         it "returns an empty result" do
-          result = stripe_service.update_payment_status(
+          result = described_class.call(
+            :update_payment_status,
             organization_id: organization.id,
             status: "succeeded",
             stripe_payment:
@@ -460,7 +474,8 @@ RSpec.describe Invoices::Payments::StripeService do
           end
 
           it "creates the missing payment and updates invoice status" do
-            result = stripe_service.update_payment_status(
+            result = described_class.call(
+              :update_payment_status,
               organization_id: organization.id,
               status: "succeeded",
               stripe_payment:
@@ -494,7 +509,8 @@ RSpec.describe Invoices::Payments::StripeService do
       let(:invoice) { create(:invoice) }
 
       it "does not update the payment status" do
-        result = stripe_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: "succeeded",
           stripe_payment:

@@ -66,7 +66,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
     describe "retry_on" do
       [
         [Sequenced::SequenceError.new("Sequenced::SequenceError"), 15],
-        [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
+        [BaseLockService::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
         [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 25],
         [BaseService::ThrottlingError.new(provider_name: "Stripe"), 25]
       ].each do |error, attempts|

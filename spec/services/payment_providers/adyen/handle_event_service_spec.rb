@@ -9,17 +9,12 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
 
   describe "#call" do
     let(:payment_service) { instance_double(Invoices::Payments::AdyenService) }
-    let(:payment_provider_service) { instance_double(PaymentProviderCustomers::AdyenService) }
     let(:service_result) { BaseService::Result.new }
 
     before do
-      allow(Invoices::Payments::AdyenService).to receive(:new)
-        .and_return(payment_service)
-      allow(PaymentProviderCustomers::AdyenService).to receive(:new)
-        .and_return(payment_provider_service)
-      allow(payment_service).to receive(:update_payment_status)
+      allow(Invoices::Payments::AdyenService).to receive(:call)
         .and_return(service_result)
-      allow(payment_provider_service).to receive(:preauthorise)
+      allow(PaymentProviderCustomers::AdyenService).to receive(:call)
         .and_return(service_result)
     end
 
@@ -37,8 +32,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
       it "routes the event to an other service" do
         event_service.call
 
-        expect(PaymentProviderCustomers::AdyenService).to have_received(:new)
-        expect(payment_provider_service).to have_received(:preauthorise)
+        expect(PaymentProviderCustomers::AdyenService).to have_received(:call).with(:preauthorise, any_args)
       end
     end
 
@@ -56,15 +50,14 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
       it "routes the event to an other service" do
         event_service.call
 
-        expect(Invoices::Payments::AdyenService).to have_received(:new)
-        expect(payment_service).to have_received(:update_payment_status)
+        expect(Invoices::Payments::AdyenService).to have_received(:call).with(:update_payment_status, any_args)
       end
 
       it "passes the amount value as a dedicated kwarg for the Payment row to use" do
         event_service.call
 
-        expect(payment_service).to have_received(:update_payment_status).with(
-          hash_including(amount_cents: 71)
+        expect(Invoices::Payments::AdyenService).to have_received(:call).with(
+          :update_payment_status, hash_including(amount_cents: 71)
         )
       end
     end
@@ -165,8 +158,8 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
       it "routes the event to the invoice payments service with originalReference" do
         event_service.call
 
-        expect(Invoices::Payments::AdyenService).to have_received(:new)
-        expect(payment_service).to have_received(:update_payment_status).with(
+        expect(Invoices::Payments::AdyenService).to have_received(:call).with(
+          :update_payment_status,
           provider_payment_id: "PSPREF123",
           status: "Cancelled",
           metadata: {lago_payable_type: "Invoice"}
@@ -189,7 +182,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
       it "does not route the event to a payment service" do
         event_service.call
 
-        expect(payment_service).not_to have_received(:update_payment_status)
+        expect(Invoices::Payments::AdyenService).not_to have_received(:call)
       end
     end
 
@@ -207,7 +200,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
       it "does not route the event to a payment service" do
         event_service.call
 
-        expect(payment_service).not_to have_received(:update_payment_status)
+        expect(Invoices::Payments::AdyenService).not_to have_received(:call)
       end
     end
 

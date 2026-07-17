@@ -20,7 +20,8 @@ module Customers
         )
       end
 
-      PaymentProviderCustomers::Factory.new_instance(provider_customer:).generate_checkout_url(send_webhook: false)
+      PaymentProviderCustomers::Factory.for(provider_customer)
+        .call(:generate_checkout_url, provider_customer, send_webhook: false)
     end
 
     private

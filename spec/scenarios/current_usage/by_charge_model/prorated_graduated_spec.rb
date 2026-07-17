@@ -61,8 +61,8 @@ describe "Charge Models - Prorated Graduated Scenarios", transaction: false do
         )
 
         fetch_current_usage(customer:)
-        expect(json[:customer_usage][:amount_cents].round(2)).to eq(0)
-        expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(0)
+        expect(json[:customer_usage][:amount_cents].round(2)).to eq(10_000) # first-tier flat fee
+        expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(10_000)
         expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
 
         travel_to(DateTime.new(2023, 9, 10)) do

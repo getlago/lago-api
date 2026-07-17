@@ -61,30 +61,48 @@ module PaymentProviders
 
       def handle_intent_event
         if INTENT_WEBHOOKS_EVENTS.include?(event_code)
-          payment_service_klass(@event_json)
-            .new.update_payment_status(
-              organization_id: @organization.id,
-              provider_payment_id: @event_json.dig("data", "intent_id"),
-              status: event_to_payment_status(event_code),
-              amount_cents: intent_amount_cents(
-                @event_json.dig("data", "intent", "amount"),
-                @event_json.dig("data", "intent", "amount_currency")
-              ),
-              metadata: @event_json.dig("data", "intent", "custom_fields")
-            ).raise_if_error!
+          klass = payment_service_klass(@event_json)
+          args = {
+            organization_id: @organization.id,
+            provider_payment_id: @event_json.dig("data", "intent_id"),
+            status: event_to_payment_status(event_code),
+            amount_cents: intent_amount_cents(
+              @event_json.dig("data", "intent", "amount"),
+              @event_json.dig("data", "intent", "amount_currency")
+            ),
+            metadata: @event_json.dig("data", "intent", "custom_fields")
+          }
+
+          # NOTE: Temporary branch until PaymentRequests::Payments services are migrated to
+          #       TypedResults too. Once they are, call `klass.call(:update_payment_status, **args)` directly.
+          service_result = if klass.include?(TypedResults)
+            klass.call(:update_payment_status, **args)
+          else
+            klass.new.update_payment_status(**args)
+          end
+          service_result.raise_if_error!
         end
       end
 
       def handle_transaction_event
         if TRANSACTION_WEBHOOKS_EVENTS.include?(event_code)
-          payment_service_klass(@event_json)
-            .new.update_payment_status(
-              organization_id: @organization.id,
-              provider_payment_id: @event_json.dig("intent", "id"),
-              status: event_to_payment_status(event_code),
-              amount_cents: intent_amount_cents(@event_json.dig("intent", "amount"), nil),
-              metadata: @event_json.dig("intent", "custom_fields")
-            ).raise_if_error!
+          klass = payment_service_klass(@event_json)
+          args = {
+            organization_id: @organization.id,
+            provider_payment_id: @event_json.dig("intent", "id"),
+            status: event_to_payment_status(event_code),
+            amount_cents: intent_amount_cents(@event_json.dig("intent", "amount"), nil),
+            metadata: @event_json.dig("intent", "custom_fields")
+          }
+
+          # NOTE: Temporary branch until PaymentRequests::Payments services are migrated to
+          #       TypedResults too. Once they are, call `klass.call(:update_payment_status, **args)` directly.
+          service_result = if klass.include?(TypedResults)
+            klass.call(:update_payment_status, **args)
+          else
+            klass.new.update_payment_status(**args)
+          end
+          service_result.raise_if_error!
         end
       end
 
@@ -117,24 +135,26 @@ module PaymentProviders
       end
 
       def handle_card_token_deleted
-        PaymentProviderCustomers::MoneyhashService.new
-          .delete_payment_method(
+        PaymentProviderCustomers::MoneyhashService
+          .call!(
+            :delete_payment_method,
             organization_id: organization.id,
             customer_id: card_token.dig("custom_fields", "lago_customer_id"),
             payment_method_id: card_token["id"],
             metadata: card_token["custom_fields"]
-          ).raise_if_error!
+          )
       end
 
       def handle_card_token_created_or_updated
-        PaymentProviderCustomers::MoneyhashService.new
-          .update_payment_method(
+        PaymentProviderCustomers::MoneyhashService
+          .call!(
+            :update_payment_method,
             organization_id: organization.id,
             customer_id: card_token.dig("custom_fields", "lago_customer_id"),
             payment_method_id: card_token["id"],
             metadata: card_token["custom_fields"],
             card_details: extract_card_details
-          ).raise_if_error!
+          )
       end
 
       def card_token

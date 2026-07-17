@@ -3,6 +3,10 @@
 module Integrations
   module Aggregator
     class AccountInformationService < BaseService
+      Result = BaseResult[:account_information]
+
+      AccountInformation = Data.define(:id)
+
       def action_path
         "v1/account-information"
       end
@@ -12,7 +16,7 @@ module Integrations
 
         response = http_client.get(headers:)
 
-        result.account_information = OpenStruct.new(response)
+        result.account_information = AccountInformation.new(id: response["id"])
         result
       end
 

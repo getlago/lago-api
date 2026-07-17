@@ -28566,12 +28566,6 @@
           "interfaces": null,
           "enumValues": [
             {
-              "name": "multiple_payment_methods",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "postgres_enriched_events",
               "description": null,
               "isDeprecated": false,
@@ -28614,7 +28608,25 @@
               "deprecationReason": null
             },
             {
+              "name": "meilisearch",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "stripe_shared_payment_token",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "fixed_charge_usage_delta_migration",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "multi_connection",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -36034,6 +36046,12 @@
             },
             {
               "name": "closed",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "deleted",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -53934,18 +53952,6 @@
               "description": "Query invoice collections of a customer portal user",
               "args": [
                 {
-                  "name": "months",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "expireCache",
                   "description": null,
                   "type": {
@@ -54059,18 +54065,6 @@
               "name": "customerPortalOverdueBalances",
               "description": "Query overdue balances of a customer portal user",
               "args": [
-                {
-                  "name": "months",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
                 {
                   "name": "expireCache",
                   "description": null,
@@ -56340,6 +56334,18 @@
               "description": "Query gross revenue of an organization",
               "args": [
                 {
+                  "name": "billingEntityCode",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "billingEntityId",
                   "description": null,
                   "type": {
@@ -56774,18 +56780,6 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "billingEntityId",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "ID",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "currency",
                   "description": null,
                   "type": {
@@ -56950,11 +56944,11 @@
               "description": "Query invoiced usage of an organization",
               "args": [
                 {
-                  "name": "billingEntityId",
+                  "name": "billingEntityCode",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
-                    "name": "ID",
+                    "name": "String",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -57341,11 +57335,11 @@
               "description": "Query MRR of an organization",
               "args": [
                 {
-                  "name": "billingEntityId",
+                  "name": "billingEntityCode",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
-                    "name": "ID",
+                    "name": "String",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -57895,18 +57889,6 @@
                   "type": {
                     "kind": "SCALAR",
                     "name": "String",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "billingEntityId",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "ID",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -60617,18 +60599,6 @@
               "deprecationReason": null
             },
             {
-              "name": "shareToken",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "startDate",
               "description": null,
               "args": [],
@@ -61192,6 +61162,18 @@
                     }
                   }
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "purchaseOrderNumber",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -65034,6 +65016,30 @@
                   "kind": "SCALAR",
                   "name": "Int",
                   "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "appliedToBillingEntitiesCodes",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "String",
+                      "ofType": null
+                    }
+                  }
                 }
               },
               "isDeprecated": false,

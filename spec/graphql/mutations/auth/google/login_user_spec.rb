@@ -5,7 +5,6 @@ require "rails_helper"
 RSpec.describe Mutations::Auth::Google::LoginUser do
   let(:membership) { create(:membership) }
   let(:user) { membership.user }
-  let(:google_service) { instance_double(Auth::GoogleService) }
 
   let(:login_result) do
     result = BaseService::Result.new
@@ -29,8 +28,7 @@ RSpec.describe Mutations::Auth::Google::LoginUser do
   end
 
   before do
-    allow(Auth::GoogleService).to receive(:new).and_return(google_service)
-    allow(google_service).to receive(:login).and_return(login_result)
+    allow(Auth::GoogleService).to receive(:call).with(:login, "code").and_return(login_result)
   end
 
   it "returns token and user" do
