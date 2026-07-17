@@ -6,7 +6,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateJob do
   subject(:create_job) { described_class }
 
   let(:credit_note) { create(:credit_note) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Integrations::Aggregator::CreditNotes::CreateService::Result.new }
 
   before do
     allow(Integrations::Aggregator::CreditNotes::CreateService).to receive(:call).and_return(result)

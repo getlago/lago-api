@@ -7,7 +7,7 @@ RSpec.describe Integrations::Hubspot::SavePortalIdService do
     let(:portal_id) { "123456" }
     let(:integration) { create(:hubspot_integration) }
     let(:service_call) { described_class.call(integration:) }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Integrations::Aggregator::AccountInformationService::Result.new }
     let(:account_information) { Integrations::Aggregator::AccountInformationService::AccountInformation.new(id: portal_id) }
 
     before do

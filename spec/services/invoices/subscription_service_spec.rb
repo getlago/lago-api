@@ -751,7 +751,7 @@ RSpec.describe Invoices::SubscriptionService do
       let(:customer) { create(:customer, :with_salesforce_integration, :with_hubspot_integration, organization:, account_type: "partner") }
       let(:salesforce_service) { instance_double(Integrations::Aggregator::Invoices::CreateService) }
       let(:hubspot_service) { instance_double(Integrations::Aggregator::Invoices::Hubspot::CreateService) }
-      let(:result) { BaseService::Result.new }
+      let(:result) { Integrations::Aggregator::Invoices::CreateService::Result.new }
 
       before do
         allow(Integrations::Aggregator::Invoices::CreateService).to receive(:new).and_return(salesforce_service)

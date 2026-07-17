@@ -17,7 +17,7 @@ RSpec.describe Invoices::Payments::CreateService do
 
   describe "#call" do
     let(:result) do
-      BaseService::Result.new.tap do |r|
+      PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
         r.payment = instance_double(Payment, payable_payment_status: "processing")
       end
     end
@@ -532,7 +532,7 @@ RSpec.describe Invoices::Payments::CreateService do
     context "when provider service raises a service failure" do
       let(:original_error) { ::Stripe::StripeError.new("card declined") }
       let(:result) do
-        BaseService::Result.new.tap do |r|
+        PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
           r.payment = instance_double(Payment, status: "failed", payable_payment_status: "failed")
           r.error_message = "error"
           r.error_code = "code"
@@ -583,7 +583,7 @@ RSpec.describe Invoices::Payments::CreateService do
 
       context "when payment has a payable_payment_status" do
         let(:result) do
-          BaseService::Result.new.tap do |r|
+          PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
             r.payment = instance_double(Payment, payable_payment_status: "failed")
             r.error_message = "error"
             r.error_code = "code"
@@ -632,7 +632,7 @@ RSpec.describe Invoices::Payments::CreateService do
 
       context "when payable_payment_status is pending" do
         let(:result) do
-          BaseService::Result.new.tap do |r|
+          PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
             r.payment = instance_double(Payment, status: "failed", payable_payment_status: "pending")
             r.error_message = "stripe_error"
             r.error_code = "unknown"
@@ -662,7 +662,7 @@ RSpec.describe Invoices::Payments::CreateService do
       ].each do |error_code|
         context "when error_code is is pending" do
           let(:result) do
-            BaseService::Result.new.tap do |r|
+            PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
               r.payment = instance_double(Payment, status: "failed", payable_payment_status: "failed")
               r.error_message = "stripe_error"
               r.error_code = error_code
