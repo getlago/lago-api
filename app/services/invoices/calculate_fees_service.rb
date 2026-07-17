@@ -2,6 +2,8 @@
 
 module Invoices
   class CalculateFeesService < BaseService
+    Result = BaseResult[:invoice, :non_invoiceable_fees]
+
     def initialize(invoice:, recurring: false, context: nil)
       @invoice = invoice
       @timestamp = invoice.invoice_subscriptions.first&.timestamp

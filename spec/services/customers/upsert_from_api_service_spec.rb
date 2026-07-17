@@ -35,7 +35,6 @@ RSpec.describe Customers::UpsertFromApiService do
   end
 
   before do
-    allow(SendWebhookJob).to receive(:perform_later)
     allow(CurrentContext).to receive(:source).and_return("api")
   end
 
@@ -99,7 +98,7 @@ RSpec.describe Customers::UpsertFromApiService do
   it "calls SendWebhookJob with customer.created" do
     customer = result.customer
 
-    expect(SendWebhookJob).to have_received(:perform_later).with("customer.created", customer)
+    expect(SendWebhookJob).to have_been_enqueued.with("customer.created", customer)
   end
 
   it "produces an activity log" do
@@ -630,7 +629,7 @@ RSpec.describe Customers::UpsertFromApiService do
     it "calls SendWebhookJob with customer.updated" do
       result
 
-      expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", customer)
+      expect(SendWebhookJob).to have_been_enqueued.with("customer.updated", customer)
     end
 
     it "produces an activity log" do

@@ -336,12 +336,17 @@ GEM
       guard (~> 2.1)
       guard-compat (~> 1.1)
       rspec (>= 2.99.0, < 4.0)
+    hana (1.3.7)
     hashdiff (1.2.1)
     hashie (5.1.0)
       logger
     highline (3.1.2)
       reline
     htmlbeautifier (1.4.3)
+    httparty (0.24.2)
+      csv
+      mini_mime (>= 1.0.0)
+      multi_xml (>= 0.5.2)
     httpclient (2.9.0)
       mutex_m
     httplog (1.8.0)
@@ -370,6 +375,11 @@ GEM
       reline (>= 0.4.2)
     jmespath (1.6.2)
     json (2.20.0)
+    json_schemer (2.5.0)
+      bigdecimal
+      hana (~> 1.3)
+      regexp_parser (~> 2.0)
+      simpleidn (~> 0.2)
     jwt (3.2.0)
       base64
     kaminari-activerecord (1.2.2)
@@ -464,6 +474,10 @@ GEM
       net-pop
       net-smtp
     marcel (1.1.0)
+    meilisearch (0.33.0)
+      httparty (~> 0.24)
+    meilisearch-rails (0.14.1)
+      meilisearch (~> 0.28)
     method_source (1.1.0)
     mini_mime (1.1.5)
     mini_portile2 (2.8.9)
@@ -945,6 +959,7 @@ GEM
       simplecov_json_formatter (~> 0.1)
     simplecov-html (0.13.2)
     simplecov_json_formatter (0.1.4)
+    simpleidn (0.2.3)
     slim (5.2.1)
       temple (~> 0.10.0)
       tilt (>= 2.1.0)
@@ -1021,7 +1036,7 @@ GEM
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
-    websocket-driver (0.8.0)
+    websocket-driver (0.8.1)
       base64
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.5)
@@ -1104,6 +1119,7 @@ DEPENDENCIES
   htmlbeautifier (~> 1.4)
   httplog
   i18n-tasks
+  json_schemer
   jwt
   kaminari-activerecord
   karafka (~> 2.5.0)
@@ -1113,6 +1129,7 @@ DEPENDENCIES
   lago-expression!
   lograge
   logstash-event
+  meilisearch-rails
   money-rails
   multipart-post
   mutex_m

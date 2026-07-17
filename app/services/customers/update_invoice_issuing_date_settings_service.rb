@@ -2,6 +2,8 @@
 
 module Customers
   class UpdateInvoiceIssuingDateSettingsService < BaseService
+    Result = BaseResult[:customer]
+
     def initialize(customer:, params:)
       @customer = customer
       @params = params

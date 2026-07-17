@@ -25,8 +25,6 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::SubscriptionO
 
   before do
     allow(comparison_service).to receive(:call).and_return(comparison_result)
-    allow(Events::Stores::Clickhouse::EnrichedStoreMigration::OrchestratorJob)
-      .to receive(:perform_later)
   end
 
   describe "#call" do
@@ -43,7 +41,7 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::SubscriptionO
         subscription_migration.reload
         expect(subscription_migration).to be_completed
         expect(Events::Stores::Clickhouse::EnrichedStoreMigration::OrchestratorJob)
-          .to have_received(:perform_later).with(migration)
+          .to have_been_enqueued.with(migration)
       end
     end
 
@@ -77,8 +75,6 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::SubscriptionO
       before do
         allow(Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService)
           .to receive(:call).and_return(reprocess_result)
-        allow(Events::Stores::Clickhouse::EnrichedStoreMigration::WaitForEnrichmentJob)
-          .to receive(:perform_later)
       end
 
       it "assigns billable_metric_codes and transitions to waiting_for_enrichment" do
@@ -88,7 +84,7 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::SubscriptionO
         expect(subscription_migration.billable_metric_codes).to eq(["api_calls"])
         expect(subscription_migration.events_reprocessed_count).to eq(42)
         expect(Events::Stores::Clickhouse::EnrichedStoreMigration::WaitForEnrichmentJob)
-          .to have_received(:perform_later).with(subscription_migration)
+          .to have_been_enqueued.with(subscription_migration)
       end
     end
 
@@ -217,7 +213,7 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::SubscriptionO
         subscription_migration.reload
         expect(subscription_migration).to be_completed
         expect(Events::Stores::Clickhouse::EnrichedStoreMigration::OrchestratorJob)
-          .to have_received(:perform_later).with(migration)
+          .to have_been_enqueued.with(migration)
       end
     end
 

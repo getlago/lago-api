@@ -21,7 +21,6 @@ RSpec.describe Mutations::QuoteVersions::Clone do
           organization { id },
           version,
           status,
-          shareToken,
           voidReason,
           voidedAt
         }
@@ -59,13 +58,11 @@ RSpec.describe Mutations::QuoteVersions::Clone do
         )
         expect(cloned["id"]).to be_present
         expect(cloned["id"]).not_to eq(quote_version.id)
-        expect(cloned["shareToken"]).to be_present
 
         quote_version.reload
         expect(quote_version.voided?).to eq(true)
         expect(quote_version.void_reason).to eq("superseded")
         expect(quote_version.voided_at).to eq(Time.current)
-        expect(quote_version.share_token).to eq(nil)
       end
     end
   end

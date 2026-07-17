@@ -8,6 +8,7 @@ RSpec.describe Subscription do
   let(:plan) { create(:plan) }
 
   it_behaves_like "paper_trail traceable"
+  it_behaves_like "a model with a purchase order number"
 
   describe "enums" do
     it do

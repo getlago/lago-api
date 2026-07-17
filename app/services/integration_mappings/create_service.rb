@@ -2,6 +2,8 @@
 
 module IntegrationMappings
   class CreateService < BaseService
+    Result = BaseResult[:integration_mapping]
+
     def call(**args)
       integration = Integrations::BaseIntegration.find_by(id: args[:integration_id])
 

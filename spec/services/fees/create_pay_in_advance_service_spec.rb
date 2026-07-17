@@ -62,6 +62,30 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         .and_return(charge_result)
     end
 
+    context "when the event has no matching subscription" do
+      let(:event) do
+        source = create(
+          :event,
+          external_subscription_id: "unknown-#{SecureRandom.uuid}",
+          external_customer_id: customer.external_id,
+          organization_id: organization.id,
+          properties: event_properties
+        )
+        Events::CommonFactory.new_instance(source:)
+      end
+
+      it "skips without creating a fee and logs a warning" do
+        allow(Rails.logger).to receive(:warn)
+
+        result = fee_service.call
+
+        expect(result).to be_success
+        expect(result.fees).to eq([])
+        expect(Fee.count).to eq(0)
+        expect(Rails.logger).to have_received(:warn).with(/no active subscription for event/)
+      end
+    end
+
     it "creates a fee" do
       result = fee_service.call
 

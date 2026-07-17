@@ -2,6 +2,8 @@
 
 module Utils
   class PdfGenerator < BaseService
+    Result = BaseResult[:io]
+
     include ActiveSupport::NumberHelper
 
     def initialize(template:, context:)

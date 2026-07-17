@@ -19,7 +19,7 @@ module QuoteVersions
       return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
       return result.single_validation_failure!(field: :status, error_code: "not_editable") unless editable?
 
-      quote_version.update!(
+      quote_version.assign_attributes(
         params.slice(
           :billing_items,
           :content,
@@ -28,6 +28,11 @@ module QuoteVersions
           :end_date
         )
       )
+
+      validator = QuoteVersions::Validators.for(result, quote_version:, scope: :update)
+      return result if validator && !validator.valid?
+
+      quote_version.save!
       result.quote_version = quote_version
 
       # TODO: SendWebhookJob.perform_after_commit("quote_version.updated", quote_version)

@@ -2,9 +2,9 @@
 
 module Wallets
   module RecurringTransactionRules
-    Result = BaseResult[:wallet, :payment_method]
-
     class UpdateService < BaseService
+      Result = BaseResult[:wallet, :payment_method]
+
       def initialize(wallet:, params:)
         @wallet = wallet
         @params = params
@@ -77,6 +77,8 @@ module Wallets
 
         result.wallet = wallet
         result
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
       rescue BaseService::FailedResult => e
         e.result
       end
@@ -115,7 +117,7 @@ module Wallets
 
       def valid_payment_methods?
         hash_recurring_rules.each do |payload_rule|
-          pm_result = BaseService::Result.new
+          pm_result = BaseResult[:payment_method].new
           pm_result.payment_method = payment_method(payload_rule)
 
           unless PaymentMethods::ValidateService.new(pm_result, **payload_rule).valid?

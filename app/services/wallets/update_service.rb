@@ -37,6 +37,7 @@ module Wallets
         wallet.code = params[:code] if params[:code]
         wallet.priority = params[:priority] if params[:priority]
         wallet.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
+        wallet.purchase_order_number = params[:purchase_order_number] if params.key?(:purchase_order_number)
         unless params[:invoice_requires_successful_payment].nil?
           wallet.invoice_requires_successful_payment = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
         end

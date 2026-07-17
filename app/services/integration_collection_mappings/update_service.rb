@@ -2,6 +2,8 @@
 
 module IntegrationCollectionMappings
   class UpdateService < BaseService
+    Result = BaseResult[:integration_collection_mapping]
+
     def initialize(integration_collection_mapping:, params:)
       @integration_collection_mapping = integration_collection_mapping
       @params = params

@@ -761,21 +761,15 @@ RSpec.describe Api::V1::InvoicesController do
 
       context "with /#{route}" do
         context "without generated pdf" do
-          before do
-            allow(Invoices::GeneratePdfJob).to receive(:perform_later)
-          end
-
           it "calls generate pdf async" do
             subject
 
-            expect(Invoices::GeneratePdfJob).to have_received(:perform_later)
+            expect(Invoices::GeneratePdfJob).to have_been_enqueued
           end
         end
 
         context "when generated pdf" do
           before do
-            allow(Invoices::GeneratePdfJob).to receive(:perform_later)
-
             invoice.file.attach(
               io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
               filename: "invoice.pdf",
@@ -786,7 +780,7 @@ RSpec.describe Api::V1::InvoicesController do
           it "does not regenerate" do
             subject
 
-            expect(Invoices::GeneratePdfJob).not_to have_received(:perform_later)
+            expect(Invoices::GeneratePdfJob).not_to have_been_enqueued
           end
         end
 
@@ -812,21 +806,15 @@ RSpec.describe Api::V1::InvoicesController do
     include_examples "requires API permission", "invoice", "write"
 
     context "without generated pdf" do
-      before do
-        allow(Invoices::GenerateXmlJob).to receive(:perform_later)
-      end
-
       it "calls generate pdf async" do
         subject
 
-        expect(Invoices::GenerateXmlJob).to have_received(:perform_later)
+        expect(Invoices::GenerateXmlJob).to have_been_enqueued
       end
     end
 
     context "with generated pdf" do
       before do
-        allow(Invoices::GenerateXmlJob).to receive(:perform_later)
-
         invoice.xml_file.attach(
           io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
           filename: "invoice.xml",
@@ -837,7 +825,7 @@ RSpec.describe Api::V1::InvoicesController do
       it "does not regenerate" do
         subject
 
-        expect(Invoices::GenerateXmlJob).not_to have_received(:perform_later)
+        expect(Invoices::GenerateXmlJob).not_to have_been_enqueued
       end
     end
 

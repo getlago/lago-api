@@ -13,6 +13,7 @@ module Types
       field :invoice_requires_successful_payment, Boolean, null: false
       field :name, String, null: true
       field :priority, Integer, null: false
+      field :purchase_order_number, String, null: true
       field :source, Types::WalletTransactions::SourceEnum, null: false
       field :status, Types::WalletTransactions::StatusEnum, null: false
       field :transaction_status, Types::WalletTransactions::TransactionStatusEnum, null: false

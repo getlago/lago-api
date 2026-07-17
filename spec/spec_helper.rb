@@ -7,6 +7,13 @@ KnapsackPro::Adapters::RSpecAdapter.bind
 
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 ENV["RAILS_ENV"] = "test"
+
+# The dev container exposes Meilisearch to the app. Tests must not depend on
+# it: drop the env vars before boot so the initializer stays inactive and
+# `Lago::Meilisearch.indexing_enabled?` is false unless a spec sets them.
+ENV.delete("LAGO_MEILISEARCH_URL")
+ENV.delete("LAGO_MEILISEARCH_SEARCH_ENABLED")
+
 require_relative "../config/environment"
 
 # Explicitly require monkey patches after loading dependencies.

@@ -148,8 +148,18 @@ module Subscriptions
     end
 
     def fixed_charges_to_datetime
-      return unless subscription.started_at
       return unless should_fill_fixed_charges_boundaries?
+
+      fixed_charges_period_to_datetime
+    end
+
+    # End of the current fixed-charges period, regardless of whether fixed charges are billed
+    # this cycle. `fixed_charges_to_datetime` gates this behind `should_fill_fixed_charges_boundaries?`
+    # to compute invoice boundaries; callers scheduling a deferred change rather than invoicing need
+    # the boundary even on cycles that skip fixed-charge billing (e.g. yearly/semiannual plans billing
+    # charges monthly but fixed charges per period).
+    def fixed_charges_period_to_datetime
+      return unless subscription.started_at
 
       datetime = customer_timezone_shift(compute_fixed_charges_to_date, end_of_day: true)
       datetime = subscription.terminated_at if subscription.terminated? && subscription.terminated_at <= datetime

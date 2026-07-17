@@ -4,7 +4,7 @@ module Integrations
   module Hubspot
     module Invoices
       class DeployObjectService < Integrations::Aggregator::BaseService
-        VERSION = 1
+        VERSION = 3
 
         def action_path
           "v1/hubspot/object"
@@ -18,7 +18,7 @@ module Integrations
 
           custom_object_result = Integrations::Aggregator::CustomObjectService.call(integration:, name: "LagoInvoices")
           if custom_object_result.success?
-            save_object_type_id(custom_object_result.custom_object&.objectTypeId)
+            save_object_type_id(custom_object_result.custom_object&.object_type_id)
             return result
           end
 
@@ -79,6 +79,13 @@ module Integrations
               {
                 name: "lago_invoice_number",
                 label: "Lago Invoice Number",
+                type: "string",
+                fieldType: "text",
+                searchableInGlobalSearch: true
+              },
+              {
+                name: "lago_invoice_purchase_order_number",
+                label: "Lago Purchase Order Number",
                 type: "string",
                 fieldType: "text",
                 searchableInGlobalSearch: true
@@ -153,6 +160,12 @@ module Integrations
                 label: "Lago Invoice File URL",
                 type: "string",
                 fieldType: "file"
+              },
+              {
+                name: "lago_invoice_url",
+                label: "Lago Invoice URL",
+                type: "string",
+                fieldType: "text"
               }
             ],
             associatedObjects: %w[COMPANY CONTACT]

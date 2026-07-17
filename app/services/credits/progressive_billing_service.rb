@@ -2,6 +2,8 @@
 
 module Credits
   class ProgressiveBillingService < BaseService
+    Result = BaseResult[:credits]
+
     def initialize(invoice:)
       @invoice = invoice
       super

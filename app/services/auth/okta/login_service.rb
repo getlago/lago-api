@@ -3,6 +3,8 @@
 module Auth
   module Okta
     class LoginService < BaseService
+      Result = BaseResult[:email, :okta_integration, :okta_access_token, :userinfo, :user, :token]
+
       def initialize(code:, state:)
         @code = code
         @state = state
@@ -40,7 +42,7 @@ module Auth
       attr_reader :code, :state
 
       def generate_token
-        result.token = Auth::TokenService.encode(user: result.user, login_method: Organizations::AuthenticationMethods::OKTA)
+        result.token = Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::OKTA)
         result
       rescue => e
         result.service_failure!(code: "token_encoding_error", message: e.message)
