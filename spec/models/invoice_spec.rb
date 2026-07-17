@@ -2530,7 +2530,8 @@ RSpec.describe Invoice do
         self_billed: false,
         total_amount_cents: 1000,
         total_paid_amount_cents: 400,
-        issuing_date: Date.new(2026, 1, 15)
+        issuing_date: Date.new(2026, 1, 15),
+        purchase_order_number: "PO-123"
       )
     end
 
@@ -2563,7 +2564,8 @@ RSpec.describe Invoice do
         "subscription_ids" => [],
         "settlement_types" => [],
         "metadata" => [],
-        "metadata_keys" => []
+        "metadata_keys" => [],
+        "purchase_order_number" => "PO-123"
       )
     end
 

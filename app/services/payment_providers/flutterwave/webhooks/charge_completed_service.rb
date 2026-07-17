@@ -30,7 +30,8 @@ module PaymentProviders
           payable = find_payable
           return result unless payable
 
-          payment_service_class.new(payable:).update_payment_status(
+          klass = payment_service_class
+          args = {
             organization_id:,
             status: verified_transaction[:status],
             amount_cents: verified_amount_cents(verified_transaction),
@@ -39,7 +40,16 @@ module PaymentProviders
               status: verified_transaction[:status],
               metadata: build_metadata(verified_transaction)
             )
-          ).raise_if_error!
+          }
+
+          # NOTE: Temporary branch until PaymentRequests::Payments services are migrated to
+          #       TypedResults too. Once they are, call `klass.call(:update_payment_status, **args)` directly.
+          service_result = if klass.include?(TypedResults)
+            klass.call(:update_payment_status, **args)
+          else
+            klass.new(payable:).update_payment_status(**args)
+          end
+          service_result.raise_if_error!
 
           result
         end

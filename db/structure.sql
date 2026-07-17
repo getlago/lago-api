@@ -545,8 +545,8 @@ DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_due_date;
-DROP INDEX IF EXISTS public.index_invoices_on_organization_id_purchase_order_number;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_lower_purchase_order_number;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_billing_entity_sequential;
@@ -3052,7 +3052,8 @@ CREATE VIEW public.exports_credit_notes AS
     ( SELECT json_agg(json_build_object('lago_id', ed.id, 'error_code', ed.error_code, 'details', ed.details)) AS json_agg
            FROM public.error_details ed
           WHERE (((ed.owner_type)::text = 'CreditNote'::text) AND (ed.owner_id = cn.id))) AS error_details
-   FROM public.credit_notes cn;
+   FROM public.credit_notes cn
+  WHERE (cn.status <> 2);
 
 
 --
@@ -8869,6 +8870,13 @@ CREATE INDEX index_invoices_on_organization_id_and_customer_id ON public.invoice
 
 
 --
+-- Name: index_invoices_on_organization_id_lower_purchase_order_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_lower_purchase_order_number ON public.invoices USING btree (organization_id, lower((purchase_order_number)::text));
+
+
+--
 -- Name: index_invoices_on_organization_id_number_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12853,6 +12861,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260715165959'),
+('20260715142900'),
 ('20260709141039'),
 ('20260709141038'),
 ('20260709141037'),
