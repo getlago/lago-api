@@ -2,6 +2,8 @@
 
 module CreditNotes
   class RefreshDraftService < BaseService
+    Result = BaseResult[:credit_note]
+
     def initialize(credit_note:, fee:, old_fee_values:)
       @credit_note = credit_note
       @fee = fee

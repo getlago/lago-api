@@ -93,12 +93,12 @@ RSpec.describe FixedCharges::UpdateService do
           expect { result }.not_to change { fixed_charge.reload.code }
         end
 
-        it "does not apply taxes" do
+        it "applies taxes" do
           tax = create(:tax, organization: plan.organization, code: "tax1")
           params[:tax_codes] = [tax.code]
 
+          expect { result }.to change { fixed_charge.reload.applied_taxes.count }.from(0).to(1)
           expect(result).to be_success
-          expect(fixed_charge.reload.applied_taxes).to be_empty
         end
       end
 
@@ -398,13 +398,12 @@ RSpec.describe FixedCharges::UpdateService do
         before do
           create(:subscription, plan: child_plan, status: :active)
           child_fixed_charge
-          allow(FixedCharges::UpdateChildrenJob).to receive(:perform_later)
         end
 
         it "triggers cascade update via FixedCharges::UpdateChildrenJob" do
           result
 
-          expect(FixedCharges::UpdateChildrenJob).to have_received(:perform_later).with(
+          expect(FixedCharges::UpdateChildrenJob).to have_been_enqueued.with(
             params: hash_including("charge_model", "properties", "units"),
             old_parent_attrs: hash_including("id" => fixed_charge.id)
           )
@@ -416,7 +415,7 @@ RSpec.describe FixedCharges::UpdateService do
           it "does not trigger cascade update" do
             result
 
-            expect(FixedCharges::UpdateChildrenJob).not_to have_received(:perform_later)
+            expect(FixedCharges::UpdateChildrenJob).not_to have_been_enqueued
           end
         end
       end
@@ -428,13 +427,12 @@ RSpec.describe FixedCharges::UpdateService do
         before do
           create(:subscription, plan: child_plan, status: :active)
           child_fixed_charge
-          allow(FixedCharges::UpdateChildrenJob).to receive(:perform_later)
         end
 
         it "does not trigger cascade update" do
           result
 
-          expect(FixedCharges::UpdateChildrenJob).not_to have_received(:perform_later)
+          expect(FixedCharges::UpdateChildrenJob).not_to have_been_enqueued
         end
       end
     end

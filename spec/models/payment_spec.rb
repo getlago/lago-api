@@ -19,7 +19,7 @@ RSpec.describe Payment do
   it { is_expected.to have_one(:invoice_settlement).with_foreign_key(:source_payment_id) }
   it { is_expected.to belong_to(:payable) }
   it { is_expected.to belong_to(:organization) }
-  it { is_expected.to belong_to(:customer).optional }
+  it { is_expected.to belong_to(:customer) }
   it { is_expected.to belong_to(:payment_method).optional }
   it { is_expected.to validate_presence_of(:payment_type) }
 

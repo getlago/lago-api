@@ -2,6 +2,8 @@
 
 module Invoices
   class CustomerUsageService < BaseService
+    Result = BaseResult[:invoice, :usage, :fees_taxes]
+
     def initialize(
       customer:,
       subscription:,

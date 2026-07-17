@@ -2,6 +2,8 @@
 
 module BillableMetrics
   class UpdateService < BaseService
+    Result = BaseResult[:billable_metric]
+
     def initialize(billable_metric:, params:)
       @billable_metric = billable_metric
       @params = params

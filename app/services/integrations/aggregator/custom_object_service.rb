@@ -3,6 +3,8 @@
 module Integrations
   module Aggregator
     class CustomObjectService < BaseService
+      CustomObject = Data.define(:id, :object_type_id)
+
       def initialize(integration:, name:)
         @name = name
         super(integration:)
@@ -17,7 +19,7 @@ module Integrations
 
         response = http_client.get(headers:, body:)
 
-        result.custom_object = OpenStruct.new(response)
+        result.custom_object = CustomObject.new(id: response["id"], object_type_id: response["objectTypeId"])
         result
       rescue LagoHttpClient::HttpError => e
         result.service_failure!(code: e.error_code, message: e.message)

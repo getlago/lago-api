@@ -49,24 +49,44 @@ RSpec.describe ChargeModels::GraduatedService do
   context "when aggregation is 0" do
     let(:aggregation) { 0 }
 
-    it "returns expected amount" do
-      expect(apply_graduated_service.amount).to eq(0)
+    it "applies the flat amount from the first tier" do
+      expect(apply_graduated_service.amount).to eq(2)
       expect(apply_graduated_service.unit_amount).to eq(0)
       expect(apply_graduated_service.amount_details).to eq(
         {
           graduated_ranges: [
             {
-              flat_unit_amount: 0,
+              flat_unit_amount: 2,
               from_value: 0,
               to_value: 10,
               per_unit_total_amount: 0,
-              total_with_flat_amount: 0,
+              total_with_flat_amount: 2,
               per_unit_amount: 0,
               units: "0.0"
             }
           ]
         }
       )
+    end
+
+    context "when first tier flat amount is zero" do
+      let(:charge) do
+        create(
+          :graduated_charge,
+          properties: {
+            graduated_ranges: [
+              {from_value: 0, to_value: 0.01, per_unit_amount: "0", flat_amount: "0"},
+              {from_value: 0.01, to_value: 10, per_unit_amount: "10", flat_amount: "2"},
+              {from_value: 11, to_value: nil, per_unit_amount: "5", flat_amount: "3"}
+            ]
+          }
+        )
+      end
+
+      it "returns zero amount" do
+        expect(apply_graduated_service.amount).to eq(0)
+        expect(apply_graduated_service.unit_amount).to eq(0)
+      end
     end
   end
 

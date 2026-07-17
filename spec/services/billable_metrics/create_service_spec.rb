@@ -7,10 +7,6 @@ RSpec.describe BillableMetrics::CreateService do
   let(:organization) { membership.organization }
 
   describe "create" do
-    before do
-      allow(SegmentTrackJob).to receive(:perform_later)
-    end
-
     let(:create_args) do
       {
         name: "New Metric",
@@ -92,7 +88,7 @@ RSpec.describe BillableMetrics::CreateService do
     it "calls SegmentTrackJob" do
       metric = described_class.call(create_args).billable_metric
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "billable_metric_created",
         properties: {

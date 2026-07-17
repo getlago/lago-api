@@ -39,7 +39,7 @@ module AuthenticableUser
   end
 
   def decoded_token
-    @decoded_token ||= Auth::TokenService.decode(token:)
+    @decoded_token ||= Utils::AuthToken.decode(token:)
   rescue JWT::DecodeError => e
     raise e if e.is_a?(JWT::ExpiredSignature) || Rails.env.development?
   end
@@ -54,8 +54,8 @@ module AuthenticableUser
   def renew_token
     return unless current_user
 
-    renewed = Auth::TokenService.renew(token:)
-    response.set_header(Auth::TokenService::LAGO_TOKEN_HEADER, renewed) if renewed.present?
+    renewed = Utils::AuthToken.renew(token:)
+    response.set_header(Utils::AuthToken::LAGO_TOKEN_HEADER, renewed) if renewed.present?
   rescue => e
     Rails.logger.warn("Error renewing token: #{e.message}")
   end

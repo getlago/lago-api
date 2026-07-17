@@ -3,16 +3,16 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory do
-  subject(:factory_service) { described_class.new_instance(payable:) }
+  subject(:factory_service) { described_class.for(payable) }
 
   let(:payment_provider) { "stripe" }
   let(:payable) { create(:payment_request, customer:) }
   let(:customer) { create(:customer, payment_provider:) }
 
-  describe "#self.new_instance" do
+  describe ".for" do
     context "when stripe" do
       it "returns correct class" do
-        expect(factory_service.class.to_s).to eq("PaymentRequests::Payments::StripeService")
+        expect(factory_service).to eq(PaymentRequests::Payments::StripeService)
       end
     end
 
@@ -20,7 +20,7 @@ RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory do
       let(:payment_provider) { "adyen" }
 
       it "returns correct class" do
-        expect(factory_service.class.to_s).to eq("PaymentRequests::Payments::AdyenService")
+        expect(factory_service).to eq(PaymentRequests::Payments::AdyenService)
       end
     end
 
@@ -28,7 +28,7 @@ RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory do
       let(:payment_provider) { "cashfree" }
 
       it "returns correct class" do
-        expect(factory_service.class.to_s).to eq("PaymentRequests::Payments::CashfreeService")
+        expect(factory_service).to eq(PaymentRequests::Payments::CashfreeService)
       end
     end
 
@@ -36,7 +36,7 @@ RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory do
       let(:payment_provider) { "gocardless" }
 
       it "returns correct class" do
-        expect(factory_service.class.to_s).to eq("PaymentRequests::Payments::GocardlessService")
+        expect(factory_service).to eq(PaymentRequests::Payments::GocardlessService)
       end
     end
 
@@ -44,7 +44,7 @@ RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory do
       let(:payment_provider) { "moneyhash" }
 
       it "returns correct class" do
-        expect(factory_service.class.to_s).to eq("PaymentRequests::Payments::MoneyhashService")
+        expect(factory_service).to eq(PaymentRequests::Payments::MoneyhashService)
       end
     end
 
@@ -52,7 +52,7 @@ RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory do
       let(:payment_provider) { "flutterwave" }
 
       it "returns correct class" do
-        expect(factory_service.class.to_s).to eq("PaymentRequests::Payments::FlutterwaveService")
+        expect(factory_service).to eq(PaymentRequests::Payments::FlutterwaveService)
       end
     end
   end

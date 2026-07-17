@@ -3,7 +3,6 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Auth::Google::AcceptInvite do
-  let(:google_service) { instance_double(Auth::GoogleService) }
   let(:user) { create(:user) }
   let(:invite) { create(:invite) }
 
@@ -29,8 +28,7 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite do
   end
 
   before do
-    allow(Auth::GoogleService).to receive(:new).and_return(google_service)
-    allow(google_service).to receive(:accept_invite).and_return(accept_invite_result)
+    allow(Auth::GoogleService).to receive(:call).with(:accept_invite, "code", invite.token).and_return(accept_invite_result)
   end
 
   it "returns token and user" do

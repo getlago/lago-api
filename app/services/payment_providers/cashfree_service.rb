@@ -2,6 +2,8 @@
 
 module PaymentProviders
   class CashfreeService < BaseService
+    Result = BaseResult[:cashfree_provider]
+
     LINK_STATUS_ACTIONS = %w[PAID].freeze
     PAYMENT_ACTIONS = %w[SUCCESS FAILED USER_DROPPED CANCELLED VOID PENDING FLAGGED NOT_ATTEMPTED].freeze
     # REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze

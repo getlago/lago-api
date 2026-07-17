@@ -35,7 +35,7 @@ module Events
               .where(code:)
 
             query = query.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
-            query = query.where("events_enriched.timestamp <= ?", applicable_to_datetime) if applicable_to_datetime
+            query = query.where(upper_timestamp_boundary_sql(applicable_to_datetime, prefix: "events_enriched.")) if applicable_to_datetime
             query
           end
 
@@ -144,21 +144,8 @@ module Events
         ]
 
         conditions << ActiveRecord::Base.sanitize_sql_for_conditions(["#{prefix}timestamp >= ?", from_datetime]) if from_datetime
-        conditions << ActiveRecord::Base.sanitize_sql_for_conditions(["#{prefix}timestamp <= ?", to_datetime]) if to_datetime
+        conditions << upper_timestamp_boundary_sql(to_datetime, prefix:) if to_datetime
         conditions.join(" AND ")
-      end
-
-      def distinct_codes(codes: nil)
-        Events::Stores::Utils::ClickhouseConnection.with_retry do
-          scope = ::Clickhouse::EventsEnriched
-            .where(external_subscription_id: subscription.external_id)
-            .where(organization_id: subscription.organization.id)
-            .where("events_enriched.timestamp >= ?", from_datetime)
-            .where("events_enriched.timestamp <= ?", applicable_to_datetime)
-
-          scope = scope.where(code: codes) unless codes.nil?
-          scope.pluck("DISTINCT(code)")
-        end
       end
 
       def distinct_charges_and_filters(codes: nil)
@@ -797,7 +784,7 @@ module Events
 
       def with_timestamp_boundaries(query, from_datetime, to_datetime)
         query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
-        query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
+        query = query.where(Arel.sql(upper_timestamp_boundary_sql(to_datetime, prefix: "events_enriched."))) if to_datetime
         query
       end
 

@@ -2,6 +2,8 @@
 
 module Invites
   class UpdateService < BaseService
+    Result = BaseResult[:invite]
+
     def initialize(user:, invite:, params:)
       @user = user
       @invite = invite

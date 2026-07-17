@@ -5,11 +5,13 @@ module Resolvers
     class GrossRevenuesResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
+      include BillingEntityArgsResolvable
 
       REQUIRED_PERMISSION = "analytics:view"
 
       description "Query gross revenue of an organization"
 
+      argument :billing_entity_code, String, required: false
       argument :billing_entity_id, ID, required: false
       argument :currency, Types::CurrencyEnum, required: false
       argument :external_customer_id, String, required: false
@@ -20,6 +22,9 @@ module Resolvers
       type Types::Analytics::GrossRevenues::Object.collection_type, null: false
 
       def resolve(**args)
+        error = resolve_billing_entity!(args)
+        return error if error
+
         ::Analytics::GrossRevenue.find_all_by(current_organization.id, **args)
       end
     end

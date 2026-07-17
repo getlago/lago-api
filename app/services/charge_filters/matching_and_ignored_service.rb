@@ -2,6 +2,8 @@
 
 module ChargeFilters
   class MatchingAndIgnoredService < BaseService
+    Result = BaseResult[:matching_filters, :ignored_filters]
+
     def initialize(charge:, filter:)
       @charge = charge
       @filter = filter

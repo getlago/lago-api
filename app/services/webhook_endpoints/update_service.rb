@@ -2,6 +2,8 @@
 
 module WebhookEndpoints
   class UpdateService < BaseService
+    Result = BaseResult[:webhook_endpoint]
+
     def initialize(id:, organization:, params:)
       @id = id
       @organization = organization

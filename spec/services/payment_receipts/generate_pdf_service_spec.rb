@@ -47,7 +47,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
       it "returns a result with error" do
         result = payment_receipt_generate_service.call
 
-        expect(result.success).to be_falsey
+        expect(result).not_to be_success
         expect(result.error.error_code).to eq("payment_receipt_not_found")
       end
     end
@@ -149,7 +149,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
     context "when einvoicing is enabled" do
       let(:fake_xml) { "<xml>content</xml>" }
       let(:country) { nil }
-      let(:create_xml_result) { BaseService::Result.new.tap { |result| result.xml = fake_xml } }
+      let(:create_xml_result) { EInvoices::Payments::Cii::CreateService::Result.new.tap { |result| result.xml = fake_xml } }
 
       before do
         payment_receipt.billing_entity.update(country:, einvoicing: true)

@@ -2,6 +2,8 @@
 
 module Invites
   class CreateService < BaseService
+    Result = BaseResult[:invite, :invite_url]
+
     def initialize(args)
       @args = args
       super

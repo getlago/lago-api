@@ -3,7 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviderCustomers::AdyenService do
-  let(:adyen_service) { described_class.new(adyen_customer) }
   let(:customer) { create(:customer, organization:) }
   let(:adyen_provider) { create(:adyen_provider) }
   let(:organization) { adyen_provider.organization }
@@ -23,8 +22,8 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
     allow(payment_links_api).to receive(:payment_links).and_return(payment_links_response)
   end
 
-  describe "#create" do
-    subject(:adyen_service_create) { adyen_service.create }
+  describe ".call(:create)" do
+    subject(:adyen_service_create) { described_class.call(:create, adyen_customer) }
 
     context "when customer does not have an adyen customer id yet" do
       it "calls adyen api client payment links" do
@@ -84,7 +83,7 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
       end
 
       it "delivers an error webhook" do
-        expect { adyen_service.create }
+        expect { described_class.call(:create, adyen_customer) }
           .to raise_error(Adyen::AdyenError)
 
         expect(SendWebhookJob).to have_been_enqueued
@@ -106,7 +105,7 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
       end
 
       it "delivers an error webhook" do
-        expect(adyen_service.create).to be_success
+        expect(described_class.call(:create, adyen_customer)).to be_success
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
@@ -121,14 +120,18 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
     end
   end
 
-  describe "#update" do
+  describe ".call(:update)" do
     it "returns result" do
-      expect(adyen_service.update).to be_a(BaseService::Result)
+      expect(described_class.call(:update, adyen_customer)).to be_a(BaseResult)
     end
   end
 
   describe "#success_redirect_url" do
-    subject(:success_redirect_url) { adyen_service.__send__(:success_redirect_url) }
+    subject(:success_redirect_url) do
+      service = described_class.new
+      service.instance_variable_set(:@adyen_customer, adyen_customer)
+      service.__send__(:success_redirect_url)
+    end
 
     context "when payment provider has success redirect url" do
       it "returns payment provider's success redirect url" do
@@ -145,12 +148,12 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
     end
   end
 
-  describe "#generate_checkout_url" do
+  describe ".call(:generate_checkout_url)" do
     context "when adyen payment provider is nil" do
       before { adyen_provider.destroy! }
 
       it "returns a not found error" do
-        result = adyen_service.generate_checkout_url
+        result = described_class.call(:generate_checkout_url, adyen_customer)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -159,7 +162,7 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
     end
 
     context "when adyen payment provider is present" do
-      subject(:generate_checkout_url) { adyen_service.generate_checkout_url }
+      subject(:generate_checkout_url) { described_class.call(:generate_checkout_url, adyen_customer) }
 
       it "generates a checkout url" do
         expect(generate_checkout_url).to be_success
@@ -188,8 +191,8 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
     end
   end
 
-  describe "#preauthorise" do
-    subject(:preauthorise) { described_class.new.preauthorise(organization, event) }
+  describe ".call(:preauthorise)" do
+    subject(:preauthorise) { described_class.call(:preauthorise, organization, event) }
 
     let(:payment_method_id) { "pm_adyen_123456" }
     let(:shopper_reference) { customer.external_id }
@@ -220,59 +223,45 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
           .on_queue(webhook_queue)
       end
 
-      it "does not create a PaymentMethod record" do
-        expect { preauthorise }.not_to change(PaymentMethod, :count)
+      it "creates a new PaymentMethod record" do
+        expect { preauthorise }.to change(PaymentMethod, :count).by(1)
+
+        payment_method = PaymentMethod.last
+        expect(payment_method.customer).to eq(customer)
+        expect(payment_method.payment_provider_customer).to eq(adyen_customer)
+        expect(payment_method.provider_method_id).to eq(payment_method_id)
+        expect(payment_method.provider_method_type).to eq("card")
+        expect(payment_method.is_default).to be(true)
       end
 
-      context "with multiple_payment_methods feature flag enabled" do
-        before { organization.enable_feature_flag!(:multiple_payment_methods) }
-
-        it "creates a new PaymentMethod record" do
-          expect { preauthorise }.to change(PaymentMethod, :count).by(1)
-
-          payment_method = PaymentMethod.last
-          expect(payment_method.customer).to eq(customer)
-          expect(payment_method.payment_provider_customer).to eq(adyen_customer)
-          expect(payment_method.provider_method_id).to eq(payment_method_id)
-          expect(payment_method.provider_method_type).to eq("card")
-          expect(payment_method.is_default).to be(true)
+      context "when PaymentMethod already exists" do
+        let!(:existing_payment_method) do
+          create(
+            :payment_method,
+            customer:,
+            payment_provider_customer: adyen_customer,
+            provider_method_id: payment_method_id,
+            is_default: false
+          )
         end
 
-        it "still updates adyen_customer payment_method_id for backward compatibility" do
+        it "does not create a new PaymentMethod" do
+          expect { preauthorise }.not_to change(PaymentMethod, :count)
+        end
+
+        it "sets the existing PaymentMethod as default" do
           preauthorise
 
-          expect(adyen_customer.reload.payment_method_id).to eq(payment_method_id)
+          expect(existing_payment_method.reload.is_default).to be(true)
         end
 
-        context "when PaymentMethod already exists" do
-          let!(:existing_payment_method) do
-            create(
-              :payment_method,
-              customer:,
-              payment_provider_customer: adyen_customer,
-              provider_method_id: payment_method_id,
-              is_default: false
-            )
+        context "when payment method lookup raises RecordNotUnique" do
+          before do
+            allow(PaymentMethods::FindOrCreateFromProviderService).to receive(:call).and_raise(ActiveRecord::RecordNotUnique)
           end
 
-          it "does not create a new PaymentMethod" do
-            expect { preauthorise }.not_to change(PaymentMethod, :count)
-          end
-
-          it "sets the existing PaymentMethod as default" do
-            preauthorise
-
-            expect(existing_payment_method.reload.is_default).to be(true)
-          end
-
-          context "when payment method lookup raises RecordNotUnique" do
-            before do
-              allow(PaymentMethods::FindOrCreateFromProviderService).to receive(:call).and_raise(ActiveRecord::RecordNotUnique)
-            end
-
-            it "does not raise error" do
-              expect { preauthorise }.not_to raise_error(ActiveRecord::RecordNotUnique)
-            end
+          it "does not raise error" do
+            expect { preauthorise }.not_to raise_error(ActiveRecord::RecordNotUnique)
           end
         end
       end

@@ -30,7 +30,7 @@ RSpec.describe ::V1::Customers::PastUsageSerializer do
   let(:fee1) { create(:charge_fee, charge: charge1, invoice:, presentation_breakdowns: [build(:presentation_breakdown)]) }
   let(:fee2) { create(:charge_fee, charge: charge2, invoice:) }
 
-  let(:usage) { OpenStruct.new(invoice_subscription:, fees: [fee1, fee2]) }
+  let(:usage) { PastUsageQuery::UsagePeriods.new(invoice_subscription:, fees: [fee1, fee2]) }
 
   it "serializes the past usage" do
     result = JSON.parse(serializer.to_json)

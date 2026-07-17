@@ -46,8 +46,6 @@ RSpec.describe Customers::UpdateService do
     let(:account_type) { "customer" }
 
     it "updates a customer and calls SendWebhookJob" do
-      allow(SendWebhookJob).to receive(:perform_later)
-
       result = customers_service.call
       updated_customer = result.customer
       expect(updated_customer.name).to eq(update_args[:name])
@@ -60,13 +58,33 @@ RSpec.describe Customers::UpdateService do
 
       shipping_address = update_args[:shipping_address]
       expect(updated_customer.shipping_city).to eq(shipping_address[:city])
-      expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", updated_customer)
+      expect(SendWebhookJob).to have_been_enqueued.with("customer.updated", updated_customer)
     end
 
     it "produces an activity log" do
       described_class.call(customer:, args: update_args)
 
       expect(Utils::ActivityLog).to have_produced("customer.updated").after_commit.with(customer)
+    end
+
+    context "when Meilisearch is enabled" do
+      before do
+        customer
+        stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
+      end
+
+      it "reindexes the customer's invoices when a searchable field changes" do
+        expect { customers_service.call }
+          .to have_enqueued_job_after_commit(Customers::ReindexInvoicesJob).with(customer.id)
+      end
+
+      context "when no searchable field changes" do
+        let(:update_args) { {id: customer.id, net_payment_term: 8} }
+
+        it "does not reindex" do
+          expect { customers_service.call }.not_to have_enqueued_job(Customers::ReindexInvoicesJob)
+        end
+      end
     end
 
     context "with email containing unicode lookalike characters" do

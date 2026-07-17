@@ -2,6 +2,8 @@
 
 module DunningCampaigns
   class ProcessAttemptService < BaseService
+    Result = BaseResult[:customer, :payment_request]
+
     def initialize(customer:, dunning_campaign_threshold:, billing_entity:)
       @customer = customer
       @dunning_campaign_threshold = dunning_campaign_threshold

@@ -150,21 +150,6 @@ module Events
         SQL
       end
 
-      # DEPRECATED: This method will be replaced by distinct_charges_and_filters
-      #             to filter the charge and filters in a billing period.
-      #             See app/services/events/billing_period_filter_service.rb:42
-      def distinct_codes(codes: nil)
-        Events::Stores::Utils::ClickhouseConnection.with_retry do
-          scope = ::Clickhouse::EventsEnrichedExpanded
-            .where(external_subscription_id: subscription.external_id)
-            .where(organization_id: subscription.organization_id)
-            .where(timestamp: from_datetime..applicable_to_datetime)
-
-          scope = scope.where(code: codes) unless codes.nil?
-          scope.pluck("DISTINCT(code)")
-        end
-      end
-
       def distinct_charges_and_filters(codes: nil)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = ::Clickhouse::EventsEnrichedExpanded
@@ -875,7 +860,7 @@ module Events
         ]
 
         conditions << sql_condition("#{prefix}timestamp >= ?", from_datetime) if from_datetime
-        conditions << sql_condition("#{prefix}timestamp <= ?", to_datetime) if to_datetime
+        conditions << upper_timestamp_boundary_sql(to_datetime, prefix:) if to_datetime
         conditions << grouped_by_values_sql_condition(prefix) if include_grouped_by_values && grouped_by_values?
 
         conditions.join(" AND ")

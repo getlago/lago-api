@@ -18,7 +18,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     )
   end
 
-  let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
+  let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
   let(:organization) { billable_metric.organization }
   let(:charge) { create(:standard_charge, organization:, billable_metric:) }
   let(:charge_filter) { nil }
@@ -417,44 +417,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       it "applies the grouped_by_values in the block" do
         event_store.with_grouped_by_values(with_grouped_by_values) do
           expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 3, events_count: 3))
-        end
-      end
-    end
-  end
-
-  if include_feature?(:distinct_codes)
-    describe "#distinct_codes" do
-      before do
-        create_event(
-          timestamp: subscription_started_at + (1..10).to_a.sample.days,
-          value: "value",
-          transaction_id: SecureRandom.uuid,
-          code: "other_code"
-        )
-      end
-
-      it "returns the distinct event codes" do
-        expect(event_store.distinct_codes).to match_array([code, "other_code"])
-      end
-
-      context "when codes are provided" do
-        it "returns only the distinct event codes matching the provided codes" do
-          expect(event_store.distinct_codes(codes: [code, "unknown_code"])).to eq([code])
-        end
-
-        context "when an event with a provided code exists outside the period" do
-          before do
-            create_event(
-              timestamp: boundaries[:to_datetime] + 1.day,
-              value: "value",
-              transaction_id: SecureRandom.uuid,
-              code: "out_of_period_code"
-            )
-          end
-
-          it "does not return the code" do
-            expect(event_store.distinct_codes(codes: [code, "out_of_period_code"])).to eq([code])
-          end
         end
       end
     end

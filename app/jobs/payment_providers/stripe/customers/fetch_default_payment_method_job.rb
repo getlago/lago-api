@@ -6,6 +6,8 @@ module PaymentProviders
       class FetchDefaultPaymentMethodJob < ApplicationJob
         queue_as :default
 
+        retry_on ::Stripe::RateLimitError, wait: :polynomially_longer, attempts: 5
+
         def perform(provider_customer)
           PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodService.call!(provider_customer:)
         end

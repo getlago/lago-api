@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class WalletTransaction < ApplicationRecord
+  include HasPurchaseOrderNumber
   include PaperTrailTraceable
 
   belongs_to :wallet
@@ -138,6 +139,7 @@ end
 #  name                                :string(255)
 #  payment_method_type                 :enum             default("provider"), not null
 #  priority                            :integer          default(50), not null
+#  purchase_order_number               :string
 #  remaining_amount_cents              :bigint
 #  settled_at                          :datetime
 #  skip_invoice_custom_sections        :boolean          default(FALSE), not null

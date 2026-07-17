@@ -2,6 +2,8 @@
 
 module LifetimeUsages
   class CalculateService < BaseService
+    Result = BaseResult[:lifetime_usage]
+
     def initialize(lifetime_usage:, current_usage: nil)
       @lifetime_usage = lifetime_usage
       @current_usage = current_usage

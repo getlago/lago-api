@@ -388,7 +388,6 @@ DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_sequential_id;
 DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_number;
-DROP INDEX IF EXISTS public.index_unique_quote_versions_on_share_token;
 DROP INDEX IF EXISTS public.index_unique_quote_versions_on_quote_sequential_id;
 DROP INDEX IF EXISTS public.index_unique_quote_versions_on_quote_active_status;
 DROP INDEX IF EXISTS public.index_unique_quote_owners_on_quote_user;
@@ -407,6 +406,7 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_started_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_previous_subscription_id_and_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_payment_method_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_organization_id_name_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_subscriptions_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on_null;
 DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on;
@@ -460,6 +460,8 @@ DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_plans_on_parent_id;
+DROP INDEX IF EXISTS public.index_plans_on_organization_id_name_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_plans_on_organization_id_code_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_plans_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_plans_on_organization_id;
 DROP INDEX IF EXISTS public.index_plans_on_deleted_at;
@@ -511,6 +513,7 @@ DROP INDEX IF EXISTS public.index_organizations_on_api_key;
 DROP INDEX IF EXISTS public.index_orders_on_organization_id_and_status;
 DROP INDEX IF EXISTS public.index_orders_on_organization_id_and_created_at;
 DROP INDEX IF EXISTS public.index_orders_on_order_form_id;
+DROP INDEX IF EXISTS public.index_orders_on_execute_at;
 DROP INDEX IF EXISTS public.index_orders_on_customer_id;
 DROP INDEX IF EXISTS public.index_order_forms_on_quote_version_id;
 DROP INDEX IF EXISTS public.index_order_forms_on_organization_id_and_status;
@@ -640,9 +643,9 @@ DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_transaction_id;
+DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_created_at;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
-DROP INDEX IF EXISTS public.index_events_on_organization_id;
 DROP INDEX IF EXISTS public.index_events_on_created_at;
 DROP INDEX IF EXISTS public.index_error_details_on_owner;
 DROP INDEX IF EXISTS public.index_error_details_on_organization_id;
@@ -743,6 +746,7 @@ DROP INDEX IF EXISTS public.index_charges_on_plan_id;
 DROP INDEX IF EXISTS public.index_charges_on_parent_id;
 DROP INDEX IF EXISTS public.index_charges_on_organization_id;
 DROP INDEX IF EXISTS public.index_charges_on_deleted_at;
+DROP INDEX IF EXISTS public.index_charges_on_billable_metric_id_all;
 DROP INDEX IF EXISTS public.index_charges_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_charges_on_accepts_target_wallet;
 DROP INDEX IF EXISTS public.index_charge_filters_on_organization_id;
@@ -840,6 +844,7 @@ DROP INDEX IF EXISTS public.idx_on_organization_id_subscription_at_created_at_id
 DROP INDEX IF EXISTS public.idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
 DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
+DROP INDEX IF EXISTS public.idx_on_organization_id_external_id_gin_trgm_ops_fb8058a497;
 DROP INDEX IF EXISTS public.idx_on_organization_id_e742f77454;
 DROP INDEX IF EXISTS public.idx_on_organization_id_e73219f079;
 DROP INDEX IF EXISTS public.idx_on_organization_id_deleted_at_225e3f789d;
@@ -923,7 +928,6 @@ ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_ta
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS plans_pkey;
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS pending_vies_checks_pkey;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS payments_pkey;
-ALTER TABLE IF EXISTS public.payments DROP CONSTRAINT IF EXISTS payments_customer_id_null;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS payment_requests_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS payment_receipts_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_providers DROP CONSTRAINT IF EXISTS payment_providers_pkey;
@@ -1095,7 +1099,6 @@ DROP VIEW IF EXISTS public.exports_item_metadata;
 DROP VIEW IF EXISTS public.exports_invoices_taxes;
 DROP TABLE IF EXISTS public.invoices_taxes;
 DROP VIEW IF EXISTS public.exports_invoices;
-DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.invoice_metadata;
 DROP VIEW IF EXISTS public.exports_invoice_subscriptions;
 DROP TABLE IF EXISTS public.invoice_subscriptions;
@@ -1108,6 +1111,7 @@ DROP TABLE IF EXISTS public.fees_taxes;
 DROP VIEW IF EXISTS public.exports_fees;
 DROP TABLE IF EXISTS public.subscriptions;
 DROP TABLE IF EXISTS public.plans;
+DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.fees;
 DROP VIEW IF EXISTS public.exports_entitlement_features;
 DROP VIEW IF EXISTS public.exports_entitlement_entitlements;
@@ -1437,7 +1441,8 @@ CREATE TYPE public.order_form_void_reason AS ENUM (
 
 CREATE TYPE public.order_status AS ENUM (
     'created',
-    'executed'
+    'executed',
+    'failed'
 );
 
 
@@ -3047,7 +3052,8 @@ CREATE VIEW public.exports_credit_notes AS
     ( SELECT json_agg(json_build_object('lago_id', ed.id, 'error_code', ed.error_code, 'details', ed.details)) AS json_agg
            FROM public.error_details ed
           WHERE (((ed.owner_type)::text = 'CreditNote'::text) AND (ed.owner_id = cn.id))) AS error_details
-   FROM public.credit_notes cn;
+   FROM public.credit_notes cn
+  WHERE (cn.status <> 2);
 
 
 --
@@ -3321,6 +3327,66 @@ CREATE TABLE public.fees (
 
 
 --
+-- Name: invoices; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoices (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    issuing_date date,
+    taxes_amount_cents bigint DEFAULT 0 NOT NULL,
+    total_amount_cents bigint DEFAULT 0 NOT NULL,
+    invoice_type integer DEFAULT 0 NOT NULL,
+    payment_status integer DEFAULT 0 NOT NULL,
+    number character varying DEFAULT ''::character varying NOT NULL,
+    sequential_id integer,
+    file character varying,
+    customer_id uuid,
+    taxes_rate double precision DEFAULT 0.0 NOT NULL,
+    status integer DEFAULT 1 NOT NULL,
+    timezone character varying DEFAULT 'UTC'::character varying NOT NULL,
+    payment_attempts integer DEFAULT 0 NOT NULL,
+    ready_for_payment_processing boolean DEFAULT true NOT NULL,
+    organization_id uuid NOT NULL,
+    version_number integer DEFAULT 4 NOT NULL,
+    currency character varying,
+    fees_amount_cents bigint DEFAULT 0 NOT NULL,
+    coupons_amount_cents bigint DEFAULT 0 NOT NULL,
+    credit_notes_amount_cents bigint DEFAULT 0 NOT NULL,
+    prepaid_credit_amount_cents bigint DEFAULT 0 NOT NULL,
+    sub_total_excluding_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
+    sub_total_including_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
+    payment_due_date date,
+    net_payment_term integer DEFAULT 0 NOT NULL,
+    voided_at timestamp(6) without time zone,
+    organization_sequential_id integer DEFAULT 0 NOT NULL,
+    ready_to_be_refreshed boolean DEFAULT false NOT NULL,
+    payment_dispute_lost_at timestamp(6) without time zone DEFAULT NULL::timestamp without time zone,
+    skip_charges boolean DEFAULT false NOT NULL,
+    payment_overdue boolean DEFAULT false,
+    negative_amount_cents bigint DEFAULT 0 NOT NULL,
+    progressive_billing_credit_amount_cents bigint DEFAULT 0 NOT NULL,
+    tax_status public.tax_status,
+    total_paid_amount_cents bigint DEFAULT 0 NOT NULL,
+    self_billed boolean DEFAULT false NOT NULL,
+    applied_grace_period integer,
+    billing_entity_id uuid NOT NULL,
+    billing_entity_sequential_id integer,
+    finalized_at timestamp without time zone,
+    voided_invoice_id uuid,
+    xml_file character varying,
+    expected_finalization_date date,
+    prepaid_granted_credit_amount_cents bigint,
+    prepaid_purchased_credit_amount_cents bigint,
+    payment_method_id uuid,
+    skip_automatic_payment boolean,
+    purchase_order_number character varying,
+    CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
+);
+
+
+--
 -- Name: plans; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3381,7 +3447,8 @@ CREATE TABLE public.subscriptions (
     billing_entity_id uuid,
     consolidate_invoice boolean DEFAULT true NOT NULL,
     skip_daily_usage boolean DEFAULT false NOT NULL,
-    cancellation_reason public.subscription_cancellation_reasons
+    cancellation_reason public.subscription_cancellation_reasons,
+    purchase_order_number character varying
 );
 
 
@@ -3481,13 +3548,15 @@ CREATE VIEW public.exports_fees AS
             WHEN 0 THEN (((f.properties ->> 'charges_to_datetime'::text))::timestamp with time zone)::text
             ELSE (((f.properties ->> 'to_datetime'::text))::timestamp with time zone)::text
         END AS to_date
-   FROM ((((((public.fees f
+   FROM (((((((public.fees f
      LEFT JOIN public.subscriptions s ON ((f.subscription_id = s.id)))
      LEFT JOIN public.customers c ON ((s.customer_id = c.id)))
      LEFT JOIN public.charges ch ON ((f.charge_id = ch.id)))
      LEFT JOIN public.billable_metrics bm ON ((ch.billable_metric_id = bm.id)))
      LEFT JOIN public.add_ons ao ON ((f.add_on_id = ao.id)))
-     LEFT JOIN public.plans p ON ((s.plan_id = p.id)));
+     LEFT JOIN public.plans p ON ((s.plan_id = p.id)))
+     LEFT JOIN public.invoices i ON ((i.id = f.invoice_id)))
+  WHERE (i.status IS DISTINCT FROM 8);
 
 
 --
@@ -3645,7 +3714,9 @@ CREATE VIEW public.exports_invoice_subscriptions AS
     ins.charges_to_datetime,
     ins."timestamp",
     (ins.invoicing_reason)::text AS invoicing_reason
-   FROM public.invoice_subscriptions ins;
+   FROM (public.invoice_subscriptions ins
+     JOIN public.invoices i ON ((i.id = ins.invoice_id)))
+  WHERE (i.status <> 8);
 
 
 --
@@ -3660,66 +3731,6 @@ CREATE TABLE public.invoice_metadata (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     organization_id uuid NOT NULL
-);
-
-
---
--- Name: invoices; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoices (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    issuing_date date,
-    taxes_amount_cents bigint DEFAULT 0 NOT NULL,
-    total_amount_cents bigint DEFAULT 0 NOT NULL,
-    invoice_type integer DEFAULT 0 NOT NULL,
-    payment_status integer DEFAULT 0 NOT NULL,
-    number character varying DEFAULT ''::character varying NOT NULL,
-    sequential_id integer,
-    file character varying,
-    customer_id uuid,
-    taxes_rate double precision DEFAULT 0.0 NOT NULL,
-    status integer DEFAULT 1 NOT NULL,
-    timezone character varying DEFAULT 'UTC'::character varying NOT NULL,
-    payment_attempts integer DEFAULT 0 NOT NULL,
-    ready_for_payment_processing boolean DEFAULT true NOT NULL,
-    organization_id uuid NOT NULL,
-    version_number integer DEFAULT 4 NOT NULL,
-    currency character varying,
-    fees_amount_cents bigint DEFAULT 0 NOT NULL,
-    coupons_amount_cents bigint DEFAULT 0 NOT NULL,
-    credit_notes_amount_cents bigint DEFAULT 0 NOT NULL,
-    prepaid_credit_amount_cents bigint DEFAULT 0 NOT NULL,
-    sub_total_excluding_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
-    sub_total_including_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
-    payment_due_date date,
-    net_payment_term integer DEFAULT 0 NOT NULL,
-    voided_at timestamp(6) without time zone,
-    organization_sequential_id integer DEFAULT 0 NOT NULL,
-    ready_to_be_refreshed boolean DEFAULT false NOT NULL,
-    payment_dispute_lost_at timestamp(6) without time zone DEFAULT NULL::timestamp without time zone,
-    skip_charges boolean DEFAULT false NOT NULL,
-    payment_overdue boolean DEFAULT false,
-    negative_amount_cents bigint DEFAULT 0 NOT NULL,
-    progressive_billing_credit_amount_cents bigint DEFAULT 0 NOT NULL,
-    tax_status public.tax_status,
-    total_paid_amount_cents bigint DEFAULT 0 NOT NULL,
-    self_billed boolean DEFAULT false NOT NULL,
-    applied_grace_period integer,
-    billing_entity_id uuid NOT NULL,
-    billing_entity_sequential_id integer,
-    finalized_at timestamp without time zone,
-    voided_invoice_id uuid,
-    xml_file character varying,
-    expected_finalization_date date,
-    prepaid_granted_credit_amount_cents bigint,
-    prepaid_purchased_credit_amount_cents bigint,
-    payment_method_id uuid,
-    skip_automatic_payment boolean,
-    purchase_order_number character varying,
-    CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
 
@@ -3831,7 +3842,9 @@ CREATE VIEW public.exports_invoices_taxes AS
     it.fees_amount_cents,
     it.created_at,
     it.updated_at
-   FROM public.invoices_taxes it;
+   FROM (public.invoices_taxes it
+     JOIN public.invoices i ON ((i.id = it.invoice_id)))
+  WHERE (i.status <> 8);
 
 
 --
@@ -3907,7 +3920,7 @@ CREATE TABLE public.payments (
     provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
     provider_payment_method_id character varying,
     organization_id uuid NOT NULL,
-    customer_id uuid,
+    customer_id uuid NOT NULL,
     error_code character varying,
     payment_method_id uuid
 );
@@ -4260,6 +4273,7 @@ CREATE TABLE public.wallet_transactions (
     remaining_amount_cents bigint,
     voided_invoice_id uuid,
     billing_entity_id uuid,
+    purchase_order_number character varying,
     CONSTRAINT remaining_amount_cents_non_negative CHECK (((remaining_amount_cents >= 0) OR (remaining_amount_cents IS NULL)))
 );
 
@@ -4349,7 +4363,8 @@ CREATE TABLE public.wallets (
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     traceable boolean DEFAULT false NOT NULL,
     code character varying,
-    billing_entity_id uuid
+    billing_entity_id uuid,
+    purchase_order_number character varying
 );
 
 
@@ -4770,6 +4785,7 @@ CREATE TABLE public.orders (
     executed_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    execution_record jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT orders_constraint_sequential_id_positive CHECK ((sequential_id > 0))
 );
 
@@ -5057,7 +5073,8 @@ CREATE TABLE public.recurring_transaction_rules (
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
-    grants_target_top_up boolean
+    grants_target_top_up boolean,
+    purchase_order_number character varying
 );
 
 
@@ -6111,14 +6128,6 @@ ALTER TABLE ONLY public.payment_requests
 
 
 --
--- Name: payments payments_customer_id_null; Type: CHECK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE public.payments
-    ADD CONSTRAINT payments_customer_id_null CHECK ((customer_id IS NOT NULL)) NOT VALID;
-
-
---
 -- Name: payments payments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6762,6 +6771,13 @@ CREATE INDEX idx_on_organization_id_e73219f079 ON public.recurring_transaction_r
 --
 
 CREATE INDEX idx_on_organization_id_e742f77454 ON public.subscription_fixed_charge_units_overrides USING btree (organization_id);
+
+
+--
+-- Name: idx_on_organization_id_external_id_gin_trgm_ops_fb8058a497; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_organization_id_external_id_gin_trgm_ops_fb8058a497 ON public.subscriptions USING gin (organization_id, external_id public.gin_trgm_ops);
 
 
 --
@@ -7445,6 +7461,13 @@ CREATE INDEX index_charges_on_accepts_target_wallet ON public.charges USING btre
 --
 
 CREATE INDEX index_charges_on_billable_metric_id ON public.charges USING btree (billable_metric_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_charges_on_billable_metric_id_all; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_charges_on_billable_metric_id_all ON public.charges USING btree (billable_metric_id);
 
 
 --
@@ -8148,13 +8171,6 @@ CREATE INDEX index_events_on_created_at ON public.events USING btree (created_at
 
 
 --
--- Name: index_events_on_organization_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_events_on_organization_id ON public.events USING btree (organization_id);
-
-
---
 -- Name: index_events_on_organization_id_and_code; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8166,6 +8182,13 @@ CREATE INDEX index_events_on_organization_id_and_code ON public.events USING btr
 --
 
 CREATE INDEX index_events_on_organization_id_and_created_at ON public.events USING btree (organization_id, created_at DESC) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_events_on_organization_id_and_timestamp; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_organization_id_and_timestamp ON public.events USING btree (organization_id, "timestamp" DESC) WHERE (deleted_at IS NULL);
 
 
 --
@@ -9072,6 +9095,13 @@ CREATE INDEX index_orders_on_customer_id ON public.orders USING btree (customer_
 
 
 --
+-- Name: index_orders_on_execute_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_orders_on_execute_at ON public.orders USING btree (execute_at) WHERE ((status = 'created'::public.order_status) AND (execute_at IS NOT NULL));
+
+
+--
 -- Name: index_orders_on_order_form_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9426,6 +9456,20 @@ CREATE INDEX index_plans_on_organization_id ON public.plans USING btree (organiz
 --
 
 CREATE UNIQUE INDEX index_plans_on_organization_id_and_code ON public.plans USING btree (organization_id, code) WHERE ((deleted_at IS NULL) AND (parent_id IS NULL));
+
+
+--
+-- Name: index_plans_on_organization_id_code_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plans_on_organization_id_code_gin_trgm_ops ON public.plans USING gin (organization_id, code public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_plans_on_organization_id_name_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plans_on_organization_id_name_gin_trgm_ops ON public.plans USING gin (organization_id, name public.gin_trgm_ops) WHERE (deleted_at IS NULL);
 
 
 --
@@ -9800,6 +9844,13 @@ CREATE INDEX index_subscriptions_on_organization_id ON public.subscriptions USIN
 
 
 --
+-- Name: index_subscriptions_on_organization_id_name_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_on_organization_id_name_gin_trgm_ops ON public.subscriptions USING gin (organization_id, name public.gin_trgm_ops);
+
+
+--
 -- Name: index_subscriptions_on_payment_method_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9923,13 +9974,6 @@ CREATE UNIQUE INDEX index_unique_quote_versions_on_quote_active_status ON public
 --
 
 CREATE UNIQUE INDEX index_unique_quote_versions_on_quote_sequential_id ON public.quote_versions USING btree (quote_id, sequential_id);
-
-
---
--- Name: index_unique_quote_versions_on_share_token; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_unique_quote_versions_on_share_token ON public.quote_versions USING btree (share_token);
 
 
 --
@@ -11161,7 +11205,7 @@ ALTER TABLE ONLY public.order_forms
 --
 
 ALTER TABLE ONLY public.wallets
-    ADD CONSTRAINT fk_rails_4ff087c52e FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_4ff087c52e FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
 
 
 --
@@ -11241,7 +11285,7 @@ ALTER TABLE ONLY public.credits
 --
 
 ALTER TABLE ONLY public.subscriptions
-    ADD CONSTRAINT fk_rails_56b3626631 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_56b3626631 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
 
 
 --
@@ -11337,7 +11381,7 @@ ALTER TABLE ONLY public.fixed_charges
 --
 
 ALTER TABLE ONLY public.recurring_transaction_rules
-    ADD CONSTRAINT fk_rails_5efea6fe31 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_5efea6fe31 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
 
 
 --
@@ -11873,7 +11917,7 @@ ALTER TABLE ONLY public.invoice_subscriptions
 --
 
 ALTER TABLE ONLY public.adjusted_fees
-    ADD CONSTRAINT fk_rails_91802dc891 FOREIGN KEY (fixed_charge_id) REFERENCES public.fixed_charges(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_91802dc891 FOREIGN KEY (fixed_charge_id) REFERENCES public.fixed_charges(id);
 
 
 --
@@ -12185,7 +12229,7 @@ ALTER TABLE ONLY public.plans_taxes
 --
 
 ALTER TABLE ONLY public.wallet_transactions
-    ADD CONSTRAINT fk_rails_bcb5aecd6c FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_bcb5aecd6c FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
 
 
 --
@@ -12233,7 +12277,7 @@ ALTER TABLE ONLY public.enriched_store_migrations
 --
 
 ALTER TABLE ONLY public.wallet_transactions
-    ADD CONSTRAINT fk_rails_c29bf4ff0f FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_c29bf4ff0f FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
 
 
 --
@@ -12377,7 +12421,7 @@ ALTER TABLE ONLY public.quote_versions
 --
 
 ALTER TABLE ONLY public.payments
-    ADD CONSTRAINT fk_rails_d384ec1ebf FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_d384ec1ebf FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
 
 
 --
@@ -12425,7 +12469,7 @@ ALTER TABLE ONLY public.subscription_fixed_charge_units_overrides
 --
 
 ALTER TABLE ONLY public.wallets
-    ADD CONSTRAINT fk_rails_d9342a8ca7 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_d9342a8ca7 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
 
 
 --
@@ -12553,7 +12597,7 @@ ALTER TABLE ONLY public.charge_filters
 --
 
 ALTER TABLE ONLY public.subscriptions
-    ADD CONSTRAINT fk_rails_e744efbe51 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_e744efbe51 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
 
 
 --
@@ -12681,7 +12725,7 @@ ALTER TABLE ONLY public.fees
 --
 
 ALTER TABLE ONLY public.invoice_subscriptions
-    ADD CONSTRAINT fk_rails_f435d13904 FOREIGN KEY (regenerated_invoice_id) REFERENCES public.invoices(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_f435d13904 FOREIGN KEY (regenerated_invoice_id) REFERENCES public.invoices(id);
 
 
 --
@@ -12803,7 +12847,36 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260716114156'),
+('20260715142900'),
+('20260710093947'),
+('20260709141039'),
+('20260709141038'),
+('20260709141037'),
+('20260709135727'),
+('20260709135726'),
+('20260709135725'),
+('20260709135724'),
+('20260709135723'),
+('20260709135722'),
+('20260709135721'),
+('20260709135720'),
+('20260709135718'),
+('20260709135717'),
+('20260708144431'),
+('20260708095857'),
+('20260707182656'),
+('20260706173746'),
+('20260706131152'),
+('20260703164249'),
+('20260702183711'),
+('20260702183710'),
+('20260702183709'),
 ('20260702074504'),
+('20260701083110'),
+('20260701083109'),
+('20260701083108'),
+('20260701083107'),
 ('20260625095837'),
 ('20260622113747'),
 ('20260619065327'),
@@ -13843,4 +13916,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-

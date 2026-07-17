@@ -288,7 +288,7 @@ RSpec.describe DailyUsages::FillFromInvoiceService do
 
     let(:charge) { create(:standard_charge, plan: subscription.plan) }
 
-    it "returns an OpenStruct with correct datetime attributes" do
+    it "returns a Struct with correct datetime attributes" do
       expect(usage.from_datetime).to eq(invoice_subscription.charges_from_datetime.change(usec: 0))
       expect(usage.to_datetime).to eq(invoice_subscription.charges_to_datetime.change(usec: 0))
     end

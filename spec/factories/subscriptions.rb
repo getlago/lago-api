@@ -47,6 +47,10 @@ FactoryBot.define do
       previous_subscription { association(:subscription, customer:, plan:, organization:) }
     end
 
+    trait :with_purchase_order_number do
+      purchase_order_number { "PO-123" }
+    end
+
     trait :with_activation_rules do
       transient do
         activation_rules_config { [{type: "payment", timeout_hours: 48}] }
