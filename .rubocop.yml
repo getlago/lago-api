@@ -173,6 +173,7 @@ GraphQL/ExtractInputType:
     - "app/graphql/mutations/applied_coupons/create.rb"
     - "app/graphql/mutations/credit_notes/create.rb"
     - "app/graphql/mutations/invites/accept.rb"
+    - "app/graphql/mutations/invoices/regenerate_from_voided.rb"
     - "app/graphql/mutations/plans/create.rb"
     - "app/graphql/mutations/plans/update.rb"
     - "app/graphql/mutations/register_user.rb"
