@@ -4,9 +4,13 @@ module Events
   class BillingPeriodFilterService < BaseService
     Result = BaseResult[:charges]
 
-    def initialize(subscription:, boundaries:)
+    # charges: optional pre-loaded collection of the plan charges, with :billable_metric
+    #          and filters: {values: :billable_metric_filter} associations loaded.
+    #          When provided, it is used instead of re-loading the same records from the database.
+    def initialize(subscription:, boundaries:, charges: nil)
       @subscription = subscription
       @boundaries = boundaries
+      @preloaded_charges = charges
       super
     end
 
@@ -20,7 +24,7 @@ module Events
 
     private
 
-    attr_reader :subscription, :boundaries
+    attr_reader :subscription, :boundaries, :preloaded_charges
 
     delegate :plan, :organization, to: :subscription
 
@@ -90,20 +94,41 @@ module Events
     # Recurring charges and all their filters (including the default bucket).
     # They are always returned, even without events, as usage carries over.
     def recurring_event_charges_and_filters
-      plan.charges.joins(:billable_metric).left_joins(:filters)
-        .where(billable_metrics: {recurring: true})
-        .group("charges.id, charge_filters.id")
-        .pluck("charges.id", "charge_filters.id")
+      pairs = if preloaded_charges
+        preloaded_charges
+          .select { it.billable_metric.recurring? }
+          .flat_map do |charge|
+            if charge.filters.empty?
+              [[charge.id, nil]]
+            else
+              charge.filters.map { |filter| [charge.id, filter.id] }
+            end
+          end
+      else
+        plan.charges.joins(:billable_metric).left_joins(:filters)
+          .where(billable_metrics: {recurring: true})
+          .group("charges.id, charge_filters.id")
+          .pluck("charges.id", "charge_filters.id")
+      end
+
+      pairs
         .then { group_by_charge_id(it) }
         .then { add_default_filter(it) }
     end
 
     # Non-recurring charges of the plan whose billable metric received events in the period
     def non_recurring_charges_with_events(codes)
-      plan.charges
-        .joins(:billable_metric)
-        .where(billable_metrics: {code: codes, recurring: false})
-        .includes(billable_metric: :filters, filters: {values: :billable_metric_filter})
+      if preloaded_charges
+        codes_set = codes.to_set
+        preloaded_charges.select do |charge|
+          !charge.billable_metric.recurring? && codes_set.include?(charge.billable_metric.code)
+        end
+      else
+        plan.charges
+          .joins(:billable_metric)
+          .where(billable_metrics: {code: codes, recurring: false})
+          .includes(billable_metric: :filters, filters: {values: :billable_metric_filter})
+      end
     end
 
     # Union of every filter key defined across the plan billable metrics
@@ -192,11 +217,15 @@ module Events
 
     # Fetches all recurring charges for the current plan
     def current_recurring_charges
-      @current_recurring_charges ||= plan.charges
-        .joins(:billable_metric)
-        .where(billable_metrics: {recurring: true})
-        .includes(:filters)
-        .to_a
+      @current_recurring_charges ||= if preloaded_charges
+        preloaded_charges.select { it.billable_metric.recurring? }
+      else
+        plan.charges
+          .joins(:billable_metric)
+          .where(billable_metrics: {recurring: true})
+          .includes(:filters)
+          .to_a
+      end
     end
 
     # Fetches all recurring billable metrics IDs from previous subscriptions,
