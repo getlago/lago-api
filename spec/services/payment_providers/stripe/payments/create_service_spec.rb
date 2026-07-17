@@ -56,7 +56,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
 
   describe ".call" do
     let(:provider_customer_service_result) do
-      BaseService::Result.new.tap do |result|
+      PaymentProviderCustomers::Stripe::CheckPaymentMethodService::Result.new.tap do |result|
         result.payment_method = Stripe::PaymentMethod.new(id: "pm_123456")
       end
     end

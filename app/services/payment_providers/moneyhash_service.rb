@@ -2,6 +2,8 @@
 
 module PaymentProviders
   class MoneyhashService < BaseService
+    Result = BaseResult[:moneyhash_provider, :signature_key]
+
     def create_or_update(**args)
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization].id,

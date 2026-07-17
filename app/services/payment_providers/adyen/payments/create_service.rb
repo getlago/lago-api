@@ -4,6 +4,8 @@ module PaymentProviders
   module Adyen
     module Payments
       class CreateService < BaseService
+        Result = BaseResult[:payment, :error_message, :error_code, :reraise]
+
         def initialize(payment:, reference:, metadata:)
           @payment = payment
           @reference = reference

@@ -34,7 +34,7 @@ RSpec.describe Mutations::Integrations::Hubspot::SyncInvoice do
   let(:service) { instance_double(Integrations::Aggregator::Invoices::Hubspot::CreateService) }
 
   let(:result) do
-    r = BaseService::Result.new
+    r = Integrations::Aggregator::Invoices::Hubspot::CreateService::Result.new
     r.invoice_id = invoice.id
     r
   end

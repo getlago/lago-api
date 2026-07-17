@@ -3,6 +3,8 @@
 module Auth
   module Okta
     class AcceptInviteService < BaseService
+      Result = BaseResult[:email, :okta_integration, :invite, :okta_access_token, :userinfo]
+
       def initialize(invite_token:, code:, state:)
         @invite_token = invite_token
         @code = code

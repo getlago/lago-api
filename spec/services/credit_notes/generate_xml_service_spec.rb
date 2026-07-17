@@ -14,7 +14,7 @@ RSpec.describe CreditNotes::GenerateXmlService, type: :service do
 
   let(:xml_service) { EInvoices::CreditNotes::Ubl::CreateService }
   let(:fake_xml) { "<xml>content</xml>" }
-  let(:create_xml_result) { BaseService::Result.new.tap { |result| result.xml = fake_xml } }
+  let(:create_xml_result) { EInvoices::CreditNotes::Ubl::CreateService::Result.new.tap { |result| result.xml = fake_xml } }
   let(:blank_xml_path) { Rails.root.join("spec/fixtures/blank.xml") }
 
   before do
