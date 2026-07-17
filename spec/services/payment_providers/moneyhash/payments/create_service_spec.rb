@@ -56,8 +56,6 @@ RSpec.describe PaymentProviders::Moneyhash::Payments::CreateService do
         expect(result).to be_failure
         expect(result.error_code).to eq(400)
         expect(result.error_message).to eq(failure_response)
-        expect(payment.status).to eq("PENDING")
-        expect(payment.payable_payment_status).to eq("processing")
       end
     end
 

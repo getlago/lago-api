@@ -3,6 +3,8 @@
 module Integrations
   module Aggregator
     class SendRestletEndpointService < BaseService
+      Result = BaseResult[:response]
+
       def action_path
         "connection/#{integration.connection_id}/metadata"
       end

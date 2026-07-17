@@ -6,6 +6,8 @@ module PaymentProviders
       class SetupIntentSucceededService < BaseService
         include ::Customers::PaymentProviderFinder
 
+        Result = BaseResult[:payment_method, :payment_method_id, :stripe_customer]
+
         def call
           return result if stripe_customer_id.nil?
           return handle_missing_customer unless stripe_customer

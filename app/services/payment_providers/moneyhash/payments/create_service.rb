@@ -4,6 +4,8 @@ module PaymentProviders
   module Moneyhash
     module Payments
       class CreateService < BaseService
+        Result = BaseResult[:payment, :error_message, :error_code, :reraise, :should_retry]
+
         include ::Customers::PaymentProviderFinder
 
         def initialize(payment:, reference:, metadata:)
@@ -26,6 +28,8 @@ module PaymentProviders
 
           result.payment = payment
           result
+        rescue LagoHttpClient::HttpError => e
+          prepare_failed_result(e, reraise: true)
         end
 
         private
@@ -74,8 +78,6 @@ module PaymentProviders
 
           response = client.post_with_response(payment_params, headers)
           JSON.parse(response.body)
-        rescue LagoHttpClient::HttpError => e
-          prepare_failed_result(e, reraise: true)
         end
 
         def client
