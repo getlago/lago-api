@@ -186,7 +186,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
           end
 
           it "returns result" do
-            expect(service_call).to be_a(BaseService::Result)
+            expect(service_call).to be_a(BaseResult)
           end
 
           it "enqueues a SendWebhookJob" do

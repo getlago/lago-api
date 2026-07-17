@@ -3,6 +3,8 @@
 module Integrations
   module Aggregator
     class CustomObjectService < BaseService
+      Result = BaseResult[:custom_object]
+
       CustomObject = Data.define(:id, :object_type_id)
 
       def initialize(integration:, name:)
