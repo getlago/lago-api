@@ -802,6 +802,10 @@ RSpec.describe Invoices::Payments::CreateService do
       end
 
       context "when the invoice gates a payment-gated subscription" do
+        let(:invoice) do
+          create(:invoice, customer:, organization:, total_amount_cents: 100, invoice_type: :subscription)
+        end
+
         before { allow(invoice).to receive(:subscription_payment_gated?).and_return(true) }
 
         it "enqueues the payment immediately" do
@@ -809,6 +813,40 @@ RSpec.describe Invoices::Payments::CreateService do
             .to have_enqueued_job(Invoices::Payments::CreateJob)
             .with(invoice:, payment_provider: :stripe, payment_method_params: {})
             .at(:no_wait)
+        end
+      end
+
+      context "when the invoice is an automatic (interval/threshold) wallet top-up" do
+        let(:invoice) { create(:invoice, :credit, customer:, organization:, total_amount_cents: 100) }
+
+        before do
+          wallet = create(:wallet, customer:, organization:)
+          create(:wallet_transaction, wallet:, invoice:, source: :interval)
+        end
+
+        it "enqueues the payment immediately" do
+          expect { ApplicationRecord.transaction { create_service.call_async } }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            .at(:no_wait)
+        end
+      end
+
+      context "when the invoice is a manual wallet top-up" do
+        let(:invoice) { create(:invoice, :credit, customer:, organization:, total_amount_cents: 100) }
+
+        before do
+          wallet = create(:wallet, customer:, organization:)
+          create(:wallet_transaction, wallet:, invoice:, source: :manual)
+        end
+
+        it "delays the first auto-payment" do
+          freeze_time do
+            expect { ApplicationRecord.transaction { create_service.call_async } }
+              .to have_enqueued_job(Invoices::Payments::CreateJob)
+              .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+              .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+          end
         end
       end
     end
