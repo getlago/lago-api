@@ -388,7 +388,6 @@ DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_sequential_id;
 DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_number;
-DROP INDEX IF EXISTS public.index_unique_quote_versions_on_share_token;
 DROP INDEX IF EXISTS public.index_unique_quote_versions_on_quote_sequential_id;
 DROP INDEX IF EXISTS public.index_unique_quote_versions_on_quote_active_status;
 DROP INDEX IF EXISTS public.index_unique_quote_owners_on_quote_user;
@@ -9968,13 +9967,6 @@ CREATE UNIQUE INDEX index_unique_quote_versions_on_quote_sequential_id ON public
 
 
 --
--- Name: index_unique_quote_versions_on_share_token; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_unique_quote_versions_on_share_token ON public.quote_versions USING btree (share_token);
-
-
---
 -- Name: index_unique_quotes_on_organization_number; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12845,6 +12837,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260716114156'),
 ('20260715142900'),
 ('20260709141039'),
 ('20260709141038'),
