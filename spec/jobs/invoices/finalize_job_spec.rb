@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Invoices::FinalizeJob do
   let(:invoice) { create(:invoice) }
 
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::RefreshDraftAndFinalizeService::Result.new }
 
   it "delegates to the RefreshDraftAndFinalizeService service" do
     allow(Invoices::RefreshDraftAndFinalizeService).to receive(:call)

@@ -7,7 +7,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessCreateJob do
 
   it "calls the gocardless create service" do
     allow(PaymentProviderCustomers::GocardlessService).to receive(:call!)
-      .and_return(BaseService::Result.new)
+      .and_return(PaymentProviderCustomers::GocardlessService::RESULTS.fetch(:create).new)
 
     described_class.perform_now(gocardless_customer)
 

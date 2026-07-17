@@ -9,7 +9,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
 
   describe "#call" do
     let(:payment_service) { instance_double(Invoices::Payments::AdyenService) }
-    let(:service_result) { BaseService::Result.new }
+    let(:service_result) { Invoices::Payments::AdyenService::RESULTS.fetch(:update_payment_status).new }
 
     before do
       allow(Invoices::Payments::AdyenService).to receive(:call)

@@ -72,7 +72,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
     end
 
     context "when kafka is configured", :kafka_configured do
-      let(:result) { BaseService::Result.new }
+      let(:result) { Coupons::UpdateService::Result.new }
 
       context "when providing a block" do
         let(:activity_type) { "coupon.updated" }

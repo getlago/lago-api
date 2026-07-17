@@ -352,7 +352,7 @@ RSpec.describe Customers::UpdateService do
         allow(PaymentProviderCustomers::UpdateService)
           .to receive(:call)
           .with(customer)
-          .and_return(BaseService::Result.new)
+          .and_return(PaymentProviderCustomers::UpdateService::Result.new)
       end
 
       it "creates a payment provider customer" do

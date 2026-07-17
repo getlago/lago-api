@@ -6,7 +6,7 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
   describe ".null_result" do
     subject(:null_result) { described_class.null_result(result, **args) }
 
-    let(:result) { BaseService::Result.new }
+    let(:result) { described_class::Result.new }
     let(:args) { {} }
 
     context "without keyword arguments" do

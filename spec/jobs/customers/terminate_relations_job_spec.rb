@@ -9,7 +9,7 @@ RSpec.describe Customers::TerminateRelationsJob do
     allow(Customers::TerminateRelationsService)
       .to receive(:call)
       .with(customer:)
-      .and_return(BaseService::Result.new)
+      .and_return(Customers::TerminateRelationsService::Result.new)
 
     described_class.perform_now(customer_id: customer.id)
 

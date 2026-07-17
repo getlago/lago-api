@@ -9,7 +9,7 @@ RSpec.describe PaymentProviderCustomers::StripeCheckoutUrlJob do
 
   it "calls generate_checkout_url method" do
     allow(PaymentProviderCustomers::StripeService).to receive(:call!)
-      .and_return(BaseService::Result.new)
+      .and_return(PaymentProviderCustomers::StripeService::RESULTS.fetch(:generate_checkout_url).new)
 
     stripe_checkout_job.perform_now(stripe_customer)
 

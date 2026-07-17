@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Invoices::FinalizePendingViesInvoiceJob do
   let(:invoice) { create(:invoice, :pending, tax_status: "pending") }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::FinalizePendingViesInvoiceService::Result.new }
 
   describe "#perform" do
     before do

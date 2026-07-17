@@ -9,7 +9,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessCheckoutUrlJob do
 
   it "calls generate_checkout_url method" do
     allow(PaymentProviderCustomers::GocardlessService).to receive(:call!)
-      .and_return(BaseService::Result.new)
+      .and_return(PaymentProviderCustomers::GocardlessService::RESULTS.fetch(:generate_checkout_url).new)
 
     gocardless_checkout_job.perform_now(gocardless_customer)
 
