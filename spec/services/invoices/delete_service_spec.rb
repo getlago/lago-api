@@ -72,9 +72,11 @@ RSpec.describe Invoices::DeleteService do
     end
 
     context "when the draft invoice has a credit note" do
-      let!(:credit_note) { create(:credit_note, :draft, invoice:, customer:) }
+      let(:credit_note) { create(:credit_note, :draft, invoice:, customer:) }
 
-      it "soft-deletes the credit note alongside the invoice" do
+      before { credit_note }
+
+      it "marks the credit note as deleted alongside the invoice" do
         result = delete_service.call
 
         expect(result).to be_success
@@ -83,10 +85,12 @@ RSpec.describe Invoices::DeleteService do
       end
     end
 
-    context "when the draft invoice has a credit note that cannot be soft-deleted" do
-      let!(:credit_note) { create(:credit_note, status: :finalized, invoice:, customer:) }
+    context "when the draft invoice has a credit note that cannot be deleted" do
+      let(:credit_note) { create(:credit_note, status: :finalized, invoice:, customer:) }
 
-      it "returns a failure and rolls back without deleting the invoice or the credit note" do
+      before { credit_note }
+
+      it "returns a failure and does not delete the invoice or the credit note" do
         result = delete_service.call
 
         expect(result).not_to be_success
@@ -98,6 +102,43 @@ RSpec.describe Invoices::DeleteService do
 
       it "does not enqueue a webhook" do
         expect { delete_service.call }.not_to have_enqueued_job(SendWebhookJob)
+      end
+    end
+
+    context "when the draft invoice has several credit notes and one cannot be deleted" do
+      let(:deletable_credit_note) { create(:credit_note, :draft, invoice:, customer:) }
+      let(:blocking_credit_note) { create(:credit_note, status: :finalized, invoice:, customer:) }
+      let(:other_invoice) { create(:invoice, :draft, organization:, customer:) }
+
+      before do
+        deletable_credit_note
+        blocking_credit_note
+      end
+
+      it "leaves every credit note and the invoice untouched" do
+        result = delete_service.call
+
+        expect(result).not_to be_success
+        expect(invoice.reload).to be_draft
+        expect(deletable_credit_note.reload).to be_draft
+        expect(blocking_credit_note.reload).to be_finalized
+      end
+
+      it "does not enqueue a webhook" do
+        expect { delete_service.call }.not_to have_enqueued_job(SendWebhookJob)
+      end
+
+      it "rolls back its own changes without affecting the surrounding transaction" do
+        ActiveRecord::Base.transaction do
+          other_invoice.update!(payment_overdue: true)
+          delete_service.call
+        end
+
+        # the surrounding transaction's change is kept...
+        expect(other_invoice.reload.payment_overdue).to be(true)
+        # ...while the service's own cascade was rolled back
+        expect(invoice.reload).to be_draft
+        expect(deletable_credit_note.reload).to be_draft
       end
     end
   end

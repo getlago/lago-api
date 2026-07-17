@@ -18,11 +18,12 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
 
-      invoice.with_lock do
+      # requires_new adds a savepoint so a rollback only impacts this block, not any outer transaction
+      invoice.with_lock(requires_new: true) do
         return result.not_allowed_failure!(code: "not_deletable") unless invoice.draft?
         return result.not_allowed_failure!(code: "invoice_synced_to_external_system") if synced_externally?
 
-        soft_delete_credit_notes!
+        mark_credit_notes_as_deleted!
 
         invoice.mark_as_deleted!
       end
@@ -33,15 +34,13 @@ module Invoices
       SendWebhookJob.perform_later("invoice.deleted", result.invoice)
 
       result
-    rescue AASM::InvalidTransition
-      result.not_allowed_failure!(code: "not_deletable")
     end
 
     private
 
     attr_reader :invoice
 
-    def soft_delete_credit_notes!
+    def mark_credit_notes_as_deleted!
       invoice.credit_notes.not_deleted.find_each do |credit_note|
         delete_result = CreditNotes::DeleteService.call(credit_note:)
         next if delete_result.success?
