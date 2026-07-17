@@ -127,17 +127,18 @@ module Invoices
         @provider ||= invoice.customer.payment_provider&.to_sym
       end
 
-      # Delay the first automatic payment for every customer of an organization that uses hosted
-      # checkout (has ever generated a checkout URL), so an auto-payment can't race a customer's
-      # manual checkout and double-charge them. Scoping to the organization — not the customer —
-      # also covers a customer's very first invoice, which has no prior checkout signal of its own.
-      # Only the first attempt is delayed;
+      # Delay the first auto-payment for orgs using hosted checkout so it can't race a manual checkout
+      # and double-charge; skip flows that pay synchronously (gated subs, auto wallet top-ups).
       def defer_for_checkout_organization?
         return false unless invoice.payment_attempts.zero?
-        # Payment-gated subscriptions activate synchronously, so charge now instead of deferring.
-        return false if invoice.subscription_payment_gated?
+        return false if invoice.subscription? && invoice.subscription_payment_gated?
+        return false if non_manual_wallet_topup?
 
         PaymentIntent.where(organization_id: invoice.organization_id).exists?
+      end
+
+      def non_manual_wallet_topup?
+        invoice.credit? && invoice.wallet_transactions.inbound.where.not(source: :manual).exists?
       end
 
       def should_process_payment?
