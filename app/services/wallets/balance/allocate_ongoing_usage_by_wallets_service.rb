@@ -33,7 +33,8 @@ module Wallets
       def calculate_wallet_allocations
         net_amounts = net_usage_by_fee_key
         budgets = currency_budgets(net_amounts)
-        metas = wallets.map { |wallet| wallet_meta(wallet) }
+        balances = fresh_balances
+        metas = wallets.map { |wallet| wallet_meta(wallet, balances) }
         allocations = wallets.index_with(0)
 
         allocatable_pool(net_amounts).each do |fee_key, key_amount|
@@ -63,17 +64,21 @@ module Wallets
         allocations
       end
 
-      def wallet_meta(wallet)
+      def wallet_meta(wallet, balances)
         threshold = threshold_wallet?(wallet)
         {
           wallet:,
           targets: wallet.wallet_targets.filter_map { |wt| ["charge", wt.billable_metric_id] if wt.billable_metric_id },
           types: wallet.allowed_fee_types,
           threshold:,
-          # Re-read the balance so a concurrent pay-in-advance DecreaseService can't make us cap
-          # against a stale value. Balance only, to keep the eager-loaded associations.
-          balance: threshold ? 0 : Wallet.where(id: wallet.id).pick(:balance_cents)
+          balance: threshold ? 0 : balances.fetch(wallet.id, 0)
         }
+      end
+
+      # Re-read balances so a concurrent pay-in-advance DecreaseService can't make us cap
+      # against stale in-memory values: one query for all wallets, one consistent snapshot.
+      def fresh_balances
+        Wallet.where(id: wallets.map(&:id)).pluck(:id, :balance_cents).to_h
       end
 
       # Net the fee buckets into a signed amount per fee key. Keys whose net is <= 0
