@@ -337,6 +337,20 @@ RSpec.shared_examples "a lago diagnostics report" do
       end
     end
 
+    context "when a matching log line embeds credentialed URLs" do
+      let(:log_content) do
+        "ERROR connect postgresql://lago:secretpw@db:5432/lago failed\n" \
+          "FATAL callback http://h?access_token=abc123 rejected\n"
+      end
+
+      it "masks URL userinfo and sensitive query params in log lines" do
+        expect(report).to include("postgresql://***@db:5432/lago")
+        expect(report).to include("http://h?access_token=***")
+        expect(report).not_to include("secretpw")
+        expect(report).not_to include("abc123")
+      end
+    end
+
     context "when the log is larger than the tail window" do
       let(:log_content) do
         "ERROR outside-window\n" \

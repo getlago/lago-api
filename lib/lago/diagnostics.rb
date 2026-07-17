@@ -17,9 +17,9 @@ module Lago
     LINE = "-" * 72
 
     SECRET_PATTERN = /
-      key|secret|password|passwd|token|dsn|salt|private|credential|
-      auth|api_key|access_key|signing|webhook|client_secret|client_id|
-      license|master\.key
+      key|secret|password|passwd|passphrase|token|dsn|salt|private|credential|
+      auth|api_key|access_key|signing|signature|webhook|client_secret|client_id|
+      license|cert|master\.key
     /xi
 
     # Matches URL userinfo credentials (`scheme://user:pass@` or `scheme://user@`).
@@ -89,10 +89,18 @@ module Lago
       if key.to_s.scrub.match?(SECRET_PATTERN)
         "***"
       else
-        value.to_s.scrub
-          .gsub(URL_USERINFO_PATTERN, '\1***@')
-          .gsub(URL_QUERY_SECRET_PATTERN, '\1***')
+        mask_value(value)
       end
+    end
+
+    # Redacts URL userinfo credentials and sensitive query string parameters
+    # from a free-form string, leaving everything else untouched. Used both by
+    # `mask` (when the key is not secret-named) and on raw log lines, which have
+    # no key to match against but still routinely embed credentialed URLs.
+    def mask_value(value)
+      value.to_s.scrub
+        .gsub(URL_USERINFO_PATTERN, '\1***@')
+        .gsub(URL_QUERY_SECRET_PATTERN, '\1***')
     end
 
     private
@@ -250,8 +258,10 @@ module Lago
         if File.exist?(feature_flags_path)
           output.puts
           output.puts "  ## Feature Flags"
-          flags = safe { YAML.load_file(feature_flags_path).keys }
-          Array(flags).each { |flag| output.puts "    - #{flag}" }
+          print_safe do
+            flags = (YAML.safe_load_file(feature_flags_path) || {}).keys
+            flags.each { |flag| output.puts "    - #{flag}" }
+          end
         end
 
         output.puts
@@ -634,8 +644,10 @@ module Lago
     # large production tables. Falls back to an exact count, bounded by a
     # statement timeout, when the table was never analyzed (negative reltuples).
     def estimated_count(model)
-      estimate = ActiveRecord::Base.connection.select_value(
-        "SELECT reltuples::bigint FROM pg_class WHERE oid = '#{model.table_name}'::regclass"
+      connection = ActiveRecord::Base.connection
+      quoted_table = connection.quote(model.table_name)
+      estimate = connection.select_value(
+        "SELECT reltuples::bigint FROM pg_class WHERE oid = #{quoted_table}::regclass"
       ).to_i
 
       estimate.negative? ? count_with_timeout { model.count } : estimate
@@ -680,7 +692,9 @@ module Lago
 
     # Scans only the last RECENT_ERRORS_TAIL_BYTES of the file, keeping the
     # last `limit` lines matching `pattern` in a bounded buffer, so huge log
-    # files are never read in full.
+    # files are never read in full. Matching lines are run through
+    # `mask_value` since log output frequently embeds credentialed URLs, and
+    # the report is meant to be pasted into support tickets.
     def last_matching_lines(path, pattern, limit)
       buffer = []
       File.open(path) do |file|
@@ -693,7 +707,7 @@ module Lago
           clean = line.scrub
           next unless clean.match?(pattern)
 
-          buffer << clean.chomp
+          buffer << mask_value(clean.chomp)
           buffer.shift if buffer.size > limit
         end
       end

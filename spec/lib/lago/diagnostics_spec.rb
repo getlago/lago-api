@@ -62,6 +62,12 @@ RSpec.describe Lago::Diagnostics do
       expect(diagnostics.mask("LAGO_LICENSE", "lic-123")).to eq("***")
     end
 
+    it "masks values of passphrase, signature and cert keys" do
+      expect(diagnostics.mask("SSL_PASSPHRASE", "hunter2")).to eq("***")
+      expect(diagnostics.mask("LAGO_WEBHOOK_SIGNATURE", "sig-123")).to eq("***")
+      expect(diagnostics.mask("LAGO_TLS_CERT", "-----BEGIN-----")).to eq("***")
+    end
+
     it "redacts URL userinfo credentials while keeping host and port visible" do
       expect(diagnostics.mask("DATABASE_URL", "postgresql://lago:changeme@db:5432/lago"))
         .to eq("postgresql://***@db:5432/lago")
