@@ -46,8 +46,6 @@ module OrderForms
             execute_at:
           )
 
-          # TODO: Enqueue Orders::ExecuteOrderJob.perform_after_commit(result.order) when execution_mode == "execute_in_lago"
-
           result.order_form = order_form
         end
       end
