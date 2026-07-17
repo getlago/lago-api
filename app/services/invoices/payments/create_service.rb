@@ -138,7 +138,7 @@ module Invoices
       end
 
       def non_manual_wallet_topup?
-        invoice.credit? && invoice.wallet_transactions.where.not(source: :manual).exists?
+        invoice.credit? && invoice.wallet_transactions.inbound.where.not(source: :manual).exists?
       end
 
       def should_process_payment?
