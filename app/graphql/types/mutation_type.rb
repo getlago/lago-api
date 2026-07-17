@@ -124,6 +124,7 @@ module Types
     field :void_credit_note, mutation: Mutations::CreditNotes::Void
 
     field :create_invoice, mutation: Mutations::Invoices::Create
+    field :delete_invoice, mutation: Mutations::Invoices::Delete
     field :download_invoice, mutation: Mutations::Invoices::Download
     field :download_invoice_xml, mutation: Mutations::Invoices::DownloadXml
     field :finalize_all_invoices, mutation: Mutations::Invoices::FinalizeAll
