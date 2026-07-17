@@ -8,7 +8,7 @@ module Organizations
 
     RESERVED_SLUGS = %w[
       auth login sign-up forgot-password reset-password invitation
-      customer-portal 404 forbidden api admin graphql webhooks google okta
+      customer-portal 404 forbidden api admin graphql webhooks google okta entra
       settings new design-system devtool
       customers customer plans plan invoices invoice subscriptions
       coupons coupon add-ons add-on billable-metrics billable-metric
