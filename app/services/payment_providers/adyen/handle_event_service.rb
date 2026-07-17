@@ -33,8 +33,7 @@ module PaymentProviders
           payment_type = event.dig("additionalData", "metadata.payment_type")
 
           if payment_type == "one-time"
-            update_result = update_payment_status(payment_type)
-            return update_result.raise_if_error!
+            return update_payment_status(payment_type)
           end
 
           return result if amount != 0
@@ -50,17 +49,12 @@ module PaymentProviders
           return result unless payment
 
           metadata = {lago_payable_type: payment.payable_type}
-          klass = payment_service_klass(metadata)
-          args = {provider_payment_id:, status: "Cancelled", metadata:}
-
-          # NOTE: Temporary branch until PaymentRequests::Payments services are migrated to
-          #       TypedResults too. Once they are, call `klass.call(:update_payment_status, **args)` directly.
-          update_result = if klass.include?(TypedResults)
-            klass.call(:update_payment_status, **args)
-          else
-            klass.new.update_payment_status(**args)
-          end
-          update_result.raise_if_error!
+          payment_service_klass(metadata).call!(
+            :update_payment_status,
+            provider_payment_id:,
+            status: "Cancelled",
+            metadata:
+          )
         when "REFUND"
           service = CreditNotes::Refunds::AdyenService.new
 
@@ -104,21 +98,13 @@ module PaymentProviders
           lago_payable_type: event.dig("additionalData", "metadata.lago_payable_type")
         }
 
-        klass = payment_service_klass(metadata)
-        args = {
+        payment_service_klass(metadata).call!(
+          :update_payment_status,
           provider_payment_id:,
           status:,
           amount_cents: event.dig("amount", "value"),
           metadata:
-        }
-
-        # NOTE: Temporary branch until PaymentRequests::Payments services are migrated to
-        #       TypedResults too. Once they are, call `klass.call(:update_payment_status, **args)` directly.
-        if klass.include?(TypedResults)
-          klass.call(:update_payment_status, **args)
-        else
-          klass.new.update_payment_status(**args)
-        end
+        )
       end
 
       def payment_service_klass(metadata)

@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::CashfreeService do
-  subject(:cashfree_service) { described_class.new(payment_request) }
-
   let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
   let(:cashfree_payment_provider) { create(:cashfree_provider, organization:, code:) }
@@ -46,7 +44,7 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
     )
   end
 
-  describe "#update_payment_status" do
+  describe ".call(:update_payment_status)" do
     let(:payment) do
       create(
         :payment,
@@ -66,7 +64,8 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
     end
 
     let(:result) do
-      cashfree_service.update_payment_status(
+      described_class.call(
+        :update_payment_status,
         organization_id: organization.id,
         status: cashfree_payment.status,
         cashfree_payment:
@@ -156,7 +155,8 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
       end
 
       it "updates the payment, payment_request and invoices status" do
-        result = cashfree_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: cashfree_payment.status,
           cashfree_payment:
@@ -311,7 +311,7 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
     end
   end
 
-  describe ".generate_payment_url" do
+  describe ".call(:generate_payment_url)" do
     let(:payment_links_response) { Net::HTTPResponse.new("1.0", "200", "OK") }
 
     before do
@@ -327,7 +327,7 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
     end
 
     it "generates payment url" do
-      result = cashfree_service.generate_payment_url
+      result = described_class.call(:generate_payment_url, payment_request)
 
       expect(result.payment_url).to be_present
     end
@@ -350,7 +350,7 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
       end
 
       it "returns a third party error" do
-        result = cashfree_service.generate_payment_url
+        result = described_class.call(:generate_payment_url, payment_request)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ThirdPartyFailure)
