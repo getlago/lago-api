@@ -9223,7 +9223,7 @@ enum OrderExecutionModeEnum {
 
 type OrderExecutionRecord {
   errors: [String!]!
-  executedAt: String
+  executedAt: ISO8601DateTime
   executionMode: OrderExecutionModeEnum
   invoiceId: ID
 }
