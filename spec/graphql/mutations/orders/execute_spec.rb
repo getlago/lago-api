@@ -88,6 +88,24 @@ RSpec.describe Mutations::Orders::Execute do
     end
   end
 
+  context "when the execution lock cannot be acquired", :premium do
+    before do
+      allow(Orders::ExecuteService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+    end
+
+    it "returns an unprocessable entity error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input: {id: order.id}}
+      )
+
+      expect_unprocessable_entity(result, details: {base: ["concurrency_conflict"]})
+    end
+  end
+
   context "when order is not found" do
     it "returns an error" do
       result = execute_graphql(
