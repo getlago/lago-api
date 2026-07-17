@@ -439,6 +439,39 @@ RSpec.describe PaymentRequests::Payments::CreateService do
       end
     end
 
+    context "when a concurrent attempt already advanced the shared payment (regression)" do
+      it "does not destroy a payment that now has a provider reference" do
+        # A parallel attempt operates on the same pending row (only one pending/processing
+        # provider payment exists per payable). It sets a real provider reference just before
+        # this attempt finds the payable already paid.
+        allow(provider_service).to receive(:call!) do
+          payment_request.reload.payments.first.update!(provider_payment_id: "pi_concurrent")
+          raise Invoices::Payments::AlreadyPaidError
+        end
+
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+
+        payment = payment_request.reload.payments.first
+        expect(payment).to be_present
+        expect(payment.provider_payment_id).to eq("pi_concurrent")
+      end
+
+      it "does not destroy a payment that was already marked succeeded" do
+        allow(provider_service).to receive(:call!) do
+          payment_request.reload.payments.first.update!(payable_payment_status: "succeeded")
+          raise Invoices::Payments::AlreadyPaidError
+        end
+
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(payment_request.reload.payments.first).to be_present
+      end
+    end
+
     context "when provider service raises a service failure" do
       let(:service_result) do
         BaseService::Result.new.tap do |r|
