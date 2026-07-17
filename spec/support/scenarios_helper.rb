@@ -395,7 +395,8 @@ module ScenariosHelper
 
   def setup_stripe_for(customer:)
     stripe_provider = create(:stripe_provider, organization:)
-    create(:stripe_customer, customer_id: customer.id, payment_provider: stripe_provider)
+    stripe_customer = create(:stripe_customer, customer_id: customer.id, payment_provider: stripe_provider)
+    create(:payment_method, payment_provider_customer: stripe_customer, is_default: true)
     customer.update!(payment_provider: "stripe", payment_provider_code: stripe_provider.code)
   end
 

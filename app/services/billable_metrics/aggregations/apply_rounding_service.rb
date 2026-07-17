@@ -3,6 +3,8 @@
 module BillableMetrics
   module Aggregations
     class ApplyRoundingService < ::BaseService
+      Result = BaseResult[:units]
+
       def initialize(billable_metric:, units:)
         @billable_metric = billable_metric
         @units = units

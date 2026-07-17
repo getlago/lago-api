@@ -3,6 +3,10 @@
 require "rails_helper"
 
 describe Clock::TerminateRecurringTransactionRulesJob, job: true do
+  it_behaves_like "a unique job" do
+    let(:job_args) { [] }
+  end
+
   let(:wallet) { create(:wallet) }
   let(:to_expire_rule) do
     create(

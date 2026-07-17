@@ -36,6 +36,10 @@ module PaymentProviderCustomers
     def require_provider_payment_id?
       true
     end
+
+    def legacy_provider_method_id
+      get_from_settings("payment_method_id") || get_from_settings("provider_mandate_id")
+    end
   end
 end
 

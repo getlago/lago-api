@@ -61,7 +61,7 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, Customers::FailedToAcquireLock
+    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, BaseLockService::FailedToAcquireLock
       raise
     rescue => e
       result.fail_with_error!(e)
@@ -79,7 +79,8 @@ module Invoices
         invoice_type: :progressive_billing,
         currency: subscription.plan.amount_currency,
         datetime: Time.zone.at(timestamp),
-        billing_entity: subscription.billing_entity || subscription.customer.billing_entity
+        billing_entity: subscription.billing_entity || subscription.customer.billing_entity,
+        purchase_order_number: subscription.purchase_order_number
       ) do |invoice|
         CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :progressive_billing)

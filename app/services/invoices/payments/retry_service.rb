@@ -3,6 +3,8 @@
 module Invoices
   module Payments
     class RetryService < BaseService
+      Result = BaseResult[:invoice]
+
       def initialize(invoice:, payment_method_params: {})
         @invoice = invoice
         @payment_method_params = payment_method_params

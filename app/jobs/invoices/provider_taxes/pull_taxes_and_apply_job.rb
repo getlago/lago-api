@@ -13,7 +13,7 @@ module Invoices
       retry_on Net::ReadTimeout, wait: :polynomially_longer, attempts: 6
       retry_on Net::OpenTimeout, wait: :polynomially_longer, attempts: 6
       retry_on(*Integrations::Aggregator::BaseService.retryable_errors, wait: :polynomially_longer, attempts: 6)
-      retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: MAX_LOCK_RETRY_ATTEMPTS
+      retry_on BaseLockService::FailedToAcquireLock, ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: MAX_LOCK_RETRY_ATTEMPTS
       retry_on Sequenced::SequenceError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
 
       def perform(invoice:)

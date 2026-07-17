@@ -2,6 +2,8 @@
 
 module DataExports
   class CreateService < BaseService
+    Result = BaseResult[:data_export]
+
     def initialize(organization:, user:, format:, resource_type:, resource_query:)
       @organization = organization
       @user = user

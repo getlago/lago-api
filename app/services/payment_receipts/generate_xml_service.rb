@@ -2,6 +2,8 @@
 
 module PaymentReceipts
   class GenerateXmlService < BaseService
+    Result = BaseResult[:payment_receipt]
+
     def initialize(payment_receipt:, context: nil)
       @payment_receipt = payment_receipt
       @context = context

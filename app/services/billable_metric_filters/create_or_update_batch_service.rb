@@ -2,6 +2,8 @@
 
 module BillableMetricFilters
   class CreateOrUpdateBatchService < BaseService
+    Result = BaseResult[:filters]
+
     BATCH_SIZE = 1_000
 
     def initialize(billable_metric:, filters_params:)

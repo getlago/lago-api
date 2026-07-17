@@ -3,6 +3,8 @@
 module EInvoices
   module CreditNotes::Ubl
     class CreateService < ::BaseService
+      Result = BaseResult[:xml]
+
       def initialize(credit_note:)
         super
 

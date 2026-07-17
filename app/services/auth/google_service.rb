@@ -2,7 +2,18 @@
 
 module Auth
   class GoogleService < BaseService
+    include TypedResults
+
     BASE_SCOPE = %w[profile email openid].freeze
+
+    RESULTS = {
+      authorize_url: BaseResult[:url],
+      login: BaseResult[:user, :token],
+      register_user: BaseResult[:user, :organization, :membership, :token],
+      accept_invite: Invites::AcceptService::Result
+    }.freeze
+
+    private
 
     def authorize_url(request)
       ensure_google_auth_setup
@@ -86,10 +97,8 @@ module Auth
       result.single_validation_failure!(error_code: "invalid_google_code")
     end
 
-    private
-
     def generate_token
-      result.token = Auth::TokenService.encode(user: result.user, login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH)
+      result.token = Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH)
       result
     rescue => e
       result.service_failure!(code: "token_encoding_error", message: e.message)

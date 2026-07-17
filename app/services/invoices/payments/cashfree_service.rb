@@ -4,14 +4,16 @@ module Invoices
   module Payments
     class CashfreeService < BaseService
       include Customers::PaymentProviderFinder
+      include TypedResults
 
       PROVIDER_NAME = "Cashfree"
 
-      def initialize(invoice = nil)
-        @invoice = invoice
+      RESULTS = {
+        update_payment_status: BaseResult[:payment, :invoice],
+        generate_payment_url: BaseResult[:payment_url]
+      }.freeze
 
-        super
-      end
+      private
 
       def update_payment_status(organization_id:, status:, cashfree_payment:, amount_cents: nil)
         payment = if cashfree_payment.metadata[:payment_type] == "one-time"
@@ -42,7 +44,8 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url(payment_intent)
+      def generate_payment_url(invoice, payment_intent)
+        @invoice = invoice
         payment_link_response = create_payment_link(payment_url_params(payment_intent))
         result.payment_url = JSON.parse(payment_link_response.body)["link_url"]
 
@@ -50,8 +53,6 @@ module Invoices
       rescue LagoHttpClient::HttpError => e
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.error_code, error_message: e.error_body)
       end
-
-      private
 
       attr_accessor :invoice
 

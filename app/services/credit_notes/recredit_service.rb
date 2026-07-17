@@ -2,6 +2,8 @@
 
 module CreditNotes
   class RecreditService < BaseService
+    Result = BaseResult[:credit_note]
+
     def initialize(credit:)
       @credit = credit
       @credit_note = credit.credit_note

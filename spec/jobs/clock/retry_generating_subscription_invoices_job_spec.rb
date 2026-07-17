@@ -5,6 +5,10 @@ require "rails_helper"
 describe Clock::RetryGeneratingSubscriptionInvoicesJob, job: true do
   subject { described_class }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [] }
+  end
+
   describe ".perform" do
     let(:old_generating_invoice) { create(:invoice, :generating, created_at: 5.days.ago) }
 

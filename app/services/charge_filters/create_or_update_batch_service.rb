@@ -2,6 +2,8 @@
 
 module ChargeFilters
   class CreateOrUpdateBatchService < BaseService
+    Result = BaseResult[:filters]
+
     def initialize(charge:, filters_params:)
       @charge = charge
       @filters_params = filters_params

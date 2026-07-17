@@ -5,6 +5,10 @@ require "rails_helper"
 describe Clock::InboundWebhooksRetryJob, job: true do
   subject(:inbound_webhooks_retry_job) { described_class }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [] }
+  end
+
   describe ".perform" do
     before { inbound_webhook }
 

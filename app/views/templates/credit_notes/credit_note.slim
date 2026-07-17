@@ -23,6 +23,10 @@ html
             tr
               td.body-1 = I18n.t('credit_note.invoice_number')
               td.body-2 = invoice.number
+            - if invoice.purchase_order_number.present?
+              tr
+                td.body-1 = I18n.t('credit_note.purchase_order_number')
+                td.body-2 = invoice.purchase_order_number
             tr
               td.body-1 = I18n.t('credit_note.issue_date')
               td.body-2 = I18n.l(issuing_date, format: :default)

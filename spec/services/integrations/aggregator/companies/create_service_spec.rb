@@ -153,7 +153,7 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
             result = service_call
 
             expect(result).to be_success
-            expect(result.contact).to be(nil)
+            expect(result.contact_id).to be(nil)
           end
 
           it "does not create integration resource object" do

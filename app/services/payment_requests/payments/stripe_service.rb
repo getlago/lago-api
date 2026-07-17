@@ -5,16 +5,19 @@ module PaymentRequests
     class StripeService < BaseService
       include Customers::PaymentProviderFinder
       include Updatable
+      include TypedResults
 
       PROVIDER_NAME = "Stripe"
 
-      def initialize(payable = nil)
+      RESULTS = {
+        generate_payment_url: BaseResult[:payment_url],
+        update_payment_status: BaseResult[:payment, :payable]
+      }.freeze
+
+      private
+
+      def generate_payment_url(payable)
         @payable = payable
-
-        super(nil)
-      end
-
-      def generate_payment_url
         result_url = ::Stripe::Checkout::Session.create(
           payment_url_payload,
           {
@@ -43,8 +46,9 @@ module PaymentRequests
 
         if payment.payable.payment_succeeded?
           if payment.persisted?
+            @payable = payment.payable
             result.payment = payment
-            result.payable = payment.payable
+            result.payable = @payable
           end
 
           return result
@@ -57,8 +61,9 @@ module PaymentRequests
         payment.payable_payment_status = payable_payment_status
         payment.save!
 
+        @payable = payment.payable
         result.payment = payment
-        result.payable = payment.payable
+        result.payable = @payable
 
         update_payable_payment_status(payment_status: payable_payment_status, processing:)
         update_invoices_payment_status(payment_status: payable_payment_status, processing:)
@@ -76,17 +81,16 @@ module PaymentRequests
         #       caller can still enqueue downstream side effects (e.g. SetPaymentMethodAndCreateReceiptJob).
         payment = Payment.find_by(provider_payment_id: stripe_payment.id)
         if payment
+          @payable = payment.payable
           result.payment = payment
-          result.payable = payment.payable
+          result.payable = @payable
         end
         result
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
       end
 
-      private
-
-      attr_accessor :payable
+      attr_reader :payable
 
       delegate :organization, :customer, to: :payable
 

@@ -2,9 +2,12 @@
 
 module Fees
   class OneOffService < BaseService
-    def initialize(invoice:, fees:)
+    Result = BaseResult[:fees]
+
+    def initialize(invoice:, fees:, with_discarded_add_ons: false)
       @invoice = invoice
       @fees = fees
+      @with_discarded_add_ons = with_discarded_add_ons
 
       super(nil)
     end
@@ -74,14 +77,18 @@ module Fees
 
     private
 
-    attr_reader :invoice, :fees
+    attr_reader :invoice, :fees, :with_discarded_add_ons
 
     delegate :customer, :organization, to: :invoice
 
     def add_on(identifier:)
       finder = api_context? ? :code : :id
 
-      invoice.organization.add_ons.find_by(finder => identifier)
+      add_ons_scope.find_by(finder => identifier)
+    end
+
+    def add_ons_scope
+      with_discarded_add_ons ? invoice.organization.add_ons.with_discarded : invoice.organization.add_ons
     end
 
     def add_on_identifier
@@ -97,27 +104,23 @@ module Fees
     def valid_boundaries?(fee)
       return true if fee[:from_datetime].nil? && fee[:to_datetime].nil?
 
-      fee[:from_datetime] &&
-        fee[:to_datetime] &&
-        Utils::Datetime.valid_format?(fee[:from_datetime]) &&
-        Utils::Datetime.valid_format?(fee[:to_datetime]) &&
-        from_datetime(fee) <= to_datetime(fee)
+      return false unless fee[:from_datetime] && fee[:to_datetime]
+      return false unless Utils::Datetime.valid_format?(fee[:from_datetime])
+      return false unless Utils::Datetime.valid_format?(fee[:to_datetime])
+
+      from_datetime(fee) <= to_datetime(fee)
     end
 
     def from_datetime(fee)
-      if fee[:from_datetime].is_a?(String)
-        DateTime.iso8601(fee[:from_datetime])
-      else
-        fee[:from_datetime] || Time.current
-      end
+      return Time.current if fee[:from_datetime].nil?
+
+      Utils::Datetime.parse_iso8601(fee[:from_datetime])
     end
 
     def to_datetime(fee)
-      if fee[:to_datetime].is_a?(String)
-        DateTime.iso8601(fee[:to_datetime])
-      else
-        fee[:to_datetime] || Time.current
-      end
+      return Time.current if fee[:to_datetime].nil?
+
+      Utils::Datetime.parse_iso8601(fee[:to_datetime])
     end
   end
 end

@@ -59,24 +59,19 @@ RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
         expect(stripe_api_customer).to have_received(:retrieve_payment_method)
       end
 
-      context "with multiple payment methods enabled" do
+      context "when a payment method exists" do
         let(:default_payment_method) { create(:payment_method, customer:, provider_method_id: payment_method_id) }
 
-        before do
-          default_payment_method
-          organization.update!(feature_flags: ["multiple_payment_methods"])
-        end
+        before { default_payment_method }
 
         it "returns a failed result and discards payment method" do
           result = check_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
+          expect(result).not_to be_success
 
-            expect(Stripe::Customer).to have_received(:new)
-            expect(stripe_api_customer).to have_received(:retrieve_payment_method)
-            expect(default_payment_method.reload.deleted_at).to be_present
-          end
+          expect(Stripe::Customer).to have_received(:new)
+          expect(stripe_api_customer).to have_received(:retrieve_payment_method)
+          expect(default_payment_method.reload.deleted_at).to be_present
         end
       end
     end

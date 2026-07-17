@@ -64,7 +64,6 @@ RSpec.describe Mutations::Charges::Update, type: :graphql do
     before do
       create(:subscription, plan: child_plan, status: :active)
       child_charge
-      allow(Charges::UpdateChildrenJob).to receive(:perform_later)
     end
 
     it "passes cascade_updates to the service" do
@@ -85,7 +84,7 @@ RSpec.describe Mutations::Charges::Update, type: :graphql do
         }
       )
 
-      expect(Charges::UpdateChildrenJob).to have_received(:perform_later)
+      expect(Charges::UpdateChildrenJob).to have_been_enqueued
     end
   end
 
