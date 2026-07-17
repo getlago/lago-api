@@ -277,6 +277,10 @@ module Customers
 
       update_provider_customer = (billing || {})[:provider_customer_id].present?
       update_provider_customer ||= customer.provider_customer&.provider_customer_id.present?
+      # NOTE: when the provider is being replaced, customer.provider_customer points at the
+      #       new (not yet created) provider and is nil, so fall back to the old provider
+      #       customer to still create the new one and discard the old provider's data.
+      update_provider_customer ||= old_provider_customer.present?
 
       return unless update_provider_customer
 
