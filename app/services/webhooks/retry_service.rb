@@ -2,6 +2,8 @@
 
 module Webhooks
   class RetryService < ::BaseService
+    Result = BaseResult[:webhook]
+
     def initialize(webhook:)
       @webhook = webhook
 

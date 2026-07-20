@@ -2,6 +2,8 @@
 
 module ErrorDetails
   class CreateService < BaseService
+    Result = BaseResult[:error_details]
+
     def call
       result = super
       return result unless result.success?

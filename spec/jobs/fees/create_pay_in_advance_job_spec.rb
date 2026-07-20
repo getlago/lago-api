@@ -6,7 +6,7 @@ RSpec.describe Fees::CreatePayInAdvanceJob do
   let(:charge) { create(:standard_charge, :pay_in_advance) }
   let(:event) { create(:event) }
 
-  let(:result) { BaseService::Result.new }
+  let(:result) { Fees::CreatePayInAdvanceService::Result.new }
 
   it "delegates to the pay_in_advance aggregation service" do
     allow(Fees::CreatePayInAdvanceService).to receive(:call)

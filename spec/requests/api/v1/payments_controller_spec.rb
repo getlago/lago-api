@@ -29,7 +29,7 @@ RSpec.describe Api::V1::PaymentsController do
     context "when all parameters are valid" do
       before do
         allow(Payments::ManualCreateService).to receive(:call).and_return(
-          BaseService::Result.new.tap { |r| r.payment = payment }
+          Payments::ManualCreateService::Result.new.tap { |r| r.payment = payment }
         )
       end
 

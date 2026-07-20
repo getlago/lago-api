@@ -36,11 +36,11 @@ RSpec.describe Customers::RefreshWalletJob do
 
     let(:customer) { create(:customer, awaiting_wallet_refresh:) }
     let(:organization) { customer.organization }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Customers::RefreshWalletsService::Result.new }
     let(:wallet_ids) { nil }
 
     before do
-      allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, target_wallet_ids: wallet_ids).and_return(result)
+      allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_return(result)
     end
 
     context "when customer is not awaiting wallet refresh" do
@@ -54,9 +54,9 @@ RSpec.describe Customers::RefreshWalletJob do
       context "when wallet_ids are provided" do
         let(:wallet_ids) { create_list(:wallet, 2, customer:).map(&:id) }
 
-        it "calls the Customers::RefreshWalletsService service scoped to the given wallets" do
+        it "still refreshes the whole customer" do
           subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: wallet_ids)
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
         end
       end
     end
@@ -67,16 +67,16 @@ RSpec.describe Customers::RefreshWalletJob do
       context "when refresh customer's wallets succeeds" do
         it "calls the Customers::RefreshWalletsService service" do
           subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: nil)
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
         end
       end
 
       context "when wallet_ids are provided" do
         let(:wallet_ids) { create_list(:wallet, 2, customer:).map(&:id) }
 
-        it "calls the Customers::RefreshWalletsService service scoped to the given wallets" do
+        it "refreshes the whole customer" do
           subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, target_wallet_ids: wallet_ids)
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
         end
       end
 
@@ -92,7 +92,7 @@ RSpec.describe Customers::RefreshWalletJob do
       end
 
       context "when refresh customer's wallets fails with a tax error" do
-        let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: ["customerAddressCouldNotResolve"]}) }
+        let(:result) { Customers::RefreshWalletsService::Result.new.validation_failure!(errors: {tax_error: ["customerAddressCouldNotResolve"]}) }
 
         context "when the error is related to the customer's address" do
           it "creates a tax_error error_detail on the customer" do
@@ -114,7 +114,7 @@ RSpec.describe Customers::RefreshWalletJob do
         ].each do |error_class|
           context "when the error is #{error_class.name.demodulize.underscore.humanize.downcase}" do
             before do
-              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, target_wallet_ids: nil).and_raise(error_class)
+              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(error_class)
             end
 
             it "raises the error and retries the job" do
@@ -128,7 +128,7 @@ RSpec.describe Customers::RefreshWalletJob do
         end
 
         context "when the tax error is an unknown failure" do
-          let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: ["failure"]}) }
+          let(:result) { Customers::RefreshWalletsService::Result.new.validation_failure!(errors: {tax_error: ["failure"]}) }
 
           it "does not create an error_detail and re-raises the error" do
             expect { subject }.to raise_error(BaseService::ValidationFailure).and not_change { customer.error_details.count }
@@ -137,7 +137,7 @@ RSpec.describe Customers::RefreshWalletJob do
       end
 
       context "when refresh customer's wallets fails with a non-tax error" do
-        let(:result) { BaseService::Result.new.validation_failure!(errors: {other_error: ["something"]}) }
+        let(:result) { Customers::RefreshWalletsService::Result.new.validation_failure!(errors: {other_error: ["something"]}) }
 
         it "re-raises the error" do
           expect { subject }.to raise_error(BaseService::ValidationFailure)

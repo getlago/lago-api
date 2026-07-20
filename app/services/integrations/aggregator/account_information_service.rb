@@ -3,6 +3,8 @@
 module Integrations
   module Aggregator
     class AccountInformationService < BaseService
+      Result = BaseResult[:account_information]
+
       AccountInformation = Data.define(:id)
 
       def action_path

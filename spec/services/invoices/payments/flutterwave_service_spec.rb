@@ -108,7 +108,7 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       end
 
       it "updates invoice payment status" do
-        allow(Invoices::UpdateService).to receive(:call).and_return(BaseService::Result.new)
+        allow(Invoices::UpdateService).to receive(:call).and_return(Invoices::UpdateService::Result.new)
 
         described_class.call(
           :update_payment_status,
@@ -184,7 +184,7 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       before do
         existing_payment1
         existing_payment2
-        allow(Invoices::UpdateService).to receive(:call).and_return(BaseService::Result.new)
+        allow(Invoices::UpdateService).to receive(:call).and_return(Invoices::UpdateService::Result.new)
       end
 
       it "calculates total paid amount correctly" do
@@ -304,8 +304,8 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       let(:payment) { create(:payment, payable: invoice) }
 
       before do
-        flutterwave_service.instance_variable_set(:@result, BaseService::Result.new.tap { |r| r.invoice = invoice })
-        allow(Invoices::UpdateService).to receive(:call).and_return(BaseService::Result.new)
+        flutterwave_service.instance_variable_set(:@result, Invoices::Payments::FlutterwaveService::RESULTS.fetch(:update_payment_status).new.tap { |r| r.invoice = invoice })
+        allow(Invoices::UpdateService).to receive(:call).and_return(Invoices::UpdateService::Result.new)
       end
 
       it "calls invoice update service with correct parameters" do

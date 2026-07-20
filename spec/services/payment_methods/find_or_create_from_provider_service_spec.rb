@@ -136,6 +136,17 @@ RSpec.describe PaymentMethods::FindOrCreateFromProviderService do
         end
       end
 
+      context "when the advisory lock cannot be acquired" do
+        before do
+          create(:payment_method, customer:, payment_provider_customer:, provider_method_id:, is_default: false)
+          allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+        end
+
+        it "raises a lock acquisition failure" do
+          expect { service.call }.to raise_error(BaseService::LockAcquisitionFailure)
+        end
+      end
+
       context "when PaymentMethod is already default" do
         let!(:existing_payment_method) do
           create(

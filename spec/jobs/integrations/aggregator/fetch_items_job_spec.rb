@@ -6,7 +6,7 @@ RSpec.describe Integrations::Aggregator::FetchItemsJob do
   subject(:fetch_items_job) { described_class }
 
   let(:integration) { create(:netsuite_integration) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Integrations::Aggregator::ItemsService::Result.new }
 
   before do
     allow(Integrations::Aggregator::ItemsService).to receive(:call).and_return(result)

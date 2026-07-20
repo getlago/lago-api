@@ -17,9 +17,8 @@ RSpec.describe DunningCampaigns::ProcessAttemptService do
   let(:payment_request) { create :payment_request, organization: }
 
   let(:payment_request_result) do
-    BaseService::Result.new.tap do |result|
+    PaymentRequests::CreateService::Result.new.tap do |result|
       result.payment_request = payment_request
-      result.customer = customer
     end
   end
 

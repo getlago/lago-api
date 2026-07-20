@@ -61,8 +61,8 @@ module PaymentProviders
 
       def handle_intent_event
         if INTENT_WEBHOOKS_EVENTS.include?(event_code)
-          klass = payment_service_klass(@event_json)
-          args = {
+          payment_service_klass(@event_json).call!(
+            :update_payment_status,
             organization_id: @organization.id,
             provider_payment_id: @event_json.dig("data", "intent_id"),
             status: event_to_payment_status(event_code),
@@ -71,38 +71,20 @@ module PaymentProviders
               @event_json.dig("data", "intent", "amount_currency")
             ),
             metadata: @event_json.dig("data", "intent", "custom_fields")
-          }
-
-          # NOTE: Temporary branch until PaymentRequests::Payments services are migrated to
-          #       TypedResults too. Once they are, call `klass.call(:update_payment_status, **args)` directly.
-          service_result = if klass.include?(TypedResults)
-            klass.call(:update_payment_status, **args)
-          else
-            klass.new.update_payment_status(**args)
-          end
-          service_result.raise_if_error!
+          )
         end
       end
 
       def handle_transaction_event
         if TRANSACTION_WEBHOOKS_EVENTS.include?(event_code)
-          klass = payment_service_klass(@event_json)
-          args = {
+          payment_service_klass(@event_json).call!(
+            :update_payment_status,
             organization_id: @organization.id,
             provider_payment_id: @event_json.dig("intent", "id"),
             status: event_to_payment_status(event_code),
             amount_cents: intent_amount_cents(@event_json.dig("intent", "amount"), nil),
             metadata: @event_json.dig("intent", "custom_fields")
-          }
-
-          # NOTE: Temporary branch until PaymentRequests::Payments services are migrated to
-          #       TypedResults too. Once they are, call `klass.call(:update_payment_status, **args)` directly.
-          service_result = if klass.include?(TypedResults)
-            klass.call(:update_payment_status, **args)
-          else
-            klass.new.update_payment_status(**args)
-          end
-          service_result.raise_if_error!
+          )
         end
       end
 

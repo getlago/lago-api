@@ -2,6 +2,8 @@
 
 module PaymentProviders
   class GocardlessService < BaseService
+    Result = BaseResult[:gocardless_provider]
+
     REDIRECT_URI = "#{ENV["LAGO_OAUTH_PROXY_URL"]}/gocardless/callback".freeze
 
     def create_or_update(**args)

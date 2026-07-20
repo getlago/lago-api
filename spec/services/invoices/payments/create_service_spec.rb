@@ -17,7 +17,7 @@ RSpec.describe Invoices::Payments::CreateService do
 
   describe "#call" do
     let(:result) do
-      BaseService::Result.new.tap do |r|
+      PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
         r.payment = instance_double(Payment, payable_payment_status: "processing")
       end
     end
@@ -496,10 +496,43 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
+    context "when a concurrent attempt already advanced the shared payment (regression)" do
+      it "does not destroy a payment that now has a provider reference" do
+        # A parallel attempt operates on the same pending row (only one pending/processing
+        # provider payment exists per payable). It sets a real provider reference just before
+        # this attempt finds the invoice already paid.
+        allow(provider_service).to receive(:call!) do
+          invoice.reload.payments.first.update!(provider_payment_id: "pi_concurrent")
+          raise Invoices::Payments::AlreadyPaidError
+        end
+
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+
+        payment = invoice.reload.payments.first
+        expect(payment).to be_present
+        expect(payment.provider_payment_id).to eq("pi_concurrent")
+      end
+
+      it "does not destroy a payment that was already marked succeeded" do
+        allow(provider_service).to receive(:call!) do
+          invoice.reload.payments.first.update!(payable_payment_status: "succeeded")
+          raise Invoices::Payments::AlreadyPaidError
+        end
+
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(invoice.reload.payments.first).to be_present
+      end
+    end
+
     context "when provider service raises a service failure" do
       let(:original_error) { ::Stripe::StripeError.new("card declined") }
       let(:result) do
-        BaseService::Result.new.tap do |r|
+        PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
           r.payment = instance_double(Payment, status: "failed", payable_payment_status: "failed")
           r.error_message = "error"
           r.error_code = "code"
@@ -550,7 +583,7 @@ RSpec.describe Invoices::Payments::CreateService do
 
       context "when payment has a payable_payment_status" do
         let(:result) do
-          BaseService::Result.new.tap do |r|
+          PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
             r.payment = instance_double(Payment, payable_payment_status: "failed")
             r.error_message = "error"
             r.error_code = "code"
@@ -599,7 +632,7 @@ RSpec.describe Invoices::Payments::CreateService do
 
       context "when payable_payment_status is pending" do
         let(:result) do
-          BaseService::Result.new.tap do |r|
+          PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
             r.payment = instance_double(Payment, status: "failed", payable_payment_status: "pending")
             r.error_message = "stripe_error"
             r.error_code = "unknown"
@@ -629,7 +662,7 @@ RSpec.describe Invoices::Payments::CreateService do
       ].each do |error_code|
         context "when error_code is is pending" do
           let(:result) do
-            BaseService::Result.new.tap do |r|
+            PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
               r.payment = instance_double(Payment, status: "failed", payable_payment_status: "failed")
               r.error_message = "stripe_error"
               r.error_code = error_code
@@ -765,6 +798,55 @@ RSpec.describe Invoices::Payments::CreateService do
             .to have_enqueued_job(Invoices::Payments::CreateJob)
             .with(invoice:, payment_provider: :stripe, payment_method_params: {})
             .at(:no_wait)
+        end
+      end
+
+      context "when the invoice gates a payment-gated subscription" do
+        let(:invoice) do
+          create(:invoice, customer:, organization:, total_amount_cents: 100, invoice_type: :subscription)
+        end
+
+        before { allow(invoice).to receive(:subscription_payment_gated?).and_return(true) }
+
+        it "enqueues the payment immediately" do
+          expect { ApplicationRecord.transaction { create_service.call_async } }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            .at(:no_wait)
+        end
+      end
+
+      context "when the invoice is an automatic (interval/threshold) wallet top-up" do
+        let(:invoice) { create(:invoice, :credit, customer:, organization:, total_amount_cents: 100) }
+
+        before do
+          wallet = create(:wallet, customer:, organization:)
+          create(:wallet_transaction, wallet:, invoice:, source: :interval)
+        end
+
+        it "enqueues the payment immediately" do
+          expect { ApplicationRecord.transaction { create_service.call_async } }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            .at(:no_wait)
+        end
+      end
+
+      context "when the invoice is a manual wallet top-up" do
+        let(:invoice) { create(:invoice, :credit, customer:, organization:, total_amount_cents: 100) }
+
+        before do
+          wallet = create(:wallet, customer:, organization:)
+          create(:wallet_transaction, wallet:, invoice:, source: :manual)
+        end
+
+        it "delays the first auto-payment" do
+          freeze_time do
+            expect { ApplicationRecord.transaction { create_service.call_async } }
+              .to have_enqueued_job(Invoices::Payments::CreateJob)
+              .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+              .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+          end
         end
       end
     end

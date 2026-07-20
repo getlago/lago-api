@@ -4,6 +4,8 @@ module PaymentProviders
   module Stripe
     module Payments
       class CreateService < BaseService
+        Result = BaseResult[:payment, :error_message, :error_code, :reraise, :should_retry]
+
         def initialize(payment:, reference:, metadata:)
           @payment = payment
           @reference = reference

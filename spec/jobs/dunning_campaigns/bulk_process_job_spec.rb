@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe DunningCampaigns::BulkProcessJob do
-  let(:result) { BaseService::Result.new }
+  let(:result) { DunningCampaigns::BulkProcessService::Result.new }
 
   before do
     allow(DunningCampaigns::BulkProcessService)

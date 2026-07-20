@@ -14,7 +14,9 @@ end
 # Database name: primary
 #
 #  id                   :uuid             not null, primary key
+#  code                 :string
 #  deleted_at           :datetime
+#  is_default           :boolean          default(FALSE), not null
 #  settings             :jsonb            not null
 #  type                 :string           not null
 #  created_at           :datetime         not null

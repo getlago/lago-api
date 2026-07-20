@@ -2743,7 +2743,7 @@ RSpec.describe Fees::ChargeService, :premium do
       end
       let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
       let(:error_result) do
-        BaseService::Result.new.service_failure!(code: "aggregation_failure", message: "Test message")
+        BillableMetrics::Aggregations::BaseService::Result.new.service_failure!(code: "aggregation_failure", message: "Test message")
       end
 
       it "returns an error" do
@@ -2961,7 +2961,7 @@ RSpec.describe Fees::ChargeService, :premium do
         end
         let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
         let(:error_result) do
-          BaseService::Result.new.service_failure!(code: "aggregation_failure", message: "Test message")
+          BillableMetrics::Aggregations::BaseService::Result.new.service_failure!(code: "aggregation_failure", message: "Test message")
         end
 
         it "returns an error" do
@@ -3011,7 +3011,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 billable_metric:,
                 properties: {
                   graduated_ranges: [
-                    {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "100"},
+                    {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "0"},
                     {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "50"}
                   ]
                 }
@@ -3138,7 +3138,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 billable_metric:,
                 properties: {
                   volume_ranges: [
-                    {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
+                    {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "0"},
                     {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
                   ]
                 }
@@ -3178,7 +3178,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 billable_metric:,
                 properties: {
                   graduated_percentage_ranges: [
-                    {from_value: 0, to_value: 10, rate: "1", flat_amount: "100"},
+                    {from_value: 0, to_value: 10, rate: "1", flat_amount: "0"},
                     {from_value: 11, to_value: nil, rate: "0.5", flat_amount: "50"}
                   ]
                 }
@@ -3212,6 +3212,111 @@ RSpec.describe Fees::ChargeService, :premium do
                     "units" => "0.0",
                     "per_unit_total_amount" => "0.0",
                     "total_with_flat_amount" => "0.0"
+                  }
+                ]
+              )
+            end
+          end
+        end
+
+        context "when units are zero but a flat fee applies" do
+          context "with graduated charge model" do
+            let(:charge) do
+              create(
+                :graduated_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {
+                  graduated_ranges: [
+                    {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "100"},
+                    {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "50"}
+                  ]
+                }
+              )
+            end
+
+            it "returns the flat fee with correct amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(units: 0, amount_cents: 10_000, events_count: 0)
+              expect(result.fees.first.amount_details).to eq(
+                "graduated_ranges" => [
+                  {
+                    "from_value" => 0,
+                    "to_value" => 10,
+                    "flat_unit_amount" => "100.0",
+                    "per_unit_amount" => "0.0",
+                    "units" => "0.0",
+                    "per_unit_total_amount" => "0.0",
+                    "total_with_flat_amount" => "100.0"
+                  }
+                ]
+              )
+            end
+          end
+
+          context "with volume charge model" do
+            let(:charge) do
+              create(
+                :volume_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {
+                  volume_ranges: [
+                    {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
+                    {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
+                  ]
+                }
+              )
+            end
+
+            it "returns the flat fee with correct amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(units: 0, amount_cents: 100, events_count: 0)
+              expect(result.fees.first.amount_details).to eq(
+                "flat_unit_amount" => "1.0",
+                "per_unit_amount" => "0.0",
+                "per_unit_total_amount" => "0.0"
+              )
+            end
+          end
+
+          context "with graduated_percentage charge model" do
+            let(:charge) do
+              create(
+                :graduated_percentage_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {
+                  graduated_percentage_ranges: [
+                    {from_value: 0, to_value: 10, rate: "1", flat_amount: "100"},
+                    {from_value: 11, to_value: nil, rate: "0.5", flat_amount: "50"}
+                  ]
+                }
+              )
+            end
+
+            it "returns the flat fee with correct amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(units: 0, amount_cents: 10_000, events_count: 0)
+              expect(result.fees.first.amount_details).to eq(
+                "graduated_percentage_ranges" => [
+                  {
+                    "from_value" => 0,
+                    "to_value" => 10,
+                    "flat_unit_amount" => "100.0",
+                    "rate" => "1.0",
+                    "units" => "0.0",
+                    "per_unit_total_amount" => "0.0",
+                    "total_with_flat_amount" => "100.0"
                   }
                 ]
               )
@@ -3409,7 +3514,7 @@ RSpec.describe Fees::ChargeService, :premium do
                   billable_metric:,
                   properties: {
                     graduated_ranges: [
-                      {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "100"},
+                      {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "0"},
                       {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "50"}
                     ]
                   }
@@ -3551,7 +3656,7 @@ RSpec.describe Fees::ChargeService, :premium do
                   billable_metric:,
                   properties: {
                     volume_ranges: [
-                      {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
+                      {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "0"},
                       {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
                     ]
                   }
@@ -3584,7 +3689,7 @@ RSpec.describe Fees::ChargeService, :premium do
                   billable_metric:,
                   properties: {
                     graduated_percentage_ranges: [
-                      {from_value: 0, to_value: 10, rate: "1", flat_amount: "100"},
+                      {from_value: 0, to_value: 10, rate: "1", flat_amount: "0"},
                       {from_value: 11, to_value: nil, rate: "0.5", flat_amount: "50"}
                     ]
                   }
@@ -4186,7 +4291,7 @@ RSpec.describe Fees::ChargeService, :premium do
       let(:presentation_group_keys) { [{value: "department"}, {value: "region"}] }
       let(:filter_by_presentation) { nil }
       let(:aggregator) { instance_double("Aggregator") }
-      let(:aggregation_result) { BaseService::Result.new }
+      let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
 
       before do
         allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original

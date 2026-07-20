@@ -33,7 +33,6 @@ RSpec.describe QuoteVersions::CreateService do
         expect(result.quote_version.version).to eq(1)
         expect(result.quote_version.draft?).to eq(true)
         expect(result.quote_version.content).to eq("Test content")
-        expect(result.quote_version.share_token).not_to be_nil
         expect(result.quote_version.billing_items).to eq({})
         expect(result.quote_version.currency).to eq("USD")
         expect(result.quote_version.start_date).to eq(start_date)

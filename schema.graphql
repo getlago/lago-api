@@ -5866,6 +5866,17 @@ enum EventsStoreEnum {
 }
 
 """
+Execute Order input arguments
+"""
+input ExecuteOrderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  id: ID!
+}
+
+"""
 Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
@@ -8101,6 +8112,16 @@ type Mutation {
   ): PaymentReceipt
 
   """
+  Execute an order
+  """
+  executeOrder(
+    """
+    Parameters for ExecuteOrder
+    """
+    input: ExecuteOrderInput!
+  ): Order
+
+  """
   Fetches taxes for one-off invoice
   """
   fetchDraftInvoiceTaxes(
@@ -9167,6 +9188,7 @@ type Order {
   executeAt: ISO8601DateTime
   executedAt: ISO8601DateTime
   executionMode: OrderExecutionModeEnum
+  executionRecord: OrderExecutionRecord!
   id: ID!
   number: String!
   orderForm: OrderForm!
@@ -9199,6 +9221,13 @@ type OrderCollection {
 enum OrderExecutionModeEnum {
   execute_in_lago
   order_only
+}
+
+type OrderExecutionRecord {
+  errors: [String!]!
+  executedAt: ISO8601DateTime
+  executionMode: OrderExecutionModeEnum
+  invoiceId: ID
 }
 
 type OrderForm {
@@ -9249,6 +9278,7 @@ enum OrderFormVoidReasonEnum {
 enum OrderStatusEnum {
   created
   executed
+  failed
 }
 
 enum OrderTypeEnum {
@@ -9540,6 +9570,7 @@ enum PermissionEnum {
   order_forms_sign
   order_forms_view
   order_forms_void
+  orders_execute
   orders_update
   orders_view
   organization_emails_update
@@ -9658,6 +9689,7 @@ type Permissions {
   orderFormsSign: Boolean!
   orderFormsView: Boolean!
   orderFormsVoid: Boolean!
+  ordersExecute: Boolean!
   ordersUpdate: Boolean!
   ordersView: Boolean!
   organizationEmailsUpdate: Boolean!
@@ -11086,7 +11118,6 @@ type QuoteVersion {
   mentionVariables: JSON!
   organization: Organization!
   quote: Quote!
-  shareToken: String
   startDate: ISO8601Date
   status: StatusEnum!
   updatedAt: ISO8601DateTime!

@@ -15,6 +15,7 @@ module PaymentProviders
       retry_on BaseService::NotFoundFailure
       retry_on ::Stripe::RateLimitError, wait: :polynomially_longer, attempts: 6, jitter: 0.75
       retry_on ::Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6, jitter: 0.75
+      retry_on BaseService::LockAcquisitionFailure, ActiveRecord::Deadlocked, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
 
       def perform(organization:, event:)
         result = PaymentProviders::Stripe::HandleEventService.call(

@@ -148,7 +148,7 @@ RSpec.describe Invoices::RefreshDraftService do
 
         subscription2.mark_as_terminated!
 
-        allow(Invoices::CalculateFeesService).to receive(:call).and_return(BaseService::Result.new)
+        allow(Invoices::CalculateFeesService).to receive(:call).and_return(Invoices::CalculateFeesService::Result.new)
 
         invoice.update!(created_at: started_at)
       end

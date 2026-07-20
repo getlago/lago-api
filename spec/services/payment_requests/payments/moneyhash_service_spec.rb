@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::MoneyhashService do
-  subject(:moneyhash_service) { described_class.new(payable) }
-
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:moneyhash_provider) { create(:moneyhash_provider, organization:) }
@@ -52,7 +50,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
     create(:payment_method, customer:, payment_provider_customer: moneyhash_customer, provider_method_id: "test_payment_method")
   end
 
-  describe "#create" do
+  describe ".call(:create)" do
     before do
       moneyhash_provider
       moneyhash_customer
@@ -64,7 +62,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       before { moneyhash_customer.update!(provider_customer_id: nil) }
 
       it "returns not found failure" do
-        result = moneyhash_service.create
+        result = described_class.call(:create, payable)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -76,7 +74,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       before { default_payment_method.update!(is_default: false) }
 
       it "returns not found failure" do
-        result = moneyhash_service.create
+        result = described_class.call(:create, payable)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -93,7 +91,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       end
 
       it "processes the payment using the provider customer payment method id" do
-        result = moneyhash_service.create
+        result = described_class.call(:create, payable)
 
         expect(result).to be_success
         expect(result.payment).to be_present
@@ -107,7 +105,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
         before { payable.update!(payment_status: :succeeded) }
 
         it "returns success without payment" do
-          result = moneyhash_service.create
+          result = described_class.call(:create, payable)
 
           expect(result).to be_success
           expect(result.payment).to be_nil
@@ -118,7 +116,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
         before { moneyhash_provider.destroy }
 
         it "returns success without payment" do
-          result = moneyhash_service.create
+          result = described_class.call(:create, payable)
 
           expect(result).to be_success
           expect(result.payment).to be_nil
@@ -130,7 +128,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       before { payable.update!(amount_cents: 0) }
 
       it "marks payment as succeeded without processing" do
-        result = moneyhash_service.create
+        result = described_class.call(:create, payable)
 
         expect(result).to be_success
         expect(result.payment).to be_nil
@@ -145,7 +143,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       end
 
       it "increments payment attempts, creates a payment and updates payment statuses for payable and invoices" do
-        result = moneyhash_service.create
+        result = described_class.call(:create, payable)
 
         expect(result).to be_success
         expect(result.payment).to be_present
@@ -164,7 +162,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
         end
 
         it "marks payment as failed" do
-          result = moneyhash_service.create
+          result = described_class.call(:create, payable)
 
           expect(result).to be_success
           expect(result.payment).to be_nil
@@ -190,7 +188,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       end
 
       it "uses customer default payment_method provider_method_id as card_token" do
-        moneyhash_service.create
+        described_class.call(:create, payable)
 
         expect(lago_client).to have_received(:post_with_response) do |params, _headers|
           expect(params[:card_token]).to eq("pm_test_123")
@@ -199,7 +197,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
     end
   end
 
-  describe "#update_payment_status" do
+  describe ".call(:update_payment_status)" do
     let(:payment) do
       create(:payment,
         payment_provider: moneyhash_provider,
@@ -220,7 +218,8 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
 
     context "when payment exists" do
       it "updates payment, payable and invoices status" do
-        result = moneyhash_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           provider_payment_id: payment_response_json.dig("data", "id"),
           status: payment_response_json.dig("data", "status"),
@@ -241,7 +240,8 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       let(:metadata) { {"lago_payable_id" => payable.id} }
 
       it "creates a new payment" do
-        result = moneyhash_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           provider_payment_id: "new_payment_id",
           status: "SUCCESSFUL",
@@ -260,10 +260,10 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
 
       context "when payable is not found" do
         let(:metadata) { {"lago_payable_id" => "invalid_id"} }
-        let(:moneyhash_service) { described_class.new(nil) }
 
         it "returns not found error" do
-          result = moneyhash_service.update_payment_status(
+          result = described_class.call(
+            :update_payment_status,
             organization_id: organization.id,
             provider_payment_id: "new_payment_id",
             status: "SUCCESSFUL",
@@ -284,7 +284,8 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       end
 
       it "does not update the status" do
-        result = moneyhash_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           provider_payment_id: payment_response_json.dig("data", "id"),
           status: "FAILED",
@@ -305,7 +306,8 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       end
 
       it "leaves already-succeeded invoices untouched" do
-        result = moneyhash_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           provider_payment_id: payment_response_json.dig("data", "id"),
           status: "FAILED",
