@@ -4088,6 +4088,24 @@ RSpec.describe Fees::ChargeService, :premium do
           aggregated_fees = result.fees.select { |f| f.units != 0 || f.events_count != 0 }
           expect(aggregated_fees).not_to be_empty
         end
+
+        context "when some filters are excluded from filtered_aggregations" do
+          let(:filtered_aggregations) { [eu_charge_filter.id] }
+
+          it "computes matching and ignored filters for all filters" do
+            allow(ChargeFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
+
+            result = charge_subscription_service.call
+            expect(result).to be_success
+
+            expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
+              .with(charge:, filter: eu_charge_filter)
+            expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
+              .with(charge:, filter: us_charge_filter)
+            expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
+              .with(charge:, filter: asia_charge_filter)
+          end
+        end
       end
 
       context "when context is current_usage", cache: :memory do

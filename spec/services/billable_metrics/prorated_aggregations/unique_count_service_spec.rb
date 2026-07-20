@@ -1082,6 +1082,32 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
       end
     end
 
+    context "when aggregation is bypassed and metric is recurring" do
+      subject(:unique_count_service) do
+        described_class.new(
+          event_store_class:,
+          charge:,
+          subscription:,
+          boundaries: {
+            from_datetime:,
+            to_datetime:,
+            charges_duration: 31
+          },
+          filters:,
+          bypass_aggregation: true
+        )
+      end
+
+      let(:added_at) { from_datetime + 10.days }
+
+      it "ignores the bypass and aggregates per events" do
+        result = unique_count_service.per_event_aggregation
+
+        expect(result.event_aggregation).to eq([1])
+        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([21.fdiv(31).ceil(5)])
+      end
+    end
+
     context "with event added in the period" do
       let(:added_at) { from_datetime + 10.days }
 

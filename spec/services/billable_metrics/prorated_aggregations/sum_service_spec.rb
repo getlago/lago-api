@@ -865,6 +865,31 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
         expect(event_store).not_to have_received(:events_values)
       end
     end
+
+    context "when aggregation is bypassed and metric is recurring" do
+      subject(:sum_service) do
+        described_class.new(
+          event_store_class:,
+          charge:,
+          subscription:,
+          boundaries: {
+            from_datetime:,
+            to_datetime:,
+            charges_duration: 31
+          },
+          filters:,
+          bypass_aggregation: true
+        )
+      end
+
+      it "ignores the bypass and aggregates per events" do
+        sum_service.options = {}
+        result = sum_service.per_event_aggregation
+
+        expect(result.event_aggregation).to eq([5, 12, 12])
+        expect(result.event_prorated_aggregation.map { |el| el.round(5) }).to eq([5, 2.32258, 2.32258])
+      end
+    end
   end
 
   describe ".grouped_by aggregation" do
