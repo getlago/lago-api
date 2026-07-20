@@ -37,10 +37,6 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
           allow(PaymentMethods::FindOrCreateFromProviderService).to receive(:call).and_raise(ActiveRecord::Deadlocked)
         end
 
-        it "propagates the error so the job can retry" do
-          expect { update_service.call }.to raise_error(ActiveRecord::Deadlocked)
-        end
-
         it "keeps the already saved settings, to be reconciled by the retry" do
           expect { update_service.call }.to raise_error(ActiveRecord::Deadlocked)
           expect(stripe_customer.reload.payment_method_id).to eq(payment_method_id)
