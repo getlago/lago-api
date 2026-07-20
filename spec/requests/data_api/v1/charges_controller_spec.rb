@@ -60,7 +60,7 @@ RSpec.describe DataApi::V1::ChargesController do # rubocop:disable Rails/FilePat
     end
 
     let(:result) do
-      BaseService::Result.new.tap do |result|
+      Charges::CalculatePriceService::Result.new.tap do |result|
         result.charge_amount_cents = 10
         result.subscription_amount_cents = 10
         result.total_amount_cents = 20

@@ -6,7 +6,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateJob do
   subject(:create_job) { described_class }
 
   let(:invoice) { create(:invoice) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Integrations::Aggregator::Invoices::Hubspot::UpdateService::Result.new }
 
   before do
     allow(Integrations::Aggregator::Invoices::Hubspot::UpdateService).to receive(:call).and_return(result)

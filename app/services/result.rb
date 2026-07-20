@@ -52,6 +52,10 @@ module Result
     fail_with_error!(BaseService::NonRetryableFailure.new(self, code:, error_message: message))
   end
 
+  def lock_acquisition_failure!(message:, code: "lock_acquisition_failed", error: nil)
+    fail_with_error!(BaseService::LockAcquisitionFailure.new(self, code:, error_message: message, original_error: error))
+  end
+
   def unknown_tax_failure!(code:, message:)
     fail_with_error!(BaseService::UnknownTaxFailure.new(self, code:, error_message: message))
   end

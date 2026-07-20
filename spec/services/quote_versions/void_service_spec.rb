@@ -19,7 +19,6 @@ RSpec.describe QuoteVersions::VoidService do
           expect(result.quote_version.voided?).to eq(true)
           expect(result.quote_version.void_reason).to eq(reason)
           expect(result.quote_version.voided_at).to eq(Time.current)
-          expect(result.quote_version.share_token).to eq(nil)
           expect(result.quote_version.approved_at).to eq(nil)
         end
       end

@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::FlutterwaveService do
-  subject(:flutterwave_service) { described_class.new(payment_request) }
-
   let(:organization) { create(:organization, name: "Test Organization") }
   let(:customer) { create(:customer, organization: organization, email: "customer@example.com", name: "John Doe") }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization: organization, secret_key: "FLWSECK_TEST-secret") }
@@ -25,7 +23,7 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
     flutterwave_customer
   end
 
-  describe "#call" do
+  describe ".call(:generate_payment_url)" do
     let(:http_client) { instance_double(LagoHttpClient::Client) }
     let(:successful_response) do
       {
@@ -42,14 +40,14 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
     end
 
     it "creates a checkout session and returns payment URL" do
-      result = flutterwave_service.call
+      result = described_class.call(:generate_payment_url, payment_request)
 
       expect(result).to be_success
       expect(result.payment_url).to eq("https://checkout.flutterwave.com/v3/hosted/pay/test_link")
     end
 
     it "sends correct parameters to Flutterwave API" do
-      flutterwave_service.call
+      described_class.call(:generate_payment_url, payment_request)
 
       expect(http_client).to have_received(:post_with_response) do |body, headers|
         expect(body[:amount]).to eq(500.0)
@@ -76,7 +74,7 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       end
 
       it "delivers error webhook and returns service failure" do
-        result = flutterwave_service.call
+        result = described_class.call(:generate_payment_url, payment_request)
 
         expect(result).not_to be_success
         expect(result.error.code).to eq("action_script_runtime_error")
@@ -84,7 +82,7 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       end
 
       it "sends webhook notification about payment failure" do
-        flutterwave_service.call
+        described_class.call(:generate_payment_url, payment_request)
 
         expect(SendWebhookJob).to have_been_enqueued.with(
           "payment_request.payment_failure",
@@ -99,7 +97,7 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
     end
   end
 
-  describe "#update_payment_status" do
+  describe ".call(:update_payment_status)" do
     let(:flutterwave_payment) do
       build(:flutterwave_payment,
         id: "flw_payment_123",
@@ -111,7 +109,8 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
 
     context "when creating a new payment" do
       it "creates a new payment and updates payment request status" do
-        result = flutterwave_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: :succeeded,
           flutterwave_payment: flutterwave_payment
@@ -126,7 +125,11 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       end
 
       it "increments payment attempts on the payment request" do
-        expect { flutterwave_service.update_payment_status(organization_id: organization.id, status: :succeeded, flutterwave_payment: flutterwave_payment) }
+        expect {
+          described_class.call(
+            :update_payment_status, organization_id: organization.id, status: :succeeded, flutterwave_payment: flutterwave_payment
+          )
+        }
           .to change { payment_request.reload.payment_attempts }.by(1)
       end
     end
@@ -150,7 +153,8 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       before { existing_payment }
 
       it "updates the existing payment status" do
-        result = flutterwave_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: :succeeded,
           flutterwave_payment: flutterwave_payment
@@ -170,7 +174,8 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       end
 
       it "returns not found failure" do
-        result = flutterwave_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: :succeeded,
           flutterwave_payment: flutterwave_payment
@@ -198,20 +203,21 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
           metadata: {payment_type: "recurring"})
       end
 
-      before { existing_payment }
+      before do
+        existing_payment
+        allow(PaymentRequests::UpdateService).to receive(:call).and_call_original
+      end
 
       it "returns early without processing" do
-        service = described_class.new(payable: succeeded_payment_request)
-        allow(service).to receive(:update_payable_payment_status)
-
-        result = service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: :succeeded,
           flutterwave_payment: flutterwave_payment
         )
 
         expect(result).to be_success
-        expect(service).not_to have_received(:update_payable_payment_status)
+        expect(PaymentRequests::UpdateService).not_to have_received(:call)
       end
     end
 
@@ -235,7 +241,8 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       end
 
       it "sends payment failure email" do
-        flutterwave_service.update_payment_status(
+        described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: :failed,
           flutterwave_payment: flutterwave_payment
@@ -252,7 +259,8 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
 
       it "leaves the already-succeeded invoice untouched" do
         expect do
-          flutterwave_service.update_payment_status(
+          described_class.call(
+            :update_payment_status,
             organization_id: organization.id,
             status: :failed,
             flutterwave_payment: flutterwave_payment
@@ -276,7 +284,7 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       it "uses correct currency conversion" do
         payment_request.update!(currency: "NGN", total_amount_cents: 1000000) # 10,000 NGN
 
-        flutterwave_service.call
+        described_class.call(:generate_payment_url, payment_request)
 
         expect(http_client).to have_received(:post_with_response) do |body|
           expect(body[:amount]).to eq(10000.0)
@@ -285,7 +293,7 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       end
 
       it "includes correct meta parameters" do
-        flutterwave_service.call
+        described_class.call(:generate_payment_url, payment_request)
 
         expect(http_client).to have_received(:post_with_response) do |body|
           meta = body[:meta]

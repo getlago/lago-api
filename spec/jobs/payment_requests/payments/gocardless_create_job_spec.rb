@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentRequests::Payments::GocardlessCreateJob do
   let(:payment_request) { create(:payment_request) }
 
-  let(:service_result) { BaseService::Result.new }
+  let(:service_result) { PaymentRequests::Payments::CreateService::Result.new }
 
   before do
     allow(PaymentRequests::Payments::CreateService).to receive(:call!)

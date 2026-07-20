@@ -150,6 +150,8 @@ module Events
         SQL
       end
 
+      # Returns [charge_id, charge_filter_id, last_seen_at] tuples, where last_seen_at is the
+      # enriched_at of the most recent event for that charge/filter in the period.
       def distinct_charges_and_filters(codes: nil)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = ::Clickhouse::EventsEnrichedExpanded
@@ -158,7 +160,8 @@ module Events
             .where(timestamp: from_datetime..to_datetime)
 
           scope = scope.where(code: codes) unless codes.nil?
-          scope.distinct.pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"))
+          scope.group("charge_id", "charge_filter_id")
+            .pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"), Arel.sql("MAX(enriched_at)"))
         end
       end
 

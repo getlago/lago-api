@@ -3,6 +3,8 @@
 module Fees
   module EstimateInstant
     class BatchPayInAdvanceService < BaseService
+      Result = BaseResult[:fees]
+
       def initialize(organization:, external_subscription_id:, events:)
         @organization = organization
         @timestamp = Time.current

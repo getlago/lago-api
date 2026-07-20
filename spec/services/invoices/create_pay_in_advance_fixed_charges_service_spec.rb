@@ -374,7 +374,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       before do
         allow(Fees::BuildPayInAdvanceFixedChargeService)
           .to receive(:call)
-          .and_return(BaseService::Result.new.service_failure!(code: "code", message: "message"))
+          .and_return(Fees::BuildPayInAdvanceFixedChargeService::Result.new.service_failure!(code: "code", message: "message"))
       end
 
       it "fails with a service failure" do

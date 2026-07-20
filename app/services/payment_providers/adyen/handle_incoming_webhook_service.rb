@@ -3,6 +3,8 @@
 module PaymentProviders
   module Adyen
     class HandleIncomingWebhookService < BaseService
+      Result = BaseResult[:event]
+
       def initialize(organization_id:, body:, code: nil)
         @organization_id = organization_id
         @body = body

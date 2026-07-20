@@ -7,7 +7,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob do
   let(:invoice) { create(:invoice, customer:) }
   let(:customer) { create(:customer, organization:) }
 
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::ProviderTaxes::PullTaxesAndApplyService::Result.new }
 
   before do
     allow(Invoices::ProviderTaxes::PullTaxesAndApplyService).to receive(:call)

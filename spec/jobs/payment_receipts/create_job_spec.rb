@@ -7,7 +7,7 @@ RSpec.describe PaymentReceipts::CreateJob do
 
   it "calls the create service" do
     allow(PaymentReceipts::CreateService)
-      .to receive(:call!).with(payment:).and_return(BaseService::Result.new)
+      .to receive(:call!).with(payment:).and_return(PaymentReceipts::CreateService::Result.new)
 
     described_class.perform_now(payment)
 

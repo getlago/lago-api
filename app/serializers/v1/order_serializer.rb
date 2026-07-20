@@ -12,6 +12,7 @@ module V1
         billing_snapshot: model.billing_snapshot,
         currency: model.currency,
         executed_at: model.executed_at&.iso8601,
+        execution_record: model.execution_record,
         lago_organization_id: model.organization_id,
         lago_customer_id: model.customer_id,
         lago_order_form_id: model.order_form_id,

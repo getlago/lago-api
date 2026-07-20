@@ -913,7 +913,7 @@ RSpec.describe Api::V1::InvoicesController do
 
     before do
       allow(Invoices::Payments::RetryService).to receive(:new).and_return(retry_service)
-      allow(retry_service).to receive(:call).and_return(BaseService::Result.new)
+      allow(retry_service).to receive(:call).and_return(Invoices::Payments::RetryService::Result.new)
     end
 
     include_examples "requires API permission", "invoice", "write"
@@ -970,7 +970,7 @@ RSpec.describe Api::V1::InvoicesController do
     let!(:invoice) { create(:invoice, customer:, organization:) }
     let(:invoice_id) { invoice.id }
     let(:retry_service) { instance_double(Invoices::RetryService) }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Invoices::RetryService::Result.new }
 
     before do
       result.invoice = invoice
@@ -1013,7 +1013,7 @@ RSpec.describe Api::V1::InvoicesController do
 
     let!(:invoice) { create(:invoice, customer:, organization:) }
     let(:invoice_id) { invoice.id }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Invoices::SyncSalesforceIdService::Result.new }
 
     before do
       result.invoice = invoice

@@ -267,9 +267,13 @@ module Customers
         end
       end
 
+      removing_provider = old_provider_customer && billing.key?(:payment_provider) && billing[:payment_provider].nil?
+      customer.payment_provider_code = nil if removing_provider
+
       customer.save!
 
-      if old_provider_customer && billing.key?(:payment_provider) && billing[:payment_provider].nil?
+      if removing_provider
+        old_provider_customer.discard!
         discard_payment_methods(old_provider_customer.payment_methods)
       end
 
@@ -277,6 +281,10 @@ module Customers
 
       update_provider_customer = (billing || {})[:provider_customer_id].present?
       update_provider_customer ||= customer.provider_customer&.provider_customer_id.present?
+      # NOTE: when the provider is being replaced, customer.provider_customer points at the
+      #       new (not yet created) provider and is nil, so fall back to the old provider
+      #       customer to still create the new one and discard the old provider's data.
+      update_provider_customer ||= old_provider_customer.present?
 
       return unless update_provider_customer
 
@@ -307,6 +315,9 @@ module Customers
         params: billing_configuration,
         async: !(billing_configuration || {})[:sync]
       ).call.raise_if_error!
+
+      # NOTE: Create service is modifying an other instance of the provider customer
+      customer.reload
     end
 
     def discard_payment_methods(payment_methods)

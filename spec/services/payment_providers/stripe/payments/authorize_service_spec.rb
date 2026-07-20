@@ -16,7 +16,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
   let(:provider_method_id) { "pm_from_payment_method" }
   let(:payment_method_id) { "pm_from_provider_customer" }
   let(:stripe_result) do
-    result = BaseService::Result.new
+    result = PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService::Result.new
     result.payment_method_id = "pm_from_stripe"
     result
   end
@@ -30,7 +30,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
       let(:payment_method) { nil }
       let(:payment_method_id) { nil }
       let(:stripe_result) do
-        result = BaseService::Result.new
+        result = PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService::Result.new
         result.payment_method_id = nil
         result
       end

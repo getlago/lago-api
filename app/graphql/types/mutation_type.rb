@@ -153,6 +153,7 @@ module Types
 
     field :void_order_form, mutation: Mutations::OrderForms::Void
 
+    field :execute_order, mutation: Mutations::Orders::Execute
     field :update_order, mutation: Mutations::Orders::Update
 
     field :download_payment_receipt, mutation: Mutations::PaymentReceipts::Download
@@ -253,6 +254,8 @@ module Types
     field :create_or_update_subscription_entitlement, mutation: Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement
     field :remove_subscription_entitlement, mutation: Mutations::Entitlement::RemoveSubscriptionEntitlement
 
+    field :ask_finance_assistant, mutation: Mutations::FinanceAssistant::Ask
     field :create_ai_conversation, mutation: Mutations::AiConversations::Create
+    field :export_finance_assistant_result, mutation: Mutations::FinanceAssistant::Export
   end
 end

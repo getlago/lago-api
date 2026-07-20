@@ -9,7 +9,7 @@ RSpec.describe PaymentProviders::Cashfree::Webhooks::PaymentLinkEventService do
   let(:event_json) { File.read("spec/fixtures/cashfree/payment_link_event_payment.json") }
 
   let(:payment_service) { instance_double(Invoices::Payments::CashfreeService) }
-  let(:service_result) { BaseService::Result.new }
+  let(:service_result) { Invoices::Payments::CashfreeService::RESULTS.fetch(:update_payment_status).new }
 
   describe "#call" do
     context "when succeeded payment event" do
@@ -35,25 +35,22 @@ RSpec.describe PaymentProviders::Cashfree::Webhooks::PaymentLinkEventService do
     end
 
     context "when succeeded payment_request event" do
-      let(:payment_service) { instance_double(PaymentRequests::Payments::CashfreeService) }
-
       let(:event_json) do
         path = Rails.root.join("spec/fixtures/cashfree/payment_link_event_payment_request.json")
         File.read(path)
       end
 
       before do
-        allow(PaymentRequests::Payments::CashfreeService).to receive(:new)
-          .and_return(payment_service)
-        allow(payment_service).to receive(:update_payment_status)
+        allow(PaymentRequests::Payments::CashfreeService).to receive(:call)
           .and_return(service_result)
       end
 
       it "routes the event to an other service" do
         webhook_service.call
 
-        expect(PaymentRequests::Payments::CashfreeService).to have_received(:new)
-        expect(payment_service).to have_received(:update_payment_status)
+        expect(PaymentRequests::Payments::CashfreeService).to have_received(:call).with(
+          :update_payment_status, hash_including(organization_id: organization.id, status: "PAID")
+        )
       end
     end
   end

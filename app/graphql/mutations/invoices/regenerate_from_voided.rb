@@ -13,13 +13,18 @@ module Mutations
       description "Regenerate an invoice from a voided invoice"
 
       argument :fees, [Types::Invoices::VoidedInvoiceFeeInput], required: true
+      argument :purchase_order_number, String, required: false
       argument :voided_invoice_id, ID, required: true
 
       type Types::Invoices::Object
 
-      def resolve(voided_invoice_id:, fees:)
+      def resolve(voided_invoice_id:, fees:, purchase_order_number: :inherit)
         invoice = current_organization.invoices.visible.find_by(id: voided_invoice_id)
-        result = ::Invoices::RegenerateFromVoidedService.new(voided_invoice: invoice, fees_params: fees).call
+        result = ::Invoices::RegenerateFromVoidedService.new(
+          voided_invoice: invoice,
+          fees_params: fees,
+          purchase_order_number:
+        ).call
 
         result.success? ? result.invoice : result_error(result)
       end
