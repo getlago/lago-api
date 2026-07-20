@@ -23,6 +23,27 @@ RSpec.describe Api::V1::CustomersController do
 
     include_examples "requires API permission", "customer", "write"
 
+    context "when firstname and lastname contain null bytes" do
+      let(:create_params) do
+        {
+          external_id: SecureRandom.uuid,
+          name: "Foo\u0000Bar",
+          firstname: "\u0000",
+          lastname: "\u0000",
+          currency: "EUR"
+        }
+      end
+
+      it "strips the null bytes instead of returning a 500" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:name]).to eq("FooBar")
+        expect(json[:customer][:firstname]).to eq("")
+        expect(json[:customer][:lastname]).to eq("")
+      end
+    end
+
     it "returns a success" do
       subject
 

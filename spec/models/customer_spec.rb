@@ -84,6 +84,46 @@ RSpec.describe Customer do
         expect(described_class.normalize_value_for(field, "")).to be_nil
       end
     end
+
+    it "strips null bytes from identity and free-text attributes" do
+      normalized_customer = build(
+        :customer,
+        name: "Foo\u0000Bar",
+        firstname: "Jo\u0000hn",
+        lastname: "Do\u0000e",
+        legal_name: "Foo\u0000Corp",
+        legal_number: "12\u000034",
+        phone: "555\u00000199",
+        url: "https://ex\u0000ample.test",
+        logo_url: "https://ex\u0000ample.test/l.png",
+        tax_identification_number: "FR\u000012345",
+        external_salesforce_id: "sf\u0000id"
+      )
+
+      expect(normalized_customer.name).to eq("FooBar")
+      expect(normalized_customer.firstname).to eq("John")
+      expect(normalized_customer.lastname).to eq("Doe")
+      expect(normalized_customer.legal_name).to eq("FooCorp")
+      expect(normalized_customer.legal_number).to eq("1234")
+      expect(normalized_customer.phone).to eq("5550199")
+      expect(normalized_customer.url).to eq("https://example.test")
+      expect(normalized_customer.logo_url).to eq("https://example.test/l.png")
+      expect(normalized_customer.tax_identification_number).to eq("FR12345")
+      expect(normalized_customer.external_salesforce_id).to eq("sfid")
+    end
+
+    it "strips null bytes from external_id" do
+      normalized_customer = build(:customer, external_id: "ext\u0000id")
+
+      expect(normalized_customer.external_id).to eq("extid")
+    end
+
+    it "keeps empty identity values as empty strings (not nil)" do
+      normalized_customer = build(:customer, firstname: "\u0000", lastname: "\u0000")
+
+      expect(normalized_customer.firstname).to eq("")
+      expect(normalized_customer.lastname).to eq("")
+    end
   end
 
   describe "validations" do
