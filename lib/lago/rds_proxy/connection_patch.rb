@@ -37,15 +37,11 @@ module Lago
           end
         end
 
-        # User-defined variables from database.yml will still pin the connection.
-        variables = @config.fetch(:variables, {}).stringify_keys
-        variables.each do |k, v|
-          if v == ":default" || v == :default
-            internal_execute("SET SESSION #{k} TO DEFAULT", "SCHEMA")
-          elsif !v.nil?
-            internal_execute("SET SESSION #{k} TO #{quote(v)}", "SCHEMA")
-          end
-        end
+        # Deliberately skip database.yml `variables:` — each one emits a session-level
+        # SET (even `TO DEFAULT`) that pins the connection on RDS Proxy. Configure any
+        # required session settings via the proxy initQuery or role-level defaults
+        # (ALTER ROLE ... SET ...) instead. Lago's statement_timeout / lock_timeout /
+        # idle_in_transaction_session_timeout are set as `lago` role defaults.
 
         add_pg_encoders
         add_pg_decoders

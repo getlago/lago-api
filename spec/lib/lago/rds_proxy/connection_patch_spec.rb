@@ -101,17 +101,7 @@ RSpec.describe Lago::RdsProxy::ConnectionPatch do
 
       before { adapter.configure_connection }
 
-      it "still applies SET SESSION for explicit variables (and accepts the pinning cost)" do
-        expect(adapter.calls).to include([:internal_execute, "SET SESSION statement_timeout TO '30s'"])
-        expect(adapter.calls).to include([:internal_execute, "SET SESSION lock_timeout TO DEFAULT"])
-      end
-    end
-
-    context "with nil values in variables" do
-      let(:config) { {variables: {statement_timeout: nil}} }
-
-      it "skips nil values" do
-        adapter.configure_connection
+      it "does not emit SET SESSION for variables (they pin the connection on RDS Proxy)" do
         sets = adapter.calls.select { |c| c.is_a?(Array) && c[0] == :internal_execute }
         expect(sets).to be_empty
       end
