@@ -8,7 +8,7 @@ RSpec.describe BillSubscriptionJob do
 
   let(:invoice) { nil }
   let(:invoicing_reason) { :subscription_starting }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::SubscriptionService::Result.new }
 
   before do
     allow(Invoices::SubscriptionService).to receive(:call)
@@ -25,7 +25,7 @@ RSpec.describe BillSubscriptionJob do
 
     context "when result is a failure" do
       let(:result) do
-        result = BaseService::Result.new
+        result = Invoices::SubscriptionService::Result.new
         result.invoice = invoice
         result.single_validation_failure!(error_code: "error")
       end

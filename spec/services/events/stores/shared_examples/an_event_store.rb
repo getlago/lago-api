@@ -2727,21 +2727,25 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         )
       end
 
-      it "returns distinct charges and filters" do
-        expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, charge_filter.id]])
+      it "returns distinct charges and filters with the last seen timestamp" do
+        result = event_store.distinct_charges_and_filters
+
+        expect(result.map { |row| row[0..1] }).to match_array([[charge.id, charge_filter.id]])
+        expect(result.map(&:last)).to all(be_present)
       end
 
       context "when charge_filter is nil" do
         let(:charge_filter) { nil }
 
         it "returns the distinct event codes" do
-          expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, nil]])
+          expect(event_store.distinct_charges_and_filters.map { |row| row[0..1] }).to match_array([[charge.id, nil]])
         end
       end
 
       context "when codes are provided" do
         it "returns only the charges and filters matching the provided codes" do
-          expect(event_store.distinct_charges_and_filters(codes: [code])).to match_array([[charge.id, charge_filter.id]])
+          matching = event_store.distinct_charges_and_filters(codes: [code])
+          expect(matching.map { |row| row[0..1] }).to match_array([[charge.id, charge_filter.id]])
           expect(event_store.distinct_charges_and_filters(codes: ["unknown_code"])).to eq([])
         end
       end
@@ -2762,17 +2766,18 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       it "returns the distinct property combinations sliced to the filter keys" do
         result = event_store.distinct_codes_and_property_combinations(codes: [code], filter_keys: %w[region provider])
 
-        expect(result).to match_array([
+        expect(result.map { |row| row[0..1] }).to match_array([
           [code, {"region" => "eu", "provider" => "aws"}],
           [code, {"region" => "us", "provider" => "gcp"}],
           [code, {"region" => "eu"}]
         ])
+        expect(result.map(&:last)).to all(be_present)
       end
 
       it "ignores property keys that are not filter keys" do
         result = event_store.distinct_codes_and_property_combinations(codes: [code], filter_keys: ["region"])
 
-        expect(result).to match_array([
+        expect(result.map { |row| row[0..1] }).to match_array([
           [code, {"region" => "eu"}],
           [code, {"region" => "us"}]
         ])
@@ -2782,7 +2787,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         it "returns the default bucket combination" do
           result = event_store.distinct_codes_and_property_combinations(codes: [code], filter_keys: [])
 
-          expect(result).to eq([[code, {}]])
+          expect(result.map { |row| row[0..1] }).to eq([[code, {}]])
         end
       end
 
@@ -2806,7 +2811,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         it "excludes them from the combinations" do
           result = event_store.distinct_codes_and_property_combinations(codes: [code], filter_keys: %w[region provider])
 
-          expect(result).not_to include([code, {"region" => "apac", "provider" => "azure"}])
+          expect(result.map { |row| row[0..1] }).not_to include([code, {"region" => "apac", "provider" => "azure"}])
         end
       end
     end

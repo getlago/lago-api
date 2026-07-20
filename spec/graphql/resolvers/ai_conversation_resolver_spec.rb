@@ -28,7 +28,7 @@ RSpec.describe Resolvers::AiConversationResolver do
   let(:ai_conversation) { create(:ai_conversation, organization:, mistral_conversation_id: "conv_123") }
   let(:fetch_messages_service) { instance_double(AiConversations::FetchMessagesService) }
   let(:service_result) do
-    result = BaseService::Result.new
+    result = AiConversations::FetchMessagesService::Result.new
     result.messages = [
       {
         "content" => "Hello",
@@ -122,7 +122,7 @@ RSpec.describe Resolvers::AiConversationResolver do
 
     context "when fetch messages service fails" do
       let(:failed_result) do
-        result = BaseService::Result.new
+        result = AiConversations::FetchMessagesService::Result.new
         result.service_failure!(code: "mistral_api_error", message: "API error")
         result
       end

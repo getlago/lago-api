@@ -35,7 +35,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
   describe "#call" do
     let(:aggregation_result) do
-      BaseService::Result.new.tap do |result|
+      BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
         result.aggregation = 9
         result.count = 4
         result.options = {}
@@ -43,7 +43,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
     end
 
     let(:charge_result) do
-      BaseService::Result.new.tap do |result|
+      Charges::ApplyPayInAdvanceChargeModelService::Result.new.tap do |result|
         result.amount = 10
         result.precise_amount = 10.0
         result.unit_amount = 0.01111111111
@@ -133,7 +133,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
     context "when aggregation fails" do
       let(:aggregation_result) do
-        BaseService::Result.new.service_failure!(code: "failure", message: "Failure")
+        BillableMetrics::Aggregations::BaseService::Result.new.service_failure!(code: "failure", message: "Failure")
       end
 
       it "returns a failure" do
@@ -148,7 +148,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
     context "when charge model fails" do
       let(:charge_result) do
-        BaseService::Result.new.service_failure!(code: "failure", message: "Failure")
+        Charges::ApplyPayInAdvanceChargeModelService::Result.new.service_failure!(code: "failure", message: "Failure")
       end
 
       it "returns a failure" do
@@ -537,10 +537,8 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
     context "when in current and max aggregation result" do
       let(:aggregation_result) do
-        BaseService::Result.new.tap do |result|
-          result.amount = 10
+        BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
           result.count = 1
-          result.units = 9
           result.current_aggregation = 9
           result.max_aggregation = 9
           result.max_aggregation_with_proration = nil
@@ -572,10 +570,8 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         end
         let(:event_properties) { {"cloud" => "aws", "region" => "us-east-1"} }
         let(:aggregation_result) do
-          BaseService::Result.new.tap do |result|
-            result.amount = 10
+          BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
             result.count = 1
-            result.units = 9
             result.current_aggregation = 9
             result.max_aggregation = 9
             result.max_aggregation_with_proration = nil
@@ -656,7 +652,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         end
         let(:aggregation_result) { aggregation_results.fetch(event.transaction_id) }
         let(:charge_result) do
-          BaseService::Result.new.tap do |result|
+          Charges::ApplyPayInAdvanceChargeModelService::Result.new.tap do |result|
             result.amount = aggregation_result.pay_in_advance_breakdowns.sum { |breakdown| breakdown[:value] }
             result.precise_amount = result.amount.to_d
             result.unit_amount = 1
@@ -665,7 +661,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           end
         end
         let(:first_aggregation_result) do
-          BaseService::Result.new.tap do |result|
+          BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
             result.aggregation = 3
             result.count = 1
             result.options = {}
@@ -676,7 +672,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           end
         end
         let(:second_aggregation_result) do
-          BaseService::Result.new.tap do |result|
+          BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
             result.aggregation = 13
             result.count = 2
             result.options = {}
@@ -690,7 +686,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           end
         end
         let(:third_aggregation_result) do
-          BaseService::Result.new.tap do |result|
+          BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
             result.aggregation = 20
             result.count = 3
             result.options = {}

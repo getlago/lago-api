@@ -332,21 +332,20 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       end
 
       let(:http_client) { instance_double(LagoHttpClient::Client) }
-      let(:payment_service) { instance_double(PaymentRequests::Payments::FlutterwaveService) }
 
       before do
         payment_request
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
         allow(http_client).to receive(:get).and_return(verification_response)
-        allow(PaymentRequests::Payments::FlutterwaveService).to receive(:new).and_return(payment_service)
-        allow(payment_service).to receive(:update_payment_status).and_return(instance_double("BaseService::Result", raise_if_error!: nil))
+        allow(PaymentRequests::Payments::FlutterwaveService).to receive(:call).and_return(update_payment_status_result)
       end
 
       it "uses the PaymentRequest service" do
         charge_completed_service.call
 
-        expect(PaymentRequests::Payments::FlutterwaveService).to have_received(:new).with(payable: payment_request)
-        expect(payment_service).to have_received(:update_payment_status)
+        expect(PaymentRequests::Payments::FlutterwaveService).to have_received(:call).with(
+          :update_payment_status, hash_including(organization_id: organization.id, status: "successful")
+        )
       end
     end
 

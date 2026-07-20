@@ -101,7 +101,7 @@ module Invoices
           subscription:,
           context: :finalize,
           boundaries:,
-          filtered_aggregations: filters[charge.id] || []
+          filtered_aggregations: filters[charge.id]&.keys || []
         )
       end
     end

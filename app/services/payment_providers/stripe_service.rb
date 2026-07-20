@@ -2,6 +2,8 @@
 
 module PaymentProviders
   class StripeService < BaseService
+    Result = BaseResult[:stripe_provider]
+
     # TODO: Split into 2 dedicated `PaymentProviders::Stripe::(Create|Update)Service`
     def create_or_update(**args)
       payment_provider_result = PaymentProviders::FindService.call(

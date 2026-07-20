@@ -111,7 +111,7 @@ RSpec.describe PaymentProviders::Moneyhash::HandleEventService do
   end
 
   describe "amount_cents handling in metadata" do
-    let(:service_result) { BaseService::Result.new }
+    let(:service_result) { Invoices::Payments::MoneyhashService::RESULTS.fetch(:update_payment_status).new }
 
     before do
       allow(Invoices::Payments::MoneyhashService).to receive(:call).and_return(service_result)

@@ -157,10 +157,11 @@ module Events
         ).distinct_charges_and_filters(codes:)
       end
 
-      # Returns the distinct [code, properties] combinations present in the events of the
-      # period. Only properties present in the filter_keys are considered, so the result holds
-      # only the dimensions that can be matched against charge filters.
+      # Returns the distinct [code, properties, last_seen_at] combinations present in the events
+      # of the period. Only properties present in the filter_keys are considered, so the result
+      # holds only the dimensions that can be matched against charge filters.
       # An empty hash represents the default (no filter) bucket.
+      # last_seen_at is the enriched_at of the most recent event in the combination.
       #
       # ClickHouse stores properties as a Map(String, String); a missing key reads back as an
       # empty string, so blank values are dropped to mirror the Postgres jsonb behaviour.
@@ -175,19 +176,22 @@ module Events
             .where("events_enriched.timestamp >= ?", from_datetime)
             .where("events_enriched.timestamp <= ?", applicable_to_datetime)
 
-          selects = ["DISTINCT code AS code"]
+          selects = ["code AS code"]
+          group_columns = ["code"]
           filter_keys.each_with_index do |key, index|
             selects << ActiveRecord::Base.sanitize_sql_array(["properties[?] AS prop_#{index}", key.to_s])
+            group_columns << "prop_#{index}"
           end
+          selects << "MAX(enriched_at) AS last_seen_at"
 
-          scope.select(selects.join(", ")).map do |row|
+          scope.select(selects.join(", ")).group(group_columns.join(", ")).map do |row|
             combination = {}
             filter_keys.each_with_index do |key, index|
               value = row.read_attribute("prop_#{index}")
               combination[key] = value if value.present?
             end
 
-            [row.code, combination]
+            [row.code, combination, row.read_attribute("last_seen_at")]
           end
         end
       end

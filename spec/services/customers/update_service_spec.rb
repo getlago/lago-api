@@ -352,7 +352,7 @@ RSpec.describe Customers::UpdateService do
         allow(PaymentProviderCustomers::UpdateService)
           .to receive(:call)
           .with(customer)
-          .and_return(BaseService::Result.new)
+          .and_return(PaymentProviderCustomers::UpdateService::Result.new)
       end
 
       it "creates a payment provider customer" do
@@ -417,7 +417,7 @@ RSpec.describe Customers::UpdateService do
             customer.update!(payment_provider: "stripe")
           end
 
-          it "removes the provider customer id" do
+          it "discards the provider customer" do
             result = customers_service.call
 
             expect(result).to be_success
@@ -426,8 +426,7 @@ RSpec.describe Customers::UpdateService do
             expect(result_customer.id).to eq(customer.id)
             expect(result_customer.payment_provider).to be_nil
 
-            expect(result_customer.stripe_customer).to eq(stripe_customer)
-            expect(result_customer.stripe_customer.provider_customer_id).to be_nil
+            expect(stripe_customer.reload).to be_discarded
           end
         end
       end
@@ -472,13 +471,11 @@ RSpec.describe Customers::UpdateService do
         expect(customer.payment_provider_code).to be_nil
       end
 
-      # NOTE: This describes a scenario with incorrect behavior that currently exists.
-      #       The previous provider customer is not discarded
-      it "does not discard the provider customer" do
+      it "discards the provider customer" do
         result = customers_service.call
 
         expect(result).to be_success
-        expect(stripe_customer.reload).not_to be_discarded
+        expect(stripe_customer.reload).to be_discarded
       end
 
       it "discards the payment methods" do
@@ -486,6 +483,25 @@ RSpec.describe Customers::UpdateService do
 
         expect(result).to be_success
         expect(payment_method.reload).to be_discarded
+      end
+
+      context "when a non-nil payment_provider_code is still provided" do
+        let(:update_args) do
+          {
+            id: customer.id,
+            organization_id: organization.id,
+            payment_provider: nil,
+            provider_customer: nil,
+            payment_provider_code:
+          }
+        end
+
+        it "wipes out the payment_provider_code" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.payment_provider_code).to be_nil
+        end
       end
     end
 

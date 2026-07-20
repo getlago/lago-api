@@ -7,7 +7,7 @@ RSpec.describe Mutations::Auth::Google::LoginUser do
   let(:user) { membership.user }
 
   let(:login_result) do
-    result = BaseService::Result.new
+    result = Auth::GoogleService::RESULTS.fetch(:login).new
     result.user = user
     result.token = "token"
     result
@@ -51,7 +51,7 @@ RSpec.describe Mutations::Auth::Google::LoginUser do
 
   context "when user does not exist" do
     let(:login_result) do
-      result = BaseService::Result.new
+      result = Auth::GoogleService::RESULTS.fetch(:login).new
       result.single_validation_failure!(error_code: "user_does_not_exist")
       result
     end

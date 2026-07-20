@@ -9,7 +9,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
     let(:timestamp) { Time.current.to_i }
 
     let(:invoice) { nil }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Invoices::CreatePayInAdvanceChargeService::Result.new }
 
     before do
       allow(Invoices::CreatePayInAdvanceChargeService).to receive(:call)
@@ -25,7 +25,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
 
     context "when result is a failure" do
       let(:result) do
-        BaseService::Result.new.single_validation_failure!(error_code: "error")
+        Invoices::CreatePayInAdvanceChargeService::Result.new.single_validation_failure!(error_code: "error")
       end
 
       it "raises an error" do

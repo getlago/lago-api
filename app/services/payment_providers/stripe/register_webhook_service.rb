@@ -3,6 +3,8 @@
 module PaymentProviders
   module Stripe
     class RegisterWebhookService < BaseService
+      Result = BaseResult[:payment_provider]
+
       def initialize(payment_provider, version: ::Stripe.api_version)
         @version = version
         super(payment_provider)

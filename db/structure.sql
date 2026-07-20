@@ -388,7 +388,6 @@ DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_sequential_id;
 DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_number;
-DROP INDEX IF EXISTS public.index_unique_quote_versions_on_share_token;
 DROP INDEX IF EXISTS public.index_unique_quote_versions_on_quote_sequential_id;
 DROP INDEX IF EXISTS public.index_unique_quote_versions_on_quote_active_status;
 DROP INDEX IF EXISTS public.index_unique_quote_owners_on_quote_user;
@@ -514,6 +513,7 @@ DROP INDEX IF EXISTS public.index_organizations_on_api_key;
 DROP INDEX IF EXISTS public.index_orders_on_organization_id_and_status;
 DROP INDEX IF EXISTS public.index_orders_on_organization_id_and_created_at;
 DROP INDEX IF EXISTS public.index_orders_on_order_form_id;
+DROP INDEX IF EXISTS public.index_orders_on_execute_at;
 DROP INDEX IF EXISTS public.index_orders_on_customer_id;
 DROP INDEX IF EXISTS public.index_order_forms_on_quote_version_id;
 DROP INDEX IF EXISTS public.index_order_forms_on_organization_id_and_status;
@@ -1441,7 +1441,8 @@ CREATE TYPE public.order_form_void_reason AS ENUM (
 
 CREATE TYPE public.order_status AS ENUM (
     'created',
-    'executed'
+    'executed',
+    'failed'
 );
 
 
@@ -3140,7 +3141,9 @@ CREATE TABLE public.payment_provider_customers (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    code character varying,
+    is_default boolean DEFAULT false NOT NULL
 );
 
 
@@ -4784,6 +4787,7 @@ CREATE TABLE public.orders (
     executed_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    execution_record jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT orders_constraint_sequential_id_positive CHECK ((sequential_id > 0))
 );
 
@@ -9093,6 +9097,13 @@ CREATE INDEX index_orders_on_customer_id ON public.orders USING btree (customer_
 
 
 --
+-- Name: index_orders_on_execute_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_orders_on_execute_at ON public.orders USING btree (execute_at) WHERE ((status = 'created'::public.order_status) AND (execute_at IS NOT NULL));
+
+
+--
 -- Name: index_orders_on_order_form_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9965,13 +9976,6 @@ CREATE UNIQUE INDEX index_unique_quote_versions_on_quote_active_status ON public
 --
 
 CREATE UNIQUE INDEX index_unique_quote_versions_on_quote_sequential_id ON public.quote_versions USING btree (quote_id, sequential_id);
-
-
---
--- Name: index_unique_quote_versions_on_share_token; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_unique_quote_versions_on_share_token ON public.quote_versions USING btree (share_token);
 
 
 --
@@ -12845,7 +12849,10 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260717133535'),
+('20260716114156'),
 ('20260715142900'),
+('20260710093947'),
 ('20260709141039'),
 ('20260709141038'),
 ('20260709141037'),
@@ -12859,7 +12866,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260709135720'),
 ('20260709135718'),
 ('20260709135717'),
+('20260708144431'),
 ('20260708095857'),
+('20260707182656'),
 ('20260706173746'),
 ('20260706131152'),
 ('20260703164249'),
@@ -13910,4 +13919,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-

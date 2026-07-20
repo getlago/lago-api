@@ -6,7 +6,7 @@ describe Integrations::Aggregator::Taxes::Invoices::CreateJob do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Integrations::Aggregator::Taxes::Invoices::CreateService::Result.new }
 
   before do
     allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call!).and_return(result)

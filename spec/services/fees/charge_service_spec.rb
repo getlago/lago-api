@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Fees::ChargeService, :premium do
+  # The charge usage cache wraps its payload with a creation time; unwrap it for assertions.
+  def read_cached_usage(key)
+    cached = Rails.cache.read(key)
+    cached.is_a?(Hash) ? cached["value"] : cached
+  end
+
   subject(:charge_subscription_service) do
     described_class.new(
       invoice:,
@@ -2743,7 +2749,7 @@ RSpec.describe Fees::ChargeService, :premium do
       end
       let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
       let(:error_result) do
-        BaseService::Result.new.service_failure!(code: "aggregation_failure", message: "Test message")
+        BillableMetrics::Aggregations::BaseService::Result.new.service_failure!(code: "aggregation_failure", message: "Test message")
       end
 
       it "returns an error" do
@@ -2961,7 +2967,7 @@ RSpec.describe Fees::ChargeService, :premium do
         end
         let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
         let(:error_result) do
-          BaseService::Result.new.service_failure!(code: "aggregation_failure", message: "Test message")
+          BillableMetrics::Aggregations::BaseService::Result.new.service_failure!(code: "aggregation_failure", message: "Test message")
         end
 
         it "returns an error" do
@@ -3011,7 +3017,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 billable_metric:,
                 properties: {
                   graduated_ranges: [
-                    {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "100"},
+                    {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "0"},
                     {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "50"}
                   ]
                 }
@@ -3138,7 +3144,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 billable_metric:,
                 properties: {
                   volume_ranges: [
-                    {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
+                    {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "0"},
                     {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
                   ]
                 }
@@ -3178,7 +3184,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 billable_metric:,
                 properties: {
                   graduated_percentage_ranges: [
-                    {from_value: 0, to_value: 10, rate: "1", flat_amount: "100"},
+                    {from_value: 0, to_value: 10, rate: "1", flat_amount: "0"},
                     {from_value: 11, to_value: nil, rate: "0.5", flat_amount: "50"}
                   ]
                 }
@@ -3212,6 +3218,111 @@ RSpec.describe Fees::ChargeService, :premium do
                     "units" => "0.0",
                     "per_unit_total_amount" => "0.0",
                     "total_with_flat_amount" => "0.0"
+                  }
+                ]
+              )
+            end
+          end
+        end
+
+        context "when units are zero but a flat fee applies" do
+          context "with graduated charge model" do
+            let(:charge) do
+              create(
+                :graduated_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {
+                  graduated_ranges: [
+                    {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "100"},
+                    {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "50"}
+                  ]
+                }
+              )
+            end
+
+            it "returns the flat fee with correct amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(units: 0, amount_cents: 10_000, events_count: 0)
+              expect(result.fees.first.amount_details).to eq(
+                "graduated_ranges" => [
+                  {
+                    "from_value" => 0,
+                    "to_value" => 10,
+                    "flat_unit_amount" => "100.0",
+                    "per_unit_amount" => "0.0",
+                    "units" => "0.0",
+                    "per_unit_total_amount" => "0.0",
+                    "total_with_flat_amount" => "100.0"
+                  }
+                ]
+              )
+            end
+          end
+
+          context "with volume charge model" do
+            let(:charge) do
+              create(
+                :volume_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {
+                  volume_ranges: [
+                    {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
+                    {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
+                  ]
+                }
+              )
+            end
+
+            it "returns the flat fee with correct amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(units: 0, amount_cents: 100, events_count: 0)
+              expect(result.fees.first.amount_details).to eq(
+                "flat_unit_amount" => "1.0",
+                "per_unit_amount" => "0.0",
+                "per_unit_total_amount" => "0.0"
+              )
+            end
+          end
+
+          context "with graduated_percentage charge model" do
+            let(:charge) do
+              create(
+                :graduated_percentage_charge,
+                plan: subscription.plan,
+                billable_metric:,
+                properties: {
+                  graduated_percentage_ranges: [
+                    {from_value: 0, to_value: 10, rate: "1", flat_amount: "100"},
+                    {from_value: 11, to_value: nil, rate: "0.5", flat_amount: "50"}
+                  ]
+                }
+              )
+            end
+
+            it "returns the flat fee with correct amount_details" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+              expect(result.fees.first).to have_attributes(units: 0, amount_cents: 10_000, events_count: 0)
+              expect(result.fees.first.amount_details).to eq(
+                "graduated_percentage_ranges" => [
+                  {
+                    "from_value" => 0,
+                    "to_value" => 10,
+                    "flat_unit_amount" => "100.0",
+                    "rate" => "1.0",
+                    "units" => "0.0",
+                    "per_unit_total_amount" => "0.0",
+                    "total_with_flat_amount" => "100.0"
                   }
                 ]
               )
@@ -3384,7 +3495,7 @@ RSpec.describe Fees::ChargeService, :premium do
             it "caches an empty array" do
               charge_subscription_service.call
 
-              cached_value = Rails.cache.read(cache_key)
+              cached_value = read_cached_usage(cache_key)
               expect(cached_value).to eq("[]")
             end
 
@@ -3409,7 +3520,7 @@ RSpec.describe Fees::ChargeService, :premium do
                   billable_metric:,
                   properties: {
                     graduated_ranges: [
-                      {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "100"},
+                      {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "0"},
                       {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "50"}
                     ]
                   }
@@ -3419,7 +3530,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee with correct amount_details on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3455,7 +3566,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee with correct amount_details on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3485,7 +3596,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee with correct amount_details on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3521,7 +3632,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee without raising on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3551,7 +3662,7 @@ RSpec.describe Fees::ChargeService, :premium do
                   billable_metric:,
                   properties: {
                     volume_ranges: [
-                      {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
+                      {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "0"},
                       {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
                     ]
                   }
@@ -3561,7 +3672,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee with correct amount_details on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3584,7 +3695,7 @@ RSpec.describe Fees::ChargeService, :premium do
                   billable_metric:,
                   properties: {
                     graduated_percentage_ranges: [
-                      {from_value: 0, to_value: 10, rate: "1", flat_amount: "100"},
+                      {from_value: 0, to_value: 10, rate: "1", flat_amount: "0"},
                       {from_value: 11, to_value: nil, rate: "0.5", flat_amount: "50"}
                     ]
                   }
@@ -3594,7 +3705,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee with correct amount_details on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3630,7 +3741,7 @@ RSpec.describe Fees::ChargeService, :premium do
               it "caches empty array and returns zero fee with correct grouped_by on subsequent call" do
                 charge_subscription_service.call
 
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 expect(cached_value).to eq("[]")
 
                 second_result = charge_subscription_service.call
@@ -3656,7 +3767,7 @@ RSpec.describe Fees::ChargeService, :premium do
             it "caches the fee data" do
               charge_subscription_service.call
 
-              cached_value = Rails.cache.read(cache_key)
+              cached_value = read_cached_usage(cache_key)
               parsed = JSON.parse(cached_value)
               expect(parsed.length).to eq(1)
               expect(parsed.first["events_count"]).to eq(1)
@@ -3700,7 +3811,7 @@ RSpec.describe Fees::ChargeService, :premium do
 
               it "keeps presentation_breakdowns on subsequent calls from cache" do
                 first_result = charge_subscription_service.call
-                cached_value = Rails.cache.read(cache_key)
+                cached_value = read_cached_usage(cache_key)
                 second_result = charge_subscription_service.call
 
                 expect(first_result).to be_success
@@ -3763,14 +3874,14 @@ RSpec.describe Fees::ChargeService, :premium do
                 europe_cache_key = Subscriptions::ChargeCacheService.new(
                   subscription:, charge:, charge_filter: europe_filter
                 ).cache_key
-                europe_cached = JSON.parse(Rails.cache.read(europe_cache_key))
+                europe_cached = JSON.parse(read_cached_usage(europe_cache_key))
                 expect(europe_cached.length).to eq(1)
                 expect(europe_cached.first["events_count"]).to eq(1)
 
                 usa_cache_key = Subscriptions::ChargeCacheService.new(
                   subscription:, charge:, charge_filter: usa_filter
                 ).cache_key
-                expect(Rails.cache.read(usa_cache_key)).to eq("[]")
+                expect(read_cached_usage(usa_cache_key)).to eq("[]")
               end
 
               it "returns consistent results on subsequent calls from cache" do
@@ -4186,7 +4297,7 @@ RSpec.describe Fees::ChargeService, :premium do
       let(:presentation_group_keys) { [{value: "department"}, {value: "region"}] }
       let(:filter_by_presentation) { nil }
       let(:aggregator) { instance_double("Aggregator") }
-      let(:aggregation_result) { BaseService::Result.new }
+      let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
 
       before do
         allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original

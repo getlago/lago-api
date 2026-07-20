@@ -68,6 +68,7 @@ module Events
     end
 
     def expire_cached_charges
+      return if organization.feature_flag_enabled?(:lazy_charge_usage_cache)
       return if active_subscription.nil?
       return unless billable_metric
 
