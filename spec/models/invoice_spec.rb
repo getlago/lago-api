@@ -8,6 +8,7 @@ RSpec.describe Invoice do
   let(:organization) { create(:organization) }
 
   it_behaves_like "paper_trail traceable"
+  it_behaves_like "a model with a purchase order number"
 
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_many(:error_details) }
@@ -33,8 +34,27 @@ RSpec.describe Invoice do
 
   it "has fixed status mapping" do
     expect(described_class::VISIBLE_STATUS).to match(draft: 0, finalized: 1, voided: 2, failed: 4, pending: 7)
-    expect(described_class::INVISIBLE_STATUS).to match(generating: 3, open: 5, closed: 6)
-    expect(described_class::STATUS).to match(draft: 0, finalized: 1, voided: 2, generating: 3, failed: 4, open: 5, closed: 6, pending: 7)
+    expect(described_class::INVISIBLE_STATUS).to match(generating: 3, open: 5, closed: 6, deleted: 8)
+    expect(described_class::STATUS).to match(draft: 0, finalized: 1, voided: 2, generating: 3, failed: 4, open: 5, closed: 6, pending: 7, deleted: 8)
+  end
+
+  describe "deleted status" do
+    it "is invisible and not a generated status" do
+      invoice = create(:invoice, :deleted)
+
+      expect(invoice).to be_invisible
+      expect(described_class.invisible).to include(invoice)
+      expect(described_class.visible).not_to include(invoice)
+      expect(described_class::GENERATED_INVOICE_STATUSES).not_to include("deleted")
+    end
+
+    it "can be reached from draft but not from finalized" do
+      draft = create(:invoice, :draft)
+      finalized = create(:invoice, status: :finalized)
+
+      expect(draft.may_mark_as_deleted?).to be(true)
+      expect(finalized.may_mark_as_deleted?).to be(false)
+    end
   end
 
   describe "validation" do

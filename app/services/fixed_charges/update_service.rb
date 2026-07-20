@@ -53,14 +53,17 @@ module FixedCharges
           end
         end
 
-        unless cascade || plan.attached_to_subscriptions?
-          code = params.delete(:code)
-          fixed_charge.code = code if code.present?
-          fixed_charge.save!
-
+        unless cascade
           if (tax_codes = params.delete(:tax_codes))
             taxes_result = FixedCharges::ApplyTaxesService.call(fixed_charge:, tax_codes:)
             taxes_result.raise_if_error!
+          end
+
+          # NOTE: structural fields cannot be edited if plan is attached to a subscription
+          unless plan.attached_to_subscriptions?
+            code = params.delete(:code)
+            fixed_charge.code = code if code.present?
+            fixed_charge.save!
           end
         end
       end

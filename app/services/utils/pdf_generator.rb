@@ -35,7 +35,7 @@ module Utils
     end
 
     def render_pdf
-      http_client = LagoHttpClient::Client.new(pdf_url, read_timeout: 300)
+      http_client = LagoHttpClient::Client.new(pdf_url, read_timeout: 300, retry_on_transient_errors: true)
 
       response = http_client.post_multipart_file(
         file1: prepare_http_files(render_html, "text/html", "index.html"),

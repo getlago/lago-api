@@ -6,7 +6,7 @@ RSpec.describe PaymentReceipts::GenerateDocumentsJob do
   subject { described_class.perform_now(payment_receipt:, notify:) }
 
   let(:payment_receipt) { create(:payment_receipt) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { PaymentReceipts::GeneratePdfService::Result.new }
   let(:notify) { false }
 
   before do

@@ -4,6 +4,8 @@ module Integrations
   module Aggregator
     module Invoices
       class CreateService < BaseService
+        Result = BaseResult[:invoice_id, :external_id]
+
         INVALID_LOGIN_ATTEMPT = "INVALID_LOGIN_ATTEMPT"
 
         def initialize(invoice:, find_first: false)

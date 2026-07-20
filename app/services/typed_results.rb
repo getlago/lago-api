@@ -16,8 +16,13 @@
 #       accept_invite: Invites::AcceptService::Result
 #     }.freeze
 #
+#     private
+#
 #     def login(code) = ...
 #   end
+#
+# The target methods should be declared `private` to discourage direct
+# invocation; `call` reaches them via `send`, so routing still works.
 #
 # The class-level `call` returns a typed Result instead of the
 # deprecated LegacyResult (OpenStruct):
@@ -39,7 +44,7 @@ module TypedResults
       instance = new
       instance.send(:result=, result_class.new)
       instance.send(:with_middlewares) do
-        instance.public_send(method_name, *args, **kwargs, &block)
+        instance.send(method_name, *args, **kwargs, &block)
       end
     end
 

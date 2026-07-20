@@ -4,6 +4,8 @@ module PaymentProviders
   module Cashfree
     module Payments
       class CreateService < BaseService
+        Result = BaseResult[:payment, :error_message, :error_code, :reraise, :should_retry]
+
         include ::Customers::PaymentProviderFinder
 
         def initialize(payment:)

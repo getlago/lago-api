@@ -10,16 +10,19 @@ module Analytics
           and_billing_entity_id_sql = sanitize_sql(["AND i.billing_entity_id = :billing_entity_id", args[:billing_entity_id]])
         end
 
-        if args[:billing_entity_code].present?
-          and_billing_entity_code_sql = sanitize_sql(
-            ["AND be.code = :billing_entity_code", args[:billing_entity_code]]
-          )
-        end
-
         if args[:external_customer_id].present?
           and_external_customer_id_sql = sanitize_sql(
             ["AND c.external_id = :external_customer_id AND c.deleted_at IS NULL", args[:external_customer_id]]
           )
+        end
+
+        unless args[:is_customer_tin_empty].nil?
+          and_is_customer_tin_empty_sql =
+            if args[:is_customer_tin_empty] == true
+              sanitize_sql(["AND (c.tax_identification_number IS NULL OR trim(c.tax_identification_number) = '')"])
+            else
+              sanitize_sql(["AND (c.tax_identification_number IS NOT NULL AND trim(c.tax_identification_number) <> '')"])
+            end
         end
 
         if args[:months].present?
@@ -68,7 +71,6 @@ module Analytics
               array_agg(DISTINCT i.id) AS ids
             FROM invoices i
             LEFT JOIN customers c ON i.customer_id = c.id
-            LEFT JOIN billing_entities be ON i.billing_entity_id = be.id
             LEFT JOIN (
               SELECT invoice_id, SUM(offset_amount_cents) AS offset_amount_cents_sum
               FROM credit_notes
@@ -78,9 +80,10 @@ module Analytics
             WHERE i.organization_id = :organization_id
             AND i.self_billed IS FALSE
             AND i.payment_overdue IS TRUE
+            AND i.status != #{Invoice.statuses[:deleted]}
             #{and_external_customer_id_sql}
+            #{and_is_customer_tin_empty_sql}
             #{and_billing_entity_id_sql}
-            #{and_billing_entity_code_sql}
             GROUP BY month, i.currency, i.billing_entity_id, total_amount_cents
             ORDER BY month ASC
           )
@@ -111,7 +114,8 @@ module Analytics
           args[:billing_entity_id],
           args[:external_customer_id],
           args[:currency],
-          args[:months]
+          args[:months],
+          args[:is_customer_tin_empty]
         ].join("/")
       end
     end

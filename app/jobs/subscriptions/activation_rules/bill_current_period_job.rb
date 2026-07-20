@@ -2,7 +2,7 @@
 
 module Subscriptions
   module ActivationRules
-    class BillMissedPeriodsJob < ApplicationJob
+    class BillCurrentPeriodJob < ApplicationJob
       queue_as do
         if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_BILLING"])
           :billing
@@ -19,7 +19,7 @@ module Subscriptions
       unique :until_executed, on_conflict: :log
 
       def perform(subscription)
-        Subscriptions::ActivationRules::BillMissedPeriodsService.call!(subscription:)
+        Subscriptions::ActivationRules::BillCurrentPeriodService.call!(subscription:)
       end
     end
   end

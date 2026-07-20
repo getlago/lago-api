@@ -3,23 +3,21 @@
 require "rails_helper"
 
 RSpec.describe UsersService do
-  subject(:user_service) { described_class.new }
-
   before { create(:role, :admin) }
 
-  describe "#register" do
+  describe ".call(:register)" do
     include_context "with mocked security logger"
 
     before { allow(UserDevices::RegisterService).to receive(:call!) }
 
     it "registers the user device" do
-      result = user_service.register("email", "password", "organization_name")
+      result = described_class.call(:register, "email", "password", "organization_name")
 
       expect(UserDevices::RegisterService).to have_received(:call!).with(user: result.user, skip_log: true)
     end
 
     it "calls SegmentIdentifyJob" do
-      result = user_service.register("email", "password", "organization_name")
+      result = described_class.call(:register, "email", "password", "organization_name")
 
       expect(SegmentIdentifyJob).to have_been_enqueued.with(
         membership_id: "membership/#{result.membership.id}"
@@ -27,7 +25,7 @@ RSpec.describe UsersService do
     end
 
     it "calls SegmentTrackJob" do
-      result = user_service.register("user@email.com", "password", "organization_name")
+      result = described_class.call(:register, "user@email.com", "password", "organization_name")
 
       expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: "membership/#{result.membership.id}",
@@ -41,16 +39,18 @@ RSpec.describe UsersService do
     end
 
     it_behaves_like "produces a security log", "user.signed_up" do
-      before { user_service.register("email", "password", "organization_name") }
+      before { described_class.call(:register, "email", "password", "organization_name") }
     end
 
     it "creates an organization, user and membership" do
-      result = user_service.register("email", "password", "organization_name")
+      result = described_class.call(:register, "email", "password", "organization_name")
+
+      expect(result).to be_a(BaseResult)
       expect(result.user).to be_present
       expect(result.membership).to be_present
       expect(result.token).to be_present
 
-      decoded = Auth::TokenService.decode(token: result.token)
+      decoded = Utils::AuthToken.decode(token: result.token)
       expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
 
       expect(result.organization)
@@ -62,7 +62,7 @@ RSpec.describe UsersService do
       let(:user) { create(:user) }
 
       it "fails" do
-        result = user_service.register(user.email, "password", "organization_name")
+        result = described_class.call(:register, user.email, "password", "organization_name")
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
@@ -71,7 +71,7 @@ RSpec.describe UsersService do
       end
 
       it_behaves_like "does not produce a security log" do
-        before { user_service.register(user.email, "password", "organization_name") }
+        before { described_class.call(:register, user.email, "password", "organization_name") }
       end
     end
 
@@ -85,19 +85,19 @@ RSpec.describe UsersService do
       end
 
       it "returns a not allowed error" do
-        result = user_service.register("email", "password", "organization_name")
+        result = described_class.call(:register, "email", "password", "organization_name")
 
         expect(result).not_to be_success
         expect(result.error.message).to eq("signup_disabled")
       end
 
       it_behaves_like "does not produce a security log" do
-        before { user_service.register("email", "password", "organization_name") }
+        before { described_class.call(:register, "email", "password", "organization_name") }
       end
     end
   end
 
-  describe "#register_from_invite" do
+  describe ".call(:register_from_invite)" do
     let(:email) { Faker::Internet.email }
     let(:password) { SecureRandom.hex(16) }
     let(:invite) { create(:invite, email:) }
@@ -106,7 +106,7 @@ RSpec.describe UsersService do
       let!(:user) { create(:user, email:, password: "old_password") }
 
       it "reuse user and adds membership" do
-        result = user_service.register_from_invite(invite, password)
+        result = described_class.call(:register_from_invite, invite, password)
 
         expect(result.user).to be_persisted
         expect(result.user.email).to eq email
@@ -119,7 +119,7 @@ RSpec.describe UsersService do
         before { create(:membership, user:, status: :revoked) }
 
         it "updates the password" do
-          result = user_service.register_from_invite(invite, password)
+          result = described_class.call(:register_from_invite, invite, password)
 
           expect(result.user).to eq user
           expect(result.user.authenticate(password).id).to eq(user.id)
@@ -132,7 +132,7 @@ RSpec.describe UsersService do
         before { create(:membership, user:, status: :active) }
 
         it "keeps the existing password" do
-          result = user_service.register_from_invite(invite, password)
+          result = described_class.call(:register_from_invite, invite, password)
 
           expect(result.user).to eq user
           expect(result.user.authenticate(password)).to eq false
@@ -144,8 +144,9 @@ RSpec.describe UsersService do
 
     context "when is a new user" do
       it "creates user and membership" do
-        result = user_service.register_from_invite(invite, password)
+        result = described_class.call(:register_from_invite, invite, password)
 
+        expect(result).to be_a(BaseResult)
         expect(result.user).to be_persisted
         expect(result.user.email).to eq email
         expect(result.membership).to be_present
@@ -155,8 +156,8 @@ RSpec.describe UsersService do
     end
   end
 
-  describe "#login" do
-    subject(:result) { described_class.new.login(email, password) }
+  describe ".call(:login)" do
+    subject(:result) { described_class.call(:login, email, password) }
 
     let!(:membership) { create(:membership, :revoked) }
     let(:user) { membership.user }
@@ -179,6 +180,7 @@ RSpec.describe UsersService do
           end
 
           it "returns success result" do
+            expect(result).to be_a(BaseResult)
             expect(result).to be_success
             expect(result.user).to eq user
             expect(result.token).to be_present
@@ -196,7 +198,7 @@ RSpec.describe UsersService do
             it "saves the login method in token" do
               expect(result).to be_success
 
-              decoded = Auth::TokenService.decode(token: result.token)
+              decoded = Utils::AuthToken.decode(token: result.token)
               expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
             end
           end

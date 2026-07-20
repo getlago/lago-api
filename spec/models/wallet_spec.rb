@@ -6,6 +6,7 @@ RSpec.describe Wallet do
   subject(:wallet) { build(:wallet) }
 
   it_behaves_like "paper_trail traceable"
+  it_behaves_like "a model with a purchase order number"
 
   describe "associations" do
     it do
@@ -291,6 +292,7 @@ RSpec.describe Wallet do
       customer_id
       organization_id
       payment_method_id
+      purchase_order_number
     ].freeze
 
     it "covers every column that does not need to trigger a refresh" do

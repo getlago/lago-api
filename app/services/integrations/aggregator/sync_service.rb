@@ -3,6 +3,8 @@
 module Integrations
   module Aggregator
     class SyncService < BaseService
+      Result = BaseResult[:response]
+
       def action_path
         "sync/trigger"
       end

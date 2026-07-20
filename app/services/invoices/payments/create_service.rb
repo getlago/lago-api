@@ -7,6 +7,9 @@ module Invoices
 
       include Customers::PaymentProviderFinder
 
+      # Delay the first auto-payment for hosted-checkout customers so their manual payment settles first.
+      CHECKOUT_AUTO_PAYMENT_DELAY = ENV.fetch("LAGO_CHECKOUT_AUTO_PAYMENT_DELAY_SECONDS", 10.minutes.to_i).to_i.seconds
+
       def initialize(invoice:, payment_provider: nil, payment_method_params: {})
         @invoice = invoice
         @provider = payment_provider&.to_sym
@@ -70,8 +73,17 @@ module Invoices
 
         result
       rescue Invoices::Payments::AlreadyPaidError
-        # NOTE: The invoice was settled by another payment so we can drop the unused pending payment
-        result.payment&.destroy if result.payment&.provider_payment_id.nil?
+        # NOTE: The invoice was settled by another payment so we can drop the unused pending payment.
+        #
+        # Reload from the DB before destroying: a concurrent attempt shares this same row (only one
+        # pending/processing provider payment exists per payable) and may have already advanced it by
+        # setting a provider_payment_id or marking it succeeded. `result.payment` here is a stale
+        # in-memory copy, so relying on it can destroy a payment that maps to a real provider charge
+        # and orphan the PaymentReceipts::CreateJob already enqueued for it.
+        persisted_payment = result.payment && Payment.find_by(id: result.payment.id)
+        if persisted_payment && persisted_payment.provider_payment_id.nil? && persisted_payment.payable_payment_status != "succeeded"
+          persisted_payment.destroy
+        end
         result.payment = nil
         result
       rescue BaseService::ServiceFailure => e
@@ -92,7 +104,14 @@ module Invoices
       def call_async
         return result unless provider
 
-        Invoices::Payments::CreateJob.perform_after_commit(invoice:, payment_provider: provider, payment_method_params:)
+        forced_delay = nil
+        forced_delay = CHECKOUT_AUTO_PAYMENT_DELAY if defer_for_checkout_organization?
+
+        AfterCommitEverywhere.after_commit do
+          Invoices::Payments::CreateJob
+            .set(wait: forced_delay)
+            .perform_later(invoice:, payment_provider: provider, payment_method_params:)
+        end
 
         result.payment_provider = provider
         result
@@ -106,6 +125,20 @@ module Invoices
 
       def provider
         @provider ||= invoice.customer.payment_provider&.to_sym
+      end
+
+      # Delay the first auto-payment for orgs using hosted checkout so it can't race a manual checkout
+      # and double-charge; skip flows that pay synchronously (gated subs, auto wallet top-ups).
+      def defer_for_checkout_organization?
+        return false unless invoice.payment_attempts.zero?
+        return false if invoice.subscription? && invoice.subscription_payment_gated?
+        return false if non_manual_wallet_topup?
+
+        PaymentIntent.where(organization_id: invoice.organization_id).exists?
+      end
+
+      def non_manual_wallet_topup?
+        invoice.credit? && invoice.wallet_transactions.inbound.where.not(source: :manual).exists?
       end
 
       def should_process_payment?

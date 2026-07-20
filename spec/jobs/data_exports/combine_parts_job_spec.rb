@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe DataExports::CombinePartsJob do
   let(:data_export) { create(:data_export) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { DataExports::CombinePartsService::Result.new }
 
   before do
     allow(DataExports::CombinePartsService)

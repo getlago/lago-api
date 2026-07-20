@@ -4,6 +4,8 @@ module Integrations
   module Hubspot
     module Invoices
       class DeployObjectService < Integrations::Aggregator::BaseService
+        Result = BaseResult[:response]
+
         VERSION = 3
 
         def action_path
@@ -18,7 +20,7 @@ module Integrations
 
           custom_object_result = Integrations::Aggregator::CustomObjectService.call(integration:, name: "LagoInvoices")
           if custom_object_result.success?
-            save_object_type_id(custom_object_result.custom_object&.objectTypeId)
+            save_object_type_id(custom_object_result.custom_object&.object_type_id)
             return result
           end
 

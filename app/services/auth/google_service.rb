@@ -13,6 +13,8 @@ module Auth
       accept_invite: Invites::AcceptService::Result
     }.freeze
 
+    private
+
     def authorize_url(request)
       ensure_google_auth_setup
       return result unless result.success?
@@ -95,10 +97,8 @@ module Auth
       result.single_validation_failure!(error_code: "invalid_google_code")
     end
 
-    private
-
     def generate_token
-      result.token = Auth::TokenService.encode(user: result.user, login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH)
+      result.token = Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH)
       result
     rescue => e
       result.service_failure!(code: "token_encoding_error", message: e.message)

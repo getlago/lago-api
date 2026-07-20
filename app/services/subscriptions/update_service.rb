@@ -53,6 +53,7 @@ module Subscriptions
       ActiveRecord::Base.transaction do
         subscription.name = params[:name] if params.key?(:name)
         subscription.ending_at = params[:ending_at] if params.key?(:ending_at)
+        subscription.purchase_order_number = params[:purchase_order_number] if params.key?(:purchase_order_number)
         subscription.progressive_billing_disabled = params[:progressive_billing_disabled] if params.key?(:progressive_billing_disabled)
         subscription.consolidate_invoice = params[:consolidate_invoice] if params.key?(:consolidate_invoice)
 

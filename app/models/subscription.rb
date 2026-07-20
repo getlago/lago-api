@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Subscription < ApplicationRecord
+  include HasPurchaseOrderNumber
   include PaperTrailTraceable
   include RansackUuidSearch
 
@@ -346,6 +347,7 @@ end
 #  on_termination_invoice       :enum             default("generate"), not null
 #  payment_method_type          :enum             default("provider"), not null
 #  progressive_billing_disabled :boolean          default(FALSE), not null
+#  purchase_order_number        :string
 #  skip_daily_usage             :boolean          default(FALSE), not null
 #  skip_invoice_custom_sections :boolean          default(FALSE), not null
 #  started_at                   :datetime

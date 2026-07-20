@@ -69,7 +69,8 @@ module Invoices
         invoice_type: :credit,
         currency:,
         datetime: Time.zone.at(timestamp),
-        billing_entity: wallet_transaction.billing_entity || wallet_transaction.wallet.billing_entity || customer.billing_entity
+        billing_entity: wallet_transaction.billing_entity || wallet_transaction.wallet.billing_entity || customer.billing_entity,
+        purchase_order_number: wallet_transaction.purchase_order_number || wallet_transaction.wallet.purchase_order_number
       )
       invoice_result.raise_if_error!
 

@@ -17,7 +17,7 @@ RSpec.describe ChargeModels::DynamicService do
     aggregation_result.precise_total_amount_cents = precise_total_amount_cents
   end
 
-  let(:aggregation_result) { BaseService::Result.new }
+  let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
 
   let(:charge) { create(:dynamic_charge) }
 

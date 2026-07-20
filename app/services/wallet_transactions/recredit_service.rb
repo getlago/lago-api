@@ -27,6 +27,7 @@ module WalletTransactions
         params: {
           wallet_id: wallet.id,
           granted_credits: wallet_transaction.credit_amount.to_s,
+          purchase_order_number: wallet_transaction.purchase_order_number,
           reset_consumed_credits: true,
           voided_invoice_id: wallet_transaction.invoice_id
         }

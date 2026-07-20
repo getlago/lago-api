@@ -7,7 +7,7 @@ RSpec.describe Invoices::ProviderTaxes::VoidJob do
   let(:invoice) { create(:invoice, customer:) }
   let(:customer) { create(:customer, organization:) }
 
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::ProviderTaxes::VoidService::Result.new }
 
   before do
     allow(Invoices::ProviderTaxes::VoidService).to receive(:call)

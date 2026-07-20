@@ -114,7 +114,7 @@ RSpec.describe Invoices::GeneratePdfService do
       let(:pdf_generator) { instance_double(Utils::PdfGenerator, call_with_middlewares: pdf_response) }
 
       let(:pdf_response) do
-        BaseService::Result.new.tap { |r| r.io = StringIO.new(pdf_content) }
+        Utils::PdfGenerator::Result.new.tap { |r| r.io = StringIO.new(pdf_content) }
       end
 
       let(:pdf_content) { File.read(blank_pdf_path) }
@@ -193,7 +193,7 @@ RSpec.describe Invoices::GeneratePdfService do
     context "when einvoicing is enabled" do
       let(:fake_xml) { "<xml>content</xml>" }
       let(:country) { nil }
-      let(:create_xml_result) { BaseService::Result.new.tap { |result| result.xml = fake_xml } }
+      let(:create_xml_result) { EInvoices::Invoices::Cii::CreateService::Result.new.tap { |result| result.xml = fake_xml } }
 
       before do
         invoice.billing_entity.update(country:, einvoicing: true)

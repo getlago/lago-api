@@ -1041,16 +1041,17 @@ RSpec.describe Customers::UpsertFromApiService do
 
         before { payment_method }
 
-        it "removes the payment provider from customer" do
+        it "removes the payment provider and its code from customer" do
           expect(result).to be_success
 
           expect(result.customer.payment_provider).to be_nil
+          expect(result.customer.payment_provider_code).to be_nil
         end
 
-        it "does not discard the provider customer" do
+        it "discards the provider customer" do
           expect(result).to be_success
 
-          expect(stripe_customer.reload).not_to be_discarded
+          expect(stripe_customer.reload).to be_discarded
         end
 
         it "discards the old provider customer's payment methods" do
@@ -1125,14 +1126,12 @@ RSpec.describe Customers::UpsertFromApiService do
             }
           end
 
-          # NOTE: This describes a scenario with incorrect behavior that currently exists.
-          #       The new provider customer does not get created and the previous one is not discarded
-          it "does not create the gocardless provider customer" do
+          it "creates the gocardless provider customer" do
             expect(result).to be_success
 
             expect(result.customer.payment_provider).to eq("gocardless")
             expect(result.customer.payment_provider_code).to eq("gocardless_1")
-            expect(result.customer.provider_customer).to be_nil
+            expect(result.customer.provider_customer).to be_present
           end
 
           it "does not discard the provider customer" do
@@ -1141,10 +1140,10 @@ RSpec.describe Customers::UpsertFromApiService do
             expect(stripe_customer.reload).not_to be_discarded
           end
 
-          it "does not discard the old provider customer's payment methods" do
+          it "discards the old provider customer's payment methods" do
             expect(result).to be_success
 
-            expect(payment_method.reload).not_to be_discarded
+            expect(payment_method.reload).to be_discarded
           end
         end
       end
@@ -1261,14 +1260,6 @@ RSpec.describe Customers::UpsertFromApiService do
             }
           end
 
-          # NOTE: This bypasses an issue with the check:
-          #
-          #       if customer.provider_customer&.provider_customer_id
-          #         PaymentProviderCustomers::UpdateService.call(customer)
-          #       end
-          #
-          #       Since customer is not reloaded, it still checks the previous provider_customer state,
-          #       which has a provider_customer_id
           before do
             allow(Stripe::Customer).to receive(:update).and_return(BaseService::Result.new)
           end
@@ -1279,6 +1270,16 @@ RSpec.describe Customers::UpsertFromApiService do
             expect(result.customer.payment_provider).to eq("stripe")
             expect(result.customer.payment_provider_code).to eq("stripe_2")
             expect(result.customer.provider_customer.provider_customer_id).to be_nil
+          end
+
+          # NOTE: the customer is reloaded after create_or_update_provider_customer,
+          #       so the provider_customer_id check reflects the cleared id and the
+          #       provider update service is not triggered on a stale object.
+          it "does not call the payment provider update service" do
+            allow(PaymentProviderCustomers::UpdateService).to receive(:call)
+
+            expect(result).to be_success
+            expect(PaymentProviderCustomers::UpdateService).not_to have_received(:call)
           end
 
           it "does not discard the provider customer" do

@@ -4,9 +4,10 @@ module Fees
   class OneOffService < BaseService
     Result = BaseResult[:fees]
 
-    def initialize(invoice:, fees:)
+    def initialize(invoice:, fees:, with_discarded_add_ons: false)
       @invoice = invoice
       @fees = fees
+      @with_discarded_add_ons = with_discarded_add_ons
 
       super(nil)
     end
@@ -76,14 +77,18 @@ module Fees
 
     private
 
-    attr_reader :invoice, :fees
+    attr_reader :invoice, :fees, :with_discarded_add_ons
 
     delegate :customer, :organization, to: :invoice
 
     def add_on(identifier:)
       finder = api_context? ? :code : :id
 
-      invoice.organization.add_ons.find_by(finder => identifier)
+      add_ons_scope.find_by(finder => identifier)
+    end
+
+    def add_ons_scope
+      with_discarded_add_ons ? invoice.organization.add_ons.with_discarded : invoice.organization.add_ons
     end
 
     def add_on_identifier

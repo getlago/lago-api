@@ -2954,6 +2954,7 @@ input CreateCustomerWalletInput {
   paidTopUpMinAmountCents: BigInt
   paymentMethod: PaymentMethodReferenceInput
   priority: Int!
+  purchaseOrderNumber: String
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
   transactionName: String
@@ -2976,6 +2977,7 @@ input CreateCustomerWalletTransactionInput {
   paidCredits: String
   paymentMethod: PaymentMethodReferenceInput
   priority: Int
+  purchaseOrderNumber: String
   voidedCredits: String
   walletId: ID!
 }
@@ -3318,6 +3320,7 @@ input CreateRecurringTransactionRuleInput {
   method: RecurringTransactionMethodEnum
   paidCredits: String
   paymentMethod: PaymentMethodReferenceInput
+  purchaseOrderNumber: String
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String
@@ -3409,6 +3412,7 @@ input CreateSubscriptionInput {
   planId: ID!
   planOverrides: PlanOverridesInput
   progressiveBillingDisabled: Boolean
+  purchaseOrderNumber: String
   subscriptionAt: ISO8601DateTime
   subscriptionId: ID
   usageThresholds: [UsageThresholdInput!]
@@ -5860,11 +5864,24 @@ enum EventsStoreEnum {
 }
 
 """
+Execute Order input arguments
+"""
+input ExecuteOrderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  id: ID!
+}
+
+"""
 Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
   enriched_events_aggregation
+  fixed_charge_usage_delta_migration
   meilisearch
+  multi_connection
   multi_currency
   multi_entity_billing
   order_forms
@@ -6781,6 +6798,7 @@ enum InvoiceSettlementTypeEnum {
 
 enum InvoiceStatusTypeEnum {
   closed
+  deleted
   draft
   failed
   finalized
@@ -8092,6 +8110,16 @@ type Mutation {
   ): PaymentReceipt
 
   """
+  Execute an order
+  """
+  executeOrder(
+    """
+    Parameters for ExecuteOrder
+    """
+    input: ExecuteOrderInput!
+  ): Order
+
+  """
   Fetches taxes for one-off invoice
   """
   fetchDraftInvoiceTaxes(
@@ -9158,6 +9186,7 @@ type Order {
   executeAt: ISO8601DateTime
   executedAt: ISO8601DateTime
   executionMode: OrderExecutionModeEnum
+  executionRecord: OrderExecutionRecord!
   id: ID!
   number: String!
   orderForm: OrderForm!
@@ -9190,6 +9219,13 @@ type OrderCollection {
 enum OrderExecutionModeEnum {
   execute_in_lago
   order_only
+}
+
+type OrderExecutionRecord {
+  errors: [String!]!
+  executedAt: ISO8601DateTime
+  executionMode: OrderExecutionModeEnum
+  invoiceId: ID
 }
 
 type OrderForm {
@@ -9240,6 +9276,7 @@ enum OrderFormVoidReasonEnum {
 enum OrderStatusEnum {
   created
   executed
+  failed
 }
 
 enum OrderTypeEnum {
@@ -9531,6 +9568,7 @@ enum PermissionEnum {
   order_forms_sign
   order_forms_view
   order_forms_void
+  orders_execute
   orders_update
   orders_view
   organization_emails_update
@@ -9649,6 +9687,7 @@ type Permissions {
   orderFormsSign: Boolean!
   orderFormsView: Boolean!
   orderFormsVoid: Boolean!
+  ordersExecute: Boolean!
   ordersUpdate: Boolean!
   ordersView: Boolean!
   organizationEmailsUpdate: Boolean!
@@ -10317,7 +10356,7 @@ type Query {
   """
   Query invoice collections of a customer portal user
   """
-  customerPortalInvoiceCollections(expireCache: Boolean, months: Int): FinalizedInvoiceCollectionCollection!
+  customerPortalInvoiceCollections(expireCache: Boolean): FinalizedInvoiceCollectionCollection!
 
   """
   Query invoices of a customer
@@ -10332,7 +10371,7 @@ type Query {
   """
   Query overdue balances of a customer portal user
   """
-  customerPortalOverdueBalances(expireCache: Boolean, months: Int): OverdueBalanceCollection!
+  customerPortalOverdueBalances(expireCache: Boolean): OverdueBalanceCollection!
 
   """
   Query a single subscription from the customer portal
@@ -10497,7 +10536,7 @@ type Query {
   """
   Query gross revenue of an organization
   """
-  grossRevenues(billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): GrossRevenueCollection!
+  grossRevenues(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): GrossRevenueCollection!
 
   """
   Query a single integration
@@ -10567,7 +10606,7 @@ type Query {
   """
   Query invoice collections of an organization
   """
-  invoiceCollections(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, isCustomerTinEmpty: Boolean): FinalizedInvoiceCollectionCollection!
+  invoiceCollections(billingEntityCode: String, currency: CurrencyEnum, isCustomerTinEmpty: Boolean): FinalizedInvoiceCollectionCollection!
 
   """
   Query invoice's credit note
@@ -10599,7 +10638,7 @@ type Query {
   """
   Query invoiced usage of an organization
   """
-  invoicedUsages(billingEntityId: ID, currency: CurrencyEnum): InvoicedUsageCollection!
+  invoicedUsages(billingEntityCode: String, currency: CurrencyEnum): InvoicedUsageCollection!
 
   """
   Query invoices
@@ -10640,7 +10679,7 @@ type Query {
   """
   Query MRR of an organization
   """
-  mrrs(billingEntityId: ID, currency: CurrencyEnum): MrrCollection!
+  mrrs(billingEntityCode: String, currency: CurrencyEnum): MrrCollection!
 
   """
   Query a single order
@@ -10680,7 +10719,7 @@ type Query {
   """
   Query overdue balances of an organization
   """
-  overdueBalances(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, isCustomerTinEmpty: Boolean, months: Int): OverdueBalanceCollection!
+  overdueBalances(billingEntityCode: String, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, isCustomerTinEmpty: Boolean, months: Int): OverdueBalanceCollection!
 
   """
   Query a password reset by token
@@ -11075,7 +11114,6 @@ type QuoteVersion {
   mentionVariables: JSON!
   organization: Organization!
   quote: Quote!
-  shareToken: String
   startDate: ISO8601Date
   status: StatusEnum!
   updatedAt: ISO8601DateTime!
@@ -11110,6 +11148,7 @@ type RecurringTransactionRule {
   paidCredits: String!
   paymentMethod: PaymentMethod
   paymentMethodType: PaymentMethodTypeEnum
+  purchaseOrderNumber: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   skipInvoiceCustomSections: Boolean
   startedAt: ISO8601DateTime
@@ -11145,6 +11184,7 @@ input RegenerateInvoiceInput {
   """
   clientMutationId: String
   fees: [VoidedInvoiceFeeInput!]!
+  purchaseOrderNumber: String
   voidedInvoiceId: ID!
 }
 
@@ -11664,6 +11704,7 @@ type Subscription {
   previousPlan: Plan
   previousSubscription: Subscription
   progressiveBillingDisabled: Boolean
+  purchaseOrderNumber: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   skipInvoiceCustomSections: Boolean
   startedAt: ISO8601DateTime
@@ -11865,6 +11906,7 @@ type Tax {
   Number of add ons using this tax
   """
   addOnsCount: Int!
+  appliedToBillingEntitiesCodes: [String!]!
   appliedToOrganization: Boolean!
   autoGenerated: Boolean!
 
@@ -13034,6 +13076,7 @@ input UpdateCustomerWalletInput {
   paidTopUpMinAmountCents: BigInt
   paymentMethod: PaymentMethodReferenceInput
   priority: Int!
+  purchaseOrderNumber: String
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
 }
 
@@ -13426,6 +13469,7 @@ input UpdateRecurringTransactionRuleInput {
   method: RecurringTransactionMethodEnum
   paidCredits: String
   paymentMethod: PaymentMethodReferenceInput
+  purchaseOrderNumber: String
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String
@@ -13566,6 +13610,7 @@ input UpdateSubscriptionInput {
   paymentMethod: PaymentMethodReferenceInput
   planOverrides: PlanOverridesInput
   progressiveBillingDisabled: Boolean
+  purchaseOrderNumber: String
   subscriptionAt: ISO8601DateTime
   usageThresholds: [UsageThresholdInput!]
 }
@@ -13728,6 +13773,7 @@ type Wallet {
   paymentMethod: PaymentMethod
   paymentMethodType: PaymentMethodTypeEnum
   priority: Int!
+  purchaseOrderNumber: String
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
@@ -13800,6 +13846,7 @@ type WalletTransaction {
   metadata: [WalletTransactionMetadataObject!]
   name: String
   priority: Int!
+  purchaseOrderNumber: String
   remainingAmountCents: BigInt
   remainingCreditAmount: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]

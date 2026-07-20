@@ -75,6 +75,30 @@ RSpec.describe "templates/invoices/v4.slim" do
   end
 
   context "when invoice_type is credit" do
+    context "with a purchase order number" do
+      let(:invoice) do
+        build_stubbed(
+          :invoice,
+          :credit,
+          :with_purchase_order_number,
+          organization: organization,
+          billing_entity: billing_entity,
+          customer: customer,
+          number: "LAGO-202509-001",
+          payment_due_date: Date.parse("2025-09-04"),
+          issuing_date: Date.parse("2025-09-04"),
+          total_amount_cents: 1050,
+          currency: "USD",
+          fees: [fee]
+        )
+      end
+
+      it "renders the purchase order number under the invoice number" do
+        expect(rendered_template).to include("Purchase Order Number")
+        expect(rendered_template).to include("PO-123")
+      end
+    end
+
     context "when wallet transaction has a name" do
       let(:wallet_transaction_name) { "Wallet Transaction Name" }
 

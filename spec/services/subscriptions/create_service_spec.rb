@@ -1116,7 +1116,7 @@ RSpec.describe Subscriptions::CreateService do
 
           context "when subscription upgrade fails" do
             let(:result_failure) do
-              BaseService::Result.new.validation_failure!(
+              Subscriptions::PlanUpgradeService::Result.new.validation_failure!(
                 errors: {billing_time: ["value_is_invalid"]}
               )
             end
@@ -1560,7 +1560,7 @@ RSpec.describe Subscriptions::CreateService do
 
           context "when subscription downgrade fails" do
             let(:result_failure) do
-              BaseService::Result.new.validation_failure!(
+              Subscriptions::PlanDowngradeService::Result.new.validation_failure!(
                 errors: {billing_time: ["value_is_invalid"]}
               )
             end

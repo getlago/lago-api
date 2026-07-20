@@ -171,9 +171,20 @@ To create a webhook:
 - When adding a constraint with `validate: false` (`NOT VALID`), add a second migration right after it that validates the constraint (`validate_foreign_key` or `validate_check_constraint`), within the same PR. If validation is not possible yet (e.g. existing rows must be backfilled or fixed first), register the constraint in `db/not_valid_constraints.yml` with a `validate_by` deadline, and remove the entry once the constraint is validated. `spec/db/not_valid_constraints_spec.rb` enforces this.
 - When validating a foreign key on a table that has several foreign keys to the same target table, pass the `column:` option to `validate_foreign_key`, otherwise the wrong constraint may be validated silently.
 
+## Clickhouse migrations
+
+- Clickhouse migrations live in `db/clickhouse_migrate/` (self-hosted). The DDL for ClickHouse Cloud is kept separately in `db/clickhouse_migrate/cloud/*.sql`; those files are executed manually when creating a new cluster, so they are edited in place to reflect the current schema.
+- Clickhouse DDL is not transactional. Keep one DDL concern per migration (e.g. one index): if a migration runs several statements and a later one fails, the earlier ones are already applied while the migration is marked as failed.
+- Define explicit `up` and `down` methods (not `change`), and make `down` revert the DDL (e.g. `DROP INDEX IF EXISTS`). Use `IF NOT EXISTS` / `IF EXISTS` guards so retries are idempotent.
+
 # Backward Compatibility
 
 - New optional parameters must not break existing functionality
+
+# Environment variables
+
+- When a change introduces a new environment variable, document it in this file (name, purpose, example value)
+- Sensitive values (keys, secrets, passwords, tokens, credentials embedded in URLs) must always be masked in examples, e.g. `LAGO_SMTP_PASSWORD=***` or `DATABASE_URL=postgresql://***@db:5432/lago`
 
 # Service
 

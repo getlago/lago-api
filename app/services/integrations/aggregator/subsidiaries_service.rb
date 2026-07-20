@@ -3,6 +3,8 @@
 module Integrations
   module Aggregator
     class SubsidiariesService < BaseService
+      Result = BaseResult[:subsidiaries]
+
       Subsidiary = Data.define(:external_id, :external_name)
 
       def action_path
