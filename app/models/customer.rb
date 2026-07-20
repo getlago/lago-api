@@ -185,8 +185,7 @@ class Customer < ApplicationRecord
   # fields are only stripped so existing empty-string values are preserved.
   sanitize_null_bytes(*ADDRESS_FIELDS, blank_to_nil: true)
   sanitize_null_bytes :name, :firstname, :lastname, :legal_name, :legal_number,
-    :phone, :url, :logo_url, :tax_identification_number, :external_salesforce_id,
-    :external_id
+    :phone, :url, :logo_url, :tax_identification_number
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 

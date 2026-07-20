@@ -96,8 +96,7 @@ RSpec.describe Customer do
         phone: "555\u00000199",
         url: "https://ex\u0000ample.test",
         logo_url: "https://ex\u0000ample.test/l.png",
-        tax_identification_number: "FR\u000012345",
-        external_salesforce_id: "sf\u0000id"
+        tax_identification_number: "FR\u000012345"
       )
 
       expect(normalized_customer.name).to eq("FooBar")
@@ -109,13 +108,6 @@ RSpec.describe Customer do
       expect(normalized_customer.url).to eq("https://example.test")
       expect(normalized_customer.logo_url).to eq("https://example.test/l.png")
       expect(normalized_customer.tax_identification_number).to eq("FR12345")
-      expect(normalized_customer.external_salesforce_id).to eq("sfid")
-    end
-
-    it "strips null bytes from external_id" do
-      normalized_customer = build(:customer, external_id: "ext\u0000id")
-
-      expect(normalized_customer.external_id).to eq("extid")
     end
 
     it "keeps empty identity values as empty strings (not nil)" do
