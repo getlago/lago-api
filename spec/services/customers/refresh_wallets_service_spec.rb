@@ -193,7 +193,7 @@ RSpec.describe Customers::RefreshWalletsService do
         allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService)
           .to receive(:call)
           .and_return(
-            BaseService::Result.new.service_failure!(
+            Integrations::Aggregator::Taxes::Invoices::CreateDraftService::Result.new.service_failure!(
               code: "customerAddressCouldNotResolve",
               message: "Customer address could not resolve"
             )

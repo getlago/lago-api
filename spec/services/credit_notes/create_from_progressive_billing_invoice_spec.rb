@@ -78,7 +78,7 @@ RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice do
         let(:amount) { 102 }
 
         let(:cn_ats_result) do
-          BaseService::Result.new.tap do |result|
+          CreditNotes::ApplyTaxesService::Result.new.tap do |result|
             result.coupons_adjustment_amount_cents = 102.0
             result.taxes_amount_cents = 0.0
             result.precise_taxes_amount_cents = 0.0

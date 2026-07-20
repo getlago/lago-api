@@ -29,7 +29,7 @@ RSpec.describe AdjustedFees::CreateService do
     before do
       allow(Invoices::RefreshDraftService)
         .to receive(:call).with(invoice: invoice)
-        .and_return(BaseService::Result.new)
+        .and_return(Invoices::RefreshDraftService::Result.new)
     end
 
     context "when license is premium", :premium do

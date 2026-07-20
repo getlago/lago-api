@@ -436,7 +436,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
 
       context "when failed to generate the invoice" do
         before do
-          allow(Invoices::RefreshDraftService).to receive(:call).and_return(BaseService::Result.new.service_failure!(code: "code", message: "message"))
+          allow(Invoices::RefreshDraftService).to receive(:call).and_return(Invoices::RefreshDraftService::Result.new.service_failure!(code: "code", message: "message"))
         end
 
         it "does not delete the invoice_generation_errors" do

@@ -20,7 +20,7 @@ RSpec.describe Invoices::ApplyProviderTaxesService do
   end
   let(:fees_amount_cents) { 3000 }
   let(:coupons_amount_cents) { 0 }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Integrations::Aggregator::Taxes::Invoices::CreateService::Result.new }
 
   let(:fee_taxes) do
     [

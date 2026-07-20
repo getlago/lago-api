@@ -13,7 +13,7 @@ RSpec.describe ChargeModels::GraduatedPercentageService, :premium do
   end
 
   let(:aggregation_result) do
-    BaseService::Result.new.tap do |r|
+    BillableMetrics::Aggregations::BaseService::Result.new.tap do |r|
       r.aggregation = aggregation
       r.count = aggregation_count
     end

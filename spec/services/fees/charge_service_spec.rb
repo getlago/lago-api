@@ -2743,7 +2743,7 @@ RSpec.describe Fees::ChargeService, :premium do
       end
       let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
       let(:error_result) do
-        BaseService::Result.new.service_failure!(code: "aggregation_failure", message: "Test message")
+        BillableMetrics::Aggregations::BaseService::Result.new.service_failure!(code: "aggregation_failure", message: "Test message")
       end
 
       it "returns an error" do
@@ -2961,7 +2961,7 @@ RSpec.describe Fees::ChargeService, :premium do
         end
         let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
         let(:error_result) do
-          BaseService::Result.new.service_failure!(code: "aggregation_failure", message: "Test message")
+          BillableMetrics::Aggregations::BaseService::Result.new.service_failure!(code: "aggregation_failure", message: "Test message")
         end
 
         it "returns an error" do
@@ -4291,7 +4291,7 @@ RSpec.describe Fees::ChargeService, :premium do
       let(:presentation_group_keys) { [{value: "department"}, {value: "region"}] }
       let(:filter_by_presentation) { nil }
       let(:aggregator) { instance_double("Aggregator") }
-      let(:aggregation_result) { BaseService::Result.new }
+      let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
 
       before do
         allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original

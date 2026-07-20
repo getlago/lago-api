@@ -16,7 +16,7 @@ RSpec.describe ChargeModels::PackageService do
     aggregation_result.aggregation = aggregation
   end
 
-  let(:aggregation_result) { BaseService::Result.new }
+  let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
   let(:aggregation) { 121 }
 
   let(:charge) do

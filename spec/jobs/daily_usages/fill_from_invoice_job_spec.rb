@@ -8,7 +8,7 @@ RSpec.describe DailyUsages::FillFromInvoiceJob do
   let(:subscription) { create(:subscription) }
   let(:invoice) { create(:invoice, :subscription, subscriptions: [subscription]) }
 
-  let(:result) { BaseService::Result.new }
+  let(:result) { DailyUsages::FillFromInvoiceService::Result.new }
 
   describe ".perform" do
     it "delegates its logic to the DailyUsages::FillFromInvoiceService" do

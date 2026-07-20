@@ -7,7 +7,7 @@ RSpec.describe Plans::DestroyJob do
 
   let(:plan) { create(:plan) }
   let(:child_plan) { create(:plan, parent: plan) }
-  let(:service_result) { BaseService::Result.new }
+  let(:service_result) { Plans::DestroyService::Result.new }
 
   before do
     plan.children << child_plan
@@ -34,7 +34,7 @@ RSpec.describe Plans::DestroyJob do
     end
 
     context "when destroy service succeeds" do
-      let(:service_result) { BaseService::Result.new }
+      let(:service_result) { Plans::DestroyService::Result.new }
 
       it "calls the destroy service for child plans first" do
         described_class.perform_now(plan)
@@ -53,7 +53,7 @@ RSpec.describe Plans::DestroyJob do
 
     context "when destroy service fails" do
       let(:service_result) do
-        BaseService::Result.new.service_failure!(
+        Plans::DestroyService::Result.new.service_failure!(
           code: "failure",
           message: "Destroy failed"
         )

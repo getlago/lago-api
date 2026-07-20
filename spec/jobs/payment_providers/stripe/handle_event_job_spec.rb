@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Stripe::HandleEventJob do
-  let(:result) { BaseService::Result.new }
+  let(:result) { PaymentProviders::Stripe::HandleEventService::Result.new }
   let(:organization) { create(:organization) }
 
   let(:stripe_event) do

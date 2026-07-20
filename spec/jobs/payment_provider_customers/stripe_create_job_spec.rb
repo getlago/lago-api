@@ -7,7 +7,7 @@ RSpec.describe PaymentProviderCustomers::StripeCreateJob do
 
   it "calls the stripe create service" do
     allow(PaymentProviderCustomers::StripeService).to receive(:call!)
-      .and_return(BaseService::Result.new)
+      .and_return(PaymentProviderCustomers::StripeService::RESULTS.fetch(:create).new)
 
     described_class.perform_now(stripe_customer)
 

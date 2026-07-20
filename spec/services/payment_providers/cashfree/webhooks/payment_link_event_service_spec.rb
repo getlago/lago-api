@@ -9,7 +9,7 @@ RSpec.describe PaymentProviders::Cashfree::Webhooks::PaymentLinkEventService do
   let(:event_json) { File.read("spec/fixtures/cashfree/payment_link_event_payment.json") }
 
   let(:payment_service) { instance_double(Invoices::Payments::CashfreeService) }
-  let(:service_result) { BaseService::Result.new }
+  let(:service_result) { Invoices::Payments::CashfreeService::RESULTS.fetch(:update_payment_status).new }
 
   describe "#call" do
     context "when succeeded payment event" do

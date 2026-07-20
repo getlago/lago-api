@@ -100,7 +100,7 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     let(:provider_customer) { create(:cashfree_customer, payment_provider:, customer:) }
 
     let(:error_result) do
-      BaseService::Result.new.tap do |result|
+      PaymentRequests::Payments::CashfreeService::RESULTS.fetch(:generate_payment_url).new.tap do |result|
         result.fail_with_error!(
           BaseService::ThirdPartyFailure.new(
             result,
@@ -144,7 +144,7 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
 
   context "when provider service return an error" do
     let(:error_result) do
-      BaseService::Result.new.tap do |result|
+      PaymentRequests::Payments::StripeService::RESULTS.fetch(:generate_payment_url).new.tap do |result|
         result.fail_with_error!(
           BaseService::ServiceFailure.new(
             result,

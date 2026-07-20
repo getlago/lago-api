@@ -11,7 +11,7 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventService do
   end
 
   let(:payment_service) { instance_double(Invoices::Payments::GocardlessService) }
-  let(:service_result) { BaseService::Result.new }
+  let(:service_result) { Invoices::Payments::GocardlessService::RESULTS.fetch(:update_payment_status).new }
   let(:payment_provider) { create(:gocardless_provider) }
 
   describe "#call" do
@@ -28,7 +28,7 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventService do
     end
 
     context "when event metadata contains payable_type PaymentRequest" do
-      let(:service_result) { BaseService::Result.new }
+      let(:service_result) { PaymentRequests::Payments::GocardlessService::RESULTS.fetch(:update_payment_status).new }
 
       let(:event_json) do
         path = Rails.root.join("spec/fixtures/gocardless/events_payment_request.json")
