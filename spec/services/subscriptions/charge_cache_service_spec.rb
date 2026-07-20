@@ -23,15 +23,6 @@ RSpec.describe Subscriptions::ChargeCacheService do
           .to eq("charge-usage/#{described_class::CACHE_KEY_VERSION}/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}/#{charge_filter.id}/#{charge_filter.updated_at.iso8601}")
       end
     end
-
-    context "when the lazy charge usage cache flag is enabled" do
-      before { subscription.organization.enable_feature_flag!(:lazy_charge_usage_cache) }
-
-      it "uses the lazy cache key version" do
-        expect(cache_service.cache_key)
-          .to eq("charge-usage/#{described_class::LAZY_CACHE_KEY_VERSION}/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}")
-      end
-    end
   end
 
   describe "#expire_cache" do

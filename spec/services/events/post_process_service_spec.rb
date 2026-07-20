@@ -49,29 +49,6 @@ RSpec.describe Events::PostProcessService do
         .with(subscription:, organization:, date: expected_date)
     end
 
-    describe "charge usage cache expiration" do
-      it "expires the charge usage cache for the matching charges" do
-        allow(Subscriptions::ChargeCacheService).to receive(:expire_cache)
-
-        process_service.call
-
-        expect(Subscriptions::ChargeCacheService).to have_received(:expire_cache)
-          .with(subscription:, charge:, charge_filter: nil)
-      end
-
-      context "when the lazy charge usage cache flag is enabled" do
-        let(:organization) { create(:organization, feature_flags: [:lazy_charge_usage_cache]) }
-
-        it "does not expire the cache, letting the read-time validation handle it" do
-          allow(Subscriptions::ChargeCacheService).to receive(:expire_cache)
-
-          process_service.call
-
-          expect(Subscriptions::ChargeCacheService).not_to have_received(:expire_cache)
-        end
-      end
-    end
-
     context "with events enrichment" do
       it "does not create an enriched event" do
         expect { process_service.call }.not_to change(EnrichedEvent, :count)

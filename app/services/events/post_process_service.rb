@@ -11,7 +11,6 @@ module Events
     end
 
     def call
-      expire_cached_charges
       create_enriched_events
       track_subscription_activity
       customer&.flag_wallets_for_refresh
@@ -65,16 +64,6 @@ module Events
 
     def billable_metric
       @billable_metric ||= organization.billable_metrics.find_by(code: event.code)
-    end
-
-    def expire_cached_charges
-      return if organization.feature_flag_enabled?(:lazy_charge_usage_cache)
-      return if active_subscription.nil?
-      return unless billable_metric
-
-      charges_and_filters.each do |charge, filter|
-        Subscriptions::ChargeCacheService.expire_cache(subscription: active_subscription, charge:, charge_filter: filter)
-      end
     end
 
     def create_enriched_events
