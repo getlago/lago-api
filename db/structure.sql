@@ -3141,7 +3141,9 @@ CREATE TABLE public.payment_provider_customers (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    code character varying,
+    is_default boolean DEFAULT false NOT NULL
 );
 
 
@@ -12847,6 +12849,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260717133535'),
 ('20260716114156'),
 ('20260715142900'),
 ('20260710093947'),
