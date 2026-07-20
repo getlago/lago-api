@@ -85,6 +85,8 @@ class BaseService
 
   class NonRetryableFailure < ServiceFailure; end
 
+  class LockAcquisitionFailure < ServiceFailure; end
+
   class UnknownTaxFailure < FailedResult
     attr_reader :code, :error_message
 

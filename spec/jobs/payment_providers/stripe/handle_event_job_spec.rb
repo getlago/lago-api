@@ -24,4 +24,29 @@ RSpec.describe PaymentProviders::Stripe::HandleEventJob do
 
     expect(PaymentProviders::Stripe::HandleEventService).to have_received(:call)
   end
+
+  context "when the service raises BaseService::LockAcquisitionFailure" do
+    before do
+      allow(PaymentProviders::Stripe::HandleEventService).to receive(:call)
+        .and_raise(BaseService::LockAcquisitionFailure.new(nil, code: "lock_acquisition_failed", error_message: "Failed to acquire lock"))
+    end
+
+    it "retries the job instead of dying" do
+      expect do
+        described_class.perform_now(organization:, event: stripe_event)
+      end.to have_enqueued_job(described_class)
+    end
+  end
+
+  context "when the service raises ActiveRecord::Deadlocked" do
+    before do
+      allow(PaymentProviders::Stripe::HandleEventService).to receive(:call).and_raise(ActiveRecord::Deadlocked)
+    end
+
+    it "retries the job instead of dying" do
+      expect do
+        described_class.perform_now(organization:, event: stripe_event)
+      end.to have_enqueued_job(described_class)
+    end
+  end
 end

@@ -18,7 +18,7 @@ RSpec.describe Customers::LockService do
   end
 
   describe "lock scoping" do
-    %i[prepaid_credit credit_note coupon].each do |scope|
+    %i[prepaid_credit payment_method credit_note coupon].each do |scope|
       context "with the #{scope} scope", transaction: false do
         subject(:lock_service) { described_class.new(customer:, scope:, timeout_seconds: 0.seconds) }
 
