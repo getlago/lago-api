@@ -53,6 +53,12 @@ RSpec.describe Events::BillingPeriodFilterService do
         expect(result).to be_success
         expect(result.charges.transform_values(&:keys)).to eq({recurring_charge.id => [charge_filter.id]})
       end
+
+      it "seeds the carried-over usage with the period start" do
+        result = filter_service.call
+
+        expect(result.charges[recurring_charge.id][charge_filter.id]).to eq(boundaries.charges_from_datetime)
+      end
     end
 
     context "when no previous fees exist" do
@@ -571,6 +577,35 @@ RSpec.describe Events::BillingPeriodFilterService do
 
           expect(result).to be_success
           expect(result.charges.transform_values(&:keys)).to eq({recurring_charge.id => [charge_filter.id, nil]})
+        end
+
+        it "seeds every recurring bucket with the period start when there are no events" do
+          result = filter_service.call
+
+          expect(result.charges[recurring_charge.id][charge_filter.id]).to eq(boundaries.charges_from_datetime)
+          expect(result.charges[recurring_charge.id][nil]).to eq(boundaries.charges_from_datetime)
+        end
+
+        context "with events in the period" do
+          before do
+            create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              timestamp: boundaries.charges_from_datetime + 5.days,
+              code: recurring_billable_metric.code,
+              properties: {"region" => "eu"}
+            )
+          end
+
+          it "refreshes the matching bucket's last_seen_at while leaving the unmatched bucket seeded" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges[recurring_charge.id].keys).to match_array([charge_filter.id, nil])
+            expect(result.charges[recurring_charge.id][charge_filter.id]).to be > boundaries.charges_from_datetime
+            expect(result.charges[recurring_charge.id][nil]).to eq(boundaries.charges_from_datetime)
+          end
         end
       end
 

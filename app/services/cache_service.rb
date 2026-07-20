@@ -46,11 +46,6 @@ class CacheService < BaseService
     false
   end
 
-  # Stamp the cache with the timestamp of the most recent event the computation was based on
-  # (invalidate_if_older_than), NOT the write time. An event could be ingested between reading
-  # the events and writing the cache; stamping the write time would make cached_at more recent
-  # than that event and wrongly keep the stale entry valid. Fall back to the write time when the
-  # computation saw no event (nothing to compare against yet).
   def wrap(value)
     return value unless track_created_at?
 
@@ -68,8 +63,8 @@ class CacheService < BaseService
     cached.is_a?(Hash) ? cached["value"] : cached
   end
 
-  # Returns false when a more recent event was ingested after the cache was written, forcing a
-  # recompute. A legacy (unwrapped) entry is always considered stale so it gets rewritten.
+  # Returns false when a more recent value is checked, forcing a recompute.
+  # A legacy (unwrapped) entry is always considered stale so it gets rewritten.
   def valid_cache?(cached)
     return true unless track_created_at?
     return true if invalidate_if_older_than.nil?
