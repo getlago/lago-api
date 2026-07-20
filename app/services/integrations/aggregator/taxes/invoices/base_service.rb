@@ -5,6 +5,8 @@ module Integrations
     module Taxes
       module Invoices
         class BaseService < Integrations::Aggregator::Taxes::BaseService
+          Result = BaseResult[:fees, :succeeded_id, :invoice_id]
+
           def initialize(invoice:, fees: nil)
             @invoice = invoice
             @fees = fees || invoice.fees
