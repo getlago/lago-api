@@ -2,6 +2,8 @@
 
 module IntegrationCustomers
   class CreateOrUpdateBatchService < ::BaseService
+    Result = BaseResult
+
     SYNC_INTEGRATIONS = ["Integrations::SalesforceIntegration"].freeze
     def initialize(integration_customers:, customer:, new_customer:)
       @integration_customers = integration_customers&.map { |c| c.to_h.deep_symbolize_keys }
