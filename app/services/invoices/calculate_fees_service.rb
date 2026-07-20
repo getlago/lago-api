@@ -142,7 +142,7 @@ module Invoices
             plan:,
             customer:,
             skip_adjusted_fees: !adjusted_fee_exists,
-            filtered_aggregations: filters[charge.id] || []
+            filtered_aggregations: filters[charge.id]&.keys || []
           )
         end
     end

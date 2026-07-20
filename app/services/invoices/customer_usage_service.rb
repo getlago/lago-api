@@ -120,7 +120,7 @@ module Invoices
     def compute_charge_fees
       fees = []
       filters = event_filters(subscription, boundaries).charges
-      charges.find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
+      charges.find_each { |c| fees += charge_usage(c, filters[c.id] || {}) }
       return fees if usage_filters.has_charge_filter?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
@@ -131,7 +131,8 @@ module Invoices
         subscription:,
         charge:,
         to_datetime: boundaries.charges_to_datetime,
-        cache: cache_applicable?
+        cache: cache_applicable?,
+        last_seen_at: applied_filters
       )
 
       applied_boundaries = boundaries
@@ -152,7 +153,7 @@ module Invoices
           with_zero_units_filters:,
           # NOTE: current usage is computed on a non-persisted invoice, so adjusted fees never apply
           skip_adjusted_fees: true,
-          filtered_aggregations: applied_filters,
+          filtered_aggregations: applied_filters.keys,
           usage_filters:
         )
         .fees

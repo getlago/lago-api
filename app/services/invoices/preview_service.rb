@@ -212,13 +212,22 @@ module Invoices
 
       context = OpenTelemetry::Context.current
 
+      # The last-seen timestamps are only consumed by the lazy cache validation. Skip the extra
+      # query when the feature flag is off, as the middleware ignores last_seen_at in that case.
+      charge_filters = if subscription.organization.feature_flag_enabled?(:lazy_charge_usage_cache)
+        Events::BillingPeriodFilterService.call!(subscription:, boundaries:).charges
+      else
+        {}
+      end
+
       invoice.fees << Parallel.flat_map(charges, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
         OpenTelemetry::Context.with_current(context) do
           ActiveRecord::Base.connection_pool.with_connection do
             cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
               subscription:,
               charge:,
-              to_datetime: boundaries.charges_to_datetime
+              to_datetime: boundaries.charges_to_datetime,
+              last_seen_at: charge_filters[charge.id] || {}
             )
 
             Fees::ChargeService
