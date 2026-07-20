@@ -81,6 +81,7 @@ end
 # Database name: primary
 #
 #  id                   :uuid             not null, primary key
+#  code                 :string
 #  settings             :jsonb            not null
 #  type                 :string           not null
 #  created_at           :datetime         not null
