@@ -53,6 +53,28 @@ RSpec.describe ::V1::WalletTransactionSerializer do
     end
   end
 
+  context "when transaction has no purchase_order_number" do
+    let(:wallet) { create(:wallet, purchase_order_number: "PO-WALLET-123") }
+    let(:wallet_transaction) { create(:wallet_transaction, wallet:, purchase_order_number: nil) }
+
+    it "serializes the wallet's purchase_order_number" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["wallet_transaction"]["purchase_order_number"]).to eq("PO-WALLET-123")
+    end
+  end
+
+  context "when transaction has a purchase_order_number" do
+    let(:wallet) { create(:wallet, purchase_order_number: "PO-WALLET-123") }
+    let(:wallet_transaction) { create(:wallet_transaction, wallet:, purchase_order_number: "PO-TRANSACTION-123") }
+
+    it "serializes the transaction's purchase_order_number" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["wallet_transaction"]["purchase_order_number"]).to eq("PO-TRANSACTION-123")
+    end
+  end
+
   context "when snapshotted billing entity differs from the wallet's current one" do
     let(:wallet) { create(:wallet) }
     let(:snapshot_billing_entity) { create(:billing_entity, organization: wallet.organization) }

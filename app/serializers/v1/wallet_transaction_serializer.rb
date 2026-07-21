@@ -19,7 +19,7 @@ module V1
         remaining_amount_cents: model.remaining_amount_cents,
         remaining_credit_amount: model.remaining_credit_amount,
         priority: model.priority,
-        purchase_order_number: model.purchase_order_number,
+        purchase_order_number: model.resolved_purchase_order_number,
         settled_at: model.settled_at&.iso8601,
         failed_at: model.failed_at&.iso8601,
         created_at: model.created_at.iso8601,
