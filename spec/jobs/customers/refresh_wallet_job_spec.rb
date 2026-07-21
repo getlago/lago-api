@@ -22,23 +22,8 @@ RSpec.describe Customers::RefreshWalletJob do
       end
     end
 
-    context "when SIDEKIQ_WALLETS is enabled" do
-      before do
-        allow(ENV).to receive(:[]).and_call_original
-        allow(ENV).to receive(:[]).with("SIDEKIQ_WALLETS").and_return("true")
-      end
-
-      it "routes to the wallets_worker queue" do
-        expect(described_class.new(customer).queue_name).to eq("wallets_worker")
-      end
-
-      context "when the customer's organization is in the dedicated list" do
-        before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", [customer.organization_id]) }
-
-        it "still routes to the dedicated queue" do
-          expect(described_class.new(customer).queue_name).to eq("dedicated_wallets")
-        end
-      end
+    it_behaves_like "a configurable queue", "dedicated_wallets", "SIDEKIQ_WALLETS", "low_priority" do
+      let(:arguments) { customer }
     end
 
     context "when the dedicated list is empty" do

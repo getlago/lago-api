@@ -2,7 +2,7 @@ concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
 timeout: 25
 retry: 1
 queues:
-  - wallets_worker
+  - wallets
 
 production:
   concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
