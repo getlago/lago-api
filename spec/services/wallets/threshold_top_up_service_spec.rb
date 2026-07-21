@@ -69,7 +69,7 @@ RSpec.describe Wallets::ThresholdTopUpService do
         expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
           .with(
             organization_id: wallet.organization.id,
-            params: hash_including(invoice_requires_successful_payment: true, ignore_paid_top_up_limits: false),
+            params: hash_including(invoice_requires_successful_payment: true, ignore_paid_top_up_limits: true),
             unique_transaction: true
           )
       end
@@ -305,11 +305,38 @@ RSpec.describe Wallets::ThresholdTopUpService do
               invoice_requires_successful_payment: false,
               metadata: [],
               name: "Recurring Transaction Rule",
-              ignore_paid_top_up_limits: false,
+              ignore_paid_top_up_limits: true,
               purchase_order_number: nil
             },
             unique_transaction: true
           )
+      end
+
+      context "when the refill exceeds the wallet max top-up limit" do
+        let(:wallet) do
+          create(
+            :wallet,
+            balance_cents: 1000,
+            ongoing_balance_cents: 550,
+            credits_balance: 10.0,
+            credits_ongoing_balance: 5.5,
+            paid_top_up_max_amount_cents: 100_00
+          )
+        end
+
+        it "enqueues the full refill with the limit check disabled" do
+          # gap to target is 194.5 credits, above the 100-credit max: the refill
+          # must not be rejected downstream
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+            .with(
+              organization_id: wallet.organization.id,
+              params: hash_including(
+                paid_credits: "194.5",
+                ignore_paid_top_up_limits: true
+              ),
+              unique_transaction: true
+            )
+        end
       end
 
       context "when grants_target_top_up is true" do

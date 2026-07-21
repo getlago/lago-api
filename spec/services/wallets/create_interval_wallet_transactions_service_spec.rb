@@ -45,6 +45,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
             invoice_requires_successful_payment: false,
             metadata: [],
             name: "Recurring Transaction Rule",
+            ignore_paid_top_up_limits: true,
             purchase_order_number: nil
           }.merge(attrs)
         )
