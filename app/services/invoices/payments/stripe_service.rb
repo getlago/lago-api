@@ -42,7 +42,10 @@ module Invoices
         payment.error_code = stripe_payment.error_code if stripe_payment.error_code
         payment.save!
 
-        deliver_webhook if payable_payment_status.to_sym == :succeeded
+        if payable_payment_status.to_sym == :succeeded
+          deliver_webhook
+          Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
+        end
 
         if status.to_s == "failed" && result.invoice.payments.excluding(result.payment).where(status: :requires_action).any?
           # We don't update the invoice status because it's likely the webhook of a failed payment
