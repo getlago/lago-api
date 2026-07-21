@@ -82,6 +82,8 @@ end
 #
 #  id                   :uuid             not null, primary key
 #  code                 :string
+#  category             :enum
+#  is_default           :boolean          default(FALSE), not null
 #  settings             :jsonb            not null
 #  type                 :string           not null
 #  created_at           :datetime         not null
