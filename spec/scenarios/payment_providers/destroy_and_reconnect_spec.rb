@@ -6,6 +6,15 @@ describe "Payment Provider Destroy And Reconnect Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 
+  before do
+    stub_request(:get, %r{/v1/customers/[^/]+$}).and_return(
+      status: 200, body: get_stripe_fixtures("customer_retrieve_response.json")
+    )
+    stub_request(:get, %r{/v1/customers/[^/]+/payment_methods}).and_return(
+      status: 200, body: get_stripe_fixtures("customer_list_payment_methods_empty_response.json")
+    )
+  end
+
   it "soft deletes provider customers on destroy and recreates them on reconnect" do
     provider = create(:stripe_provider, organization:)
     create_or_update_customer({
