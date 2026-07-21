@@ -12,6 +12,10 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertJob do
     let(:job_args) { [{alert:, subscription:}] }
   end
 
+  it_behaves_like "a configurable queue", "alerts", "SIDEKIQ_ALERTS" do
+    let(:arguments) { {alert:, subscription:} }
+  end
+
   describe "#perform" do
     before do
       allow(UsageMonitoring::ProcessLifetimeUsageAlertService).to receive(:call!)

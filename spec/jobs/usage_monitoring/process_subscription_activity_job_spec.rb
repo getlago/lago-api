@@ -3,6 +3,10 @@
 require "rails_helper"
 
 RSpec.describe UsageMonitoring::ProcessSubscriptionActivityJob do
+  it_behaves_like "a configurable queue", "alerts", "SIDEKIQ_ALERTS" do
+    let(:arguments) { create(:subscription_activity).id }
+  end
+
   describe "#perform" do
     let(:subscription_activity) { create(:subscription_activity) }
     let(:subscription_activity_id) { subscription_activity.id }
