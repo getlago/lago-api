@@ -41,7 +41,7 @@ module Invoices
     attr_reader :invoice
 
     def mark_credit_notes_as_deleted!
-      invoice.credit_notes.not_deleted.find_each do |credit_note|
+      invoice.credit_notes.not_deleted.order(:created_at).each do |credit_note|
         delete_result = CreditNotes::DeleteService.call(credit_note:)
         next if delete_result.success?
 

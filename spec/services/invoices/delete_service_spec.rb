@@ -106,8 +106,8 @@ RSpec.describe Invoices::DeleteService do
     end
 
     context "when the draft invoice has several credit notes and one cannot be deleted" do
-      let(:deletable_credit_note) { create(:credit_note, :draft, invoice:, customer:) }
-      let(:blocking_credit_note) { create(:credit_note, status: :finalized, invoice:, customer:) }
+      let(:deletable_credit_note) { create(:credit_note, :draft, invoice:, customer:, created_at: 2.days.ago) }
+      let(:blocking_credit_note) { create(:credit_note, status: :finalized, invoice:, customer:, created_at: 1.day.ago) }
       let(:other_invoice) { create(:invoice, :draft, organization:, customer:) }
 
       before do
