@@ -4,7 +4,7 @@ module UsageMonitoring
   class ProcessWalletAlertsJob < ApplicationJob
     queue_as do
       if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_ALERTS"])
-        :alerts
+        :alerts_high_priority
       else
         :default
       end
