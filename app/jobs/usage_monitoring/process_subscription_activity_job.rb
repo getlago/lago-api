@@ -2,7 +2,13 @@
 
 module UsageMonitoring
   class ProcessSubscriptionActivityJob < ApplicationJob
-    queue_as :default
+    queue_as do
+      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_ALERTS"])
+        :alerts
+      else
+        :default
+      end
+    end
 
     def perform(subscription_activity_id, attempt = 1)
       subscription_activity = SubscriptionActivity.find_by(id: subscription_activity_id)
