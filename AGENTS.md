@@ -184,6 +184,7 @@ To create a webhook:
 # Environment variables
 
 - When a change introduces a new environment variable, document it in this file (name, purpose, example value)
+- `SIDEKIQ_WALLETS` — when true, wallet jobs (e.g. `Customers::RefreshWalletJob`) are routed to the `wallets_worker` queue, processed by the dedicated wallet worker (`scripts/start.wallets.worker.sh`). Example: `SIDEKIQ_WALLETS=true`
 - Sensitive values (keys, secrets, passwords, tokens, credentials embedded in URLs) must always be masked in examples, e.g. `LAGO_SMTP_PASSWORD=***` or `DATABASE_URL=postgresql://***@db:5432/lago`
 
 # Service
