@@ -116,4 +116,45 @@ RSpec.describe Lago::RdsProxy::ConnectionPatch do
       expect(adapter.calls).not_to include(:original_reconfigure_connection_timezone)
     end
   end
+
+  # The specs above use a fake adapter to assert call ordering / absence of SETs
+  # in isolation. This block exercises the REAL PostgreSQLAdapter against the test
+  # database, so we catch any drift in `configure_connection`'s internals across
+  # Rails upgrades (per review feedback: the fake could hide such a change).
+  describe "against the real PostgreSQLAdapter" do
+    let(:db_config) { ActiveRecord::Base.connection_db_config.configuration_hash }
+
+    # Plain adapter = control; the patched one uses an isolated subclass so the
+    # prepend never leaks onto the shared connection pool.
+    let(:plain_adapter) do
+      ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.new(db_config)
+    end
+
+    let(:patched_adapter) do
+      Class.new(ActiveRecord::ConnectionAdapters::PostgreSQLAdapter) do
+        prepend Lago::RdsProxy::ConnectionPatch
+      end.new(db_config)
+    end
+
+    after do
+      plain_adapter.disconnect!
+      patched_adapter.disconnect!
+    end
+
+    # Rails' configure_connection drives these away from the Postgres server
+    # defaults; the patch must leave them alone. Asserting "not the Rails value"
+    # (rather than a hardcoded default) keeps this robust across environments.
+    it "applies Rails' session SETs without the patch (control)" do
+      expect(plain_adapter.select_value("SHOW intervalstyle")).to eq("iso_8601")
+      expect(plain_adapter.select_value("SHOW client_min_messages")).to eq("warning")
+    end
+
+    it "skips the session SETs and keeps the connection fully functional" do
+      expect(patched_adapter.select_value("SHOW intervalstyle")).not_to eq("iso_8601")
+      expect(patched_adapter.select_value("SHOW client_min_messages")).not_to eq("warning")
+
+      # Connection is usable and decoders are loaded (integers cast, not raw strings):
+      expect(patched_adapter.select_value("SELECT 1")).to eq(1)
+    end
+  end
 end
