@@ -22,7 +22,7 @@ RSpec.describe Customers::RefreshWalletJob do
       end
     end
 
-    it_behaves_like "a configurable queue", "dedicated_wallets", "SIDEKIQ_WALLETS", "low_priority" do
+    it_behaves_like "a configurable queue", "wallets", "SIDEKIQ_WALLETS", "low_priority" do
       let(:arguments) { customer }
     end
 
