@@ -7,9 +7,6 @@ describe "Payment Provider Destroy And Reconnect Scenarios" do
   let(:customer) { create(:customer, organization:) }
 
   before do
-    # Linking a Stripe provider customer enqueues FetchDefaultPaymentMethodJob,
-    # which reaches out to Stripe. Return a customer with no default and no cards
-    # so the job resolves to no payment method without any real HTTP call.
     stub_request(:get, %r{/v1/customers/[^/]+$}).and_return(
       status: 200, body: get_stripe_fixtures("customer_retrieve_response.json")
     )
