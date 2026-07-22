@@ -39,7 +39,7 @@ RSpec.describe Metadata::InvoiceMetadata do
     end
 
     context "when value length is invalid" do
-      let(:value) { "a" * 101 }
+      let(:value) { "a" * 141 }
 
       it { expect(metadata).not_to be_valid }
     end
@@ -47,7 +47,7 @@ RSpec.describe Metadata::InvoiceMetadata do
     context "when value length is invalid but value is unchanged" do
       let(:metadata) { create(:invoice_metadata, invoice:) }
 
-      before { metadata.update_column(:value, "a" * 101) } # rubocop:disable Rails/SkipsModelValidations
+      before { metadata.update_column(:value, "a" * 141) } # rubocop:disable Rails/SkipsModelValidations
 
       it { expect(metadata).to be_valid }
     end

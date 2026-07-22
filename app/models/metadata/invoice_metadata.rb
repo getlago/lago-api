@@ -9,7 +9,7 @@ module Metadata
 
     validates :key, presence: true, uniqueness: {scope: :invoice_id}, length: {maximum: 20}
     validates :value, presence: true
-    validates :value, length: {maximum: 100}, if: :value_changed?
+    validates :value, length: {maximum: 140}, if: :value_changed?
   end
 end
 
