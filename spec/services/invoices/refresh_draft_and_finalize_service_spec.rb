@@ -458,5 +458,37 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
         end
       end
     end
+
+    context "with concurrent finalize requests", transaction: false do
+      let(:invoices) { Array.new(2) { Invoice.find(invoice.id) } }
+
+      before do
+        allow(Invoices::CreateInvoiceSubscriptionService).to receive(:call).and_wrap_original do |original, *args, **kwargs|
+          original.call(*args, **kwargs).tap { sleep 0.2 }
+        end
+      end
+
+      it "serializes requests and finalizes the invoice once" do
+        errors = Concurrent::Array.new
+        results = Concurrent::Array.new
+
+        threads = invoices.map do |current_invoice|
+          Thread.new do
+            results << described_class.call(invoice: current_invoice)
+          rescue => e
+            errors << e
+          ensure
+            ActiveRecord::Base.connection_pool.release_connection
+          end
+        end
+
+        threads.each(&:join)
+
+        expect(results.count(&:success?)).to eq(2)
+        expect(errors).to be_empty
+        expect(invoice.reload.invoice_subscriptions.where(subscription:).count).to eq(1)
+        expect(invoice).to be_finalized
+      end
+    end
   end
 end
