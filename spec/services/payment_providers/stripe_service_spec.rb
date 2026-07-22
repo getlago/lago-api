@@ -25,12 +25,14 @@ RSpec.describe PaymentProviders::StripeService do
           code:,
           name:,
           success_redirect_url:,
-          supports_3ds: true
+          supports_3ds: true,
+          require_terms_of_service_consent: true
         )
 
         expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
           .with(result.stripe_provider)
         expect(result.stripe_provider.supports_3ds).to be(true)
+        expect(result.stripe_provider.require_terms_of_service_consent).to be(true)
       end.to change(PaymentProviders::StripeProvider, :count).by(1)
     end
 
