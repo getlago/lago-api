@@ -60,7 +60,7 @@ RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory do
       let(:payment_provider) { "paystack" }
 
       it "returns correct class" do
-        expect(factory_service.class.to_s).to eq("PaymentRequests::Payments::PaystackService")
+        expect(factory_service).to eq(PaymentRequests::Payments::PaystackService)
       end
     end
   end
