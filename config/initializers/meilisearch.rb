@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-MeiliSearch::Rails.configuration = {
+Meilisearch::Rails.configuration = {
   meilisearch_url: ENV["LAGO_MEILISEARCH_URL"] || "http://localhost:7700",
   meilisearch_api_key: ENV["LAGO_MEILISEARCH_API_KEY"],
   active: ENV["LAGO_MEILISEARCH_URL"].present?,

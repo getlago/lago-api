@@ -7,7 +7,7 @@ class Invoice < ApplicationRecord
   include PaperTrailTraceable
   include Sequenced
   include RansackUuidSearch
-  include MeiliSearch::Rails
+  include Meilisearch::Rails
 
   meilisearch(index_uid: "invoices", auto_index: false, auto_remove: true) do
     attribute :number, :organization_id, :billing_entity_id, :currency, :customer_id,
