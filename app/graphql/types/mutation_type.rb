@@ -94,6 +94,8 @@ module Types
     field :generate_checkout_url, mutation: Mutations::PaymentMethods::GenerateCheckoutUrl
     field :set_payment_method_as_default, mutation: Mutations::PaymentMethods::SetAsDefault
 
+    field :destroy_payment_provider_customer, mutation: Mutations::PaymentProviderCustomers::Destroy
+
     field :create_netsuite_integration, mutation: Mutations::Integrations::Netsuite::Create
     field :destroy_integration, mutation: Mutations::Integrations::Destroy
     field :update_netsuite_integration, mutation: Mutations::Integrations::Netsuite::Update
