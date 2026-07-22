@@ -148,7 +148,7 @@ module Invoices
       end
 
       def payment_url_payload(payment_intent)
-        {
+        payload = {
           line_items: [
             {
               quantity: 1,
@@ -178,6 +178,12 @@ module Invoices
             }
           }
         }
+
+        if stripe_payment_provider.require_terms_of_service_consent
+          payload[:consent_collection] = {terms_of_service: "required"}
+        end
+
+        payload
       end
 
       def description
