@@ -12,6 +12,7 @@ queues:
   - integrations
   - low_priority
   - long_running
+  - meilisearch
 
 production:
   concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
