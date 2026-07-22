@@ -2,7 +2,7 @@
 
 class WalletTransactionsQuery < BaseQuery
   Result = BaseResult[:wallet_transactions]
-  Filters = BaseFilters[:transaction_type, :status, :transaction_status]
+  Filters = BaseFilters[:transaction_type, :status, :transaction_status, :metadata]
 
   def initialize(organization:, wallet_id:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil)
     @wallet = organization.wallets.find_by(id: wallet_id)
@@ -26,6 +26,8 @@ class WalletTransactionsQuery < BaseQuery
       wallet_transactions = with_transaction_status(wallet_transactions)
     end
 
+    wallet_transactions = with_metadata(wallet_transactions) if filters.metadata.is_a?(Hash) && filters.metadata.present?
+
     result.wallet_transactions = wallet_transactions
     result
   end
@@ -44,6 +46,18 @@ class WalletTransactionsQuery < BaseQuery
 
   def with_transaction_status(scope)
     scope.where(transaction_status: filters.transaction_status)
+  end
+
+  def with_metadata(scope)
+    filters.metadata.reduce(scope) do |relation, (key, value)|
+      next relation if value.blank?
+
+      relation.where(
+        "EXISTS (SELECT 1 FROM jsonb_array_elements(wallet_transactions.metadata) AS pair " \
+        "WHERE pair->>'key' = ? AND pair->>'value' = ?)",
+        key.to_s, value.to_s
+      )
+    end
   end
 
   def valid_status?(status)
