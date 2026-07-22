@@ -8,6 +8,7 @@ class Invoice < ApplicationRecord
   include Sequenced
   include RansackUuidSearch
   include MeiliSearch::Rails
+  include HasPurchaseOrderNumber
 
   meilisearch(index_uid: "invoices", auto_index: false, auto_remove: true) do
     attribute :number, :organization_id, :billing_entity_id, :currency, :customer_id,
@@ -41,7 +42,6 @@ class Invoice < ApplicationRecord
     typo_tolerance disable_on_attributes: %w[number customer_external_id customer_email]
     pagination max_total_hits: 100_000
   end
-  include HasPurchaseOrderNumber
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
