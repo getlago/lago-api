@@ -1477,6 +1477,18 @@ CREATE TYPE public.billing_cycle_status AS ENUM (
 
 
 --
+-- Name: connection_category; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.connection_category AS ENUM (
+    'payment',
+    'tax',
+    'accounting',
+    'crm'
+);
+
+
+--
 -- Name: customer_account_type; Type: TYPE; Schema: public; Owner: -
 --
 
