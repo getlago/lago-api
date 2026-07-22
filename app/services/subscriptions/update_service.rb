@@ -25,6 +25,10 @@ module Subscriptions
       return result.not_found_failure!(resource: "subscription") unless subscription
       return result.not_allowed_failure!(code: "subscription_incomplete") if subscription.incomplete?
 
+      if params.key?(:purchase_order_number) && !subscription.pending? && !subscription.active?
+        return result.not_allowed_failure!(code: "purchase_order_number_not_editable")
+      end
+
       unless valid?(
         customer: subscription.customer,
         plan: subscription.plan,
