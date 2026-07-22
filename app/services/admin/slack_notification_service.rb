@@ -9,7 +9,7 @@ module Admin
 
     def call
       webhook_url = ENV.fetch("CS_ADMIN_SLACK_WEBHOOK_URL", nil)
-      return result unless webhook_url.present?
+      return result if webhook_url.blank?
 
       payload = build_payload
       LagoHttpClient::Client.new(webhook_url).post_with_response(payload, {})
@@ -25,7 +25,7 @@ module Admin
     attr_reader :audit_log
 
     def build_payload
-      emoji = audit_log.toggle_on? || audit_log.org_created? ? "\u2705" : "\u274c"
+      emoji = (audit_log.toggle_on? || audit_log.org_created?) ? "\u2705" : "\u274c"
       action_text = case audit_log.action
       when "toggle_on" then "enabled"
       when "toggle_off" then "disabled"

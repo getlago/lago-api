@@ -6,12 +6,16 @@ RSpec.describe Admin::RollbackService do
   let(:actor) { create(:user, email: "cs@getlago.com", cs_admin: true) }
   let(:organization) { create(:organization) }
 
-  before do
-    allow(Admin::SlackNotificationJob).to receive(:perform_later)
-  end
-
   describe "#call" do
     context "when rolling back a toggle_on (disabling the feature)" do
+      subject(:service) do
+        described_class.new(
+          actor: actor,
+          audit_log: original_log,
+          reason: "Rolling back okta toggle for testing"
+        )
+      end
+
       let(:original_log) do
         create(
           :cs_admin_audit_log,
@@ -23,14 +27,6 @@ RSpec.describe Admin::RollbackService do
           before_value: false,
           after_value: true,
           reason: "Enabling okta for testing purposes"
-        )
-      end
-
-      subject(:service) do
-        described_class.new(
-          actor: actor,
-          audit_log: original_log,
-          reason: "Rolling back okta toggle for testing"
         )
       end
 
@@ -59,6 +55,14 @@ RSpec.describe Admin::RollbackService do
     end
 
     context "when rolling back a toggle_off (re-enabling the feature)" do
+      subject(:service) do
+        described_class.new(
+          actor: actor,
+          audit_log: original_log,
+          reason: "Re-enabling netsuite after reassessment"
+        )
+      end
+
       let(:original_log) do
         create(
           :cs_admin_audit_log,
@@ -70,14 +74,6 @@ RSpec.describe Admin::RollbackService do
           before_value: true,
           after_value: false,
           reason: "Disabling netsuite for cost reasons"
-        )
-      end
-
-      subject(:service) do
-        described_class.new(
-          actor: actor,
-          audit_log: original_log,
-          reason: "Re-enabling netsuite after reassessment"
         )
       end
 
@@ -96,20 +92,6 @@ RSpec.describe Admin::RollbackService do
     end
 
     context "when rolling back a feature flag toggle_on" do
-      let(:original_log) do
-        create(
-          :cs_admin_audit_log,
-          actor_user: actor,
-          action: :toggle_on,
-          organization: organization,
-          feature_type: :feature_flag,
-          feature_key: "multiple_payment_methods",
-          before_value: false,
-          after_value: true,
-          reason: "Enabling flag for testing purposes"
-        )
-      end
-
       subject(:service) do
         described_class.new(
           actor: actor,
@@ -118,7 +100,21 @@ RSpec.describe Admin::RollbackService do
         )
       end
 
-      before { organization.enable_feature_flag!("multiple_payment_methods") }
+      let(:original_log) do
+        create(
+          :cs_admin_audit_log,
+          actor_user: actor,
+          action: :toggle_on,
+          organization: organization,
+          feature_type: :feature_flag,
+          feature_key: "multi_currency",
+          before_value: false,
+          after_value: true,
+          reason: "Enabling flag for testing purposes"
+        )
+      end
+
+      before { organization.enable_feature_flag!("multi_currency") }
 
       it "disables the feature flag and creates a rollback audit log" do
         allow(organization).to receive(:disable_feature_flag!).and_call_original
@@ -126,12 +122,12 @@ RSpec.describe Admin::RollbackService do
         result = service.call
 
         expect(result).to be_success
-        expect(organization).to have_received(:disable_feature_flag!).with("multiple_payment_methods")
+        expect(organization).to have_received(:disable_feature_flag!).with("multi_currency")
 
         rollback_log = result.audit_log
         expect(rollback_log.action).to eq("rollback")
         expect(rollback_log.feature_type).to eq("feature_flag")
-        expect(rollback_log.feature_key).to eq("multiple_payment_methods")
+        expect(rollback_log.feature_key).to eq("multi_currency")
         expect(rollback_log.after_value).to be(false)
         expect(rollback_log.rollback_of).to eq(original_log)
       end
@@ -156,6 +152,14 @@ RSpec.describe Admin::RollbackService do
     end
 
     context "when rollback succeeds" do
+      subject(:service) do
+        described_class.new(
+          actor: actor,
+          audit_log: original_log,
+          reason: "Rolling back okta toggle for testing"
+        )
+      end
+
       let(:original_log) do
         create(
           :cs_admin_audit_log,
@@ -170,21 +174,13 @@ RSpec.describe Admin::RollbackService do
         )
       end
 
-      subject(:service) do
-        described_class.new(
-          actor: actor,
-          audit_log: original_log,
-          reason: "Rolling back okta toggle for testing"
-        )
-      end
-
       before { organization.update!(premium_integrations: ["okta"]) }
 
       it "dispatches a Slack notification job after rollback" do
         result = service.call
 
         expect(result).to be_success
-        expect(Admin::SlackNotificationJob).to have_received(:perform_later).with(result.audit_log.id)
+        expect(Admin::SlackNotificationJob).to have_been_enqueued.with(result.audit_log.id)
       end
     end
   end
