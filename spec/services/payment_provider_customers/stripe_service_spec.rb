@@ -529,7 +529,7 @@ RSpec.describe PaymentProviderCustomers::StripeService do
     end
 
     context "when consent collection is enabled on the provider" do
-      before { stripe_provider.update!(require_terms_of_service_consent: true) }
+      let(:stripe_provider) { create(:stripe_provider, require_terms_of_service_consent: true) }
 
       it "requires terms of service consent on the checkout session" do
         allow(::Stripe::Checkout::Session).to receive(:create).and_return({"url" => "https://example.com"})
