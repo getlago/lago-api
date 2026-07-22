@@ -92,6 +92,120 @@ RSpec.describe Api::V1::WalletTransactionsController do
       end
     end
 
+    context "with a targeted voided transaction" do
+      let(:wallet) { create(:wallet, customer:, credits_balance: 20, balance_cents: 2000) }
+      let(:grant_a) do
+        create(:wallet_transaction, wallet:, transaction_type: :inbound, transaction_status: :granted,
+          status: :settled, amount: 5, credit_amount: 5, remaining_amount_cents: 500)
+      end
+      let(:grant_b) do
+        create(:wallet_transaction, wallet:, transaction_type: :inbound, transaction_status: :granted,
+          status: :settled, amount: 15, credit_amount: 15, remaining_amount_cents: 1500)
+      end
+
+      before do
+        grant_a
+        grant_b
+      end
+
+      # grant_a is created first at the same priority, so it is first in consumption order:
+      # a pool-wide void would drain it before grant_b. Targeting grant_b therefore proves
+      # the void was routed to the specified grant rather than falling back to FIFO.
+      context "without an amount" do
+        let(:params) { {wallet_id:, voided_transaction_id: grant_b.id} }
+
+        it "voids the targeted grant's whole remaining and leaves the earlier grant untouched" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:wallet_transactions].count).to eq(1)
+          expect(json[:wallet_transactions].first).to include(
+            transaction_status: "voided",
+            credit_amount: "15.0"
+          )
+          expect(grant_b.reload.remaining_amount_cents).to eq(0)
+          expect(grant_a.reload.remaining_amount_cents).to eq(500)
+          expect(wallet.reload.credits_balance).to eq(5)
+        end
+      end
+
+      context "with an explicit amount" do
+        let(:params) { {wallet_id:, voided_transaction_id: grant_b.id, voided_credits: "2"} }
+
+        it "voids that amount from the targeted grant only" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(grant_b.reload.remaining_amount_cents).to eq(1300)
+          expect(grant_a.reload.remaining_amount_cents).to eq(500)
+        end
+      end
+
+      context "when the amount exceeds the targeted grant remaining" do
+        let(:params) { {wallet_id:, voided_transaction_id: grant_a.id, voided_credits: "10"} }
+
+        it "returns an error without touching any grant" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:amount_cents]).to eq(["exceeds_remaining_transaction_amount"])
+          expect(grant_a.reload.remaining_amount_cents).to eq(500)
+        end
+      end
+
+      context "when the targeted transaction belongs to another wallet" do
+        let(:other_grant) { create(:wallet_transaction, transaction_type: :inbound, remaining_amount_cents: 500) }
+        let(:params) { {wallet_id:, voided_transaction_id: other_grant.id} }
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:voided_transaction_id]).to eq(["wallet_transaction_not_found"])
+        end
+      end
+
+      context "when the targeted grant has no remaining balance" do
+        let(:consumed_grant) do
+          create(:wallet_transaction, wallet:, transaction_type: :inbound, transaction_status: :granted,
+            status: :settled, amount: 5, credit_amount: 5, remaining_amount_cents: 0)
+        end
+        let(:params) { {wallet_id:, voided_transaction_id: consumed_grant.id} }
+
+        it "returns an error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:voided_transaction_id]).to eq(["no_remaining_amount"])
+        end
+      end
+
+      context "when the wallet is not traceable" do
+        let(:wallet) { create(:wallet, customer:, credits_balance: 20, balance_cents: 2000, traceable: false) }
+        let(:params) { {wallet_id:, voided_transaction_id: grant_a.id} }
+
+        it "rejects targeting" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:voided_transaction_id]).to eq(["wallet_not_traceable"])
+        end
+      end
+
+      context "when voided_transaction_id is blank" do
+        # An SDK may serialize an unset field as "" rather than omitting it: still a pool-wide void.
+        let(:params) { {wallet_id:, voided_credits: "5", voided_transaction_id: ""} }
+
+        it "falls back to a pool-wide void" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(grant_a.reload.remaining_amount_cents).to eq(0)
+          expect(grant_b.reload.remaining_amount_cents).to eq(1500)
+        end
+      end
+    end
+
     context "when metadata is present" do
       let(:params) do
         {

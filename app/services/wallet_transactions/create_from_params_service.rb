@@ -4,7 +4,7 @@ module WalletTransactions
   class CreateFromParamsService < ::BaseService
     MAX_WALLET_UPDATE_ATTEMPTS = 5
 
-    Result = BaseResult[:current_wallet, :wallet_transactions, :payment_method]
+    Result = BaseResult[:current_wallet, :wallet_transactions, :payment_method, :voided_wallet_transaction]
 
     def initialize(organization:, params:)
       @organization = organization
@@ -52,7 +52,7 @@ module WalletTransactions
           wallet_transactions << transaction
         end
 
-        if params[:voided_credits]
+        if params[:voided_credits] || params[:voided_transaction_id].present?
           wallet_transactions << handle_voided_credits(wallet)
         end
 
@@ -94,10 +94,21 @@ module WalletTransactions
     end
 
     def handle_voided_credits(wallet)
-      credit_amount = BigDecimal(params[:voided_credits]).floor(5)
-      wallet_credit = WalletCredit.new(wallet:, credit_amount:, invoiceable: false)
+      # Resolved and validated upstream by ValidateService; nil means a pool-wide void.
+      inbound_wallet_transaction = result.voided_wallet_transaction
       void_params = params.to_h.symbolize_keys.slice(:metadata, :source, :priority).merge(name:)
-      WalletTransactions::VoidService.call!(wallet:, wallet_credit:, **void_params).wallet_transaction
+
+      if params[:voided_credits]
+        wallet_credit = WalletCredit.new(wallet:, credit_amount: BigDecimal(params[:voided_credits]).floor(5), invoiceable: false)
+        WalletTransactions::VoidService.call!(
+          wallet:, wallet_credit:, inbound_wallet_transaction:, **void_params
+        ).wallet_transaction
+      else
+        # No amount given: void the grant's whole remaining, sized under the lock in VoidService.
+        WalletTransactions::VoidService.call!(
+          wallet:, inbound_wallet_transaction:, void_remaining: true, **void_params
+        ).wallet_transaction
+      end
     end
 
     def handle_paid_credits(wallet:, credits_amount:, invoice_requires_successful_payment:)

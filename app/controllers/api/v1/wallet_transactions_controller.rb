@@ -125,6 +125,7 @@ module Api
           :paid_credits,
           :granted_credits,
           :voided_credits,
+          :voided_transaction_id,
           :invoice_requires_successful_payment,
           :name,
           :ignore_paid_top_up_limits,
