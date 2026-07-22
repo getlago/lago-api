@@ -12,8 +12,8 @@ end
 # Database name: primary
 #
 #  id                   :uuid             not null, primary key
-#  code                 :string
 #  category             :enum
+#  code                 :string
 #  is_default           :boolean          default(FALSE), not null
 #  settings             :jsonb            not null
 #  type                 :string           not null
@@ -26,11 +26,13 @@ end
 #
 # Indexes
 #
-#  index_integration_customers_on_customer_id           (customer_id)
-#  index_integration_customers_on_customer_id_and_type  (customer_id,type) UNIQUE
-#  index_integration_customers_on_external_customer_id  (external_customer_id)
-#  index_integration_customers_on_integration_id        (integration_id)
-#  index_integration_customers_on_organization_id       (organization_id)
+#  index_integration_customers_on_customer_category_code     (customer_id,category,code) UNIQUE
+#  index_integration_customers_on_customer_category_default  (customer_id,category) UNIQUE WHERE is_default
+#  index_integration_customers_on_customer_id                (customer_id)
+#  index_integration_customers_on_customer_id_and_type       (customer_id,type) UNIQUE
+#  index_integration_customers_on_external_customer_id       (external_customer_id)
+#  index_integration_customers_on_integration_id             (integration_id)
+#  index_integration_customers_on_organization_id            (organization_id)
 #
 # Foreign Keys
 #
