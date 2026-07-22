@@ -8,12 +8,12 @@ module Mutations
       graphql_name "AdminCreateOrganization"
       description "Create a new organization with pre-configured features"
 
+      argument :feature_flags, [String], required: false
       argument :name, String, required: true
       argument :owner_email, String, required: true
-      argument :timezone, String, required: false
       argument :premium_integrations, [String], required: false
-      argument :feature_flags, [String], required: false
       argument :reason, String, required: true
+      argument :timezone, String, required: false
 
       type Types::Admin::CreateOrganizationPayload
 

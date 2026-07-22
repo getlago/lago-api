@@ -7,14 +7,14 @@ module Resolvers
 
       description "Query admin audit logs with filters"
 
-      argument :organization_id, ID, required: false
       argument :actor_user_id, ID, required: false
       argument :feature_key, String, required: false
       argument :feature_type, Types::Admin::FeatureTypeEnum, required: false
       argument :from_date, GraphQL::Types::ISO8601Date, required: false
-      argument :to_date, GraphQL::Types::ISO8601Date, required: false
-      argument :page, Integer, required: false
       argument :limit, Integer, required: false
+      argument :organization_id, ID, required: false
+      argument :page, Integer, required: false
+      argument :to_date, GraphQL::Types::ISO8601Date, required: false
 
       type Types::Admin::AuditLogType.collection_type, null: false
 

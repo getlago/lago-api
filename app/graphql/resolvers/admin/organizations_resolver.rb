@@ -7,9 +7,9 @@ module Resolvers
 
       description "Search organizations (admin only)"
 
-      argument :search_term, String, required: false
-      argument :page, Integer, required: false
       argument :limit, Integer, required: false
+      argument :page, Integer, required: false
+      argument :search_term, String, required: false
 
       type Types::Admin::OrganizationType.collection_type, null: false
 

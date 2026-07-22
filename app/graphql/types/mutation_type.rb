@@ -257,11 +257,11 @@ module Types
     field :create_ai_conversation, mutation: Mutations::AiConversations::Create
     field :export_finance_assistant_result, mutation: Mutations::FinanceAssistant::Export
 
-    field :admin_toggle_feature, mutation: Mutations::Admin::ToggleFeature
     field :admin_batch_toggle_feature, mutation: Mutations::Admin::BatchToggleFeature
+    field :admin_toggle_feature, mutation: Mutations::Admin::ToggleFeature
 
-    field :admin_rollback_change, mutation: Mutations::Admin::RollbackChange
     field :admin_batch_rollback, mutation: Mutations::Admin::BatchRollback
     field :admin_create_organization, mutation: Mutations::Admin::CreateOrganization
+    field :admin_rollback_change, mutation: Mutations::Admin::RollbackChange
   end
 end

@@ -4,7 +4,7 @@ module Admin
   class CreateOrganizationService < ::BaseService
     Result = BaseResult[:organization, :invite_url]
 
-    def initialize(actor:, name:, owner_email:, timezone: nil, premium_integrations: [], feature_flags: [], reason:)
+    def initialize(actor:, name:, owner_email:, reason:, timezone: nil, premium_integrations: [], feature_flags: [])
       @actor = actor
       @name = name
       @owner_email = owner_email

@@ -9,7 +9,7 @@ class AdminMailer < ApplicationMailer
     @action = audit_log.toggle_on? ? "enabled" : "disabled"
 
     owner = @organization.admins.first
-    return unless owner&.email.present?
+    return if owner&.email.blank?
 
     mail(
       to: owner.email,
