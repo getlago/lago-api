@@ -12,12 +12,13 @@ end
 # Table name: usage_monitoring_subscription_activities
 # Database name: primary
 #
-#  id              :bigint           not null, primary key
-#  enqueued        :boolean          default(FALSE), not null
-#  enqueued_at     :datetime
-#  inserted_at     :datetime         not null
-#  organization_id :uuid             not null
-#  subscription_id :uuid             not null
+#  id                       :bigint           not null, primary key
+#  enqueued                 :boolean          default(FALSE), not null
+#  enqueued_at              :datetime
+#  inserted_at              :datetime         not null
+#  oldest_event_ingested_at :datetime
+#  organization_id          :uuid             not null
+#  subscription_id          :uuid             not null
 #
 # Indexes
 #

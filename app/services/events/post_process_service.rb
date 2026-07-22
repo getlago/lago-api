@@ -14,7 +14,7 @@ module Events
       expire_cached_charges
       create_enriched_events
       track_subscription_activity
-      customer&.flag_wallets_for_refresh
+      customer&.flag_wallets_for_refresh(requested_at: event.created_at)
       # TODO: update also event-processor to process targeted wallets
       check_targeted_wallets
 
@@ -90,7 +90,9 @@ module Events
       #       But there should be only one active subscription here, so it's better to not re-requery to eager load
       subscriptions.select(&:active?).each do |subscription|
         date = Time.current.in_time_zone(customer.applicable_timezone).to_date
-        UsageMonitoring::TrackSubscriptionActivityService.call(organization:, subscription:, date:)
+        UsageMonitoring::TrackSubscriptionActivityService.call(
+          organization:, subscription:, date:, event_ingested_at: event.created_at
+        )
       end
     end
 

@@ -14,4 +14,16 @@ Yabeda.configure do
   default_tag :service, ENV["OTEL_SERVICE_NAME"] || "lago-api"
   default_tag :environment, Rails.env
   default_tag :version, ENV["LAGO_VERSION"] || "unknown"
+
+  group :lago_pipeline do
+    histogram :wallet_refresh_e2e_seconds,
+      comment: "Duration between event ingestion and wallet ongoing balance refresh completion",
+      unit: :seconds,
+      buckets: [5, 15, 30, 60, 120, 300, 600, 1800, 3600]
+
+    histogram :usage_alert_e2e_seconds,
+      comment: "Duration between event ingestion and subscription activity processing completion (alerts evaluated)",
+      unit: :seconds,
+      buckets: [5, 15, 30, 60, 120, 300, 600, 1800, 3600]
+  end
 end

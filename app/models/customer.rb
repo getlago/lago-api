@@ -368,10 +368,18 @@ class Customer < ApplicationRecord
     )
   end
 
-  def flag_wallets_for_refresh
+  def flag_wallets_for_refresh(requested_at: nil)
     return unless wallets.active.exists?
 
-    update!(awaiting_wallet_refresh: true)
+    attributes = {awaiting_wallet_refresh: true}
+
+    # Keep the oldest pending request so the refresh latency metric measures
+    # the worst case, not the most recent trigger.
+    unless awaiting_wallet_refresh? && wallet_refresh_requested_at.present?
+      attributes[:wallet_refresh_requested_at] = requested_at || Time.current
+    end
+
+    update!(attributes)
   end
 
   def tax_customer
@@ -458,6 +466,7 @@ end
 #  timezone                                     :string
 #  url                                          :string
 #  vat_rate                                     :float
+#  wallet_refresh_requested_at                  :datetime
 #  zipcode                                      :string
 #  created_at                                   :datetime         not null
 #  updated_at                                   :datetime         not null

@@ -47,6 +47,12 @@ module UsageMonitoring
         exception_to_raise ||= e
       end
 
+      # Measured before the delete because the row is the only artifact linking the
+      # triggering event to its processing. Falls back to inserted_at (flag time)
+      # when the event ingestion timestamp was not propagated.
+      started_at = subscription_activity.oldest_event_ingested_at || subscription_activity.inserted_at
+      Yabeda.lago_pipeline.usage_alert_e2e_seconds.measure({}, Time.current - started_at)
+
       subscription_activity.delete
 
       if exception_to_raise

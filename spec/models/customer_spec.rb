@@ -1359,6 +1359,29 @@ RSpec.describe Customer do
         it "marks customer as awaiting wallet refresh" do
           expect { subject }.to change(customer, :awaiting_wallet_refresh).from(false).to(true)
         end
+
+        it "records the refresh request time" do
+          expect { subject }.to change(customer, :wallet_refresh_requested_at).from(nil)
+        end
+      end
+
+      context "with a requested_at timestamp" do
+        subject { customer.flag_wallets_for_refresh(requested_at:) }
+
+        let(:awaiting_wallet_refresh) { false }
+        let(:requested_at) { 2.minutes.ago }
+
+        it "records the provided request time" do
+          expect { subject }.to change(customer, :wallet_refresh_requested_at).from(nil).to(be_within(0.001).of(requested_at))
+        end
+
+        context "when a refresh is already pending with a timestamp" do
+          let(:customer) { create(:customer, awaiting_wallet_refresh: true, wallet_refresh_requested_at: 10.minutes.ago) }
+
+          it "keeps the oldest pending request time" do
+            expect { subject }.not_to change { customer.reload.wallet_refresh_requested_at }
+          end
+        end
       end
     end
 

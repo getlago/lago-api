@@ -39,6 +39,11 @@ RSpec.describe Events::PostProcessService do
       expect { process_service.call }.to change { customer.reload.awaiting_wallet_refresh }.from(false).to(true)
     end
 
+    it "records the event ingestion time as the wallet refresh request time" do
+      expect { process_service.call }.to change { customer.reload.wallet_refresh_requested_at }
+        .from(nil).to(event.created_at)
+    end
+
     it "tracks subscription activity" do
       allow(UsageMonitoring::TrackSubscriptionActivityService).to receive(:call)
 
@@ -46,7 +51,7 @@ RSpec.describe Events::PostProcessService do
 
       expected_date = Time.current.in_time_zone(customer.applicable_timezone).to_date
       expect(UsageMonitoring::TrackSubscriptionActivityService).to have_received(:call)
-        .with(subscription:, organization:, date: expected_date)
+        .with(subscription:, organization:, date: expected_date, event_ingested_at: event.created_at)
     end
 
     describe "charge usage cache expiration" do

@@ -38,6 +38,33 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
     end
   end
 
+  context "when measuring end-to-end latency" do
+    let(:premium_integrations) { %w[lifetime_usage] }
+
+    it "records the usage alert e2e latency before deleting the activity" do
+      allow(Yabeda.lago_pipeline.usage_alert_e2e_seconds).to receive(:measure)
+
+      service.call
+
+      expect(Yabeda.lago_pipeline.usage_alert_e2e_seconds).to have_received(:measure).with({}, kind_of(Numeric))
+    end
+
+    context "with an event ingestion timestamp on the activity" do
+      let(:subscription_activity) do
+        create(:subscription_activity, subscription:, organization:, oldest_event_ingested_at: 90.seconds.ago)
+      end
+
+      it "measures from the event ingestion time" do
+        allow(Yabeda.lago_pipeline.usage_alert_e2e_seconds).to receive(:measure)
+
+        service.call
+
+        expect(Yabeda.lago_pipeline.usage_alert_e2e_seconds).to have_received(:measure)
+          .with({}, be_within(5).of(90))
+      end
+    end
+  end
+
   context "when lifetime_usage and progressive_billing are both disabled" do
     let(:premium_integrations) { ["salesforce"] }
 

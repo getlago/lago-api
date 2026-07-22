@@ -6,10 +6,11 @@ module UsageMonitoring
 
     # NOTE: The organization can be passed to avoid loading it from the subscription
     #       If not passed, it's lazy loaded from the subscription
-    def initialize(subscription:, date:, organization: nil)
+    def initialize(subscription:, date:, organization: nil, event_ingested_at: nil)
       @subscription = subscription
       @organization = organization
       @date = date
+      @event_ingested_at = event_ingested_at
       super
     end
 
@@ -22,8 +23,14 @@ module UsageMonitoring
 
       return result unless need_lifetime_usage? || has_alerts?
 
+      # NOTE: On conflict the existing row is kept untouched, so
+      #       oldest_event_ingested_at always reflects the first unprocessed event.
       UsageMonitoring::SubscriptionActivity.insert_all( # rubocop:disable Rails/SkipsModelValidations
-        [{organization_id: organization.id, subscription_id: subscription.id}],
+        [{
+          organization_id: organization.id,
+          subscription_id: subscription.id,
+          oldest_event_ingested_at: event_ingested_at
+        }],
         unique_by: :idx_subscription_unique
       )
 
@@ -32,7 +39,7 @@ module UsageMonitoring
 
     private
 
-    attr_reader :subscription, :date
+    attr_reader :subscription, :date, :event_ingested_at
 
     def organization
       @organization ||= subscription.organization
