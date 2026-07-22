@@ -5,8 +5,8 @@ module Types
     class CreateOrganizationPayload < Types::BaseObject
       graphql_name "AdminCreateOrganizationPayload"
 
-      field :organization, Types::Admin::OrganizationType, null: false
       field :invite_url, String, null: false
+      field :organization, Types::Admin::OrganizationType, null: false
     end
   end
 end

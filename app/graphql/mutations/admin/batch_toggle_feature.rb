@@ -8,12 +8,12 @@ module Mutations
       graphql_name "AdminBatchToggleFeature"
       description "Toggle a feature across multiple organizations"
 
-      argument :organization_ids, [ID], required: true
-      argument :feature_type, Types::Admin::FeatureTypeEnum, required: true
-      argument :feature_key, String, required: true
       argument :enabled, Boolean, required: true
-      argument :reason, String, required: true
+      argument :feature_key, String, required: true
+      argument :feature_type, Types::Admin::FeatureTypeEnum, required: true
       argument :notify_org_admin, Boolean, required: true
+      argument :organization_ids, [ID], required: true
+      argument :reason, String, required: true
 
       type [Types::Admin::AuditLogType]
 
