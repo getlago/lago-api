@@ -22,6 +22,10 @@ RSpec.describe Customers::RefreshWalletJob do
       end
     end
 
+    it_behaves_like "a configurable queue", "wallets", "SIDEKIQ_WALLETS", "low_priority" do
+      let(:arguments) { customer }
+    end
+
     context "when the dedicated list is empty" do
       before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", []) }
 

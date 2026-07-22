@@ -70,6 +70,122 @@ RSpec.describe CacheService do
     end
   end
 
+  describe "#call with lazy validation" do
+    let(:tracking_cache_service_class) do
+      Class.new(described_class) do
+        def initialize(key_suffix = nil, expires_in: nil, invalidate_if_older_than: nil)
+          @key_suffix = key_suffix
+          super(nil, expires_in:, invalidate_if_older_than:)
+        end
+
+        def cache_key
+          "tracking_cache_service:#{@key_suffix}"
+        end
+
+        private
+
+        def track_created_at?
+          true
+        end
+      end
+    end
+
+    let(:cache_key) { "tracking_cache_service:test" }
+    let(:new_value) { "new_value" }
+
+    before { allow(Rails.cache).to receive(:write) }
+
+    it "wraps the stored value, falling back to the write time when no event was seen" do
+      allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
+
+      freeze_time do
+        result = tracking_cache_service_class.new("test").call { new_value }
+
+        expect(result).to eq(new_value)
+        expect(Rails.cache).to have_received(:write).with(
+          cache_key,
+          {"cached_at" => Time.current.iso8601(6), "value" => new_value},
+          expires_in: nil
+        )
+      end
+    end
+
+    it "stamps cached_at with the last seen event timestamp, not the write time" do
+      allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
+      last_seen_at = 3.hours.ago
+
+      tracking_cache_service_class.new("test", invalidate_if_older_than: last_seen_at).call { new_value }
+
+      expect(Rails.cache).to have_received(:write).with(
+        cache_key,
+        {"cached_at" => last_seen_at.iso8601(6), "value" => new_value},
+        expires_in: nil
+      )
+    end
+
+    it "keeps the sub-second precision so a re-read for the same event stays valid" do
+      last_seen_at = Time.current.change(usec: 750_000)
+
+      allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
+      tracking_cache_service_class.new("test", invalidate_if_older_than: last_seen_at).call { new_value }
+
+      wrapped = nil
+      expect(Rails.cache).to have_received(:write) { |_key, value, **| wrapped = value }
+
+      allow(Rails.cache).to receive(:read).with(cache_key).and_return(wrapped)
+      service = tracking_cache_service_class.new("test", invalidate_if_older_than: last_seen_at)
+
+      block_called = false
+      result = service.call { block_called = true }
+
+      expect(result).to eq(new_value)
+      expect(block_called).to be false
+    end
+
+    context "when a wrapped value exists" do
+      let(:cached_at) { 1.hour.ago }
+      let(:cached) { {"cached_at" => cached_at.iso8601, "value" => "cached_value"} }
+
+      before { allow(Rails.cache).to receive(:read).with(cache_key).and_return(cached) }
+
+      it "returns the unwrapped value when no newer event was ingested" do
+        service = tracking_cache_service_class.new("test", invalidate_if_older_than: 2.hours.ago)
+
+        block_called = false
+        result = service.call { block_called = true }
+
+        expect(result).to eq("cached_value")
+        expect(block_called).to be false
+      end
+
+      it "recomputes when a more recent event was ingested" do
+        service = tracking_cache_service_class.new("test", invalidate_if_older_than: Time.current)
+
+        result = service.call { new_value }
+
+        expect(result).to eq(new_value)
+      end
+
+      it "returns the unwrapped value when no last event timestamp is given" do
+        result = tracking_cache_service_class.new("test").call { new_value }
+
+        expect(result).to eq("cached_value")
+      end
+    end
+
+    context "when a legacy unwrapped value exists" do
+      before { allow(Rails.cache).to receive(:read).with(cache_key).and_return("legacy_value") }
+
+      it "recomputes so the entry is rewritten in the new shape" do
+        service = tracking_cache_service_class.new("test", invalidate_if_older_than: 1.hour.ago)
+
+        result = service.call { new_value }
+
+        expect(result).to eq(new_value)
+      end
+    end
+  end
+
   describe "#expire_cache" do
     let(:cache_service) { test_cache_service_class.new("test") }
     let(:cache_key) { cache_service.cache_key }

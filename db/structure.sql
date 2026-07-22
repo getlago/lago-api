@@ -1217,6 +1217,7 @@ DROP TYPE IF EXISTS public.enriched_store_sub_migration_status;
 DROP TYPE IF EXISTS public.enriched_store_migration_status;
 DROP TYPE IF EXISTS public.customer_type;
 DROP TYPE IF EXISTS public.customer_account_type;
+DROP TYPE IF EXISTS public.connection_category;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP EXTENSION IF EXISTS unaccent;
@@ -1284,6 +1285,18 @@ CREATE TYPE public.billable_metric_rounding_function AS ENUM (
 
 CREATE TYPE public.billable_metric_weighted_interval AS ENUM (
     'seconds'
+);
+
+
+--
+-- Name: connection_category; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.connection_category AS ENUM (
+    'payment',
+    'tax',
+    'accounting',
+    'crm'
 );
 
 
@@ -3616,7 +3629,10 @@ CREATE TABLE public.integration_customers (
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    code character varying,
+    is_default boolean DEFAULT false NOT NULL,
+    category public.connection_category
 );
 
 
@@ -12864,6 +12880,9 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260721163101'),
+('20260717163416'),
+('20260717160544'),
 ('20260717133535'),
 ('20260716114156'),
 ('20260715142900'),
