@@ -13,5 +13,6 @@ RSpec.describe Types::PaymentProviders::Stripe do
     expect(subject).to have_field(:secret_key).of_type("ObfuscatedString").with_permission("organization:integrations:view")
     expect(subject).to have_field(:success_redirect_url).of_type("String").with_permission("organization:integrations:view")
     expect(subject).to have_field(:supports_3ds).of_type("Boolean")
+    expect(subject).to have_field(:require_terms_of_service_consent).of_type("Boolean")
   end
 end
