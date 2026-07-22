@@ -276,7 +276,7 @@ describe "Subscriptions Termination Scenario" do
           expect(subscription).to be_active
         end
 
-        travel_to(ending_at - 5.hours) do
+        travel_to(ending_at + 15.minutes) do
           Clock::TerminateEndedSubscriptionsJob.perform_now
 
           perform_all_enqueued_jobs
@@ -313,7 +313,7 @@ describe "Subscriptions Termination Scenario" do
           expect(subscription).to be_active
         end
 
-        travel_to(ending_at - 5.hours) do
+        travel_to(ending_at + 15.minutes) do
           Clock::TerminateEndedSubscriptionsJob.perform_now
 
           perform_all_enqueued_jobs
