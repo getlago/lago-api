@@ -3,14 +3,6 @@
 require "rails_helper"
 
 RSpec.describe Admin::CreateOrganizationService do
-  let(:actor) { create(:user, email: "cs@getlago.com", cs_admin: true) }
-  let(:name) { "Hooli Inc" }
-  let(:owner_email) { "owner@hooli.com" }
-  let(:timezone) { nil }
-  let(:premium_integrations) { ["okta", "netsuite"] }
-  let(:feature_flags) { ["multiple_payment_methods"] }
-  let(:reason) { "New enterprise customer onboarding" }
-
   subject(:service) do
     described_class.new(
       actor: actor,
@@ -23,9 +15,16 @@ RSpec.describe Admin::CreateOrganizationService do
     )
   end
 
+  let(:actor) { create(:user, email: "cs@getlago.com", cs_admin: true) }
+  let(:name) { "Hooli Inc" }
+  let(:owner_email) { "owner@hooli.com" }
+  let(:timezone) { nil }
+  let(:premium_integrations) { ["okta", "netsuite"] }
+  let(:feature_flags) { ["multi_currency"] }
+  let(:reason) { "New enterprise customer onboarding" }
+
   before do
     create(:role, :admin)
-    allow(Admin::SlackNotificationJob).to receive(:perform_later)
   end
 
   describe "#call" do
@@ -47,7 +46,7 @@ RSpec.describe Admin::CreateOrganizationService do
     it "sets feature flags on the organization" do
       result = service.call
 
-      expect(result.organization.reload.feature_flags).to include("multiple_payment_methods")
+      expect(result.organization.reload.feature_flags).to include("multi_currency")
     end
 
     it "creates an invite for the owner email and returns the invite url" do
@@ -72,7 +71,7 @@ RSpec.describe Admin::CreateOrganizationService do
       expect(integration_logs.pluck(:feature_key)).to match_array(["okta", "netsuite"])
 
       flag_logs = logs.where(feature_type: "feature_flag")
-      expect(flag_logs.pluck(:feature_key)).to eq(["multiple_payment_methods"])
+      expect(flag_logs.pluck(:feature_key)).to eq(["multi_currency"])
 
       logs.each do |log|
         expect(log.actor_user).to eq(actor)
@@ -91,7 +90,7 @@ RSpec.describe Admin::CreateOrganizationService do
       expect(log_ids.count).to eq(3)
 
       log_ids.each do |log_id|
-        expect(Admin::SlackNotificationJob).to have_received(:perform_later).with(log_id)
+        expect(Admin::SlackNotificationJob).to have_been_enqueued.with(log_id)
       end
     end
 
@@ -110,7 +109,7 @@ RSpec.describe Admin::CreateOrganizationService do
 
         expect(result).to be_success
         expect(CsAdminAuditLog.where(organization: result.organization).count).to eq(0)
-        expect(Admin::SlackNotificationJob).not_to have_received(:perform_later)
+        expect(Admin::SlackNotificationJob).not_to have_been_enqueued
       end
     end
   end

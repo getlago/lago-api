@@ -7,11 +7,11 @@ RSpec.describe CsAdminAuditLog, type: :model do
 
   describe "enums" do
     it do
-      is_expected.to define_enum_for(:action)
+      expect(subject).to define_enum_for(:action)
         .with_values(toggle_on: 0, toggle_off: 1, org_created: 2, rollback: 3)
         .validating
 
-      is_expected.to define_enum_for(:feature_type)
+      expect(subject).to define_enum_for(:feature_type)
         .with_values(premium_integration: 0, feature_flag: 1)
         .validating
     end
@@ -19,9 +19,9 @@ RSpec.describe CsAdminAuditLog, type: :model do
 
   describe "associations" do
     it do
-      is_expected.to belong_to(:actor_user).class_name("User")
-      is_expected.to belong_to(:organization)
-      is_expected.to belong_to(:rollback_of).class_name("CsAdminAuditLog").optional
+      expect(subject).to belong_to(:actor_user).class_name("User")
+      expect(subject).to belong_to(:organization)
+      expect(subject).to belong_to(:rollback_of).class_name("CsAdminAuditLog").optional
     end
   end
 
@@ -32,19 +32,19 @@ RSpec.describe CsAdminAuditLog, type: :model do
       let!(:log2) { create(:cs_admin_audit_log, organization: org, created_at: Time.current) }
 
       it "orders by newest first" do
-        expect(CsAdminAuditLog.newest_first.to_a).to eq([log2, log1])
+        expect(described_class.newest_first.to_a).to eq([log2, log1])
       end
     end
   end
 
   describe "validations" do
     it do
-      is_expected.to validate_presence_of(:actor_email)
-      is_expected.to validate_presence_of(:action)
-      is_expected.to validate_presence_of(:feature_type)
-      is_expected.to validate_presence_of(:feature_key)
-      is_expected.to validate_presence_of(:reason)
-      is_expected.to validate_length_of(:reason).is_at_least(10).is_at_most(500)
+      expect(subject).to validate_presence_of(:actor_email)
+      expect(subject).to validate_presence_of(:action)
+      expect(subject).to validate_presence_of(:feature_type)
+      expect(subject).to validate_presence_of(:feature_key)
+      expect(subject).to validate_presence_of(:reason)
+      expect(subject).to validate_length_of(:reason).is_at_least(10).is_at_most(500)
     end
   end
 end

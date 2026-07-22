@@ -6,14 +6,6 @@ RSpec.describe Admin::ToggleFeatureService do
   let(:actor) { create(:user, email: "cs@getlago.com", cs_admin: true) }
   let(:organization) { create(:organization) }
 
-  before do
-    stub_const("Admin::EmailNotificationJob", Class.new do
-      def self.perform_later(*); end
-    end)
-    allow(Admin::SlackNotificationJob).to receive(:perform_later)
-    allow(Admin::EmailNotificationJob).to receive(:perform_later)
-  end
-
   describe "#call" do
     context "when toggling a premium integration ON" do
       subject(:service) do
@@ -46,7 +38,7 @@ RSpec.describe Admin::ToggleFeatureService do
         expect(audit_log.after_value).to be(true)
         expect(audit_log.reason).to eq("Enabling okta for testing purposes")
 
-        expect(Admin::SlackNotificationJob).to have_received(:perform_later).with(audit_log.id)
+        expect(Admin::SlackNotificationJob).to have_been_enqueued.with(audit_log.id)
       end
     end
 
@@ -84,7 +76,7 @@ RSpec.describe Admin::ToggleFeatureService do
           actor: actor,
           organization: organization,
           feature_type: "feature_flag",
-          feature_key: "multiple_payment_methods",
+          feature_key: "multi_currency",
           enabled: true,
           reason: "Enabling feature flag for testing purposes",
           notify_org_admin: false
@@ -97,12 +89,12 @@ RSpec.describe Admin::ToggleFeatureService do
         result = service.call
 
         expect(result).to be_success
-        expect(organization).to have_received(:enable_feature_flag!).with("multiple_payment_methods")
+        expect(organization).to have_received(:enable_feature_flag!).with("multi_currency")
 
         audit_log = result.audit_log
         expect(audit_log.action).to eq("toggle_on")
         expect(audit_log.feature_type).to eq("feature_flag")
-        expect(audit_log.feature_key).to eq("multiple_payment_methods")
+        expect(audit_log.feature_key).to eq("multi_currency")
       end
     end
 
@@ -112,7 +104,7 @@ RSpec.describe Admin::ToggleFeatureService do
           actor: actor,
           organization: organization,
           feature_type: "feature_flag",
-          feature_key: "multiple_payment_methods",
+          feature_key: "multi_currency",
           enabled: false,
           reason: "Disabling feature flag for testing purposes",
           notify_org_admin: false
@@ -125,7 +117,7 @@ RSpec.describe Admin::ToggleFeatureService do
         result = service.call
 
         expect(result).to be_success
-        expect(organization).to have_received(:disable_feature_flag!).with("multiple_payment_methods")
+        expect(organization).to have_received(:disable_feature_flag!).with("multi_currency")
 
         audit_log = result.audit_log
         expect(audit_log.action).to eq("toggle_off")
@@ -194,7 +186,7 @@ RSpec.describe Admin::ToggleFeatureService do
         result = service.call
 
         expect(result).to be_success
-        expect(Admin::EmailNotificationJob).to have_received(:perform_later).with(result.audit_log.id, "cs@getlago.com")
+        expect(Admin::EmailNotificationJob).to have_been_enqueued.with(result.audit_log.id, "cs@getlago.com")
       end
     end
 
@@ -214,7 +206,7 @@ RSpec.describe Admin::ToggleFeatureService do
       it "does not enqueue an email notification job" do
         service.call
 
-        expect(Admin::EmailNotificationJob).not_to have_received(:perform_later)
+        expect(Admin::EmailNotificationJob).not_to have_been_enqueued
       end
     end
   end
