@@ -3,6 +3,8 @@
 module Auth
   module Okta
     class LoginService < BaseService
+      Result = BaseResult[:email, :okta_integration, :okta_access_token, :userinfo, :user, :token]
+
       def initialize(code:, state:)
         @code = code
         @state = state

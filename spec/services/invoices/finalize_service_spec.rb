@@ -20,6 +20,25 @@ RSpec.describe Invoices::FinalizeService do
         expect(result.invoice.finalized_at).to be_within(1.second).of(Time.current)
       end
 
+      context "when the subscription has a different purchase order number" do
+        let(:invoice) do
+          create(:invoice, :draft, customer:, organization:, purchase_order_number: "PO-ORIGINAL")
+        end
+
+        let(:subscription) do
+          create(:subscription, customer:, organization:, purchase_order_number: "PO-UPDATED")
+        end
+
+        before { create(:invoice_subscription, invoice:, subscription:) }
+
+        it "keeps the invoice purchase order number" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.invoice.reload.purchase_order_number).to eq("PO-ORIGINAL")
+        end
+      end
+
       context "when Meilisearch is enabled" do
         before do
           invoice

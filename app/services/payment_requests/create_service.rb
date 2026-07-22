@@ -94,7 +94,7 @@ module PaymentRequests
     end
 
     def invoices
-      @invoices ||= customer.invoices.where(id: params[:lago_invoice_ids])
+      @invoices ||= customer.invoices.where.not(status: :deleted).where(id: params[:lago_invoice_ids])
     end
 
     def email

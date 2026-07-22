@@ -5,6 +5,8 @@ require "redis"
 module Auth
   module Okta
     class AuthorizeService < BaseService
+      Result = BaseResult[:okta_integration, :invite, :url]
+
       def initialize(email:, invite_token: nil)
         @email = email
         @invite_token = invite_token

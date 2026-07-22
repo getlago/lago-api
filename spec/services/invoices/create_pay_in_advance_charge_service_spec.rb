@@ -37,7 +37,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
 
   describe "#call" do
     let(:aggregation_result) do
-      BaseService::Result.new.tap do |result|
+      BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
         result.aggregation = 9
         result.count = 4
         result.options = {}
@@ -45,7 +45,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
     end
 
     let(:charge_result) do
-      BaseService::Result.new.tap do |result|
+      Charges::ApplyPayInAdvanceChargeModelService::Result.new.tap do |result|
         result.amount = 10
         result.precise_amount = 10.0
         result.unit_amount = 0.01111111111
@@ -136,6 +136,18 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
 
           expect(invoice.billing_entity).to eq(other_billing_entity)
         end
+      end
+    end
+
+    context "when the event subscription has a purchase order number" do
+      let(:subscription) do
+        create(:subscription, customer:, plan:, purchase_order_number: "PO-SUB-123")
+      end
+
+      it "copies it to the invoice" do
+        invoice = invoice_service.call.invoice
+
+        expect(invoice.purchase_order_number).to eq("PO-SUB-123")
       end
     end
 

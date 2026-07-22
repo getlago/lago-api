@@ -5,14 +5,16 @@ module Invoices
     class AdyenService < BaseService
       include Lago::Adyen::ErrorHandlable
       include Customers::PaymentProviderFinder
+      include TypedResults
 
       PROVIDER_NAME = "Adyen"
 
-      def initialize(invoice = nil)
-        @invoice = invoice
+      RESULTS = {
+        update_payment_status: BaseResult[:payment, :invoice],
+        generate_payment_url: BaseResult[:payment_url]
+      }.freeze
 
-        super
-      end
+      private
 
       def update_payment_status(provider_payment_id:, status:, amount_cents: nil, metadata: {})
         payment = if metadata[:payment_type] == "one-time"
@@ -43,7 +45,8 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url(payment_intent)
+      def generate_payment_url(invoice, payment_intent)
+        @invoice = invoice
         res = client.checkout.payment_links_api.payment_links(
           Lago::Adyen::Params.new(payment_url_params(payment_intent)).to_h,
           headers: {"Idempotency-Key" => payment_intent.id}
@@ -60,8 +63,6 @@ module Invoices
       rescue Adyen::AdyenError => e
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.msg)
       end
-
-      private
 
       attr_accessor :invoice
 
@@ -126,6 +127,8 @@ module Invoices
       end
 
       def update_invoice_payment_status(payment_status:, deliver_webhook: true)
+        @invoice = result.invoice
+
         params = {
           payment_status:,
           ready_for_payment_processing: payment_status.to_sym != :succeeded

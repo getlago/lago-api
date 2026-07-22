@@ -7,7 +7,7 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportJob do
   let(:credit_note) { create(:credit_note, customer:) }
   let(:customer) { create(:customer, organization:) }
 
-  let(:result) { BaseService::Result.new }
+  let(:result) { CreditNotes::ProviderTaxes::ReportService::Result.new }
 
   before do
     allow(CreditNotes::ProviderTaxes::ReportService).to receive(:call)

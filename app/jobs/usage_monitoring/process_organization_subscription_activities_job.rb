@@ -6,6 +6,8 @@ module UsageMonitoring
       organization_id = arguments.first
       if Utils::DedicatedWorkerConfig.enabled_for?(organization_id)
         Utils::DedicatedWorkerConfig::DEDICATED_ALERTS_QUEUE
+      elsif ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_ALERTS"])
+        :alerts
       else
         :default
       end

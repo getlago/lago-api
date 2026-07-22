@@ -35,7 +35,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
   describe "#call" do
     let(:aggregation_result) do
-      BaseService::Result.new.tap do |result|
+      BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
         result.aggregation = 9
         result.count = 4
         result.options = {}
@@ -43,7 +43,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
     end
 
     let(:charge_result) do
-      BaseService::Result.new.tap do |result|
+      Charges::ApplyPayInAdvanceChargeModelService::Result.new.tap do |result|
         result.amount = 10
         result.precise_amount = 10.0
         result.unit_amount = 0.01111111111
@@ -60,6 +60,30 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
         .with(charge:, aggregation_result:, properties: Hash)
         .and_return(charge_result)
+    end
+
+    context "when the event has no matching subscription" do
+      let(:event) do
+        source = create(
+          :event,
+          external_subscription_id: "unknown-#{SecureRandom.uuid}",
+          external_customer_id: customer.external_id,
+          organization_id: organization.id,
+          properties: event_properties
+        )
+        Events::CommonFactory.new_instance(source:)
+      end
+
+      it "skips without creating a fee and logs a warning" do
+        allow(Rails.logger).to receive(:warn)
+
+        result = fee_service.call
+
+        expect(result).to be_success
+        expect(result.fees).to eq([])
+        expect(Fee.count).to eq(0)
+        expect(Rails.logger).to have_received(:warn).with(/no active subscription for event/)
+      end
     end
 
     it "creates a fee" do
@@ -109,7 +133,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
     context "when aggregation fails" do
       let(:aggregation_result) do
-        BaseService::Result.new.service_failure!(code: "failure", message: "Failure")
+        BillableMetrics::Aggregations::BaseService::Result.new.service_failure!(code: "failure", message: "Failure")
       end
 
       it "returns a failure" do
@@ -124,7 +148,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
     context "when charge model fails" do
       let(:charge_result) do
-        BaseService::Result.new.service_failure!(code: "failure", message: "Failure")
+        Charges::ApplyPayInAdvanceChargeModelService::Result.new.service_failure!(code: "failure", message: "Failure")
       end
 
       it "returns a failure" do
@@ -513,10 +537,8 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
     context "when in current and max aggregation result" do
       let(:aggregation_result) do
-        BaseService::Result.new.tap do |result|
-          result.amount = 10
+        BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
           result.count = 1
-          result.units = 9
           result.current_aggregation = 9
           result.max_aggregation = 9
           result.max_aggregation_with_proration = nil
@@ -548,10 +570,8 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         end
         let(:event_properties) { {"cloud" => "aws", "region" => "us-east-1"} }
         let(:aggregation_result) do
-          BaseService::Result.new.tap do |result|
-            result.amount = 10
+          BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
             result.count = 1
-            result.units = 9
             result.current_aggregation = 9
             result.max_aggregation = 9
             result.max_aggregation_with_proration = nil
@@ -632,7 +652,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         end
         let(:aggregation_result) { aggregation_results.fetch(event.transaction_id) }
         let(:charge_result) do
-          BaseService::Result.new.tap do |result|
+          Charges::ApplyPayInAdvanceChargeModelService::Result.new.tap do |result|
             result.amount = aggregation_result.pay_in_advance_breakdowns.sum { |breakdown| breakdown[:value] }
             result.precise_amount = result.amount.to_d
             result.unit_amount = 1
@@ -641,7 +661,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           end
         end
         let(:first_aggregation_result) do
-          BaseService::Result.new.tap do |result|
+          BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
             result.aggregation = 3
             result.count = 1
             result.options = {}
@@ -652,7 +672,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           end
         end
         let(:second_aggregation_result) do
-          BaseService::Result.new.tap do |result|
+          BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
             result.aggregation = 13
             result.count = 2
             result.options = {}
@@ -666,7 +686,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           end
         end
         let(:third_aggregation_result) do
-          BaseService::Result.new.tap do |result|
+          BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
             result.aggregation = 20
             result.count = 3
             result.options = {}

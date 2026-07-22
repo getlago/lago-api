@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Invoices::RefreshDraftJob do
   let(:invoice) { create(:invoice, ready_to_be_refreshed: true) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::RefreshDraftService::Result.new }
 
   it "delegates to the RefreshDraft service" do
     allow(Invoices::RefreshDraftService).to receive(:call).with(invoice:).and_return(result)

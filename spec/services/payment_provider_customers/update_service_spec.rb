@@ -10,7 +10,7 @@ RSpec.describe PaymentProviderCustomers::UpdateService do
   let!(:provider_customer) { create(:"#{provider_name.downcase}_customer", customer:) }
 
   before do
-    allow(provider_service_class).to receive(:call).and_return(BaseService::Result.new)
+    allow(provider_service_class).to receive(:call).and_return(provider_service_class::RESULTS.fetch(:update).new)
     allow(Stripe::Customer).to receive(:update).and_return(true)
   end
 

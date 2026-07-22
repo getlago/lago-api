@@ -22,19 +22,23 @@ module Events
         filters_scope(scope)
       end
 
+      # Returns [charge_id, charge_filter_id, last_seen_at] tuples, where last_seen_at is the
+      # enriched_at of the most recent event for that charge/filter in the period.
       def distinct_charges_and_filters(codes: nil)
         scope = EnrichedEvent.where(organization_id: subscription.organization_id)
           .where(subscription_id: subscription.id)
           .where(timestamp: from_datetime..to_datetime)
 
         scope = scope.where(code: codes) unless codes.nil?
-        scope.distinct.pluck(:charge_id, :charge_filter_id)
+        scope.group(:charge_id, :charge_filter_id)
+          .pluck(:charge_id, :charge_filter_id, Arel.sql("MAX(enriched_at)"))
       end
 
-      # Returns the distinct [code, properties] combinations present in the events of the
-      # period. Only properties present in the filter_keys are considered, so the result holds
-      # only the dimensions that can be matched against charge filters.
+      # Returns the distinct [code, properties, last_seen_at] combinations present in the events
+      # of the period. Only properties present in the filter_keys are considered, so the result
+      # holds only the dimensions that can be matched against charge filters.
       # An empty hash represents the default (no filter) bucket.
+      # last_seen_at is the created_at of the most recent event in the combination.
       def distinct_codes_and_property_combinations(codes:, filter_keys:)
         scope = Event.where(external_subscription_id: subscription.external_id)
           .where(organization_id: subscription.organization_id)
@@ -44,14 +48,16 @@ module Events
 
         scope
           .select(Arel.sql(<<~SQL.squish))
-            DISTINCT events.code AS code,
+            events.code AS code,
             coalesce((
               SELECT jsonb_object_agg(props.key, props.value)
               FROM jsonb_each_text(events.properties) AS props(key, value)
               WHERE props.key = ANY(#{filter_keys_array_sql(filter_keys)})
-            ), '{}'::jsonb) AS combination
+            ), '{}'::jsonb) AS combination,
+            MAX(events.created_at) AS last_seen_at
           SQL
-          .map { |row| [row.code, parse_combination(row)] }
+          .group("code, combination")
+          .map { |row| [row.code, parse_combination(row), row.last_seen_at] }
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)

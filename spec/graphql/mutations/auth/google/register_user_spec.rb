@@ -6,7 +6,7 @@ RSpec.describe Mutations::Auth::Google::RegisterUser do
   let(:user) { create(:user) }
 
   let(:register_user_result) do
-    result = BaseService::Result.new
+    result = Auth::GoogleService::RESULTS.fetch(:register_user).new
     result.user = user
     result.token = "token"
     result
@@ -51,7 +51,7 @@ RSpec.describe Mutations::Auth::Google::RegisterUser do
 
   context "when user already exists" do
     let(:register_user_result) do
-      result = BaseService::Result.new
+      result = Auth::GoogleService::RESULTS.fetch(:register_user).new
       result.single_validation_failure!(error_code: "user_already_exists")
       result
     end

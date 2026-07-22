@@ -134,7 +134,8 @@ module Invoices
         currency: subscription.plan_amount_currency,
         datetime: Time.zone.at(timestamp),
         charge_in_advance: true,
-        billing_entity: subscription.billing_entity || customer.billing_entity
+        billing_entity: subscription.billing_entity || customer.billing_entity,
+        purchase_order_number: subscription.purchase_order_number
       ) do |inv|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice: inv, subscriptions: [subscription], timestamp:, invoicing_reason: :in_advance_charge)

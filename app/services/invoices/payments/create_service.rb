@@ -73,8 +73,17 @@ module Invoices
 
         result
       rescue Invoices::Payments::AlreadyPaidError
-        # NOTE: The invoice was settled by another payment so we can drop the unused pending payment
-        result.payment&.destroy if result.payment&.provider_payment_id.nil?
+        # NOTE: The invoice was settled by another payment so we can drop the unused pending payment.
+        #
+        # Reload from the DB before destroying: a concurrent attempt shares this same row (only one
+        # pending/processing provider payment exists per payable) and may have already advanced it by
+        # setting a provider_payment_id or marking it succeeded. `result.payment` here is a stale
+        # in-memory copy, so relying on it can destroy a payment that maps to a real provider charge
+        # and orphan the PaymentReceipts::CreateJob already enqueued for it.
+        persisted_payment = result.payment && Payment.find_by(id: result.payment.id)
+        if persisted_payment && persisted_payment.provider_payment_id.nil? && persisted_payment.payable_payment_status != "succeeded"
+          persisted_payment.destroy
+        end
         result.payment = nil
         result
       rescue BaseService::ServiceFailure => e
@@ -96,7 +105,7 @@ module Invoices
         return result unless provider
 
         forced_delay = nil
-        forced_delay = CHECKOUT_AUTO_PAYMENT_DELAY if defer_for_checkout_customer?
+        forced_delay = CHECKOUT_AUTO_PAYMENT_DELAY if defer_for_checkout_organization?
 
         AfterCommitEverywhere.after_commit do
           Invoices::Payments::CreateJob
@@ -118,11 +127,18 @@ module Invoices
         @provider ||= invoice.customer.payment_provider&.to_sym
       end
 
-      # Only the first automatic attempt is delayed; retries keep payment_attempts positive.
-      def defer_for_checkout_customer?
+      # Delay the first auto-payment for orgs using hosted checkout so it can't race a manual checkout
+      # and double-charge; skip flows that pay synchronously (gated subs, auto wallet top-ups).
+      def defer_for_checkout_organization?
         return false unless invoice.payment_attempts.zero?
+        return false if invoice.subscription? && invoice.subscription_payment_gated?
+        return false if non_manual_wallet_topup?
 
-        PaymentIntent.joins(:invoice).where(invoices: {customer_id: invoice.customer_id}).exists?
+        PaymentIntent.where(organization_id: invoice.organization_id).exists?
+      end
+
+      def non_manual_wallet_topup?
+        invoice.credit? && invoice.wallet_transactions.inbound.where.not(source: :manual).exists?
       end
 
       def should_process_payment?

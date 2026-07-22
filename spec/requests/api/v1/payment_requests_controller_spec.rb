@@ -28,7 +28,7 @@ RSpec.describe Api::V1::PaymentRequestsController do
 
     before do
       allow(PaymentRequests::CreateService).to receive(:call).and_return(
-        BaseService::Result.new.tap { |r| r.payment_request = payment_request }
+        PaymentRequests::CreateService::Result.new.tap { |r| r.payment_request = payment_request }
       )
     end
 

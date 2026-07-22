@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe CreditNotes::GenerateXmlJob do
   let(:credit_note) { create(:credit_note) }
 
-  let(:result) { BaseService::Result.new }
+  let(:result) { CreditNotes::GenerateXmlService::Result.new }
 
   let(:generate_service) do
     instance_double(CreditNotes::GenerateXmlService)

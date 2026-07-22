@@ -60,7 +60,8 @@ module PaymentProviders
         end
 
         def update_payment_status!(status)
-          payment_service_klass.new.update_payment_status(
+          payment_service_klass.call!(
+            :update_payment_status,
             organization_id: organization.id,
             status:,
             amount_cents: event.data.object.try(:amount),
@@ -70,7 +71,7 @@ module PaymentProviders
               metadata:,
               error_code: event.data.object.to_hash.dig(:last_payment_error, :code)
             )
-          ).raise_if_error!
+          )
         end
       end
     end

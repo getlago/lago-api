@@ -526,7 +526,7 @@ RSpec.describe Mutations::Plans::Create, :premium do
   context "when entitlements is an empty array" do
     it "calls PlanEntitlementsUpdateService to remove all entitlements" do
       allow(::Entitlement::PlanEntitlementsUpdateService).to receive(:call)
-        .and_return(BaseService::Result.new)
+        .and_return(::Entitlement::PlanEntitlementsUpdateService::Result.new)
 
       execute_graphql(
         current_user: membership.user,

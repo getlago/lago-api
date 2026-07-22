@@ -2,12 +2,15 @@
 
 require "rails_helper"
 
-# Regression test for ISSUE-1799: ClickHouse query fails with empty Tuple()
-# when ignored_filters contains empty hashes or hashes with all-empty-array
-# values. These states should not occur — charge filters should always have
-# values and duplicates should not exist — but missing validations allow them
-# in production. The store-level defensive guards prevent invalid SQL.
-describe "Current Usage - Filters with empty ignored_filters entries", transaction: false do
+# Regression tests for overlapping charge filters on the same charge:
+# - ISSUE-1799: filters with no values produce empty hashes in ignored_filters;
+#   the store-level defensive guards prevent them from rendering invalid SQL.
+# - Subset and identical duplicate filters used to be double-counted: events
+#   matching both a filter and a more specific sibling were counted in both
+#   buckets. Each event must only be counted in its most specific bucket, and
+#   identical duplicates must count the event only in the oldest duplicate's
+#   bucket (tie-break on [created_at, id]).
+describe "Current Usage - Overlapping charge filters", transaction: false do
   [
     :postgres,
     :clickhouse
@@ -60,9 +63,9 @@ describe "Current Usage - Filters with empty ignored_filters entries", transacti
         end
       end
 
-      # Duplicate filters with identical values should not exist but can due
-      # to missing validations. The child's subtraction zeroes out all arrays,
-      # producing {"cloud" => []} in ignored_filters.
+      # When a child filter's values are a subset of another filter's values,
+      # the child is kept verbatim in the parent's ignored_filters, so events
+      # matching the child are only counted in the child's bucket.
       context "when a child filter's values are a subset of the parent's" do
         before do
           cloud_filter = create(:billable_metric_filter, billable_metric:, key: "cloud", values: %w[aws gcp])
@@ -75,7 +78,71 @@ describe "Current Usage - Filters with empty ignored_filters entries", transacti
             .tap { |cf| create(:charge_filter_value, charge_filter: cf, billable_metric_filter: cloud_filter, values: ["aws"]) }
         end
 
-        it "returns current usage without SQL errors" do
+        it "counts each event only in its most specific bucket" do
+          travel_to(DateTime.new(2024, 3, 5)) do
+            create_subscription(
+              {
+                external_customer_id: customer.external_id,
+                external_id: customer.external_id,
+                plan_code: plan.code
+              }
+            )
+          end
+
+          travel_to(DateTime.new(2024, 3, 6)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_subscription_id: customer.external_id,
+                properties: {cloud: "aws", value: 10}
+              }
+            )
+
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_subscription_id: customer.external_id,
+                properties: {cloud: "gcp", value: 7}
+              }
+            )
+
+            fetch_current_usage(customer:)
+
+            filters = json[:customer_usage][:charges_usage].first[:filters]
+            expect(filters.count).to eq(3)
+
+            all_clouds = filters.find { |f| f[:invoice_display_name] == "All clouds" }
+            expect(all_clouds[:events_count]).to eq(1)
+            expect(all_clouds[:units]).to eq("7.0")
+            expect(all_clouds[:amount_cents]).to eq(3500)
+
+            aws_only = filters.find { |f| f[:invoice_display_name] == "AWS only" }
+            expect(aws_only[:events_count]).to eq(1)
+            expect(aws_only[:units]).to eq("10.0")
+            expect(aws_only[:amount_cents]).to eq(3000)
+          end
+        end
+      end
+
+      # Duplicate filters with identical values should not exist but can due
+      # to missing validations. The tie-break on [created_at, id] makes the
+      # oldest duplicate count the events; the newer duplicate keeps the older
+      # one in its ignored_filters and counts zero.
+      context "when two charge filters have identical values" do
+        before do
+          cloud_filter = create(:billable_metric_filter, billable_metric:, key: "cloud", values: %w[aws gcp])
+
+          charge = create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"})
+
+          create(:charge_filter, charge:, properties: {amount: "5"}, invoice_display_name: "Duplicate A", created_at: 2.days.ago)
+            .tap { |cf| create(:charge_filter_value, charge_filter: cf, billable_metric_filter: cloud_filter, values: ["aws"]) }
+          create(:charge_filter, charge:, properties: {amount: "3"}, invoice_display_name: "Duplicate B", created_at: 1.day.ago)
+            .tap { |cf| create(:charge_filter_value, charge_filter: cf, billable_metric_filter: cloud_filter, values: ["aws"]) }
+        end
+
+        it "counts the event only in the oldest duplicate's bucket" do
           travel_to(DateTime.new(2024, 3, 5)) do
             create_subscription(
               {
@@ -98,7 +165,18 @@ describe "Current Usage - Filters with empty ignored_filters entries", transacti
 
             fetch_current_usage(customer:)
 
-            expect(json[:customer_usage][:charges_usage].first[:filters].count).to eq(3)
+            filters = json[:customer_usage][:charges_usage].first[:filters]
+            expect(filters.count).to eq(3)
+
+            duplicate_a = filters.find { |f| f[:invoice_display_name] == "Duplicate A" }
+            expect(duplicate_a[:events_count]).to eq(1)
+            expect(duplicate_a[:units]).to eq("10.0")
+            expect(duplicate_a[:amount_cents]).to eq(5000)
+
+            duplicate_b = filters.find { |f| f[:invoice_display_name] == "Duplicate B" }
+            expect(duplicate_b[:events_count]).to eq(0)
+            expect(duplicate_b[:units]).to eq("0.0")
+            expect(duplicate_b[:amount_cents]).to eq(0)
           end
         end
       end

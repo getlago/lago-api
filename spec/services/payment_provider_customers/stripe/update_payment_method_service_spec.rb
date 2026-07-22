@@ -29,6 +29,29 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
         expect(result.payment_method.is_default).to be_truthy
         expect(customer.payment_methods.count).to eq(1)
       end
+
+      context "when the default flip fails" do
+        let(:stripe_customer) { create(:stripe_customer, customer:, payment_method_id: "pm_old") }
+
+        before do
+          allow(PaymentMethods::FindOrCreateFromProviderService).to receive(:call).and_raise(ActiveRecord::Deadlocked)
+        end
+
+        it "keeps the already saved settings, to be reconciled by the retry" do
+          expect { update_service.call }.to raise_error(ActiveRecord::Deadlocked)
+          expect(stripe_customer.reload.payment_method_id).to eq(payment_method_id)
+        end
+      end
+
+      context "when the advisory lock cannot be acquired" do
+        before do
+          allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+        end
+
+        it "propagates the error so the job can retry" do
+          expect { update_service.call }.to raise_error(BaseService::LockAcquisitionFailure)
+        end
+      end
     end
 
     context "with existing payment_method" do

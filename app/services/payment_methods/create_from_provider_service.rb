@@ -27,7 +27,7 @@ module PaymentMethods
         payment_method.details = details if details.present?
       end
       payment_method.save!
-      PaymentMethods::SetAsDefaultService.call(payment_method:)
+      PaymentMethods::SetAsDefaultService.call(payment_method:).raise_if_error!
 
       result.payment_method = payment_method
       result

@@ -79,7 +79,8 @@ module Invoices
         invoice_type: :progressive_billing,
         currency: subscription.plan.amount_currency,
         datetime: Time.zone.at(timestamp),
-        billing_entity: subscription.billing_entity || subscription.customer.billing_entity
+        billing_entity: subscription.billing_entity || subscription.customer.billing_entity,
+        purchase_order_number: subscription.purchase_order_number
       ) do |invoice|
         CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :progressive_billing)
@@ -100,7 +101,7 @@ module Invoices
           subscription:,
           context: :finalize,
           boundaries:,
-          filtered_aggregations: filters[charge.id] || []
+          filtered_aggregations: filters[charge.id]&.keys || []
         )
       end
     end

@@ -169,16 +169,34 @@ RSpec.describe Invoices::CreateOneOffService do
       end
     end
 
-    it "enqueues a SendWebhookJob" do
+    it "enqueues a SendWebhookJob after commit" do
       expect do
         described_class.call(**args)
-      end.to have_enqueued_job(SendWebhookJob)
+      end.to have_enqueued_job_after_commit(SendWebhookJob)
     end
 
-    it "enqueues GenerateDocumentsJob with email false" do
+    it "enqueues GenerateDocumentsJob with email false after commit" do
       expect do
         described_class.call(**args)
-      end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
+      end.to have_enqueued_job_after_commit(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
+    end
+
+    context "when an add-on is soft-deleted" do
+      before { add_on_first.discard! }
+
+      it "is not found by default" do
+        result = described_class.call(**args)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+      end
+
+      it "is billed when with_discarded_add_ons is true" do
+        result = described_class.call(**args.merge(with_discarded_add_ons: true))
+
+        expect(result).to be_success
+        expect(result.invoice.fees.where(fee_type: :add_on).count).to eq(2)
+      end
     end
 
     context "when there is tax provider integration" do

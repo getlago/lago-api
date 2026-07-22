@@ -61,30 +61,30 @@ module PaymentProviders
 
       def handle_intent_event
         if INTENT_WEBHOOKS_EVENTS.include?(event_code)
-          payment_service_klass(@event_json)
-            .new.update_payment_status(
-              organization_id: @organization.id,
-              provider_payment_id: @event_json.dig("data", "intent_id"),
-              status: event_to_payment_status(event_code),
-              amount_cents: intent_amount_cents(
-                @event_json.dig("data", "intent", "amount"),
-                @event_json.dig("data", "intent", "amount_currency")
-              ),
-              metadata: @event_json.dig("data", "intent", "custom_fields")
-            ).raise_if_error!
+          payment_service_klass(@event_json).call!(
+            :update_payment_status,
+            organization_id: @organization.id,
+            provider_payment_id: @event_json.dig("data", "intent_id"),
+            status: event_to_payment_status(event_code),
+            amount_cents: intent_amount_cents(
+              @event_json.dig("data", "intent", "amount"),
+              @event_json.dig("data", "intent", "amount_currency")
+            ),
+            metadata: @event_json.dig("data", "intent", "custom_fields")
+          )
         end
       end
 
       def handle_transaction_event
         if TRANSACTION_WEBHOOKS_EVENTS.include?(event_code)
-          payment_service_klass(@event_json)
-            .new.update_payment_status(
-              organization_id: @organization.id,
-              provider_payment_id: @event_json.dig("intent", "id"),
-              status: event_to_payment_status(event_code),
-              amount_cents: intent_amount_cents(@event_json.dig("intent", "amount"), nil),
-              metadata: @event_json.dig("intent", "custom_fields")
-            ).raise_if_error!
+          payment_service_klass(@event_json).call!(
+            :update_payment_status,
+            organization_id: @organization.id,
+            provider_payment_id: @event_json.dig("intent", "id"),
+            status: event_to_payment_status(event_code),
+            amount_cents: intent_amount_cents(@event_json.dig("intent", "amount"), nil),
+            metadata: @event_json.dig("intent", "custom_fields")
+          )
         end
       end
 
