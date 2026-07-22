@@ -1430,18 +1430,6 @@ CREATE TYPE public.billable_metric_weighted_interval AS ENUM (
 
 
 --
--- Name: connection_category; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.connection_category AS ENUM (
-    'payment',
-    'tax',
-    'accounting',
-    'crm'
-);
-
-
---
 -- Name: billing_cycle_status; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1450,6 +1438,18 @@ CREATE TYPE public.billing_cycle_status AS ENUM (
     'processing',
     'done',
     'failed'
+);
+
+
+--
+-- Name: connection_category; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.connection_category AS ENUM (
+    'payment',
+    'tax',
+    'accounting',
+    'crm'
 );
 
 
