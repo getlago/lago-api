@@ -32,7 +32,7 @@ class Invoice < ApplicationRecord
     attribute(:metadata_keys) { metadata.map(&:key) }
 
     searchable_attributes %i[number customer_name customer_firstname customer_lastname
-      customer_legal_name customer_external_id customer_email]
+      customer_legal_name customer_external_id customer_email purchase_order_number]
     filterable_attributes %i[id organization_id billing_entity_id currency customer_id
       customer_external_id invoice_type status payment_status payment_dispute_lost
       payment_overdue self_billed issuing_date total_amount_cents due_amount_cents
