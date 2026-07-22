@@ -1438,6 +1438,10 @@ CREATE TYPE public.connection_category AS ENUM (
     'tax',
     'accounting',
     'crm'
+);
+
+
+--
 -- Name: billing_cycle_status; Type: TYPE; Schema: public; Owner: -
 --
 
