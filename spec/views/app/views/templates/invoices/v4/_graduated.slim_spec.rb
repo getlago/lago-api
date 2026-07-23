@@ -56,9 +56,9 @@ RSpec.describe "templates/invoices/v4/_graduated.slim" do
   end
 
   it "rounds the units column to six decimals for display" do
-    expect(rendered_template).to include("4.770011")
-    expect(rendered_template).to include("5.123457")
-    expect(rendered_template).not_to include("4.77001111111111111111107306")
-    expect(rendered_template).not_to include("5.123456789123")
+    expect(rendered_template).to match(/\s4\.770011\s/)
+    expect(rendered_template).to match(/\s5\.123457\s/)
+    expect(rendered_template).not_to match(/\s4\.77001111111111111111107306\s/)
+    expect(rendered_template).not_to match(/\s5\.123456789123\s/)
   end
 end
