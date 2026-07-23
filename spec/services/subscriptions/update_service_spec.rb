@@ -35,6 +35,37 @@ RSpec.describe Subscriptions::UpdateService do
       end
     end
 
+    context "with purchase_order_number" do
+      let(:params) { {purchase_order_number: "PO-123"} }
+
+      %i[pending active].each do |status|
+        context "when subscription is #{status}" do
+          let(:subscription) { create(:subscription, status:) }
+
+          it "updates the purchase_order_number" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.purchase_order_number).to eq("PO-123")
+          end
+        end
+      end
+
+      %i[terminated canceled].each do |status|
+        context "when subscription is #{status}" do
+          let(:subscription) { create(:subscription, status:) }
+
+          it "returns a not allowed error and does not update" do
+            result = update_service.call
+
+            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+            expect(result.error.code).to eq("purchase_order_number_not_editable")
+            expect(subscription.reload.purchase_order_number).to be_nil
+          end
+        end
+      end
+    end
+
     context "when both usage_thresholds and plan_overrides.usage_thresholds are present" do
       let(:params) do
         {

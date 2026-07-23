@@ -493,6 +493,7 @@ input AddStripePaymentProviderInput {
   clientMutationId: String
   code: String!
   name: String!
+  requireTermsOfServiceConsent: Boolean
   secretKey: String
   successRedirectUrl: String
   supports3ds: Boolean
@@ -11750,6 +11751,7 @@ type StripeProvider {
   code: String!
   id: ID!
   name: String!
+  requireTermsOfServiceConsent: Boolean
   secretKey: ObfuscatedString
   successRedirectUrl: String
   supports3ds: Boolean
@@ -12874,6 +12876,7 @@ input UpdateAdyenPaymentProviderInput {
   flowId: String
   id: ID!
   name: String
+  requireTermsOfServiceConsent: Boolean
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -12995,6 +12998,7 @@ input UpdateCashfreePaymentProviderInput {
   flowId: String
   id: ID!
   name: String
+  requireTermsOfServiceConsent: Boolean
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -13229,6 +13233,7 @@ input UpdateFlutterwavePaymentProviderInput {
   flowId: String
   id: ID!
   name: String
+  requireTermsOfServiceConsent: Boolean
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -13245,6 +13250,7 @@ input UpdateGocardlessPaymentProviderInput {
   flowId: String
   id: ID!
   name: String
+  requireTermsOfServiceConsent: Boolean
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -13368,6 +13374,7 @@ input UpdateMoneyhashPaymentProviderInput {
   flowId: String
   id: ID!
   name: String
+  requireTermsOfServiceConsent: Boolean
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -13605,6 +13612,7 @@ input UpdateStripePaymentProviderInput {
   flowId: String
   id: ID!
   name: String
+  requireTermsOfServiceConsent: Boolean
   successRedirectUrl: String
   supports3ds: Boolean
 }

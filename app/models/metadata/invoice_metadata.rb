@@ -7,6 +7,11 @@ module Metadata
     belongs_to :invoice, touch: true
     belongs_to :organization
 
+    include NullByteSanitizable
+
+    # NOTE: Null byte injection. Prevent 500 errors (ArgumentError: string contains null byte).
+    sanitize_null_bytes :key, :value
+
     validates :key, presence: true, uniqueness: {scope: :invoice_id}, length: {maximum: 20}
     validates :value, presence: true
   end

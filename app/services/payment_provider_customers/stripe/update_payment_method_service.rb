@@ -17,22 +17,20 @@ module PaymentProviderCustomers
         return result.not_found_failure!(resource: "stripe_customer") unless stripe_customer
         return result.service_failure!(code: :deleted_customer, message: "Customer associated to this stripe customer was deleted") if deleted_customer
 
-        ActiveRecord::Base.transaction do
-          stripe_customer.payment_method_id = payment_method_id
-          stripe_customer.save!
+        stripe_customer.payment_method_id = payment_method_id
+        stripe_customer.save!
 
-          find_or_create_result = PaymentMethods::FindOrCreateFromProviderService.call(
-            customer:,
-            payment_provider_customer: stripe_customer,
-            provider_method_id: payment_method_id,
-            params: {
-              provider_payment_methods: stripe_customer.provider_payment_methods,
-              details: payment_method_details
-            },
-            set_as_default: true
-          )
-          result.payment_method = find_or_create_result.payment_method
-        end
+        find_or_create_result = PaymentMethods::FindOrCreateFromProviderService.call(
+          customer:,
+          payment_provider_customer: stripe_customer,
+          provider_method_id: payment_method_id,
+          params: {
+            provider_payment_methods: stripe_customer.provider_payment_methods,
+            details: payment_method_details
+          },
+          set_as_default: true
+        )
+        result.payment_method = find_or_create_result.payment_method
 
         reprocess_pending_invoices
 
