@@ -30,6 +30,18 @@ module Clockwork
       .perform_later
   end
 
+  every(5.minutes, "schedule:create_billing_cycles") do
+    Clock::CreateBillingCyclesJob
+      .set(sentry: {"slug" => "lago_create_billing_cycles", "cron" => "*/5 * * * *"})
+      .perform_later
+  end
+
+  every(5.minutes, "schedule:process_billing_cycles") do
+    Clock::ProcessBillingCyclesJob
+      .set(sentry: {"slug" => "lago_process_billing_cycles", "cron" => "*/5 * * * *"})
+      .perform_later
+  end
+
   subscription_activity_processing_interval = ENV["LAGO_SUBSCRIPTION_ACTIVITY_PROCESSING_INTERVAL_SECONDS"].presence || 1.minute
   every(subscription_activity_processing_interval.to_i.seconds, "schedule:process_subscription_activity") do
     Clock::ProcessAllSubscriptionActivitiesJob

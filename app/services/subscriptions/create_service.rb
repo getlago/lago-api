@@ -176,6 +176,13 @@ module Subscriptions
       return unless new_subscription.plan.product_catalog?
 
       Subscriptions::ProductCatalog::MaterializeService.call!(subscription: new_subscription)
+
+      # Bill due (advance) items immediately, off the create transaction, so they
+      # invoice on subscribe instead of waiting for the clock tick. Arrears items and
+      # future subscriptions aren't due yet, so they wait for the scheduler.
+      if new_subscription.active?
+        after_commit { BillingCycles::BillSubscriptionJob.perform_later(new_subscription) }
+      end
     end
 
     def handle_today_subscription(new_subscription)
