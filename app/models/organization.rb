@@ -204,6 +204,12 @@ class Organization < ApplicationRecord
     end
   end
 
+  # Product catalog (billing v2) is a rollout feature flag, not a license-gated
+  # premium integration: it is available to any organization, premium or not.
+  def product_catalog_enabled?
+    feature_flag_enabled?(:product_catalog)
+  end
+
   def using_lifetime_usage?
     lifetime_usage_enabled? || progressive_billing_enabled?
   end

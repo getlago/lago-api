@@ -45,3 +45,7 @@ multi_connection:
 lazy_charge_usage_cache:
   description: "Validate the charge usage cache lazily at read time (compare cache creation time to the last event) instead of expiring it on every event reception"
   owners: ["@vincent-pochet"]
+
+product_catalog:
+  description: "Use the product catalog (billing v2): products, product items, rate cards and plan rate phases"
+  owners: ["@rsempe"]
