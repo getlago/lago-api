@@ -155,7 +155,7 @@ module PaymentRequests
       end
 
       def payment_url_payload
-        {
+        payload = {
           line_items: line_items,
           mode: "payment",
           success_url: success_redirect_url,
@@ -171,6 +171,12 @@ module PaymentRequests
             }
           }
         }
+
+        if stripe_payment_provider.require_terms_of_service_consent
+          payload[:consent_collection] = {terms_of_service: "required"}
+        end
+
+        payload
       end
 
       def handle_missing_payment(organization_id, stripe_payment)

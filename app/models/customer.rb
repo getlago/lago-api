@@ -8,6 +8,7 @@ class Customer < ApplicationRecord
   include OrganizationTimezone
   include BillingEntityTimezone
   include Discard::Model
+  include NullByteSanitizable
 
   self.discard_column = :deleted_at
 
@@ -179,10 +180,12 @@ class Customer < ApplicationRecord
 
   ADDRESS_FIELDS = (BILLING_ADDRESS_FIELDS + SHIPPING_ADDRESS_FIELDS).freeze
 
-  ADDRESS_FIELDS.each do |attribute|
-    # NOTE: Null byte injection. Prevent 500 errors.
-    normalizes attribute, with: ->(value) { value.delete("\u0000").presence }
-  end
+  # NOTE: Null byte injection. Prevent 500 errors (ArgumentError: string contains null byte).
+  # Address fields keep the historical blank -> nil behavior; identity/free-text
+  # fields are only stripped so existing empty-string values are preserved.
+  sanitize_null_bytes(*ADDRESS_FIELDS, blank_to_nil: true)
+  sanitize_null_bytes :name, :firstname, :lastname, :legal_name, :legal_number,
+    :phone, :url, :logo_url, :tax_identification_number
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 

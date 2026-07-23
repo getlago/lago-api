@@ -30,6 +30,7 @@ module PaymentProviders
       stripe_provider.name = args[:name] if args.key?(:name)
       stripe_provider.success_redirect_url = args[:success_redirect_url] if args.key?(:success_redirect_url)
       stripe_provider.supports_3ds = args[:supports_3ds] if args.key?(:supports_3ds)
+      stripe_provider.require_terms_of_service_consent = args[:require_terms_of_service_consent] if args.key?(:require_terms_of_service_consent)
       stripe_provider.save!
 
       if is_new
