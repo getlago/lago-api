@@ -22,6 +22,7 @@ module Invoices
         return result.not_allowed_failure!(code: "invoice_payment_already_succeeded") if invoice.payment_succeeded?
         return result.not_allowed_failure!(code: "invoice_due_date_in_future") if invoice.payment_due_date > Time.current
         return result.not_allowed_failure!(code: "invoice_dispute_lost") if invoice.payment_dispute_lost_at
+        return result.not_allowed_failure!(code: "invoice_already_overdue") if invoice.payment_overdue?
 
         invoice.update!(payment_overdue: true)
 
