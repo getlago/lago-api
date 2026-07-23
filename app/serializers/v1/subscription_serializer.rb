@@ -30,6 +30,7 @@ module V1
         on_termination_invoice: model.on_termination_invoice,
         progressive_billing_disabled: model.progressive_billing_disabled,
         consolidate_invoice: model.consolidate_invoice,
+        purchase_order_number: model.purchase_order_number,
         cancellation_reason: model.cancellation_reason,
         activated_at: model.activated_at&.iso8601
       }
