@@ -75,6 +75,9 @@ Rails.application.routes.draw do
           resources :payment_methods, only: %i[index destroy] do
             put :set_as_default, on: :member
           end
+          resources :integration_customers, only: [], param: :code do
+            put :set_as_default, on: :member
+          end
         end
       end
 
