@@ -139,11 +139,12 @@ describe "Subscription termination vs billing order" do
 
       # (B) period 2, before ending
       travel_to(Time.zone.parse("2025-07-22T10:00:00")) { ingest_usage(20) }
-      # (C) 1 min after ending_at — still active (not yet terminated).
+      # (C) 1 min after ending_at — accepted (sub still active) but NOT billed, because
+      # terminated_at is pinned to ending_at (15:33).
       travel_to(Time.zone.parse("2025-07-22T16:34:00")) { ingest_usage(40) }
 
-      # Tick after ending: termination fires (terminated_at = 17:05), bills the
-      # partial period 2.
+      # Tick after ending: termination fires and bills the partial period 2, up to
+      # terminated_at = ending_at (15:33).
       travel_to(Time.zone.parse("2025-07-22T17:05:00")) do
         run_clock_terminate_then_bill
       end
@@ -152,11 +153,11 @@ describe "Subscription termination vs billing order" do
       expect(subscription).to be_terminated
       expect(subscription.invoices.count).to eq(2)
 
-      # No usage lost, none double-counted: A + B + C = 10 + 20 + 40 = 70.
-      # (C is included because terminated_at is the job run time, 17:05, > 16:34.)
-      expect(charge_units_total(subscription)).to eq(70)
+      # No usage lost, none double-counted. Usage up to ending_at is billed (A in period 1,
+      # B in period 2); the post-ending event C is excluded: A + B = 10 + 20 = 30.
+      expect(charge_units_total(subscription)).to eq(30)
 
-      # Period 1 full month + period 2 prorate.
+      # Period 1 full month + period 2 prorate (up to ending_at).
       expect(subscription_fees_cents(subscription)).to be > 10_000
     end
   end
@@ -229,11 +230,11 @@ describe "Subscription termination vs billing order" do
 
       subscription.reload
       expect(subscription).to be_terminated
-      expect(charge_units_total(subscription)).to eq(15)          # NOT 30
-      expect(subscription_fees_cents(subscription)).to be < 20_000 # July billed once, not twice
+      expect(charge_units_total(subscription)).to eq(15)           # billed once, not doubled
+      expect(subscription_fees_cents(subscription)).to eq(10_000)  # July once, no next-period sliver
       expect(
         invoice_subscriptions_for(subscription, from: started_at, to: Time.zone.parse("2025-07-31")).count
-      ).to eq(1)                                                  # July billed exactly once
+      ).to eq(1)                                                   # July billed exactly once
     end
   end
 end

@@ -9,7 +9,11 @@ module Subscriptions
     unique :until_executed, on_conflict: :log
 
     def perform(subscription)
-      Subscriptions::TerminateService.call!(subscription:)
+      # NOTE: Pin termination to the subscription's contractual end so billing stops exactly
+      #       at `ending_at`, regardless of when this (hourly) job actually runs. The
+      #       termination-side dedup in Invoices::CreateInvoiceSubscriptionService prevents a
+      #       period already billed periodically from being billed again.
+      Subscriptions::TerminateService.call!(subscription:, terminated_at: subscription.ending_at)
     end
   end
 end

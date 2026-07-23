@@ -87,6 +87,20 @@ class InvoiceSubscription < ApplicationRecord
     base_query.exists?
   end
 
+  # NOTE: True when a recurring (periodic) invoice already covers this period, i.e. the
+  #       period was billed by the periodic biller. Used to stop the termination flow from
+  #       re-billing a period the biller already invoiced. This is an OVERLAP check, not an
+  #       exact match: the periodic invoice spans the full period while termination bills up
+  #       to `ending_at`, so we match on the period start and require the recurring invoice to
+  #       extend at least as far as the termination boundary.
+  def self.period_already_billed?(subscription, boundaries)
+    recurring
+      .where(subscription_id: subscription.id)
+      .where(from_datetime: boundaries.from_datetime)
+      .where("invoice_subscriptions.to_datetime >= ?", boundaries.to_datetime)
+      .exists?
+  end
+
   def fees
     @fees ||= Fee.where(
       subscription_id: subscription.id,
