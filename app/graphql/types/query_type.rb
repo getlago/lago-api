@@ -92,6 +92,12 @@ module Types
     field :plans, resolver: Resolvers::PlansResolver
     field :pricing_unit, resolver: Resolvers::PricingUnitResolver
     field :pricing_units, resolver: Resolvers::PricingUnitsResolver
+    field :product, resolver: Resolvers::ProductResolver
+    field :product_item, resolver: Resolvers::ProductItemResolver
+    field :product_item_filter, resolver: Resolvers::ProductItemFilterResolver
+    field :product_item_filters, resolver: Resolvers::ProductItemFiltersResolver
+    field :product_items, resolver: Resolvers::ProductItemsResolver
+    field :products, resolver: Resolvers::ProductsResolver
     field :quote, resolver: Resolvers::QuoteResolver
     field :quote_version, resolver: Resolvers::QuoteVersionResolver
     field :quotes, resolver: Resolvers::QuotesResolver

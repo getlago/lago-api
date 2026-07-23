@@ -1,0 +1,54 @@
+# frozen_string_literal: true
+
+class ProductItemFiltersQuery < BaseQuery
+  Result = BaseResult[:product_item_filters]
+  Filters = BaseFilters[:product_item_id, :product_ids, :without_product]
+
+  def call
+    product_item_filters = base_scope.result.includes(values: :billable_metric_filter)
+    product_item_filters = paginate(product_item_filters)
+    product_item_filters = apply_consistent_ordering(product_item_filters)
+
+    product_item_filters = with_product_item(product_item_filters) if filters.product_item_id.present?
+    if filters.product_ids.present? || filters.without_product.present?
+      product_item_filters = with_product(product_item_filters)
+    end
+
+    result.product_item_filters = product_item_filters
+    result
+  end
+
+  private
+
+  def base_scope
+    ProductItemFilter.where(organization:).ransack(search_params)
+  end
+
+  def search_params
+    return if search_term.blank?
+
+    {
+      m: "or",
+      name_cont: search_term,
+      code_cont: search_term
+    }
+  end
+
+  def with_product_item(scope)
+    scope.where(product_item_id: filters.product_item_id)
+  end
+
+  # The product dimension is a multi-select: chosen products OR "no product".
+  # A filter's product is its parent item's product.
+  def with_product(scope)
+    scope = scope.joins(:product_item)
+    if filters.product_ids.present? && filters.without_product.present?
+      scope.where(product_items: {product_id: filters.product_ids})
+        .or(scope.where(product_items: {product_id: nil}))
+    elsif filters.without_product.present?
+      scope.where(product_items: {product_id: nil})
+    else
+      scope.where(product_items: {product_id: filters.product_ids})
+    end
+  end
+end
