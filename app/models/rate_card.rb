@@ -42,6 +42,20 @@ class RateCard < ApplicationRecord
   def attached_to_plan_or_subscription?
     plan_rate_cards.exists? || subscription_rate_cards.exists?
   end
+
+  # The card bills someone once it belongs to a plan that has subscriptions or
+  # is attached directly to a subscription. From that point its pricing is
+  # immutable: any price change goes through a new card and a plan migration.
+  def attached_to_subscriptions?
+    subscription_rate_cards.exists? ||
+      Subscription.where(plan_id: plan_rate_cards.select(:plan_id)).exists?
+  end
+
+  # The active rate is the latest effective rate; later rates are pending and
+  # earlier ones have been superseded (terminated).
+  def active_rate
+    rates.effective.order(effective_datetime: :desc).first
+  end
 end
 
 # == Schema Information
