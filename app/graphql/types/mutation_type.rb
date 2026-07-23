@@ -95,6 +95,7 @@ module Types
     field :set_payment_method_as_default, mutation: Mutations::PaymentMethods::SetAsDefault
 
     field :set_integration_customer_as_default, mutation: Mutations::IntegrationCustomers::SetAsDefault
+    field :set_payment_provider_customer_as_default, mutation: Mutations::PaymentProviderCustomers::SetAsDefault
 
     field :create_netsuite_integration, mutation: Mutations::Integrations::Netsuite::Create
     field :destroy_integration, mutation: Mutations::Integrations::Destroy
