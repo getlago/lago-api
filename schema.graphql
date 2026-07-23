@@ -3357,6 +3357,7 @@ input CreatePlanRateCardInput {
   clientMutationId: String
   planId: ID!
   rateCardCode: String!
+  ratePhases: [PhaseInput!]
   units: Float
 }
 
@@ -8776,6 +8777,16 @@ type Mutation {
   ): RemoveSubscriptionEntitlementPayload
 
   """
+  Replaces the whole ordered rate phase sequence of a plan product item
+  """
+  replaceRatePhases(
+    """
+    Parameters for ReplaceRatePhases
+    """
+    input: ReplaceRatePhasesInput!
+  ): [RatePhase!]
+
+  """
   Resend credit note email with optional custom recipients
   """
   resendCreditNoteEmail(
@@ -10267,6 +10278,16 @@ type Permissions {
   walletsUpdate: Boolean!
 }
 
+"""
+A single rate phase in a replace-sequence request
+"""
+input PhaseInput {
+  billingIntervalCycleCount: Int
+  name: String
+  position: Int!
+  rateOverride: RateOverrideInput
+}
+
 type Plan {
   activeSubscriptionsCount: Int!
   activityLogs: [ActivityLog!]
@@ -10381,6 +10402,7 @@ type PlanRateCard {
   id: ID!
   productItem: ProductItem!
   rateCard: RateCard!
+  ratePhases: [RatePhase!]!
   ratePhasesCount: Int!
   units: Float
   updatedAt: ISO8601DateTime!
@@ -11983,6 +12005,46 @@ enum RateCardRegroupPaidFeesEnum {
   invoice
 }
 
+"""
+Overridden pricing applied by a rate phase in place of the card's active rate
+"""
+type RateOverride {
+  billingIntervalCount: Int
+  billingIntervalUnit: RateCardRateBillingIntervalUnitEnum
+  createdAt: ISO8601DateTime!
+  id: ID!
+  minAmountCents: BigInt!
+  pricingUnitConversionRate: Float
+  rateModel: RateCardRateModelEnum!
+  rateProperties: JSON!
+  updatedAt: ISO8601DateTime!
+}
+
+"""
+Overridden pricing for a rate phase
+"""
+input RateOverrideInput {
+  billingIntervalCount: Int
+  billingIntervalUnit: RateCardRateBillingIntervalUnitEnum
+  minAmountCents: BigInt
+  pricingUnitConversionRate: Float
+  rateModel: RateCardRateModelEnum!
+  rateProperties: JSON!
+}
+
+"""
+A phase in the ordered rate schedule of a plan product item
+"""
+type RatePhase {
+  billingIntervalCycleCount: Int
+  createdAt: ISO8601DateTime!
+  id: ID!
+  name: String
+  position: Int!
+  rateOverride: RateOverride
+  updatedAt: ISO8601DateTime!
+}
+
 enum RecurringTransactionIntervalEnum {
   monthly
   quarterly
@@ -12118,6 +12180,18 @@ type RemoveTaxesPayload {
   """
   clientMutationId: String
   removedTaxes: [Tax!]!
+}
+
+"""
+Replace the whole ordered rate phase sequence of a plan product item
+"""
+input ReplaceRatePhasesInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  planRateCardId: ID!
+  ratePhases: [PhaseInput!]!
 }
 
 """

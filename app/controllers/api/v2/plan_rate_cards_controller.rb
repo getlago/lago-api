@@ -93,7 +93,22 @@ module Api
       end
 
       def create_params
-        params.require(:plan_rate_card).permit(:rate_card_code, :units)
+        params.require(:plan_rate_card).permit(
+          :rate_card_code, :units,
+          rate_phases: [
+            :position,
+            :name,
+            :billing_interval_cycle_count,
+            {rate_override: [
+              :rate_model,
+              :min_amount_cents,
+              :billing_interval_count,
+              :billing_interval_unit,
+              :pricing_unit_conversion_rate,
+              {rate_properties: {}}
+            ]}
+          ]
+        )
       end
 
       def update_params
