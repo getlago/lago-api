@@ -28719,12 +28719,6 @@
               "deprecationReason": null
             },
             {
-              "name": "payment_gated_subscriptions",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "multi_entity_billing",
               "description": null,
               "isDeprecated": false,
