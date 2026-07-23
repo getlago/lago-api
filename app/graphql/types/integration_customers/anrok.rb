@@ -11,6 +11,7 @@ module Types
       field :integration_code, String, null: true
       field :integration_id, ID, null: true
       field :integration_type, Types::Integrations::IntegrationTypeEnum, null: true
+      field :is_default, Boolean, null: false
       field :sync_with_provider, Boolean, null: true
 
       def integration_type
