@@ -276,7 +276,7 @@ describe "Subscriptions Termination Scenario" do
           expect(subscription).to be_active
         end
 
-        travel_to(ending_at - 5.hours) do
+        travel_to(ending_at + 15.minutes) do
           Clock::TerminateEndedSubscriptionsJob.perform_now
 
           perform_all_enqueued_jobs
@@ -313,7 +313,7 @@ describe "Subscriptions Termination Scenario" do
           expect(subscription).to be_active
         end
 
-        travel_to(ending_at - 5.hours) do
+        travel_to(ending_at + 15.minutes) do
           Clock::TerminateEndedSubscriptionsJob.perform_now
 
           perform_all_enqueued_jobs
@@ -417,7 +417,10 @@ describe "Subscriptions Termination Scenario" do
       end
 
       context "with already triggered subscription job" do
-        it "bills correctly the previous period since billing job is not performed on ending day" do
+        # Path A: the periodic biller is no longer skipped on the ending day, so it bills
+        # the completed period; the termination flow then only adds the final partial
+        # period, and never re-bills the completed one.
+        it "bills the completed period via the periodic biller on the ending day" do
           subscription = nil
 
           travel_to(creation_time) do
@@ -443,7 +446,11 @@ describe "Subscriptions Termination Scenario" do
             perform_billing
 
             expect(subscription.reload).to be_active
-            expect(subscription.reload.invoices.count).to eq(0)
+            expect(subscription.reload.invoices.count).to eq(1)
+
+            invoice = subscription.invoices.first
+            expect(invoice.total_amount_cents).to eq(1000)
+            expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
           end
 
           travel_to(ending_at + 15.minutes) do
@@ -451,12 +458,10 @@ describe "Subscriptions Termination Scenario" do
 
             perform_all_enqueued_jobs
 
-            invoice = subscription.invoices.order(created_at: :desc).first
-
             expect(subscription.reload).to be_terminated
-            expect(subscription.reload.invoices.count).to eq(1)
-            expect(invoice.total_amount_cents).to eq(1000)
-            expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
+            # The completed period is billed exactly once by the periodic biller; the
+            # termination flow does not re-bill it.
+            expect(subscription.invoices.where(total_amount_cents: 1000).count).to eq(1)
           end
         end
       end

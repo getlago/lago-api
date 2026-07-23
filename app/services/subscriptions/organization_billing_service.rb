@@ -113,10 +113,13 @@ module Subscriptions
           AND DATE(subscriptions.started_at#{at_time_zone}) < DATE(:today#{at_time_zone})
           -- Do not bill subscriptions that were not created yet
           and DATE(subscriptions.created_at) <= Date(:today)
-          AND (
-            subscriptions.ending_at IS NULL OR
-            DATE(subscriptions.ending_at#{at_time_zone}) != DATE(:today#{at_time_zone})
-          )
+          -- NOTE: We intentionally DO bill subscriptions whose `ending_at` is today.
+          --       A completed period that rolls over on the ending day must be billed
+          --       by the periodic biller (as any other period); the termination flow
+          --       only bills the final partial period. The `already_billed_today` guard
+          --       and the period-based duplicate check in
+          --       Invoices::CreateInvoiceSubscriptionService prevent double billing when
+          --       termination has already invoiced the same period.
         GROUP BY subscriptions.id
       SQL
 
