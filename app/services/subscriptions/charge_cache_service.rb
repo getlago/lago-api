@@ -2,11 +2,9 @@
 
 module Subscriptions
   class ChargeCacheService < CacheService
-    CACHE_KEY_VERSION = "1"
-    # Lazy validation stores a different value shape (wrapped with its creation time), so it uses
-    # its own version. Enabling the feature flag gradually migrates an organization's entries to
-    # this version instead of invalidating every organization's cache at once.
-    LAZY_CACHE_KEY_VERSION = "2"
+    # Bumped to "2" when lazy validation was introduced: it stores a different value shape (wrapped
+    # with its creation time) than the legacy eager-invalidation entries.
+    CACHE_KEY_VERSION = "2"
 
     def self.expire_for_subscriptions(subscription_ids)
       Subscription
@@ -44,7 +42,7 @@ module Subscriptions
     def cache_key
       [
         "charge-usage",
-        cache_key_version,
+        CACHE_KEY_VERSION,
         charge.id,
         subscription.id,
         charge.updated_at.iso8601,
@@ -57,18 +55,8 @@ module Subscriptions
 
     attr_reader :subscription, :charge, :charge_filter
 
-    def cache_key_version
-      lazy_validation? ? LAZY_CACHE_KEY_VERSION : CACHE_KEY_VERSION
-    end
-
     def track_created_at?
-      lazy_validation?
-    end
-
-    def lazy_validation?
-      return @lazy_validation if defined?(@lazy_validation)
-
-      @lazy_validation = subscription.organization.feature_flag_enabled?(:lazy_charge_usage_cache)
+      true
     end
   end
 end
