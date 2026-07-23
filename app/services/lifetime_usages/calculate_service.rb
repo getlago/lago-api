@@ -59,7 +59,8 @@ module LifetimeUsages
       @current_usage ||= Invoices::CustomerUsageService.call(
         customer: subscription.customer,
         subscription: subscription,
-        apply_taxes: false
+        apply_taxes: false,
+        with_cache: true
       ).usage
     end
 
