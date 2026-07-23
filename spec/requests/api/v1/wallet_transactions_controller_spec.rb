@@ -28,7 +28,8 @@ RSpec.describe Api::V1::WalletTransactionsController do
         wallet_id:,
         paid_credits: "10",
         granted_credits: "10",
-        name: "Custom Top-up Name"
+        name: "Custom Top-up Name",
+        purchase_order_number: "PO-789"
       }
     end
 
@@ -55,7 +56,11 @@ RSpec.describe Api::V1::WalletTransactionsController do
       expect(paid_transaction[:status]).to eq("pending")
       expect(granted_transaction[:status]).to eq("settled")
       expect(granted_transaction[:lago_id]).to be_present
-      expect(wallet_transactions).to all(include(name: "Custom Top-up Name", lago_wallet_id: wallet.id))
+      expect(wallet_transactions).to all(include(
+        name: "Custom Top-up Name",
+        lago_wallet_id: wallet.id,
+        purchase_order_number: "PO-789"
+      ))
     end
 
     context "when paid credits is below the wallet minimum" do

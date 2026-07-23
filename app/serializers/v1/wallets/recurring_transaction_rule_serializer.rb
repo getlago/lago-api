@@ -21,6 +21,7 @@ module V1
           invoice_requires_successful_payment: model.invoice_requires_successful_payment?,
           transaction_metadata: model.transaction_metadata,
           transaction_name: model.transaction_name,
+          purchase_order_number: model.purchase_order_number,
           ignore_paid_top_up_limits: model.ignore_paid_top_up_limits
         }
 
