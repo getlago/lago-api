@@ -655,6 +655,17 @@ RSpec.describe Customer do
         expect(customer.provider_customer).to eq(gocardless_customer)
       end
     end
+
+    context "when payment provider is paystack" do
+      let(:payment_provider) { "paystack" }
+      let(:paystack_customer) { create(:paystack_customer, customer:) }
+
+      before { paystack_customer }
+
+      it "returns the paystack provider customer object" do
+        expect(customer.provider_customer).to eq(paystack_customer)
+      end
+    end
   end
 
   describe "#applicable_timezone" do

@@ -439,4 +439,64 @@ RSpec.describe WebhooksController do
       end
     end
   end
+
+  describe "POST /paystack" do
+    let(:organization_id) { Faker::Internet.uuid }
+    let(:code) { "paystack_1" }
+    let(:signature) { "paystack_signature" }
+    let(:body) do
+      {
+        "event" => "charge.success",
+        "data" => {"reference" => "lago-invoice-reference"}
+      }.to_json
+    end
+    let(:result) { BaseService::Result.new }
+
+    before do
+      allow(InboundWebhooks::CreateService).to receive(:call)
+        .with(
+          organization_id:,
+          webhook_source: :paystack,
+          code:,
+          payload: body,
+          signature:,
+          event_type: "paystack"
+        )
+        .and_return(result)
+    end
+
+    it "handles Paystack webhooks" do
+      post(
+        "/webhooks/paystack/#{organization_id}?code=#{code}",
+        params: body,
+        headers: {
+          "Content-Type" => "application/json",
+          "x-paystack-signature" => signature
+        }
+      )
+
+      expect(response).to have_http_status(:success)
+      expect(InboundWebhooks::CreateService).to have_received(:call)
+    end
+
+    context "when the webhook cannot be persisted" do
+      before do
+        result.record_validation_failure!(record: build(:inbound_webhook))
+      end
+
+      it "returns a bad request" do
+        post(
+          "/webhooks/paystack/#{organization_id}?code=#{code}",
+          params: body,
+          headers: {
+            "Content-Type" => "application/json",
+            "x-paystack-signature" => signature
+          }
+        )
+
+        expect(response).to have_http_status(:bad_request)
+        expect(InboundWebhooks::CreateService).to have_received(:call)
+      end
+    end
+  end
 end

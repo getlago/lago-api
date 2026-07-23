@@ -110,6 +110,23 @@ RSpec.describe ::V1::CustomerSerializer do
     end
   end
 
+  context "with a paystack customer" do
+    let(:paystack_customer) { create(:paystack_customer, customer:) }
+
+    before do
+      paystack_customer
+      customer.update!(payment_provider: "paystack")
+    end
+
+    it "serializes the provider customer and payment methods" do
+      billing_configuration = result["customer"]["billing_configuration"]
+
+      expect(billing_configuration["provider_customer_id"]).to eq(paystack_customer.provider_customer_id)
+      expect(billing_configuration["provider_payment_methods"])
+        .to eq(PaymentProviderCustomers::PaystackCustomer::PAYMENT_METHODS)
+    end
+  end
+
   context "with a VIES check" do
     subject(:serializer) { described_class.new(customer, root_name: "customer", includes: %i[vies_check], vies_check: {custom_hash: "yes"}) }
 

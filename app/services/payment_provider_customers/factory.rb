@@ -16,6 +16,8 @@ module PaymentProviderCustomers
         PaymentProviderCustomers::AdyenService
       when "PaymentProviderCustomers::MoneyhashCustomer"
         PaymentProviderCustomers::MoneyhashService
+      when "PaymentProviderCustomers::PaystackCustomer"
+        PaymentProviderCustomers::PaystackService
       else
         raise(NotImplementedError)
       end
