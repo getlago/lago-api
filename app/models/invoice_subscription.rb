@@ -53,13 +53,24 @@ class InvoiceSubscription < ApplicationRecord
       .order(Arel.sql("COALESCE(to_datetime, timestamp) ASC"))
   }
 
-  def self.matching?(subscription, boundaries, recurring: true)
+  def self.matching?(subscription, boundaries, recurring: true, include_terminating: false)
     base_query = InvoiceSubscription
       .where(subscription_id: subscription.id)
       .where(from_datetime: boundaries.from_datetime)
       .where(to_datetime: boundaries.to_datetime)
 
-    base_query = base_query.recurring if recurring
+    if recurring && include_terminating
+      # NOTE: A period already invoiced by the termination flow (recurring = false,
+      #       invoicing_reason = subscription_terminating) must also block a periodic
+      #       (recurring) bill of the same period. Progressive-billing rows are
+      #       intentionally NOT matched here, since they do not close the period.
+      base_query = base_query.where(
+        "invoice_subscriptions.recurring = TRUE OR invoice_subscriptions.invoicing_reason = ?",
+        INVOICING_REASONS[:subscription_terminating]
+      )
+    elsif recurring
+      base_query = base_query.recurring
+    end
 
     if subscription.plan.charges_billed_in_monthly_split_intervals?
       base_query = base_query

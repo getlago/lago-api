@@ -72,7 +72,11 @@ module Invoices
       subscriptions_boundaries.any? do |subscription_id, boundaries|
         subscription = Subscription.includes(:plan).find(subscription_id)
 
-        InvoiceSubscription.matching?(subscription, boundaries)
+        # NOTE: `include_terminating` also treats a period already invoiced by the
+        #       termination flow as billed, so the periodic biller cannot re-bill a
+        #       period that termination already covered (prevents the
+        #       termination-then-periodic double billing on the ending/billing day).
+        InvoiceSubscription.matching?(subscription, boundaries, include_terminating: true)
       end
     end
 
