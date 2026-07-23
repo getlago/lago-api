@@ -15,7 +15,7 @@
 # per customer. Should a group ever contain more than one, we skip it and count it
 # as a conflict instead of writing two defaults.
 module MultiCustomerConnections
-  class BackfillConnectionCodesService < BaseService
+  class BackfillConnectionsService < BaseService
     Result = BaseResult[:summary]
 
     CATEGORY_BY_TYPE = {

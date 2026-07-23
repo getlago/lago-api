@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe MultiCustomerConnections::BackfillConnectionCodesService do
+RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
   subject(:result) { described_class.call(organization:, dry_run:, batch_size: 1000) }
 
   let(:organization) { create(:organization) }
