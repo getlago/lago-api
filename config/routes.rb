@@ -80,6 +80,7 @@ Rails.application.routes.draw do
 
       resources :subscriptions, only: %i[create update show index], param: :external_id do
         resource :lifetime_usage, only: %i[show update], controller: "subscriptions/lifetime_usages"
+        post :terminate_recurring_usage, to: "subscriptions/recurring_usage#terminate"
         resources :alerts, only: %i[create index update show destroy], param: :code, controller: "subscriptions/alerts" do
           collection do
             delete "/", action: :destroy_all
