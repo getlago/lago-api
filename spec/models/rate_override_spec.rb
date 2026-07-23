@@ -60,4 +60,16 @@ RSpec.describe RateOverride do
       end
     end
   end
+
+  describe "#charge_model" do
+    it "exposes the rate model under the calculators' expected name" do
+      expect(build(:rate_override).charge_model).to eq("standard")
+    end
+  end
+
+  describe "#prorated?" do
+    it "is never prorated" do
+      expect(build(:rate_override).prorated?).to be(false)
+    end
+  end
 end

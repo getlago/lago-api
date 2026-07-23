@@ -167,7 +167,15 @@ module Subscriptions
         handle_future_subscription(new_subscription)
       end
 
+      materialize_product_catalog_rate_cards(new_subscription)
+
       new_subscription
+    end
+
+    def materialize_product_catalog_rate_cards(new_subscription)
+      return unless new_subscription.plan.product_catalog?
+
+      Subscriptions::ProductCatalog::MaterializeService.call!(subscription: new_subscription)
     end
 
     def handle_today_subscription(new_subscription)

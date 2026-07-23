@@ -30,8 +30,8 @@ Rails.application.routes.draw do
       draw(:shared_api)
     end
 
-    # The catalog namespace is drawn first so its routes win recognition for
-    # the paths it defines; everything else on /api/v2 falls through to v1.
+    # Catalog-specific v2 routes are drawn before the v1 fallback: for the
+    # paths defined here (e.g. GET /api/v2/subscriptions) the first match wins.
     namespace :v2 do
       resources :product_items, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "product_items/filters"
@@ -48,6 +48,15 @@ Rails.application.routes.draw do
           end
         end
       end
+      resources :subscriptions, param: :external_id, only: [] do
+        resources :rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "subscription_rate_cards" do
+          scope module: :subscription_rate_cards do
+            get "rate_phases", to: "rate_phases#index"
+            put "rate_phases", to: "rate_phases#replace"
+          end
+        end
+      end
+      resources :subscriptions, only: %i[index show], param: :external_id
     end
 
     namespace :v2, module: :v1 do

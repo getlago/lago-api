@@ -97,7 +97,26 @@ unless Product.exists?(organization:, code: "cloud_platform")
     }
   )
 
-  # Assign the rate card to a plan so the catalog is wired into an offer.
+  platform_fee_card = RateCards::CreateService.call!(
+    product_item: ProductItem.find_by!(organization:, code: "platform_fee"),
+    params: {
+      name: "Platform fee USD",
+      code: "platform_fee_usd",
+      currency: "USD"
+    }
+  ).rate_card
+
+  RateCardRates::CreateService.call!(
+    rate_card: platform_fee_card,
+    params: {
+      effective_datetime: 1.month.ago,
+      rate_model: "standard",
+      rate_properties: {amount: "99"},
+      billing_interval_unit: "month"
+    }
+  )
+
+  # Assign the rate cards to a plan so the catalog is wired into an offer.
   plan = Plans::CreateService.call!({
     organization_id: organization.id,
     name: "Growth",
@@ -106,8 +125,81 @@ unless Product.exists?(organization:, code: "cloud_platform")
     pricing_type: "product_catalog"
   }).plan
 
-  PlanRateCards::CreateService.call!(
+  usage_entry = PlanRateCards::CreateService.call!(
     plan:,
     params: {rate_card_code: rate_card.code}
+  ).plan_rate_card
+
+  PlanRateCards::CreateService.call!(
+    plan:,
+    params: {rate_card_code: platform_fee_card.code, units: 1}
+  )
+
+  # Phases must be authored before the first subscription: a subscribed plan
+  # is immutable (cards, phases and rates all lock).
+  RatePhases::ReplaceService.call!(
+    plan_rate_card: usage_entry,
+    phases_params: [
+      {
+        position: 1,
+        name: "Launch offer",
+        billing_interval_cycle_count: 3,
+        rate_override: {rate_model: "standard", rate_properties: {amount: "0.005"}}
+      },
+      {position: 2, name: "Standard", billing_interval_cycle_count: nil}
+    ]
+  )
+
+  billing_entity = organization.billing_entities.find_by!(code: "hooli_v2")
+
+  # An active subscription: materialization gives each plan card its own
+  # billing lifecycle on the subscription, pricing stays on the plan.
+  richard = Customer.create_with(
+    name: "Richard Hendricks",
+    currency: "USD",
+    email: "richard@piedpiper.com"
+  ).find_or_create_by!(organization:, billing_entity:, external_id: "cust_hooli_v2_1")
+
+  active_subscription = Subscription.create_with(
+    organization:,
+    started_at: 1.month.ago,
+    subscription_at: 1.month.ago,
+    status: :active,
+    billing_time: :anniversary
+  ).find_or_create_by!(customer: richard, plan:, external_id: "sub_hooli_v2_1")
+
+  Subscriptions::ProductCatalog::MaterializeService.call!(subscription: active_subscription)
+
+  # A pending subscription still in its authoring window: rate cards and
+  # phases can be added, edited or removed until activation.
+  monica = Customer.create_with(
+    name: "Monica Hall",
+    currency: "USD",
+    email: "monica@raviga.com"
+  ).find_or_create_by!(organization:, billing_entity:, external_id: "cust_hooli_v2_2")
+
+  pending_subscription = Subscription.create_with(
+    organization:,
+    subscription_at: 1.month.from_now,
+    status: :pending,
+    billing_time: :anniversary
+  ).find_or_create_by!(customer: monica, plan:, external_id: "sub_hooli_v2_2")
+
+  negotiated_entry = SubscriptionRateCards::CreateService.call!(
+    subscription: pending_subscription,
+    params: {rate_card_code: platform_fee_card.code, units: 1, started_at: 1.month.from_now.iso8601}
+  ).subscription_rate_card
+
+  RatePhases::ReplaceService.call!(
+    subscription_rate_card: negotiated_entry,
+    phases_params: [
+      {
+        position: 1,
+        name: "Negotiated intro",
+        billing_interval_cycle_count: 3,
+        rate_override: {rate_model: "standard", rate_properties: {amount: "49"}}
+      },
+      {position: 2, name: "Standard", billing_interval_cycle_count: nil}
+    ]
   )
 end

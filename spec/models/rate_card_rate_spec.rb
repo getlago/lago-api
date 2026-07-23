@@ -124,4 +124,17 @@ RSpec.describe RateCardRate do
       end
     end
   end
+
+  describe "#charge_model" do
+    it "exposes the rate model under the calculators' expected name" do
+      expect(build(:rate_card_rate).charge_model).to eq("standard")
+    end
+  end
+
+  describe "#prorated?" do
+    it "reflects the card's proration mode" do
+      expect(build(:rate_card_rate, rate_card: build(:rate_card, proration: true)).prorated?).to be(true)
+      expect(build(:rate_card_rate, rate_card: build(:rate_card, proration: false)).prorated?).to be(false)
+    end
+  end
 end
