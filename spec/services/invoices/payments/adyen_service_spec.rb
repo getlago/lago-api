@@ -76,6 +76,28 @@ RSpec.describe Invoices::Payments::AdyenService do
       end.to have_enqueued_job(SendWebhookJob).with("payment.succeeded", Payment)
     end
 
+    it_behaves_like "syncs payment" do
+      let(:service_call) do
+        described_class.call(
+          :update_payment_status,
+          provider_payment_id: "ch_123456",
+          status: "Authorised"
+        )
+      end
+    end
+
+    context "when the customer has no accounting integration" do
+      it "does not enqueue an accounting payment sync job" do
+        expect do
+          described_class.call(
+            :update_payment_status,
+            provider_payment_id: "ch_123456",
+            status: "Authorised"
+          )
+        end.not_to have_enqueued_job(Integrations::Aggregator::Payments::CreateJob)
+      end
+    end
+
     context "when status is failed" do
       it "updates the payment and invoice status" do
         result = described_class.call(
@@ -91,6 +113,23 @@ RSpec.describe Invoices::Payments::AdyenService do
           payment_status: "failed",
           ready_for_payment_processing: true
         )
+      end
+
+      context "when the customer has an accounting integration syncing payments" do
+        let(:integration) { create(:netsuite_integration, organization:, sync_payments: true) }
+        let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+
+        before { integration_customer }
+
+        it "does not enqueue an accounting payment sync job" do
+          expect do
+            described_class.call(
+              :update_payment_status,
+              provider_payment_id: "ch_123456",
+              status: "Refused"
+            )
+          end.not_to have_enqueued_job(Integrations::Aggregator::Payments::CreateJob)
+        end
       end
     end
 

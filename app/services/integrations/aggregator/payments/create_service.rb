@@ -20,30 +20,35 @@ module Integrations
           return result unless integration
           return result unless integration.sync_payments
           return result unless invoice.finalized?
-          return result if payload.integration_payment
 
-          throttle!(:netsuite, :xero)
+          LockService.call(payment:, timeout_seconds: 0, transaction: false) do
+            next if payload.integration_payment
 
-          response = http_client.post_with_response(payload.body, headers)
-          body = JSON.parse(response.body)
+            throttle!(:netsuite, :xero)
 
-          if body.is_a?(Hash)
-            process_hash_result(body)
-          else
-            process_string_result(body)
+            response = http_client.post_with_response(payload.body, headers)
+            body = JSON.parse(response.body)
+
+            if body.is_a?(Hash)
+              process_hash_result(body)
+            else
+              process_string_result(body)
+            end
+
+            next unless result.external_id
+
+            IntegrationResource.create!(
+              organization_id: integration.organization_id,
+              integration:,
+              external_id: result.external_id,
+              syncable_id: payment.id,
+              syncable_type: "Payment",
+              resource_type: :payment
+            )
           end
 
-          return result unless result.external_id
-
-          IntegrationResource.create!(
-            organization_id: integration.organization_id,
-            integration:,
-            external_id: result.external_id,
-            syncable_id: payment.id,
-            syncable_type: "Payment",
-            resource_type: :payment
-          )
-
+          result
+        rescue BaseLockService::FailedToAcquireLock
           result
         rescue LagoHttpClient::HttpError => e
           raise RequestLimitError(e) if request_limit_error?(e)

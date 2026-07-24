@@ -261,6 +261,30 @@ RSpec.describe Invoices::Payments::StripeService do
       end.to have_enqueued_job(SendWebhookJob).with("payment.succeeded", Payment)
     end
 
+    it_behaves_like "syncs payment" do
+      let(:service_call) do
+        described_class.call(
+          :update_payment_status,
+          organization_id: organization.id,
+          status: "succeeded",
+          stripe_payment:
+        )
+      end
+    end
+
+    context "when the customer has no accounting integration" do
+      it "does not enqueue an accounting payment sync job" do
+        expect do
+          described_class.call(
+            :update_payment_status,
+            organization_id: organization.id,
+            status: "succeeded",
+            stripe_payment:
+          )
+        end.not_to have_enqueued_job(Integrations::Aggregator::Payments::CreateJob)
+      end
+    end
+
     context "when status is failed" do
       let(:stripe_payment) do
         PaymentProviders::StripeProvider::StripePayment.new(
@@ -286,6 +310,24 @@ RSpec.describe Invoices::Payments::StripeService do
           payment_status: "failed",
           ready_for_payment_processing: true
         )
+      end
+
+      context "when the customer has an accounting integration syncing payments" do
+        let(:integration) { create(:netsuite_integration, organization:, sync_payments: true) }
+        let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+
+        before { integration_customer }
+
+        it "does not enqueue an accounting payment sync job" do
+          expect do
+            described_class.call(
+              :update_payment_status,
+              organization_id: organization.id,
+              status: "failed",
+              stripe_payment:
+            )
+          end.not_to have_enqueued_job(Integrations::Aggregator::Payments::CreateJob)
+        end
       end
 
       context "when there is another payment in requires_action state for the invoice" do
