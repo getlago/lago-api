@@ -37,7 +37,7 @@ module BillableMetrics
 
       def self.null_result(result, grouped_by_keys: nil, apply_aggregation: false)
         if apply_aggregation && grouped_by_keys.present?
-          result.aggregations = [null_result(BaseService::Result.new, grouped_by_keys: grouped_by_keys)]
+          result.aggregations = [null_result(Result.new, grouped_by_keys: grouped_by_keys)]
         else
           result.grouped_by = grouped_by_keys.index_with { nil } if grouped_by_keys
           result.aggregation = 0

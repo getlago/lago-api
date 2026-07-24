@@ -38,7 +38,7 @@ module BillableMetrics
         return empty_results if aggregations.blank?
 
         result.aggregations = aggregations.map do |aggregation|
-          group_result = BaseService::Result.new
+          group_result = BillableMetrics::Aggregations::BaseService::Result.new
           group_result.grouped_by = aggregation.groups
           group_result.aggregation = compute_aggregation_value(aggregation.value)
           group_result.count = aggregation.events_count || 0

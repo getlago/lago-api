@@ -116,7 +116,6 @@ gem "valvat"
 
 # Data Export
 gem "csv", "~> 3.0"
-gem "ostruct"
 
 gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", ref: "2abd2b3"
 
