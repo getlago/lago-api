@@ -47,7 +47,7 @@ module Auth
           client_secret: result.okta_integration.client_secret,
           grant_type: "authorization_code",
           code:,
-          redirect_uri: "#{ENV["LAGO_FRONT_URL"]}/auth/okta/callback"
+          redirect_uri: "#{Rails.application.config.lago_front_url}/auth/okta/callback"
         }
 
         token_client = LagoHttpClient::Client.new("https://#{result.okta_integration.host}/oauth2/v1/token")

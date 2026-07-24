@@ -263,7 +263,7 @@ class Invoice < ApplicationRecord
   def web_url
     return if invisible?
 
-    front_url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+    front_url = Rails.application.config.lago_front_url
 
     URI.join(front_url, "/#{organization.slug}/customer/#{customer_id}/", "invoice/#{id}/overview").to_s
   end
