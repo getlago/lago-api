@@ -105,6 +105,7 @@ module Types
     field :update_integration_collection_mapping, mutation: Mutations::IntegrationCollectionMappings::Update
 
     field :destroy_integration_collection_mapping, mutation: Mutations::IntegrationCollectionMappings::Destroy
+    field :destroy_integration_customer, mutation: Mutations::IntegrationCustomers::Destroy
     field :destroy_integration_mapping, mutation: Mutations::IntegrationMappings::Destroy
 
     field :fetch_integration_accounts, mutation: Mutations::IntegrationItems::FetchAccounts
