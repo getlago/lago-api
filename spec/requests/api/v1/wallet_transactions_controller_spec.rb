@@ -244,6 +244,31 @@ RSpec.describe Api::V1::WalletTransactionsController do
       end
     end
 
+    context "with metadata param" do
+      let(:params) { {metadata: {site_id: "alpha"}} }
+      let(:wallet_transaction_first) { create(:wallet_transaction, wallet:, metadata: [{"key" => "site_id", "value" => "alpha"}]) }
+      let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, metadata: [{"key" => "site_id", "value" => "beta"}]) }
+
+      it "returns only the transactions tagged with that key and value" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transactions].count).to eq(1)
+        expect(json[:wallet_transactions].first[:lago_id]).to eq(wallet_transaction_first.id)
+      end
+    end
+
+    context "when metadata is sent with a malformed shape" do
+      let(:params) { {metadata: "foo"} }
+
+      it "ignores the filter instead of erroring" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transactions].count).to eq(2)
+      end
+    end
+
     context "with transaction_status filter" do
       # Override outer context transactions to avoid interference
       let(:wallet_transaction_first) { nil }
