@@ -108,8 +108,8 @@ ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_a7f20c73bb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
-ALTER TABLE IF EXISTS ONLY public.invoice_connections DROP CONSTRAINT IF EXISTS fk_rails_a3fff9bd72;
 ALTER TABLE IF EXISTS ONLY public.billing_object_connections DROP CONSTRAINT IF EXISTS fk_rails_a5a0718a08;
+ALTER TABLE IF EXISTS ONLY public.invoice_connections DROP CONSTRAINT IF EXISTS fk_rails_a3fff9bd72;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_a2d2cb3819;
 ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_a1ab65f1f7;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_9f22076477;
@@ -12250,6 +12250,7 @@ ALTER TABLE ONLY public.invoice_connections
     ADD CONSTRAINT fk_rails_a3fff9bd72 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
+--
 -- Name: billing_object_connections fk_rails_a5a0718a08; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
