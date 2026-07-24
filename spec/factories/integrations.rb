@@ -31,6 +31,21 @@ FactoryBot.define do
     end
   end
 
+  factory :entra_id_integration, class: "Integrations::EntraIdIntegration" do
+    organization
+    type { "Integrations::EntraIdIntegration" }
+    code { "entra_id" }
+    name { "Entra ID Integration" }
+
+    settings do
+      {client_id: SecureRandom.uuid, domain: "foo.test", tenant_id: SecureRandom.uuid}
+    end
+
+    secrets do
+      {client_secret: SecureRandom.uuid}.to_json
+    end
+  end
+
   factory :anrok_integration, class: "Integrations::AnrokIntegration" do
     organization
     type { "Integrations::AnrokIntegration" }
