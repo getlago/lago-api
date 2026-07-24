@@ -7,6 +7,19 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityJob do
     let(:arguments) { create(:subscription_activity).id }
   end
 
+  describe "queue routing" do
+    let(:subscription_activity) { create(:subscription_activity) }
+
+    context "when the organization is targeted for the dedicated queue" do
+      before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", [subscription_activity.organization_id]) }
+
+      it "routes the retry re-enqueue to the dedicated queue" do
+        expect { described_class.perform_later(subscription_activity.id, 2) }
+          .to have_enqueued_job(described_class).on_queue("dedicated_alerts")
+      end
+    end
+  end
+
   describe "#perform" do
     let(:subscription_activity) { create(:subscription_activity) }
     let(:subscription_activity_id) { subscription_activity.id }

@@ -457,7 +457,7 @@ module Fees
           charges_duration: boundaries.charges_duration,
           max_timestamp: boundaries.max_timestamp
         },
-        filters: aggregation_filters(charge_filter:, bypass_aggregation: !aggregate),
+        filters: aggregation_filters(charge_filter:),
         bypass_aggregation: !aggregate
       )
     end
@@ -499,7 +499,7 @@ module Fees
       grouped_by_keys if grouped_by_keys.present? && !usage_filters.skip_grouping
     end
 
-    def aggregation_filters(charge_filter: nil, bypass_aggregation: false)
+    def aggregation_filters(charge_filter: nil)
       filters = {charge_id: charge.id}
 
       grouped_by_keys = grouped_by_keys(charge_filter:)
@@ -511,16 +511,10 @@ module Fees
       end
 
       if charge_filter.present?
+        result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
         filters[:charge_filter] = charge_filter
-
-        # NOTE: Matching and ignored filters are only used to filter events when querying the store.
-        #       When the aggregation is bypassed, no event is queried, so computing them is a waste
-        #       (see BillableMetrics::Aggregations::BaseService#should_bypass_aggregation?).
-        if !bypass_aggregation || billable_metric.recurring?
-          result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
-          filters[:matching_filters] = result.matching_filters
-          filters[:ignored_filters] = result.ignored_filters
-        end
+        filters[:matching_filters] = result.matching_filters
+        filters[:ignored_filters] = result.ignored_filters
       end
 
       if usage_filters.filter_by_group.present?

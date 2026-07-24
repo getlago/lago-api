@@ -90,6 +90,20 @@ RSpec.describe Invoices::Payments::StripeService do
         }
       end
 
+      it "does not require terms of service consent by default" do
+        expect(payment_url_payload).not_to have_key(:consent_collection)
+      end
+
+      context "when consent collection is enabled on the provider" do
+        let(:stripe_payment_provider) do
+          create(:stripe_provider, organization:, code:, require_terms_of_service_consent: true)
+        end
+
+        it "requires terms of service consent" do
+          expect(payment_url_payload[:consent_collection]).to eq(terms_of_service: "required")
+        end
+      end
+
       context "when paid amount is not zero" do
         let(:total_paid_amount_cents) { 1 }
 

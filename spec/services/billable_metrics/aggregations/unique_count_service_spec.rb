@@ -604,15 +604,6 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, transaction: f
         expect(result.options).to eq({running_total: []})
       end
     end
-
-    context "when bypass_aggregation is set to true and metric is recurring" do
-      let(:bypass_aggregation) { true }
-
-      it "ignores the bypass and aggregates the events" do
-        expect(result.aggregation).to eq(1)
-        expect(result.count).to eq(1)
-      end
-    end
   end
 
   describe ".grouped_by_aggregation" do
@@ -782,33 +773,6 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, transaction: f
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
         expect(aggregation.grouped_by).to eq({"agent_name" => nil})
-      end
-    end
-
-    context "when bypass_aggregation is set to true and metric is recurring" do
-      let(:bypass_aggregation) { true }
-
-      let(:unique_count_event) do
-        create(
-          :event,
-          organization_id: organization.id,
-          code: billable_metric.code,
-          external_customer_id: customer.external_id,
-          external_subscription_id: subscription.external_id,
-          timestamp: added_at,
-          properties: {unique_id: SecureRandom.uuid, agent_name: "aragorn"}
-        )
-      end
-
-      it "ignores the bypass and aggregates the events" do
-        result = count_service.aggregate
-
-        expect(result.aggregations.count).to eq(1)
-
-        aggregation = result.aggregations.first
-        expect(aggregation.aggregation).to eq(1)
-        expect(aggregation.count).to eq(1)
-        expect(aggregation.grouped_by).to eq({"agent_name" => "aragorn"})
       end
     end
 

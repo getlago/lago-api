@@ -73,7 +73,7 @@ module Fees
     def amount_result
       return @amount_result if defined?(@amount_result)
 
-      aggregation_result = BaseService::Result.new
+      aggregation_result = BillableMetrics::Aggregations::BaseService::Result.new
       aggregation_result.aggregation = adjusted_fee.units
       aggregation_result.current_usage_units = adjusted_fee.units
       aggregation_result.full_units_number = adjusted_fee.units
