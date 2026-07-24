@@ -10932,6 +10932,16 @@ type Query {
   ): SecurityLogCollection
 
   """
+  Query billable metrics of an organization for selection inputs
+  """
+  selectableBillableMetrics(limit: Int, page: Int, searchTerm: String): SelectableBillableMetricCollection!
+
+  """
+  Query plans of an organization for selection inputs
+  """
+  selectablePlans(limit: Int, page: Int, searchTerm: String): SelectablePlanCollection!
+
+  """
   Query a single subscription of an organization
   """
   subscription(
@@ -11686,6 +11696,54 @@ type SecurityLogCollection {
   A collection of paginated SecurityLogCollection
   """
   collection: [SecurityLog!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+"""
+Minimal billable metric fields for selection inputs
+"""
+type SelectableBillableMetric {
+  code: String!
+  id: ID!
+  name: String!
+}
+
+"""
+SelectableBillableMetricCollection type
+"""
+type SelectableBillableMetricCollection {
+  """
+  A collection of paginated SelectableBillableMetricCollection
+  """
+  collection: [SelectableBillableMetric!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+"""
+Minimal plan fields for selection inputs
+"""
+type SelectablePlan {
+  code: String!
+  id: ID!
+  name: String!
+}
+
+"""
+SelectablePlanCollection type
+"""
+type SelectablePlanCollection {
+  """
+  A collection of paginated SelectablePlanCollection
+  """
+  collection: [SelectablePlan!]!
 
   """
   Pagination Metadata for navigating the Pagination

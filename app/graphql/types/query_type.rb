@@ -99,6 +99,8 @@ module Types
     field :roles, resolver: Resolvers::RolesResolver
     field :security_log, resolver: Resolvers::SecurityLogResolver
     field :security_logs, resolver: Resolvers::SecurityLogsResolver
+    field :selectable_billable_metrics, resolver: Resolvers::SelectableBillableMetricsResolver
+    field :selectable_plans, resolver: Resolvers::SelectablePlansResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
     field :subscription_alert, resolver: Resolvers::Subscriptions::AlertResolver
     field :subscription_alerts, resolver: Resolvers::Subscriptions::AlertsResolver
