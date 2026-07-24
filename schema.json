@@ -28589,6 +28589,12 @@
               "deprecationReason": null
             },
             {
+              "name": "wallet_transaction_payment_failure_after_settlement",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "all",
               "description": null,
               "isDeprecated": false,

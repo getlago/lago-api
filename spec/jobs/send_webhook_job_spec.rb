@@ -741,6 +741,12 @@ RSpec.describe SendWebhookJob do
         Webhooks::BillableMetrics::DeletedService
     end
 
+    context "with wallet transaction webhooks" do
+      it_behaves_like "a webhook service",
+        "wallet_transaction.payment_failure_after_settlement",
+        Webhooks::WalletTransactions::PaymentFailureAfterSettlementService
+    end
+
     context "when webhook_type is dunning_campaign.finished" do
       let(:webhook_service) { instance_double(Webhooks::DunningCampaigns::FinishedService) }
       let(:customer) { create(:customer) }

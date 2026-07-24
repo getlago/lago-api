@@ -323,3 +323,8 @@ wallet_transaction_payment_failure:
   description: A payment attempt for a wallet transaction has failed on a payment provider
   category: Wallets and Credits
   deprecated: false
+wallet_transaction_payment_failure_after_settlement:
+  name: wallet_transaction.payment_failure_after_settlement
+  description: A payment failure was recorded for a wallet transaction whose credits were already settled, requiring a manual review
+  category: Wallets and Credits
+  deprecated: false

@@ -5857,6 +5857,7 @@ enum EventTypeEnum {
   wallet_terminated
   wallet_transaction_created
   wallet_transaction_payment_failure
+  wallet_transaction_payment_failure_after_settlement
   wallet_transaction_updated
   wallet_updated
 }
