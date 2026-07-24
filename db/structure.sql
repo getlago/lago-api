@@ -553,6 +553,7 @@ DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_due_date;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_lower_purchase_order_number;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_billing_entity_sequential;
@@ -9025,6 +9026,13 @@ CREATE INDEX index_invoices_on_organization_id_and_customer_id ON public.invoice
 
 
 --
+-- Name: index_invoices_on_organization_id_lower_purchase_order_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_lower_purchase_order_number ON public.invoices USING btree (organization_id, lower((purchase_order_number)::text));
+
+
+--
 -- Name: index_invoices_on_organization_id_number_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -13064,6 +13072,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260717160544'),
 ('20260717133535'),
 ('20260716114156'),
+('20260715165959'),
 ('20260715142900'),
 ('20260710093947'),
 ('20260709141039'),

@@ -8,6 +8,7 @@ class CreditNotesQuery < BaseQuery
     :customer_external_id,
     :customer_id,
     :invoice_number,
+    :purchase_order_number,
     :issuing_date_from,
     :issuing_date_to,
     :amount_from,
@@ -36,6 +37,7 @@ class CreditNotesQuery < BaseQuery
     credit_notes = with_refund_status(credit_notes) if valid_refund_statuses.present?
     credit_notes = with_types(credit_notes) if valid_types.present?
     credit_notes = with_invoice_number(credit_notes) if filters.invoice_number.present?
+    credit_notes = with_purchase_order_number(credit_notes) if filters.purchase_order_number.present?
     credit_notes = with_issuing_date_range(credit_notes) if filters.issuing_date_from || filters.issuing_date_to
     credit_notes = with_amount_range(credit_notes) if filters.amount_from.present? || filters.amount_to.present?
     credit_notes = with_self_billed_invoice(credit_notes) unless filters.self_billed.nil?
@@ -126,6 +128,14 @@ class CreditNotesQuery < BaseQuery
 
   def with_invoice_number(scope)
     scope.joins(:invoice).where(invoices: {number: filters.invoice_number})
+  end
+
+  def with_purchase_order_number(scope)
+    # NOTE: case-insensitive match; scoping invoices to the org + lower() hits
+    # index_invoices_on_organization_id_lower_purchase_order_number.
+    scope
+      .joins(:invoice)
+      .where("invoices.organization_id = ? AND lower(invoices.purchase_order_number) = lower(?)", organization.id, filters.purchase_order_number)
   end
 
   def with_issuing_date_range(scope)

@@ -19,6 +19,7 @@ module InvoiceIndex
     :payment_status,
     :payment_statuses,
     :per_page,
+    :purchase_order_number,
     :search_term,
     :self_billed,
     :settlements,
@@ -52,6 +53,7 @@ module InvoiceIndex
         payment_dispute_lost: params[:payment_dispute_lost],
         payment_overdue: params[:payment_overdue],
         payment_status: params[:payment_status] || params[:payment_statuses],
+        purchase_order_number: params[:purchase_order_number],
         settlements: params[:settlements],
         self_billed: params[:self_billed],
         status: params[:status] || params[:statuses]
