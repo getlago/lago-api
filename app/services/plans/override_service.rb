@@ -75,7 +75,7 @@ module Plans
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
-      e.result
+      result.fail_with_error!(e)
     end
 
     private
