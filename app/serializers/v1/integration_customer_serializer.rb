@@ -7,7 +7,9 @@ module V1
         lago_id: model.id,
         external_customer_id: model.external_customer_id,
         type:,
-        integration_code: model&.integration&.code
+        integration_code: model&.integration&.code,
+        code: model.code,
+        is_default: model.is_default
       }
 
       base_response.merge!(model&.settings || {})
