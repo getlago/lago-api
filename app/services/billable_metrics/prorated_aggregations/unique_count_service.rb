@@ -102,13 +102,6 @@ module BillableMetrics
       end
 
       def per_event_aggregation(grouped_by_values: nil, include_event_value: false)
-        if should_bypass_aggregation?
-          return ProratedPerEventAggregationResult.new.tap do |result|
-            result.event_aggregation = []
-            result.event_prorated_aggregation = []
-          end
-        end
-
         event_aggregation_array = []
         period_aggregation = event_store.with_grouped_by_values(grouped_by_values) do
           event_store.prorated_unique_count_breakdown(with_remove: true).map do |row|

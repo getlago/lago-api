@@ -1944,6 +1944,26 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#web_url" do
+    it "returns the lago frontend url of the invoice overview page" do
+      expect(invoice.web_url).to eq(
+        URI.join(
+          ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com",
+          "/#{invoice.organization.slug}/customer/#{invoice.customer_id}/",
+          "invoice/#{invoice.id}/overview"
+        ).to_s
+      )
+    end
+
+    context "when the invoice is not visible" do
+      let(:invoice) { create(:invoice, status: :closed) }
+
+      it "returns nil" do
+        expect(invoice.web_url).to be_nil
+      end
+    end
+  end
+
   describe "#creditable_amount_cents" do
     let(:invoice) { create(:invoice, version_number:, status:, payment_status:, fees_amount_cents:, taxes_amount_cents:, coupons_amount_cents:, progressive_billing_credit_amount_cents:) }
     let(:fees_amount_cents) { 1000 }

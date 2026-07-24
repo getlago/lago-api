@@ -1,9 +1,12 @@
 concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
 timeout: 25
 retry: 1
+# Weighted (not strict) ordering: alerts_high_priority is favored 2:1 but the
+# alerts queue is still polled every cycle, so the high-priority queue cannot
+# starve the bulk subscription-activity processing on the alerts queue.
 queues:
-  - alerts_high_priority
-  - alerts
+  - ["alerts_high_priority", 2]
+  - ["alerts", 1]
 
 production:
   concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 5) %>

@@ -187,14 +187,28 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
       alert_5
     end
 
-    it "enqueues ProcessLifetimeUsageAlertJob with a 5 minute delay" do
+    it "enqueues ProcessLifetimeUsageAlertJob with the default processing interval delay" do
       freeze_time do
         service.call
 
         expect(UsageMonitoring::ProcessLifetimeUsageAlertJob)
-          .to have_been_enqueued.with(alert: alert_5, subscription:).at(5.minutes.from_now)
+          .to have_been_enqueued.with(alert: alert_5, subscription:).at(1.minute.from_now)
       end
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
+    end
+
+    context "when LAGO_SUBSCRIPTION_ACTIVITY_PROCESSING_INTERVAL_SECONDS is set" do
+      before { ENV["LAGO_SUBSCRIPTION_ACTIVITY_PROCESSING_INTERVAL_SECONDS"] = "30" }
+      after { ENV.delete("LAGO_SUBSCRIPTION_ACTIVITY_PROCESSING_INTERVAL_SECONDS") }
+
+      it "enqueues ProcessLifetimeUsageAlertJob with the configured delay" do
+        freeze_time do
+          service.call
+
+          expect(UsageMonitoring::ProcessLifetimeUsageAlertJob)
+            .to have_been_enqueued.with(alert: alert_5, subscription:).at(30.seconds.from_now)
+        end
+      end
     end
 
     context "when the job enqueue raises" do

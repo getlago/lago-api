@@ -114,13 +114,6 @@ module BillableMetrics
       end
 
       def per_event_aggregation(exclude_event: false, include_event_value: false, grouped_by_values: nil)
-        if should_bypass_aggregation?
-          return ProratedPerEventAggregationResult.new.tap do |result|
-            result.event_aggregation = []
-            result.event_prorated_aggregation = []
-          end
-        end
-
         recurring_result = recurring_value
         recurring_aggregation = recurring_result ? [BigDecimal(recurring_result)] : []
         recurring_prorated_aggregation = recurring_result ? [BigDecimal(recurring_result) * persisted_pro_rata] : []

@@ -300,19 +300,6 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
         expect(result.event_aggregation).to eq([1, 1, 1, 1, 1])
       end
     end
-
-    context "when aggregation is bypassed" do
-      let(:bypass_aggregation) { true }
-
-      it "returns an empty aggregation without querying the event store" do
-        allow(Events::Stores::PostgresStore).to receive(:new).and_call_original
-
-        result = count_service.per_event_aggregation
-
-        expect(result.event_aggregation).to eq([])
-        expect(Events::Stores::PostgresStore).not_to have_received(:new)
-      end
-    end
   end
 
   describe ".grouped_by_aggregation" do
