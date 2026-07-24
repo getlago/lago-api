@@ -120,6 +120,157 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
     end
   end
 
+  # A recurring metric (use_from_boundary false) always needs the code-based fallback so that
+  # events predating subscription.started_at are aggregated, even when the subscription has no
+  # previous_subscription_id link (e.g. a subscription sharing the same external_id was terminated
+  # and recreated). Without the fallback, such pre-start events carry an earlier charge_id and are
+  # dropped by the charge_id based query.
+  describe "#needs_code_based_fallback? for recurring metrics" do
+    let(:billable_metric) { create(:billable_metric, field_name: "seats", code: "seats") }
+    let(:organization) { billable_metric.organization }
+    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
+    let(:customer) { create(:customer, organization:) }
+    # No previous_subscription_id link, even though earlier subscriptions shared the external_id.
+    let(:subscription) do
+      create(:subscription, customer:, external_id: "seat_sub", started_at: DateTime.parse("2023-03-01"))
+    end
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+
+    subject(:event_store) do
+      store = described_class.new(
+        code: billable_metric.code,
+        subscription:,
+        boundaries:,
+        filters: {charge_id: charge.id}
+      )
+      store.use_from_boundary = false # recurring metric
+      store
+    end
+
+    it "runs the code-based fallback even without a previous subscription" do
+      expect(subscription.previous_subscription_id).to be_nil
+      expect(event_store.needs_code_based_fallback?(force_from: false)).to be(true)
+    end
+
+    context "when the metric is not recurring (use_from_boundary true)" do
+      it "does not run the code-based fallback" do
+        event_store.use_from_boundary = true
+        expect(event_store.needs_code_based_fallback?(force_from: false)).to be(false)
+      end
+    end
+  end
+
+  # Behavioural scenarios for a recurring metric (seats) whose events may predate the current
+  # subscription. These exercise the full ClickHouse aggregation path, so they must run against a
+  # ClickHouse instance (`lago exec api bundle exec rspec`).
+  describe "recurring aggregation of events before subscription.started_at" do
+    let(:billable_metric) { create(:billable_metric, field_name: "seats", code: "seats") }
+    let(:organization) { billable_metric.organization }
+    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
+    let(:customer) { create(:customer, organization:) }
+    let(:external_id) { "seat_sub" }
+    let(:events_grouped_by) { nil }
+
+    def build_store(sub, boundaries)
+      store = described_class.new(
+        code: billable_metric.code,
+        subscription: sub,
+        boundaries:,
+        filters: {charge_id: charge.id}
+      )
+      store.use_from_boundary = false # recurring metric
+      store
+    end
+
+    # Scenario 1: monthly subscriptions sharing the same external_id, each with its own started_at,
+    # NOT linked through previous_subscription_id (terminated and recreated). A seat received during
+    # the first month was enriched under that month's charge, so it carries a different charge_id
+    # than the current subscription. It must still be aggregated for the current subscription via
+    # the code-based fallback.
+    context "when each subscription keeps its own started_at and is not linked" do
+      let(:january_charge) { create(:standard_charge, organization:, billable_metric:, plan: create(:plan, organization:)) }
+      let!(:subscription) do
+        create(:subscription, customer:, external_id:, started_at: DateTime.parse("2023-03-01"))
+      end
+
+      let(:boundaries) do
+        {
+          from_datetime: DateTime.parse("2023-03-01").beginning_of_day,
+          to_datetime: DateTime.parse("2023-03-31").end_of_day,
+          charges_duration: 31
+        }
+      end
+
+      before do
+        # Seat received in January, before the current subscription started, enriched under the
+        # January subscription's (different) charge.
+        create_event(timestamp: DateTime.parse("2023-01-15"), value: 1, transaction_id: SecureRandom.uuid, event_charge: january_charge)
+        # Seat received during the current period, under the current charge.
+        create_event(timestamp: DateTime.parse("2023-03-10"), value: 1, transaction_id: SecureRandom.uuid)
+      end
+
+      it "aggregates the pre-start seat (different charge_id) together with the current-period seat" do
+        expect(build_store(subscription, boundaries).count.events_count).to eq(2)
+      end
+    end
+
+    # Scenario 2: the current subscription inherits the started_at of the first one (January 1st),
+    # so a January seat is after started_at and aggregated through the regular charge_id query.
+    context "when the subscription inherits the first started_at" do
+      let!(:subscription) do
+        create(:subscription, customer:, external_id:, started_at: DateTime.parse("2023-01-01"))
+      end
+
+      let(:boundaries) do
+        {
+          from_datetime: DateTime.parse("2023-01-01").beginning_of_day,
+          to_datetime: DateTime.parse("2023-03-31").end_of_day,
+          charges_duration: 90
+        }
+      end
+
+      before do
+        create_event(timestamp: DateTime.parse("2023-01-15"), value: 1, transaction_id: SecureRandom.uuid)
+        create_event(timestamp: DateTime.parse("2023-03-10"), value: 1, transaction_id: SecureRandom.uuid)
+      end
+
+      it "aggregates every seat" do
+        expect(build_store(subscription, boundaries).count.events_count).to eq(2)
+      end
+    end
+
+    # Scenario 3: a single subscription started on June 1st with events during June. Events after the
+    # subscription start are aggregated as usual.
+    context "when a single subscription receives events after it started" do
+      let!(:subscription) do
+        create(:subscription, customer:, external_id:, started_at: DateTime.parse("2023-06-01"))
+      end
+
+      let(:boundaries) do
+        {
+          from_datetime: DateTime.parse("2023-06-01").beginning_of_day,
+          to_datetime: DateTime.parse("2023-06-30").end_of_day,
+          charges_duration: 30
+        }
+      end
+
+      before do
+        create_event(timestamp: DateTime.parse("2023-06-05"), value: 1, transaction_id: SecureRandom.uuid)
+        create_event(timestamp: DateTime.parse("2023-06-20"), value: 1, transaction_id: SecureRandom.uuid)
+      end
+
+      it "aggregates the June seats" do
+        expect(build_store(subscription, boundaries).count.events_count).to eq(2)
+      end
+    end
+  end
+
   # SQL-shape guard: the transaction_id tie-break applies only when aggregating for a
   # pay-in-advance event AND the boundary is that event's own timestamp.
   describe "#charge_id_based_where_sql boundary predicate" do

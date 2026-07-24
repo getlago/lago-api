@@ -12,6 +12,12 @@ module Events
 
       DEDUP_KEY_COLUMNS = %w[code organization_id external_subscription_id transaction_id timestamp].freeze
 
+      # NOTE: For recurring billable metrics use_from_boundary is false (see the aggregation
+      #       services), so from_datetime is not applied below and events are never lower-bounded
+      #       at subscription.started_at: events before the subscription start are included in
+      #       recurring aggregation. The enriched store (Events::Stores::ClickhouseEnrichedStore)
+      #       achieves the same result through its code-based fallback, which matches recurring
+      #       pre-start events by code.
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = if deduplicate

@@ -10,6 +10,12 @@ module Events
 
         scope = scope.order(timestamp: :asc) if ordered
 
+        # NOTE: For recurring billable metrics use_from_boundary is false (see the aggregation
+        #       services), so from_datetime is not applied and events are never lower-bounded at
+        #       subscription.started_at here: events before the subscription start are included in
+        #       recurring aggregation. The enriched ClickHouse store
+        #       (Events::Stores::ClickhouseEnrichedStore) achieves the same result through its
+        #       code-based fallback, which matches recurring pre-start events by code.
         scope = scope.from_datetime(from_datetime) if force_from || use_from_boundary
         scope = apply_to_boundary(scope) if applicable_to_datetime
 

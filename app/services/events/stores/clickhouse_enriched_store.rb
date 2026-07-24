@@ -925,8 +925,17 @@ module Events
         end.join(" AND ")
       end
 
+      # For a recurring metric, events that predate subscription.started_at must always be
+      # aggregated, matched by code rather than charge_id. Those events were enriched with a
+      # different charge_id — a previous subscription's charge, or, when a subscription sharing
+      # the same external_id was terminated and recreated (no previous_subscription_id link),
+      # that earlier subscription's charge — so the charge_id based query would miss them.
+      # We therefore always run the code-based fallback for recurring metrics (use_from_boundary
+      # false). The current charge_id query covers [started_at, to] and the fallback covers
+      # (-inf, started_at), so the two stay disjoint and events are never double-counted. This
+      # keeps the enriched store consistent with the Postgres and ClickHouse stores, which never
+      # lower-bound recurring aggregation at started_at.
       def needs_code_based_fallback?(force_from:)
-        return false if subscription.previous_subscription_id.blank?
         return false if use_from_boundary
 
         effective_from = from_datetime if force_from
