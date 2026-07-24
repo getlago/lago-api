@@ -73,7 +73,7 @@ module BillableMetrics
             group_result_without_proration.grouped_by = aggregation.groups
           end
 
-          group_result = BaseService::Result.new
+          group_result = BillableMetrics::Aggregations::BaseService::Result.new
           group_result.grouped_by = aggregation.groups
           group_result.full_units_number = group_result_without_proration&.aggregation || 0
 
