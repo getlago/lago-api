@@ -172,6 +172,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.day, "schedule:retry_tax_pending_invoices", at: "01:30") do
+    Clock::RetryTaxPendingInvoicesJob
+      .set(sentry: {"slug" => "lago_retry_tax_pending_invoices", "cron" => "30 1 * * *"})
+      .perform_later
+  end
+
   unless ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_EVENTS_VALIDATION"])
     every(1.hour, "schedule:post_validate_events", at: "*:05") do
       Clock::EventsValidationJob
