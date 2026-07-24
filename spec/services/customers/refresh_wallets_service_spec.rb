@@ -99,6 +99,26 @@ RSpec.describe Customers::RefreshWalletsService do
       expect { subject }.to change(customer, :awaiting_wallet_refresh).from(true).to(false)
     end
 
+    it "records the wallet refresh e2e latency and clears the request timestamp" do
+      customer.update!(wallet_refresh_requested_at: 2.minutes.ago)
+      allow(Yabeda.lago_pipeline.wallet_refresh_e2e_seconds).to receive(:measure)
+
+      expect { subject }.to change(customer, :wallet_refresh_requested_at).to(nil)
+
+      expect(Yabeda.lago_pipeline.wallet_refresh_e2e_seconds).to have_received(:measure)
+        .with({}, be_within(10).of(120))
+    end
+
+    context "when no refresh request timestamp is set" do
+      it "does not record the latency metric" do
+        allow(Yabeda.lago_pipeline.wallet_refresh_e2e_seconds).to receive(:measure)
+
+        subject
+
+        expect(Yabeda.lago_pipeline.wallet_refresh_e2e_seconds).not_to have_received(:measure)
+      end
+    end
+
     context "when charges have presentation_group_keys" do
       before do
         allow(Invoices::CustomerUsageService).to receive(:call!).and_call_original

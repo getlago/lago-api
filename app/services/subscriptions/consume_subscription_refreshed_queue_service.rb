@@ -24,17 +24,20 @@ module Subscriptions
         end
 
         threshold = (Time.current - SUBSCRIPTION_BUCKET_DURATION).to_i
-        values = redis_client.zrangebyscore(REDIS_STORE_NAME, "-inf", threshold, limit: [0, BATCH_SIZE])
+        values = redis_client.zrangebyscore(REDIS_STORE_NAME, "-inf", threshold, limit: [0, BATCH_SIZE], with_scores: true)
         break if values.blank?
 
-        values.each do |value|
+        values.each do |member, score|
           # Extract the subscription_id from the bucketed member key (org_id:sub_id|bucket)
-          subscription_id = value.split("|").first.split(":").last
+          subscription_id = member.split("|").first.split(":").last
 
-          Subscriptions::FlagRefreshedJob.perform_later(subscription_id)
+          # The score is the event timestamp set by the events-processor. Carrying it
+          # through the flag hop is what makes the end-to-end latency metrics
+          # (event ingested -> wallet refreshed / alert processed) measurable.
+          Subscriptions::FlagRefreshedJob.perform_later(subscription_id, score.to_f)
         end
 
-        redis_client.zrem(REDIS_STORE_NAME, values)
+        redis_client.zrem(REDIS_STORE_NAME, values.map(&:first))
       end
 
       result

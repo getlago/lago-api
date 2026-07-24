@@ -33,7 +33,13 @@ module Customers
 
       Wallet.where(id: all_wallets.map(&:id)).touch_all(:last_ongoing_balance_sync_at) # rubocop:disable Rails/SkipsModelValidations
 
-      customer.update!(awaiting_wallet_refresh: false)
+      if customer.wallet_refresh_requested_at.present?
+        Yabeda.lago_pipeline.wallet_refresh_e2e_seconds.measure(
+          {}, Time.current - customer.wallet_refresh_requested_at
+        )
+      end
+
+      customer.update!(awaiting_wallet_refresh: false, wallet_refresh_requested_at: nil)
 
       result.wallets = customer.wallets.active.reload
       result

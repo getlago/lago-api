@@ -23,6 +23,25 @@ RSpec.describe UsageMonitoring::TrackSubscriptionActivityService, :premium do
     end
   end
 
+  context "when an event ingestion timestamp is provided" do
+    subject { described_class.new(organization:, subscription:, date:, event_ingested_at:) }
+
+    let(:event_ingested_at) { 3.minutes.ago }
+
+    before { create(:usage_threshold, plan: subscription.plan) }
+
+    it "stores the timestamp on the subscription activity" do
+      subject.call
+      expect(subscription.subscription_activity.oldest_event_ingested_at).to be_within(0.001).of(event_ingested_at)
+    end
+
+    it "keeps the oldest timestamp when an activity already exists" do
+      create(:subscription_activity, subscription:, organization:, oldest_event_ingested_at: 10.minutes.ago)
+
+      expect { subject.call }.not_to change { subscription.subscription_activity.reload.oldest_event_ingested_at }
+    end
+  end
+
   context "when last_received_event_on is already set to the same date" do
     before { subscription.update(last_received_event_on: date) }
 

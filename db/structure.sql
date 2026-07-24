@@ -2461,6 +2461,7 @@ CREATE TABLE public.customers (
     subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments,
     awaiting_wallet_refresh boolean DEFAULT false NOT NULL,
     dunning_currency_attempts jsonb DEFAULT '{}'::jsonb NOT NULL,
+    wallet_refresh_requested_at timestamp(6) without time zone,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -5274,7 +5275,8 @@ CREATE TABLE public.usage_monitoring_subscription_activities (
     subscription_id uuid NOT NULL,
     enqueued boolean DEFAULT false NOT NULL,
     inserted_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    enqueued_at timestamp(6) without time zone
+    enqueued_at timestamp(6) without time zone,
+    oldest_event_ingested_at timestamp(6) without time zone
 );
 
 
@@ -12959,6 +12961,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260722090100'),
+('20260722090000'),
 ('20260721180721'),
 ('20260721163101'),
 ('20260717163416'),

@@ -13,10 +13,11 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
       (Time.current.to_i - 20) / described_class::SUBSCRIPTION_BUCKET_DURATION
     ) * described_class::SUBSCRIPTION_BUCKET_DURATION
   end
+  let(:event_ingested_at) { (Time.current - 20).to_f }
   let(:values) do
     [
-      "#{SecureRandom.uuid}:#{subscription_id1}|#{bucket}",
-      "#{SecureRandom.uuid}:#{subscription_id2}|#{bucket}"
+      ["#{SecureRandom.uuid}:#{subscription_id1}|#{bucket}", event_ingested_at],
+      ["#{SecureRandom.uuid}:#{subscription_id2}|#{bucket}", event_ingested_at]
     ]
   end
   let(:loop_values) { [values, []] }
@@ -38,8 +39,8 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
       result = service.call
 
       expect(result).to be_success
-      expect(Subscriptions::FlagRefreshedJob).to have_been_enqueued.with(subscription_id1)
-      expect(Subscriptions::FlagRefreshedJob).to have_been_enqueued.with(subscription_id2)
+      expect(Subscriptions::FlagRefreshedJob).to have_been_enqueued.with(subscription_id1, event_ingested_at)
+      expect(Subscriptions::FlagRefreshedJob).to have_been_enqueued.with(subscription_id2, event_ingested_at)
     end
 
     it "queries with the correct threshold" do
@@ -49,7 +50,7 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
         service.call
 
         expect(redis_client).to have_received(:zrangebyscore)
-          .with(described_class::REDIS_STORE_NAME, "-inf", threshold, limit: [0, described_class::BATCH_SIZE])
+          .with(described_class::REDIS_STORE_NAME, "-inf", threshold, limit: [0, described_class::BATCH_SIZE], with_scores: true)
           .at_least(:once)
       end
     end
@@ -57,7 +58,7 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
     it "removes processed values with zrem" do
       service.call
 
-      expect(redis_client).to have_received(:zrem).with(described_class::REDIS_STORE_NAME, values)
+      expect(redis_client).to have_received(:zrem).with(described_class::REDIS_STORE_NAME, values.map(&:first))
     end
 
     context "with multiple batches" do

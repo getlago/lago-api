@@ -10,8 +10,10 @@ module Subscriptions
       end
     end
 
-    def perform(subscription_id)
-      Subscriptions::FlagRefreshedService.call!(subscription_id)
+    # event_ingested_at is an epoch timestamp (the zset score set by the
+    # events-processor). Optional so jobs enqueued before this change deserialize fine.
+    def perform(subscription_id, event_ingested_at = nil)
+      Subscriptions::FlagRefreshedService.call!(subscription_id, event_ingested_at:)
     end
   end
 end
