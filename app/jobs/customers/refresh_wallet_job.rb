@@ -4,13 +4,11 @@ module Customers
   class RefreshWalletJob < ApplicationJob
     queue_as do
       customer = arguments.first
-      if Utils::DedicatedWorkerConfig.enabled_for?(customer&.organization_id)
-        Utils::DedicatedWorkerConfig::DEDICATED_WALLETS_QUEUE
-      elsif ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WALLETS"])
-        :wallets
-      else
-        :low_priority
-      end
+      Utils::DedicatedWorkerConfig.queue_for(
+        customer&.organization_id,
+        dedicated: Utils::DedicatedWorkerConfig::DEDICATED_WALLETS_QUEUE,
+        default: ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WALLETS"]) ? :wallets : :low_priority
+      )
     end
 
     unique :until_executed, on_conflict: :log, lock_ttl: 12.hours

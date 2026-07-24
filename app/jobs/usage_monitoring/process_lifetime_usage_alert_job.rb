@@ -4,11 +4,11 @@ module UsageMonitoring
   class ProcessLifetimeUsageAlertJob < ApplicationJob
     unique :until_executed, on_conflict: :log
     queue_as do
-      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_ALERTS"])
-        :alerts
-      else
-        :default
-      end
+      Utils::DedicatedWorkerConfig.queue_for(
+        arguments.first[:subscription]&.organization_id,
+        dedicated: Utils::DedicatedWorkerConfig::DEDICATED_ALERTS_QUEUE,
+        default: ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_ALERTS"]) ? :alerts : :default
+      )
     end
 
     def perform(alert:, subscription:)
