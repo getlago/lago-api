@@ -116,6 +116,7 @@ invoices:
   void:
     - finance
     - manager
+  delete:
   export:
     - finance
     - manager

@@ -678,6 +678,70 @@ RSpec.describe Api::V1::InvoicesController do
     end
   end
 
+  describe "DELETE /api/v1/invoices/:id" do
+    subject { delete_with_token(organization, "/api/v1/invoices/#{invoice_id}") }
+
+    let(:invoice) { create(:invoice, status:, customer:, organization:) }
+    let(:invoice_id) { invoice.id }
+    let(:status) { :draft }
+
+    before { invoice }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    context "when the invoice is a draft" do
+      it "marks the invoice as deleted" do
+        expect { subject }.to change { invoice.reload.status }.from("draft").to("deleted")
+      end
+
+      it "returns the deleted invoice" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:lago_id]).to eq(invoice.id)
+        expect(json[:invoice][:status]).to eq("deleted")
+      end
+    end
+
+    context "when the invoice does not exist" do
+      let(:invoice_id) { SecureRandom.uuid }
+
+      it "returns a not found error" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when the invoice is not a draft" do
+      let(:status) { :finalized }
+
+      it "returns a method not allowed error" do
+        subject
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("not_deletable")
+      end
+    end
+
+    context "when the invoice is already deleted" do
+      let(:status) { :deleted }
+
+      it "returns a not found error" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when invoices belongs to another organization" do
+      let(:invoice) { create(:invoice, status: :draft) }
+
+      it "returns not found" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
   describe "POST /api/v1/invoices/:id/lose_dispute" do
     subject { post_with_token(organization, "/api/v1/invoices/#{invoice_id}/lose_dispute") }
 

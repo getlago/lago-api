@@ -129,7 +129,7 @@ Rails.application.routes.draw do
       end
       resources :applied_coupons, only: %i[create index]
       resources :fees, only: %i[show update index destroy]
-      resources :invoices, only: %i[create update show index] do
+      resources :invoices, only: %i[create update show index destroy] do
         post :download, on: :member, action: :download_pdf
         post :download_pdf, on: :member
         post :download_xml, on: :member
