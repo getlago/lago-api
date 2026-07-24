@@ -128,6 +128,17 @@ module Api
         end
       end
 
+      def destroy
+        invoice = current_organization.invoices.visible.find_by(id: params[:id])
+
+        result = Invoices::DeleteService.call(invoice:)
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
       def lose_dispute
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
 
