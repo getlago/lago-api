@@ -34,6 +34,7 @@ module V1
         prepaid_purchased_credit_amount_cents: model.prepaid_purchased_credit_amount_cents,
         file_url: model.file_url,
         xml_url: model.xml_url,
+        web_url: model.web_url,
         version_number: model.version_number,
         self_billed: model.self_billed,
         created_at: model.created_at.iso8601,
