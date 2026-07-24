@@ -607,6 +607,30 @@ RSpec.describe Events::BillingPeriodFilterService do
             expect(result.charges[recurring_charge.id][nil]).to eq(boundaries.charges_from_datetime)
           end
         end
+
+        context "with a backdated event ingested for a prior period" do
+          before do
+            create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              timestamp: boundaries.charges_from_datetime - 10.days,
+              code: recurring_billable_metric.code,
+              properties: {"region" => "eu"}
+            )
+          end
+
+          it "refreshes the matching bucket's last_seen_at from the backdated event's ingestion time" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges[recurring_charge.id].keys).to match_array([charge_filter.id, nil])
+            # The event's business timestamp is out of the period, but it was ingested now, so
+            # the recurring bucket must reflect it to invalidate the lazy usage cache.
+            expect(result.charges[recurring_charge.id][charge_filter.id]).to be > boundaries.charges_from_datetime
+            expect(result.charges[recurring_charge.id][nil]).to eq(boundaries.charges_from_datetime)
+          end
+        end
       end
 
       context "with events that does not match the boundaries" do
@@ -1135,6 +1159,44 @@ RSpec.describe Events::BillingPeriodFilterService do
 
       context "with recurring billable metric" do
         it_behaves_like "recurring billable metric filtering"
+
+        context "with a backdated event ingested for a prior period" do
+          let(:recurring_billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+          let(:recurring_charge) { create(:standard_charge, plan:, billable_metric: recurring_billable_metric) }
+
+          let(:backdated_event) do
+            create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              code: recurring_billable_metric.code,
+              timestamp: boundaries.charges_from_datetime - 10.days
+            )
+          end
+
+          let(:backdated_enriched_event) do
+            create(
+              :enriched_event,
+              event: backdated_event,
+              subscription:,
+              value: 12,
+              decimal_value: 12.0,
+              charge: recurring_charge,
+              charge_filter_id: nil
+            )
+          end
+
+          before { backdated_enriched_event }
+
+          it "includes the recurring charge with a last_seen_at from the backdated ingestion time" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            # The enriched event's business timestamp is out of the period, but it was ingested
+            # now, so the recurring bucket must reflect it to invalidate the lazy usage cache.
+            expect(result.charges[recurring_charge.id][nil]).to be > boundaries.charges_from_datetime
+          end
+        end
       end
 
       context "with unknown charges" do

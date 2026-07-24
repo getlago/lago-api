@@ -148,13 +148,13 @@ module Events
         conditions.join(" AND ")
       end
 
-      def distinct_charges_and_filters(codes: nil)
+      def distinct_charges_and_filters(codes: nil, include_all_history: false)
         # Implementation relies directly on the events_enriched_expanded table,
         # so we delegate the implementation to the ClickhouseEnrichedStore
         Events::Stores::ClickhouseEnrichedStore.new(
           subscription:,
           boundaries:
-        ).distinct_charges_and_filters(codes:)
+        ).distinct_charges_and_filters(codes:, include_all_history:)
       end
 
       # Returns the distinct [code, properties, last_seen_at] combinations present in the events
@@ -165,7 +165,7 @@ module Events
       #
       # ClickHouse stores properties as a Map(String, String); a missing key reads back as an
       # empty string, so blank values are dropped to mirror the Postgres jsonb behaviour.
-      def distinct_codes_and_property_combinations(codes:, filter_keys:)
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false)
         return [] if codes.empty?
 
         Events::Stores::Utils::ClickhouseConnection.with_retry do
@@ -173,8 +173,8 @@ module Events
             .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization_id)
             .where(code: codes)
-            .where("events_enriched.timestamp >= ?", from_datetime)
             .where("events_enriched.timestamp <= ?", applicable_to_datetime)
+          scope = scope.where("events_enriched.timestamp >= ?", from_datetime) unless include_all_history
 
           selects = ["code AS code"]
           group_columns = ["code"]
