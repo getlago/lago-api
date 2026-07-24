@@ -198,6 +198,11 @@ enum ActivityTypeEnum {
   invoice_created
 
   """
+  invoice.deleted
+  """
+  invoice_deleted
+
+  """
   invoice.drafted
   """
   invoice_drafted
@@ -5822,6 +5827,7 @@ enum EventTypeEnum {
   fee_tax_provider_error
   integration_provider_error
   invoice_created
+  invoice_deleted
   invoice_drafted
   invoice_generated
   invoice_one_off_created
