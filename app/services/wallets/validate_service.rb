@@ -89,9 +89,38 @@ module Wallets
         return add_error(field: :recurring_transaction_rules, error_code: "invalid_number_of_recurring_rules")
       end
 
-      unless Wallets::RecurringTransactionRules::ValidateService.call(params: args[:recurring_transaction_rules].first)
-        add_error(field: :recurring_transaction_rules, error_code: "invalid_recurring_rule")
+      rule = args[:recurring_transaction_rules].first
+
+      unless Wallets::RecurringTransactionRules::ValidateService.call(params: rule)
+        return add_error(field: :recurring_transaction_rules, error_code: "invalid_recurring_rule")
       end
+
+      add_error(field: :recurring_transaction_rules, error_code: "invalid_recurring_rule") unless fixed_rule_within_limits?(rule)
+    end
+
+    # A fixed out-of-limits amount fails on every refill, so reject it at config time.
+    # Target rules are exempt: they compute the amount at runtime and may reach past the max.
+    def fixed_rule_within_limits?(rule)
+      return true if rule[:method].to_s == "target"
+      return true if ActiveModel::Type::Boolean.new.cast(rule[:ignore_paid_top_up_limits])
+
+      paid_credits = rule[:paid_credits].to_s
+      # A granted-only rule sends "0"; only a positive paid amount can breach the limits.
+      return true unless ::Validators::DecimalAmountService.new(paid_credits).valid_positive_amount?
+
+      wallet = Wallet.new(
+        rate_amount: args[:rate_amount] || 1,
+        # Match the currency the real wallet will use, or the cents conversion is wrong.
+        balance_currency: args[:currency].presence || customer&.currency,
+        paid_top_up_min_amount_cents: args[:paid_top_up_min_amount_cents],
+        paid_top_up_max_amount_cents: args[:paid_top_up_max_amount_cents]
+      )
+
+      Validators::WalletTransactionAmountLimitsValidator.new(
+        BaseService::Result.new,
+        wallet:,
+        credits_amount: paid_credits
+      ).valid?
     end
 
     def valid_metadata?
