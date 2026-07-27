@@ -502,7 +502,9 @@ DROP INDEX IF EXISTS public.index_payment_providers_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_provider_customer_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_organization_id;
+DROP INDEX IF EXISTS public.index_payment_provider_customers_on_customer_id_default;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_customer_id_and_type;
+DROP INDEX IF EXISTS public.index_payment_provider_customers_on_customer_id_and_code;
 DROP INDEX IF EXISTS public.index_payment_methods_on_provider_method_type;
 DROP INDEX IF EXISTS public.index_payment_methods_on_provider_customer_and_provider_method;
 DROP INDEX IF EXISTS public.index_payment_methods_on_payment_provider_id;
@@ -599,6 +601,8 @@ DROP INDEX IF EXISTS public.index_integration_customers_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_customers_on_external_customer_id;
 DROP INDEX IF EXISTS public.index_integration_customers_on_customer_id_and_type;
 DROP INDEX IF EXISTS public.index_integration_customers_on_customer_id;
+DROP INDEX IF EXISTS public.index_integration_customers_on_customer_category_default;
+DROP INDEX IF EXISTS public.index_integration_customers_on_customer_category_code;
 DROP INDEX IF EXISTS public.index_integration_collection_mappings_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_collection_mappings_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_collection_mappings_on_billing_entity_id;
@@ -8711,6 +8715,20 @@ CREATE INDEX index_integration_collection_mappings_on_organization_id ON public.
 
 
 --
+-- Name: index_integration_customers_on_customer_category_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_integration_customers_on_customer_category_code ON public.integration_customers USING btree (customer_id, category, code);
+
+
+--
+-- Name: index_integration_customers_on_customer_category_default; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_integration_customers_on_customer_category_default ON public.integration_customers USING btree (customer_id, category) WHERE is_default;
+
+
+--
 -- Name: index_integration_customers_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9383,10 +9401,24 @@ CREATE INDEX index_payment_methods_on_provider_method_type ON public.payment_met
 
 
 --
+-- Name: index_payment_provider_customers_on_customer_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_payment_provider_customers_on_customer_id_and_code ON public.payment_provider_customers USING btree (customer_id, code) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_payment_provider_customers_on_customer_id_and_type; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX index_payment_provider_customers_on_customer_id_and_type ON public.payment_provider_customers USING btree (customer_id, type) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_payment_provider_customers_on_customer_id_default; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_payment_provider_customers_on_customer_id_default ON public.payment_provider_customers USING btree (customer_id) WHERE (is_default AND (deleted_at IS NULL));
 
 
 --
@@ -13065,6 +13097,10 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260724094543'),
+('20260724094542'),
+('20260724094541'),
+('20260722091941'),
 ('20260721180721'),
 ('20260721163101'),
 ('20260721130703'),
