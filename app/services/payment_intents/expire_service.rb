@@ -19,7 +19,9 @@ module PaymentIntents
             .call!(:expire_payment_url, invoice, payment_intent)
         end
 
-        payment_intent.expired!
+        # NOTE: also move expires_at into the past so the intent leaves the reuse window
+        #       (PaymentIntent.non_expired is time-based) and a fresh intent is generated next time.
+        payment_intent.update!(status: :expired, expires_at: Time.current)
       end
 
       result.payment_intents = payment_intents
