@@ -104,7 +104,7 @@ RSpec.describe CacheService do
       wrapped = nil
       allow(Rails.cache).to receive(:write) { |_key, written, **| wrapped = written }
 
-      travel_to(computed_at) do
+      travel_to(computed_at, with_usec: true) do
         tracking_cache_service_class.new("test", invalidate_if_older_than:).call { value }
       end
 
@@ -145,7 +145,7 @@ RSpec.describe CacheService do
         last_seen_at = Time.zone.parse("2026-07-27T10:00:00.123Z")
         computed_at = Time.zone.parse("2026-07-27T10:05:00.000Z")
 
-        travel_to(computed_at) do
+        travel_to(computed_at, with_usec: true) do
           tracking_cache_service_class.new("test", invalidate_if_older_than: last_seen_at).call { new_value }
         end
 
@@ -160,10 +160,10 @@ RSpec.describe CacheService do
         allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
         started_at = Time.zone.parse("2026-07-27T10:00:00.500Z")
 
-        travel_to(started_at) do
+        travel_to(started_at, with_usec: true) do
           tracking_cache_service_class.new("test").call do
             # The aggregation is the slow part: simulate it taking 30 seconds.
-            travel_to(started_at + 30.seconds)
+            travel_to(started_at + 30.seconds, with_usec: true)
             new_value
           end
         end
@@ -178,7 +178,7 @@ RSpec.describe CacheService do
       it "keeps the sub-second precision of the computation time" do
         allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
 
-        travel_to(Time.zone.parse("2026-07-27T10:00:00.750Z")) do
+        travel_to(Time.zone.parse("2026-07-27T10:00:00.750Z"), with_usec: true) do
           tracking_cache_service_class.new("test").call { new_value }
         end
 
@@ -196,7 +196,7 @@ RSpec.describe CacheService do
       it "does not cache a value computed while the boundary is still unsettled" do
         allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
 
-        travel_to(boundary + 0.4.seconds) do
+        travel_to(boundary + 0.4.seconds, with_usec: true) do
           result = tracking_cache_service_class.new("test", invalidate_if_older_than: boundary).call { new_value }
 
           expect(result).to eq(new_value)
@@ -208,7 +208,7 @@ RSpec.describe CacheService do
       it "does not cache a value computed exactly at the edge of the window" do
         allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
 
-        travel_to(boundary + described_class::SETTLE_WINDOW) do
+        travel_to(boundary + described_class::SETTLE_WINDOW, with_usec: true) do
           tracking_cache_service_class.new("test", invalidate_if_older_than: boundary).call { new_value }
         end
 
@@ -219,7 +219,7 @@ RSpec.describe CacheService do
         allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
         computed_at = boundary + described_class::SETTLE_WINDOW + 1.second
 
-        travel_to(computed_at) do
+        travel_to(computed_at, with_usec: true) do
           tracking_cache_service_class.new("test", invalidate_if_older_than: boundary).call { new_value }
         end
 
@@ -234,9 +234,9 @@ RSpec.describe CacheService do
         allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
         started_at = boundary + 0.4.seconds
 
-        travel_to(started_at) do
+        travel_to(started_at, with_usec: true) do
           tracking_cache_service_class.new("test", invalidate_if_older_than: boundary).call do
-            travel_to(started_at + 30.seconds)
+            travel_to(started_at + 30.seconds, with_usec: true)
             new_value
           end
         end
@@ -286,14 +286,17 @@ RSpec.describe CacheService do
         expect(result).to eq("recomputed")
       end
 
-      it "recomputes when an event shares the exact microsecond of the computation" do
+      # cached_at is a wall clock reading taken before the aggregation, so a boundary landing on the
+      # exact same microsecond was already ingested when the events were read. The comparison is
+      # inclusive on purpose; SETTLE_WINDOW is what guards an untrustworthy boundary.
+      it "serves the cached value when an event shares the exact microsecond of the computation" do
         computed_at = Time.zone.parse("2026-07-27T10:00:00.123456Z")
 
         wrapped = write_entry(computed_at:, invalidate_if_older_than: computed_at - 1.hour)
         result, block_called = read_entry(wrapped, invalidate_if_older_than: computed_at)
 
-        expect(block_called).to be true
-        expect(result).to eq("recomputed")
+        expect(block_called).to be false
+        expect(result).to eq("new_value")
       end
 
       it "serves the cached value on a re-read for the same last seen event" do
@@ -310,7 +313,7 @@ RSpec.describe CacheService do
         last_seen_at = Time.zone.parse("2026-07-27T10:00:00.123Z")
         wrapped = write_entry(computed_at: last_seen_at + 10.seconds, invalidate_if_older_than: last_seen_at)
 
-        blocks_called = 3.times.map do
+        blocks_called = Array.new(3) do
           _result, block_called = read_entry(wrapped, invalidate_if_older_than: last_seen_at)
           block_called
         end

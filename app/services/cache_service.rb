@@ -99,6 +99,6 @@ class CacheService < BaseService
     cached_at = cached.is_a?(Hash) ? cached["cached_at"] : nil
     return false if cached_at.nil?
 
-    Time.iso8601(cached_at) > invalidate_if_older_than
+    Time.iso8601(cached_at) >= invalidate_if_older_than
   end
 end
