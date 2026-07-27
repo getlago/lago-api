@@ -17,11 +17,10 @@ module Mutations
         field :invoice_id, ID, null: true
 
         def resolve(**args)
-          invoice = current_organization.invoices.find_by(id: args[:invoice_id])
+          invoice = current_organization.invoices.visible.find_by(id: args[:invoice_id])
 
           result = ::Integrations::Salesforce::Invoices::SyncService.call(invoice)
-          result.success? ? result.invoice_id : result_error(result)
-          result
+          result.success? ? result : result_error(result)
         end
       end
     end
