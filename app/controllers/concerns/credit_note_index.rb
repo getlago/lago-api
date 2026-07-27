@@ -46,6 +46,7 @@ module CreditNoteIndex
         credit_status: params[:credit_status],
         currency: params[:currency],
         invoice_number: params[:invoice_number],
+        purchase_order_number: params[:purchase_order_number],
         issuing_date_from: (Date.iso8601(params[:issuing_date_from]) if valid_date?(params[:issuing_date_from])),
         issuing_date_to: (Date.iso8601(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to])),
         reason: params[:reason],

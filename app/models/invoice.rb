@@ -8,11 +8,12 @@ class Invoice < ApplicationRecord
   include Sequenced
   include RansackUuidSearch
   include MeiliSearch::Rails
+  include HasPurchaseOrderNumber
 
   meilisearch(index_uid: "invoices", auto_index: false, auto_remove: true) do
     attribute :number, :organization_id, :billing_entity_id, :currency, :customer_id,
       :invoice_type, :status, :payment_status, :payment_overdue, :self_billed,
-      :total_amount_cents, :total_paid_amount_cents
+      :total_amount_cents, :total_paid_amount_cents, :purchase_order_number
 
     attribute(:created_at) { created_at.to_i }
     attribute(:issuing_date) { issuing_date&.to_time(:utc)&.to_i }
@@ -31,16 +32,16 @@ class Invoice < ApplicationRecord
     attribute(:metadata_keys) { metadata.map(&:key) }
 
     searchable_attributes %i[number customer_name customer_firstname customer_lastname
-      customer_legal_name customer_external_id customer_email]
+      customer_legal_name customer_external_id customer_email purchase_order_number]
     filterable_attributes %i[id organization_id billing_entity_id currency customer_id
       customer_external_id invoice_type status payment_status payment_dispute_lost
       payment_overdue self_billed issuing_date total_amount_cents due_amount_cents
-      partially_paid subscription_ids settlement_types metadata metadata_keys]
+      partially_paid subscription_ids settlement_types metadata metadata_keys
+      purchase_order_number]
     sortable_attributes %i[issuing_date created_at id]
     typo_tolerance disable_on_attributes: %w[number customer_external_id customer_email]
     pagination max_total_hits: 100_000
   end
-  include HasPurchaseOrderNumber
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
@@ -795,6 +796,7 @@ end
 #  index_invoices_on_customer_billing_entity_sequential            (customer_id,billing_entity_id,sequential_id) UNIQUE
 #  index_invoices_on_number                                        (number)
 #  index_invoices_on_organization_id_and_customer_id               (customer_id,organization_id)
+#  index_invoices_on_organization_id_lower_purchase_order_number   (organization_id, lower((purchase_order_number)::text))
 #  index_invoices_on_organization_id_number_gin_trgm_ops           (organization_id,number) USING gin
 #  index_invoices_on_payment_due_date                              (payment_due_date) WHERE ((status = 1) AND (payment_status <> 1) AND (payment_overdue = false) AND (payment_dispute_lost_at IS NULL))
 #  index_invoices_on_payment_method_id                             (payment_method_id)

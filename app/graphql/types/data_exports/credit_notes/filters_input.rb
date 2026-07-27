@@ -17,6 +17,7 @@ module Types
         argument :invoice_number, String, required: false
         argument :issuing_date_from, GraphQL::Types::ISO8601Date, required: false
         argument :issuing_date_to, GraphQL::Types::ISO8601Date, required: false
+        argument :purchase_order_number, String, required: false
         argument :reason, [Types::CreditNotes::ReasonTypeEnum], required: false
         argument :refund_status, [Types::CreditNotes::RefundStatusTypeEnum], required: false
         argument :search_term, String, required: false

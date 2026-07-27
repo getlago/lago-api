@@ -297,6 +297,25 @@ RSpec.describe CreditNotesQuery do
     end
   end
 
+  context "when purchase order number filter applied" do
+    let(:purchase_order_number) { "PO-123" }
+    let(:filters) { {purchase_order_number: purchase_order_number.downcase} }
+    let!(:matching_credit_note) do
+      invoice = create(:invoice, customer:, purchase_order_number:)
+      create(:credit_note, customer:, invoice:)
+    end
+
+    before do
+      invoice = create(:invoice, customer:, purchase_order_number: "PO-999")
+      create(:credit_note, customer:, invoice:)
+    end
+
+    it "returns credit notes whose invoice matches the purchase order number case-insensitively" do
+      expect(result).to be_success
+      expect(result.credit_notes.pluck(:id)).to contain_exactly matching_credit_note.id
+    end
+  end
+
   context "when issuing date filters applied" do
     let(:filters) { {issuing_date_from:, issuing_date_to:} }
 
