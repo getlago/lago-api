@@ -474,7 +474,7 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
-    context "when the customer only uses setup-less stripe payment methods" do
+    context "when the stripe customer only uses customer_balance" do
       let(:default_payment_method) { nil }
       let(:provider_customer) do
         create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[customer_balance])
@@ -489,10 +489,36 @@ RSpec.describe Invoices::Payments::CreateService do
         expect(provider_class).to have_received(:new)
       end
 
+      context "when the customer only uses crypto" do
+        let(:provider_customer) do
+          create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[crypto])
+        end
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(provider_class).not_to have_received(:new)
+        end
+      end
+
       context "when the customer also uses a payment method requiring setup" do
         let(:provider_customer) do
           create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[card crypto])
         end
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(provider_class).not_to have_received(:new)
+        end
+      end
+
+      context "when the customer has no provider payment methods" do
+        before { provider_customer.update_column(:settings, {}) } # rubocop:disable Rails/SkipsModelValidations
 
         it "does not create a payment" do
           result = create_service.call
