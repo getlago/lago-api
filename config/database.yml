@@ -5,6 +5,18 @@ default: &default
     idle_in_transaction_session_timeout: <%= ENV.fetch("LAGO_DATABASE_IDLE_TX_TIMEOUT", ":default") %>
     lock_timeout: <%= ENV.fetch("LAGO_DATABASE_LOCK_TIMEOUT", ":default") %>
 
+# URL contract
+#   DATABASE_URL       — direct connection to the physical database.
+#                        Always present. In envs without a connection pooler
+#                        this is also the URL every query uses.
+#   DATABASE_PROXY_URL — pooler / RDS Proxy URL. Optional. When set, becomes
+#                        the default connection for `:writing` and `:events`;
+#                        `:direct` still connects via DATABASE_URL to bypass
+#                        the pooler for statements that would session-pin
+#                        (>16 KB — see Subscriptions::OrganizationBillingService).
+# When only DATABASE_URL is set, every role points at it — the `:direct`
+# role is effectively a no-op.
+
 development:
   primary:
     <<: *default
@@ -14,6 +26,15 @@ development:
     database: lago
     pool: <%= ENV.fetch('DATABASE_POOL', 5) %>
     port: 5432
+  direct:
+    <<: *default
+    host: db
+    username: lago
+    password: changeme
+    database: lago
+    pool: <%= ENV.fetch('DATABASE_POOL', 5) %>
+    port: 5432
+    database_tasks: false
   events:
     <<: *default
     host: db
@@ -40,6 +61,11 @@ test:
     <<: *default
     url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
     schema_dump: <% if ENV['LAGO_DISABLE_SCHEMA_DUMP'].present? %> false <% else %> structure.sql <% end %>
+  direct:
+    <<: *default
+    url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
+    database_tasks: false
+    schema_dump: false
   events:
     <<: *default
     url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
@@ -59,12 +85,19 @@ test:
 staging:
   primary:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] %>
+    url: <%= ENV.fetch('DATABASE_PROXY_URL', ENV['DATABASE_URL']) %>
     pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
-  events:
+    prepared_statements: <%= ENV['DATABASE_PROXY_URL'].blank? %>
+  direct:
     <<: *default
     url: <%= ENV['DATABASE_URL'] %>
     pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
+    database_tasks: false
+  events:
+    <<: *default
+    url: <%= ENV.fetch('DATABASE_PROXY_URL', ENV['DATABASE_URL']) %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
+    prepared_statements: <%= ENV['DATABASE_PROXY_URL'].blank? %>
     database_tasks: false
   clickhouse:
     adapter: clickhouse
@@ -80,15 +113,24 @@ staging:
 production:
   primary:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] %>
+    url: <%= ENV.fetch('DATABASE_PROXY_URL', ENV['DATABASE_URL']) %>
     pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
-    prepared_statements: <%= ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
+    # RDS Proxy for Postgres session-pins on prepared statements, so
+    # this must be off whenever the primary role goes through a pooler
+    # — derived from DATABASE_PROXY_URL presence (single source of truth).
+    prepared_statements: <%= ENV['DATABASE_PROXY_URL'].blank? %>
     schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
-  events:
+  direct:
     <<: *default
     url: <%= ENV['DATABASE_URL'] %>
     pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
-    prepared_statements: <%= ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
+    schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
+    database_tasks: false
+  events:
+    <<: *default
+    url: <%= ENV.fetch('DATABASE_PROXY_URL', ENV['DATABASE_URL']) %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
+    prepared_statements: <%= ENV['DATABASE_PROXY_URL'].blank? %>
     schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
     database_tasks: false
   clickhouse:

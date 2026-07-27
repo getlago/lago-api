@@ -61,39 +61,48 @@ module InvoiceIndex
     )
 
     if result.success?
-      invoices = Invoice.preload_offset_amounts(
-        result.invoices.includes(
-          :metadata,
-          :applied_taxes,
-          :billing_entity,
-          :applied_usage_thresholds,
-          customer: [
-            :billing_entity,
+      # The `.includes(...)` chain here (5 payment-provider join aliases plus
+      # billing_entity, metadata, integration_customers, applied_taxes,
+      # applied_usage_thresholds) renders to ~16.2–16.7 KB once ActiveRecord
+      # expands the `WHERE invoices.id IN ($, $, …)` clause against a page of
+      # 100 invoice IDs — crossing RDS Proxy's 16 KB per-statement pin
+      # threshold. Route the eager-load + serializer traversal through the
+      # `:direct` role so this whole page render bypasses the pooler.
+      ApplicationRecord.connected_to(role: :direct) do
+        invoices = Invoice.preload_offset_amounts(
+          result.invoices.includes(
             :metadata,
-            :stripe_customer,
-            :gocardless_customer,
-            :cashfree_customer,
-            :adyen_customer,
-            :moneyhash_customer,
-            {integration_customers: :integration}
-          ]
+            :applied_taxes,
+            :billing_entity,
+            :applied_usage_thresholds,
+            customer: [
+              :billing_entity,
+              :metadata,
+              :stripe_customer,
+              :gocardless_customer,
+              :cashfree_customer,
+              :adyen_customer,
+              :moneyhash_customer,
+              {integration_customers: :integration}
+            ]
+          )
         )
-      )
 
-      render(
-        json: ::CollectionSerializer.new(
-          invoices,
-          ::V1::InvoiceSerializer,
-          collection_name: "invoices",
-          meta: pagination_metadata(
+        render(
+          json: ::CollectionSerializer.new(
             invoices,
-            key: "invoices",
-            organization_id: current_organization.id,
-            params: params.permit(*WHITELIST)
-          ),
-          includes: %i[customer integration_customers metadata applied_taxes]
+            ::V1::InvoiceSerializer,
+            collection_name: "invoices",
+            meta: pagination_metadata(
+              invoices,
+              key: "invoices",
+              organization_id: current_organization.id,
+              params: params.permit(*WHITELIST)
+            ),
+            includes: %i[customer integration_customers metadata applied_taxes]
+          )
         )
-      )
+      end
     else
       render_error_response(result)
     end

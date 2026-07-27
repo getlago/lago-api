@@ -50,7 +50,12 @@ module Subscriptions
 
     attr_reader :today, :organization
 
-    # NOTE: Retrieve list of subscriptions that should be billed today
+    # NOTE: Retrieve list of subscriptions that should be billed today.
+    # The rendered SQL is ~28 KB and exceeds RDS Proxy's 16 KB
+    # per-statement pin threshold, so it runs on the `:direct` role
+    # (always DATABASE_URL) to bypass the pooler. In envs without a
+    # pooler, `:direct` resolves to the same connection as `:writing`
+    # (see config/database.yml).
     def billable_subscriptions
       sql = <<-SQL
         WITH
@@ -120,7 +125,9 @@ module Subscriptions
         GROUP BY subscriptions.id
       SQL
 
-      Subscription.find_by_sql([sql, {today:}])
+      ApplicationRecord.connected_to(role: :direct) do
+        Subscription.find_by_sql([sql, {today:}])
+      end
     end
 
     def base_subscription_scope(billing_time: nil, interval: nil, conditions: nil)

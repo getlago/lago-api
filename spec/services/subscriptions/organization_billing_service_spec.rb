@@ -1553,4 +1553,30 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
     end
   end
+
+  describe "database routing" do
+    let(:billing_entity) { create(:billing_entity) }
+    let(:organization) { billing_entity.organization }
+    let(:billing_at) { Time.current }
+
+    it "wraps the >16 KB billable-subscriptions CTE in ApplicationRecord.connected_to(role: :direct)" do
+      # The rendered SQL is ~28 KB and would session-pin RDS Proxy for
+      # Postgres. Verify the query executes on the :direct role so it
+      # bypasses the pooler regardless of which Sidekiq worker picks
+      # the job up. We yield through the stub instead of `and_call_original`
+      # so the underlying query still runs on the default pool — that
+      # keeps this test independent of cross-pool transaction visibility
+      # in the test env, where :direct and :writing resolve to the same URL.
+      wrapped_role = nil
+      allow(ApplicationRecord).to receive(:connected_to) do |role:, &block|
+        wrapped_role = role
+        block.call
+      end
+
+      billing_service.call
+
+      expect(wrapped_role).to eq(:direct)
+      expect(ApplicationRecord).to have_received(:connected_to).with(role: :direct).at_least(:once)
+    end
+  end
 end

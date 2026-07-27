@@ -57,15 +57,23 @@ module CreditNoteIndex
     )
 
     if result.success?
-      render(
-        json: ::CollectionSerializer.new(
-          result.credit_notes,
-          ::V1::CreditNoteSerializer,
-          collection_name: "credit_notes",
-          meta: pagination_metadata(result.credit_notes),
-          includes: [:items, :applied_taxes, :error_details, {customer: [:integration_customers]}]
+      # Same shape as InvoiceIndex — five payment-provider join aliases on
+      # `customer` plus a deep `items → fee → …` chain push the rendered
+      # `.includes(...)` query past RDS Proxy's 16 KB per-statement pin
+      # threshold once a page of credit-note IDs is expanded into the
+      # `WHERE id IN (…)` clause. Route the query + serialization through
+      # `:direct` so the whole page render bypasses the pooler.
+      ApplicationRecord.connected_to(role: :direct) do
+        render(
+          json: ::CollectionSerializer.new(
+            result.credit_notes,
+            ::V1::CreditNoteSerializer,
+            collection_name: "credit_notes",
+            meta: pagination_metadata(result.credit_notes),
+            includes: [:items, :applied_taxes, :error_details, {customer: [:integration_customers]}]
+          )
         )
-      )
+      end
     else
       render_error_response(result)
     end
