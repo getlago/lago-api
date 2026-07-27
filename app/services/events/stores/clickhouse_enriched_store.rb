@@ -150,8 +150,11 @@ module Events
         SQL
       end
 
-      # Returns [charge_id, charge_filter_id, last_seen_at] tuples, where last_seen_at is the
-      # enriched_at of the most recent event for that charge/filter in the period.
+      # Returns [charge_id, charge_filter_id, last_seen_at, events_count] tuples. last_seen_at is
+      # the enriched_at of the most recent event for that charge/filter in the period.
+      # events_count is deduplicated on transaction_id so it can be compared against a cached fee's
+      # events_count, which is produced by the deduplicated aggregation. Without the dedup, an
+      # event delivered twice would inflate the count and invalidate the entry on every read.
       def distinct_charges_and_filters(codes: nil, include_all_history: false)
         lower_bound = include_all_history ? nil : from_datetime
         Events::Stores::Utils::ClickhouseConnection.with_retry do
@@ -162,7 +165,12 @@ module Events
 
           scope = scope.where(code: codes) unless codes.nil?
           scope.group("charge_id", "charge_filter_id")
-            .pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"), Arel.sql("MAX(enriched_at)"))
+            .pluck(
+              "charge_id",
+              Arel.sql("nullIf(charge_filter_id, '')"),
+              Arel.sql("MAX(enriched_at)"),
+              Arel.sql("uniqExact(transaction_id)")
+            )
         end
       end
 

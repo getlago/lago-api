@@ -31,12 +31,12 @@ module Subscriptions
       expire_cache(subscription:, charge:)
     end
 
-    def initialize(subscription:, charge:, charge_filter: nil, expires_in: nil, invalidate_if_older_than: nil)
+    def initialize(subscription:, charge:, charge_filter: nil, expires_in: nil, invalidate_if_older_than: nil, events_count: nil)
       @subscription = subscription
       @charge = charge
       @charge_filter = charge_filter
 
-      super(expires_in:, invalidate_if_older_than:)
+      super(expires_in:, invalidate_if_older_than:, events_count:)
     end
 
     # IMPORTANT
@@ -63,6 +63,19 @@ module Subscriptions
 
     def track_created_at?
       lazy_validation?
+    end
+
+    # The cached value is the JSON of the charge's fees, and every fee carries the events_count its
+    # aggregation produced. Summing them gives the number of events actually behind the cached usage,
+    # which can be compared against the count the event store reports for this charge/filter.
+    def cached_events_count(value)
+      fees = JSON.parse(value)
+      return nil unless fees.is_a?(Array)
+      return nil if fees.any? { |fee| fee["events_count"].nil? }
+
+      fees.sum { |fee| fee["events_count"].to_i }
+    rescue JSON::ParserError, TypeError
+      nil
     end
 
     def lazy_validation?

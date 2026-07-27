@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
 class CacheService < BaseService
-  def initialize(*, expires_in: nil, invalidate_if_older_than: nil)
+  def initialize(*, expires_in: nil, invalidate_if_older_than: nil, events_count: nil)
     @expires_in = expires_in
     @invalidate_if_older_than = invalidate_if_older_than
+    @events_count = events_count
     super(nil)
   end
 
@@ -37,7 +38,7 @@ class CacheService < BaseService
 
   private
 
-  attr_reader :expires_in, :invalidate_if_older_than
+  attr_reader :expires_in, :invalidate_if_older_than, :events_count
 
   # Subclasses opting into lazy validation override this to wrap the stored value with its
   # creation time, so the cache can be invalidated at read time by comparing it against the
@@ -65,13 +66,38 @@ class CacheService < BaseService
 
   # Returns false when a more recent value is checked, forcing a recompute.
   # A legacy (unwrapped) entry is always considered stale so it gets rewritten.
+  #
+  # Two gates, in order:
+  #   1. the timestamp: a boundary newer than the entry means an event was ingested since.
+  #   2. the events count: the timestamp alone cannot reveal an event that reached the aggregation
+  #      only after it was already reflected in the boundary. The ingestion timestamp is assigned
+  #      when the row is written, not when it becomes readable, so a boundary can name an event the
+  #      aggregation could not yet see. That entry is self-consistent and would never expire.
+  #      Comparing the boundary's event count against the count the cached value actually aggregated
+  #      catches it, whatever the timestamps say.
   def valid_cache?(cached)
     return true unless track_created_at?
     return true if invalidate_if_older_than.nil?
 
     cached_at = cached.is_a?(Hash) ? cached["cached_at"] : nil
     return false if cached_at.nil?
+    return false if Time.iso8601(cached_at) < invalidate_if_older_than
 
-    Time.iso8601(cached_at) >= invalidate_if_older_than
+    matching_events_count?(cached)
+  end
+
+  # Nil on either side means the count cannot be compared, so the timestamp gate stands alone.
+  def matching_events_count?(cached)
+    return true if events_count.nil?
+
+    cached_count = cached_events_count(unwrap(cached))
+    return true if cached_count.nil?
+
+    cached_count == events_count
+  end
+
+  # Subclasses storing a value that knows how many events it aggregated override this to expose it.
+  def cached_events_count(_value)
+    nil
   end
 end
