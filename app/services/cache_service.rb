@@ -21,11 +21,16 @@ class CacheService < BaseService
     cached = Rails.cache.read(cache_key)
     return unwrap(cached) if cached && valid_cache?(cached)
 
+    # Snapshot the time *before* computing, so an event enriched while the block runs is stamped
+    # after the cache entry and invalidates it on the next read. Stamping after the block would
+    # swallow every event ingested during the aggregation, which is the slow part.
+    computed_at = Time.current
+
     value = yield
 
     # NOTE: It seems that passing expires_in: 0 is not a NO-OP, so bypass manually
-    if expires_in.nil? || expires_in > 0
-      Rails.cache.write(cache_key, wrap(value), expires_in:)
+    if (expires_in.nil? || expires_in > 0) && settled?(computed_at)
+      Rails.cache.write(cache_key, wrap(value, computed_at), expires_in:)
     end
 
     value
@@ -46,15 +51,33 @@ class CacheService < BaseService
     false
   end
 
-  def wrap(value)
+  def wrap(value, computed_at)
     return value unless track_created_at?
 
+    # cached_at is the moment the value was computed, never the timestamp of the last seen event.
+    # Stamping it with invalidate_if_older_than would store the exact value the next read compares
+    # against, so the entry would be discarded on every read and never serve.
+    #
     # Keep sub-second precision: event timestamps carry milliseconds (ClickHouse enriched_at is
-    # DateTime64(3)) or microseconds (Postgres). A bare iso8601 floors to whole seconds, so a
-    # re-read for the very same event would compare a floored cached_at against the unfloored
-    # timestamp and wrongly recompute on every read, defeating the cache.
-    cached_at = (invalidate_if_older_than || Time.current).iso8601(6)
-    {"cached_at" => cached_at, "value" => value}
+    # DateTime64(3)) or microseconds (Postgres). A bare iso8601 floors to whole seconds, so an
+    # event enriched earlier in the same second as the computation would look newer than the entry
+    # and wrongly recompute on every read, defeating the cache.
+    {"cached_at" => computed_at.iso8601(6), "value" => value}
+  end
+
+  # An event enriched at the boundary timestamp may still be committing when the aggregation runs.
+  # ClickHouse populates enriched_at with now(), which has one-second resolution, so such a sibling
+  # is invisible to the invalidation: MAX(enriched_at) is byte-identical with or without it, and the
+  # entry would keep serving usage that misses it. Refuse to cache until the boundary has settled.
+  #
+  # The window is measured from the pre-aggregation snapshot rather than Time.current, because what
+  # matters is whether the boundary was already settled when the events were read, not how long the
+  # aggregation happened to take afterwards.
+  def settled?(computed_at)
+    return true unless track_created_at?
+    return true if invalidate_if_older_than.nil?
+
+    invalidate_if_older_than < computed_at - SETTLE_WINDOW
   end
 
   def unwrap(cached)
@@ -72,6 +95,6 @@ class CacheService < BaseService
     cached_at = cached.is_a?(Hash) ? cached["cached_at"] : nil
     return false if cached_at.nil?
 
-    Time.iso8601(cached_at) >= invalidate_if_older_than
+    Time.iso8601(cached_at) > invalidate_if_older_than
   end
 end
