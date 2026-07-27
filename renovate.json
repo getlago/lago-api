@@ -1,0 +1,75 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["bundler", "dockerfile", "custom.regex"],
+  "rangeStrategy": "update-lockfile",
+  "minimumReleaseAge": "7 days",
+  "prConcurrentLimit": 10,
+  "prCreation": "immediate",
+  "addLabels": ["🔗 dependencies"],
+  "schedule": ["every weekend", "before 5am every weekday"],
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "👷‍♀️ Dependency Dashboard",
+  "dependencyDashboardHeader": "[👮‍♂️ Do not close]. This issue tracks Renovate updates and their statuses. [Learn more](https://docs.renovatebot.com/key-concepts/dashboard/)",
+  "dependencyDashboardLabels": ["🙅 Don't close"],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "schedule": ["at any time"],
+    "addLabels": ["security"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on monday"],
+    "commitMessagePrefix": "chore(deps)"
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Bump ARG *_VERSION lines in the Dockerfile annotated with a `# renovate:` comment (e.g. GO_VERSION, PDFCPU_VERSION)",
+      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: versioning=(?<versioning>[^\\s]+?))?\\s+ARG [A-Z_]+?_VERSION=(?<currentValue>[^\\s]+)"
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver-coerced{{/if}}"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Group the Rails framework gems so interdependent packages bump together",
+      "matchPackageNames": [
+        "rails",
+        "railties",
+        "actioncable",
+        "actionmailbox",
+        "actionmailer",
+        "actionpack",
+        "actiontext",
+        "actionview",
+        "activejob",
+        "activemodel",
+        "activerecord",
+        "activestorage",
+        "activesupport"
+      ],
+      "groupName": "Rails"
+    },
+    {
+      "description": "Sidekiq Pro/Enterprise live on the private contribsys gem source; needs a Renovate host rule + token to look up. Disabled until credentials are configured to avoid failing lookups.",
+      "matchPackageNames": ["sidekiq-pro", "sidekiq-ent"],
+      "enabled": false
+    },
+    {
+      "description": "Commit prefixes by update type (mirrors lago-front conventions)",
+      "matchUpdateTypes": ["major"],
+      "commitMessagePrefix": "chore(deps-major)"
+    },
+    {
+      "matchUpdateTypes": ["minor"],
+      "commitMessagePrefix": "chore(deps-minor)"
+    },
+    {
+      "matchUpdateTypes": ["patch", "digest", "bump"],
+      "commitMessagePrefix": "chore(deps)"
+    }
+  ]
+}
