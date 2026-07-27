@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 class CacheService < BaseService
+  # How long a boundary timestamp must have settled before the value computed at that boundary can
+  # be cached. See #settled? for why an unsettled boundary cannot be cached at all.
+  SETTLE_WINDOW = 1.second
+
   def initialize(*, expires_in: nil, invalidate_if_older_than: nil)
     @expires_in = expires_in
     @invalidate_if_older_than = invalidate_if_older_than
