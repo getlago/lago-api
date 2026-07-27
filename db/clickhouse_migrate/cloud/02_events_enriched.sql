@@ -7,7 +7,7 @@ CREATE TABLE default.events_enriched
     `transaction_id` String,
     `properties` Map(String, String),
     `sorted_properties` Map(String, String) DEFAULT mapSort(properties),
-    `enriched_at` DateTime64(3) DEFAULT now(),
+    `enriched_at` DateTime64(3) DEFAULT now64(3),
     `value` Nullable(String),
     `decimal_value` Nullable(Decimal(38, 26)) DEFAULT toDecimal128OrZero(value, 26),
     `precise_total_amount_cents` Nullable(Decimal(40, 15))

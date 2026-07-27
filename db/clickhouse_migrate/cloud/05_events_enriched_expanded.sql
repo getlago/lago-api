@@ -11,7 +11,7 @@ CREATE TABLE events_enriched_expanded
     `sorted_properties` Map(String, String) DEFAULT mapSort(JSONExtract(CAST(properties, 'String'), 'Map(String, String)')),
     `value` Nullable(String),
     `decimal_value` Nullable(Decimal(38, 26)) DEFAULT toDecimal128OrZero(value, 26),
-    `enriched_at` DateTime64(3) DEFAULT now(),
+    `enriched_at` DateTime64(3) DEFAULT now64(3),
     `precise_total_amount_cents` Nullable(Decimal(40, 15)),
     `subscription_id` String DEFAULT '',
     `plan_id` String DEFAULT '',
