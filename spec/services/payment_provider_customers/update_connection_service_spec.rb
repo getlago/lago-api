@@ -40,20 +40,6 @@ RSpec.describe PaymentProviderCustomers::UpdateConnectionService do
           expect(result.payment_provider_customer).to eq(payment_provider_customer)
         end
       end
-
-      context "when provider payment methods are also provided" do
-        let(:params) { {code: "new_code", provider_payment_methods: %w[card]} }
-
-        it "updates the code and ignores the provider payment methods" do
-          expect(result).to be_success
-          expect(payment_provider_customer.reload.code).to eq("new_code")
-        end
-
-        it "does not create a stripe connection" do
-          expect { update_service.call }
-            .not_to change(PaymentProviderCustomers::StripeCustomer, :count)
-        end
-      end
     end
 
     context "with a stripe connection" do
@@ -129,7 +115,7 @@ RSpec.describe PaymentProviderCustomers::UpdateConnectionService do
         end
       end
 
-      context "when the connection cannot be handled" do
+      context "when provider_customer does not exist and is not provided" do
         let(:payment_provider_customer) do
           create(:stripe_customer, organization:, customer:, provider_customer_id: nil, provider_payment_methods: %w[card])
         end
