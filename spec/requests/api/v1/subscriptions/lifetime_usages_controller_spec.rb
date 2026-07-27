@@ -44,6 +44,54 @@ RSpec.describe Api::V1::Subscriptions::LifetimeUsagesController do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context "when subscription belongs to another organization" do
+      subject { get_with_token(other_organization, "/api/v1/subscriptions/#{external_id}/lifetime_usage") }
+
+      let(:other_organization) { create(:organization) }
+
+      it "returns not found" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when the subscription was upgraded and shares its external_id with a terminated one" do
+      let(:terminated_subscription) do
+        create(
+          :subscription,
+          :terminated,
+          plan:,
+          organization:,
+          customer:,
+          external_id: subscription.external_id
+        )
+      end
+      let!(:terminated_lifetime_usage) { create(:lifetime_usage, organization:, subscription: terminated_subscription) }
+
+      it "returns the active subscription lifetime_usage" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:lifetime_usage][:lago_id]).to eq(lifetime_usage.id)
+      end
+
+      context "when the terminated status is requested" do
+        subject do
+          get_with_token(
+            organization,
+            "/api/v1/subscriptions/#{external_id}/lifetime_usage?status=terminated"
+          )
+        end
+
+        it "returns the terminated subscription lifetime_usage" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:lifetime_usage][:lago_id]).to eq(terminated_lifetime_usage.id)
+        end
+      end
+    end
   end
 
   describe "PUT /api/v1/subscriptions/:subscription_external_id/lifetime_usage" do
