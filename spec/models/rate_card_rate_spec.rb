@@ -109,6 +109,30 @@ RSpec.describe RateCardRate do
       end
     end
 
+    describe "effective_datetime timezone" do
+      let(:rate_card) { create(:rate_card) }
+
+      before { allow(rate_card.organization).to receive(:timezone).and_return(nil) }
+
+      it "falls back to UTC when the organization timezone is nil" do
+        utc_rate = build(:rate_card_rate, rate_card:, effective_datetime: "2026-09-01T00:00:00Z")
+        offset_rate = build(:rate_card_rate, rate_card:, effective_datetime: "2026-09-01T00:00:00-03:00")
+
+        expect(utc_rate).to be_valid
+
+        offset_rate.valid?
+        expect(offset_rate.errors.added?(:effective_datetime, :invalid_timezone)).to be(true)
+      end
+
+      it "rejects an invalid datetime" do
+        rate = build(:rate_card_rate, rate_card:, effective_datetime: "invalid")
+
+        rate.valid?
+
+        expect(rate.errors.added?(:effective_datetime, :invalid_date)).to be(true)
+      end
+    end
+
     describe "applied_pricing_unit_conversion_rate" do
       it "is required when the card carries an applied_pricing_unit_code" do
         rate_card = create(:rate_card, applied_pricing_unit_code: "credits")

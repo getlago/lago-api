@@ -29,6 +29,39 @@ RSpec.describe Api::V2::RateCards::RatesController do
       expect(json[:rate][:status]).to eq("pending")
     end
 
+    context "when effective_datetime includes a timezone offset" do
+      let(:organization) do
+        create(:organization).tap do |organization|
+          organization.default_billing_entity.update!(timezone: "America/Sao_Paulo")
+        end
+      end
+
+      it "accepts UTC" do
+        create_params[:effective_datetime] = "2026-09-01T00:00:00Z"
+
+        subject
+
+        expect(response).to have_http_status(:success)
+      end
+
+      it "accepts the organization timezone" do
+        create_params[:effective_datetime] = "2026-09-01T00:00:00-03:00"
+
+        subject
+
+        expect(response).to have_http_status(:success)
+      end
+
+      it "rejects a different timezone" do
+        create_params[:effective_datetime] = "2026-09-01T00:00:00+02:00"
+
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :effective_datetime)).to eq(["invalid_timezone"])
+      end
+    end
+
     context "when the rate card does not exist" do
       subject { post_with_token(organization, "/api/v2/rate_cards/unknown/rates", {rate: create_params}) }
 
@@ -51,6 +84,23 @@ RSpec.describe Api::V2::RateCards::RatesController do
 
       expect(response).to have_http_status(:success)
       expect(json[:rate][:min_amount_cents]).to eq(500)
+    end
+
+    context "when effective_datetime uses a different timezone" do
+      let(:organization) do
+        create(:organization).tap do |organization|
+          organization.default_billing_entity.update!(timezone: "America/Sao_Paulo")
+        end
+      end
+
+      let(:update_params) { {effective_datetime: "2026-09-01T00:00:00+02:00"} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :effective_datetime)).to eq(["invalid_timezone"])
+      end
     end
 
     context "when the rate does not exist" do

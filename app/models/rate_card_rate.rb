@@ -48,6 +48,7 @@ class RateCardRate < ApplicationRecord
   validates :billing_interval_count, numericality: {greater_than_or_equal_to: 1}
 
   validate :validate_effective_datetime_is_appended
+  validate :validate_effective_datetime_timezone
   validate :validate_pricing_unit_conversion_rate
   validate :validate_properties
 
@@ -121,6 +122,25 @@ class RateCardRate < ApplicationRecord
     return if effective_datetime > active_boundary
 
     errors.add(:effective_datetime, :must_be_after_active_rate)
+  end
+
+  def validate_effective_datetime_timezone
+    raw_effective_datetime = effective_datetime_before_type_cast
+    return unless raw_effective_datetime.is_a?(String)
+
+    parsed_datetime = Time.iso8601(raw_effective_datetime)
+    return if parsed_datetime.utc_offset.zero?
+    return if matching_relation_timezone?(parsed_datetime)
+
+    errors.add(:effective_datetime, :invalid_timezone)
+  rescue ArgumentError
+    errors.add(:effective_datetime, :invalid_date)
+  end
+
+  def matching_relation_timezone?(parsed_datetime)
+    time_zone = Time.find_zone(rate_card&.organization&.timezone || "UTC")
+
+    time_zone && parsed_datetime.in_time_zone(time_zone).utc_offset == parsed_datetime.utc_offset
   end
 
   def validate_pricing_unit_conversion_rate
