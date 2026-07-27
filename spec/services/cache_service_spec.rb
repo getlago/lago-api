@@ -125,22 +125,7 @@ RSpec.describe CacheService do
     end
 
     describe "stamping" do
-      it "wraps the stored value with the computation time" do
-        allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
-
-        freeze_time do
-          result = tracking_cache_service_class.new("test").call { new_value }
-
-          expect(result).to eq(new_value)
-          expect(Rails.cache).to have_received(:write).with(
-            cache_key,
-            {"cached_at" => Time.current.iso8601(6), "value" => new_value},
-            expires_in: nil
-          )
-        end
-      end
-
-      it "stamps cached_at with the computation time, not the last seen event timestamp" do
+      it "stamps cached_at with the last seen event timestamp, not the computation time" do
         allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
         last_seen_at = Time.zone.parse("2026-07-27T10:00:00.123Z")
         computed_at = Time.zone.parse("2026-07-27T10:05:00.000Z")
@@ -151,12 +136,42 @@ RSpec.describe CacheService do
 
         expect(Rails.cache).to have_received(:write).with(
           cache_key,
-          {"cached_at" => computed_at.iso8601(6), "value" => new_value},
+          {"cached_at" => last_seen_at.iso8601(6), "value" => new_value},
           expires_in: nil
         )
       end
 
-      it "stamps cached_at before the block runs, not after it returns" do
+      it "keeps the sub-second precision of the last seen event timestamp" do
+        allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
+        last_seen_at = Time.zone.parse("2026-07-27T10:00:00.750Z")
+
+        travel_to(last_seen_at + 1.hour, with_usec: true) do
+          tracking_cache_service_class.new("test", invalidate_if_older_than: last_seen_at).call { new_value }
+        end
+
+        expect(Rails.cache).to have_received(:write).with(
+          cache_key,
+          {"cached_at" => "2026-07-27T10:00:00.750000Z", "value" => new_value},
+          expires_in: nil
+        )
+      end
+
+      it "falls back to the settle bound, never Time.current, when no event was seen" do
+        allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
+        computed_at = Time.zone.parse("2026-07-27T10:00:00.500Z")
+
+        travel_to(computed_at, with_usec: true) do
+          tracking_cache_service_class.new("test").call { new_value }
+        end
+
+        expect(Rails.cache).to have_received(:write).with(
+          cache_key,
+          {"cached_at" => (computed_at - described_class::SETTLE_WINDOW).iso8601(6), "value" => new_value},
+          expires_in: nil
+        )
+      end
+
+      it "takes the fallback bound before the block runs, not after it returns" do
         allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
         started_at = Time.zone.parse("2026-07-27T10:00:00.500Z")
 
@@ -170,21 +185,7 @@ RSpec.describe CacheService do
 
         expect(Rails.cache).to have_received(:write).with(
           cache_key,
-          {"cached_at" => started_at.iso8601(6), "value" => new_value},
-          expires_in: nil
-        )
-      end
-
-      it "keeps the sub-second precision of the computation time" do
-        allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
-
-        travel_to(Time.zone.parse("2026-07-27T10:00:00.750Z"), with_usec: true) do
-          tracking_cache_service_class.new("test").call { new_value }
-        end
-
-        expect(Rails.cache).to have_received(:write).with(
-          cache_key,
-          {"cached_at" => "2026-07-27T10:00:00.750000Z", "value" => new_value},
+          {"cached_at" => (started_at - described_class::SETTLE_WINDOW).iso8601(6), "value" => new_value},
           expires_in: nil
         )
       end
@@ -225,7 +226,7 @@ RSpec.describe CacheService do
 
         expect(Rails.cache).to have_received(:write).with(
           cache_key,
-          {"cached_at" => computed_at.iso8601(6), "value" => new_value},
+          {"cached_at" => boundary.iso8601(6), "value" => new_value},
           expires_in: nil
         )
       end
@@ -261,16 +262,27 @@ RSpec.describe CacheService do
         expect(Rails.cache).to have_received(:write).with(service.cache_key, new_value, expires_in: nil)
       end
 
-      # The production trace: events enriched at 05:31:13 and 05:31:15, usage aggregated at
-      # 05:31:15.4 between two inserts that both stamped 05:31:15. Caching there would have pinned
-      # a 4-event result that MAX(enriched_at) could never invalidate.
-      it "refuses to cache the usage aggregated between two inserts sharing a second" do
+      # End-to-end guard for the reported bug, and the example that fails without the settle gate.
+      #
+      # Production trace: events enriched at 05:31:13 and 05:31:15, usage aggregated at 05:31:15.4
+      # between two inserts that both floor to 05:31:15, so it counts only some of them. Without the
+      # gate the partial value is cached under cached_at = 05:31:15; the sibling never moves
+      # MAX(enriched_at), 05:31:15 >= 05:31:15 holds on every later read, and the partial usage is
+      # served until the entry expires at the end of the billing period.
+      it "does not serve a partial usage computed while the boundary was unsettled" do
         newest_event = Time.zone.parse("2026-07-27T05:31:15.000Z")
 
-        expect(write_entry(computed_at: newest_event + 0.4.seconds, invalidate_if_older_than: newest_event)).to be_nil
+        partial = write_entry(
+          computed_at: newest_event + 0.4.seconds,
+          invalidate_if_older_than: newest_event,
+          value: "partial-usage"
+        )
+        expect(partial).to be_nil
 
-        wrapped = write_entry(computed_at: newest_event + 10.seconds, invalidate_if_older_than: newest_event)
-        expect(wrapped).to eq({"cached_at" => (newest_event + 10.seconds).iso8601(6), "value" => "new_value"})
+        result, block_called = read_entry(partial, invalidate_if_older_than: newest_event)
+
+        expect(block_called).to be true
+        expect(result).to eq("recomputed")
       end
     end
 
@@ -286,17 +298,22 @@ RSpec.describe CacheService do
         expect(result).to eq("recomputed")
       end
 
-      # cached_at is a wall clock reading taken before the aggregation, so a boundary landing on the
-      # exact same microsecond was already ingested when the events were read. The comparison is
-      # inclusive on purpose; SETTLE_WINDOW is what guards an untrustworthy boundary.
-      it "serves the cached value when an event shares the exact microsecond of the computation" do
-        computed_at = Time.zone.parse("2026-07-27T10:00:00.123456Z")
+      # Regression guard. An event inserted *after* the aggregation can carry an *earlier*
+      # enriched_at, because ClickHouse fills it with now(), which floors to the second. Stamping
+      # cached_at with a wall clock reading compares a precise time against a floored one, treats
+      # that event as already covered, and pins the entry for the rest of the billing period.
+      # The stamp must stay the last seen event timestamp for this to invalidate.
+      it "recomputes when an event landing after the aggregation floors to an earlier second" do
+        last_seen_at = Time.zone.parse("2026-07-27T05:30:00.000Z")
+        computed_at = Time.zone.parse("2026-07-27T05:31:15.400Z")
+        # inserted at 05:31:15.6, recorded as 05:31:15.000 - before the computation
+        floored_enriched_at = Time.zone.parse("2026-07-27T05:31:15.000Z")
 
-        wrapped = write_entry(computed_at:, invalidate_if_older_than: computed_at - 1.hour)
-        result, block_called = read_entry(wrapped, invalidate_if_older_than: computed_at)
+        wrapped = write_entry(computed_at:, invalidate_if_older_than: last_seen_at)
+        result, block_called = read_entry(wrapped, invalidate_if_older_than: floored_enriched_at)
 
-        expect(block_called).to be false
-        expect(result).to eq("new_value")
+        expect(block_called).to be true
+        expect(result).to eq("recomputed")
       end
 
       it "serves the cached value on a re-read for the same last seen event" do
