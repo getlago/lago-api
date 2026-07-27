@@ -18,6 +18,7 @@ module Types
         argument :payment_dispute_lost, Boolean, required: false
         argument :payment_overdue, Boolean, required: false
         argument :payment_status, [Types::Invoices::PaymentStatusTypeEnum], required: false
+        argument :purchase_order_number, String, required: false
         argument :search_term, String, required: false
         argument :self_billed, Boolean, required: false
         argument :status, [Types::Invoices::StatusTypeEnum], required: false

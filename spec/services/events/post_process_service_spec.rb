@@ -86,6 +86,49 @@ RSpec.describe Events::PostProcessService do
       end
     end
 
+    context "when the event is backdated before the subscription started" do
+      let(:timestamp) { started_at - 7.days }
+
+      context "with a recurring billable metric" do
+        let(:billable_metric) do
+          create(:billable_metric, organization:, recurring: true, aggregation_type: "sum_agg", field_name: "item_id")
+        end
+        let(:event_properties) { {"item_id" => "12"} }
+
+        it "falls back on the currently active subscription to expire the charge usage cache" do
+          allow(Subscriptions::ChargeCacheService).to receive(:expire_cache)
+
+          process_service.call
+
+          expect(Subscriptions::ChargeCacheService).to have_received(:expire_cache)
+            .with(subscription:, charge:, charge_filter: nil)
+        end
+
+        it "tracks subscription activity on the fallback subscription" do
+          allow(UsageMonitoring::TrackSubscriptionActivityService).to receive(:call)
+
+          process_service.call
+
+          expect(UsageMonitoring::TrackSubscriptionActivityService).to have_received(:call)
+            .with(subscription:, organization:, date: kind_of(Date))
+        end
+
+        it "enqueues a pay in advance job" do
+          expect { process_service.call }.to have_enqueued_job(Events::PayInAdvanceJob)
+        end
+      end
+
+      context "with a non-recurring billable metric" do
+        it "does not fall back and skips the charge usage cache expiration" do
+          allow(Subscriptions::ChargeCacheService).to receive(:expire_cache)
+
+          process_service.call
+
+          expect(Subscriptions::ChargeCacheService).not_to have_received(:expire_cache)
+        end
+      end
+    end
+
     context "when subscription is incomplete" do
       let(:subscription) do
         create(:subscription, :incomplete, organization:, customer:, plan:, started_at:)

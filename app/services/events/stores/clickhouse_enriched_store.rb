@@ -152,12 +152,13 @@ module Events
 
       # Returns [charge_id, charge_filter_id, last_seen_at] tuples, where last_seen_at is the
       # enriched_at of the most recent event for that charge/filter in the period.
-      def distinct_charges_and_filters(codes: nil)
+      def distinct_charges_and_filters(codes: nil, include_all_history: false)
+        lower_bound = include_all_history ? nil : from_datetime
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = ::Clickhouse::EventsEnrichedExpanded
             .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization_id)
-            .where(timestamp: from_datetime..to_datetime)
+            .where(timestamp: lower_bound..to_datetime)
 
           scope = scope.where(code: codes) unless codes.nil?
           scope.group("charge_id", "charge_filter_id")
