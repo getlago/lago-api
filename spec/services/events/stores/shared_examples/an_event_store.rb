@@ -2814,6 +2814,30 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           expect(result.map { |row| row[0..1] }).not_to include([code, {"region" => "apac", "provider" => "azure"}])
         end
       end
+
+      context "with an event before from_datetime" do
+        before do
+          create_event(
+            timestamp: subscription_started_at - 1.day,
+            value: 1,
+            properties: {"region" => "apac", "provider" => "azure"}
+          )
+        end
+
+        it "excludes it by default" do
+          result = event_store.distinct_codes_and_property_combinations(codes: [code], filter_keys: %w[region provider])
+
+          expect(result.map { |row| row[0..1] }).not_to include([code, {"region" => "apac", "provider" => "azure"}])
+        end
+
+        it "includes it when include_all_history is true" do
+          result = event_store.distinct_codes_and_property_combinations(
+            codes: [code], filter_keys: %w[region provider], include_all_history: true
+          )
+
+          expect(result.map { |row| row[0..1] }).to include([code, {"region" => "apac", "provider" => "azure"}])
+        end
+      end
     end
   end
 end
