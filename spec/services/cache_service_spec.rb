@@ -186,6 +186,127 @@ RSpec.describe CacheService do
     end
   end
 
+  describe "#call with events count validation" do
+    let(:counting_cache_service_class) do
+      Class.new(described_class) do
+        def initialize(key_suffix = nil, expires_in: nil, invalidate_if_older_than: nil, events_count: nil)
+          @key_suffix = key_suffix
+          super(nil, expires_in:, invalidate_if_older_than:, events_count:)
+        end
+
+        def cache_key
+          "counting_cache_service:#{@key_suffix}"
+        end
+
+        private
+
+        def track_created_at?
+          true
+        end
+
+        # Mirrors Subscriptions::ChargeCacheService: the cached value knows how many events it
+        # aggregated, so it can be compared against the count the event store reports.
+        def cached_events_count(value)
+          fees = JSON.parse(value)
+          return nil if fees.any? { |fee| fee["events_count"].nil? }
+
+          fees.sum { |fee| fee["events_count"].to_i }
+        rescue JSON::ParserError, TypeError
+          nil
+        end
+      end
+    end
+
+    let(:cache_key) { "counting_cache_service:test" }
+    let(:last_seen_at) { Time.zone.parse("2026-07-27T14:14:26.000Z") }
+
+    def fees(*counts)
+      counts.map { |count| {"units" => count.to_s, "events_count" => count} }.to_json
+    end
+
+    def entry(value, cached_at: last_seen_at)
+      {"cached_at" => cached_at.iso8601(6), "value" => value}
+    end
+
+    def call(cached, invalidate_if_older_than:, events_count:, recomputed: "recomputed")
+      allow(Rails.cache).to receive(:read).with(cache_key).and_return(cached)
+
+      block_called = false
+      result = counting_cache_service_class
+        .new("test", invalidate_if_older_than:, events_count:)
+        .call do
+          block_called = true
+          recomputed
+        end
+
+      [result, block_called]
+    end
+
+    before { allow(Rails.cache).to receive(:write) }
+
+    # The production failure: the boundary timestamp already named the sixth event, but the
+    # aggregation behind the cached value had only counted five. The timestamps agree, so nothing
+    # else can catch it.
+    it "recomputes when the boundary counts more events than the cached value aggregated" do
+      result, block_called = call(entry(fees(5)), invalidate_if_older_than: last_seen_at, events_count: 6)
+
+      expect(block_called).to be true
+      expect(result).to eq("recomputed")
+    end
+
+    it "serves the cached value once the counts agree" do
+      result, block_called = call(entry(fees(6)), invalidate_if_older_than: last_seen_at, events_count: 6)
+
+      expect(block_called).to be false
+      expect(result).to eq(fees(6))
+    end
+
+    it "sums the events count across every cached fee" do
+      result, block_called = call(entry(fees(4, 2)), invalidate_if_older_than: last_seen_at, events_count: 6)
+
+      expect(block_called).to be false
+      expect(result).to eq(fees(4, 2))
+    end
+
+    it "recomputes when the cached value aggregated more events than the boundary counts" do
+      _result, block_called = call(entry(fees(6)), invalidate_if_older_than: last_seen_at, events_count: 5)
+
+      expect(block_called).to be true
+    end
+
+    it "still recomputes on a newer boundary even when the counts agree" do
+      _result, block_called = call(
+        entry(fees(6)),
+        invalidate_if_older_than: last_seen_at + 5.seconds,
+        events_count: 6
+      )
+
+      expect(block_called).to be true
+    end
+
+    context "when the count cannot be compared" do
+      it "falls back to the timestamp when no events count is given" do
+        _result, block_called = call(entry(fees(5)), invalidate_if_older_than: last_seen_at, events_count: nil)
+
+        expect(block_called).to be false
+      end
+
+      it "falls back to the timestamp when a cached fee carries no events count" do
+        value = [{"units" => "6", "events_count" => nil}].to_json
+
+        _result, block_called = call(entry(value), invalidate_if_older_than: last_seen_at, events_count: 6)
+
+        expect(block_called).to be false
+      end
+
+      it "falls back to the timestamp when the cached value is not parseable as fees" do
+        _result, block_called = call(entry("not-json"), invalidate_if_older_than: last_seen_at, events_count: 6)
+
+        expect(block_called).to be false
+      end
+    end
+  end
+
   describe "#expire_cache" do
     let(:cache_service) { test_cache_service_class.new("test") }
     let(:cache_key) { cache_service.cache_key }

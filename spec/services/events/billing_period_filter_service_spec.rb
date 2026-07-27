@@ -57,7 +57,7 @@ RSpec.describe Events::BillingPeriodFilterService do
       it "seeds the carried-over usage with the period start" do
         result = filter_service.call
 
-        expect(result.charges[recurring_charge.id][charge_filter.id]).to eq(boundaries.charges_from_datetime)
+        expect(result.charges[recurring_charge.id][charge_filter.id].last_seen_at).to eq(boundaries.charges_from_datetime)
       end
     end
 
@@ -442,7 +442,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_service.call
 
           expect(result.charges[charge.id].keys).to eq([nil])
-          expect(result.charges[charge.id][nil]).to be_present
+          expect(result.charges[charge.id][nil].last_seen_at).to be_present
         end
 
         context "with multiple charges for the same billable_metric" do
@@ -582,8 +582,8 @@ RSpec.describe Events::BillingPeriodFilterService do
         it "seeds every recurring bucket with the period start when there are no events" do
           result = filter_service.call
 
-          expect(result.charges[recurring_charge.id][charge_filter.id]).to eq(boundaries.charges_from_datetime)
-          expect(result.charges[recurring_charge.id][nil]).to eq(boundaries.charges_from_datetime)
+          expect(result.charges[recurring_charge.id][charge_filter.id].last_seen_at).to eq(boundaries.charges_from_datetime)
+          expect(result.charges[recurring_charge.id][nil].last_seen_at).to eq(boundaries.charges_from_datetime)
         end
 
         context "with events in the period" do
@@ -603,8 +603,8 @@ RSpec.describe Events::BillingPeriodFilterService do
 
             expect(result).to be_success
             expect(result.charges[recurring_charge.id].keys).to match_array([charge_filter.id, nil])
-            expect(result.charges[recurring_charge.id][charge_filter.id]).to be > boundaries.charges_from_datetime
-            expect(result.charges[recurring_charge.id][nil]).to eq(boundaries.charges_from_datetime)
+            expect(result.charges[recurring_charge.id][charge_filter.id].last_seen_at).to be > boundaries.charges_from_datetime
+            expect(result.charges[recurring_charge.id][nil].last_seen_at).to eq(boundaries.charges_from_datetime)
           end
         end
 
@@ -627,8 +627,8 @@ RSpec.describe Events::BillingPeriodFilterService do
             expect(result.charges[recurring_charge.id].keys).to match_array([charge_filter.id, nil])
             # The event's business timestamp is out of the period, but it was ingested now, so
             # the recurring bucket must reflect it to invalidate the lazy usage cache.
-            expect(result.charges[recurring_charge.id][charge_filter.id]).to be > boundaries.charges_from_datetime
-            expect(result.charges[recurring_charge.id][nil]).to eq(boundaries.charges_from_datetime)
+            expect(result.charges[recurring_charge.id][charge_filter.id].last_seen_at).to be > boundaries.charges_from_datetime
+            expect(result.charges[recurring_charge.id][nil].last_seen_at).to eq(boundaries.charges_from_datetime)
           end
         end
       end
@@ -1194,7 +1194,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             expect(result).to be_success
             # The enriched event's business timestamp is out of the period, but it was ingested
             # now, so the recurring bucket must reflect it to invalidate the lazy usage cache.
-            expect(result.charges[recurring_charge.id][nil]).to be > boundaries.charges_from_datetime
+            expect(result.charges[recurring_charge.id][nil].last_seen_at).to be > boundaries.charges_from_datetime
           end
         end
       end

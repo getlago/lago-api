@@ -2727,11 +2727,33 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         )
       end
 
-      it "returns distinct charges and filters with the last seen timestamp" do
+      it "returns distinct charges and filters with the last seen timestamp and events count" do
         result = event_store.distinct_charges_and_filters
 
         expect(result.map { |row| row[0..1] }).to match_array([[charge.id, charge_filter.id]])
-        expect(result.map(&:last)).to all(be_present)
+        expect(result.map { |row| row[2] }).to all(be_present)
+        expect(result.map { |row| row[3] }).to eq([1])
+      end
+
+      context "with several events on the same charge and filter" do
+        before do
+          2.times do
+            create_enriched_event(
+              timestamp: boundaries[:from_datetime] + 13.days,
+              value: 12,
+              properties: {billable_metric.field_name => 12},
+              charge_filter:
+            )
+          end
+        end
+
+        # The count is what lets the cache notice an event that reached the aggregation only after it
+        # was already reflected in the last seen timestamp.
+        it "counts every distinct event behind the timestamp" do
+          result = event_store.distinct_charges_and_filters
+
+          expect(result.map { |row| row[3] }).to eq([3])
+        end
       end
 
       context "when charge_filter is nil" do
@@ -2771,7 +2793,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           [code, {"region" => "us", "provider" => "gcp"}],
           [code, {"region" => "eu"}]
         ])
-        expect(result.map(&:last)).to all(be_present)
+        expect(result.map { |row| row[2] }).to all(be_present)
+      end
+
+      it "returns the number of distinct events per combination" do
+        result = event_store.distinct_codes_and_property_combinations(codes: [code], filter_keys: %w[region provider])
+
+        counts = result.to_h { |row| [row[1], row[3]] }
+
+        # Two events share {region: eu, provider: aws}; the other two combinations hold one each.
+        expect(counts).to eq({
+          {"region" => "eu", "provider" => "aws"} => 2,
+          {"region" => "us", "provider" => "gcp"} => 1,
+          {"region" => "eu"} => 1
+        })
       end
 
       it "ignores property keys that are not filter keys" do

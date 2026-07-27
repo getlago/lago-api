@@ -15,11 +15,15 @@ module Subscriptions
     def call(charge_filter:)
       return yield unless cache
 
-      # Lazily invalidate the cache when a more recent event was ingested for this charge/filter.
-      # last_seen_at is the { filter_id => timestamp } bucket for the current charge.
-      invalidate_if_older_than = last_seen_at[charge_filter&.id]
+      # Lazily invalidate the cache when a more recent event was ingested for this charge/filter, or
+      # when the number of events behind the boundary no longer matches what the cached fees counted.
+      # last_seen_at is the { filter_id => Events::BillingPeriodFilterService::Boundary } bucket for
+      # the current charge.
+      boundary = last_seen_at[charge_filter&.id]
+      invalidate_if_older_than = boundary&.last_seen_at
+      events_count = boundary&.events_count
 
-      json = Subscriptions::ChargeCacheService.call(subscription:, charge:, charge_filter:, expires_in: cache_expiration, invalidate_if_older_than:) do
+      json = Subscriptions::ChargeCacheService.call(subscription:, charge:, charge_filter:, expires_in: cache_expiration, invalidate_if_older_than:, events_count:) do
         yield
           .map do |fee|
             fee.attributes.merge(

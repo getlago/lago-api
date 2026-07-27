@@ -22,8 +22,10 @@ module Events
         filters_scope(scope)
       end
 
-      # Returns [charge_id, charge_filter_id, last_seen_at] tuples, where last_seen_at is the
-      # enriched_at of the most recent event for that charge/filter in the period.
+      # Returns [charge_id, charge_filter_id, last_seen_at, events_count] tuples. last_seen_at is
+      # the enriched_at of the most recent event for that charge/filter in the period.
+      # events_count is deduplicated on transaction_id so it can be compared against a cached
+      # fee's events_count, which is produced by the deduplicated aggregation.
       def distinct_charges_and_filters(codes: nil, include_all_history: false)
         lower_bound = include_all_history ? nil : from_datetime
         scope = EnrichedEvent.where(organization_id: subscription.organization_id)
@@ -32,14 +34,20 @@ module Events
 
         scope = scope.where(code: codes) unless codes.nil?
         scope.group(:charge_id, :charge_filter_id)
-          .pluck(:charge_id, :charge_filter_id, Arel.sql("MAX(enriched_at)"))
+          .pluck(
+            :charge_id,
+            :charge_filter_id,
+            Arel.sql("MAX(enriched_at)"),
+            Arel.sql("COUNT(DISTINCT transaction_id)")
+          )
       end
 
-      # Returns the distinct [code, properties, last_seen_at] combinations present in the events
-      # of the period. Only properties present in the filter_keys are considered, so the result
-      # holds only the dimensions that can be matched against charge filters.
+      # Returns the distinct [code, properties, last_seen_at, events_count] combinations present in
+      # the events of the period. Only properties present in the filter_keys are considered, so the
+      # result holds only the dimensions that can be matched against charge filters.
       # An empty hash represents the default (no filter) bucket.
-      # last_seen_at is the created_at of the most recent event in the combination.
+      # last_seen_at is the created_at of the most recent event in the combination, events_count the
+      # number of distinct events in it.
       def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false)
         scope = Event.where(external_subscription_id: subscription.external_id)
           .where(organization_id: subscription.organization_id)
@@ -55,10 +63,11 @@ module Events
               FROM jsonb_each_text(events.properties) AS props(key, value)
               WHERE props.key = ANY(#{filter_keys_array_sql(filter_keys)})
             ), '{}'::jsonb) AS combination,
-            MAX(events.created_at) AS last_seen_at
+            MAX(events.created_at) AS last_seen_at,
+            COUNT(DISTINCT events.transaction_id) AS events_count
           SQL
           .group("code, combination")
-          .map { |row| [row.code, parse_combination(row), row.last_seen_at] }
+          .map { |row| [row.code, parse_combination(row), row.last_seen_at, row.events_count] }
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)

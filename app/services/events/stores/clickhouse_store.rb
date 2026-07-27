@@ -157,11 +157,13 @@ module Events
         ).distinct_charges_and_filters(codes:, include_all_history:)
       end
 
-      # Returns the distinct [code, properties, last_seen_at] combinations present in the events
-      # of the period. Only properties present in the filter_keys are considered, so the result
-      # holds only the dimensions that can be matched against charge filters.
+      # Returns the distinct [code, properties, last_seen_at, events_count] combinations present in
+      # the events of the period. Only properties present in the filter_keys are considered, so the
+      # result holds only the dimensions that can be matched against charge filters.
       # An empty hash represents the default (no filter) bucket.
-      # last_seen_at is the enriched_at of the most recent event in the combination.
+      # last_seen_at is the enriched_at of the most recent event in the combination. events_count is
+      # deduplicated on transaction_id so it can be compared against a cached fee's events_count,
+      # which is produced by the deduplicated aggregation.
       #
       # ClickHouse stores properties as a Map(String, String); a missing key reads back as an
       # empty string, so blank values are dropped to mirror the Postgres jsonb behaviour.
@@ -183,6 +185,7 @@ module Events
             group_columns << "prop_#{index}"
           end
           selects << "MAX(enriched_at) AS last_seen_at"
+          selects << "uniqExact(transaction_id) AS events_count"
 
           scope.select(selects.join(", ")).group(group_columns.join(", ")).map do |row|
             combination = {}
@@ -191,7 +194,7 @@ module Events
               combination[key] = value if value.present?
             end
 
-            [row.code, combination, row.read_attribute("last_seen_at")]
+            [row.code, combination, row.read_attribute("last_seen_at"), row.read_attribute("events_count")]
           end
         end
       end
