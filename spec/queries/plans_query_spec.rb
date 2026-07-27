@@ -34,6 +34,25 @@ RSpec.describe PlansQuery do
     expect(returned_ids).not_to include(plan_fourth.id)
   end
 
+  it "returns plans ordered by name" do
+    expect(result).to be_success
+    expect(returned_ids).to eq([plan_second.id, plan_first.id, plan_third.id])
+  end
+
+  context "when filtering to include deleted plans" do
+    let(:filters) { {with_deleted: true} }
+    let(:plan_deleted) do
+      create(:plan, organization:, name: "aaaaa", code: "55", deleted_at: Time.current)
+    end
+
+    before { plan_deleted }
+
+    it "returns deleted plans after the active ones" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([plan_second.id, plan_first.id, plan_third.id, plan_deleted.id])
+    end
+  end
+
   context "when plans have the same values for the ordering criteria" do
     let(:plan_second) do
       create(

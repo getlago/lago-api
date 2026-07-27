@@ -7,7 +7,16 @@ class PlansQuery < BaseQuery
   def call
     plans = base_scope.result
     plans = paginate(plans)
-    plans = apply_consistent_ordering(plans)
+    # Deleted plans are kept for history but should not clutter the top of the list, so they are
+    # pushed after the active ones, which stay sorted by name to remain easy to scan.
+    plans = apply_consistent_ordering(
+      plans,
+      default_order: <<~SQL.squish
+        plans.deleted_at ASC NULLS FIRST,
+        plans.name ASC,
+        plans.created_at DESC
+      SQL
+    )
 
     plans = exclude_pending_deletion(plans) unless filters.include_pending_deletion
     plans = plans.with_discarded if filters.with_deleted
