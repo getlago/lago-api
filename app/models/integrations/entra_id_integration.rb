@@ -9,7 +9,7 @@ module Integrations
     secrets_accessors :client_secret
 
     def host
-      get_from_settings("host") || "login.microsoftonline.com"
+      get_from_settings("host").presence || "login.microsoftonline.com"
     end
 
     private
