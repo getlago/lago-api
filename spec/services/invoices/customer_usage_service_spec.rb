@@ -792,4 +792,40 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end
     end
   end
+
+  describe "transiently duplicated charges" do
+    subject(:usage_service) { described_class.new(customer:, subscription:) }
+
+    let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"}, invoice_display_name: "Usage") }
+
+    before do
+      create_list(:event, 3, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
+      charge
+      Rails.cache.clear
+    end
+
+    it "counts a charge of identical definition only once" do
+      create(:standard_charge, plan:, billable_metric:, code: "clone", properties: {amount: "10"}, invoice_display_name: "Usage")
+
+      result = usage_service.call
+
+      expect(result).to be_success
+      # 3 events x 10, counted once despite the duplicate charge
+      expect(result.usage.amount_cents).to eq(3000)
+      expect(result.usage.fees.size).to eq(1)
+    end
+
+    it "keeps charges that differ in a billing-relevant attribute" do
+      create(:standard_charge, plan:, billable_metric:, code: "other", properties: {amount: "5"})
+      create(:standard_charge, plan:, billable_metric:, code: "named", properties: {amount: "10"}, invoice_display_name: "Support fee")
+
+      result = usage_service.call
+
+      expect(result).to be_success
+      # 3 x 10 + 3 x 5 + 3 x 10
+      expect(result.usage.amount_cents).to eq(7500)
+      expect(result.usage.fees.size).to eq(3)
+    end
+  end
 end

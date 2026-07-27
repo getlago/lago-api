@@ -120,10 +120,36 @@ module Invoices
     def compute_charge_fees
       fees = []
       filters = event_filters(subscription, boundaries).charges
-      charges.find_each { |c| fees += charge_usage(c, filters[c.id] || {}) }
+      deduplicated_charges.each { |c| fees += charge_usage(c, filters[c.id] || {}) }
       return fees if usage_filters.has_charge_filter?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
+    end
+
+    # NOTE: Concurrent plan updates can transiently leave a plan with several copies of the
+    #       same charge (only code/parent_id differ), which would multiply usage.
+    #       Count exact copies once; charges differing in any billing attribute are preserved.
+    def deduplicated_charges
+      charges.to_a.uniq { |charge| charge_definition_signature(charge) }
+    end
+
+    def charge_definition_signature(charge)
+      [
+        charge.billable_metric_id,
+        charge.charge_model,
+        charge.properties,
+        charge.pay_in_advance,
+        charge.prorated,
+        charge.invoiceable,
+        charge.regroup_paid_fees,
+        charge.min_amount_cents,
+        charge.invoice_display_name,
+        charge.amount_currency,
+        charge.accepts_target_wallet,
+        charge.taxes.map(&:id).sort,
+        charge.applied_pricing_unit&.slice(:pricing_unit_id, :conversion_rate),
+        charge.filters.map { |f| [f.properties, f.values.map { |v| [v.billable_metric_filter_id, v.values] }.sort_by(&:to_s)] }.sort_by(&:to_s)
+      ]
     end
 
     def charge_usage(charge, applied_filters)
