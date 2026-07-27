@@ -98,7 +98,7 @@ RSpec.describe Entitlement::Feature::SubscriptionsCountQuery do
 
     context "with a deleted plan" do
       let(:plan1) { create(:plan, organization:) }
-      let(:plan2) { create(:plan, organization:, deleted_at: Time.now) }
+      let(:plan2) { create(:plan, organization:, deleted_at: Time.zone.now) }
 
       before do
         create(:subscription, plan: plan1)
@@ -173,7 +173,7 @@ RSpec.describe Entitlement::Feature::SubscriptionsCountQuery do
     context "with deleted plan entitlements" do
       before do
         create(:subscription, plan:)
-        create(:entitlement, feature:, plan:, deleted_at: Time.now)
+        create(:entitlement, feature:, plan:, deleted_at: Time.zone.now)
       end
 
       it "does not include deleted entitlement plan subscriptions" do
@@ -187,7 +187,7 @@ RSpec.describe Entitlement::Feature::SubscriptionsCountQuery do
       let(:subscription) { create(:subscription, plan:) }
 
       before do
-        create(:entitlement, :subscription, feature:, subscription:, deleted_at: Time.now)
+        create(:entitlement, :subscription, feature:, subscription:, deleted_at: Time.zone.now)
       end
 
       it "does not include deleted entitlement direct subscriptions" do
@@ -201,7 +201,7 @@ RSpec.describe Entitlement::Feature::SubscriptionsCountQuery do
       let(:subscription) { create(:subscription, plan:) }
 
       before do
-        create(:subscription_feature_removal, feature:, subscription:, deleted_at: Time.now)
+        create(:subscription_feature_removal, feature:, subscription:, deleted_at: Time.zone.now)
         create(:entitlement, feature:, plan:)
       end
 
