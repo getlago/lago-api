@@ -18,6 +18,7 @@ RSpec.describe Mutations::PaymentProviderCustomers::Update do
           id
           code
           providerPaymentMethods
+          syncWithProvider
         }
       }
     GQL
@@ -81,6 +82,23 @@ RSpec.describe Mutations::PaymentProviderCustomers::Update do
 
       data = result["data"]["updatePaymentProviderCustomer"]
       expect(data["code"]).to eq("new_code")
+    end
+  end
+
+  context "when updating sync_with_provider" do
+    it "updates sync_with_provider" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {id: payment_provider_customer.id, syncWithProvider: true}
+        }
+      )
+
+      data = result["data"]["updatePaymentProviderCustomer"]
+      expect(data["syncWithProvider"]).to be(true)
     end
   end
 

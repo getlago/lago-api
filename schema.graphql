@@ -13559,7 +13559,9 @@ input UpdatePaymentProviderCustomerInput {
   clientMutationId: String
   code: String
   id: ID!
+  providerCustomerId: ID
   providerPaymentMethods: [ProviderPaymentMethodsEnum!]
+  syncWithProvider: Boolean
 }
 
 """

@@ -17,14 +17,13 @@ module PaymentProviderCustomers
       return result.not_found_failure!(resource: "payment_provider_customer") unless payment_provider_customer
 
       ActiveRecord::Base.transaction do
-        if params.key?(:code)
-          payment_provider_customer.code = params[:code]
-          payment_provider_customer.save!
-        end
+        payment_provider_customer.update!(code: params[:code]) if params.key?(:code)
 
-        # NOTE: provider_payment_methods only exist on Stripe connections; it is silently
-        #       ignored for any other provider.
-        update_provider_payment_methods if update_provider_payment_methods?
+        update_provider_customer if editing_provider_customer?
+      end
+
+      if params[:provider_customer_id].present?
+        PaymentProviderCustomers::UpdateService.call(customer).raise_if_error!
       end
 
       result.payment_provider_customer = payment_provider_customer.reload
@@ -41,21 +40,33 @@ module PaymentProviderCustomers
 
     delegate :customer, to: :payment_provider_customer
 
-    def update_provider_payment_methods?
-      params.key?(:provider_payment_methods) &&
-        payment_provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer)
+    def provider
+      @provider ||= payment_provider_customer.type.demodulize.underscore.delete_suffix("_customer")
     end
 
-    # NOTE: mirrors the provider customer edition performed by Customers::UpdateService.
-    #       The provider CreateService is an upsert that applies provider_payment_methods
-    #       (with the Stripe model validations) on the existing connection.
-    def update_provider_payment_methods
+    def editing_provider_customer?
+      params.key?(:provider_customer_id) ||
+        params.key?(:provider_payment_methods) ||
+        params.key?(:sync_with_provider)
+    end
+
+    def provider_customer_params
+      @provider_customer_params ||= params.slice(:provider_customer_id, :provider_payment_methods, :sync_with_provider)
+    end
+
+    def update_provider_customer
+      handle_provider_customer = provider_customer_params[:provider_customer_id].present?
+      handle_provider_customer ||= payment_provider_customer&.provider_customer_id.present?
+      return unless handle_provider_customer
+
       PaymentProviders::CreateCustomerFactory.new_instance(
-        provider: "stripe",
+        provider:,
         customer:,
-        payment_provider_id: payment_provider(customer)&.id,
-        params: {provider_payment_methods: params[:provider_payment_methods]}
+        payment_provider_id: payment_provider_customer&.payment_provider&.id,
+        params: provider_customer_params
       ).call.raise_if_error!
+
+      customer.reload
     end
   end
 end

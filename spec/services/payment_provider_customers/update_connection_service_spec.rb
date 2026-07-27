@@ -23,16 +23,16 @@ RSpec.describe PaymentProviderCustomers::UpdateConnectionService do
     end
 
     context "with a non-stripe connection" do
-      let(:payment_provider_customer) { create(:adyen_customer, organization:, customer:, code: "old_code") }
+      let(:payment_provider_customer) do
+        create(:adyen_customer, organization:, customer:, code: "old_code")
+      end
 
       context "when updating the code" do
         let(:params) { {code: "new_code"} }
 
         it "updates the code" do
           expect { update_service.call }
-            .to change { payment_provider_customer.reload.code }
-            .from("old_code")
-            .to("new_code")
+            .to change { payment_provider_customer.reload.code }.from("old_code").to("new_code")
         end
 
         it "returns the payment provider customer" do
@@ -61,6 +61,17 @@ RSpec.describe PaymentProviderCustomers::UpdateConnectionService do
         create(:stripe_customer, organization:, customer:, code: "old_code", provider_payment_methods: %w[card])
       end
 
+      context "when only the code is updated" do
+        let(:params) { {code: "new_code"} }
+
+        before { allow(PaymentProviders::CreateCustomerFactory).to receive(:new_instance).and_call_original }
+
+        it "does not run the provider customer upsert" do
+          update_service.call
+          expect(PaymentProviders::CreateCustomerFactory).not_to have_received(:new_instance)
+        end
+      end
+
       context "when updating both code and provider payment methods" do
         let(:params) { {code: "new_code", provider_payment_methods: %w[card sepa_debit]} }
 
@@ -85,8 +96,48 @@ RSpec.describe PaymentProviderCustomers::UpdateConnectionService do
           expect(result.error).to be_a(BaseService::ValidationFailure)
         end
 
-        it "does not update the code" do
+        it "rolls back the code change" do
           expect { update_service.call }.not_to change { payment_provider_customer.reload.code }
+        end
+      end
+
+      context "when updating sync_with_provider" do
+        let(:params) { {sync_with_provider: true} }
+
+        it "updates sync_with_provider" do
+          expect { update_service.call }
+            .to change { payment_provider_customer.reload.sync_with_provider }.to(true)
+        end
+      end
+
+      context "when a provider customer id is provided" do
+        let(:payment_provider_customer) do
+          create(:stripe_customer, organization:, customer:, provider_customer_id: "cus_old", provider_payment_methods: %w[card])
+        end
+        let(:params) { {provider_customer_id: "cus_new"} }
+
+        before { allow(PaymentProviderCustomers::UpdateService).to receive(:call).and_return(BaseResult.new) }
+
+        it "updates the provider customer id" do
+          expect { update_service.call }
+            .to change { payment_provider_customer.reload.provider_customer_id }.from("cus_old").to("cus_new")
+        end
+
+        it "syncs the provider customer with the provider" do
+          update_service.call
+          expect(PaymentProviderCustomers::UpdateService).to have_received(:call).with(customer)
+        end
+      end
+
+      context "when the connection cannot be handled" do
+        let(:payment_provider_customer) do
+          create(:stripe_customer, organization:, customer:, provider_customer_id: nil, provider_payment_methods: %w[card])
+        end
+        let(:params) { {provider_payment_methods: %w[card sepa_debit]} }
+
+        it "does not update the provider payment methods" do
+          expect { update_service.call }
+            .not_to change { payment_provider_customer.reload.provider_payment_methods }
         end
       end
     end
