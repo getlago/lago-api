@@ -31,11 +31,23 @@ RSpec.describe Entitlement::Feature do
 
     context "when subscriptions_count is not preloaded" do
       before do
-        allow(Entitlement::Feature::SubscriptionsCountQuery).to receive(:call).and_return(subject.id => 4)
+        allow(Entitlement::Feature::SubscriptionsCountQuery).to receive(:call).and_return(subject.id => subscriptions_count)
       end
 
-      it "queries for the subscriptions count" do
-        expect(subject.subscriptions_count).to eq(4)
+      context "and the feature has subscriptions" do
+        let(:subscriptions_count) { 4 }
+
+        it "queries for the subscriptions count" do
+          expect(subject.subscriptions_count).to eq(4)
+        end
+      end
+
+      context "and the feature does not have subscriptions" do
+        let(:subscriptions_count) { nil }
+
+        it "returns 0" do
+          expect(subject.subscriptions_count).to eq(0)
+        end
       end
     end
 

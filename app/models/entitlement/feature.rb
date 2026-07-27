@@ -32,7 +32,7 @@ module Entitlement
         filters: {feature_ids: [id]}
       )
 
-      subscriptions_count[id]
+      subscriptions_count[id] || 0
     end
 
     def self.preload_subscriptions_count(organization, features)
