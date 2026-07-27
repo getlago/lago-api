@@ -34,7 +34,7 @@ RSpec.describe Entitlement::Feature do
         allow(Entitlement::Feature::SubscriptionsCountQuery).to receive(:call).and_return(subject.id => subscriptions_count)
       end
 
-      context "and the feature has subscriptions" do
+      context "when the feature has subscriptions" do
         let(:subscriptions_count) { 4 }
 
         it "queries for the subscriptions count" do
@@ -42,7 +42,7 @@ RSpec.describe Entitlement::Feature do
         end
       end
 
-      context "and the feature does not have subscriptions" do
+      context "when the feature does not have subscriptions" do
         let(:subscriptions_count) { nil }
 
         it "returns 0" do
