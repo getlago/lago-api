@@ -937,10 +937,8 @@ RSpec.describe Api::V1::InvoicesController do
       it "calls retry service" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(retry_service).to have_received(:call)
-        end
+        expect(response).to have_http_status(:success)
+        expect(retry_service).to have_received(:call)
       end
     end
 

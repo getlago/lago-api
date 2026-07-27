@@ -598,7 +598,7 @@ RSpec.describe CreditNotesQuery do
         )
       end
 
-      it "returns credit notes by partially matching customer first name", aggregate_failures: false do
+      it "returns credit notes by partially matching customer first name" do
         expect(result).to be_success
         expect(result.credit_notes.pluck(:id)).to contain_exactly matching_credit_note.id
       end
