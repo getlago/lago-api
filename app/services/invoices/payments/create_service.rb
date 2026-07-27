@@ -147,7 +147,19 @@ module Invoices
         return false if current_payment_provider.blank?
 
         current_payment_provider_customer&.provider_customer_id &&
-          (determine_payment_method.present? || provider_payment_method_pending_backfill?)
+          (determine_payment_method.present? ||
+            provider_payment_method_pending_backfill? ||
+            provider_payment_methods_without_setup?)
+      end
+
+      # NOTE: Stripe setup-less methods (customer_balance/V-BAN, crypto) have no instrument to pull
+      #       from, so no PaymentMethod record ever exists for them. Such customers are still
+      #       chargeable: the attempt opens an awaiting-funds PaymentIntent for the wire to land on,
+      #       which is what makes the payment reconcilable. Guarded on the class since the predicate
+      #       is Stripe-specific.
+      def provider_payment_methods_without_setup?
+        current_payment_provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer) &&
+          !current_payment_provider_customer.provider_payment_methods_require_setup?
       end
 
       # NOTE: While the OSS payment methods backfill is still running

@@ -474,6 +474,52 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
+    context "when the customer only uses setup-less stripe payment methods" do
+      let(:default_payment_method) { nil }
+      let(:provider_customer) do
+        create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[customer_balance])
+      end
+
+      it "creates a payment so an awaiting-funds payment intent is opened" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_present
+        expect(result.payment.payment_method_id).to be_nil
+        expect(provider_class).to have_received(:new)
+      end
+
+      context "when the customer also uses a payment method requiring setup" do
+        let(:provider_customer) do
+          create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[card crypto])
+        end
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(provider_class).not_to have_received(:new)
+        end
+      end
+    end
+
+    context "when a non-stripe provider customer has no payment method" do
+      let(:provider) { "adyen" }
+      let(:provider_class) { PaymentProviders::Adyen::Payments::CreateService }
+      let(:payment_provider) { create(:adyen_provider, code: payment_provider_code, organization:) }
+      let(:provider_customer) { create(:adyen_customer, payment_provider:, customer:) }
+      let(:default_payment_method) { nil }
+
+      it "does not create a payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
     it_behaves_like "syncs payment" do
       let(:service_call) { create_service.call }
     end
