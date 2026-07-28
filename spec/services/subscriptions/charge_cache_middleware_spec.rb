@@ -47,13 +47,29 @@ RSpec.describe Subscriptions::ChargeCacheMiddleware do
         expect(result.map(&:amount_cents)).to eq([999])
       end
 
-      it "stores the value wrapped with its creation time" do
+      # No event has been seen for this charge yet (last_seen_at is empty), so cached_at falls back to
+      # the settle bound rather than Time.current. Stepping a full window back is what guarantees the
+      # first event to arrive invalidates the entry: ClickHouse floors enriched_at to the second, so
+      # an event inserted just after the write is recorded at floor(write_time), which is always
+      # greater than write_time - SETTLE_WINDOW but not necessarily greater than write_time itself.
+      it "stores the value wrapped with the settle bound when no event was seen" do
         freeze_time do
           middleware.call(charge_filter:) { [fee] }
 
           cached = Rails.cache.read(cache_key)
-          expect(cached["cached_at"]).to eq(Time.current.iso8601(6))
+          expect(cached["cached_at"]).to eq((Time.current - CacheService::SETTLE_WINDOW).iso8601(6))
           expect(JSON.parse(cached["value"]).first["amount_cents"]).to eq(999)
+        end
+      end
+
+      context "when an event was already seen for the charge" do
+        let(:last_seen_at) { {nil => 2.hours.ago} }
+
+        it "stamps cached_at with the last seen event timestamp" do
+          middleware.call(charge_filter:) { [fee] }
+
+          cached = Rails.cache.read(cache_key)
+          expect(cached["cached_at"]).to eq(last_seen_at[nil].iso8601(6))
         end
       end
     end
