@@ -17,6 +17,7 @@ RSpec.describe Mutations::PaymentProviderCustomers::SetAsDefault do
       mutation($input: SetPaymentProviderCustomerAsDefaultInput!) {
         setPaymentProviderCustomerAsDefault(input: $input) {
           id
+          code
           isDefault
         }
       }
@@ -47,6 +48,7 @@ RSpec.describe Mutations::PaymentProviderCustomers::SetAsDefault do
       data = result["data"]["setPaymentProviderCustomerAsDefault"]
 
       expect(data["id"]).to eq(gocardless_customer.id)
+      expect(data["code"]).to eq("gocardless_eu")
       expect(data["isDefault"]).to be(true)
       expect(gocardless_customer.reload.is_default).to be(true)
       expect(stripe_customer.reload.is_default).to be(false)

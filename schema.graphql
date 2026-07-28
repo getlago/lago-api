@@ -624,6 +624,8 @@ enum AlertTypeEnum {
 }
 
 type AnrokCustomer {
+  category: ConnectionCategoryEnum
+  code: String
   externalAccountId: String
   externalCustomerId: String
   id: ID!
@@ -833,6 +835,8 @@ type Authorize {
 }
 
 type AvalaraCustomer {
+  category: ConnectionCategoryEnum
+  code: String
   externalCustomerId: String
   id: ID!
   integrationCode: String
@@ -6507,6 +6511,8 @@ Api Logs HTTP status
 scalar HttpStatus
 
 type HubspotCustomer {
+  category: ConnectionCategoryEnum
+  code: String
   externalCustomerId: String
   id: ID!
   integrationCode: String
@@ -9205,6 +9211,8 @@ type Mutation {
 }
 
 type NetsuiteCustomer {
+  category: ConnectionCategoryEnum
+  code: String
   externalCustomerId: String
   id: ID!
   integrationCode: String
@@ -10203,6 +10211,7 @@ input PropertiesInput {
 }
 
 type ProviderCustomer {
+  code: String
   id: ID!
   isDefault: Boolean!
   providerCustomerId: ID
@@ -11691,6 +11700,8 @@ enum RoundingFunctionEnum {
 }
 
 type SalesforceCustomer {
+  category: ConnectionCategoryEnum
+  code: String
   externalCustomerId: String
   id: ID!
   integrationCode: String
@@ -14228,6 +14239,8 @@ enum WeightedIntervalEnum {
 }
 
 type XeroCustomer {
+  category: ConnectionCategoryEnum
+  code: String
   externalCustomerId: String
   id: ID!
   integrationCode: String

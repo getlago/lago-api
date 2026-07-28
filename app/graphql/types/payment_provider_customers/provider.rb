@@ -5,6 +5,7 @@ module Types
     class Provider < Types::BaseObject
       graphql_name "ProviderCustomer"
 
+      field :code, String, null: true
       field :id, ID, null: false
       field :is_default, Boolean, null: false
       field :provider_customer_id, ID, null: true

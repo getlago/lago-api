@@ -26,6 +26,8 @@ RSpec.describe Mutations::IntegrationCustomers::SetAsDefault do
         setIntegrationCustomerAsDefault(input: $input) {
           ... on XeroCustomer {
             id
+            category
+            code
             isDefault
           }
         }
@@ -58,6 +60,8 @@ RSpec.describe Mutations::IntegrationCustomers::SetAsDefault do
       data = result["data"]["setIntegrationCustomerAsDefault"]
 
       expect(data["id"]).to eq(xero_customer.id)
+      expect(data["category"]).to eq("accounting")
+      expect(data["code"]).to eq("xero_eu")
       expect(data["isDefault"]).to be(true)
       expect(xero_customer.reload.is_default).to be(true)
       expect(netsuite_customer.reload.is_default).to be(false)

@@ -5,6 +5,8 @@ module Types
     class Salesforce < Types::BaseObject
       graphql_name "SalesforceCustomer"
 
+      field :category, Types::IntegrationCustomers::ConnectionCategoryEnum, null: true
+      field :code, String, null: true
       field :external_customer_id, String, null: true
       field :id, ID, null: false
       field :integration_code, String, null: true

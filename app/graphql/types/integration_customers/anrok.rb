@@ -5,6 +5,8 @@ module Types
     class Anrok < Types::BaseObject
       graphql_name "AnrokCustomer"
 
+      field :category, Types::IntegrationCustomers::ConnectionCategoryEnum, null: true
+      field :code, String, null: true
       field :external_account_id, String, null: true
       field :external_customer_id, String, null: true
       field :id, ID, null: false
