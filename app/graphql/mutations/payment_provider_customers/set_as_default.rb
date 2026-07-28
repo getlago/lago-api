@@ -11,14 +11,14 @@ module Mutations
 
       REQUIRED_PERMISSION = "customers:update"
 
-      argument :code, String, required: true
-      argument :customer_id, ID, required: true
+      argument :id, ID, required: true
 
       type Types::PaymentProviderCustomers::Provider
 
-      def resolve(**args)
-        customer = current_organization.customers.find_by(id: args[:customer_id])
-        payment_provider_customer = customer&.payment_provider_customers&.find_by(code: args[:code])
+      def resolve(id:)
+        payment_provider_customer = ::PaymentProviderCustomers::BaseCustomer
+          .where(organization_id: current_organization.id)
+          .find_by(id:)
 
         result = ::PaymentProviderCustomers::SetAsDefaultService.call(payment_provider_customer:)
 

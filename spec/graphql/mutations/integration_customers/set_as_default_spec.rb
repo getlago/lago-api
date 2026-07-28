@@ -53,7 +53,7 @@ RSpec.describe Mutations::IntegrationCustomers::SetAsDefault do
         permissions: required_permission,
         query: mutation,
         variables: {
-          input: {customerId: customer.id, category: "accounting", code: "xero_eu"}
+          input: {id: xero_customer.id}
         }
       )
 
@@ -67,14 +67,14 @@ RSpec.describe Mutations::IntegrationCustomers::SetAsDefault do
       expect(netsuite_customer.reload.is_default).to be(false)
     end
 
-    it "resolves the connection within the requested category only" do
+    it "only clears defaults within the connection's own category" do
       execute_graphql(
         current_organization: organization,
         current_user: user,
         permissions: required_permission,
         query: mutation,
         variables: {
-          input: {customerId: customer.id, category: "accounting", code: "xero_eu"}
+          input: {id: xero_customer.id}
         }
       )
 
@@ -83,7 +83,12 @@ RSpec.describe Mutations::IntegrationCustomers::SetAsDefault do
     end
   end
 
-  context "when no connection matches the code within the category" do
+  context "when the connection belongs to another organization" do
+    let(:other_customer) { create(:customer) }
+    let(:other_connection) do
+      create(:xero_customer, customer: other_customer, organization: other_customer.organization, category: "accounting", code: "xero_eu")
+    end
+
     it "returns an error" do
       result = execute_graphql(
         current_organization: organization,
@@ -91,7 +96,7 @@ RSpec.describe Mutations::IntegrationCustomers::SetAsDefault do
         permissions: required_permission,
         query: mutation,
         variables: {
-          input: {customerId: customer.id, category: "crm", code: "xero_eu"}
+          input: {id: other_connection.id}
         }
       )
 
@@ -107,7 +112,7 @@ RSpec.describe Mutations::IntegrationCustomers::SetAsDefault do
         permissions: required_permission,
         query: mutation,
         variables: {
-          input: {customerId: customer.id, category: "accounting", code: "unknown"}
+          input: {id: SecureRandom.uuid}
         }
       )
 

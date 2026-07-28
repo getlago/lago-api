@@ -41,7 +41,7 @@ RSpec.describe Mutations::PaymentProviderCustomers::SetAsDefault do
         permissions: required_permission,
         query: mutation,
         variables: {
-          input: {customerId: customer.id, code: "gocardless_eu"}
+          input: {id: gocardless_customer.id}
         }
       )
 
@@ -55,6 +55,27 @@ RSpec.describe Mutations::PaymentProviderCustomers::SetAsDefault do
     end
   end
 
+  context "when the connection belongs to another organization" do
+    let(:other_customer) { create(:customer) }
+    let(:other_connection) do
+      create(:stripe_customer, customer: other_customer, organization: other_customer.organization, code: "stripe_eu")
+    end
+
+    it "returns an error" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {id: other_connection.id}
+        }
+      )
+
+      expect_not_found(result)
+    end
+  end
+
   context "when the connection is not found" do
     it "returns an error" do
       result = execute_graphql(
@@ -63,7 +84,7 @@ RSpec.describe Mutations::PaymentProviderCustomers::SetAsDefault do
         permissions: required_permission,
         query: mutation,
         variables: {
-          input: {customerId: customer.id, code: "unknown"}
+          input: {id: SecureRandom.uuid}
         }
       )
 
