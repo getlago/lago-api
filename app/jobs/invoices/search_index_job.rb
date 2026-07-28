@@ -11,6 +11,7 @@ module Invoices
       Errno::ECONNREFUSED,
       Errno::EHOSTUNREACH,
       Errno::ETIMEDOUT,
+      HTTParty::UnsupportedURIScheme,
       Net::OpenTimeout,
       Net::ReadTimeout,
       EOFError, wait: :polynomially_longer, attempts: 3

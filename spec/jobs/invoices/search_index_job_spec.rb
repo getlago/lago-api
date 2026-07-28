@@ -47,6 +47,7 @@ RSpec.describe Invoices::SearchIndexJob do
       Errno::ECONNREFUSED.new,
       Errno::EHOSTUNREACH.new,
       Errno::ETIMEDOUT.new,
+      HTTParty::UnsupportedURIScheme.new("Unsupported URI scheme"),
       Net::OpenTimeout.new,
       Net::ReadTimeout.new,
       EOFError.new
