@@ -123,5 +123,94 @@ RSpec.describe DataExports::Csv::InvoiceFees do
 
       it_behaves_like "exports fee dates in customer timezone"
     end
+
+    context "when a fee is billed in advance for a period of its own" do
+      # The invoice mixes an arrears usage block (charges_*: May 22 - Jun 21) with
+      # advance-billed rows covering the next period (Jun 22 - Jul 21).
+      let(:from_utc) { "2026-05-22 00:00:00 UTC" }
+      let(:to_utc) { "2026-06-21 23:59:59 UTC" }
+
+      let(:advance_boundaries) do
+        {
+          "from_datetime" => "2026-06-22T00:00:00Z",
+          "to_datetime" => "2026-07-21T23:59:59Z",
+          "fixed_charges_from_datetime" => "2026-06-22T00:00:00Z",
+          "fixed_charges_to_datetime" => "2026-07-21T23:59:59Z"
+        }
+      end
+
+      def exported_period
+        result = described_class.new(data_export_part:).call
+
+        file = result.csv_file
+        csv_content = file.read
+        file.close
+        File.unlink(file.path)
+
+        row = CSV.parse(csv_content).find { |r| r[3] == advance_fee.id }
+        [row[13], row[14]]
+      end
+
+      context "with an advance-billed fixed charge fee" do
+        let(:advance_fee) do
+          create(:fixed_charge_fee,
+            invoice:,
+            subscription:,
+            organization: customer.organization,
+            pay_in_advance: true,
+            properties: advance_boundaries)
+        end
+
+        before { advance_fee }
+
+        it "exports the fee's own period rather than the usage window" do
+          expect(exported_period).to eq(%w[2026-06-22 2026-07-21])
+        end
+      end
+
+      context "with a subscription fee billed in advance" do
+        let(:advance_fee) do
+          create(:fee,
+            invoice:,
+            subscription:,
+            organization: customer.organization,
+            fee_type: :subscription,
+            properties: advance_boundaries)
+        end
+
+        before { advance_fee }
+
+        it "exports the fee's own period rather than the usage window" do
+          expect(exported_period).to eq(%w[2026-06-22 2026-07-21])
+        end
+
+        context "when the customer is in a negative UTC offset timezone" do
+          let(:timezone) { "America/New_York" }
+
+          it "converts the fee's own period to the customer timezone" do
+            expect(exported_period).to eq(%w[2026-06-21 2026-07-21])
+          end
+        end
+      end
+
+      context "with an arrears usage fee" do
+        let(:advance_fee) do
+          create(:charge_fee,
+            invoice:,
+            subscription:,
+            organization: customer.organization,
+            properties: {
+              "charges_from_datetime" => "2026-05-22T00:00:00Z",
+              "charges_to_datetime" => "2026-06-21T23:59:59Z"
+            })
+        end
+
+        before { advance_fee }
+
+        it "keeps exporting the usage window" do
+          expect(exported_period).to eq(%w[2026-05-22 2026-06-21])
+        end
+      end
+    end
   end
 end

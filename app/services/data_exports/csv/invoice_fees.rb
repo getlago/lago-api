@@ -55,6 +55,7 @@ module DataExports
       def serialize_item(invoice, csv)
         serialized_invoice = invoice_serializer_klass.new(invoice).serialize
         invoice_subscriptions = invoice.invoice_subscriptions.index_by(&:subscription_id)
+        timezone = invoice.customer.applicable_timezone
 
         invoice
           .fees
@@ -92,8 +93,8 @@ module DataExports
               serialized_fee.dig(:item, :grouped_by),
               serialized_subscription[:external_id],
               serialized_subscription[:plan_code],
-              invoice_subscription&.charges_from_datetime_in_customer_timezone&.to_date,
-              invoice_subscription&.charges_to_datetime_in_customer_timezone&.to_date,
+              period_date(serialized_fee[:from_date], invoice_subscription&.charges_from_datetime, timezone),
+              period_date(serialized_fee[:to_date], invoice_subscription&.charges_to_datetime, timezone),
               serialized_fee[:total_amount_currency],
               serialized_fee[:units],
               serialized_fee[:precise_unit_amount],
@@ -101,6 +102,13 @@ module DataExports
               serialized_fee[:total_amount_cents]
             ]
         end
+      end
+
+      # Renders a fee boundary as a date in the customer timezone, falling back to the
+      # invoice subscription usage window for fees that carry no boundaries of their own.
+      def period_date(fee_datetime, fallback_datetime, timezone)
+        datetime = fee_datetime.presence || fallback_datetime
+        datetime&.to_datetime&.in_time_zone(timezone)&.to_date
       end
 
       def collection
