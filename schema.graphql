@@ -624,7 +624,7 @@ enum AlertTypeEnum {
 }
 
 type AnrokCustomer {
-  category: ConnectionCategoryEnum
+  category: IntegrationConnectionCategoryEnum
   code: String
   externalAccountId: String
   externalCustomerId: String
@@ -835,7 +835,7 @@ type Authorize {
 }
 
 type AvalaraCustomer {
-  category: ConnectionCategoryEnum
+  category: IntegrationConnectionCategoryEnum
   code: String
   externalCustomerId: String
   id: ID!
@@ -1343,13 +1343,6 @@ input CommitmentInput {
 
 enum CommitmentTypeEnum {
   minimum_commitment
-}
-
-enum ConnectionCategoryEnum {
-  accounting
-  crm
-  payment
-  tax
 }
 
 enum CountryCode {
@@ -6511,7 +6504,7 @@ Api Logs HTTP status
 scalar HttpStatus
 
 type HubspotCustomer {
-  category: ConnectionCategoryEnum
+  category: IntegrationConnectionCategoryEnum
   code: String
   externalCustomerId: String
   id: ID!
@@ -6566,6 +6559,13 @@ type IntegrationCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+enum IntegrationConnectionCategoryEnum {
+  accounting
+  crm
+  payment
+  tax
 }
 
 union IntegrationCustomer = AnrokCustomer | AvalaraCustomer | HubspotCustomer | NetsuiteCustomer | SalesforceCustomer | XeroCustomer
@@ -9211,7 +9211,7 @@ type Mutation {
 }
 
 type NetsuiteCustomer {
-  category: ConnectionCategoryEnum
+  category: IntegrationConnectionCategoryEnum
   code: String
   externalCustomerId: String
   id: ID!
@@ -11700,7 +11700,7 @@ enum RoundingFunctionEnum {
 }
 
 type SalesforceCustomer {
-  category: ConnectionCategoryEnum
+  category: IntegrationConnectionCategoryEnum
   code: String
   externalCustomerId: String
   id: ID!
@@ -14235,7 +14235,7 @@ enum WeightedIntervalEnum {
 }
 
 type XeroCustomer {
-  category: ConnectionCategoryEnum
+  category: IntegrationConnectionCategoryEnum
   code: String
   externalCustomerId: String
   id: ID!

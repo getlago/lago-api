@@ -2765,7 +2765,7 @@
               "args": [],
               "type": {
                 "kind": "ENUM",
-                "name": "ConnectionCategoryEnum",
+                "name": "IntegrationConnectionCategoryEnum",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -4398,7 +4398,7 @@
               "args": [],
               "type": {
                 "kind": "ENUM",
-                "name": "ConnectionCategoryEnum",
+                "name": "IntegrationConnectionCategoryEnum",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -8462,41 +8462,6 @@
           "enumValues": [
             {
               "name": "minimum_commitment",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "possibleTypes": null
-        },
-        {
-          "kind": "ENUM",
-          "name": "ConnectionCategoryEnum",
-          "description": null,
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": [
-            {
-              "name": "payment",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "tax",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "accounting",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "crm",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -33397,7 +33362,7 @@
               "args": [],
               "type": {
                 "kind": "ENUM",
-                "name": "ConnectionCategoryEnum",
+                "name": "IntegrationConnectionCategoryEnum",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -33834,6 +33799,41 @@
           "inputFields": null,
           "interfaces": [],
           "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "IntegrationConnectionCategoryEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "payment",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "tax",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "accounting",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "crm",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
           "possibleTypes": null
         },
         {
@@ -43994,7 +43994,7 @@
               "args": [],
               "type": {
                 "kind": "ENUM",
-                "name": "ConnectionCategoryEnum",
+                "name": "IntegrationConnectionCategoryEnum",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -63625,7 +63625,7 @@
               "args": [],
               "type": {
                 "kind": "ENUM",
-                "name": "ConnectionCategoryEnum",
+                "name": "IntegrationConnectionCategoryEnum",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -77477,7 +77477,7 @@
               "args": [],
               "type": {
                 "kind": "ENUM",
-                "name": "ConnectionCategoryEnum",
+                "name": "IntegrationConnectionCategoryEnum",
                 "ofType": null
               },
               "isDeprecated": false,
