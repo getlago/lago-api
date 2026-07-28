@@ -68,6 +68,27 @@ RSpec.describe Utils::ApiLog do
         )
       end
 
+      context "when the request uses PATCH" do
+        let(:fake_request) do
+          instance_double(
+            "ActionDispatch::Request",
+            user_agent: "RSpec",
+            params: {parameters: [1, 2, 3, 4]},
+            path: "/api/v1/customers/abc",
+            base_url: "https://lago.test",
+            method_symbol: :patch,
+            request_id: "1234"
+          )
+        end
+
+        it "produces a payload with http_method: :patch" do
+          api_log.produce(fake_request, fake_response, organization:)
+
+          expect(karafka_producer).to have_received(:produce_async)
+            .with(hash_including(payload: include('"http_method":"patch"')))
+        end
+      end
+
       context "when request_id is empty" do
         let(:fake_request) do
           instance_double(
