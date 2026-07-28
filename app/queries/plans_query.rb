@@ -8,8 +8,8 @@ class PlansQuery < BaseQuery
   # grouped after the active ones. Both groups stay sorted by name to remain easy to scan.
   DEFAULT_ORDER = {
     Arel.sql("plans.deleted_at IS NOT NULL") => :asc,
-    name: :asc,
-    created_at: :desc
+    :name => :asc,
+    :created_at => :desc
   }.freeze
 
   def call
