@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 class CacheService < BaseService
-  # How long a boundary timestamp must have settled before the value computed at that boundary can
-  # be cached. See #settled? for why an unsettled boundary cannot be cached at all.
+  # How long after latest event is enriched is needed to settle on Clickhouse side
   SETTLE_WINDOW = 1.second
 
   def initialize(*, expires_in: nil, invalidate_if_older_than: nil)
@@ -25,9 +24,9 @@ class CacheService < BaseService
     cached = Rails.cache.read(cache_key)
     return unwrap(cached) if cached && valid_cache?(cached)
 
-    # Snapshot the time *before* computing, so an event enriched while the block runs is stamped
-    # after the cache entry and invalidates it on the next read. Stamping after the block would
-    # swallow every event ingested during the aggregation, which is the slow part.
+    # Snapshot the time *before* computing, so the settle gate asks whether the boundary was already
+    # settled when the events were read. Reading the clock after the block would let a slow
+    # aggregation make a boundary that was hot at read time look settled by the time we write.
     computed_at = Time.current
 
     value = yield
@@ -61,29 +60,19 @@ class CacheService < BaseService
     # cached_at is a watermark of what the value aggregated, not a wall clock reading. It must stay
     # the last seen event timestamp so that *any* event above it invalidates the entry.
     #
-    # Stamping Time.current instead would open a hole: ClickHouse fills enriched_at with now(),
-    # which floors to the second, so an event inserted at 05:31:15.6 is recorded as 05:31:15.000 -
-    # earlier than a snapshot taken at 05:31:15.400. An event that landed after the aggregation
-    # would then compare as already covered, and the entry would serve usage that misses it for the
-    # rest of the billing period. Comparing a precise clock against a floored one is unsound.
-    #
-    # Keep sub-second precision: event timestamps carry milliseconds (ClickHouse enriched_at is
-    # DateTime64(3)) or microseconds (Postgres), and a bare iso8601 would floor them.
-    #
-    # With no event seen yet, fall back to the conservative bound the settle gate already used,
-    # never to Time.current, for the same reason.
+    # With no event seen yet there is no watermark to use, so fall back to the same conservative
+    # bound the settle gate applies rather than to Time.current
     cached_at = (invalidate_if_older_than || computed_at - SETTLE_WINDOW).iso8601(6)
     {"cached_at" => cached_at, "value" => value}
   end
 
   # An event enriched at the boundary timestamp may still be committing when the aggregation runs.
-  # ClickHouse populates enriched_at with now(), which has one-second resolution, so such a sibling
-  # is invisible to the invalidation: MAX(enriched_at) is byte-identical with or without it, and the
-  # entry would keep serving usage that misses it. Refuse to cache until the boundary has settled.
+  # ClickHouse stamps enriched_at with now64(3) when the insert *begins*, not when the row becomes
+  # readable, so a sibling sharing that timestamp can land after the aggregation and stay invisible
+  # to the invalidation: MAX(enriched_at) is unchanged with or without it, and the entry would keep
+  # serving usage that misses it until the billing period ends. Refuse to cache a boundary that fresh.
   #
-  # The window is measured from the pre-aggregation snapshot rather than Time.current, because what
-  # matters is whether the boundary was already settled when the events were read, not how long the
-  # aggregation happened to take afterwards.
+  # The window has to cover the insert-to-readable gap
   def settled?(computed_at)
     return true unless track_created_at?
     return true if invalidate_if_older_than.nil?
