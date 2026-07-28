@@ -5,9 +5,9 @@ module BillingCycles
   # start, then prices it. For now it handles fixed (subscription) items priced with
   # the standard model; usage aggregation is a later slice.
   #
-  # Proration: with rate_card.proration == "full", a partial period (a clamped first
+  # Proration: when rate_card.proration is true, a partial period (a clamped first
   # period or a mid-period termination) is charged pro-rata by day count
-  # (cycle_days / full_period_days). With "none" the full period amount is charged.
+  # (cycle_days / full_period_days). When false the full period amount is charged.
   #
   #   $20/month, period [Jun 1, Jun 30] (30/30 days) => $20.00
   #   $20/month, period [Jun 1, Jun 23] (23/30 days) => $15.33
@@ -96,7 +96,7 @@ module BillingCycles
     # 1 for a full period; the prorated fraction for a partial period. The day math
     # lives on Boundaries (the billing calendar), matching the legacy engine.
     def proration_ratio
-      return 1 unless rate.rate_card.proration_full?
+      return 1 unless rate.rate_card.proration?
 
       boundaries.proration_ratio(billing_cycle.period_from, billing_cycle.period_to)
     end
