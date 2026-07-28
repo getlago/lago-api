@@ -51,11 +51,8 @@ module Subscriptions
     attr_reader :today, :organization
 
     # NOTE: Retrieve list of subscriptions that should be billed today.
-    # The rendered SQL is ~28 KB and exceeds RDS Proxy's 16 KB
-    # per-statement pin threshold, so it runs on the `:direct` role
-    # (always DATABASE_URL) to bypass the pooler. In envs without a
-    # pooler, `:direct` resolves to the same connection as `:writing`
-    # (see config/database.yml).
+    # The rendered SQL (~28 KB) exceeds RDS Proxy's 16 KB pin threshold,
+    # so it runs on :direct to bypass the pooler.
     def billable_subscriptions
       sql = <<-SQL
         WITH

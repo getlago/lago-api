@@ -116,9 +116,10 @@ production:
     url: <%= ENV.fetch('DATABASE_PROXY_URL', ENV['DATABASE_URL']) %>
     pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
     # RDS Proxy for Postgres session-pins on prepared statements, so
-    # this must be off whenever the primary role goes through a pooler
-    # — derived from DATABASE_PROXY_URL presence (single source of truth).
-    prepared_statements: <%= ENV['DATABASE_PROXY_URL'].blank? %>
+    # this must be off whenever the primary role goes through a pooler.
+    # When DATABASE_PROXY_URL is unset, fall back to the previous
+    # DATABASE_PREPARED_STATEMENTS knob (default true).
+    prepared_statements: <%= ENV['DATABASE_PROXY_URL'].present? ? false : ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
     schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
   direct:
     <<: *default
@@ -130,7 +131,7 @@ production:
     <<: *default
     url: <%= ENV.fetch('DATABASE_PROXY_URL', ENV['DATABASE_URL']) %>
     pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
-    prepared_statements: <%= ENV['DATABASE_PROXY_URL'].blank? %>
+    prepared_statements: <%= ENV['DATABASE_PROXY_URL'].present? ? false : ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
     schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
     database_tasks: false
   clickhouse:

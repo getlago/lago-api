@@ -208,15 +208,8 @@ class Invoice < ApplicationRecord
 
   # Batch-loads offset_amount_cents for a collection of invoices in a single query,
   # caching the result on each instance to avoid N+1 queries during serialization.
-  #
-  # `invoices.map(&:id)` iterates the relation, which is what materialises any
-  # chained `.includes(...)` — including the 5-payment-provider eager-load that
-  # invoice / credit-note index endpoints add on top. That materialised query
-  # renders to ~16.2–16.7 KB, above RDS Proxy's 16 KB per-statement pin
-  # threshold. Route both the eager-load fire AND the CreditNote batch through
-  # the `:direct` role so every caller (InvoiceIndex, CreditNoteIndex, GraphQL
-  # invoices resolvers, data exports) bypasses the pooler here — no need for
-  # each call site to remember the wrap.
+  # Wrapped in :direct — invoices.map(&:id) fires the eager-load, which exceeds
+  # RDS Proxy's 16 KB pin threshold under the index endpoints' .includes(...) chain.
   def self.preload_offset_amounts(invoices)
     return unless invoices
 

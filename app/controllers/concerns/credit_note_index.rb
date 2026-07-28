@@ -57,12 +57,7 @@ module CreditNoteIndex
     )
 
     if result.success?
-      # Same shape as InvoiceIndex — five payment-provider join aliases on
-      # `customer` plus a deep `items → fee → …` chain push the rendered
-      # `.includes(...)` query past RDS Proxy's 16 KB per-statement pin
-      # threshold once a page of credit-note IDs is expanded into the
-      # `WHERE id IN (…)` clause. Route the query + serialization through
-      # `:direct` so the whole page render bypasses the pooler.
+      # Eager-load exceeds RDS Proxy's 16 KB pin threshold — bypass the pooler.
       ApplicationRecord.connected_to(role: :direct) do
         render(
           json: ::CollectionSerializer.new(

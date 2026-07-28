@@ -61,13 +61,7 @@ module InvoiceIndex
     )
 
     if result.success?
-      # The `.includes(...)` chain here (5 payment-provider join aliases plus
-      # billing_entity, metadata, integration_customers, applied_taxes,
-      # applied_usage_thresholds) renders to ~16.2–16.7 KB once ActiveRecord
-      # expands the `WHERE invoices.id IN ($, $, …)` clause against a page of
-      # 100 invoice IDs — crossing RDS Proxy's 16 KB per-statement pin
-      # threshold. Route the eager-load + serializer traversal through the
-      # `:direct` role so this whole page render bypasses the pooler.
+      # Eager-load exceeds RDS Proxy's 16 KB pin threshold — bypass the pooler.
       ApplicationRecord.connected_to(role: :direct) do
         invoices = Invoice.preload_offset_amounts(
           result.invoices.includes(
