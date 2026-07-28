@@ -16,6 +16,10 @@ RSpec.describe Mutations::IntegrationCustomers::SetAsDefault do
     create(:xero_customer, customer:, organization:, category: "accounting", code: "xero_eu", is_default: false)
   end
 
+  let(:anrok_customer) do
+    create(:anrok_customer, customer:, organization:, category: "tax", code: "xero_eu", is_default: true)
+  end
+
   let(:mutation) do
     <<-GQL
       mutation($input: SetIntegrationCustomerAsDefaultInput!) {
@@ -32,6 +36,7 @@ RSpec.describe Mutations::IntegrationCustomers::SetAsDefault do
   before do
     netsuite_customer
     xero_customer
+    anrok_customer
   end
 
   it_behaves_like "requires current user"
@@ -46,7 +51,7 @@ RSpec.describe Mutations::IntegrationCustomers::SetAsDefault do
         permissions: required_permission,
         query: mutation,
         variables: {
-          input: {customerId: customer.id, code: "xero_eu"}
+          input: {customerId: customer.id, category: "accounting", code: "xero_eu"}
         }
       )
 
@@ -56,6 +61,37 @@ RSpec.describe Mutations::IntegrationCustomers::SetAsDefault do
       expect(data["isDefault"]).to be(true)
       expect(xero_customer.reload.is_default).to be(true)
       expect(netsuite_customer.reload.is_default).to be(false)
+    end
+
+    it "resolves the connection within the requested category only" do
+      execute_graphql(
+        current_organization: organization,
+        current_user: user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {customerId: customer.id, category: "accounting", code: "xero_eu"}
+        }
+      )
+
+      expect(xero_customer.reload.is_default).to be(true)
+      expect(anrok_customer.reload.is_default).to be(true)
+    end
+  end
+
+  context "when no connection matches the code within the category" do
+    it "returns an error" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {customerId: customer.id, category: "crm", code: "xero_eu"}
+        }
+      )
+
+      expect_not_found(result)
     end
   end
 
@@ -67,7 +103,7 @@ RSpec.describe Mutations::IntegrationCustomers::SetAsDefault do
         permissions: required_permission,
         query: mutation,
         variables: {
-          input: {customerId: customer.id, code: "unknown"}
+          input: {customerId: customer.id, category: "accounting", code: "unknown"}
         }
       )
 

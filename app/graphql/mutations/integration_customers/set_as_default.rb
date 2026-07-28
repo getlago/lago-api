@@ -11,14 +11,13 @@ module Mutations
 
       REQUIRED_PERMISSION = "customers:update"
 
-      argument :code, String, required: true
-      argument :customer_id, ID, required: true
+      input_object_class Types::IntegrationCustomers::SetAsDefaultInput
 
       type Types::IntegrationCustomers::Object
 
       def resolve(**args)
         customer = current_organization.customers.find_by(id: args[:customer_id])
-        integration_customer = customer&.integration_customers&.find_by(code: args[:code])
+        integration_customer = customer&.integration_customers&.find_by(category: args[:category], code: args[:code])
 
         result = ::IntegrationCustomers::SetAsDefaultService.call(integration_customer:)
 

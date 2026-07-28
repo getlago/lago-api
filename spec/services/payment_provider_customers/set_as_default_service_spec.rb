@@ -27,14 +27,6 @@ RSpec.describe PaymentProviderCustomers::SetAsDefaultService do
       expect(stripe_customer.reload.is_default).to be(false)
     end
 
-    it "runs under the per-customer payment_provider_customer advisory lock" do
-      allow(Customers::LockService).to receive(:call).and_call_original
-
-      set_as_default_service.call
-
-      expect(Customers::LockService).to have_received(:call).with(customer:, scope: :payment_provider_customer)
-    end
-
     context "when the connection is already default" do
       let(:payment_provider_customer) { stripe_customer }
 
@@ -55,21 +47,6 @@ RSpec.describe PaymentProviderCustomers::SetAsDefaultService do
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
-      end
-    end
-
-    context "when the advisory lock cannot be acquired" do
-      before do
-        allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
-      end
-
-      it "returns a lock acquisition failure and leaves defaults unchanged" do
-        result = set_as_default_service.call
-
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
-        expect(gocardless_customer.reload.is_default).to be(false)
-        expect(stripe_customer.reload.is_default).to be(true)
       end
     end
   end

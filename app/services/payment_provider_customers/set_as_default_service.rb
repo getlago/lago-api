@@ -19,19 +19,15 @@ module PaymentProviderCustomers
       end
 
       ActiveRecord::Base.transaction do
-        Customers::LockService.call(customer: payment_provider_customer.customer, scope: :payment_provider_customer) do
-          payment_provider_customer.customer.payment_provider_customers
-            .where.not(id: payment_provider_customer.id)
-            .update!(is_default: false)
-          payment_provider_customer.update!(is_default: true)
-        end
+        payment_provider_customer.customer.payment_provider_customers
+          .where.not(id: payment_provider_customer.id)
+          .update_all(is_default: false, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        payment_provider_customer.update!(is_default: true)
       end
 
       result.payment_provider_customer = payment_provider_customer
 
       result
-    rescue BaseLockService::FailedToAcquireLock => e
-      result.lock_acquisition_failure!(message: e.message, error: e)
     end
 
     private

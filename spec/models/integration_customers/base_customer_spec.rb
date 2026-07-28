@@ -15,6 +15,15 @@ RSpec.describe IntegrationCustomers::BaseCustomer do
   it { is_expected.to belong_to(:customer) }
   it { is_expected.to belong_to(:organization) }
 
+  describe "enums" do
+    it do
+      expect(subject).to define_enum_for(:category)
+        .backed_by_column_of_type(:enum)
+        .validating(allowing_nil: true)
+        .with_values(payment: "payment", tax: "tax", accounting: "accounting", crm: "crm")
+    end
+  end
+
   describe ".accounting_kind" do
     let(:netsuite_customer) { create(:netsuite_customer) }
     let(:xero_customer) { create(:xero_customer) }

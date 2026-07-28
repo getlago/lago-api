@@ -19,20 +19,16 @@ module IntegrationCustomers
       end
 
       ActiveRecord::Base.transaction do
-        Customers::LockService.call(customer: integration_customer.customer, scope: :integration_customer) do
-          integration_customer.customer.integration_customers
-            .where(category: integration_customer.category)
-            .where.not(id: integration_customer.id)
-            .update!(is_default: false)
-          integration_customer.update!(is_default: true)
-        end
+        integration_customer.customer.integration_customers
+          .where(category: integration_customer.category)
+          .where.not(id: integration_customer.id)
+          .update_all(is_default: false, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        integration_customer.update!(is_default: true)
       end
 
       result.integration_customer = integration_customer
 
       result
-    rescue BaseLockService::FailedToAcquireLock => e
-      result.lock_acquisition_failure!(message: e.message, error: e)
     end
 
     private
