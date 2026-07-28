@@ -4,19 +4,18 @@ class PlansQuery < BaseQuery
   Result = BaseResult[:plans]
   Filters = BaseFilters[:with_deleted, :include_pending_deletion]
 
+  # Deleted plans are kept for history but should not clutter the top of the list, so they are
+  # grouped after the active ones. Both groups stay sorted by name to remain easy to scan.
+  DEFAULT_ORDER = {
+    Arel.sql("plans.deleted_at IS NOT NULL") => :asc,
+    name: :asc,
+    created_at: :desc
+  }.freeze
+
   def call
     plans = base_scope.result
     plans = paginate(plans)
-    # Deleted plans are kept for history but should not clutter the top of the list, so they are
-    # pushed after the active ones, which stay sorted by name to remain easy to scan.
-    plans = apply_consistent_ordering(
-      plans,
-      default_order: <<~SQL.squish
-        plans.deleted_at ASC NULLS FIRST,
-        plans.name ASC,
-        plans.created_at DESC
-      SQL
-    )
+    plans = apply_consistent_ordering(plans, default_order: DEFAULT_ORDER)
 
     plans = exclude_pending_deletion(plans) unless filters.include_pending_deletion
     plans = plans.with_discarded if filters.with_deleted
