@@ -120,4 +120,24 @@ FactoryBot.define do
       webhook_secret { SecureRandom.hex(32) }
     end
   end
+
+  factory :paystack_provider, class: "PaymentProviders::PaystackProvider" do
+    organization
+    type { "PaymentProviders::PaystackProvider" }
+    name { "Paystack" }
+    code { "paystack_#{SecureRandom.uuid}" }
+
+    secrets do
+      {secret_key:}.to_json
+    end
+
+    settings do
+      {success_redirect_url:}
+    end
+
+    transient do
+      secret_key { "sk_test_#{SecureRandom.hex(24)}" }
+      success_redirect_url { Faker::Internet.url }
+    end
+  end
 end
