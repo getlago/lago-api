@@ -75,7 +75,16 @@ module ChargeFilters
     attr_reader :charge, :filter
 
     def other_filters
-      @other_filters ||= charge.filters.select { it.id != filter.id }
+      @other_filters ||= filters.reject { it.id == filter.id }
+    end
+
+    # NOTE: when filters are already pre-loaded (e.g. usage computation), reuse the loaded
+    #       association. Otherwise (e.g. pay-in-advance aggregation, where the charge arrives
+    #       without cached associations) eager load the values to avoid an N+1 per event.
+    def filters
+      return charge.filters if charge.association_cached?(:filters)
+
+      charge.filters.includes(values: :billable_metric_filter)
     end
 
     def subset_of_matching_filters?(child)
