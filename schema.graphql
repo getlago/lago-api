@@ -9024,6 +9024,16 @@ type Mutation {
   ): CurrentOrganization
 
   """
+  Updates a payment provider customer connection
+  """
+  updatePaymentProviderCustomer(
+    """
+    Parameters for UpdatePaymentProviderCustomer
+    """
+    input: UpdatePaymentProviderCustomerInput!
+  ): ProviderCustomer
+
+  """
   Updates an existing Plan
   """
   updatePlan(
@@ -13537,6 +13547,21 @@ input UpdateOrganizationInput {
   timezone: TimezoneEnum
   webhookUrl: String
   zipcode: String
+}
+
+"""
+Update payment provider customer input arguments
+"""
+input UpdatePaymentProviderCustomerInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String
+  id: ID!
+  providerCustomerId: ID
+  providerPaymentMethods: [ProviderPaymentMethodsEnum!]
+  syncWithProvider: Boolean
 }
 
 """
