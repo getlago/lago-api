@@ -64,7 +64,7 @@ module PaymentProviderCustomers
         customer:,
         payment_provider_id: payment_provider_customer&.payment_provider&.id,
         params: provider_customer_params
-      ).call.raise_if_error!
+      ).call!
 
       customer.reload
     end
