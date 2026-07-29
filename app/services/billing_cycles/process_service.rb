@@ -67,10 +67,9 @@ module BillingCycles
     end
 
     # Effective payment method (parity with the legacy grouping): explicit wins, else the
-    # customer default; only splits when the org has the feature enabled.
+    # customer default. Always splits, like the legacy biller: an invoice is charged with a
+    # single payment method, so subscriptions resolving to different ones cannot share one.
     def payment_method_key(subscription)
-      return nil unless customer.organization.feature_flag_enabled?(:multiple_payment_methods)
-
       if subscription.payment_method_id.present?
         [subscription.payment_method_id, subscription.payment_method_type]
       elsif subscription.payment_method_type == "manual"

@@ -13,6 +13,14 @@ module LifetimeUsages
     def call
       result.lifetime_usage = lifetime_usage
 
+      # Product-catalog (billing v2) plans have no legacy interval, so the legacy usage
+      # computation cannot resolve billing boundaries for them. Clear the flags without
+      # recalculating so the refresh clock stops re-enqueuing them every tick.
+      if lifetime_usage.subscription.plan.product_catalog?
+        lifetime_usage.update!(recalculate_current_usage: false, recalculate_invoiced_usage: false)
+        return result
+      end
+
       # clear boolean flags without recalculating if the subscription is not active.
       if !lifetime_usage.subscription.active?
         lifetime_usage.update!(recalculate_current_usage: false, recalculate_invoiced_usage: false)
