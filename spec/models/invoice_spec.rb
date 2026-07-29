@@ -1948,7 +1948,7 @@ RSpec.describe Invoice do
     it "returns the lago frontend url of the invoice overview page" do
       expect(invoice.web_url).to eq(
         URI.join(
-          ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com",
+          Rails.application.config.lago_front_url,
           "/#{invoice.organization.slug}/customer/#{invoice.customer_id}/",
           "invoice/#{invoice.id}/overview"
         ).to_s
