@@ -208,22 +208,26 @@ class Invoice < ApplicationRecord
 
   # Batch-loads offset_amount_cents for a collection of invoices in a single query,
   # caching the result on each instance to avoid N+1 queries during serialization.
+  # Wrapped in :direct — invoices.map(&:id) fires the eager-load, which exceeds
+  # RDS Proxy's 16 KB pin threshold under the index endpoints' .includes(...) chain.
   def self.preload_offset_amounts(invoices)
     return unless invoices
 
-    invoice_ids = invoices.map(&:id).compact
+    ApplicationRecord.connected_to(role: :direct) do
+      invoice_ids = invoices.map(&:id).compact
 
-    offset_amounts = CreditNote
-      .where(invoice_id: invoice_ids)
-      .finalized
-      .group(:invoice_id)
-      .sum(:offset_amount_cents)
+      offset_amounts = CreditNote
+        .where(invoice_id: invoice_ids)
+        .finalized
+        .group(:invoice_id)
+        .sum(:offset_amount_cents)
 
-    invoices.each do |invoice|
-      invoice.precalculated_offset_amount_cents = (offset_amounts[invoice.id] || 0)
+      invoices.each do |invoice|
+        invoice.precalculated_offset_amount_cents = (offset_amounts[invoice.id] || 0)
+      end
+
+      invoices
     end
-
-    invoices
   end
 
   def payment_invoices
