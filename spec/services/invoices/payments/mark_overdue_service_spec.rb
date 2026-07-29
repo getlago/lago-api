@@ -10,12 +10,14 @@ RSpec.describe Invoices::Payments::MarkOverdueService do
       payment_due_date: invoice_due_date,
       status: invoice_status,
       payment_status: invoice_payment_status,
-      payment_dispute_lost_at: invoice_dispute_lost_at)
+      payment_dispute_lost_at: invoice_dispute_lost_at,
+      payment_overdue: invoice_payment_overdue)
   end
   let(:invoice_payment_status) { :pending }
   let(:invoice_due_date) { 1.day.ago }
   let(:invoice_status) { :finalized }
   let(:invoice_dispute_lost_at) { nil }
+  let(:invoice_payment_overdue) { false }
 
   describe "#call" do
     it "mark the invoice as payment_overdue" do
@@ -80,6 +82,16 @@ RSpec.describe Invoices::Payments::MarkOverdueService do
         expect(result.success?).to be(false)
         expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         expect(result.error.code).to eq("invoice_dispute_lost")
+      end
+    end
+
+    context "when invoice is already overdue" do
+      let(:invoice_payment_overdue) { true }
+
+      it "returns not allowed failure" do
+        expect(result.success?).to be(false)
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("invoice_already_overdue")
       end
     end
   end
