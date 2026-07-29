@@ -16,6 +16,15 @@ module IntegrationCustomers
       IntegrationCustomers::AvalaraCustomer
     ].freeze
 
+    CATEGORIES = {
+      payment: "payment",
+      tax: "tax",
+      accounting: "accounting",
+      crm: "crm"
+    }.freeze
+
+    enum :category, CATEGORIES, validate: {allow_nil: true}
+
     validates :customer_id, uniqueness: {scope: :type}
     validate :only_one_tax_integration_per_customer, if: :tax_kind?
 

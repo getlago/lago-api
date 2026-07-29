@@ -2760,6 +2760,30 @@
           "description": null,
           "fields": [
             {
+              "name": "category",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "ENUM",
+                "name": "IntegrationConnectionCategoryEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "externalAccountId",
               "description": null,
               "args": [],
@@ -2831,6 +2855,22 @@
                 "kind": "ENUM",
                 "name": "IntegrationTypeEnum",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "isDefault",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -4353,6 +4393,30 @@
           "description": null,
           "fields": [
             {
+              "name": "category",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "ENUM",
+                "name": "IntegrationConnectionCategoryEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "externalCustomerId",
               "description": null,
               "args": [],
@@ -4412,6 +4476,22 @@
                 "kind": "ENUM",
                 "name": "IntegrationTypeEnum",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "isDefault",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -33277,6 +33357,30 @@
           "description": null,
           "fields": [
             {
+              "name": "category",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "ENUM",
+                "name": "IntegrationConnectionCategoryEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "externalCustomerId",
               "description": null,
               "args": [],
@@ -33336,6 +33440,22 @@
                 "kind": "ENUM",
                 "name": "IntegrationTypeEnum",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "isDefault",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -33680,6 +33800,82 @@
           "interfaces": [],
           "enumValues": null,
           "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "IntegrationConnectionCategoryEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "payment",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "tax",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "accounting",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "crm",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
+          "kind": "UNION",
+          "name": "IntegrationCustomer",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": [
+            {
+              "kind": "OBJECT",
+              "name": "AnrokCustomer",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "AvalaraCustomer",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "HubspotCustomer",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "NetsuiteCustomer",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "SalesforceCustomer",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "XeroCustomer",
+              "ofType": null
+            }
+          ]
         },
         {
           "kind": "INPUT_OBJECT",
@@ -41926,6 +42122,35 @@
               "deprecationReason": null
             },
             {
+              "name": "setIntegrationCustomerAsDefault",
+              "description": "Set an integration connection as the default for its category",
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for SetIntegrationCustomerAsDefault",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "SetIntegrationCustomerAsDefaultInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "UNION",
+                "name": "IntegrationCustomer",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "setPaymentMethodAsDefault",
               "description": "Set payment method as default",
               "args": [
@@ -41949,6 +42174,35 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "PaymentMethod",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "setPaymentProviderCustomerAsDefault",
+              "description": "Set a payment connection as the default for the customer",
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for SetPaymentProviderCustomerAsDefault",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "SetPaymentProviderCustomerAsDefaultInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "ProviderCustomer",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -43735,6 +43989,30 @@
           "description": null,
           "fields": [
             {
+              "name": "category",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "ENUM",
+                "name": "IntegrationConnectionCategoryEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "externalCustomerId",
               "description": null,
               "args": [],
@@ -43794,6 +44072,22 @@
                 "kind": "ENUM",
                 "name": "IntegrationTypeEnum",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "isDefault",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -52563,6 +52857,18 @@
           "description": null,
           "fields": [
             {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "id",
               "description": null,
               "args": [],
@@ -52572,6 +52878,22 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "isDefault",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
                   "ofType": null
                 }
               },
@@ -63298,6 +63620,30 @@
           "description": null,
           "fields": [
             {
+              "name": "category",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "ENUM",
+                "name": "IntegrationConnectionCategoryEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "externalCustomerId",
               "description": null,
               "args": [],
@@ -63357,6 +63703,22 @@
                 "kind": "ENUM",
                 "name": "IntegrationTypeEnum",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "isDefault",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -63798,6 +64160,84 @@
           "kind": "INPUT_OBJECT",
           "name": "SetAsDefaultInput",
           "description": "Autogenerated input type of SetAsDefault",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "SetIntegrationCustomerAsDefaultInput",
+          "description": "Autogenerated input type of SetIntegrationCustomerAsDefault",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "SetPaymentProviderCustomerAsDefaultInput",
+          "description": "Autogenerated input type of SetPaymentProviderCustomerAsDefault",
           "fields": null,
           "inputFields": [
             {
@@ -77032,6 +77472,30 @@
           "description": null,
           "fields": [
             {
+              "name": "category",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "ENUM",
+                "name": "IntegrationConnectionCategoryEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "externalCustomerId",
               "description": null,
               "args": [],
@@ -77091,6 +77555,22 @@
                 "kind": "ENUM",
                 "name": "IntegrationTypeEnum",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "isDefault",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
