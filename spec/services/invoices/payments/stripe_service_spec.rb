@@ -288,6 +288,63 @@ RSpec.describe Invoices::Payments::StripeService do
         )
       end
 
+      context "when the off-session charge was rejected for authentication and 3DS is supported" do
+        let(:stripe_payment) do
+          PaymentProviders::StripeProvider::StripePayment.new(
+            id: "ch_123456",
+            status: "requires_payment_method",
+            metadata: {},
+            error_code: "authentication_required"
+          )
+        end
+
+        before { payment.payment_provider.update!(supports_3ds: true) }
+
+        # The on-session retry has not run yet, so no payment is in requires_action.
+        it "updates the payment status but not the invoice status" do
+          result = described_class.call(
+            :update_payment_status,
+            organization_id: organization.id,
+            status: "failed",
+            stripe_payment:
+          )
+
+          expect(result).to be_success
+          expect(result.payment.status).to eq("failed")
+          expect(result.payment.error_code).to eq("authentication_required")
+          expect(result.invoice.reload).to have_attributes(
+            payment_status: "pending",
+            ready_for_payment_processing: true
+          )
+        end
+      end
+
+      context "when the off-session charge was rejected for authentication and 3DS is not supported" do
+        let(:stripe_payment) do
+          PaymentProviders::StripeProvider::StripePayment.new(
+            id: "ch_123456",
+            status: "requires_payment_method",
+            metadata: {},
+            error_code: "authentication_required"
+          )
+        end
+
+        it "updates the invoice status because no retry will follow" do
+          result = described_class.call(
+            :update_payment_status,
+            organization_id: organization.id,
+            status: "failed",
+            stripe_payment:
+          )
+
+          expect(result).to be_success
+          expect(result.invoice.reload).to have_attributes(
+            payment_status: "failed",
+            ready_for_payment_processing: true
+          )
+        end
+      end
+
       context "when there is another payment in requires_action state for the invoice" do
         it "updates the payment status but not the invoice status" do
           # We can only have one `pending/processing` payment for an invoice

@@ -44,10 +44,7 @@ module Invoices
 
         deliver_webhook if payable_payment_status.to_sym == :succeeded
 
-        if status.to_s == "failed" && result.invoice.payments.excluding(result.payment).where(status: :requires_action).any?
-          # We don't update the invoice status because it's likely the webhook of a failed payment
-          # but there is already a retry in progress with 3DSecure authentication
-        else
+        unless authentication_retry_pending?(payment, status)
           update_invoice_payment_status(
             payment_status: payable_payment_status,
             processing: status == "processing"
@@ -61,6 +58,13 @@ module Invoices
         result
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
+      end
+
+      def authentication_retry_pending?(payment, status)
+        return false unless status.to_s == "failed"
+
+        payment.payment_provider&.retriable_authentication_failure?(payment.error_code) ||
+          payment.payable.payments.excluding(payment).where(status: :requires_action).any?
       end
 
       def generate_payment_url(invoice, payment_intent)
