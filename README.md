@@ -26,3 +26,4 @@ Check the wiki [guide](https://github.com/getlago/lago-api/wiki)
 ## License
 
 Lago is distributed under [AGPL-3.0](LICENSE).
+
