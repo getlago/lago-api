@@ -402,7 +402,7 @@ RSpec.describe Events::BillingPeriodFilterService do
   before { charge }
 
   describe "#call" do
-    context "when relying on event codes" do
+    shared_examples "billing period filtering from event codes" do
       it "returns the filtered charge_ids" do
         result = filter_service.call
 
@@ -679,6 +679,34 @@ RSpec.describe Events::BillingPeriodFilterService do
 
         expect(event_store).to have_received(:distinct_codes_and_property_combinations)
           .with(codes: [billable_metric.code], filter_keys: [])
+      end
+    end
+
+    context "when relying on event codes" do
+      it_behaves_like "billing period filtering from event codes"
+
+      context "when charges are preloaded" do
+        subject(:filter_service) { described_class.new(subscription:, boundaries:, charges: preloaded_charges) }
+
+        let(:preloaded_charges) do
+          plan.charges
+            .includes(billable_metric: :filters, filters: {values: :billable_metric_filter})
+            .to_a
+        end
+
+        it_behaves_like "billing period filtering from event codes"
+
+        it "does not load charges or filters from the database" do
+          preloaded_charges
+
+          queries = []
+          callback = ->(_name, _start, _finish, _id, payload) { queries << payload[:sql] }
+          ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+            filter_service.call
+          end
+
+          expect(queries.grep(/FROM "charges"|FROM "charge_filters"/)).to be_empty
+        end
       end
     end
 
@@ -1196,6 +1224,18 @@ RSpec.describe Events::BillingPeriodFilterService do
             # now, so the recurring bucket must reflect it to invalidate the lazy usage cache.
             expect(result.charges[recurring_charge.id][nil]).to be > boundaries.charges_from_datetime
           end
+        end
+
+        context "when charges are preloaded" do
+          subject(:filter_service) { described_class.new(subscription:, boundaries:, charges: preloaded_charges) }
+
+          let(:preloaded_charges) do
+            plan.charges
+              .includes(billable_metric: :filters, filters: {values: :billable_metric_filter})
+              .to_a
+          end
+
+          it_behaves_like "recurring billable metric filtering"
         end
       end
 
