@@ -129,27 +129,35 @@ module Invoices
     # NOTE: Concurrent plan updates can transiently leave a plan with several copies of the
     #       same charge (only code/parent_id differ), which would multiply usage.
     #       Count exact copies once; charges differing in any billing attribute are preserved.
+    #       Filters are only compared between charges identical in everything else, and
+    #       since copies require a repeated billable metric, plans without one — the
+    #       common case — skip all signature work.
     def deduplicated_charges
-      charges.to_a.uniq { |charge| charge_definition_signature(charge) }
+      all_charges = charges.to_a
+      candidates = all_charges.group_by(&:billable_metric_id).values.reject(&:one?)
+      return all_charges if candidates.empty?
+
+      duplicates = candidates.flat_map do |charges_of_metric|
+        charges_of_metric
+          .group_by { |charge| charge_scalar_signature(charge) }
+          .values
+          .reject(&:one?)
+          .flat_map { |copies| copies - copies.uniq { |charge| charge_filters_signature(charge) } }
+      end
+
+      all_charges - duplicates
     end
 
-    def charge_definition_signature(charge)
+    def charge_scalar_signature(charge)
       [
-        charge.billable_metric_id,
-        charge.charge_model,
-        charge.properties,
-        charge.pay_in_advance,
-        charge.prorated,
-        charge.invoiceable,
-        charge.regroup_paid_fees,
-        charge.min_amount_cents,
-        charge.invoice_display_name,
-        charge.amount_currency,
-        charge.accepts_target_wallet,
+        charge.attributes.except("id", "code", "parent_id", "created_at", "updated_at", "deleted_at"),
         charge.taxes.map(&:id).sort,
-        charge.applied_pricing_unit&.slice(:pricing_unit_id, :conversion_rate),
-        charge.filters.map { |f| [f.properties, f.values.map { |v| [v.billable_metric_filter_id, v.values] }.sort_by(&:to_s)] }.sort_by(&:to_s)
+        charge.applied_pricing_unit&.slice(:pricing_unit_id, :conversion_rate)
       ]
+    end
+
+    def charge_filters_signature(charge)
+      charge.filters.map { |f| [f.properties, f.invoice_display_name, f.to_h.sort] }.sort_by(&:to_s)
     end
 
     def charge_usage(charge, applied_filters)

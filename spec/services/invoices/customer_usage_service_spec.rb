@@ -794,10 +794,15 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
   end
 
   describe "transiently duplicated charges" do
+    def create_charge_copy(code:, **attributes)
+      defaults = {plan:, billable_metric:, code:, properties: {amount: "10"}, invoice_display_name: "Usage"}
+      create(:standard_charge, **defaults.merge(attributes))
+    end
+
     subject(:usage_service) { described_class.new(customer:, subscription:) }
 
     let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
-    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"}, invoice_display_name: "Usage") }
+    let(:charge) { create_charge_copy(code: "base") }
 
     before do
       create_list(:event, 3, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
@@ -806,7 +811,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
 
     it "counts a charge of identical definition only once" do
-      create(:standard_charge, plan:, billable_metric:, code: "clone", properties: {amount: "10"}, invoice_display_name: "Usage")
+      create_charge_copy(code: "clone")
 
       result = usage_service.call
 
@@ -816,9 +821,38 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       expect(result.usage.fees.size).to eq(1)
     end
 
+    it "compares filters only between charges identical in everything else" do
+      other_metric = create(:billable_metric, organization:, aggregation_type: "count_agg")
+      create(:standard_charge, plan:, billable_metric: other_metric, properties: {amount: "5"})
+
+      service = described_class.new(customer:, subscription:)
+      allow(service).to receive(:charge_filters_signature).and_call_original
+
+      expect(service.call).to be_success
+      expect(service).not_to have_received(:charge_filters_signature)
+    end
+
+    it "dedups by filter definition when charges are otherwise identical" do
+      bm_filter = create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
+      clone_a, clone_b, priced_differently = [["fa", "5"], ["fb", "5"], ["fc", "7"]].map do |code, amount|
+        create_charge_copy(code:).tap do |copy|
+          filter = create(:charge_filter, charge: copy, properties: {amount:})
+          create(:charge_filter_value, charge_filter: filter, billable_metric_filter: bm_filter, values: ["eu"])
+        end
+      end
+
+      deduplicated = usage_service.send(:deduplicated_charges)
+
+      # the base charge (no filters), one of the two identical clones, and the
+      # charge whose filter carries a different price
+      expect(deduplicated.size).to eq(3)
+      expect(deduplicated).to include(charge, priced_differently)
+      expect(deduplicated & [clone_a, clone_b]).to be_one
+    end
+
     it "keeps charges that differ in a billing-relevant attribute" do
-      create(:standard_charge, plan:, billable_metric:, code: "other", properties: {amount: "5"})
-      create(:standard_charge, plan:, billable_metric:, code: "named", properties: {amount: "10"}, invoice_display_name: "Support fee")
+      create_charge_copy(code: "other", properties: {amount: "5"})
+      create_charge_copy(code: "named", invoice_display_name: "Support fee")
 
       result = usage_service.call
 
