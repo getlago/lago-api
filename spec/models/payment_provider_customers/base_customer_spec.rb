@@ -7,6 +7,12 @@ RSpec.describe PaymentProviderCustomers::BaseCustomer do
 
   it { is_expected.to belong_to(:organization) }
 
+  describe "validations" do
+    subject { create(:stripe_customer, code: "stripe_eu") }
+
+    it { is_expected.to validate_uniqueness_of(:code).scoped_to(:customer_id).allow_nil }
+  end
+
   describe "#legacy_provider_method_id" do
     subject { customer.legacy_provider_method_id }
 
