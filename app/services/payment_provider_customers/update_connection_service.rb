@@ -2,8 +2,6 @@
 
 module PaymentProviderCustomers
   class UpdateConnectionService < BaseService
-    include Customers::PaymentProviderFinder
-
     Result = BaseResult[:payment_provider_customer]
 
     def initialize(payment_provider_customer:, params:)
