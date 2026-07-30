@@ -11,7 +11,7 @@ module Customers
       )
     end
 
-    unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
+    unique :until_executed, on_conflict: :log, lock_ttl: 2.hours
 
     retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
 
@@ -27,6 +27,12 @@ module Customers
         "RefreshWalletJob reached max throttling retry attempts" \
         "customer_id=#{job.arguments.first&.id} provider=#{error.provider_name}"
       )
+
+      # The uniqueness lock is only released by the `after_perform` callback, which is skipped
+      # when the job raises. Swallowing the error here also bypasses Sidekiq's death handler, so
+      # the lock must be released explicitly: otherwise the customer stays locked for `lock_ttl`
+      # and every re-enqueue from the clock job is silently dropped on conflict.
+      ActiveJob::Uniqueness.unlock!(job_class_name: job.class.name, arguments: job.arguments)
     end
 
     retry_on(*Integrations::Aggregator::BaseService.retryable_errors, wait: :polynomially_longer, attempts: 6)
