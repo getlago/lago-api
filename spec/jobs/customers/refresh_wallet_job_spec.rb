@@ -158,6 +158,23 @@ RSpec.describe Customers::RefreshWalletJob do
             expect { described_class.perform_later(customer) }.not_to raise_error
           end
         end
+
+        context "with the uniqueness lock enforced" do
+          around do |example|
+            ActiveJob::Uniqueness.reset_manager!
+            example.run
+            described_class.unlock!(customer)
+            ActiveJob::Uniqueness.test_mode!
+          end
+
+          it "releases the uniqueness lock when giving up" do
+            assert_performed_jobs(10, only: [described_class]) do
+              described_class.perform_later(customer)
+            end
+
+            expect { described_class.perform_later(customer) }.to change { enqueued_jobs.count }.by(1) # rubocop:disable RSpec/ExpectChange
+          end
+        end
       end
 
       context "when refresh customer's wallets fails with a non-tax error" do
