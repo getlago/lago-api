@@ -129,9 +129,7 @@ module Invoices
     # NOTE: Concurrent plan updates can transiently leave a plan with several copies of the
     #       same charge (only code/parent_id differ), which would multiply usage.
     #       Count exact copies once; charges differing in any billing attribute are preserved.
-    #       Filters are only compared between charges identical in everything else, and
-    #       since copies require a repeated billable metric, plans without one — the
-    #       common case — skip all signature work.
+    #       Filters are only compared between charges identical in everything else to reduce perf impact.
     def deduplicated_charges
       all_charges = charges.to_a
       candidates = all_charges.group_by(&:billable_metric_id).values.reject(&:one?)
