@@ -12,6 +12,7 @@ module V1
         currency: model.currency,
         name: model.name,
         code: model.code,
+        purchase_order_number: model.purchase_order_number,
         rate_amount: model.rate_amount,
         credits_balance: model.credits_balance,
         credits_ongoing_balance: model.credits_ongoing_balance,
