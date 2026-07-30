@@ -8951,6 +8951,16 @@ type Mutation {
   ): CollectionMapping
 
   """
+  Updates an integration customer connection
+  """
+  updateIntegrationCustomer(
+    """
+    Parameters for UpdateIntegrationCustomer
+    """
+    input: UpdateIntegrationCustomerInput!
+  ): IntegrationCustomer
+
+  """
   Update integration mapping
   """
   updateIntegrationMapping(
@@ -13399,6 +13409,22 @@ input UpdateIntegrationCollectionMappingInput {
   taxCode: String
   taxNexus: String
   taxType: String
+}
+
+"""
+Update integration customer input arguments
+"""
+input UpdateIntegrationCustomerInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String
+  externalCustomerId: String
+  id: ID!
+  subsidiaryId: String
+  syncWithProvider: Boolean
+  targetedObject: HubspotTargetedObjectsEnum
 }
 
 """
