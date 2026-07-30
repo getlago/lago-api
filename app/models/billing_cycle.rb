@@ -30,29 +30,29 @@ end
 # Table name: billing_cycles
 # Database name: primary
 #
-#  id                           :uuid             not null, primary key
-#  attempts                     :integer          default(0), not null
-#  billing_at                   :datetime         not null
-#  period_from                  :datetime         not null
-#  period_to                    :datetime         not null
-#  status                       :enum             default("pending"), not null
-#  created_at                   :datetime         not null
-#  updated_at                   :datetime         not null
-#  customer_id                  :uuid             not null
-#  invoice_id                   :uuid
-#  organization_id              :uuid             not null
-#  subscription_id              :uuid             not null
+#  id                        :uuid             not null, primary key
+#  attempts                  :integer          default(0), not null
+#  billing_at                :datetime         not null
+#  period_from               :datetime         not null
+#  period_to                 :datetime         not null
+#  status                    :enum             default("pending"), not null
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  customer_id               :uuid             not null
+#  invoice_id                :uuid
+#  organization_id           :uuid             not null
+#  subscription_id           :uuid             not null
 #  subscription_rate_card_id :uuid             not null
 #
 # Indexes
 #
-#  idx_on_subscription_id_billing_at_status_a01115903b   (subscription_id,billing_at,status)
-#  index_billing_cycles_on_customer_id                   (customer_id)
-#  index_billing_cycles_on_invoice_id                    (invoice_id)
-#  index_billing_cycles_on_organization_id               (organization_id)
-#  index_billing_cycles_on_product_and_period       (subscription_rate_card_id,period_from) UNIQUE
-#  index_billing_cycles_on_subscription_id               (subscription_id)
-#  index_billing_cycles_on_subscription_rate_card_id  (subscription_rate_card_id)
+#  idx_on_subscription_id_billing_at_status_a01115903b  (subscription_id,billing_at,status)
+#  index_billing_cycles_on_customer_id                  (customer_id)
+#  index_billing_cycles_on_invoice_id                   (invoice_id)
+#  index_billing_cycles_on_organization_id              (organization_id)
+#  index_billing_cycles_on_product_and_period           (subscription_rate_card_id,period_from) UNIQUE
+#  index_billing_cycles_on_subscription_id              (subscription_id)
+#  index_billing_cycles_on_subscription_rate_card_id    (subscription_rate_card_id)
 #
 # Foreign Keys
 #
