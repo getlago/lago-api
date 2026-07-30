@@ -55,4 +55,21 @@ class ApplicationJob < ActiveJob::Base
   def self.random_lock_retry_delay
     random_delay(MAX_LOCK_RETRY_DELAY)
   end
+
+  # This method is a generic proc for specifying a linearly growing wait between retries.
+  # The delay grows by `step_seconds` per attempt, is capped at `max_seconds` and carries its
+  # own jitter so that retries of jobs that failed on the same event do not realign on the
+  # same window.
+  #
+  # Usage:
+  # retry_on ExceptionClass, attempts: 10, wait: linear_delay(5, max_seconds: 30)
+  #
+  def self.linear_delay(step_seconds, max_seconds: nil)
+    lambda do |executions|
+      delay = step_seconds * executions
+      delay = [delay, max_seconds].min if max_seconds
+
+      delay + rand(0...step_seconds)
+    end
+  end
 end
