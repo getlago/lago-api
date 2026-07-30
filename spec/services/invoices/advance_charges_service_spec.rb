@@ -246,6 +246,66 @@ RSpec.describe Invoices::AdvanceChargesService do
       end
     end
 
+    context "when a terminated subscription started after the active one" do
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+
+      let(:charge) do
+        create(
+          :charge,
+          plan:,
+          billable_metric:,
+          prorated: true,
+          pay_in_advance: true,
+          invoiceable: false,
+          regroup_paid_fees: "invoice",
+          properties: {amount: "1"}
+        )
+      end
+
+      # The customer re-subscribed with a backdated `subscription_at`, so the active subscription has an
+      # earlier `started_at` than the terminated one it replaced.
+      let(:started_at) { billing_at - 11.months }
+
+      let(:subscription_2) do
+        create(
+          :subscription,
+          external_id: subscription.external_id,
+          customer:,
+          status: :terminated,
+          subscription_at: started_at + 14.days,
+          started_at: started_at + 14.days,
+          terminated_at: started_at + 1.month,
+          plan:
+        )
+      end
+
+      before do
+        create(
+          :fee,
+          :succeeded,
+          organization_id: organization.id,
+          succeeded_at: billing_at - 2.days,
+          invoice_id: nil,
+          subscription: subscription_2,
+          amount_cents: 999,
+          taxes_amount_cents: 0,
+          properties: fee_boundaries,
+          charge:
+        )
+      end
+
+      it "bills the terminated subscription on its own last period" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.fees.count).to eq 1
+
+        invoice_subscription = result.invoice.invoice_subscriptions.sole
+        expect(invoice_subscription.charges_from_datetime).to match_datetime subscription_2.terminated_at.beginning_of_month
+        expect(invoice_subscription.charges_to_datetime).to match_datetime subscription_2.terminated_at
+      end
+    end
+
     context "when re-expanded subscriptions carry different purchase order numbers" do
       let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
 
