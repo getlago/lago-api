@@ -87,6 +87,43 @@ module Api
         end
       end
 
+      # Testing helper: fast-forwards one or more product-catalog subscriptions to
+      # `timestamp` (default now) and returns what they produced, synchronously. With
+      # `terminate: true` it simulates a termination at that date (final prorated cycle +
+      # advance credit notes) instead of periodic billing. Takes the id from the path, or
+      # an `external_ids` array to bill several at once.
+      def bill
+        external_ids = Array.wrap(params[:external_ids].presence || params[:external_id])
+          .map(&:to_s).reject(&:blank?).uniq
+        return not_found_error(resource: "subscription") if external_ids.empty?
+
+        subscriptions = current_organization.subscriptions
+          .where(external_id: external_ids, status: :active).to_a
+        # Fail on an unknown id rather than silently billing the subset: a typo in a test
+        # call should be visible, not look like "that subscription had nothing to bill".
+        return not_found_error(resource: "subscription") if subscriptions.size != external_ids.size
+
+        result = ::V2::Subscriptions::BillService.call(
+          subscriptions:,
+          timestamp: params[:timestamp],
+          terminate: ActiveModel::Type::Boolean.new.cast(params[:terminate])
+        )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.invoices, ::V1::InvoiceSerializer, collection_name: "invoices"
+            ).serialize.merge(
+              ::CollectionSerializer.new(
+                result.credit_notes, ::V1::CreditNoteSerializer, collection_name: "credit_notes"
+              ).serialize
+            )
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def resource_name
