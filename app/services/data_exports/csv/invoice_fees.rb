@@ -74,6 +74,12 @@ module DataExports
             serialized_fee = fee_serializer_klass.new(fee).serialize
             invoice_subscription = invoice_subscriptions[fee.subscription_id]
 
+            # Resolve the period with the same rules the invoice PDF uses, so both
+            # documents agree on every fee type. Fees without an invoice subscription
+            # (add-ons, credits) keep exporting an empty period.
+            billing_period = invoice_subscription &&
+              FeeBoundariesHelper.billing_period_for(fee, invoice_subscription:)
+
             serialized_subscription = {
               external_id: fee.subscription&.external_id,
               plan_code: fee.subscription&.plan&.code
@@ -93,8 +99,8 @@ module DataExports
               serialized_fee.dig(:item, :grouped_by),
               serialized_subscription[:external_id],
               serialized_subscription[:plan_code],
-              period_date(serialized_fee[:from_date], invoice_subscription&.charges_from_datetime, timezone),
-              period_date(serialized_fee[:to_date], invoice_subscription&.charges_to_datetime, timezone),
+              period_date(billing_period&.from_datetime, timezone),
+              period_date(billing_period&.to_datetime, timezone),
               serialized_fee[:total_amount_currency],
               serialized_fee[:units],
               serialized_fee[:precise_unit_amount],
@@ -104,11 +110,10 @@ module DataExports
         end
       end
 
-      # Renders a fee boundary as a date in the customer timezone, falling back to the
-      # invoice subscription usage window for fees that carry no boundaries of their own.
-      def period_date(fee_datetime, fallback_datetime, timezone)
-        datetime = fee_datetime.presence || fallback_datetime
-        datetime&.to_datetime&.in_time_zone(timezone)&.to_date
+      # Renders a billing period boundary as a date in the customer timezone, matching
+      # FeeBoundariesHelper.format_billing_period used by the invoice PDF.
+      def period_date(datetime, timezone)
+        datetime&.in_time_zone(timezone)&.to_date
       end
 
       def collection

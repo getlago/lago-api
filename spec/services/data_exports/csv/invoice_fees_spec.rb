@@ -9,6 +9,9 @@ RSpec.describe DataExports::Csv::InvoiceFees do
   let(:invoice) { create(:invoice, customer:, organization: customer.organization) }
   let(:to_utc) { "2024-06-06 12:48:59 UTC" }
   let(:from_utc) { "2024-05-08 00:00:00 UTC" }
+  # The subscription period, which only differs from the usage window on advance-billed plans
+  let(:subscription_from_utc) { from_utc }
+  let(:subscription_to_utc) { to_utc }
   let(:timezone) { "UTC" }
   let(:data_export_part) do
     data_export.data_export_parts.create(index: 1, object_ids: [invoice.id], organization_id: data_export.organization_id)
@@ -66,8 +69,12 @@ RSpec.describe DataExports::Csv::InvoiceFees do
         invoice:,
         subscription:,
         organization: customer.organization,
+        from_datetime: Time.zone.parse(subscription_from_utc),
+        to_datetime: Time.zone.parse(subscription_to_utc),
         charges_from_datetime: Time.zone.parse(from_utc),
-        charges_to_datetime: Time.zone.parse(to_utc))
+        charges_to_datetime: Time.zone.parse(to_utc),
+        fixed_charges_from_datetime: Time.zone.parse(subscription_from_utc),
+        fixed_charges_to_datetime: Time.zone.parse(subscription_to_utc))
       allow(invoice_serializer_klass).to receive(:new).and_return(invoice_serializer)
       allow(fee_serializer_klass).to receive(:new).and_return(fee_serializer)
     end
@@ -185,10 +192,18 @@ RSpec.describe DataExports::Csv::InvoiceFees do
         end
 
         context "when the customer is in a negative UTC offset timezone" do
+          # America/New_York is UTC-4 in summer, so a Jun 22 - Jul 21 local period is
+          # stored as 2026-06-22 04:00 UTC - 2026-07-22 03:59 UTC.
           let(:timezone) { "America/New_York" }
+          let(:advance_boundaries) do
+            {
+              "from_datetime" => "2026-06-22T04:00:00Z",
+              "to_datetime" => "2026-07-22T03:59:59Z"
+            }
+          end
 
           it "converts the fee's own period to the customer timezone" do
-            expect(exported_period).to eq(%w[2026-06-21 2026-07-21])
+            expect(exported_period).to eq(%w[2026-06-22 2026-07-21])
           end
         end
       end
@@ -209,6 +224,50 @@ RSpec.describe DataExports::Csv::InvoiceFees do
 
         it "keeps exporting the usage window" do
           expect(exported_period).to eq(%w[2026-05-22 2026-06-21])
+        end
+      end
+
+      context "with a commitment fee" do
+        # A commitment fee carries the period it reconciles, which on a pay-in-advance
+        # plan is the period preceding the invoice's usage window.
+        let(:plan) { create(:plan, organization: customer.organization, pay_in_advance: true) }
+        let(:advance_fee) do
+          create(:minimum_commitment_fee,
+            invoice:,
+            subscription:,
+            organization: customer.organization,
+            properties: {
+              "from_datetime" => "2026-04-22T00:00:00Z",
+              "to_datetime" => "2026-05-21T23:59:59Z"
+            })
+        end
+
+        before { advance_fee }
+
+        it "exports the reconciled period rather than the usage window" do
+          expect(exported_period).to eq(%w[2026-04-22 2026-05-21])
+        end
+      end
+
+      context "with a subscription fee carrying no boundaries of its own" do
+        # Legacy rows have empty properties: on a pay-in-advance plan the subscription
+        # period is the next period, not the arrears usage window.
+        let(:plan) { create(:plan, organization: customer.organization, pay_in_advance: true) }
+        let(:subscription_from_utc) { "2026-06-22 00:00:00 UTC" }
+        let(:subscription_to_utc) { "2026-07-21 23:59:59 UTC" }
+        let(:advance_fee) do
+          create(:fee,
+            invoice:,
+            subscription:,
+            organization: customer.organization,
+            fee_type: :subscription,
+            properties: {})
+        end
+
+        before { advance_fee }
+
+        it "falls back to the subscription period, not the usage window" do
+          expect(exported_period).to eq(%w[2026-06-22 2026-07-21])
         end
       end
     end
