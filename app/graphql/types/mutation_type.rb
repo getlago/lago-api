@@ -95,6 +95,7 @@ module Types
     field :set_payment_method_as_default, mutation: Mutations::PaymentMethods::SetAsDefault
 
     field :create_payment_provider_customer, mutation: Mutations::PaymentProviderCustomers::Create
+    field :destroy_payment_provider_customer, mutation: Mutations::PaymentProviderCustomers::Destroy
     field :set_integration_customer_as_default, mutation: Mutations::IntegrationCustomers::SetAsDefault
     field :set_payment_provider_customer_as_default, mutation: Mutations::PaymentProviderCustomers::SetAsDefault
     field :update_integration_customer, mutation: Mutations::IntegrationCustomers::Update
