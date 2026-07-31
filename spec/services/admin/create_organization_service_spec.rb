@@ -37,6 +37,18 @@ RSpec.describe Admin::CreateOrganizationService do
       expect(organization.name).to eq("Hooli Inc")
     end
 
+    context "when a timezone is provided" do
+      around { |example| lago_premium!(&example) }
+
+      let(:timezone) { "Europe/Paris" }
+
+      it "sets the timezone on the organization" do
+        result = service.call
+
+        expect(result.organization.reload.timezone).to eq("Europe/Paris")
+      end
+    end
+
     it "sets premium integrations on the organization" do
       result = service.call
 
