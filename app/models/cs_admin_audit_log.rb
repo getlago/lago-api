@@ -6,7 +6,8 @@ class CsAdminAuditLog < ApplicationRecord
   belongs_to :rollback_of, class_name: "CsAdminAuditLog", optional: true
 
   ACTIONS = {toggle_on: 0, toggle_off: 1, org_created: 2, rollback: 3}.freeze
-  FEATURE_TYPES = {premium_integration: 0, feature_flag: 1}.freeze
+  FEATURE_TYPES = {premium_integration: 0, feature_flag: 1, organization: 2}.freeze
+  TOGGLEABLE_FEATURE_TYPES = %w[premium_integration feature_flag].freeze
 
   enum :action, ACTIONS, validate: true
   enum :feature_type, FEATURE_TYPES, validate: true

@@ -70,14 +70,17 @@ RSpec.describe Admin::CreateOrganizationService do
       expect(result.invite_url).to include("/invitation/#{invite.token}")
     end
 
-    it "creates audit logs for premium integrations and feature flags" do
+    it "creates audit logs for the organization, premium integrations and feature flags" do
       result = service.call
       organization = result.organization
 
       logs = CsAdminAuditLog.where(organization:)
-      expect(logs.count).to eq(3)
+      expect(logs.count).to eq(4)
       expect(logs.pluck(:action).uniq).to eq(["org_created"])
       expect(logs.pluck(:batch_id).uniq.count).to eq(1)
+
+      organization_logs = logs.where(feature_type: "organization")
+      expect(organization_logs.pluck(:feature_key)).to eq(["organization"])
 
       integration_logs = logs.where(feature_type: "premium_integration")
       expect(integration_logs.pluck(:feature_key)).to match_array(["okta", "netsuite"])
@@ -99,7 +102,7 @@ RSpec.describe Admin::CreateOrganizationService do
       organization = result.organization
 
       log_ids = CsAdminAuditLog.where(organization:).pluck(:id)
-      expect(log_ids.count).to eq(3)
+      expect(log_ids.count).to eq(4)
 
       log_ids.each do |log_id|
         expect(Admin::SlackNotificationJob).to have_been_enqueued.with(log_id)
@@ -116,12 +119,21 @@ RSpec.describe Admin::CreateOrganizationService do
         )
       end
 
-      it "creates an organization with no audit logs" do
+      it "creates an audit log for the organization creation" do
         result = service.call
 
         expect(result).to be_success
-        expect(CsAdminAuditLog.where(organization: result.organization).count).to eq(0)
-        expect(Admin::SlackNotificationJob).not_to have_been_enqueued
+
+        logs = CsAdminAuditLog.where(organization: result.organization)
+        expect(logs.count).to eq(1)
+
+        log = logs.sole
+        expect(log.action).to eq("org_created")
+        expect(log.feature_type).to eq("organization")
+        expect(log.feature_key).to eq("organization")
+        expect(log.before_value).to be_nil
+        expect(log.after_value).to be(true)
+        expect(Admin::SlackNotificationJob).to have_been_enqueued.with(log.id)
       end
     end
   end
