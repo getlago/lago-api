@@ -2493,6 +2493,12 @@
               "description": "Feature flag toggle",
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "organization",
+              "description": "Organization creation",
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null

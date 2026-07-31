@@ -614,6 +614,11 @@ enum AdminFeatureTypeEnum {
   feature_flag
 
   """
+  Organization creation
+  """
+  organization
+
+  """
   Premium integration toggle
   """
   premium_integration

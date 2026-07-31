@@ -55,6 +55,19 @@ module Admin
     attr_reader :actor, :name, :owner_email, :timezone, :premium_integrations, :feature_flags, :reason
 
     def create_audit_logs!(organization, batch_id)
+      CsAdminAuditLog.create!(
+        actor_user: actor,
+        actor_email: actor.email,
+        action: :org_created,
+        organization:,
+        feature_type: :organization,
+        feature_key: "organization",
+        before_value: nil,
+        after_value: true,
+        reason:,
+        batch_id:
+      )
+
       premium_integrations.each do |key|
         CsAdminAuditLog.create!(
           actor_user: actor,

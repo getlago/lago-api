@@ -18,6 +18,7 @@ module Admin
 
     def call
       return result.not_found_failure!(resource: "organization") unless organization
+      return result.validation_failure!(errors: {feature_type: ["invalid"]}) unless toggleable_feature_type?
       return result.validation_failure!(errors: {feature_key: ["invalid"]}) unless valid_feature_key?
 
       before_value = currently_enabled?
@@ -52,6 +53,10 @@ module Admin
     private
 
     attr_reader :actor, :organization, :feature_type, :feature_key, :enabled, :reason, :notify_org_admin, :batch_id
+
+    def toggleable_feature_type?
+      CsAdminAuditLog::TOGGLEABLE_FEATURE_TYPES.include?(feature_type.to_s)
+    end
 
     def valid_feature_key?
       if feature_type == "premium_integration"
