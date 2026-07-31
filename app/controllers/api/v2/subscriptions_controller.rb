@@ -86,8 +86,13 @@ module Api
       # advance credit notes) instead of periodic billing. Takes the id from the path, or
       # an `external_ids` array to bill several at once.
       def bill
-        external_ids = Array.wrap(params[:external_ids].presence || params[:external_id])
-          .map(&:to_s).reject(&:blank?).uniq
+        # `subscription_external_ids` is accepted as an alias so the body reads
+        # unambiguously; the path form supplies a single `external_id`.
+        external_ids = Array.wrap(
+          params[:external_ids].presence ||
+            params[:subscription_external_ids].presence ||
+            params[:external_id]
+        ).map(&:to_s).reject(&:blank?).uniq
         return not_found_error(resource: "subscription") if external_ids.empty?
 
         subscriptions = current_organization.subscriptions
