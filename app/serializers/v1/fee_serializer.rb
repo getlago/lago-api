@@ -60,7 +60,7 @@ module V1
         presentation_breakdowns: model.presentation_breakdowns_displayed_in_invoice.map { |breakdown| PresentationBreakdownSerializer.new(breakdown).serialize }
       }
 
-      payload.merge!(model.date_boundaries) if model.charge? || model.subscription? || model.add_on? || model.fixed_charge?
+      payload.merge!(model.date_boundaries) if model.charge? || model.subscription? || model.add_on? || model.fixed_charge? || model.product?
       payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance? && model.charge?
       payload.merge!(applied_taxes) if include?(:applied_taxes)
 
