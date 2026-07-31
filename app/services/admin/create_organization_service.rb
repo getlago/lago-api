@@ -19,7 +19,7 @@ module Admin
       batch_id = SecureRandom.uuid
 
       organization = ::Organizations::CreateService
-        .call(name:, document_numbering: "per_organization")
+        .call(name:, timezone:, document_numbering: "per_organization")
         .raise_if_error!
         .organization
 

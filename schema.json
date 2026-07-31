@@ -2418,8 +2418,8 @@
               "name": "timezone",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "TimezoneEnum",
                 "ofType": null
               },
               "defaultValue": null,
