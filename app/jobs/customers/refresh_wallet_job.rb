@@ -32,7 +32,7 @@ module Customers
       # when the job raises. Swallowing the error here also bypasses Sidekiq's death handler, so
       # the lock must be released explicitly: otherwise the customer stays locked for `lock_ttl`
       # and every re-enqueue from the clock job is silently dropped on conflict.
-      ActiveJob::Uniqueness.unlock!(job_class_name: job.class.name, arguments: job.arguments)
+      job.lock_strategy.unlock(resource: job.lock_key)
     end
 
     retry_on(*Integrations::Aggregator::BaseService.retryable_errors, wait: :polynomially_longer, attempts: 6)
