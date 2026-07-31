@@ -16,6 +16,28 @@ RSpec.describe ChargeFilter do
     end
   end
 
+  describe "Scopes" do
+    let(:billable_metric) { create(:billable_metric) }
+    let(:charge) { create(:standard_charge, billable_metric:) }
+    let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[US Europe]) }
+
+    let(:kept_filter) { create(:charge_filter, charge:) }
+    let(:emptied_filter) { create(:charge_filter, charge:) }
+
+    before do
+      create(:charge_filter_value, charge_filter: kept_filter, billable_metric_filter: region, values: %w[US])
+
+      create(:charge_filter_value, charge_filter: emptied_filter, billable_metric_filter: region, values: %w[US])
+        .discard!
+    end
+
+    describe ".without_kept_values" do
+      it "returns the filters whose values are all discarded" do
+        expect(described_class.without_kept_values).to eq([emptied_filter])
+      end
+    end
+  end
+
   describe "#validate_properties" do
     subject(:charge_filter) { build(:charge_filter, charge:, properties: charge_properties) }
 

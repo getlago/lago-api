@@ -134,6 +134,7 @@ module Api
           :expression,
           :rounding_function,
           :rounding_precision,
+          :discard_impacted_charge_filters,
           filters: [[:key, values: []]]
         ])
       end

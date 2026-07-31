@@ -19,6 +19,8 @@ module Types
       argument :weighted_interval, Types::BillableMetrics::WeightedIntervalEnum, required: false
 
       argument :filters, [Types::BillableMetricFilters::Input], required: false
+
+      argument :discard_impacted_charge_filters, Boolean, required: false
     end
   end
 end

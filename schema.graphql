@@ -13020,6 +13020,7 @@ input UpdateBillableMetricInput {
   clientMutationId: String
   code: String!
   description: String!
+  discardImpactedChargeFilters: Boolean
   expression: String
   fieldName: String
   filters: [BillableMetricFiltersInput!]

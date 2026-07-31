@@ -180,6 +180,63 @@ RSpec.describe Api::V1::BillableMetricsController do
         expect(json[:billable_metric][:weighted_interval]).to eq("seconds")
       end
     end
+
+    context "when removing a filter value used by a charge filter with other keys" do
+      let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[US Europe]) }
+      let(:cloud) { create(:billable_metric_filter, billable_metric:, key: "cloud", values: %w[aws gcp]) }
+      let(:charge) { create(:standard_charge, billable_metric:, plan: create(:plan, organization:)) }
+      let(:charge_filter) { create(:charge_filter, charge:) }
+
+      let(:update_params) do
+        {
+          name: "BM1",
+          filters: [
+            {key: "region", values: %w[Europe]},
+            {key: "cloud", values: %w[aws gcp]}
+          ]
+        }
+      end
+
+      before do
+        create(:charge_filter_value, charge_filter:, billable_metric_filter: region, values: %w[US])
+        create(:charge_filter_value, charge_filter:, billable_metric_filter: cloud, values: %w[aws])
+      end
+
+      it "returns unprocessable_entity and keeps the charge filter" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:filters]).to eq(["values_used_by_charge_filters"])
+        expect(json[:error_details][:impacted_charge_filters_count]).to eq(["1"])
+        expect(json[:error_details][:impacted_plan_codes]).to eq([charge.plan.code])
+
+        expect(charge_filter.reload).not_to be_discarded
+        expect(region.reload.values).to eq(%w[US Europe])
+      end
+
+      context "when discard_impacted_charge_filters is set" do
+        let(:update_params) { super().merge(discard_impacted_charge_filters: true) }
+
+        it "discards the impacted charge filter" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(charge_filter.reload).to be_discarded
+          expect(region.reload.values).to eq(%w[Europe])
+        end
+      end
+
+      context "when discard_impacted_charge_filters is the string \"false\"" do
+        let(:update_params) { super().merge(discard_impacted_charge_filters: "false") }
+
+        it "still returns unprocessable_entity" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(charge_filter.reload).not_to be_discarded
+        end
+      end
+    end
   end
 
   describe "GET /api/v1/billable_metrics/:code" do

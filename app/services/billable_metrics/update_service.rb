@@ -32,7 +32,8 @@ module BillableMetrics
         if params.key?(:filters)
           BillableMetricFilters::CreateOrUpdateBatchService.call(
             billable_metric:,
-            filters_params: params[:filters].map { |f| f.to_h.with_indifferent_access }
+            filters_params: params[:filters].map { |f| f.to_h.with_indifferent_access },
+            discard_impacted_charge_filters:
           ).raise_if_error!
         end
 
@@ -72,5 +73,10 @@ module BillableMetrics
     attr_reader :billable_metric, :params
 
     delegate :organization, to: :billable_metric
+
+    # NOTE: cast rather than rely on truthiness: "false" is truthy, and this flag deletes pricing config.
+    def discard_impacted_charge_filters
+      ActiveModel::Type::Boolean.new.cast(params[:discard_impacted_charge_filters]) || false
+    end
   end
 end

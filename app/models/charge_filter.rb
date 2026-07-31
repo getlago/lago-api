@@ -21,6 +21,13 @@ class ChargeFilter < ApplicationRecord
   # NOTE: Ensure filters are keeping the initial ordering
   default_scope -> { kept.order(updated_at: :asc) }
 
+  KEPT_VALUE_EXISTS_SQL = "EXISTS (SELECT 1 FROM charge_filter_values" \
+    " WHERE charge_filter_values.charge_filter_id = charge_filters.id" \
+    " AND charge_filter_values.deleted_at IS NULL)"
+
+  # NOTE: no kept values means an empty predicate, and an empty predicate matches every event of the charge.
+  scope :without_kept_values, -> { where("NOT #{KEPT_VALUE_EXISTS_SQL}") }
+
   def display_name(separator: ", ")
     invoice_display_name.presence || (values.map do |value|
       next value.billable_metric_filter.key if value.values == [ChargeFilterValue::ALL_FILTER_VALUES]

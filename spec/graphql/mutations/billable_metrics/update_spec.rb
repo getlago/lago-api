@@ -59,4 +59,48 @@ RSpec.describe Mutations::BillableMetrics::Update do
     expect(result_data["recurring"]).to eq(false)
     expect(result_data["filters"].count).to eq(1)
   end
+
+  context "when removing a value that a charge filter relies on" do
+    let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[US Europe]) }
+    let(:cloud) { create(:billable_metric_filter, billable_metric:, key: "cloud", values: %w[aws gcp]) }
+    let(:charge) { create(:standard_charge, billable_metric:, plan: create(:plan, organization:)) }
+    let(:charge_filter) { create(:charge_filter, charge:) }
+
+    let(:input) do
+      {
+        id: billable_metric.id,
+        name: billable_metric.name,
+        code: billable_metric.code,
+        description: billable_metric.description,
+        aggregationType: "count_agg",
+        filters: [
+          {key: "region", values: %w[Europe]},
+          {key: "cloud", values: %w[aws gcp]}
+        ]
+      }
+    end
+
+    before do
+      create(:charge_filter_value, charge_filter:, billable_metric_filter: region, values: %w[US])
+      create(:charge_filter_value, charge_filter:, billable_metric_filter: cloud, values: %w[aws])
+    end
+
+    it "returns a validation error naming the impacted plans" do
+      result = execute_query(query: mutation, input:)
+
+      error = result["errors"].first
+      expect(error["extensions"]["status"]).to eq(422)
+      expect(error["extensions"]["details"]["filters"]).to eq(["values_used_by_charge_filters"])
+      expect(error["extensions"]["details"]["impactedPlanCodes"]).to eq([charge.plan.code])
+
+      expect(charge_filter.reload).not_to be_discarded
+    end
+
+    it "discards the impacted charge filter when opted in" do
+      result = execute_query(query: mutation, input: input.merge(discardImpactedChargeFilters: true))
+
+      expect(result["errors"]).to be_nil
+      expect(charge_filter.reload).to be_discarded
+    end
+  end
 end

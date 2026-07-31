@@ -5,10 +5,13 @@ module BillableMetricFilters
     Result = BaseResult[:filters]
 
     BATCH_SIZE = 1_000
+    IMPACTED_PLAN_CODES_LIMIT = 10
 
-    def initialize(billable_metric:, filters_params:)
+    def initialize(billable_metric:, filters_params:, discard_impacted_charge_filters: false)
       @billable_metric = billable_metric
       @filters_params = filters_params
+      @discard_impacted_charge_filters = discard_impacted_charge_filters
+      @touched_charge_filter_ids = Set.new
 
       super
     end
@@ -24,7 +27,8 @@ module BillableMetricFilters
 
       return result.validation_failure!(errors: {values: ["value_is_mandatory"]}) if any_filter_params_values_blank?
 
-      ActiveRecord::Base.transaction do
+      # NOTE: requires_new so the guard can undo its own discards; a nested block is not a savepoint.
+      ActiveRecord::Base.transaction(requires_new: true) do
         filters_params.each do |filter_param|
           filter = billable_metric.filters
             .create_with(organization_id: billable_metric.organization_id)
@@ -55,16 +59,27 @@ module BillableMetricFilters
         billable_metric.filters.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
           discard_filter(it)
         end
+
+        resolve_impacted_charge_filters!
       end
+
+      return result if result.failure?
 
       BillableMetricFilters::RefreshDraftInvoicesJob.perform_after_commit(billable_metric.id)
 
       result
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private
 
-    attr_reader :billable_metric, :filters_params
+    attr_reader :billable_metric, :filters_params, :discard_impacted_charge_filters, :touched_charge_filter_ids
+
+    # NOTE: one per run. Bulk `update_all` skips PaperTrail, so this is the only trace, and the undo key.
+    def discarded_at
+      @discarded_at ||= Time.current
+    end
 
     def any_filter_params_values_blank?
       filters_params.any? do |filter_param|
@@ -73,8 +88,10 @@ module BillableMetricFilters
     end
 
     def discard_all_filters
-      ActiveRecord::Base.transaction do
+      ActiveRecord::Base.transaction(requires_new: true) do
         billable_metric.filters.each { discard_filter(it) }
+
+        resolve_impacted_charge_filters!
       end
     end
 
@@ -89,7 +106,7 @@ module BillableMetricFilters
         values_to_trim, values_to_discard = filter_value_batch.partition { |fv| trimmable?(fv, new_values) }
 
         bulk_update_trimmed_filter_values(values_to_trim, new_values)
-        discard_filter_values_and_emptied_charge_filters(values_to_discard)
+        discard_filter_values(values_to_discard)
       end
     end
 
@@ -107,39 +124,76 @@ module BillableMetricFilters
       end
     end
 
-    def discard_filter_values_and_emptied_charge_filters(filter_values)
+    def discard_filter_values(filter_values)
       return if filter_values.empty?
 
-      filter_value_ids = filter_values.map(&:id)
-      bulk_discard_filter_values(filter_value_ids)
-      bulk_discard_emptied_charge_filters_for(filter_value_ids)
-    end
+      touched_charge_filter_ids.merge(filter_values.map(&:charge_filter_id))
 
-    def bulk_discard_filter_values(filter_value_ids)
       ChargeFilterValue
-        .where(id: filter_value_ids)
-        .update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        .where(id: filter_values.map(&:id))
+        .update_all(deleted_at: discarded_at) # rubocop:disable Rails/SkipsModelValidations
     end
 
-    def bulk_discard_emptied_charge_filters_for(filter_value_ids)
-      charge_filter_ids = ChargeFilterValue
-        .with_discarded
-        .where(id: filter_value_ids)
+    def resolve_impacted_charge_filters!
+      emptied_ids, collapsed_ids = partition_touched_charge_filters
+
+      refuse_collapsed_charge_filters!(collapsed_ids) unless discard_impacted_charge_filters
+
+      discarded_ids = emptied_ids + collapsed_ids
+      return if discarded_ids.empty?
+
+      discarded = ChargeFilters::BulkDiscardService.call!(charge_filter_ids: discarded_ids, discarded_at:)
+
+      Rails.logger.info(
+        "Discarded charge filters after a billable metric filter change: " \
+        "billable_metric=#{billable_metric.id} discarded_at=#{discarded_at.iso8601(6)} " \
+        "emptied=#{emptied_ids.size} collapsed=#{collapsed_ids.size} discarded=#{discarded.discarded_count}"
+      )
+    end
+
+    def refuse_collapsed_charge_filters!(collapsed_ids)
+      return if collapsed_ids.empty?
+
+      result.validation_failure!(errors: collapsed_charge_filters_errors(collapsed_ids)).raise_if_error!
+    end
+
+    def partition_touched_charge_filters
+      emptied_ids = []
+      collapsed_ids = []
+
+      touched_charge_filter_ids.each_slice(BATCH_SIZE) do |ids|
+        kept_ids = ChargeFilter.where(id: ids, deleted_at: nil).unscope(:order).pluck(:id)
+        next if kept_ids.empty?
+
+        slice_emptied_ids = ChargeFilter
+          .where(id: kept_ids, deleted_at: nil)
+          .without_kept_values
+          .unscope(:order)
+          .pluck(:id)
+
+        emptied_ids.concat(slice_emptied_ids)
+        collapsed_ids.concat(kept_ids - slice_emptied_ids)
+      end
+
+      [emptied_ids, collapsed_ids]
+    end
+
+    def collapsed_charge_filters_errors(collapsed_ids)
+      {
+        filters: ["values_used_by_charge_filters"],
+        impacted_charge_filters_count: [collapsed_ids.size.to_s],
+        impacted_plan_codes: impacted_plan_codes(collapsed_ids)
+      }
+    end
+
+    def impacted_plan_codes(collapsed_ids)
+      ChargeFilter
+        .where(id: collapsed_ids.first(BATCH_SIZE))
+        .joins(charge: :plan)
         .unscope(:order)
         .distinct
-        .pluck(:charge_filter_id)
-
-      return if charge_filter_ids.empty?
-
-      ChargeFilter
-        .where(id: charge_filter_ids, deleted_at: nil)
-        .where(
-          "NOT EXISTS (SELECT 1 FROM charge_filter_values" \
-          " WHERE charge_filter_values.charge_filter_id = charge_filters.id" \
-          " AND charge_filter_values.deleted_at IS NULL)"
-        )
-        .unscope(:order)
-        .update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        .limit(IMPACTED_PLAN_CODES_LIMIT)
+        .pluck("plans.code")
     end
   end
 end

@@ -3,9 +3,10 @@
 require "rails_helper"
 
 RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
-  subject(:service) { described_class.call(billable_metric:, filters_params:) }
+  subject(:service) { described_class.call(billable_metric:, filters_params:, discard_impacted_charge_filters:) }
 
   let(:billable_metric) { create(:billable_metric) }
+  let(:discard_impacted_charge_filters) { false }
 
   context "when filter params is empty" do
     let(:filters_params) { {} }
@@ -249,12 +250,54 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
           ]
         end
 
-        it "discards the filter_value but keeps the shared charge_filter" do
-          service
+        # NOTE: dropping "US" would leave it matching {cloud: aws} alone, at the {region: US, cloud: aws} price.
+        it "fails and leaves every row untouched" do
+          result = service
 
-          expect(shared_cfv_region.reload).to be_discarded
+          expect(result).not_to be_success
+          expect(result.error.messages[:filters]).to eq(["values_used_by_charge_filters"])
+          expect(result.error.messages[:impacted_charge_filters_count]).to eq(["1"])
+          expect(result.error.messages[:impacted_plan_codes]).to eq([charge.plan.code])
+
+          expect(shared_cfv_region.reload).not_to be_discarded
           expect(shared_cfv_cloud.reload).not_to be_discarded
           expect(shared_charge_filter.reload).not_to be_discarded
+          expect(filter.reload.values).to eq(%w[Europe US Asia])
+        end
+
+        it "does not enqueue the refresh draft invoices job" do
+          expect { service }.not_to have_enqueued_job(BillableMetricFilters::RefreshDraftInvoicesJob)
+        end
+
+        # NOTE: the rollback must not depend on the caller re-raising the failure.
+        it "undoes its own discards when a caller only reads the failure" do
+          ActiveRecord::Base.transaction do
+            expect(service).not_to be_success
+          end
+
+          expect(shared_cfv_region.reload).not_to be_discarded
+          expect(shared_charge_filter.reload).not_to be_discarded
+          expect(filter.reload.values).to eq(%w[Europe US Asia])
+        end
+
+        context "when discarding the impacted charge filters is opted in" do
+          let(:discard_impacted_charge_filters) { true }
+
+          it "discards the charge_filter along with its surviving filter_value" do
+            expect(service).to be_success
+
+            expect(shared_cfv_region.reload).to be_discarded
+            expect(shared_cfv_cloud.reload).to be_discarded
+            expect(shared_charge_filter.reload).to be_discarded
+            expect(filter.reload.values).to eq(%w[Europe])
+          end
+
+          it "stamps one deleted_at across the whole run" do
+            service
+
+            expect(shared_cfv_cloud.reload.deleted_at).to eq(shared_charge_filter.reload.deleted_at)
+            expect(shared_cfv_region.reload.deleted_at).to eq(shared_charge_filter.reload.deleted_at)
+          end
         end
       end
 
@@ -325,6 +368,70 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
           expect(filter.reload).to be_discarded
           expect(filter_value.reload).to be_discarded
           expect(charge_filter.reload).to be_discarded
+        end
+
+        # NOTE: the ticket's reproduction: it would keep the {region: US} price while matching every region.
+        context "when the charge_filter also holds a value from a filter that survives" do
+          let(:other_filter) { create(:billable_metric_filter, billable_metric:, key: "cloud", values: %w[aws gcp]) }
+
+          let(:filters_params) do
+            [
+              {key: "country", values: %w[USA France Germany]},
+              {key: "cloud", values: %w[aws gcp]}
+            ]
+          end
+
+          let!(:other_filter_value) do
+            create(
+              :charge_filter_value,
+              charge_filter:,
+              billable_metric_filter: other_filter,
+              values: %w[aws]
+            )
+          end
+
+          it "fails and leaves every row untouched" do
+            result = service
+
+            expect(result).not_to be_success
+            expect(result.error.messages[:filters]).to eq(["values_used_by_charge_filters"])
+
+            expect(filter.reload).not_to be_discarded
+            expect(filter_value.reload).not_to be_discarded
+            expect(other_filter_value.reload).not_to be_discarded
+            expect(charge_filter.reload).not_to be_discarded
+          end
+
+          context "when discarding the impacted charge filters is opted in" do
+            let(:discard_impacted_charge_filters) { true }
+
+            it "discards the filter, both filter_values, and the charge_filter" do
+              expect(service).to be_success
+
+              expect(filter.reload).to be_discarded
+              expect(filter_value.reload).to be_discarded
+              expect(other_filter_value.reload).to be_discarded
+              expect(charge_filter.reload).to be_discarded
+            end
+          end
+
+          # NOTE: both dimensions go, in separate batches. Nothing survives to broaden, so no need to ask.
+          context "when the charge_filter loses its surviving key in the same call" do
+            let(:filters_params) do
+              [
+                {key: "country", values: %w[USA France Germany]},
+                {key: "cloud", values: %w[gcp]}
+              ]
+            end
+
+            it "discards the emptied charge_filter without failing" do
+              expect(service).to be_success
+
+              expect(filter_value.reload).to be_discarded
+              expect(other_filter_value.reload).to be_discarded
+              expect(charge_filter.reload).to be_discarded
+            end
+          end
         end
       end
     end

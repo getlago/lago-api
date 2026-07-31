@@ -76,24 +76,28 @@ RSpec.describe "Create and edit plans with charge filters" do
     charge = plan.charges.first
     expect(charge.filters.count).to eq(4)
 
-    # Update the typo on the charge filter values
+    # Update the typo on the charge filter values. f1 and f2 are both priced on the old image_size, so the
+    # update is refused until it says what should happen to them.
+    fixed_filters = [
+      {key: "image_size", values: %w[1024x1024 512x512]},
+      {key: "steps", values: %w[0-25 26-50 51-100]},
+      {key: "model_name", values: %w[llama-1 llama-2 llama-3]}
+    ]
+
     travel_to(Time.zone.parse("2024-03-27T14:00:00")) do
-      update_metric(
-        billable_metric,
-        {filters: [
-          {key: "image_size", values: %w[1024x1024 512x512]},
-          {key: "steps", values: %w[0-25 26-50 51-100]},
-          {key: "model_name", values: %w[llama-1 llama-2 llama-3]}
-        ]}
-      )
+      update_metric(billable_metric, {filters: fixed_filters}, raise_on_error: false)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json[:error_details][:filters]).to eq(["values_used_by_charge_filters"])
+
+      update_metric(billable_metric, {filters: fixed_filters, discard_impacted_charge_filters: true})
     end
 
     charge.reload
-    f1 = charge.filters.find_by(invoice_display_name: "f1")
-    expect(f1.to_h.keys).to match_array(%w[steps model_name])
-
-    f2 = charge.filters.find_by(invoice_display_name: "f2")
-    expect(f2.to_h.keys).to eq(%w[steps])
+    # Discarded rather than left matching every image size at the price set for one of them.
+    expect(charge.filters.count).to eq(2)
+    expect(charge.filters.find_by(invoice_display_name: "f1")).to be_nil
+    expect(charge.filters.find_by(invoice_display_name: "f2")).to be_nil
 
     f3 = charge.filters.find_by(invoice_display_name: "f3")
     expect(f3.to_h.keys).to match_array(%w[image_size steps])
