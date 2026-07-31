@@ -13,7 +13,7 @@ module Mutations
       argument :owner_email, String, required: true
       argument :premium_integrations, [String], required: false
       argument :reason, String, required: true
-      argument :timezone, String, required: false
+      argument :timezone, Types::TimezoneEnum, required: false
 
       type Types::Admin::CreateOrganizationPayload
 

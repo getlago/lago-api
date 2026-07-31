@@ -719,7 +719,7 @@ input AdminCreateOrganizationInput {
   ownerEmail: String!
   premiumIntegrations: [String!]
   reason: String!
-  timezone: String
+  timezone: TimezoneEnum
 }
 
 type AdminCreateOrganizationPayload {
