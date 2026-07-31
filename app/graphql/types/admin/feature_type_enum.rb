@@ -7,6 +7,7 @@ module Types
 
       value "premium_integration", "Premium integration toggle"
       value "feature_flag", "Feature flag toggle"
+      value "organization", "Organization creation"
     end
   end
 end

@@ -12,7 +12,7 @@ RSpec.describe CsAdminAuditLog, type: :model do
         .validating
 
       expect(subject).to define_enum_for(:feature_type)
-        .with_values(premium_integration: 0, feature_flag: 1)
+        .with_values(premium_integration: 0, feature_flag: 1, organization: 2)
         .validating
     end
   end
