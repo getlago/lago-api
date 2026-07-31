@@ -88,6 +88,27 @@ RSpec.describe Admin::SlackNotificationService do
           }).to have_been_made.once
         end
       end
+
+      context "when the log is the organization creation itself" do
+        let(:audit_log) do
+          create(:cs_admin_audit_log,
+            organization:,
+            action: :org_created,
+            feature_type: :organization,
+            feature_key: "organization",
+            actor_email: "admin@lago.com",
+            reason: "New enterprise customer onboarding")
+        end
+
+        it "uses a dedicated organization created message" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            text = JSON.parse(req.body)["blocks"].first["text"]["text"]
+            text == "[✅ Organization created] *ACME Corp* by admin@lago.com — reason: \"New enterprise customer onboarding\""
+          }).to have_been_made.once
+        end
+      end
     end
 
     context "when webhook URL is NOT configured" do

@@ -25,25 +25,42 @@ module Admin
     attr_reader :audit_log
 
     def build_payload
-      emoji = (audit_log.toggle_on? || audit_log.org_created?) ? "\u2705" : "\u274c"
-      action_text = case audit_log.action
-      when "toggle_on" then "enabled"
-      when "toggle_off" then "disabled"
-      when "org_created" then "set on new org"
-      when "rollback" then "rolled back"
-      end
-
       {
         blocks: [
           {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: "[#{emoji} #{audit_log.feature_key} #{action_text}] on *#{audit_log.organization.name}* by #{audit_log.actor_email} — reason: \"#{audit_log.reason}\""
+              text: message_text
             }
           }
         ]
       }
+    end
+
+    def message_text
+      if audit_log.feature_type == "organization"
+        "[#{emoji} Organization created] *#{audit_log.organization.name}* by #{audit_log.actor_email} — reason: \"#{audit_log.reason}\""
+      else
+        "[#{emoji} #{audit_log.feature_key} #{action_text}] on *#{audit_log.organization.name}* by #{audit_log.actor_email} — reason: \"#{audit_log.reason}\""
+      end
+    end
+
+    def emoji
+      if audit_log.toggle_on? || audit_log.org_created?
+        "✅"
+      else
+        "❌"
+      end
+    end
+
+    def action_text
+      case audit_log.action
+      when "toggle_on" then "enabled"
+      when "toggle_off" then "disabled"
+      when "org_created" then "set on new org"
+      when "rollback" then "rolled back"
+      end
     end
   end
 end
