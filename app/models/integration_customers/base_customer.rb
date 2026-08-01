@@ -23,9 +23,19 @@ module IntegrationCustomers
       crm: "crm"
     }.freeze
 
+    CATEGORY_BY_TYPE = {
+      "IntegrationCustomers::AnrokCustomer" => CATEGORIES[:tax],
+      "IntegrationCustomers::AvalaraCustomer" => CATEGORIES[:tax],
+      "IntegrationCustomers::NetsuiteCustomer" => CATEGORIES[:accounting],
+      "IntegrationCustomers::XeroCustomer" => CATEGORIES[:accounting],
+      "IntegrationCustomers::HubspotCustomer" => CATEGORIES[:crm],
+      "IntegrationCustomers::SalesforceCustomer" => CATEGORIES[:crm]
+    }.freeze
+
     enum :category, CATEGORIES, validate: {allow_nil: true}
 
     validates :customer_id, uniqueness: {scope: :type}
+    validates :code, uniqueness: {scope: %i[customer_id category]}, allow_nil: true
     validate :only_one_tax_integration_per_customer, if: :tax_kind?
 
     scope :accounting_kind, -> do
@@ -65,6 +75,10 @@ module IntegrationCustomers
       else
         raise(NotImplementedError)
       end
+    end
+
+    def self.category_for(customer_type)
+      CATEGORY_BY_TYPE[customer_type]
     end
 
     def tax_kind?

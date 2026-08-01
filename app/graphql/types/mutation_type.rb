@@ -94,6 +94,7 @@ module Types
     field :generate_checkout_url, mutation: Mutations::PaymentMethods::GenerateCheckoutUrl
     field :set_payment_method_as_default, mutation: Mutations::PaymentMethods::SetAsDefault
 
+    field :create_integration_customer, mutation: Mutations::IntegrationCustomers::Create
     field :set_integration_customer_as_default, mutation: Mutations::IntegrationCustomers::SetAsDefault
     field :set_payment_provider_customer_as_default, mutation: Mutations::PaymentProviderCustomers::SetAsDefault
     field :update_payment_provider_customer, mutation: Mutations::PaymentProviderCustomers::Update
