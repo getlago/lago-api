@@ -66483,9 +66483,13 @@
               "description": null,
               "args": [],
               "type": {
-                "kind": "ENUM",
-                "name": "RateCardRegroupPaidFeesEnum",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "RateCardRegroupPaidFeesEnum",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -67106,6 +67110,12 @@
           "inputFields": null,
           "interfaces": null,
           "enumValues": [
+            {
+              "name": "none",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
             {
               "name": "invoice",
               "description": null,

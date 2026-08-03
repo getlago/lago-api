@@ -92,6 +92,16 @@ RSpec.describe RateCards::UpdateService do
       end
     end
 
+    context "when sending an explicit null regroup_paid_fees" do
+      let(:params) { {regroup_paid_fees: nil, name: "After"} }
+
+      it "reads as none, not as a locked-field change" do
+        expect(result).to be_success
+        expect(result.rate_card.name).to eq("After")
+        expect(result.rate_card.regroup_paid_fees).to eq("none")
+      end
+    end
+
     context "when resending all unchanged billing fields" do
       let(:params) do
         {

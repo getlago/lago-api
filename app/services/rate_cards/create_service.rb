@@ -45,7 +45,6 @@ module RateCards
         description: params[:description],
         currency: params[:currency],
         billing_timing: params[:billing_timing] || "arrears",
-        regroup_paid_fees: params[:regroup_paid_fees],
         applied_pricing_unit_code: params[:applied_pricing_unit_code],
         wallet_targetable: params[:wallet_targetable]
       }
@@ -54,6 +53,7 @@ module RateCards
       # to the column default instead of inserting NULL.
       attributes[:proration] = params[:proration] unless params[:proration].nil?
       attributes[:display_on_invoice] = params[:display_on_invoice] unless params[:display_on_invoice].nil?
+      attributes[:regroup_paid_fees] = params[:regroup_paid_fees] unless params[:regroup_paid_fees].nil?
 
       ActiveRecord::Base.transaction do
         rate_card = product.rate_cards.create!(**attributes)
