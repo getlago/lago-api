@@ -10754,7 +10754,7 @@ type Query {
   """
   Query admin audit logs with filters
   """
-  adminAuditLogs(actorUserId: ID, featureKey: String, featureType: AdminFeatureTypeEnum, fromDate: ISO8601Date, limit: Int, organizationId: ID, page: Int, toDate: ISO8601Date): AdminAuditLogCollection!
+  adminAuditLogs(actions: [AdminActionEnum!], actorUserIds: [ID!], featureKey: String, featureType: AdminFeatureTypeEnum, fromDate: ISO8601Date, limit: Int, organizationIds: [ID!], page: Int, toDate: ISO8601Date): AdminAuditLogCollection!
 
   """
   Get a single organization by ID (admin only)
