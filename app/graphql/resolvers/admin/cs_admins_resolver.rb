@@ -2,7 +2,7 @@
 
 module Resolvers
   module Admin
-    class UsersResolver < Resolvers::BaseResolver
+    class CsAdminsResolver < Resolvers::BaseResolver
       include AuthenticableAdminUser
 
       description "List CS admin users (admin only)"

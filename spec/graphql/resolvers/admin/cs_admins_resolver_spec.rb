@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::Admin::UsersResolver do
+RSpec.describe Resolvers::Admin::CsAdminsResolver do
   let(:query) do
     <<~GQL
       query {
