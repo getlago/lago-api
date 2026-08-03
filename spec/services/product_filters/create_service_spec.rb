@@ -115,7 +115,7 @@ RSpec.describe ProductFilters::CreateService do
 
     it "returns a validation failure" do
       expect(result).not_to be_success
-      expect(result.error.messages[:product]).to eq(["invalid_product_type"])
+      expect(result.error.messages[:product]).to eq(["not_allowed_for_product_type"])
     end
   end
 
