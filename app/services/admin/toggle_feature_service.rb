@@ -40,10 +40,15 @@ module Admin
         )
 
         result.audit_log = audit_log
-      end
 
-      Admin::SlackNotificationJob.perform_later(result.audit_log.id)
-      Admin::EmailNotificationJob.perform_later(result.audit_log.id, actor.email) if notify_org_admin
+        after_commit do
+          Admin::SlackNotificationJob.perform_later(audit_log.id)
+
+          if notify_org_admin
+            Admin::EmailNotificationJob.perform_later(audit_log.id, actor.email)
+          end
+        end
+      end
 
       result
     rescue ActiveRecord::RecordInvalid => e

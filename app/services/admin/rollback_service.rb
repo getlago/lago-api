@@ -42,9 +42,10 @@ module Admin
         )
 
         result.audit_log = rollback_log
+
+        after_commit { Admin::SlackNotificationJob.perform_later(rollback_log.id) }
       end
 
-      Admin::SlackNotificationJob.perform_later(result.audit_log.id)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
