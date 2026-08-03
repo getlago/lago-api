@@ -12,12 +12,16 @@ module ChargeFilters
       before_by_values = before.group_by { |f| f[:values] }
 
       after.each do |new_filter|
-        # NOTE: group_by yields an array of matching "before" rows. When a predicate has
-        #       collapsed onto duplicates there may be several; use the first as the
-        #       representative — CascadeService reconciles every matching child row.
-        existing = before_by_values.delete(new_filter[:values])&.first
+        # NOTE: group_by yields every "before" row sharing this predicate. A metric edit can
+        #       collapse several filters onto one predicate, so the group may hold duplicates.
+        existing_group = before_by_values.delete(new_filter[:values]) || []
+        existing = existing_group.first
 
-        next if existing &&
+        # NOTE: only treat this as a no-op when the predicate resolved to a single row that
+        #       is unchanged. If the group carries duplicates, the parent has just been
+        #       deduplicated to one row and the children still hold the extras, so a job must
+        #       be enqueued for CascadeService to reconcile that cardinality.
+        next if existing_group.size == 1 &&
           existing[:properties] == new_filter[:properties] &&
           existing[:invoice_display_name] == new_filter[:invoice_display_name]
 

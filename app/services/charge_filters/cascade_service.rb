@@ -34,7 +34,13 @@ module ChargeFilters
               child_filters = matches[child_charge.id] || []
 
               case action
-              when "update" then child_filters.each { |cf| update_child_filter(child_charge, cf) }
+              when "update"
+                # NOTE: the parent holds at most one row per predicate, so the child must too.
+                #       Update the first and discard any duplicates a collapsed metric edit
+                #       left behind, otherwise stale rows keep billing at their old rate.
+                keep, *extras = child_filters
+                update_child_filter(child_charge, keep) if keep
+                extras.each { |cf| destroy_child_filter(cf) }
               when "create" then create_child_filter(child_charge, child_filters.first)
               when "destroy" then child_filters.each { |cf| destroy_child_filter(cf) }
               end
