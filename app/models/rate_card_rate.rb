@@ -35,8 +35,9 @@ class RateCardRate < ApplicationRecord
 
   has_many :fees
 
-  # allow_nil + explicit presence: a missing value reads as value_is_mandatory,
-  # an unknown value as value_is_invalid.
+  # Nil is forbidden by the presence validations below (and NOT NULL in the
+  # schema). allow_nil here only keeps a missing value on the presence error
+  # (value_is_mandatory) instead of also failing inclusion (value_is_invalid).
   enum :rate_model, RATE_MODELS, validate: {allow_nil: true}
   enum :billing_interval_unit, BILLING_INTERVAL_UNITS, validate: {allow_nil: true}
 
