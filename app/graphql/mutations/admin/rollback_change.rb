@@ -16,11 +16,11 @@ module Mutations
       def resolve(audit_log_id:, reason:)
         audit_log = CsAdminAuditLog.find_by(id: audit_log_id)
 
-        result = ::Admin::RollbackService.new(
+        result = ::Admin::RollbackService.call(
           actor: current_user,
           audit_log: audit_log,
           reason: reason
-        ).call
+        )
 
         result.success? ? result.audit_log : result_error(result)
       end

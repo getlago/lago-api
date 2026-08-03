@@ -20,7 +20,7 @@ module Mutations
       def resolve(organization_id:, feature_type:, feature_key:, enabled:, reason:, notify_org_admin:)
         organization = Organization.find_by(id: organization_id)
 
-        result = ::Admin::ToggleFeatureService.new(
+        result = ::Admin::ToggleFeatureService.call(
           actor: current_user,
           organization: organization,
           feature_type: feature_type,
@@ -28,7 +28,7 @@ module Mutations
           enabled: enabled,
           reason: reason,
           notify_org_admin: notify_org_admin
-        ).call
+        )
 
         result.success? ? result.audit_log : result_error(result)
       end
