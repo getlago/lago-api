@@ -16,9 +16,9 @@ module ChargeFilters
     def call
       return result.not_found_failure!(resource: "charge_filter") unless charge_filter
 
-      # Capture values before the transaction discards them — to_h uses the kept
-      # scope and would return an empty hash after discard.
-      filter_values = charge_filter.to_h_with_discarded
+      # Kept values only, captured before the transaction discards them: the children
+      # are matched on their live predicate, which a metric change shortened alike
+      filter_values = charge_filter.to_h
 
       ActiveRecord::Base.transaction do
         charge_filter.values.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
