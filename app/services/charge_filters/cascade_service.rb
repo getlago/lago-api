@@ -28,12 +28,15 @@ module ChargeFilters
         Charge.where(id: ids).includes(:billable_metric).find_each do |child_charge|
           Charge.no_touching do
             Plan.no_touching do
-              child_filter = matches[child_charge.id]
+              # NOTE: matches are grouped by charge_id, so each child charge maps to every
+              #       filter row that satisfies the predicate. Duplicates left behind by a
+              #       collapsed metric edit are all reconciled instead of just one.
+              child_filters = matches[child_charge.id] || []
 
               case action
-              when "update" then update_child_filter(child_charge, child_filter)
-              when "create" then create_child_filter(child_charge, child_filter)
-              when "destroy" then destroy_child_filter(child_filter)
+              when "update" then child_filters.each { |cf| update_child_filter(child_charge, cf) }
+              when "create" then create_child_filter(child_charge, child_filters.first)
+              when "destroy" then child_filters.each { |cf| destroy_child_filter(cf) }
               end
             end
           end
@@ -75,7 +78,7 @@ module ChargeFilters
         .where(id: candidate_ids)
         .includes(values: :billable_metric_filter)
         .select { |filter| filter.to_h == filter_values }
-        .index_by(&:charge_id)
+        .group_by(&:charge_id)
     end
 
     def update_child_filter(child_charge, child_filter)

@@ -9,10 +9,13 @@ module ChargeFilters
     #   { values: {"key" => [...]}, properties: {...} | nil, invoice_display_name: "..." }
     # `values` and `properties` must be string-keyed.
     def call(charge:, before:, after:)
-      before_by_values = before.index_by { |f| f[:values] }
+      before_by_values = before.group_by { |f| f[:values] }
 
       after.each do |new_filter|
-        existing = before_by_values.delete(new_filter[:values])
+        # NOTE: group_by yields an array of matching "before" rows. When a predicate has
+        #       collapsed onto duplicates there may be several; use the first as the
+        #       representative — CascadeService reconciles every matching child row.
+        existing = before_by_values.delete(new_filter[:values])&.first
 
         next if existing &&
           existing[:properties] == new_filter[:properties] &&
@@ -28,7 +31,8 @@ module ChargeFilters
         )
       end
 
-      before_by_values.each_value do |old|
+      before_by_values.each_value do |old_group|
+        old = old_group.first
         ChargeFilters::CascadeJob.perform_later(
           charge.id,
           "destroy",

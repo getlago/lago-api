@@ -34,8 +34,11 @@ module ChargeFilters
           values_params = filter_param[:values].transform_keys(&:to_s)
 
           # NOTE: since a filter could be a refinement of another one, we have to make sure
-          #       that we are targeting the right one
-          existing_filter = filters_by_values_key[values_params.sort]
+          #       that we are targeting the right one.
+          #       filters are grouped by their values key, so a predicate that has collapsed
+          #       onto duplicates resolves to several rows: update the first and let the
+          #       reconciliation sweep at the end of the transaction discard the leftovers.
+          existing_filter = filters_by_values_key[values_params.sort]&.first
 
           properties = ChargeModels::FilterPropertiesService.call(
             chargeable: charge,
@@ -179,7 +182,7 @@ module ChargeFilters
     end
 
     def filters_by_values_key
-      @filters_by_values_key ||= filters.index_by { |f| f.to_h.sort }
+      @filters_by_values_key ||= filters.group_by { |f| f.to_h.sort }
     end
 
     def billable_metric_filters_by_key
