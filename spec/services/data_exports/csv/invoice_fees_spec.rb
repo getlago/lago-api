@@ -69,6 +69,7 @@ RSpec.describe DataExports::Csv::InvoiceFees do
         invoice:,
         subscription:,
         organization: customer.organization,
+        timestamp: Time.zone.parse(subscription_from_utc),
         from_datetime: Time.zone.parse(subscription_from_utc),
         to_datetime: Time.zone.parse(subscription_to_utc),
         charges_from_datetime: Time.zone.parse(from_utc),
@@ -209,10 +210,12 @@ RSpec.describe DataExports::Csv::InvoiceFees do
       end
 
       context "with an arrears usage fee" do
+        let(:charge) { create(:standard_charge, plan:) }
         let(:advance_fee) do
           create(:charge_fee,
             invoice:,
             subscription:,
+            charge:,
             organization: customer.organization,
             properties: {
               "charges_from_datetime" => "2026-05-22T00:00:00Z",
@@ -225,27 +228,49 @@ RSpec.describe DataExports::Csv::InvoiceFees do
         it "keeps exporting the usage window" do
           expect(exported_period).to eq(%w[2026-05-22 2026-06-21])
         end
+
+        context "when the charge is pay in advance in a negative UTC offset timezone" do
+          let(:charge) { create(:standard_charge, :pay_in_advance, plan:) }
+          let(:timezone) { "America/New_York" }
+          let(:from_utc) { "2026-05-22 04:00:00 UTC" }
+          let(:to_utc) { "2026-06-22 03:59:59 UTC" }
+
+          it "does not shift the charge period by one day" do
+            expect(exported_period).to eq(%w[2026-05-22 2026-06-21])
+          end
+        end
       end
 
       context "with a commitment fee" do
         # A commitment fee carries the period it reconciles, which on a pay-in-advance
         # plan is the period preceding the invoice's usage window.
         let(:plan) { create(:plan, organization: customer.organization, pay_in_advance: true) }
+        let(:commitment_boundaries) do
+          {
+            "from_datetime" => "2026-04-22T00:00:00Z",
+            "to_datetime" => "2026-05-21T23:59:59Z"
+          }
+        end
         let(:advance_fee) do
           create(:minimum_commitment_fee,
             invoice:,
             subscription:,
             organization: customer.organization,
-            properties: {
-              "from_datetime" => "2026-04-22T00:00:00Z",
-              "to_datetime" => "2026-05-21T23:59:59Z"
-            })
+            properties: commitment_boundaries)
         end
 
         before { advance_fee }
 
         it "exports the reconciled period rather than the usage window" do
           expect(exported_period).to eq(%w[2026-04-22 2026-05-21])
+        end
+
+        context "without stored boundaries or a previous invoice subscription" do
+          let(:commitment_boundaries) { {} }
+
+          it "exports an empty period" do
+            expect(exported_period).to eq([nil, nil])
+          end
         end
       end
 

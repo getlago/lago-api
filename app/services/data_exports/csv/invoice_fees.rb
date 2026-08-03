@@ -74,11 +74,9 @@ module DataExports
             serialized_fee = fee_serializer_klass.new(fee).serialize
             invoice_subscription = invoice_subscriptions[fee.subscription_id]
 
-            # Resolve the period with the same rules the invoice PDF uses, so both
-            # documents agree on every fee type. Fees without an invoice subscription
-            # (add-ons, credits) keep exporting an empty period.
-            billing_period = invoice_subscription &&
-              FeeBoundariesHelper.billing_period_for(fee, invoice_subscription:)
+            billing_period = if invoice_subscription
+              DataExports::Csv::ResolveFeeBillingPeriodService.call!(fee:, invoice_subscription:)
+            end
 
             serialized_subscription = {
               external_id: fee.subscription&.external_id,
@@ -110,8 +108,6 @@ module DataExports
         end
       end
 
-      # Renders a billing period boundary as a date in the customer timezone, matching
-      # FeeBoundariesHelper.format_billing_period used by the invoice PDF.
       def period_date(datetime, timezone)
         datetime&.in_time_zone(timezone)&.to_date
       end
