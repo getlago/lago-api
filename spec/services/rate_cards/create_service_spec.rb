@@ -6,7 +6,9 @@ RSpec.describe RateCards::CreateService do
   subject(:result) { described_class.call(product:, params:) }
 
   let(:organization) { create(:organization) }
-  let(:product) { create(:product, organization:) }
+  # The shared params set proration: true, which requires a recurring metric.
+  let(:metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount") }
+  let(:product) { create(:product, organization:, billable_metric: metric) }
 
   let(:params) do
     {
