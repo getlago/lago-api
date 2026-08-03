@@ -80,7 +80,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :billing_interval_cycle_count)).to eq(["non_terminal_indefinite"])
+        expect(json.dig(:error_details, :billing_interval_cycle_count)).to eq(["indefinite_phase_must_be_last"])
       end
     end
   end

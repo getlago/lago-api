@@ -24,14 +24,14 @@ module RatePhases
       position = (params[:position].presence || default_position(existing)).to_i
 
       unless position.between?(1, existing.size + 1)
-        return result.single_validation_failure!(field: :position, error_code: "non_contiguous_position")
+        return result.single_validation_failure!(field: :position, error_code: "positions_must_be_contiguous")
       end
 
       # Validate the prospective sequence before touching anything: an
       # indefinite phase (null cycle count) is only allowed last.
       counts = existing.map(&:billing_interval_cycle_count).insert(position - 1, params[:billing_interval_cycle_count])
       if counts[0...-1].any?(&:nil?)
-        return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "non_terminal_indefinite")
+        return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "indefinite_phase_must_be_last")
       end
 
       ActiveRecord::Base.transaction do

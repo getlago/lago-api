@@ -106,7 +106,7 @@ RSpec.describe PlanRateCards::CreateService do
     it "fails and rolls the whole create back" do
       expect { result }.not_to change(PlanRateCard, :count)
       expect(result).not_to be_success
-      expect(result.error.messages[:rate_phases]).to eq(["non_contiguous_position"])
+      expect(result.error.messages[:rate_phases]).to eq(["positions_must_be_contiguous"])
     end
   end
 
