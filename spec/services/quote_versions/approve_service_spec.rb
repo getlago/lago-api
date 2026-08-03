@@ -8,7 +8,14 @@ RSpec.describe QuoteVersions::ApproveService do
   let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
   let(:quote) { create(:quote, organization:) }
   let(:quote_version) do
-    create(:quote_version, quote:, organization:, start_date: Date.new(2026, 1, 1), end_date: Date.new(2027, 1, 1))
+    create(
+      :quote_version,
+      :with_subscription_creation_billing_items,
+      quote:,
+      organization:,
+      start_date: Date.new(2026, 1, 1),
+      end_date: Date.new(2027, 1, 1)
+    )
   end
 
   describe ".call" do
@@ -87,6 +94,24 @@ RSpec.describe QuoteVersions::ApproveService do
         quote_version.reload
         expect(quote_version.approved?).to eq(false)
         expect(quote_version.approved_at).to eq(nil)
+      end
+
+      it "does not create an order form" do
+        expect { result }.not_to change(OrderForm, :count)
+      end
+    end
+
+    context "when the billing items are incomplete", :premium do
+      let(:quote_version) do
+        create(:quote_version, quote:, organization:, start_date: Date.new(2026, 1, 1), end_date: Date.new(2027, 1, 1))
+      end
+
+      it "does not approve the quote version" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({"billing_items.plans": ["value_is_mandatory"]})
+
+        expect(quote_version.reload.approved?).to eq(false)
       end
 
       it "does not create an order form" do

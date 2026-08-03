@@ -6,6 +6,8 @@ module QuoteVersions
       case quote_version.quote.order_type
       when Quote::ORDER_TYPES[:one_off]
         OneOffValidator.new(result, quote_version:, scope:)
+      when Quote::ORDER_TYPES[:subscription_creation]
+        SubscriptionCreationValidator.new(result, quote_version:, scope:)
       end
     end
   end
