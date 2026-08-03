@@ -13,6 +13,12 @@ module Admin
 
     def call
       return result.not_found_failure!(resource: "audit_log") unless audit_log
+      unless rollbackable_feature_type?
+        return result.single_validation_failure!(
+          error_code: "cannot_rollback_organization_creation",
+          field: :feature_type
+        )
+      end
 
       organization = audit_log.organization
       reversed_enabled = !audit_log.after_value
@@ -47,6 +53,10 @@ module Admin
     private
 
     attr_reader :actor, :audit_log, :reason
+
+    def rollbackable_feature_type?
+      CsAdminAuditLog::TOGGLEABLE_FEATURE_TYPES.include?(audit_log.feature_type)
+    end
 
     def currently_enabled?(organization)
       if audit_log.premium_integration?
