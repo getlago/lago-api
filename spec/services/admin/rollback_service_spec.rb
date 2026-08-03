@@ -151,6 +151,46 @@ RSpec.describe Admin::RollbackService do
       end
     end
 
+    context "when the audit log is an organization creation" do
+      subject(:service) do
+        described_class.new(
+          actor: actor,
+          audit_log: original_log,
+          reason: "Trying to roll back an organization creation"
+        )
+      end
+
+      let(:original_log) do
+        create(
+          :cs_admin_audit_log,
+          actor_user: actor,
+          action: :org_created,
+          organization: organization,
+          feature_type: :organization,
+          feature_key: "organization",
+          before_value: nil,
+          after_value: true,
+          reason: "Creating the organization for onboarding"
+        )
+      end
+
+      it "returns a validation failure without touching the organization" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:feature_type]).to eq(["cannot_rollback_organization_creation"])
+      end
+
+      it "does not create a rollback audit log nor notify Slack" do
+        original_log
+
+        expect { service.call }.not_to change(CsAdminAuditLog, :count)
+
+        expect(Admin::SlackNotificationJob).not_to have_been_enqueued
+      end
+    end
+
     context "when rollback succeeds" do
       subject(:service) do
         described_class.new(
