@@ -18,30 +18,40 @@ module Mutations
       type [Types::Admin::AuditLogType]
 
       def resolve(organization_ids:, feature_type:, feature_key:, enabled:, reason:, notify_org_admin:)
-        batch_id = SecureRandom.uuid
-        audit_logs = []
+        organizations = Organization.where(id: organization_ids)
+        missing_ids = organization_ids.map(&:to_s) - organizations.pluck(:id)
 
-        organization_ids.each do |org_id|
-          organization = Organization.find_by(id: org_id)
-          next unless organization
-
-          result = ::Admin::ToggleFeatureService.new(
-            actor: current_user,
-            organization: organization,
-            feature_type: feature_type,
-            feature_key: feature_key,
-            enabled: enabled,
-            reason: reason,
-            notify_org_admin: notify_org_admin,
-            batch_id: batch_id
-          ).call
-
-          return result_error(result) unless result.success?
-
-          audit_logs << result.audit_log
+        if missing_ids.any?
+          return validation_error(messages: {organization_ids: missing_ids.map { |id| "#{id}: not_found" }})
         end
 
-        audit_logs
+        batch_id = SecureRandom.uuid
+        audit_logs = []
+        error = nil
+
+        ActiveRecord::Base.transaction do
+          organizations.each do |organization|
+            result = ::Admin::ToggleFeatureService.call(
+              actor: current_user,
+              organization: organization,
+              feature_type: feature_type,
+              feature_key: feature_key,
+              enabled: enabled,
+              reason: reason,
+              notify_org_admin: notify_org_admin,
+              batch_id: batch_id
+            )
+
+            unless result.success?
+              error = result_error(result)
+              raise ActiveRecord::Rollback
+            end
+
+            audit_logs << result.audit_log
+          end
+        end
+
+        error || audit_logs
       end
     end
   end
