@@ -2,15 +2,14 @@
 
 require "rails_helper"
 
-# Editing a billable metric filter does not destroy the charge filters that reference
-# the removed values: it strips those values out. Several charge filters can therefore
-# collapse onto one identical predicate (e.g. six `{model: [...], type: [pp1k_pages]}`
-# filters all become `{type: [pp1k_pages]}`).
+# Removing a value from a billable metric filter trims that value out of the charge
+# filters referencing it instead of destroying them. Several charge filters can therefore
+# end up on the same predicate: `{model: [ocr], type: [pages]}` and
+# `{model: [ocr-batch], type: [pages]}` both become `{type: [pages]}` once `model` is gone.
 #
-# The cascade diff keys filters by their `values` payload, so a collapsed predicate
-# resolves to a *group* of rows rather than a single one. These specs pin the behaviour
-# for that group: every duplicate must be reconciled on the child override, and the
-# child must never keep a stale filter that bills at a rate the parent no longer has.
+# A predicate is what the cascade and the usage calculation key on, so duplicates make both
+# ambiguous. These specs pin that one filter survives per predicate, on the plan and on its
+# overrides, and that the cascade keeps behaving normally afterwards.
 RSpec.describe "Cascade collapsed filter updates", :premium do
   include ScenariosHelper
 
@@ -21,7 +20,10 @@ RSpec.describe "Cascade collapsed filter updates", :premium do
     create(:sum_billable_metric, organization:, code: "api_pages", field_name: "value")
   end
 
-  let(:models) { %w[ocr-2411 ocr-2512 ocr-2503 ocr-4 ocr-2505 ocr-4-launch] }
+  let(:models) { %w[ocr-2411 ocr-2512 ocr-2503] }
+
+  let(:pages_predicate) { {"type" => ["pp1k_pages"]} }
+  let(:zone_predicate) { {"type" => ["pp1k_pages"], "zone" => ["us"]} }
 
   before do
     create(:billable_metric_filter, billable_metric:, key: "type", values: %w[pp1k_pages])
@@ -29,22 +31,25 @@ RSpec.describe "Cascade collapsed filter updates", :premium do
     create(:billable_metric_filter, billable_metric:, key: "zone", values: %w[us])
   end
 
-  # Parent charge: one filter per model (all sharing type: pp1k_pages) plus a zone
-  # filter that never collapses. The child override mirrors the shape at its own rates.
-  def setup_plan_with_override
-    model_filters = models.map.with_index do |model, index|
+  def model_filter_params
+    models.map.with_index do |model, index|
       {
         invoice_display_name: "Model #{index}",
-        properties: {amount: "10"},
+        properties: {amount: (10 * (index + 1)).to_s},
         values: {type: %w[pp1k_pages], model: [model]}
       }
     end
-    zone_filter = {
+  end
+
+  def zone_filter_params
+    {
       invoice_display_name: "US zone",
       properties: {amount: "5"},
       values: {type: %w[pp1k_pages], zone: %w[us]}
     }
+  end
 
+  def setup_plan_with_override
     create_plan({
       name: "API Plan",
       code: "api_plan",
@@ -59,7 +64,7 @@ RSpec.describe "Cascade collapsed filter updates", :premium do
           code: "pages_charge",
           pay_in_advance: false,
           properties: {amount: "0.01"},
-          filters: model_filters + [zone_filter]
+          filters: model_filter_params + [zone_filter_params]
         }
       ]
     })
@@ -75,7 +80,6 @@ RSpec.describe "Cascade collapsed filter updates", :premium do
 
     subscription = organization.subscriptions.find_by(external_id: "sub_api")
 
-    # Negotiated child rates: the override keeps its own prices on every filter.
     update_subscription_charge(subscription, "pages_charge", {
       invoice_display_name: "Pages",
       properties: {amount: "0.02"}
@@ -83,18 +87,25 @@ RSpec.describe "Cascade collapsed filter updates", :premium do
 
     subscription.reload
     child_charge = subscription.plan.charges.find_by(code: "pages_charge")
-    child_charge.filters.each do |filter|
-      filter.update!(properties: {"amount" => filter.to_h.key?("zone") ? "4" : "9"})
-    end
+    child_charge.filters.each { it.update!(properties: {"amount" => "9"}) }
 
     {parent_plan:, parent_charge:, child_charge:, subscription:}
   end
 
-  # Drops the whole `model` key, collapsing every model filter onto {type: [pp1k_pages]}.
-  def collapse_model_key
+  def remove_model_key
     update_metric(billable_metric, {
       filters: [
         {key: "type", values: %w[pp1k_pages]},
+        {key: "zone", values: %w[us]}
+      ]
+    })
+  end
+
+  def remove_first_model_value
+    update_metric(billable_metric, {
+      filters: [
+        {key: "type", values: %w[pp1k_pages]},
+        {key: "model", values: models.drop(1)},
         {key: "zone", values: %w[us]}
       ]
     })
@@ -120,101 +131,57 @@ RSpec.describe "Cascade collapsed filter updates", :premium do
     })
   end
 
-  def predicate_counts(charge)
-    charge.filters.reload.map(&:to_h).tally
+  def predicates(charge)
+    charge.filters.reload.map(&:to_h)
   end
 
-  let(:collapsed_predicate) { {"type" => ["pp1k_pages"]} }
-  let(:zone_predicate) { {"type" => ["pp1k_pages"], "zone" => ["us"]} }
-
-  it "collapses several charge filters onto one predicate when a metric key is removed" do
+  it "keeps one filter per predicate on the plan and on the override" do
     ctx = setup_plan_with_override
 
-    expect(predicate_counts(ctx[:parent_charge])).to eq(
-      {"type" => ["pp1k_pages"], "model" => ["ocr-2411"]} => 1,
-      {"type" => ["pp1k_pages"], "model" => ["ocr-2512"]} => 1,
-      {"type" => ["pp1k_pages"], "model" => ["ocr-2503"]} => 1,
-      {"type" => ["pp1k_pages"], "model" => ["ocr-4"]} => 1,
-      {"type" => ["pp1k_pages"], "model" => ["ocr-2505"]} => 1,
-      {"type" => ["pp1k_pages"], "model" => ["ocr-4-launch"]} => 1,
-      zone_predicate => 1
+    expect(predicates(ctx[:parent_charge]).size).to eq(4)
+
+    remove_model_key
+
+    expect(predicates(ctx[:parent_charge])).to contain_exactly(pages_predicate, zone_predicate)
+    expect(predicates(ctx[:child_charge])).to contain_exactly(pages_predicate, zone_predicate)
+  end
+
+  it "leaves untouched filters alone when a single value is removed" do
+    ctx = setup_plan_with_override
+
+    remove_first_model_value
+
+    expect(predicates(ctx[:parent_charge])).to contain_exactly(
+      pages_predicate,
+      {"type" => ["pp1k_pages"], "model" => ["ocr-2512"]},
+      {"type" => ["pp1k_pages"], "model" => ["ocr-2503"]},
+      zone_predicate
     )
-
-    collapse_model_key
-
-    # The six model filters now share one predicate on the parent *and* on the override.
-    expect(predicate_counts(ctx[:parent_charge])).to eq(collapsed_predicate => 6, zone_predicate => 1)
-    expect(predicate_counts(ctx[:child_charge])).to eq(collapsed_predicate => 6, zone_predicate => 1)
+    expect(predicates(ctx[:child_charge])).to eq(predicates(ctx[:parent_charge]))
   end
 
-  it "removes every collapsed duplicate from the override when the parent drops them all" do
+  it "preserves the negotiated override price of the surviving filter" do
     ctx = setup_plan_with_override
-    collapse_model_key
 
-    update_parent_filters(ctx[:parent_plan], ctx[:parent_charge], [
-      {
-        invoice_display_name: "US zone",
-        properties: {amount: "5"},
-        values: {type: %w[pp1k_pages], zone: %w[us]}
-      }
-    ])
+    remove_model_key
 
-    # Parent kept only the zone filter, and the override must match: no stale
-    # {type: [pp1k_pages]} row may survive, otherwise it keeps billing at "9".
-    expect(predicate_counts(ctx[:parent_charge])).to eq(zone_predicate => 1)
-    expect(predicate_counts(ctx[:child_charge])).to eq(zone_predicate => 1)
-  end
-
-  # Regression: the diff deletes the whole group for a predicate found in `after`.
-  # Comparing only a single representative made this look like a no-op, so no job was
-  # enqueued, the parent self-healed to one row and the override silently kept all six.
-  it "converges the override to a single row when the parent keeps one collapsed filter" do
-    ctx = setup_plan_with_override
-    collapse_model_key
-
-    update_parent_filters(ctx[:parent_plan], ctx[:parent_charge], [
-      {
-        invoice_display_name: "Pages",
-        properties: {amount: "10"},
-        values: {type: %w[pp1k_pages]}
-      },
-      {
-        invoice_display_name: "US zone",
-        properties: {amount: "5"},
-        values: {type: %w[pp1k_pages], zone: %w[us]}
-      }
-    ])
-
-    expect(predicate_counts(ctx[:parent_charge])).to eq(collapsed_predicate => 1, zone_predicate => 1)
-    expect(predicate_counts(ctx[:child_charge])).to eq(collapsed_predicate => 1, zone_predicate => 1)
-  end
-
-  it "preserves the negotiated override price while deduplicating" do
-    ctx = setup_plan_with_override
-    collapse_model_key
-
-    update_parent_filters(ctx[:parent_plan], ctx[:parent_charge], [
-      {
-        invoice_display_name: "Pages",
-        properties: {amount: "10"},
-        values: {type: %w[pp1k_pages]}
-      },
-      {
-        invoice_display_name: "US zone",
-        properties: {amount: "5"},
-        values: {type: %w[pp1k_pages], zone: %w[us]}
-      }
-    ])
-
-    surviving = ctx[:child_charge].filters.reload.find { |f| f.to_h == collapsed_predicate }
-
-    # Deduplication must not clobber a customized child price.
+    surviving = ctx[:child_charge].filters.reload.find { it.to_h == pages_predicate }
     expect(surviving.properties).to eq({"amount" => "9"})
   end
 
-  it "emits a single destroy job for a collapsed predicate" do
+  it "cascades the deletion of a collapsed filter to the override" do
     ctx = setup_plan_with_override
-    collapse_model_key
+    remove_model_key
+
+    update_parent_filters(ctx[:parent_plan], ctx[:parent_charge], [zone_filter_params])
+
+    expect(predicates(ctx[:parent_charge])).to contain_exactly(zone_predicate)
+    expect(predicates(ctx[:child_charge])).to contain_exactly(zone_predicate)
+  end
+
+  it "enqueues one destroy job for the collapsed predicate" do
+    ctx = setup_plan_with_override
+    remove_model_key
 
     payloads = []
     allow(ChargeFilters::CascadeJob).to receive(:perform_later).and_wrap_original do |original, *args|
@@ -222,35 +189,16 @@ RSpec.describe "Cascade collapsed filter updates", :premium do
       original.call(*args)
     end
 
-    update_parent_filters(ctx[:parent_plan], ctx[:parent_charge], [
-      {
-        invoice_display_name: "US zone",
-        properties: {amount: "5"},
-        values: {type: %w[pp1k_pages], zone: %w[us]}
-      }
-    ])
+    update_parent_filters(ctx[:parent_plan], ctx[:parent_charge], [zone_filter_params])
 
-    # One job per predicate, not per duplicated row: CascadeService fans that single
-    # destroy out to every matching filter on each child charge.
-    destroys = payloads.select { |p| p[:action] == "destroy" }
-    expect(destroys.size).to eq(1)
-    expect(destroys.first[:values]).to eq(collapsed_predicate)
+    destroys = payloads.select { it[:action] == "destroy" }
+    expect(destroys.map { it[:values] }).to eq([pages_predicate])
   end
 
-  it "does not bill the override at a rate the parent no longer has" do
+  it "bills the override at the charge default once the filter is gone" do
     ctx = setup_plan_with_override
-    collapse_model_key
-
-    update_parent_filters(ctx[:parent_plan], ctx[:parent_charge], [
-      {
-        invoice_display_name: "US zone",
-        properties: {amount: "5"},
-        values: {type: %w[pp1k_pages], zone: %w[us]}
-      }
-    ])
-
-    # No stale row survives on the override, so nothing can bill at the old "9" rate.
-    expect(ctx[:child_charge].filters.reload.map(&:to_h)).not_to include(collapsed_predicate)
+    remove_model_key
+    update_parent_filters(ctx[:parent_plan], ctx[:parent_charge], [zone_filter_params])
 
     create_event({
       code: billable_metric.code,
@@ -261,40 +209,19 @@ RSpec.describe "Cascade collapsed filter updates", :premium do
     fetch_current_usage(customer:, subscription: ctx[:subscription])
 
     customer_usage = json[:customer_usage]
-    charge_usage = customer_usage[:charges_usage].first
-
-    # 10 units fall back to the charge default (0.02 EUR) = 20 cents. A surviving
-    # duplicate would have priced them at 9 EUR/unit instead.
-    expect(charge_usage[:units]).to eq("10.0")
+    expect(customer_usage[:charges_usage].first[:units]).to eq("10.0")
     expect(customer_usage[:amount_cents]).to eq(20)
   end
 
-  # Guard against over-correcting: an ordinary, non-collapsed update must still
-  # cascade exactly one row and must not delete anything.
-  it "still cascades an ordinary filter update without duplicates" do
+  it "cascades an ordinary price change without removing filters" do
     ctx = setup_plan_with_override
 
-    model_filters = models.map.with_index do |model, index|
-      amount = (index.zero?) ? "12" : "10"
-      {
-        invoice_display_name: "Model #{index}",
-        properties: {amount:},
-        values: {type: %w[pp1k_pages], model: [model]}
-      }
-    end
+    repriced = model_filter_params
+    repriced.first[:properties] = {amount: "99"}
 
-    update_parent_filters(ctx[:parent_plan], ctx[:parent_charge], model_filters + [
-      {
-        invoice_display_name: "US zone",
-        properties: {amount: "5"},
-        values: {type: %w[pp1k_pages], zone: %w[us]}
-      }
-    ])
+    update_parent_filters(ctx[:parent_plan], ctx[:parent_charge], repriced + [zone_filter_params])
 
-    expect(ctx[:child_charge].filters.reload.count).to eq(7)
-
-    # The child had customized every filter, so its price is preserved; the point is
-    # that no row was destroyed and the predicate set is untouched.
-    expect(predicate_counts(ctx[:child_charge]).values.uniq).to eq([1])
+    expect(predicates(ctx[:parent_charge]).size).to eq(4)
+    expect(predicates(ctx[:child_charge]).size).to eq(4)
   end
 end

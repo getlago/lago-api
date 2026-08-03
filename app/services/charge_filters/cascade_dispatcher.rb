@@ -9,43 +9,48 @@ module ChargeFilters
     #   { values: {"key" => [...]}, properties: {...} | nil, invoice_display_name: "..." }
     # `values` and `properties` must be string-keyed.
     def call(charge:, before:, after:)
-      before_by_values = before.group_by { |f| f[:values] }
+      removed = before.group_by { |filter| filter[:values] }
 
       after.each do |new_filter|
-        # NOTE: group_by yields every "before" row sharing this predicate. A metric edit can
-        #       collapse several filters onto one predicate, so the group may hold duplicates.
-        existing_group = before_by_values.delete(new_filter[:values]) || []
-        existing = existing_group.first
+        previous = removed.delete(new_filter[:values])&.first
 
-        # NOTE: only treat this as a no-op when the predicate resolved to a single row that
-        #       is unchanged. If the group carries duplicates, the parent has just been
-        #       deduplicated to one row and the children still hold the extras, so a job must
-        #       be enqueued for CascadeService to reconcile that cardinality.
-        next if existing_group.size == 1 &&
-          existing[:properties] == new_filter[:properties] &&
-          existing[:invoice_display_name] == new_filter[:invoice_display_name]
+        next if unchanged?(previous, new_filter)
 
-        ChargeFilters::CascadeJob.perform_later(
-          charge.id,
-          existing ? "update" : "create",
+        enqueue(
+          charge,
+          previous ? "update" : "create",
           new_filter[:values],
-          existing&.dig(:properties),
+          previous&.dig(:properties),
           new_filter[:properties],
           new_filter[:invoice_display_name]
         )
       end
 
-      before_by_values.each_value do |old_group|
-        old = old_group.first
-        ChargeFilters::CascadeJob.perform_later(
-          charge.id,
+      removed.each_value do |old_filters|
+        old_filter = old_filters.first
+
+        enqueue(
+          charge,
           "destroy",
-          old[:values],
-          old[:properties],
+          old_filter[:values],
+          old_filter[:properties],
           nil,
-          old[:invoice_display_name]
+          old_filter[:invoice_display_name]
         )
       end
+    end
+
+    def unchanged?(previous, new_filter)
+      return false if previous.nil?
+
+      previous[:properties] == new_filter[:properties] &&
+        previous[:invoice_display_name] == new_filter[:invoice_display_name]
+    end
+
+    def enqueue(charge, action, values, old_properties, new_properties, invoice_display_name)
+      ChargeFilters::CascadeJob.perform_later(
+        charge.id, action, values, old_properties, new_properties, invoice_display_name
+      )
     end
   end
 end

@@ -55,6 +55,8 @@ module BillableMetricFilters
         billable_metric.filters.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
           discard_filter(it)
         end
+
+        discard_charge_filters_collapsed_onto_the_same_predicate
       end
 
       BillableMetricFilters::RefreshDraftInvoicesJob.perform_after_commit(billable_metric.id)
@@ -76,6 +78,33 @@ module BillableMetricFilters
       ActiveRecord::Base.transaction do
         billable_metric.filters.each { discard_filter(it) }
       end
+    end
+
+    # Trimming a value off a charge filter can leave it identical to a sibling:
+    # `{model: [ocr], type: [pages]}` and `{model: [ocr-batch], type: [pages]}` both
+    # become `{type: [pages]}` once the `model` key is gone. Only the first survives,
+    # on parent and overridden charges alike, so no predicate is ever ambiguous.
+    def discard_charge_filters_collapsed_onto_the_same_predicate
+      charge_filters_of_billable_metric
+        .group_by { |charge_filter| [charge_filter.charge_id, charge_filter.to_h] }
+        .each_value { |collapsed| discard_all_but_first(collapsed) }
+    end
+
+    def charge_filters_of_billable_metric
+      ChargeFilter
+        .where(charge_id: billable_metric.charges.unscope(:order).select(:id))
+        .includes(values: :billable_metric_filter)
+    end
+
+    def discard_all_but_first(charge_filters)
+      _surviving, *duplicates = charge_filters
+
+      duplicates.each { discard_charge_filter(it) }
+    end
+
+    def discard_charge_filter(charge_filter)
+      charge_filter.values.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      charge_filter.discard!
     end
 
     def discard_filter(filter)

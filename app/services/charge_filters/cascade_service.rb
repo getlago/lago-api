@@ -28,21 +28,12 @@ module ChargeFilters
         Charge.where(id: ids).includes(:billable_metric).find_each do |child_charge|
           Charge.no_touching do
             Plan.no_touching do
-              # NOTE: matches are grouped by charge_id, so each child charge maps to every
-              #       filter row that satisfies the predicate. Duplicates left behind by a
-              #       collapsed metric edit are all reconciled instead of just one.
               child_filters = matches[child_charge.id] || []
 
               case action
-              when "update"
-                # NOTE: the parent holds at most one row per predicate, so the child must too.
-                #       Update the first and discard any duplicates a collapsed metric edit
-                #       left behind, otherwise stale rows keep billing at their old rate.
-                keep, *extras = child_filters
-                update_child_filter(child_charge, keep) if keep
-                extras.each { |cf| destroy_child_filter(cf) }
+              when "update" then update_child_filters(child_charge, child_filters)
               when "create" then create_child_filter(child_charge, child_filters.first)
-              when "destroy" then child_filters.each { |cf| destroy_child_filter(cf) }
+              when "destroy" then child_filters.each { destroy_child_filter(it) }
               end
             end
           end
@@ -85,6 +76,13 @@ module ChargeFilters
         .includes(values: :billable_metric_filter)
         .select { |filter| filter.to_h == filter_values }
         .group_by(&:charge_id)
+    end
+
+    def update_child_filters(child_charge, child_filters)
+      surviving, *duplicates = child_filters
+
+      update_child_filter(child_charge, surviving)
+      duplicates.each { destroy_child_filter(it) }
     end
 
     def update_child_filter(child_charge, child_filter)
