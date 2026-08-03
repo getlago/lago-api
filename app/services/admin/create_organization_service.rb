@@ -18,34 +18,38 @@ module Admin
     def call
       batch_id = SecureRandom.uuid
 
-      organization = ::Organizations::CreateService
-        .call(name:, timezone:, document_numbering: "per_organization")
-        .raise_if_error!
-        .organization
+      ActiveRecord::Base.transaction do
+        organization = ::Organizations::CreateService
+          .call(name:, timezone:, document_numbering: "per_organization")
+          .raise_if_error!
+          .organization
 
-      organization.update!(premium_integrations:) if premium_integrations.any?
+        organization.update!(premium_integrations:) if premium_integrations.any?
 
-      feature_flags.each do |flag|
-        organization.enable_feature_flag!(flag)
+        feature_flags.each do |flag|
+          organization.enable_feature_flag!(flag)
+        end
+
+        invite_result = ::Invites::CreateService.call(
+          current_organization: organization,
+          email: owner_email,
+          roles: %w[admin],
+          skip_admin_check: true
+        ).raise_if_error!
+
+        create_audit_logs!(organization, batch_id)
+
+        result.organization = organization
+        result.invite_url = invite_result.invite_url
       end
-
-      invite_result = ::Invites::CreateService.call(
-        current_organization: organization,
-        email: owner_email,
-        roles: %w[admin],
-        skip_admin_check: true
-      ).raise_if_error!
-
-      create_audit_logs!(organization, batch_id)
-
-      result.organization = organization
-      result.invite_url = invite_result.invite_url
 
       CsAdminAuditLog.where(batch_id:).find_each do |log|
         Admin::SlackNotificationJob.perform_later(log.id)
       end
 
       result
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end
