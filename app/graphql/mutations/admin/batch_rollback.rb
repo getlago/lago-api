@@ -14,7 +14,9 @@ module Mutations
       type [Types::Admin::AuditLogType]
 
       def resolve(batch_id:, reason:)
-        audit_logs = CsAdminAuditLog.where(batch_id: batch_id).where.not(action: :rollback)
+        audit_logs = CsAdminAuditLog
+          .where(batch_id: batch_id, feature_type: CsAdminAuditLog::TOGGLEABLE_FEATURE_TYPES)
+          .where.not(action: :rollback)
         rollback_logs = []
 
         audit_logs.find_each do |audit_log|
