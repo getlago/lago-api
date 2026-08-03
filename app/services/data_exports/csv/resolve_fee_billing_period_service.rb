@@ -32,6 +32,8 @@ module DataExports
           properties_period("fixed_charges_from_datetime", "fixed_charges_to_datetime") || fixed_charge_period
         when :commitment
           properties_period("from_datetime", "to_datetime") || commitment_period
+        when :charge
+          charge_period
         else
           charges_period
         end
@@ -68,10 +70,15 @@ module DataExports
         end
       end
 
+      def charge_period
+        if fee.charge&.pay_in_advance?
+          properties_period("charges_from_datetime", "charges_to_datetime") || charges_period
+        else
+          charges_period
+        end
+      end
+
       def charges_period
-        # Preserve charges_* timestamps for charge rows. Some pay-in-advance boundaries
-        # are derived from local dates at UTC midnight, so converting them to the
-        # customer timezone can shift the exported date by one day.
         [invoice_subscription.charges_from_datetime, invoice_subscription.charges_to_datetime]
       end
 

@@ -146,6 +146,7 @@ RSpec.describe DataExports::Csv::InvoiceFees do
           "fixed_charges_to_datetime" => "2026-07-21T23:59:59Z"
         }
       end
+      let(:exported_fee) { advance_fee }
 
       def exported_period
         result = described_class.new(data_export_part:).call
@@ -155,7 +156,7 @@ RSpec.describe DataExports::Csv::InvoiceFees do
         file.close
         File.unlink(file.path)
 
-        row = CSV.parse(csv_content).find { |r| r[3] == advance_fee.id }
+        row = CSV.parse(csv_content).find { |r| r[3] == exported_fee.id }
         [row[13], row[14]]
       end
 
@@ -211,19 +212,23 @@ RSpec.describe DataExports::Csv::InvoiceFees do
 
       context "with an arrears usage fee" do
         let(:charge) { create(:standard_charge, plan:) }
-        let(:advance_fee) do
+        let(:charge_boundaries) do
+          {
+            "charges_from_datetime" => "2026-05-22T00:00:00Z",
+            "charges_to_datetime" => "2026-06-21T23:59:59Z"
+          }
+        end
+        let(:charge_fee) do
           create(:charge_fee,
             invoice:,
             subscription:,
             charge:,
             organization: customer.organization,
-            properties: {
-              "charges_from_datetime" => "2026-05-22T00:00:00Z",
-              "charges_to_datetime" => "2026-06-21T23:59:59Z"
-            })
+            properties: charge_boundaries)
         end
+        let(:exported_fee) { charge_fee }
 
-        before { advance_fee }
+        before { charge_fee }
 
         it "keeps exporting the usage window" do
           expect(exported_period).to eq(%w[2026-05-22 2026-06-21])
@@ -234,9 +239,15 @@ RSpec.describe DataExports::Csv::InvoiceFees do
           let(:timezone) { "America/New_York" }
           let(:from_utc) { "2026-05-22 04:00:00 UTC" }
           let(:to_utc) { "2026-06-22 03:59:59 UTC" }
+          let(:charge_boundaries) do
+            {
+              "charges_from_datetime" => "2026-06-22T04:00:00Z",
+              "charges_to_datetime" => "2026-07-22T03:59:59Z"
+            }
+          end
 
-          it "does not shift the charge period by one day" do
-            expect(exported_period).to eq(%w[2026-05-22 2026-06-21])
+          it "exports the fee's own period without shifting it by one day" do
+            expect(exported_period).to eq(%w[2026-06-22 2026-07-21])
           end
         end
       end
