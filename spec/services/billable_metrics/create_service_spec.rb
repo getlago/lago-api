@@ -32,6 +32,42 @@ RSpec.describe BillableMetrics::CreateService do
       expect(SendWebhookJob).to have_been_enqueued.with("billable_metric.created", result.billable_metric)
     end
 
+    it "expires the expression cache of the code" do
+      cache_key = BillableMetrics::ExpressionCacheService.new(organization.id, create_args[:code]).cache_key
+      allow(Rails.cache).to receive(:delete)
+
+      described_class.call(create_args)
+
+      expect(Rails.cache).to have_received(:delete).with(cache_key)
+    end
+
+    context "when an event was received for the code before the metric existed", cache: :memory do
+      let(:create_args) do
+        {
+          name: "New Metric",
+          code: "new_metric",
+          organization_id: organization.id,
+          aggregation_type: "sum_agg",
+          field_name: "result",
+          expression: "event.properties.left + event.properties.right"
+        }
+      end
+
+      let(:event) do
+        create(:event, organization:, code: create_args[:code], properties: {"left" => "1", "right" => "2"})
+      end
+
+      it "evaluates the expression on the following events" do
+        # This caches the absence of an expression for the code
+        Events::CalculateExpressionService.call(organization:, event:)
+
+        described_class.call(create_args)
+
+        result = Events::CalculateExpressionService.call(organization:, event:)
+        expect(result.event.properties["result"]).to eq(3)
+      end
+    end
+
     context "with code already used by a deleted metric" do
       it "creates a billable metric with the same code" do
         create(:billable_metric, organization:, code: "new_metric", deleted_at: Time.current)

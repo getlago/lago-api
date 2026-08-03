@@ -10,7 +10,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
   let(:organization) { create(:organization) }
   let(:file_url) { Faker::Internet.url }
   let(:invoice_url) do
-    url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+    url = Rails.application.config.lago_front_url
 
     URI.join(url, "/#{customer.organization.slug}/customer/#{customer.id}/", "invoice/#{invoice.id}/overview").to_s
   end

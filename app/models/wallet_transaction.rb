@@ -117,6 +117,10 @@ class WalletTransaction < ApplicationRecord
     self
   end
 
+  def resolved_purchase_order_number
+    purchase_order_number.presence || wallet.purchase_order_number
+  end
+
   def mark_as_failed!(timestamp = Time.zone.now)
     return if failed?
 

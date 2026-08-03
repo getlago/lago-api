@@ -10,8 +10,8 @@ module LagoApi
   class Application < Rails::Application
     config.load_defaults 8.0
 
-    # Disable YJIT as we are not ready yet
-    config.yjit = false
+    # YJIT is disabled by default, enable it with LAGO_ENABLE_YJIT=true
+    config.yjit = ActiveModel::Type::Boolean.new.cast(ENV["LAGO_ENABLE_YJIT"]) || false
 
     # TODO: Should be turned to false
     config.add_autoload_paths_to_load_path = true
@@ -28,6 +28,7 @@ module LagoApi
 
     config.api_only = true
     config.active_job.queue_adapter = :sidekiq
+    config.lago_front_url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
 
     # Configuration for active record encryption
     config.active_record.encryption.hash_digest_class = OpenSSL::Digest::SHA1

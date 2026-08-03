@@ -112,8 +112,12 @@ module BillableMetrics
       #   Used only for in advance billing
       def per_event_aggregation(exclude_event: false, include_event_value: false, grouped_by_values: nil)
         PerEventAggregationResult.new.tap do |result|
-          result.event_aggregation = event_store.with_grouped_by_values(grouped_by_values) do
-            compute_per_event_aggregation(exclude_event:, include_event_value:)
+          result.event_aggregation = if should_bypass_aggregation?
+            []
+          else
+            event_store.with_grouped_by_values(grouped_by_values) do
+              compute_per_event_aggregation(exclude_event:, include_event_value:)
+            end
           end
         end
       end

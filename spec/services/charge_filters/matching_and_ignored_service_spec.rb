@@ -351,6 +351,47 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     end
   end
 
+  describe "filters loading" do
+    subject(:service_result) { described_class.call(charge: uncached_charge, filter: current_filter) }
+
+    let(:current_filter) { f1 }
+    let(:uncached_charge) { Charge.find(charge.id) }
+    let(:filter_tables) { %w[charge_filters charge_filter_values billable_metric_filters] }
+
+    # NOTE: the caller-provided filter resolves its own values, so warm it to keep the counts
+    #       below limited to the queries made for the charge's other filters.
+    before do
+      uncached_charge
+      current_filter.to_h_with_all_values
+    end
+
+    def count_queries(tables)
+      queries = []
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_, _, _, _, payload|
+        queries << payload[:sql] if tables.any? { |table| payload[:sql].include?(%("#{table}")) }
+      end
+      yield
+      queries
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
+
+    it "eager loads the filter values" do
+      # NOTE: one query for the charge filters, one for their values and one for the billable
+      #       metric filters, whatever the number of filters on the charge.
+      expect(count_queries(filter_tables) { service_result }.size).to eq(3)
+    end
+
+    context "when the filters are already preloaded" do
+      let(:uncached_charge) { Charge.includes(filters: {values: :billable_metric_filter}).find(charge.id) }
+
+      it "reuses the loaded association" do
+        expect(count_queries(filter_tables) { service_result }).to eq([])
+        expect(service_result.matching_filters).to eq({"size" => %w[512], "steps" => %w[25], "model" => %w[llama-2]})
+      end
+    end
+  end
+
   # When identical duplicates share the same created_at, the id part of the
   # [created_at, id] tie-break decides: exactly one filter counts the events.
   context "when identical filters share the same created_at" do
