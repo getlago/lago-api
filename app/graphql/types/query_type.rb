@@ -14,6 +14,7 @@ module Types
     field :add_on, resolver: Resolvers::AddOnResolver
     field :add_ons, resolver: Resolvers::AddOnsResolver
     field :admin_audit_logs, resolver: Resolvers::Admin::AuditLogsResolver
+    field :admin_cs_admins, resolver: Resolvers::Admin::UsersResolver
     field :admin_organization, resolver: Resolvers::Admin::OrganizationResolver
     field :admin_organizations, resolver: Resolvers::Admin::OrganizationsResolver
     field :ai_conversation, resolver: Resolvers::AiConversationResolver
