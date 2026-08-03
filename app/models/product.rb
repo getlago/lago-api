@@ -3,6 +3,7 @@
 class Product < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
+  include CatalogAttachable
 
   self.discard_column = :deleted_at
 
@@ -40,10 +41,6 @@ class Product < ApplicationRecord
 
   def invoice_name
     invoice_display_name.presence || name
-  end
-
-  def attached_to_plan_or_subscription?
-    plan_applied_rate_cards.exists? || subscription_applied_rate_cards.exists?
   end
 
   private

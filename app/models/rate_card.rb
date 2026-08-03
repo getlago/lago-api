@@ -4,6 +4,7 @@ class RateCard < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
   include Discard::Model
+  include CatalogAttachable
 
   self.discard_column = :deleted_at
 
@@ -48,10 +49,6 @@ class RateCard < ApplicationRecord
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
-  end
-
-  def attached_to_plan_or_subscription?
-    plan_applied_rate_cards.exists? || subscription_applied_rate_cards.exists?
   end
 end
 
