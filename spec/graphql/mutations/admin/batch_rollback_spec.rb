@@ -77,6 +77,56 @@ RSpec.describe Mutations::Admin::BatchRollback do
     end
   end
 
+  context "when one of the rollbacks fails" do
+    let(:other_organization) { create(:organization, premium_integrations: ["netsuite"]) }
+
+    let(:other_log) do
+      create(
+        :cs_admin_audit_log,
+        actor_user: admin_user,
+        organization: other_organization,
+        action: :toggle_on,
+        feature_type: :premium_integration,
+        feature_key: "netsuite",
+        before_value: false,
+        after_value: true,
+        batch_id:
+      )
+    end
+
+    let(:failed_result) do
+      ::Admin::RollbackService::Result.new.validation_failure!(errors: {base: ["something_went_wrong"]})
+    end
+
+    before do
+      toggle_log
+      other_log
+
+      # The first log of the batch rolls back for real, the second one fails.
+      processed = 0
+      allow(::Admin::RollbackService).to receive(:call).and_wrap_original do |original, **kwargs|
+        processed += 1
+
+        if processed == 1
+          original.call(**kwargs)
+        else
+          failed_result
+        end
+      end
+    end
+
+    it "returns the error and rolls the whole batch back" do
+      result = rollback
+
+      expect_graphql_error(result:, message: "unprocessable_entity")
+
+      expect(CsAdminAuditLog.where(action: :rollback)).to be_empty
+      expect(organization.reload.premium_integrations).to include("okta")
+      expect(other_organization.reload.premium_integrations).to include("netsuite")
+      expect(Admin::SlackNotificationJob).not_to have_been_enqueued
+    end
+  end
+
   context "when the user is not a CS admin" do
     let(:regular_user) { create(:user, email: "user@acme.test") }
 
