@@ -97,6 +97,24 @@ RSpec.describe Api::V2::SubscriptionRateCards::RatePhasesController do
       expect(json[:rate_phase][:name]).to eq("Renamed")
     end
 
+    context "when the override names a structural card field" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/subscriptions/#{subscription.external_id}/applied_rate_cards/#{subscription_rate_card.rate_card.code}/rate_phases/#{rate_phase.code}",
+          {rate_phase: {rate_override: {rate_model: "standard", rate_properties: {amount: "0.02"}, currency: "EUR"}}}
+        )
+      end
+
+      it "rejects it instead of silently dropping the field" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :currency)).to eq(["not_overridable"])
+        expect(rate_phase.reload.rate_override).to be_nil
+      end
+    end
+
     context "when the subscription is active" do
       let(:subscription) { create(:subscription, customer:, organization:) }
 
