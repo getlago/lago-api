@@ -65,6 +65,55 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckJob do
     end
   end
 
+  describe "in-process lock retry when invoked inline with current_usage" do
+    let(:current_usage) { SubscriptionUsage.new }
+
+    before do
+      allow(LifetimeUsages::CalculateService).to receive(:call!)
+      allow(LifetimeUsages::CheckThresholdsService).to receive(:call!)
+    end
+
+    it "forwards the current_usage to the Calculate service" do
+      described_class.perform_now(lifetime_usage, current_usage:)
+      expect(LifetimeUsages::CalculateService).to have_received(:call!).with(lifetime_usage:, current_usage:)
+    end
+
+    [
+      BaseLockService::FailedToAcquireLock.new("customer-1-prepaid_credit"),
+      ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet.")
+    ].each do |error|
+      context "when a #{error.class} is raised then resolves" do
+        before do
+          stub_const("ApplicationJob::MAX_LOCK_RETRY_DELAY", 1)
+          call_count = 0
+          allow(LifetimeUsages::CalculateService).to receive(:call!) do
+            call_count += 1
+            raise error if call_count == 1
+          end
+        end
+
+        it "retries in-process without raising ActiveJob::SerializationError" do
+          expect { described_class.perform_now(lifetime_usage, current_usage:) }.not_to raise_error
+          expect(LifetimeUsages::CalculateService).to have_received(:call!).twice
+        end
+      end
+
+      context "when a #{error.class} never resolves" do
+        before do
+          stub_const("ApplicationJob::MAX_LOCK_RETRY_ATTEMPTS", 3)
+          stub_const("ApplicationJob::MAX_LOCK_RETRY_DELAY", 1)
+          allow(LifetimeUsages::CalculateService).to receive(:call!).and_raise(error)
+        end
+
+        it "exhausts in-process retries and raises without reaching retry_on" do
+          expect { described_class.perform_now(lifetime_usage, current_usage:) }
+            .to raise_error(described_class::InlineLockRetryExhausted)
+          expect(LifetimeUsages::CalculateService).to have_received(:call!).exactly(3).times
+        end
+      end
+    end
+  end
+
   describe "discard_on" do
     context "when an Idempotency::IdempotencyError is raised", :premium do
       before do
