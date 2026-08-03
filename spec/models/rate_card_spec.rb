@@ -70,6 +70,36 @@ RSpec.describe RateCard do
       end
     end
 
+    describe "proration compatibility" do
+      it "rejects proration on a metered metric" do
+        metered = create(:product, billable_metric: create(:billable_metric, recurring: false))
+        card = build(:rate_card, organization: metered.organization, product: metered, proration: true)
+        card.valid?
+        expect(card.errors.where(:proration).map(&:type)).to eq([:requires_recurring_metric])
+      end
+
+      it "rejects proration on a weighted_sum metric" do
+        metric = create(:billable_metric, aggregation_type: "weighted_sum_agg", recurring: true, field_name: "value", weighted_interval: "seconds")
+        product = create(:product, organization: metric.organization, billable_metric: metric)
+        card = build(:rate_card, organization: product.organization, product:, proration: true)
+        card.valid?
+        expect(card.errors.where(:proration).map(&:type)).to eq([:not_allowed_for_aggregation_type])
+      end
+
+      it "accepts proration on a recurring metric" do
+        metric = create(:billable_metric, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
+        product = create(:product, organization: metric.organization, billable_metric: metric)
+
+        expect(build(:rate_card, organization: product.organization, product:, proration: true)).to be_valid
+      end
+
+      it "accepts proration on a fixed product" do
+        product = create(:product, :fixed, :standalone)
+
+        expect(build(:rate_card, organization: product.organization, product:, proration: true)).to be_valid
+      end
+    end
+
     describe "currency inclusion" do
       it "is valid with an accepted currency" do
         expect(build(:rate_card, currency: "USD")).to be_valid

@@ -42,6 +42,7 @@ class RateCard < ApplicationRecord
   validates :currency, presence: true, inclusion: {in: currency_list, allow_nil: true}
   validate :validate_filter_belongs_to_item
   validate :validate_display_on_invoice
+  validate :validate_proration
 
   default_scope -> { kept }
 
@@ -60,6 +61,21 @@ class RateCard < ApplicationRecord
     return if advance? || display_on_invoice?
 
     errors.add(:display_on_invoice, :not_allowed_for_billing_timing)
+  end
+
+  # Usage proration spreads a recurring quantity across the period, so it
+  # needs a recurring metric — and not weighted_sum, which prorates by design
+  # (v1: Charge#validate_prorated). Fixed products prorate by calendar time
+  # instead and carry no metric, so they are exempt.
+  def validate_proration
+    return unless proration?
+    return unless product&.usage?
+
+    metric = product.billable_metric
+    return if metric.nil?
+
+    errors.add(:proration, :requires_recurring_metric) unless metric.recurring?
+    errors.add(:proration, :not_allowed_for_aggregation_type) if metric.weighted_sum_agg?
   end
 
   def self.ransackable_attributes(_auth_object = nil)

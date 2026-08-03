@@ -59,6 +59,7 @@ en:
         payment_request_is_already_succeeded: payment_request_is_already_succeeded
         present: value_must_be_blank
         required: relation_must_exist
+        requires_recurring_metric: requires_recurring_metric
         taken: value_already_exist
         too_long: value_is_too_long
         too_short: value_is_too_short
