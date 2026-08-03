@@ -16,7 +16,7 @@ module QuoteVersions
                 "type" => "object",
                 "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
                 "x-error" => {"type" => "invalid_type", "required" => "value_is_mandatory"},
-                "required" => %w[id localId type payload],
+                "required" => %w[id type payload],
                 "properties" => {
                   "id" => {
                     "type" => "string",
@@ -24,7 +24,7 @@ module QuoteVersions
                     "x-error" => {"type" => "invalid_type", "format" => "invalid_format"}
                   },
                   "localId" => {
-                    "type" => "string",
+                    "type" => %w[string null],
                     "minLength" => 1,
                     "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
                   },
@@ -45,40 +45,96 @@ module QuoteVersions
                     }
                   },
                   "overrides" => {
-                    "type" => "object",
+                    "type" => %w[object null],
                     "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
                     "x-error" => {"type" => "invalid_type"},
                     "properties" => {
                       "amountCents" => {
-                        "type" => "integer",
+                        "type" => %w[integer null],
                         "minimum" => 0,
                         "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
                       },
-                      "charges" => {
-                        "type" => "array",
+                      "invoiceDisplayName" => {
+                        "type" => %w[string null],
+                        "minLength" => 1,
+                        "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
+                      },
+                      "minimumCommitment" => {
+                        "type" => %w[object null],
+                        "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
+                        "x-error" => {"type" => "invalid_type"},
+                        "properties" => {
+                          "amountCents" => {
+                            "type" => %w[integer null],
+                            "minimum" => 0,
+                            "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
+                          },
+                          "invoiceDisplayName" => {
+                            "type" => %w[string null],
+                            "minLength" => 1,
+                            "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
+                          }
+                        }
+                      },
+                      "usageThresholds" => {
+                        "type" => %w[array null],
                         "x-error" => {"type" => "invalid_type"},
                         "items" => {
                           "type" => "object",
                           "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
                           "x-error" => {"type" => "invalid_type", "required" => "value_is_mandatory"},
-                          "required" => ["id"],
+                          "required" => ["amountCents"],
                           "properties" => {
-                            "id" => {
-                              "type" => "string",
-                              "format" => "uuid",
-                              "x-error" => {"type" => "invalid_type", "format" => "invalid_format"}
-                            },
-                            "properties" => {
-                              "type" => "object",
-                              "x-error" => {"type" => "invalid_type"}
-                            },
-                            "minAmountCents" => {
+                            "amountCents" => {
                               "type" => "integer",
                               "minimum" => 0,
                               "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
                             },
-                            "invoiceDisplayName" => {
+                            "recurring" => {
+                              "type" => %w[boolean null],
+                              "x-error" => {"type" => "invalid_type"}
+                            },
+                            "thresholdDisplayName" => {
+                              "type" => %w[string null],
+                              "minLength" => 1,
+                              "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
+                            }
+                          }
+                        }
+                      },
+                      "charges" => {
+                        "type" => %w[array null],
+                        "x-error" => {"type" => "invalid_type"},
+                        "items" => {
+                          "type" => "object",
+                          "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
+                          "x-error" => {"type" => "invalid_type", "required" => "value_is_mandatory"},
+                          "required" => ["billableMetricCode"],
+                          "properties" => {
+                            "billableMetricCode" => {
                               "type" => "string",
+                              "minLength" => 1,
+                              "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
+                            },
+                            "chargeModel" => {
+                              "type" => %w[string null],
+                              "enum" => [
+                                "standard", "graduated", "package", "percentage",
+                                "volume", "graduated_percentage", "custom", "dynamic", nil
+                              ],
+                              "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
+                            },
+                            "properties" => {
+                              "type" => %w[object null],
+                              "x-error" => {"type" => "invalid_type"}
+                            },
+                            "minAmountCents" => {
+                              "type" => %w[integer null],
+                              "minimum" => 0,
+                              "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
+                            },
+                            "invoiceDisplayName" => {
+                              "type" => %w[string null],
                               "minLength" => 1,
                               "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
                             }
@@ -86,30 +142,30 @@ module QuoteVersions
                         }
                       },
                       "fixedCharges" => {
-                        "type" => "array",
+                        "type" => %w[array null],
                         "x-error" => {"type" => "invalid_type"},
                         "items" => {
                           "type" => "object",
                           "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
                           "x-error" => {"type" => "invalid_type", "required" => "value_is_mandatory"},
-                          "required" => ["id"],
+                          "required" => ["addOnCode"],
                           "properties" => {
-                            "id" => {
-                              "type" => "string",
-                              "format" => "uuid",
-                              "x-error" => {"type" => "invalid_type", "format" => "invalid_format"}
-                            },
-                            "units" => {
+                            "addOnCode" => {
                               "type" => "string",
                               "minLength" => 1,
                               "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
                             },
+                            "units" => {
+                              "type" => %w[string null],
+                              "minLength" => 1,
+                              "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
+                            },
                             "properties" => {
-                              "type" => "object",
+                              "type" => %w[object null],
                               "x-error" => {"type" => "invalid_type"}
                             },
                             "invoiceDisplayName" => {
-                              "type" => "string",
+                              "type" => %w[string null],
                               "minLength" => 1,
                               "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
                             }
@@ -154,32 +210,59 @@ module QuoteVersions
                         "minLength" => 1,
                         "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
                       },
-                      "couponType" => {
+                      "type" => {
                         "type" => "string",
                         "enum" => %w[fixed_amount percentage],
                         "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
                       },
                       "amountCents" => {
-                        "type" => "integer",
+                        "type" => %w[integer null],
                         "minimum" => 0,
                         "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
                       },
-                      "amountCurrency" => {
-                        "type" => "string",
+                      "currency" => {
+                        "type" => %w[string null],
                         "x-error" => {"type" => "invalid_type"}
                       },
                       "percentageRate" => {
-                        "type" => "number",
+                        "type" => %w[number null],
                         "exclusiveMinimum" => 0,
                         "x-error" => {"type" => "invalid_type", "exclusiveMinimum" => "invalid_value"}
                       },
                       "frequency" => {
-                        "type" => "string",
-                        "enum" => %w[once recurring forever],
+                        "type" => %w[string null],
+                        "enum" => ["once", "recurring", "forever", nil],
                         "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
                       },
                       "frequencyDuration" => {
-                        "type" => "integer",
+                        "type" => %w[integer null],
+                        "exclusiveMinimum" => 0,
+                        "x-error" => {"type" => "invalid_type", "exclusiveMinimum" => "invalid_value"}
+                      }
+                    }
+                  },
+                  "overrides" => {
+                    "type" => %w[object null],
+                    "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
+                    "x-error" => {"type" => "invalid_type"},
+                    "properties" => {
+                      "amountCents" => {
+                        "type" => %w[integer null],
+                        "minimum" => 0,
+                        "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
+                      },
+                      "percentageRate" => {
+                        "type" => %w[number null],
+                        "exclusiveMinimum" => 0,
+                        "x-error" => {"type" => "invalid_type", "exclusiveMinimum" => "invalid_value"}
+                      },
+                      "frequency" => {
+                        "type" => %w[string null],
+                        "enum" => ["once", "recurring", "forever", nil],
+                        "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
+                      },
+                      "frequencyDuration" => {
+                        "type" => %w[integer null],
                         "exclusiveMinimum" => 0,
                         "x-error" => {"type" => "invalid_type", "exclusiveMinimum" => "invalid_value"}
                       }
@@ -188,7 +271,7 @@ module QuoteVersions
                 }
               }
             },
-            "wallets" => {
+            "walletCredits" => {
               "type" => "array",
               "x-error" => {"type" => "invalid_type"},
               "items" => {
@@ -204,7 +287,7 @@ module QuoteVersions
                   },
                   "type" => {
                     "type" => "string",
-                    "const" => "wallet",
+                    "const" => "wallet_credit",
                     "x-error" => {"type" => "invalid_type", "const" => "invalid_value"}
                   },
                   "payload" => {
@@ -224,7 +307,7 @@ module QuoteVersions
                         "x-error" => {"type" => "invalid_type"}
                       },
                       "recurringTransactionRules" => {
-                        "type" => "array",
+                        "type" => %w[array null],
                         "x-error" => {"type" => "invalid_type"},
                         "items" => {
                           "type" => "object",
@@ -232,34 +315,53 @@ module QuoteVersions
                           "x-error" => {"type" => "invalid_type"},
                           "properties" => {
                             "trigger" => {
-                              "type" => "string",
-                              "enum" => %w[interval threshold],
+                              "type" => %w[string null],
+                              "enum" => ["interval", "threshold", nil],
                               "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
                             },
                             "interval" => {
-                              "type" => "string",
-                              "enum" => %w[weekly monthly quarterly yearly semiannual],
+                              "type" => %w[string null],
+                              "enum" => ["weekly", "monthly", "quarterly", "yearly", "semiannual", nil],
                               "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
                             },
                             "method" => {
-                              "type" => "string",
-                              "enum" => %w[fixed target],
+                              "type" => %w[string null],
+                              "enum" => ["fixed", "target", nil],
                               "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
                             },
                             "thresholdCredits" => {
-                              "type" => "string",
+                              "type" => %w[string null],
                               "x-error" => {"type" => "invalid_type"}
                             },
                             "targetOngoingBalance" => {
-                              "type" => "string",
+                              "type" => %w[string null],
                               "x-error" => {"type" => "invalid_type"}
                             },
                             "paidCredits" => {
-                              "type" => "string",
+                              "type" => %w[string null],
                               "x-error" => {"type" => "invalid_type"}
                             },
                             "grantedCredits" => {
-                              "type" => "string",
+                              "type" => %w[string null],
+                              "x-error" => {"type" => "invalid_type"}
+                            },
+                            "startedAt" => {
+                              "type" => %w[string null],
+                              "format" => "date-time",
+                              "x-error" => {"type" => "invalid_type", "format" => "invalid_format"}
+                            },
+                            "expirationAt" => {
+                              "type" => %w[string null],
+                              "format" => "date-time",
+                              "x-error" => {"type" => "invalid_type", "format" => "invalid_format"}
+                            },
+                            "transactionName" => {
+                              "type" => %w[string null],
+                              "minLength" => 1,
+                              "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
+                            },
+                            "invoiceRequiresSuccessfulPayment" => {
+                              "type" => %w[boolean null],
                               "x-error" => {"type" => "invalid_type"}
                             }
                           }
@@ -281,8 +383,8 @@ module QuoteVersions
           plans["items"]["properties"]["payload"]["required"] = %w[code]
 
           schema["properties"]["coupons"]["items"]["properties"]["payload"]["required"] =
-            %w[code couponType]
-          schema["properties"]["wallets"]["items"]["properties"]["payload"]["required"] =
+            %w[code type]
+          schema["properties"]["walletCredits"]["items"]["properties"]["payload"]["required"] =
             %w[paidCredits grantedCredits rateAmount]
         end.freeze
 

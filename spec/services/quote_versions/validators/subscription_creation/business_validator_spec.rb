@@ -20,7 +20,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
     )
   end
   let(:plan) { create(:plan, organization:) }
-  let(:charge) { create(:standard_charge, plan:) }
+  let(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
+  let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:fixed_charge) { create(:fixed_charge, plan:) }
   let(:coupon) { create(:coupon, organization:) }
   let(:scope) { :update }
@@ -28,7 +29,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
   let(:plan_item) do
     {
       "id" => plan.id,
-      "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+      "type" => "plan",
       "payload" => {"code" => plan.code},
       "overrides" => plan_overrides
     }
@@ -36,10 +37,18 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
   let(:plan_overrides) do
     {
       "amountCents" => 500_000,
-      "charges" => [{"id" => charge.id}],
-      "fixedCharges" => [{"id" => fixed_charge.id}]
+      "charges" => [charge_override],
+      "fixedCharges" => [fixed_charge_override]
     }
   end
+  let(:charge_override) do
+    {
+      "billableMetricCode" => charge.billable_metric.code,
+      "chargeModel" => "graduated",
+      "properties" => {"graduatedRanges" => []}
+    }
+  end
+  let(:fixed_charge_override) { {"addOnCode" => fixed_charge.add_on.code, "units" => "3"} }
 
   let(:coupon_item) do
     {
@@ -51,18 +60,18 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
   let(:coupon_payload) do
     {
       "code" => coupon.code,
-      "couponType" => "fixed_amount",
+      "type" => "fixed_amount",
       "amountCents" => 20_000
     }
   end
 
-  let(:wallet_item) do
+  let(:wallet_credit_item) do
     {
       "localId" => "d9169d94-b322-4d70-a2b1-9e6a58e3f74a",
-      "payload" => wallet_payload
+      "payload" => wallet_credit_payload
     }
   end
-  let(:wallet_payload) do
+  let(:wallet_credit_payload) do
     {
       "paidCredits" => "100.0",
       "grantedCredits" => "10.0",
@@ -76,7 +85,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
     {
       "plans" => [plan_item],
       "coupons" => [coupon_item],
-      "wallets" => [wallet_item]
+      "walletCredits" => [wallet_credit_item]
     }
   end
 
@@ -200,8 +209,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
     context "when the plan belongs to another organization" do
       let(:plan) { create(:plan) }
-      let(:charge) { create(:standard_charge) }
-      let(:fixed_charge) { create(:fixed_charge) }
+      let(:billable_metric) { create(:billable_metric, organization: plan.organization, code: "api_calls") }
+      let(:fixed_charge) { create(:fixed_charge, plan:) }
 
       it "returns a plan_not_found error" do
         expect(validator).not_to be_valid
@@ -217,12 +226,28 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
-    context "when the charge override points at another plan's charge" do
-      let(:charge) { create(:standard_charge, plan: create(:plan, organization:)) }
+    context "when the charge override references a metric with no charge on the plan" do
+      let(:charge_override) { super().merge("billableMetricCode" => "unknown_metric") }
 
       it "returns a charge_not_found error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.plans.0.overrides.charges.0.id": ["charge_not_found"]})
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.billableMetricCode": ["charge_not_found"]}
+        )
+      end
+    end
+
+    context "when the charge override references another plan's charge" do
+      let(:other_metric) { create(:billable_metric, organization:, code: "other_metric") }
+      let(:charge_override) { super().merge("billableMetricCode" => "other_metric") }
+
+      before { create(:standard_charge, plan: create(:plan, organization:), billable_metric: other_metric) }
+
+      it "returns a charge_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.billableMetricCode": ["charge_not_found"]}
+        )
       end
     end
 
@@ -234,19 +259,38 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
-    context "when the fixed charge override points at another plan's fixed charge" do
-      let(:fixed_charge) { create(:fixed_charge, plan: create(:plan, organization:)) }
+    context "when the billable metric is discarded" do
+      before do
+        charge
+        billable_metric.discard!
+      end
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the fixed charge override references an add-on with no fixed charge on the plan" do
+      let(:fixed_charge_override) { super().merge("addOnCode" => "unknown_add_on") }
 
       it "returns a fixed_charge_not_found error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
-          {"billing_items.plans.0.overrides.fixedCharges.0.id": ["fixed_charge_not_found"]}
+          {"billing_items.plans.0.overrides.fixedCharges.0.addOnCode": ["fixed_charge_not_found"]}
         )
       end
     end
 
     context "when the fixed charge is discarded" do
       before { fixed_charge.discard! }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the plan overrides is null" do
+      let(:plan_overrides) { nil }
 
       it "is valid" do
         expect(validator).to be_valid
@@ -295,7 +339,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       let(:coupon_payload) do
         {
           "code" => coupon.code,
-          "couponType" => "percentage",
+          "type" => "percentage",
           "percentageRate" => 10.0
         }
       end
@@ -318,7 +362,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       let(:scope) { :approve }
 
       context "when a fixed_amount coupon payload has no amountCents" do
-        let(:coupon_payload) { {"code" => coupon.code, "couponType" => "fixed_amount"} }
+        let(:coupon_payload) { {"code" => coupon.code, "type" => "fixed_amount", "amountCents" => nil} }
 
         it "requires amountCents" do
           expect(validator).not_to be_valid
@@ -328,7 +372,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
       context "when a percentage coupon payload has no percentageRate" do
         let(:coupon) { create(:coupon, organization:, coupon_type: "percentage", percentage_rate: 10) }
-        let(:coupon_payload) { {"code" => coupon.code, "couponType" => "percentage"} }
+        let(:coupon_payload) { {"code" => coupon.code, "type" => "percentage", "percentageRate" => nil} }
 
         it "requires percentageRate" do
           expect(validator).not_to be_valid
@@ -340,58 +384,58 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
     end
 
     context "when a fixed_amount coupon payload has no amountCents at update scope" do
-      let(:coupon_payload) { {"code" => coupon.code, "couponType" => "fixed_amount"} }
+      let(:coupon_payload) { {"code" => coupon.code, "type" => "fixed_amount"} }
 
       it "is valid" do
         expect(validator).to be_valid
       end
     end
 
-    context "when the wallet paidCredits is not a decimal" do
-      let(:wallet_payload) { super().merge("paidCredits" => "abc") }
+    context "when the wallet credit paidCredits is not a decimal" do
+      let(:wallet_credit_payload) { super().merge("paidCredits" => "abc") }
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.wallets.0.payload.paidCredits": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.walletCredits.0.payload.paidCredits": ["invalid_value"]})
       end
     end
 
-    context "when the wallet grantedCredits is negative" do
-      let(:wallet_payload) { super().merge("grantedCredits" => "-1") }
+    context "when the wallet credit grantedCredits is negative" do
+      let(:wallet_credit_payload) { super().merge("grantedCredits" => "-1") }
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.wallets.0.payload.grantedCredits": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.walletCredits.0.payload.grantedCredits": ["invalid_value"]})
       end
     end
 
-    context "when the wallet rateAmount is zero" do
-      let(:wallet_payload) { super().merge("rateAmount" => "0") }
+    context "when the wallet credit rateAmount is zero" do
+      let(:wallet_credit_payload) { super().merge("rateAmount" => "0") }
 
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.wallets.0.payload.rateAmount": ["invalid_value"]})
+        expect(result.error.messages).to eq({"billing_items.walletCredits.0.payload.rateAmount": ["invalid_value"]})
       end
     end
 
     context "when the recurring rule trigger is interval without an interval" do
-      let(:recurring_rule) { {"trigger" => "interval", "method" => "fixed"} }
+      let(:recurring_rule) { {"trigger" => "interval", "interval" => nil, "method" => "fixed"} }
 
       it "requires the interval" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
-          {"billing_items.wallets.0.payload.recurringTransactionRules.0.interval": ["value_is_mandatory"]}
+          {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.interval": ["value_is_mandatory"]}
         )
       end
     end
 
     context "when the recurring rule trigger is threshold without thresholdCredits" do
-      let(:recurring_rule) { {"trigger" => "threshold", "method" => "fixed"} }
+      let(:recurring_rule) { {"trigger" => "threshold", "thresholdCredits" => nil, "method" => "fixed"} }
 
       it "requires thresholdCredits" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
-          {"billing_items.wallets.0.payload.recurringTransactionRules.0.thresholdCredits": ["value_is_mandatory"]}
+          {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.thresholdCredits": ["value_is_mandatory"]}
         )
       end
     end
@@ -402,18 +446,20 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
-          {"billing_items.wallets.0.payload.recurringTransactionRules.0.thresholdCredits": ["invalid_value"]}
+          {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.thresholdCredits": ["invalid_value"]}
         )
       end
     end
 
     context "when the recurring rule method is target without targetOngoingBalance" do
-      let(:recurring_rule) { {"trigger" => "interval", "interval" => "monthly", "method" => "target"} }
+      let(:recurring_rule) do
+        {"trigger" => "interval", "interval" => "monthly", "method" => "target", "targetOngoingBalance" => nil}
+      end
 
       it "requires targetOngoingBalance" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
-          {"billing_items.wallets.0.payload.recurringTransactionRules.0.targetOngoingBalance": ["value_is_mandatory"]}
+          {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.targetOngoingBalance": ["value_is_mandatory"]}
         )
       end
     end
@@ -426,7 +472,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
-          {"billing_items.wallets.0.payload.recurringTransactionRules.0.targetOngoingBalance": ["invalid_value"]}
+          {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.targetOngoingBalance": ["invalid_value"]}
         )
       end
     end
@@ -439,7 +485,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
-          {"billing_items.wallets.0.payload.recurringTransactionRules.0.targetOngoingBalance": ["invalid_value"]}
+          {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.targetOngoingBalance": ["invalid_value"]}
         )
       end
     end
@@ -460,7 +506,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
-          {"billing_items.wallets.0.payload.recurringTransactionRules.0.paidCredits": ["invalid_value"]}
+          {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.paidCredits": ["invalid_value"]}
         )
       end
     end

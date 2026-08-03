@@ -19,7 +19,7 @@ module QuoteVersions
           validate_dates
           validate_plans
           validate_coupons
-          validate_wallets
+          validate_wallet_credits
 
           if errors?
             result.validation_failure!(errors:)
@@ -71,12 +71,12 @@ module QuoteVersions
         end
 
         def validate_charge_overrides(plan_item, index)
-          charge_overrides = plan_item.dig("overrides", "charges") || []
+          charge_overrides = (plan_item["overrides"] || {})["charges"] || []
 
           charge_overrides.each_with_index do |charge_override, charge_index|
-            unless known_charge_keys.include?([plan_item["id"], charge_override["id"]])
+            unless known_charge_metric_codes.include?([plan_item["id"], charge_override["billableMetricCode"]])
               add_error(
-                field: plan_field(index, "overrides.charges.#{charge_index}.id"),
+                field: plan_field(index, "overrides.charges.#{charge_index}.billableMetricCode"),
                 error_code: "charge_not_found"
               )
             end
@@ -84,12 +84,12 @@ module QuoteVersions
         end
 
         def validate_fixed_charge_overrides(plan_item, index)
-          fixed_charge_overrides = plan_item.dig("overrides", "fixedCharges") || []
+          fixed_charge_overrides = (plan_item["overrides"] || {})["fixedCharges"] || []
 
           fixed_charge_overrides.each_with_index do |fixed_charge_override, fixed_charge_index|
-            unless known_fixed_charge_keys.include?([plan_item["id"], fixed_charge_override["id"]])
+            unless known_fixed_charge_add_on_codes.include?([plan_item["id"], fixed_charge_override["addOnCode"]])
               add_error(
-                field: plan_field(index, "overrides.fixedCharges.#{fixed_charge_index}.id"),
+                field: plan_field(index, "overrides.fixedCharges.#{fixed_charge_index}.addOnCode"),
                 error_code: "fixed_charge_not_found"
               )
             end
@@ -129,22 +129,22 @@ module QuoteVersions
           end
         end
 
-        def validate_wallets
-          wallets.each_with_index do |wallet_item, index|
-            payload = wallet_item["payload"] || {}
+        def validate_wallet_credits
+          wallet_credits.each_with_index do |wallet_credit_item, index|
+            payload = wallet_credit_item["payload"] || {}
 
-            validate_wallet_amounts(payload, index)
+            validate_wallet_credit_amounts(payload, index)
             validate_recurring_rules(payload, index)
           end
         end
 
-        def validate_wallet_amounts(payload, index)
+        def validate_wallet_credit_amounts(payload, index)
           %w[paidCredits grantedCredits].each do |key|
             value = payload[key]
             next if value.nil?
 
             unless ::Validators::DecimalAmountService.valid_amount?(value)
-              add_error(field: wallet_field(index, "payload.#{key}"), error_code: "invalid_value")
+              add_error(field: wallet_credit_field(index, "payload.#{key}"), error_code: "invalid_value")
             end
           end
 
@@ -152,48 +152,48 @@ module QuoteVersions
           return if rate_amount.nil?
 
           unless ::Validators::DecimalAmountService.valid_positive_amount?(rate_amount)
-            add_error(field: wallet_field(index, "payload.rateAmount"), error_code: "invalid_value")
+            add_error(field: wallet_credit_field(index, "payload.rateAmount"), error_code: "invalid_value")
           end
         end
 
-        def validate_recurring_rules(payload, wallet_index)
+        def validate_recurring_rules(payload, wallet_credit_index)
           rules = payload["recurringTransactionRules"] || []
 
           rules.each_with_index do |rule, rule_index|
-            validate_rule_trigger(rule, wallet_index, rule_index)
-            validate_rule_method(rule, wallet_index, rule_index)
-            validate_rule_credits(rule, wallet_index, rule_index)
+            validate_rule_trigger(rule, wallet_credit_index, rule_index)
+            validate_rule_method(rule, wallet_credit_index, rule_index)
+            validate_rule_credits(rule, wallet_credit_index, rule_index)
           end
         end
 
-        def validate_rule_trigger(rule, wallet_index, rule_index)
+        def validate_rule_trigger(rule, wallet_credit_index, rule_index)
           case rule["trigger"]
           when "interval"
             if rule["interval"].nil?
-              add_error(field: rule_field(wallet_index, rule_index, "interval"), error_code: "value_is_mandatory")
+              add_error(field: rule_field(wallet_credit_index, rule_index, "interval"), error_code: "value_is_mandatory")
             end
           when "threshold"
             threshold = rule["thresholdCredits"]
 
             if threshold.nil?
-              add_error(field: rule_field(wallet_index, rule_index, "thresholdCredits"), error_code: "value_is_mandatory")
+              add_error(field: rule_field(wallet_credit_index, rule_index, "thresholdCredits"), error_code: "value_is_mandatory")
             elsif !valid_decimal?(threshold)
-              add_error(field: rule_field(wallet_index, rule_index, "thresholdCredits"), error_code: "invalid_value")
+              add_error(field: rule_field(wallet_credit_index, rule_index, "thresholdCredits"), error_code: "invalid_value")
             end
           end
         end
 
-        def validate_rule_method(rule, wallet_index, rule_index)
+        def validate_rule_method(rule, wallet_credit_index, rule_index)
           return unless rule["method"] == "target"
 
           target = rule["targetOngoingBalance"]
 
           if target.nil?
-            add_error(field: rule_field(wallet_index, rule_index, "targetOngoingBalance"), error_code: "value_is_mandatory")
+            add_error(field: rule_field(wallet_credit_index, rule_index, "targetOngoingBalance"), error_code: "value_is_mandatory")
           elsif !valid_decimal?(target)
-            add_error(field: rule_field(wallet_index, rule_index, "targetOngoingBalance"), error_code: "invalid_value")
+            add_error(field: rule_field(wallet_credit_index, rule_index, "targetOngoingBalance"), error_code: "invalid_value")
           elsif target_below_threshold?(rule, target)
-            add_error(field: rule_field(wallet_index, rule_index, "targetOngoingBalance"), error_code: "invalid_value")
+            add_error(field: rule_field(wallet_credit_index, rule_index, "targetOngoingBalance"), error_code: "invalid_value")
           end
         end
 
@@ -203,13 +203,13 @@ module QuoteVersions
             BigDecimal(target) < BigDecimal(rule["thresholdCredits"])
         end
 
-        def validate_rule_credits(rule, wallet_index, rule_index)
+        def validate_rule_credits(rule, wallet_credit_index, rule_index)
           %w[paidCredits grantedCredits].each do |key|
             value = rule[key]
             next if value.nil?
 
             unless valid_decimal?(value)
-              add_error(field: rule_field(wallet_index, rule_index, key), error_code: "invalid_value")
+              add_error(field: rule_field(wallet_credit_index, rule_index, key), error_code: "invalid_value")
             end
           end
         end
@@ -226,8 +226,8 @@ module QuoteVersions
           billing_items["coupons"] || []
         end
 
-        def wallets
-          billing_items["wallets"] || []
+        def wallet_credits
+          billing_items["walletCredits"] || []
         end
 
         def plan_field(index, suffix)
@@ -238,12 +238,12 @@ module QuoteVersions
           :"billing_items.coupons.#{index}.#{suffix}"
         end
 
-        def wallet_field(index, suffix)
-          :"billing_items.wallets.#{index}.#{suffix}"
+        def wallet_credit_field(index, suffix)
+          :"billing_items.walletCredits.#{index}.#{suffix}"
         end
 
-        def rule_field(wallet_index, rule_index, suffix)
-          wallet_field(wallet_index, "payload.recurringTransactionRules.#{rule_index}.#{suffix}")
+        def rule_field(wallet_credit_index, rule_index, suffix)
+          wallet_credit_field(wallet_credit_index, "payload.recurringTransactionRules.#{rule_index}.#{suffix}")
         end
 
         def known_plan_ids
@@ -256,25 +256,21 @@ module QuoteVersions
             .to_set
         end
 
-        def known_charge_keys
-          @known_charge_keys ||= Charge
+        def known_charge_metric_codes
+          @known_charge_metric_codes ||= Charge
             .with_discarded
-            .where(
-              plan_id: known_plan_ids.to_a,
-              id: plans.flat_map { |plan_item| (plan_item.dig("overrides", "charges") || []).map { |charge_override| charge_override["id"] } }
-            )
-            .pluck(:plan_id, :id)
+            .joins(:billable_metric)
+            .where(plan_id: known_plan_ids.to_a)
+            .pluck(:plan_id, "billable_metrics.code")
             .to_set
         end
 
-        def known_fixed_charge_keys
-          @known_fixed_charge_keys ||= FixedCharge
+        def known_fixed_charge_add_on_codes
+          @known_fixed_charge_add_on_codes ||= FixedCharge
             .with_discarded
-            .where(
-              plan_id: known_plan_ids.to_a,
-              id: plans.flat_map { |plan_item| (plan_item.dig("overrides", "fixedCharges") || []).map { |fixed_charge_override| fixed_charge_override["id"] } }
-            )
-            .pluck(:plan_id, :id)
+            .joins(:add_on)
+            .where(plan_id: known_plan_ids.to_a)
+            .pluck(:plan_id, "add_ons.code")
             .to_set
         end
 

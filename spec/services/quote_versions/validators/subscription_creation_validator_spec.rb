@@ -37,13 +37,13 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
       "id" => coupon.id,
       "localId" => "ba54903c-7bd5-4d40-8d51-45a5157005ff",
       "type" => "coupon",
-      "payload" => {"code" => coupon.code, "couponType" => "fixed_amount", "amountCents" => 20_000}
+      "payload" => {"code" => coupon.code, "type" => "fixed_amount", "amountCents" => 20_000}
     }
   end
-  let(:wallet_item) do
+  let(:wallet_credit_item) do
     {
       "localId" => "d9169d94-b322-4d70-a2b1-9e6a58e3f74a",
-      "type" => "wallet",
+      "type" => "wallet_credit",
       "payload" => {"paidCredits" => "100.0", "grantedCredits" => "10.0", "rateAmount" => "1.0"}
     }
   end
@@ -51,7 +51,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
     {
       "plans" => [plan_item],
       "coupons" => [coupon_item],
-      "wallets" => [wallet_item]
+      "walletCredits" => [wallet_credit_item]
     }
   end
 
