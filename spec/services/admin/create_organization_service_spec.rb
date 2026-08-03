@@ -129,6 +129,26 @@ RSpec.describe Admin::CreateOrganizationService do
       end
     end
 
+    context "when a feature flag is unknown" do
+      let(:feature_flags) { ["multi_currency", "not_a_real_flag"] }
+
+      it "returns a validation failure" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:feature_flags]).to eq(["invalid"])
+      end
+
+      it "does not persist anything" do
+        expect { service.call }.not_to change(Organization, :count)
+
+        expect(Invite.count).to eq(0)
+        expect(CsAdminAuditLog.count).to eq(0)
+        expect(Admin::SlackNotificationJob).not_to have_been_enqueued
+      end
+    end
+
     context "when no premium integrations or feature flags are provided" do
       subject(:service) do
         described_class.new(

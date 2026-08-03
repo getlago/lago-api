@@ -16,6 +16,8 @@ module Admin
     end
 
     def call
+      return result.validation_failure!(errors: {feature_flags: ["invalid"]}) unless valid_feature_flags?
+
       batch_id = SecureRandom.uuid
 
       ActiveRecord::Base.transaction do
@@ -57,6 +59,10 @@ module Admin
     private
 
     attr_reader :actor, :name, :owner_email, :timezone, :premium_integrations, :feature_flags, :reason
+
+    def valid_feature_flags?
+      feature_flags.all? { |flag| FeatureFlag.valid?(flag) }
+    end
 
     def create_audit_logs!(organization, batch_id)
       CsAdminAuditLog.create!(
