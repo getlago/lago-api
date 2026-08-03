@@ -19,7 +19,7 @@ module Types
       field :currency, Types::CurrencyEnum, null: false
       field :display_on_invoice, Boolean, null: false
       field :proration, Boolean, null: false
-      field :regroup_paid_fees, Types::RateCards::RegroupPaidFeesEnum, null: true
+      field :regroup_paid_fees, Types::RateCards::RegroupPaidFeesEnum, null: false
 
       field :applied_pricing_unit_code, String, null: true
       field :wallet_targetable, Boolean, null: true

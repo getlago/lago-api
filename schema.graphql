@@ -12171,7 +12171,7 @@ type RateCard {
   productFilter: ProductFilter
   proration: Boolean!
   ratesCount: Int!
-  regroupPaidFees: RateCardRegroupPaidFeesEnum
+  regroupPaidFees: RateCardRegroupPaidFeesEnum!
   updatedAt: ISO8601DateTime!
   walletTargetable: Boolean
 }
@@ -12269,6 +12269,7 @@ enum RateCardRateStatusEnum {
 
 enum RateCardRegroupPaidFeesEnum {
   invoice
+  none
 }
 
 enum RecurringTransactionIntervalEnum {
