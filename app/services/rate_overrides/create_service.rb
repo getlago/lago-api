@@ -4,6 +4,15 @@ module RateOverrides
   class CreateService < BaseService
     Result = BaseResult[:rate_override]
 
+    # Structural card fields are inherited, never overridden. A caller naming
+    # one has misunderstood the contract, not made a typo — reject it instead
+    # of silently building a phase they believe is advance-billed / EUR /
+    # prorated. Genuinely unknown keys keep the API-wide tolerant behaviour.
+    NOT_OVERRIDABLE_FIELDS = %i[
+      billing_timing currency proration display_on_invoice
+      regroup_paid_fees wallet_targetable applied_pricing_unit_code
+    ].freeze
+
     def initialize(rate_card:, params:)
       @rate_card = rate_card
       @params = params.to_h.with_indifferent_access
@@ -12,6 +21,11 @@ module RateOverrides
 
     def call
       return result.not_found_failure!(resource: "rate_card") unless rate_card
+
+      structural_field = NOT_OVERRIDABLE_FIELDS.find { params.key?(it) }
+      if structural_field
+        return result.single_validation_failure!(field: structural_field, error_code: "not_overridable")
+      end
 
       if rate_card.applied_pricing_unit_code.present? && params[:pricing_unit_conversion_rate].blank?
         return result.single_validation_failure!(field: :pricing_unit_conversion_rate, error_code: "value_is_mandatory")

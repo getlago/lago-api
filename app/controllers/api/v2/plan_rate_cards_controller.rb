@@ -108,6 +108,15 @@ module Api
               :billing_interval_count,
               :billing_interval_unit,
               :pricing_unit_conversion_rate,
+              # Structural card fields pass through so the override service can
+              # reject them explicitly instead of strong params dropping them.
+              :billing_timing,
+              :currency,
+              :proration,
+              :display_on_invoice,
+              :regroup_paid_fees,
+              :wallet_targetable,
+              :applied_pricing_unit_code,
               {rate_properties: {}}
             ]}
           ]
