@@ -28,6 +28,23 @@ RSpec.describe RateOverrides::CreateService do
     expect(rate_override.min_amount_cents).to eq(100)
   end
 
+  context "with a spend floor on an advance card" do
+    let(:rate_card) { create(:rate_card, organization:, billing_timing: "advance") }
+
+    it "rejects it like the rate layer does" do
+      expect { result }.not_to change(RateOverride, :count)
+
+      expect(result).not_to be_success
+      expect(result.error.messages[:min_amount_cents]).to eq(["not_allowed_for_billing_timing"])
+    end
+
+    it "accepts a zero floor" do
+      zero = described_class.call(rate_card:, params: params.merge(min_amount_cents: 0))
+
+      expect(zero).to be_success
+    end
+  end
+
   it "defaults min_amount_cents and rate_properties" do
     result = described_class.call(rate_card:, params: {rate_model: "standard", rate_properties: {"amount" => "5"}})
 
