@@ -167,6 +167,12 @@ class Subscription < ApplicationRecord
     plan.yearly_amount_cents > next_subscription.plan.yearly_amount_cents
   end
 
+  # The anchor a rate card inherits when it is created without one: the
+  # subscription's explicit anchor, else the day the subscription started.
+  def effective_billing_anchor_date
+    billing_anchor_date || (started_at || subscription_at)&.to_date
+  end
+
   def trial_end_date
     return unless plan.has_trial?
 
@@ -337,6 +343,7 @@ end
 #
 #  id                           :uuid             not null, primary key
 #  activated_at                 :datetime
+#  billing_anchor_date          :date
 #  billing_time                 :integer          default("calendar"), not null
 #  canceled_at                  :datetime
 #  cancellation_reason          :enum

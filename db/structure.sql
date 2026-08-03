@@ -3682,7 +3682,8 @@ CREATE TABLE public.subscriptions (
     consolidate_invoice boolean DEFAULT true NOT NULL,
     skip_daily_usage boolean DEFAULT false NOT NULL,
     cancellation_reason public.subscription_cancellation_reasons,
-    purchase_order_number character varying
+    purchase_order_number character varying,
+    billing_anchor_date date
 );
 
 
@@ -14144,6 +14145,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260803162623'),
 ('20260724094543'),
 ('20260724094542'),
 ('20260724094541'),
