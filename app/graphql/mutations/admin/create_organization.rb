@@ -18,7 +18,7 @@ module Mutations
       type Types::Admin::CreateOrganizationPayload
 
       def resolve(**args)
-        result = ::Admin::CreateOrganizationService.new(
+        result = ::Admin::CreateOrganizationService.call(
           actor: current_user,
           name: args[:name],
           owner_email: args[:owner_email],
@@ -26,7 +26,7 @@ module Mutations
           premium_integrations: args[:premium_integrations],
           feature_flags: args[:feature_flags],
           reason: args[:reason]
-        ).call
+        )
 
         result.success? ? result : result_error(result)
       end
