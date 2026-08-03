@@ -24,6 +24,12 @@ module RateOverrides
         return result.single_validation_failure!(field: :rate_model, error_code: compatibility_error)
       end
 
+      # Same rule as RateCardRate#validate_min_amount_timing: a spend floor
+      # true-ups against a closed period, so it only exists on arrears cards.
+      if params[:min_amount_cents].to_i.positive? && rate_card.advance?
+        return result.single_validation_failure!(field: :min_amount_cents, error_code: "not_allowed_for_billing_timing")
+      end
+
       rate_override = RateOverride.new(
         organization: rate_card.organization,
         rate_model: params[:rate_model],
