@@ -26,7 +26,7 @@ module Subscriptions
               subscription:,
               rate_card: plan_rate_card.rate_card,
               units: plan_rate_card.units,
-              billing_anchor_date: started_at.to_date,
+              billing_anchor_date: subscription.effective_billing_anchor_date,
               next_billing_at: started_at,
               started_at:
             )
