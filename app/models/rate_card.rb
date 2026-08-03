@@ -76,11 +76,13 @@ class RateCard < ApplicationRecord
 
   # Paid-fee regrouping only exists for advance fees kept off the invoice
   # (v1: Charge#validate_regroup_paid_fees, invoiceable == display_on_invoice).
+  # Each condition carries its own error so the caller learns which field
+  # actually conflicts.
   def validate_regroup_paid_fees
     return if regroup_paid_fees_none?
-    return if advance? && !display_on_invoice?
 
-    errors.add(:regroup_paid_fees, :only_compatible_with_pay_in_advance_and_non_invoiceable)
+    errors.add(:regroup_paid_fees, :not_allowed_for_billing_timing) unless advance?
+    errors.add(:regroup_paid_fees, :not_allowed_with_display_on_invoice) if display_on_invoice?
   end
 
   def self.ransackable_attributes(_auth_object = nil)

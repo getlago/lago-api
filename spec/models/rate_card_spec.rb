@@ -101,14 +101,19 @@ RSpec.describe RateCard do
     end
 
     describe "regroup_paid_fees compatibility" do
-      it "requires advance timing and display_on_invoice false" do
-        invalid = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "arrears")
-        invalid.valid?
-        expect(invalid.errors.where(:regroup_paid_fees, :only_compatible_with_pay_in_advance_and_non_invoiceable)).to be_present
+      it "names the field that actually conflicts" do
+        arrears = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "arrears", display_on_invoice: false)
+        arrears.valid?
+        expect(arrears.errors.where(:regroup_paid_fees).map(&:type)).to eq([:not_allowed_for_billing_timing])
 
         displayed = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "advance", display_on_invoice: true)
         displayed.valid?
-        expect(displayed.errors.where(:regroup_paid_fees)).to be_present
+        expect(displayed.errors.where(:regroup_paid_fees).map(&:type)).to eq([:not_allowed_with_display_on_invoice])
+
+        both = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "arrears", display_on_invoice: true)
+        both.valid?
+        expect(both.errors.where(:regroup_paid_fees).map(&:type))
+          .to match_array(%i[not_allowed_for_billing_timing not_allowed_with_display_on_invoice])
 
         valid = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "advance", display_on_invoice: false)
         expect(valid).to be_valid

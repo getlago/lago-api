@@ -56,6 +56,7 @@ en:
         not_allowed_for_aggregation_type: not_allowed_for_aggregation_type
         not_allowed_for_billing_timing: not_allowed_for_billing_timing
         not_allowed_for_product: not_allowed_for_product
+        not_allowed_with_display_on_invoice: not_allowed_with_display_on_invoice
         not_allowed_with_proration: not_allowed_with_proration
         not_compatible_with_aggregation_type: not_compatible_with_aggregation_type
         not_compatible_with_pay_in_advance: not_compatible_with_pay_in_advance
