@@ -19,36 +19,35 @@ module Admin
     end
 
     def create
-      organization = nil
-      invite_url = nil
+      return render_validation_error(errors: {reason: ["value_is_mandatory"]}) if create_params[:reason].blank?
+      return render_validation_error(errors: {actor_email: ["value_is_mandatory"]}) if create_params[:actor_email].blank?
 
-      ActiveRecord::Base.transaction do
-        organization = ::Organizations::CreateService
-          .call(
-            name: create_params[:name],
-            document_numbering: "per_customer",
-            premium_integrations: create_params[:premium_integrations]
-          )
-          .raise_if_error!
-          .organization
+      actor = User.find_by(email: create_params[:actor_email])
+      return render_validation_error(errors: {actor_email: ["value_is_invalid"]}) unless actor
 
-        invite_url = ::Invites::CreateService.call(
-          current_organization: organization,
-          email: create_params[:email],
-          roles: %w[admin],
-          skip_admin_check: true
-        ).raise_if_error!.invite_url
-      end
+      result = ::Admin::CreateOrganizationService.call(
+        actor:,
+        name: create_params[:name],
+        owner_email: create_params[:email],
+        reason: create_params[:reason],
+        timezone: create_params[:timezone],
+        premium_integrations: create_params[:premium_integrations],
+        feature_flags: create_params[:feature_flags]
+      )
+
+      return render_error_response(result) unless result.success?
 
       render json: {
-        organization: ::Admin::OrganizationSerializer.new(organization).serialize,
-        invite_url: invite_url
+        organization: ::Admin::OrganizationSerializer.new(result.organization).serialize,
+        invite_url: result.invite_url
       }, status: :created
-    rescue BaseService::FailedResult => e
-      render_error_response(e.result)
     end
 
     private
+
+    def render_validation_error(errors:)
+      render_error_response(BaseResult.new.validation_failure!(errors:))
+    end
 
     def organization
       @organization ||= Organization.find_by(id: params[:id])
@@ -59,7 +58,15 @@ module Admin
     end
 
     def create_params
-      params.permit(:name, :email, premium_integrations: [])
+      params.permit(
+        :name,
+        :email,
+        :actor_email,
+        :reason,
+        :timezone,
+        premium_integrations: [],
+        feature_flags: []
+      )
     end
   end
 end
