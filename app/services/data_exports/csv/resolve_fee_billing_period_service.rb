@@ -76,8 +76,10 @@ module DataExports
       end
 
       def parse_datetime(value)
-        if value.present?
-          Time.zone.parse(value.to_s)
+        if value.is_a?(String)
+          Time.zone.parse(value)
+        else
+          value
         end
       end
     end
