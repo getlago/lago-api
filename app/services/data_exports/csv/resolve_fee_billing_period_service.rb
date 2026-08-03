@@ -71,7 +71,7 @@ module DataExports
       end
 
       def charge_period
-        if fee.charge&.pay_in_advance?
+        if fee.pay_in_advance?
           properties_period("charges_from_datetime", "charges_to_datetime") || charges_period
         else
           charges_period

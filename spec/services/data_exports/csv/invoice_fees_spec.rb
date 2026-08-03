@@ -224,8 +224,10 @@ RSpec.describe DataExports::Csv::InvoiceFees do
             subscription:,
             charge:,
             organization: customer.organization,
+            pay_in_advance: fee_pay_in_advance,
             properties: charge_boundaries)
         end
+        let(:fee_pay_in_advance) { false }
         let(:exported_fee) { charge_fee }
 
         before { charge_fee }
@@ -234,8 +236,26 @@ RSpec.describe DataExports::Csv::InvoiceFees do
           expect(exported_period).to eq(%w[2026-05-22 2026-06-21])
         end
 
-        context "when the charge is pay in advance in a negative UTC offset timezone" do
+        context "when the charge is pay in advance but the fee is billed in arrears" do
           let(:charge) { create(:standard_charge, :pay_in_advance, plan:) }
+          let(:timezone) { "America/New_York" }
+          let(:from_utc) { "2026-05-22 04:00:00 UTC" }
+          let(:to_utc) { "2026-06-22 03:59:59 UTC" }
+          let(:charge_boundaries) do
+            {
+              "charges_from_datetime" => "2026-05-22T04:00:00Z",
+              "charges_to_datetime" => "2026-06-22T03:59:59Z"
+            }
+          end
+
+          it "keeps exporting the usage window" do
+            expect(exported_period).to eq(%w[2026-05-22 2026-06-21])
+          end
+        end
+
+        context "when the fee is pay in advance in a negative UTC offset timezone" do
+          let(:charge) { create(:standard_charge, :pay_in_advance, plan:) }
+          let(:fee_pay_in_advance) { true }
           let(:timezone) { "America/New_York" }
           let(:from_utc) { "2026-05-22 04:00:00 UTC" }
           let(:to_utc) { "2026-06-22 03:59:59 UTC" }

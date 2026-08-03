@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe DataExports::Csv::ResolveFeeBillingPeriodService do
   subject(:result) { described_class.call(fee:, invoice_subscription:) }
 
-  let(:fee) { instance_double(Fee, fee_type:, properties:, charge:) }
+  let(:fee) { instance_double(Fee, fee_type:, properties:, pay_in_advance?: pay_in_advance) }
   let(:fee_type) { "subscription" }
   let(:properties) { {} }
-  let(:charge) { nil }
+  let(:pay_in_advance) { false }
   let(:invoice_subscription) do
     instance_double(
       InvoiceSubscription,
@@ -93,8 +93,8 @@ RSpec.describe DataExports::Csv::ResolveFeeBillingPeriodService do
         expect(result.to_datetime).to eq(charges_to_datetime)
       end
 
-      context "when the charge is pay in advance" do
-        let(:charge) { instance_double(Charge, pay_in_advance?: true) }
+      context "when the fee is pay in advance" do
+        let(:pay_in_advance) { true }
 
         it "returns the fee charge boundaries" do
           expect(result.from_datetime).to eq(Time.zone.parse("2026-06-22 00:00:00 UTC"))
