@@ -20,7 +20,7 @@ module RatePhases
       end
 
       if params.key?(:billing_interval_cycle_count) && params[:billing_interval_cycle_count].nil? && !last_phase?
-        return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "non_terminal_indefinite")
+        return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "indefinite_phase_must_be_last")
       end
 
       rate_phase.name = params[:name] if params.key?(:name)
