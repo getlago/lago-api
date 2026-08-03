@@ -10757,6 +10757,11 @@ type Query {
   adminAuditLogs(actions: [AdminActionEnum!], actorUserIds: [ID!], featureKey: String, featureType: AdminFeatureTypeEnum, fromDate: ISO8601Date, limit: Int, organizationIds: [ID!], page: Int, toDate: ISO8601Date): AdminAuditLogCollection!
 
   """
+  List CS admin users (admin only)
+  """
+  adminCsAdmins: [User!]!
+
+  """
   Get a single organization by ID (admin only)
   """
   adminOrganization(organizationId: ID!): AdminOrganization

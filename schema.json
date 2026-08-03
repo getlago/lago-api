@@ -55965,6 +55965,30 @@
               "deprecationReason": null
             },
             {
+              "name": "adminCsAdmins",
+              "description": "List CS admin users (admin only)",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "User",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "adminOrganization",
               "description": "Get a single organization by ID (admin only)",
               "args": [
