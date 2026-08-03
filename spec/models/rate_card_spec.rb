@@ -54,6 +54,22 @@ RSpec.describe RateCard do
       end
     end
 
+    describe "display_on_invoice compatibility" do
+      it "rejects hiding fees on an arrears card" do
+        hidden = build(:rate_card, billing_timing: "arrears", display_on_invoice: false)
+        hidden.valid?
+        expect(hidden.errors.where(:display_on_invoice).map(&:type)).to eq([:not_allowed_for_billing_timing])
+      end
+
+      it "accepts hiding fees on an advance card" do
+        expect(build(:rate_card, billing_timing: "advance", display_on_invoice: false)).to be_valid
+      end
+
+      it "accepts a displayed arrears card" do
+        expect(build(:rate_card, billing_timing: "arrears", display_on_invoice: true)).to be_valid
+      end
+    end
+
     describe "currency inclusion" do
       it "is valid with an accepted currency" do
         expect(build(:rate_card, currency: "USD")).to be_valid

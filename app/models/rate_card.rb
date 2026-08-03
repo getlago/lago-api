@@ -41,6 +41,7 @@ class RateCard < ApplicationRecord
   # inclusion error fires for a provided-but-unknown currency.
   validates :currency, presence: true, inclusion: {in: currency_list, allow_nil: true}
   validate :validate_filter_belongs_to_item
+  validate :validate_display_on_invoice
 
   default_scope -> { kept }
 
@@ -50,6 +51,15 @@ class RateCard < ApplicationRecord
     return if product_filter.product_id == product_id
 
     errors.add(:product_filter, :does_not_belong_to_product)
+  end
+
+  # Hiding fees from the invoice only exists for advance cards
+  # (v1: Charge#validate_invoiceable_unless_pay_in_advance). An arrears fee
+  # has no instant-charge path, so a hidden one would never surface anywhere.
+  def validate_display_on_invoice
+    return if advance? || display_on_invoice?
+
+    errors.add(:display_on_invoice, :not_allowed_for_billing_timing)
   end
 
   def self.ransackable_attributes(_auth_object = nil)
