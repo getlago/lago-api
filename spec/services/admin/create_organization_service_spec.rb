@@ -109,6 +109,26 @@ RSpec.describe Admin::CreateOrganizationService do
       end
     end
 
+    context "when the owner email is invalid" do
+      let(:owner_email) { "not-an-email" }
+
+      it "returns a validation failure without creating anything" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to include(email: ["invalid_email_format"])
+      end
+
+      it "does not persist the organization, the invite nor the audit logs" do
+        expect { service.call }.not_to change(Organization, :count)
+
+        expect(Invite.count).to eq(0)
+        expect(CsAdminAuditLog.count).to eq(0)
+        expect(Admin::SlackNotificationJob).not_to have_been_enqueued
+      end
+    end
+
     context "when no premium integrations or feature flags are provided" do
       subject(:service) do
         described_class.new(
