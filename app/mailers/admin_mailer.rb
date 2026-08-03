@@ -8,11 +8,12 @@ class AdminMailer < ApplicationMailer
     @feature_key = audit_log.feature_key
     @action = audit_log.toggle_on? ? "enabled" : "disabled"
 
-    owner = @organization.admins.first
+    owner = @organization.admins.order(:created_at, :id).first
     return if owner&.email.blank?
 
     mail(
       to: owner.email,
+      from: ENV["LAGO_FROM_EMAIL"],
       subject: "Feature #{@feature_key} has been #{@action} on your organization"
     )
   end
