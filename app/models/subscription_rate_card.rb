@@ -45,7 +45,7 @@ end
 #  ended_at            :datetime
 #  next_billing_at     :datetime         not null
 #  started_at          :datetime         not null
-#  units               :decimal(30, 10)
+#  units               :decimal(, )
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
 #  organization_id     :uuid             not null

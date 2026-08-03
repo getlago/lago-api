@@ -12,7 +12,7 @@ class CreateSubscriptionRateCards < ActiveRecord::Migration[8.0]
       t.datetime :started_at, null: false
       t.datetime :ended_at
 
-      t.decimal :units, precision: 30, scale: 10
+      t.decimal :units
 
       t.datetime :deleted_at
 

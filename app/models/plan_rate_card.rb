@@ -26,7 +26,7 @@ end
 #
 #  id              :uuid             not null, primary key
 #  deleted_at      :datetime
-#  units           :decimal(30, 10)
+#  units           :decimal(, )
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  organization_id :uuid             not null

@@ -7,7 +7,7 @@ class CreatePlanRateCards < ActiveRecord::Migration[8.0]
       t.references :plan, null: false, foreign_key: true, type: :uuid
       t.references :rate_card, null: false, foreign_key: true, type: :uuid
 
-      t.decimal :units, precision: 30, scale: 10
+      t.decimal :units
 
       t.datetime :deleted_at
 

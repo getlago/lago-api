@@ -5157,7 +5157,7 @@ CREATE TABLE public.plan_rate_cards (
     organization_id uuid NOT NULL,
     plan_id uuid NOT NULL,
     rate_card_id uuid NOT NULL,
-    units numeric(30,10),
+    units numeric,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
@@ -5628,7 +5628,7 @@ CREATE TABLE public.subscription_rate_cards (
     next_billing_at timestamp(6) without time zone NOT NULL,
     started_at timestamp(6) without time zone NOT NULL,
     ended_at timestamp(6) without time zone,
-    units numeric(30,10),
+    units numeric,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
