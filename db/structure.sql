@@ -1720,6 +1720,7 @@ CREATE TYPE public.rate_card_rate_model AS ENUM (
 --
 
 CREATE TYPE public.rate_card_regroup_paid_fees AS ENUM (
+    'none',
     'invoice'
 );
 
@@ -5427,7 +5428,7 @@ CREATE TABLE public.rate_cards (
     billing_timing public.rate_card_billing_timing DEFAULT 'arrears'::public.rate_card_billing_timing NOT NULL,
     proration boolean DEFAULT false NOT NULL,
     display_on_invoice boolean DEFAULT true NOT NULL,
-    regroup_paid_fees public.rate_card_regroup_paid_fees,
+    regroup_paid_fees public.rate_card_regroup_paid_fees DEFAULT 'none'::public.rate_card_regroup_paid_fees NOT NULL,
     applied_pricing_unit_code character varying,
     wallet_targetable boolean,
     deleted_at timestamp(6) without time zone,

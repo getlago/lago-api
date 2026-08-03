@@ -16,8 +16,10 @@ RSpec.describe RateCard do
 
       expect(rate_card).to define_enum_for(:regroup_paid_fees)
         .backed_by_column_of_type(:enum)
-        .validating(allowing_nil: true)
-        .with_values(invoice: "invoice")
+        .validating
+        .with_values(none: "none", invoice: "invoice")
+        .with_prefix(:regroup_paid_fees)
+      expect(rate_card.regroup_paid_fees).to eq("none")
     end
   end
 

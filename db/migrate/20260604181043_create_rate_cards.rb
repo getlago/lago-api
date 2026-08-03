@@ -3,7 +3,7 @@
 class CreateRateCards < ActiveRecord::Migration[8.0]
   def change
     create_enum :rate_card_billing_timing, %w[arrears advance]
-    create_enum :rate_card_regroup_paid_fees, %w[invoice]
+    create_enum :rate_card_regroup_paid_fees, %w[none invoice]
 
     create_table :rate_cards, id: :uuid do |t|
       t.references :organization, null: false, foreign_key: true, type: :uuid
@@ -19,7 +19,7 @@ class CreateRateCards < ActiveRecord::Migration[8.0]
       t.enum :billing_timing, enum_type: :rate_card_billing_timing, null: false, default: "arrears"
       t.boolean :proration, null: false, default: false
       t.boolean :display_on_invoice, null: false, default: true
-      t.enum :regroup_paid_fees, enum_type: :rate_card_regroup_paid_fees
+      t.enum :regroup_paid_fees, enum_type: :rate_card_regroup_paid_fees, null: false, default: "none"
       t.string :applied_pricing_unit_code
       t.boolean :wallet_targetable
 

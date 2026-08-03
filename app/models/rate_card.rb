@@ -13,7 +13,10 @@ class RateCard < ApplicationRecord
     advance: "advance"
   }.freeze
 
+  # none is a real value, not a nil stand-in: the column is NOT NULL so the API
+  # always returns a concrete grouping behaviour.
   REGROUP_PAID_FEES = {
+    none: "none",
     invoice: "invoice"
   }.freeze
 
@@ -26,7 +29,9 @@ class RateCard < ApplicationRecord
   has_many :subscription_applied_rate_cards, class_name: "SubscriptionRateCard"
 
   enum :billing_timing, BILLING_TIMINGS, validate: true
-  enum :regroup_paid_fees, REGROUP_PAID_FEES, validate: {allow_nil: true}
+  # prefix: a bare `none` value would define a RateCard.none scope, which
+  # collides with ActiveRecord::QueryMethods#none.
+  enum :regroup_paid_fees, REGROUP_PAID_FEES, validate: true, prefix: true
 
   validates :name, presence: true
   validates :code,
@@ -67,7 +72,7 @@ end
 #  display_on_invoice        :boolean          default(TRUE), not null
 #  name                      :string           not null
 #  proration                 :boolean          default(FALSE), not null
-#  regroup_paid_fees         :enum
+#  regroup_paid_fees         :enum             default("none"), not null
 #  wallet_targetable         :boolean
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
