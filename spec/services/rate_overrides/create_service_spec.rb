@@ -45,6 +45,22 @@ RSpec.describe RateOverrides::CreateService do
     end
   end
 
+  context "with a structural card field" do
+    it "rejects each field on its own key instead of silently dropping it" do
+      {billing_timing: "advance", currency: "EUR", proration: true}.each do |field, value|
+        result = described_class.call(rate_card:, params: params.merge(field => value))
+
+        expect(result).not_to be_success
+        expect(result.error.messages[field]).to eq(["not_overridable"])
+      end
+    end
+
+    it "creates nothing" do
+      expect { described_class.call(rate_card:, params: params.merge(currency: "EUR")) }
+        .not_to change(RateOverride, :count)
+    end
+  end
+
   it "defaults min_amount_cents and rate_properties" do
     result = described_class.call(rate_card:, params: {rate_model: "standard", rate_properties: {"amount" => "5"}})
 

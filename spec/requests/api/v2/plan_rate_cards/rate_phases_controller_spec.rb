@@ -105,6 +105,24 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       expect(json[:rate_phase][:name]).to eq("Renamed")
     end
 
+    context "when the override names a structural card field" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          {rate_phase: {rate_override: {rate_model: "standard", rate_properties: {amount: "0.02"}, billing_timing: "advance"}}}
+        )
+      end
+
+      it "rejects it instead of silently dropping the field" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :billing_timing)).to eq(["not_overridable"])
+        expect(rate_phase.reload.rate_override).to be_nil
+      end
+    end
+
     context "when the phase does not exist" do
       subject do
         put_with_token(
