@@ -44,7 +44,9 @@ module SubscriptionRateCards
           rate_card:,
           units: params[:units],
           started_at:,
-          billing_anchor_date: params[:billing_anchor_date].presence || started_at.to_date,
+          # A card added mid-subscription follows the subscription's anchor, not
+          # the day it was added, so it invoices alongside the existing cards.
+          billing_anchor_date: params[:billing_anchor_date].presence || subscription.effective_billing_anchor_date,
           next_billing_at: started_at
         )
 

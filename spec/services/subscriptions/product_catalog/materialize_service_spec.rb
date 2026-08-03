@@ -28,6 +28,18 @@ RSpec.describe Subscriptions::ProductCatalog::MaterializeService do
     expect(result.subscription_rate_cards).to eq([item])
   end
 
+  context "when the subscription carries its own billing anchor" do
+    let(:subscription) do
+      create(:subscription, customer:, plan:, started_at: Time.zone.parse("2026-01-15"), billing_anchor_date: Date.new(2026, 1, 1))
+    end
+
+    it "materializes cards on the subscription's anchor, not its start date" do
+      result
+
+      expect(subscription.reload.applied_rate_cards.sole.billing_anchor_date).to eq(Date.new(2026, 1, 1))
+    end
+  end
+
   it "does not copy the plan entry's phases: pricing resolves by reference" do
     plan_rate_card = plan.applied_rate_cards.sole
     create(:rate_phase, organization:, plan_rate_card:, position: 1)

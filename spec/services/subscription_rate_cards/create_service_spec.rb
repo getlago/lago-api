@@ -19,7 +19,22 @@ RSpec.describe SubscriptionRateCards::CreateService do
     expect(subscription_rate_card.subscription).to eq(subscription)
     expect(subscription_rate_card.rate_card).to eq(rate_card)
     expect(subscription_rate_card.units).to eq(10)
-    expect(subscription_rate_card.billing_anchor_date).to eq(subscription_rate_card.started_at.to_date)
+    expect(subscription_rate_card.billing_anchor_date).to eq(subscription.effective_billing_anchor_date)
+  end
+
+  context "when the card is added after the subscription started" do
+    let(:subscription) do
+      create(:subscription, :pending, customer:, organization:, billing_anchor_date: Date.new(2026, 1, 1))
+    end
+
+    let(:params) { {rate_card_code: rate_card.code, started_at: "2026-03-12T00:00:00Z"} }
+
+    it "anchors on the subscription rather than the day it was added" do
+      subscription_rate_card = result.subscription_rate_card
+
+      expect(subscription_rate_card.started_at).to eq(Time.zone.parse("2026-03-12"))
+      expect(subscription_rate_card.billing_anchor_date).to eq(Date.new(2026, 1, 1))
+    end
   end
 
   it "creates a default rate phase" do
