@@ -92,9 +92,16 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
   describe "#valid?" do
     context "with a valid quote version" do
-      it "is valid for both scopes" do
-        expect(described_class.new(BaseService::Result.new, quote_version:, billing_items:, scope: :update)).to be_valid
-        expect(described_class.new(BaseService::Result.new, quote_version:, billing_items:, scope: :approve)).to be_valid
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
       end
     end
 
