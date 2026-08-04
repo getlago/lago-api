@@ -331,6 +331,82 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
       end
     end
 
+    context "when a snapshot charge carries no id" do
+      let(:charge_snapshot) { super().except("id") }
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "requires the id the override is resolved through" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.plans.0.payload.charges.0.id": ["value_is_mandatory"]}
+          )
+        end
+      end
+    end
+
+    context "when a snapshot charge billable metric carries no code" do
+      let(:charge_snapshot) { super().merge("billableMetric" => {"name" => "API calls"}) }
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "requires the code the override is matched on" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.plans.0.payload.charges.0.billableMetric.code": ["value_is_mandatory"]}
+          )
+        end
+      end
+    end
+
+    context "when a snapshot fixed charge carries no id" do
+      let(:fixed_charge_snapshot) { super().except("id") }
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "requires the id the override is resolved through" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.plans.0.payload.fixedCharges.0.id": ["value_is_mandatory"]}
+          )
+        end
+      end
+    end
+
+    context "when a snapshot fixed charge add-on carries no code" do
+      let(:fixed_charge_snapshot) { super().merge("addOn" => {"name" => "Seats"}) }
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "requires the code the override is matched on" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.plans.0.payload.fixedCharges.0.addOn.code": ["value_is_mandatory"]}
+          )
+        end
+      end
+    end
+
     context "when the plan overrides is null" do
       let(:plan_overrides) { nil }
 
