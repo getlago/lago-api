@@ -73,6 +73,17 @@ RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
           expect(stripe_api_customer).to have_received(:retrieve_payment_method)
           expect(default_payment_method.reload.deleted_at).to be_present
         end
+
+        context "when customer is deleted" do
+          let(:customer) { create(:customer, :deleted, organization:) }
+
+          it "returns a failed result and discards payment method" do
+            result = check_service.call
+
+            expect(result).not_to be_success
+            expect(default_payment_method.reload.deleted_at).to be_present
+          end
+        end
       end
     end
 
