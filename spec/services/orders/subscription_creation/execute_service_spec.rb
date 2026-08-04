@@ -119,6 +119,76 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         end
       end
 
+      context "with a fixed charge override" do
+        let(:add_on) { create(:add_on, organization:, code: "seats") }
+        let(:fixed_charge) do
+          create(:fixed_charge, plan:, add_on:, units: 1, properties: {"amount" => "100"})
+        end
+        let(:plan_payload) do
+          super().merge(
+            "fixedCharges" => [
+              {
+                "id" => fixed_charge.id,
+                "addOn" => {"code" => add_on.code},
+                "chargeModel" => fixed_charge.charge_model
+              }
+            ]
+          )
+        end
+        let(:plan_overrides) do
+          super().merge(
+            "fixedCharges" => [
+              {"addOnCode" => add_on.code, "units" => "5", "properties" => {"amount" => "80"}}
+            ]
+          )
+        end
+
+        before { fixed_charge }
+
+        it "bills the negotiated fixed charge" do
+          execute_service.call
+
+          overridden = customer.subscriptions.sole.plan.fixed_charges.sole
+          expect(overridden.parent_id).to eq(fixed_charge.id)
+          expect(overridden.units).to eq(5)
+          expect(overridden.properties["amount"]).to eq("80")
+        end
+      end
+
+      context "with a minimum commitment" do
+        let(:plan_overrides) do
+          super().merge("minimumCommitment" => {"amountCents" => 50_000, "invoiceDisplayName" => "Yearly floor"})
+        end
+
+        it "creates it on the overridden plan" do
+          execute_service.call
+
+          commitment = customer.subscriptions.sole.plan.minimum_commitment
+          expect(commitment.amount_cents).to eq(50_000)
+          expect(commitment.invoice_display_name).to eq("Yearly floor")
+        end
+      end
+
+      context "with usage thresholds" do
+        let(:organization) { create(:organization, premium_integrations: ["progressive_billing"]) }
+        let(:plan_overrides) do
+          super().merge(
+            "usageThresholds" => [
+              {"amountCents" => 100_000, "recurring" => false, "thresholdDisplayName" => "First"},
+              {"amountCents" => 200_000, "recurring" => true, "thresholdDisplayName" => "Recurring cap"}
+            ]
+          )
+        end
+
+        it "creates them on the subscription, not on the overridden plan" do
+          execute_service.call
+
+          subscription = customer.subscriptions.sole
+          expect(subscription.usage_thresholds.pluck(:amount_cents)).to match_array([100_000, 200_000])
+          expect(subscription.plan.usage_thresholds).to be_empty
+        end
+      end
+
       context "when the payload carries no external id" do
         let(:plan_payload) { super().except("subscriptionExternalId") }
 
