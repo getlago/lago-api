@@ -3,6 +3,12 @@
 module Auth
   module EntraId
     class BaseService < BaseService
+      # Microsoft's OIDC userinfo endpoint. Azure AD exposes userinfo through
+      # Microsoft Graph (not the tenant login host), so it is the same for every
+      # commercial Entra tenant. Sovereign clouds (US Gov, China) use a different
+      # Graph host and are out of scope for this integration.
+      MICROSOFT_GRAPH_USERINFO_URL = "https://graph.microsoft.com/oidc/userinfo"
+
       private
 
       def check_code
@@ -63,7 +69,7 @@ module Auth
       #       `preferred_username` (the UPN). Comparison is case-insensitive as
       #       Entra ID casing is not guaranteed to match the typed email.
       def check_userinfo(email)
-        userinfo_client = LagoHttpClient::Client.new("https://graph.microsoft.com/oidc/userinfo")
+        userinfo_client = LagoHttpClient::Client.new(MICROSOFT_GRAPH_USERINFO_URL)
         userinfo_headers = {"Authorization" => "Bearer #{result.entra_id_access_token}"}
         response = userinfo_client.get(headers: userinfo_headers)
 

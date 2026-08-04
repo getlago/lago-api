@@ -45,5 +45,23 @@ RSpec.describe Integrations::EntraIdIntegration do
         expect(entra_id_integration.errors).to include(:domain)
       end
     end
+
+    context "when tenant_id contains unsafe URL characters" do
+      before { subject.tenant_id = "bad/tenant" }
+
+      it "is invalid" do
+        expect(subject).not_to be_valid
+        expect(subject.errors).to include(:tenant_id)
+      end
+    end
+
+    context "when host contains unsafe URL characters" do
+      before { subject.host = "evil.com/path" }
+
+      it "is invalid" do
+        expect(subject).not_to be_valid
+        expect(subject.errors).to include(:host)
+      end
+    end
   end
 end
