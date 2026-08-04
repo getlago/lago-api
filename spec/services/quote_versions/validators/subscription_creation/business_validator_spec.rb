@@ -714,6 +714,84 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
+    context "when the same non-reusable coupon is applied twice" do
+      let(:coupon) { create(:coupon, organization:, reusable: false) }
+      let(:billing_items) { super().merge("coupons" => [coupon_item, coupon_item]) }
+
+      it "returns a coupon_is_not_reusable error on the second one" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.coupons.1.id": ["coupon_is_not_reusable"]})
+      end
+    end
+
+    context "when the same reusable coupon is applied twice" do
+      let(:billing_items) { super().merge("coupons" => [coupon_item, coupon_item]) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "with a second coupon" do
+      let(:other_coupon) { create(:coupon, organization:) }
+      let(:other_coupon_item) do
+        {
+          "id" => other_coupon.id,
+          "localId" => "4c0e5e21-9f38-4a2b-8c7d-6e5f4a3b2c1d",
+          "payload" => {"code" => other_coupon.code, "type" => "fixed_amount", "amountCents" => 10_000}
+        }
+      end
+      let(:billing_items) { super().merge("coupons" => [coupon_item, other_coupon_item]) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+
+      context "when both are limited to the same plan" do
+        let(:coupon) { create(:coupon, organization:, limited_plans: true) }
+        let(:other_coupon) { create(:coupon, organization:, limited_plans: true) }
+
+        before do
+          create(:coupon_plan, coupon:, plan:)
+          create(:coupon_plan, coupon: other_coupon, plan:)
+        end
+
+        it "returns a plan_overlapping error on the second one" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.coupons.1.id": ["plan_overlapping"]})
+        end
+      end
+
+      context "when they are limited to different plans" do
+        let(:coupon) { create(:coupon, organization:, limited_plans: true) }
+        let(:other_coupon) { create(:coupon, organization:, limited_plans: true) }
+
+        before do
+          create(:coupon_plan, coupon:, plan:)
+          create(:coupon_plan, coupon: other_coupon, plan: create(:plan, organization:))
+        end
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+
+      context "when one is limited to a plan and the other to a metric that plan charges" do
+        let(:coupon) { create(:coupon, organization:, limited_plans: true) }
+        let(:other_coupon) { create(:coupon, organization:, limited_billable_metrics: true) }
+
+        before do
+          create(:coupon_plan, coupon:, plan:)
+          create(:coupon_billable_metric, coupon: other_coupon, billable_metric:)
+        end
+
+        it "returns a plan_overlapping error on the second one" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.coupons.1.id": ["plan_overlapping"]})
+        end
+      end
+    end
+
     context "when a fixed_amount coupon currency differs from the version currency" do
       let(:coupon) { create(:coupon, organization:, amount_currency: "USD") }
 
