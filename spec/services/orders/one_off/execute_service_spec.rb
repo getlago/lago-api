@@ -56,6 +56,15 @@ RSpec.describe Orders::OneOff::ExecuteService do
         expect(order.execution_record["errors"]).to eq([])
       end
 
+      it "records the keys a one-off order creates nothing for" do
+        execute_service.call
+
+        order.reload
+        expect(order.execution_record["subscription_ids"]).to eq([])
+        expect(order.execution_record["applied_coupon_ids"]).to eq([])
+        expect(order.execution_record["wallet_ids"]).to eq([])
+      end
+
       it "bills the payload values" do
         execute_service.call
 

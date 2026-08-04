@@ -2,59 +2,15 @@
 
 module Orders
   module SubscriptionCreation
-    # Internal: premium/feature-flag gates live in Orders::ExecuteService, always call through it.
-    class ExecuteService < BaseService
-      Result = BaseResult[:order]
-
+    class ExecuteService < Orders::BaseExecuteService
       CALENDAR_DATE = /\A\d{4}-\d{2}-\d{2}\z/
-
-      def initialize(order:)
-        @order = order
-
-        super
-      end
-
-      def call
-        return success_result if order.executed?
-
-        if order.execution_mode.blank?
-          return result.single_validation_failure!(field: :execution_mode, error_code: "value_is_mandatory")
-        end
-
-        Order.transaction do
-          Quotes::LockService.call(quote: order.quote) do
-            order.reload
-            next success_result if order.executed?
-
-            mark_executed!(execute_in_lago? ? create_deal : {})
-
-            result.order = order
-          end
-        end
-
-        result
-      rescue ActiveRecord::RecordInvalid => e
-        record_execution_failure!(result.record_validation_failure!(record: e.record))
-      rescue BaseService::FailedResult => e
-        record_execution_failure!(e.result)
-      end
 
       private
 
-      attr_reader :order
-
-      def success_result
-        result.order = order
-        result
-      end
-
-      def execute_in_lago?
-        order.execution_mode == Order::EXECUTION_MODES[:execute_in_lago]
-      end
-
       # Subscriptions come first: they settle the customer currency the coupons and wallets
-      # then reuse.
-      def create_deal
+      # then reuse. No invoice_id: a subscription is invoiced later by BillSubscriptionJob, and only
+      # when the plan is paid in advance.
+      def create_records
         with_coupon_lock do
           subscriptions = create_subscriptions
           applied_coupons = apply_coupons
@@ -75,57 +31,6 @@ module Orders
         return yield if coupon_items.empty?
 
         ::Customers::LockService.call(customer: order.customer, scope: :coupon, &block).value
-      end
-
-      # invoice_id stays nil: a subscription is invoiced later by BillSubscriptionJob, and only
-      # when the plan is paid in advance.
-      def mark_executed!(created)
-        executed_at = Time.current
-
-        order.update!(
-          status: :executed,
-          executed_at:,
-          execution_record: {
-            executed_at: executed_at.iso8601,
-            execution_mode: order.execution_mode,
-            invoice_id: nil,
-            subscription_ids: [],
-            applied_coupon_ids: [],
-            wallet_ids: [],
-            errors: []
-          }.merge(created)
-        )
-      end
-
-      # The transaction has already rolled back, so this trace is the only durable outcome
-      # of the attempt. Recording it moves the order to failed, excluding it from the
-      # executable scope; retrying is a deliberate manual action.
-      def record_execution_failure!(failed_result)
-        order.update!(
-          status: :failed,
-          executed_at: nil,
-          execution_record: {
-            executed_at: nil,
-            execution_mode: order.execution_mode,
-            invoice_id: nil,
-            subscription_ids: [],
-            applied_coupon_ids: [],
-            wallet_ids: [],
-            errors: execution_errors(failed_result.error)
-          }
-        )
-
-        failed_result
-      end
-
-      def execution_errors(error)
-        if error.respond_to?(:messages)
-          error.messages.values.flatten
-        elsif error.respond_to?(:code)
-          [error.code]
-        else
-          [error.message]
-        end
       end
 
       # NOTE: an external id matching a live subscription of this customer makes
