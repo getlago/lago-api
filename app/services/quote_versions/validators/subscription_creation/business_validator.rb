@@ -125,6 +125,7 @@ module QuoteVersions
             end
 
             validate_coupon_currency(coupon, index)
+            validate_coupon_frequency(coupon, coupon_item, index)
             validate_coupon_snapshot(coupon, coupon_item, index) if scope == :approve
           end
         end
@@ -154,6 +155,25 @@ module QuoteVersions
           if coupon.percentage? && coupon_item.dig("payload", "percentageRate").nil?
             add_error(field: coupon_field(index, "payload.percentageRate"), error_code: "value_is_mandatory")
           end
+        end
+
+        # AppliedCoupon requires a positive frequency_duration when recurring, and
+        # AppliedCoupons::CreateService falls back to the live coupon's own frequency and duration,
+        # so overriding an already recurring coupon need not restate its duration. Only a coupon that
+        # is recurring nowhere but in the quote, with no duration anywhere, cannot be applied.
+        def validate_coupon_frequency(coupon, coupon_item, index)
+          return unless scope == :approve
+          return unless effective_coupon_value(coupon_item, "frequency", coupon.frequency) == "recurring"
+          return unless effective_coupon_value(coupon_item, "frequencyDuration", coupon.frequency_duration).nil?
+
+          section = (coupon_item.dig("overrides", "frequency") == "recurring") ? "overrides" : "payload"
+          add_error(field: coupon_field(index, "#{section}.frequencyDuration"), error_code: "value_is_mandatory")
+        end
+
+        # Mirrors how the execution service resolves an overridden coupon value, then the fallback
+        # AppliedCoupons::CreateService applies on the live coupon.
+        def effective_coupon_value(coupon_item, field, coupon_value)
+          coupon_item.dig("overrides", field) || coupon_item.dig("payload", field) || coupon_value
         end
 
         def validate_wallet_credits

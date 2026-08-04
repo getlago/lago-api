@@ -440,6 +440,65 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
           )
         end
       end
+
+      context "when the coupon is overridden to recurring without a duration" do
+        let(:coupon_item) { super().merge("overrides" => {"frequency" => "recurring"}) }
+
+        it "requires the frequencyDuration" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.coupons.0.overrides.frequencyDuration": ["value_is_mandatory"]}
+          )
+        end
+      end
+
+      context "when the coupon is overridden to recurring with a duration" do
+        let(:coupon_item) do
+          super().merge("overrides" => {"frequency" => "recurring", "frequencyDuration" => 3})
+        end
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+
+      context "when the coupon payload is recurring without a duration" do
+        let(:coupon_payload) { super().merge("frequency" => "recurring") }
+
+        it "requires the frequencyDuration" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.coupons.0.payload.frequencyDuration": ["value_is_mandatory"]}
+          )
+        end
+      end
+
+      context "when an already recurring coupon is overridden to recurring without a duration" do
+        let(:coupon) do
+          create(:coupon, organization:, frequency: "recurring", frequency_duration: 3)
+        end
+        let(:coupon_item) { super().merge("overrides" => {"frequency" => "recurring"}) }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+
+      context "when the coupon overrides only the duration" do
+        let(:coupon_item) { super().merge("overrides" => {"frequencyDuration" => 3}) }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+    end
+
+    context "when the coupon payload is recurring without a duration at update scope" do
+      let(:coupon_payload) { super().merge("frequency" => "recurring") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
     end
 
     context "when a fixed_amount coupon payload has no amountCents at update scope" do
