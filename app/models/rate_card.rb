@@ -108,7 +108,7 @@ class RateCard < ApplicationRecord
   # append-only and locked once the card has subscriptions, so only rates
   # scheduled before signing can change a subscriber's price.
   def rate_active_at(datetime)
-    rates.where(effective_datetime: ..datetime).order(effective_datetime: :desc).first
+    rates.where(effective_from: ..datetime).order(effective_from: :desc).first
   end
 end
 

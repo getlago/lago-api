@@ -208,8 +208,8 @@ RSpec.describe RateCard do
   describe "#rate_active_at" do
     subject(:rate_card) { create(:rate_card) }
 
-    let!(:old_rate) { create(:rate_card_rate, rate_card:, effective_datetime: 10.days.ago) }
-    let!(:new_rate) { create(:rate_card_rate, rate_card:, effective_datetime: 2.days.ago) }
+    let!(:old_rate) { create(:rate_card_rate, rate_card:, effective_from: 10.days.ago.beginning_of_day) }
+    let!(:new_rate) { create(:rate_card_rate, rate_card:, effective_from: 2.days.ago.beginning_of_day) }
 
     it "returns the rate that was active at the given time" do
       expect(rate_card.rate_active_at(5.days.ago)).to eq(old_rate)

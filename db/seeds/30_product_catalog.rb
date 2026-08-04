@@ -111,7 +111,7 @@ unless ProductCategory.exists?(organization:, code: "cloud_platform")
     rate_card: platform_fee_card,
     params: {
       code: "rate_1",
-      effective_datetime: 1.month.ago,
+      effective_from: 1.month.ago.beginning_of_day,
       rate_model: "standard",
       rate_properties: {amount: "99"},
       billing_interval_unit: "month"
