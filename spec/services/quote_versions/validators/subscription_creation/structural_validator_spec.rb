@@ -119,6 +119,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
       "paidCredits" => "1000",
       "grantedCredits" => "200",
       "targetOngoingBalance" => "5000",
+      "grantsTargetTopUp" => true,
       "thresholdCredits" => nil,
       "startedAt" => "2026-08-01T00:00:00Z",
       "transactionName" => "Monthly refill",
@@ -288,6 +289,25 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
         expect(result.error.messages).to eq(
           {"billing_items.plans.0.overrides.invoiceDisplayName": ["invalid_value"]}
         )
+      end
+    end
+
+    context "when the plan overrides carries trialPeriod, name and description" do
+      let(:plan_overrides) do
+        super().merge("trialPeriod" => 14.0, "name" => "Enterprise", "description" => "Negotiated wording")
+      end
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the plan overrides trialPeriod is negative" do
+      let(:plan_overrides) { super().merge("trialPeriod" => -1) }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.overrides.trialPeriod": ["invalid_value"]})
       end
     end
 
@@ -481,6 +501,15 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
       end
     end
 
+    context "when the coupon payload currency is not a known currency" do
+      let(:coupon_payload) { super().merge("currency" => "EURO") }
+
+      it "returns an invalid_currency error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.coupons.0.payload.currency": ["invalid_currency"]})
+      end
+    end
+
     context "when the coupon amountCents is negative" do
       let(:coupon_payload) { super().merge("amountCents" => -1) }
 
@@ -586,14 +615,47 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
       end
     end
 
+    context "when the wallet credit paidCredits is null" do
+      let(:wallet_credit_payload) { super().merge("paidCredits" => nil) }
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the wallet credit expirationAt is not an ISO 8601 date-time" do
+      let(:wallet_credit_payload) { super().merge("expirationAt" => "not-a-date") }
+
+      it "returns an invalid_format error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.walletCredits.0.payload.expirationAt": ["invalid_format"]})
+      end
+    end
+
     context "when the recurring rule contains an unknown key" do
       let(:recurring_rule) { super().merge("purchaseOrderNumber" => "PO-123") }
 
-      it "returns an unsupported_key error" do
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the recurring rule grantsTargetTopUp is a string" do
+      let(:recurring_rule) { super().merge("grantsTargetTopUp" => "true") }
+
+      it "returns an invalid_type error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
-          {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.purchaseOrderNumber": ["unsupported_key"]}
+          {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.grantsTargetTopUp": ["invalid_type"]}
         )
+      end
+    end
+
+    context "when the recurring rule trigger is null" do
+      let(:recurring_rule) { super().merge("trigger" => nil) }
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
       end
     end
 
@@ -697,6 +759,41 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
               "billing_items.walletCredits.0.payload.paidCredits": ["value_is_mandatory"],
               "billing_items.walletCredits.0.payload.grantedCredits": ["value_is_mandatory"],
               "billing_items.walletCredits.0.payload.rateAmount": ["value_is_mandatory"]
+            }
+          )
+        end
+      end
+
+      context "when the wallet credit paidCredits is null" do
+        let(:wallet_credit_payload) { super().merge("paidCredits" => nil) }
+
+        it "returns an invalid_type error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.walletCredits.0.payload.paidCredits": ["invalid_type"]})
+        end
+      end
+
+      context "when the recurring rule has no trigger" do
+        let(:recurring_rule) { super().except("trigger") }
+
+        it "requires the trigger" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.trigger": ["value_is_mandatory"]}
+          )
+        end
+      end
+
+      context "when the recurring rule trigger is null" do
+        let(:recurring_rule) { super().merge("trigger" => nil) }
+
+        it "returns invalid_type and invalid_value errors" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {
+              "billing_items.walletCredits.0.payload.recurringTransactionRules.0.trigger": [
+                "invalid_type", "invalid_value"
+              ]
             }
           )
         end

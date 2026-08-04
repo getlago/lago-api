@@ -4,6 +4,8 @@ module QuoteVersions
   module Validators
     module SubscriptionCreation
       module Schema
+        CURRENCIES = Currencies::ACCEPTED_CURRENCIES.keys.map(&:to_s).freeze
+
         UPDATE_DEFINITION = {
           "type" => "object",
           "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
@@ -58,6 +60,21 @@ module QuoteVersions
                         "type" => %w[string null],
                         "minLength" => 1,
                         "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
+                      },
+                      "name" => {
+                        "type" => %w[string null],
+                        "minLength" => 1,
+                        "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
+                      },
+                      "description" => {
+                        "type" => %w[string null],
+                        "minLength" => 1,
+                        "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
+                      },
+                      "trialPeriod" => {
+                        "type" => %w[number null],
+                        "minimum" => 0,
+                        "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
                       },
                       "minimumCommitment" => {
                         "type" => %w[object null],
@@ -222,7 +239,8 @@ module QuoteVersions
                       },
                       "currency" => {
                         "type" => %w[string null],
-                        "x-error" => {"type" => "invalid_type"}
+                        "enum" => CURRENCIES + [nil],
+                        "x-error" => {"type" => "invalid_type", "enum" => "invalid_currency"}
                       },
                       "percentageRate" => {
                         "type" => %w[number null],
@@ -295,24 +313,30 @@ module QuoteVersions
                     "x-error" => {"type" => "invalid_type", "required" => "value_is_mandatory"},
                     "properties" => {
                       "paidCredits" => {
-                        "type" => "string",
+                        "type" => %w[string null],
                         "x-error" => {"type" => "invalid_type"}
                       },
                       "grantedCredits" => {
-                        "type" => "string",
+                        "type" => %w[string null],
                         "x-error" => {"type" => "invalid_type"}
                       },
                       "rateAmount" => {
-                        "type" => "string",
+                        "type" => %w[string null],
                         "x-error" => {"type" => "invalid_type"}
+                      },
+                      "expirationAt" => {
+                        "type" => %w[string null],
+                        "format" => "date-time",
+                        "x-error" => {"type" => "invalid_type", "format" => "invalid_format"}
                       },
                       "recurringTransactionRules" => {
                         "type" => %w[array null],
                         "x-error" => {"type" => "invalid_type"},
+                        # NOTE: rules live inside the free-form payload, so unknown keys are
+                        # accepted here too. Only the keys the validators act on are typed.
                         "items" => {
                           "type" => "object",
-                          "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
-                          "x-error" => {"type" => "invalid_type"},
+                          "x-error" => {"type" => "invalid_type", "required" => "value_is_mandatory"},
                           "properties" => {
                             "trigger" => {
                               "type" => %w[string null],
@@ -335,6 +359,10 @@ module QuoteVersions
                             },
                             "targetOngoingBalance" => {
                               "type" => %w[string null],
+                              "x-error" => {"type" => "invalid_type"}
+                            },
+                            "grantsTargetTopUp" => {
+                              "type" => %w[boolean null],
                               "x-error" => {"type" => "invalid_type"}
                             },
                             "paidCredits" => {
@@ -384,8 +412,17 @@ module QuoteVersions
 
           schema["properties"]["coupons"]["items"]["properties"]["payload"]["required"] =
             %w[code type]
-          schema["properties"]["walletCredits"]["items"]["properties"]["payload"]["required"] =
-            %w[paidCredits grantedCredits rateAmount]
+
+          wallet_credit_payload = schema["properties"]["walletCredits"]["items"]["properties"]["payload"]
+          wallet_credit_payload["required"] = %w[paidCredits grantedCredits rateAmount]
+          wallet_credit_payload["required"].each do |key|
+            wallet_credit_payload["properties"][key]["type"] = "string"
+          end
+
+          rules = wallet_credit_payload["properties"]["recurringTransactionRules"]["items"]
+          rules["required"] = ["trigger"]
+          rules["properties"]["trigger"]["type"] = "string"
+          rules["properties"]["trigger"]["enum"] = %w[interval threshold]
         end.freeze
 
         SCHEMERS = {
