@@ -269,6 +269,8 @@ module QuoteVersions
         end
 
         def validate_coupons
+          earlier_coupons = []
+
           coupons.each_with_index do |coupon_item, index|
             coupon = known_coupons_by_id[coupon_item["id"]]
 
@@ -279,8 +281,61 @@ module QuoteVersions
 
             validate_coupon_currency(coupon, index)
             validate_coupon_frequency(coupon, coupon_item, index)
+            validate_coupon_preconditions(coupon, earlier_coupons, index)
             validate_coupon_snapshot(coupon, coupon_item, index) if scope == :approve
+
+            earlier_coupons << coupon
           end
+        end
+
+        # AppliedCoupons::CreateService refuses a non-reusable coupon the customer already carries and
+        # a limited coupon overlapping one already applied. The deal applies its coupons one by one,
+        # so the first application is what makes a second one fail, halfway through execution.
+        # NOTE: the customer's own applied coupons are deliberately not checked here, that state can
+        # change between approval and execution.
+        def validate_coupon_preconditions(coupon, earlier_coupons, index)
+          if !coupon.reusable? && earlier_coupons.any? { |earlier| earlier.id == coupon.id }
+            add_error(field: coupon_field(index, "id"), error_code: "coupon_is_not_reusable")
+          end
+
+          return unless limited?(coupon)
+          return if earlier_coupons.none? { |earlier| overlapping_limitations?(coupon, earlier) }
+
+          add_error(field: coupon_field(index, "id"), error_code: "plan_overlapping")
+        end
+
+        def limited?(coupon)
+          coupon.limited_plans? || coupon.limited_billable_metrics?
+        end
+
+        # The four comparisons AppliedCoupons::CreateService makes: plans against plans, metrics
+        # against metrics, and each against the other through the charges connecting them.
+        def overlapping_limitations?(coupon, earlier)
+          plan_ids = target_ids(coupon, :plan_id)
+          metric_ids = target_ids(coupon, :billable_metric_id)
+          earlier_plan_ids = target_ids(earlier, :plan_id)
+          earlier_metric_ids = target_ids(earlier, :billable_metric_id)
+
+          plan_ids.intersect?(earlier_plan_ids) ||
+            metric_ids.intersect?(earlier_metric_ids) ||
+            earlier_plan_ids.intersect?(plans_charging(metric_ids)) ||
+            earlier_metric_ids.intersect?(metrics_charged_by(plan_ids))
+        end
+
+        def target_ids(coupon, attribute)
+          coupon.coupon_targets.filter_map(&attribute)
+        end
+
+        def plans_charging(metric_ids)
+          return [] if metric_ids.empty?
+
+          Charge.joins(:billable_metric).where(billable_metric: {id: metric_ids}).pluck(:plan_id)
+        end
+
+        def metrics_charged_by(plan_ids)
+          return [] if plan_ids.empty?
+
+          Charge.joins(:plan).where(plan: {id: plan_ids}).pluck(:billable_metric_id)
         end
 
         def validate_coupon_currency(coupon, index)
@@ -558,6 +613,7 @@ module QuoteVersions
             .organization
             .coupons
             .with_discarded
+            .includes(:coupon_targets)
             .where(id: coupons.map { |coupon_item| coupon_item["id"] })
             .index_by(&:id)
         end
