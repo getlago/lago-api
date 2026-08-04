@@ -9602,10 +9602,13 @@ enum OrderExecutionModeEnum {
 }
 
 type OrderExecutionRecord {
+  appliedCouponIds: [ID!]!
   errors: [String!]!
   executedAt: ISO8601DateTime
   executionMode: OrderExecutionModeEnum
   invoiceId: ID
+  subscriptionIds: [ID!]!
+  walletIds: [ID!]!
 }
 
 type OrderForm {
