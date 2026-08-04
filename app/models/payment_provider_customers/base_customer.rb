@@ -20,6 +20,7 @@ module PaymentProviderCustomers
     has_many :refunds, foreign_key: :payment_provider_customer_id
 
     validates :customer_id, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :type}
+    validates :code, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :customer_id}, allow_nil: true
 
     settings_accessors :provider_mandate_id, :sync_with_provider
 
