@@ -299,6 +299,44 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
+    context "when the fixed charge override units is negative" do
+      let(:fixed_charge_override) { super().merge("units" => "-1") }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.fixedCharges.0.units": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when the fixed charge override units is not a decimal" do
+      let(:fixed_charge_override) { super().merge("units" => "abc") }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.fixedCharges.0.units": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when the fixed charge override units is zero" do
+      let(:fixed_charge_override) { super().merge("units" => "0") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the fixed charge override carries no units" do
+      let(:fixed_charge_override) { super().except("units") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
     context "when the plan overrides is null" do
       let(:plan_overrides) { nil }
 

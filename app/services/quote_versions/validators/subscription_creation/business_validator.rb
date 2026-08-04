@@ -91,6 +91,8 @@ module QuoteVersions
           fixed_charge_overrides = (plan_item["overrides"] || {})["fixedCharges"] || []
 
           fixed_charge_overrides.each_with_index do |fixed_charge_override, fixed_charge_index|
+            validate_fixed_charge_units(fixed_charge_override, index, fixed_charge_index)
+
             unless known_fixed_charge_add_on_codes.include?([plan_item["id"], fixed_charge_override["addOnCode"]])
               add_error(
                 field: plan_field(index, "overrides.fixedCharges.#{fixed_charge_index}.addOnCode"),
@@ -98,6 +100,19 @@ module QuoteVersions
               )
             end
           end
+        end
+
+        # units is forwarded verbatim to FixedCharges::OverrideService, and FixedCharge validates it
+        # with numericality: {greater_than_or_equal_to: 0}, the bound valid_amount? enforces.
+        def validate_fixed_charge_units(fixed_charge_override, index, fixed_charge_index)
+          units = fixed_charge_override["units"]
+          return if units.nil?
+          return if ::Validators::DecimalAmountService.valid_amount?(units)
+
+          add_error(
+            field: plan_field(index, "overrides.fixedCharges.#{fixed_charge_index}.units"),
+            error_code: "invalid_value"
+          )
         end
 
         def validate_coupons
