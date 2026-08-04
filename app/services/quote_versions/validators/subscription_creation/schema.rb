@@ -547,6 +547,21 @@ module QuoteVersions
           plans["minItems"] = 1
           plans["items"]["properties"]["payload"]["required"] = %w[code]
 
+          # An override is resolved through its snapshot entry, by code then by id, so an approved
+          # entry must carry both. Without the id the business validator can only report
+          # charge_not_found against the override, pointing the approver at the wrong key.
+          charge_snapshot = plans["items"]["properties"]["payload"]["properties"]["charges"]["items"]
+          charge_snapshot["required"] = ["id"]
+          charge_snapshot["x-error"]["required"] = "value_is_mandatory"
+          charge_snapshot["properties"]["billableMetric"]["required"] = ["code"]
+          charge_snapshot["properties"]["billableMetric"]["x-error"]["required"] = "value_is_mandatory"
+
+          fixed_charge_snapshot = plans["items"]["properties"]["payload"]["properties"]["fixedCharges"]["items"]
+          fixed_charge_snapshot["required"] = ["id"]
+          fixed_charge_snapshot["x-error"]["required"] = "value_is_mandatory"
+          fixed_charge_snapshot["properties"]["addOn"]["required"] = ["code"]
+          fixed_charge_snapshot["properties"]["addOn"]["x-error"]["required"] = "value_is_mandatory"
+
           schema["properties"]["coupons"]["items"]["properties"]["payload"]["required"] =
             %w[code type]
 
