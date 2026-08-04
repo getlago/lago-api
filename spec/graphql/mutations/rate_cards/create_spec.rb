@@ -67,7 +67,7 @@ RSpec.describe Mutations::RateCards::Create do
         rates: [
           {
             code: "launch_price",
-            effectiveDatetime: 1.minute.ago.iso8601,
+            effectiveFrom: 1.minute.ago.beginning_of_day.iso8601,
             rateModel: "standard",
             rateProperties: {amount: "10"},
             billingIntervalUnit: "month"
