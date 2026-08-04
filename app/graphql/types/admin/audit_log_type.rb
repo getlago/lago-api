@@ -18,14 +18,10 @@ module Types
       field :organization_name, String, null: false
       field :reason, String, null: false
       field :rollback_of_id, ID, null: true
-      field :rolled_back, Boolean, null: false
+      field :rolled_back, Boolean, null: false, method: :rolled_back?
 
       def organization_name
         object.organization.name
-      end
-
-      def rolled_back
-        object.rolled_back?
       end
     end
   end

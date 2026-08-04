@@ -17,6 +17,7 @@ module Mutations
         audit_logs = CsAdminAuditLog
           .where(batch_id: batch_id, feature_type: CsAdminAuditLog::TOGGLEABLE_FEATURE_TYPES)
           .where.not(action: :rollback)
+          .where.missing(:rollback)
         rollback_logs = []
         error = nil
 
