@@ -41,8 +41,6 @@ class RateCardRate < ApplicationRecord
   enum :rate_model, RATE_MODELS, validate: {allow_nil: true}
   enum :billing_interval_unit, BILLING_INTERVAL_UNITS, validate: {allow_nil: true}
 
-  # The code is the rate's stable identifier within its card. It is always
-  # caller-provided — there is no auto-generation.
   validates :code, presence: true
   validates :code, uniqueness: {scope: :rate_card_id, conditions: -> { where(deleted_at: nil) }}
   validates :billing_interval_unit, presence: true

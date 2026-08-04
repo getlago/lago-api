@@ -54,9 +54,6 @@ class RateCard < ApplicationRecord
     errors.add(:product_filter, :does_not_belong_to_product)
   end
 
-  # Hiding fees from the invoice only exists for advance cards
-  # (v1: Charge#validate_invoiceable_unless_pay_in_advance). An arrears fee
-  # has no instant-charge path, so a hidden one would never surface anywhere.
   def validate_display_on_invoice
     return if advance? || display_on_invoice?
 
@@ -65,8 +62,6 @@ class RateCard < ApplicationRecord
 
   # Usage proration spreads a recurring quantity across the period, so it
   # needs a recurring metric — and not weighted_sum, which prorates by design
-  # (v1: Charge#validate_prorated). Fixed products prorate by calendar time
-  # instead and carry no metric, so they are exempt.
   def validate_proration
     return unless proration?
     return unless product&.usage?

@@ -11,7 +11,7 @@ class PlanRateCard < ApplicationRecord
   belongs_to :rate_card
 
   has_one :product, through: :rate_card
-  # Phases are an ordered sequence; heap order is not deterministic.
+
   has_many :rate_phases, -> { order(:position) }
 
   validates :rate_card_id, uniqueness: {scope: :plan_id, conditions: -> { where(deleted_at: nil) }}

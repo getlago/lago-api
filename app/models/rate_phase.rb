@@ -11,9 +11,6 @@ class RatePhase < ApplicationRecord
   belongs_to :subscription_rate_card, optional: true
   belongs_to :rate_override, optional: true
 
-  # The code is the phase's stable identifier within its parent entry:
-  # positions renumber on insert/delete, codes never move. It is always
-  # caller-provided — there is no auto-generation.
   validates :code, presence: true
   validates :code,
     uniqueness: {scope: :plan_rate_card_id, conditions: -> { where(deleted_at: nil) }},

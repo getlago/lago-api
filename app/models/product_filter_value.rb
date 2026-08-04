@@ -17,7 +17,6 @@ class ProductFilterValue < ApplicationRecord
     uniqueness: {scope: [:product_filter_id, :billable_metric_filter_id], conditions: -> { where(deleted_at: nil) }}
   validate :validate_value_inclusion
 
-  # created_at keeps the values order stable across edits.
   default_scope -> { kept.order(created_at: :asc) }
 
   delegate :key, to: :billable_metric_filter

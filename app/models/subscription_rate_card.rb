@@ -12,7 +12,6 @@ class SubscriptionRateCard < ApplicationRecord
 
   has_one :product, through: :rate_card
 
-  # Phases are an ordered sequence; heap order is not deterministic.
   has_many :rate_phases, -> { order(:position) }
 
   validates :billing_anchor_date, presence: true
