@@ -58,8 +58,29 @@ RSpec.describe Orders::ExecuteService do
         end
       end
 
-      context "when the order type is not supported yet" do
+      context "when the order is a subscription_creation" do
         let(:order_type) { :subscription_creation }
+
+        it "delegates to the subscription_creation execute service" do
+          allow(Orders::SubscriptionCreation::ExecuteService).to receive(:call).and_call_original
+
+          execute_service.call
+
+          expect(Orders::SubscriptionCreation::ExecuteService).to have_received(:call).with(order:)
+        end
+      end
+
+      context "when the order type is not supported yet" do
+        let(:order_type) { :subscription_amendment }
+        let(:quote) do
+          create(
+            :quote,
+            organization:,
+            customer:,
+            order_type:,
+            subscription: create(:subscription, organization:, customer:)
+          )
+        end
 
         it "returns a validation failure" do
           result = execute_service.call
