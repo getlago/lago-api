@@ -2,6 +2,9 @@
 
 module QuoteVersions
   module Validators
+    # NOTE: subscription_amendment has no validator yet, so it returns nil and the callers
+    # (ApproveService, UpdateService) let it through. Orders::ExecuteService refuses that order
+    # type anyway, until the amendment validator lands.
     def self.for(result, quote_version:, scope:)
       case quote_version.quote.order_type
       when Quote::ORDER_TYPES[:one_off]
