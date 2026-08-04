@@ -55,15 +55,26 @@ module Orders
       # Subscriptions come first: they settle the customer currency the coupons and wallets
       # then reuse.
       def create_deal
-        subscriptions = create_subscriptions
-        applied_coupons = apply_coupons
-        wallets = create_wallets
+        with_coupon_lock do
+          subscriptions = create_subscriptions
+          applied_coupons = apply_coupons
+          wallets = create_wallets
 
-        {
-          subscription_ids: subscriptions.map(&:id),
-          applied_coupon_ids: applied_coupons.map(&:id),
-          wallet_ids: wallets.map(&:id)
-        }
+          {
+            subscription_ids: subscriptions.map(&:id),
+            applied_coupon_ids: applied_coupons.map(&:id),
+            wallet_ids: wallets.map(&:id)
+          }
+        end
+      end
+
+      # AppliedCoupons::CreateService takes this lock and then writes the customer row, while
+      # Subscriptions::CreateService locks the row first. Taking it up front keeps one ordering for
+      # the whole deal; the lock is transaction scoped, so the inner acquisition is then a no-op.
+      def with_coupon_lock(&block)
+        return yield if coupon_items.empty?
+
+        ::Customers::LockService.call(customer: order.customer, scope: :coupon, &block).value
       end
 
       # invoice_id stays nil: a subscription is invoiced later by BillSubscriptionJob, and only
