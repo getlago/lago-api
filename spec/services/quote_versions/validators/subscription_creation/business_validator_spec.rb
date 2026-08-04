@@ -387,6 +387,25 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
+    context "when the snapshot charge model differs from the charge" do
+      let(:charge_snapshot) { super().merge("chargeModel" => "graduated") }
+
+      it "returns a charge_model_changed error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.payload.charges.0.chargeModel": ["charge_model_changed"]}
+        )
+      end
+    end
+
+    context "when the snapshot charge carries no charge model" do
+      let(:charge_snapshot) { super().except("chargeModel") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
     context "when the billable metric is discarded" do
       before do
         charge
@@ -432,6 +451,25 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
         expect(result.error.messages).to eq(
           {"billing_items.plans.0.overrides.fixedCharges.0.addOnCode": ["ambiguous_fixed_charge_override"]}
         )
+      end
+    end
+
+    context "when the snapshot fixed charge model differs from the fixed charge" do
+      let(:fixed_charge_snapshot) { super().merge("chargeModel" => "graduated") }
+
+      it "returns a fixed_charge_model_changed error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.payload.fixedCharges.0.chargeModel": ["fixed_charge_model_changed"]}
+        )
+      end
+    end
+
+    context "when the snapshot fixed charge carries no charge model" do
+      let(:fixed_charge_snapshot) { super().except("chargeModel") }
+
+      it "is valid" do
+        expect(validator).to be_valid
       end
     end
 
