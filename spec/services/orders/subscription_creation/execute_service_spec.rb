@@ -143,6 +143,39 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         end
       end
 
+      context "when the customer is west of UTC" do
+        let(:customer) do
+          create(:customer, organization:, billing_entity:, currency: "EUR", timezone: "America/New_York")
+        end
+
+        it "reads the version dates as calendar dates in the customer timezone" do
+          execute_service.call
+
+          subscription = customer.subscriptions.sole
+          timezone = customer.applicable_timezone
+          expect(subscription.subscription_at.in_time_zone(timezone).to_date).to eq(quote_version.start_date)
+          expect(subscription.ending_at.in_time_zone(timezone).to_date).to eq(quote_version.end_date)
+        end
+
+        context "when the payload carries bare dates" do
+          let(:plan_payload) do
+            super().merge(
+              "startDate" => 3.days.from_now.to_date.iso8601,
+              "endDate" => 1.year.from_now.to_date.iso8601
+            )
+          end
+
+          it "reads them in the customer timezone too" do
+            execute_service.call
+
+            subscription = customer.subscriptions.sole
+            timezone = customer.applicable_timezone
+            expect(subscription.subscription_at.in_time_zone(timezone).to_date).to eq(3.days.from_now.to_date)
+            expect(subscription.ending_at.in_time_zone(timezone).to_date).to eq(1.year.from_now.to_date)
+          end
+        end
+      end
+
       context "when the payload carries a payment method" do
         let(:payment_method) { create(:payment_method, organization:, customer:) }
         let(:plan_payload) { super().merge("paymentMethodId" => payment_method.id) }
