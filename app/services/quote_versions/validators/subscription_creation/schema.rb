@@ -6,6 +6,13 @@ module QuoteVersions
       module Schema
         CURRENCIES = Currencies::ACCEPTED_CURRENCIES.keys.map(&:to_s).freeze
 
+        COUPON_TYPES = Coupon::COUPON_TYPES.map(&:to_s).freeze
+        COUPON_FREQUENCIES = Coupon::FREQUENCIES.map(&:to_s).freeze
+
+        RULE_TRIGGERS = RecurringTransactionRule::TRIGGERS.map(&:to_s).freeze
+        RULE_INTERVALS = RecurringTransactionRule::INTERVALS.map(&:to_s).freeze
+        RULE_METHODS = RecurringTransactionRule::METHODS.map(&:to_s).freeze
+
         UPDATE_DEFINITION = {
           "type" => "object",
           "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
@@ -233,7 +240,7 @@ module QuoteVersions
                       },
                       "type" => {
                         "type" => "string",
-                        "enum" => %w[fixed_amount percentage],
+                        "enum" => COUPON_TYPES,
                         "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
                       },
                       "amountCents" => {
@@ -253,7 +260,7 @@ module QuoteVersions
                       },
                       "frequency" => {
                         "type" => %w[string null],
-                        "enum" => ["once", "recurring", "forever", nil],
+                        "enum" => [*COUPON_FREQUENCIES, nil],
                         "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
                       },
                       "frequencyDuration" => {
@@ -280,7 +287,7 @@ module QuoteVersions
                       },
                       "frequency" => {
                         "type" => %w[string null],
-                        "enum" => ["once", "recurring", "forever", nil],
+                        "enum" => [*COUPON_FREQUENCIES, nil],
                         "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
                       },
                       "frequencyDuration" => {
@@ -349,17 +356,17 @@ module QuoteVersions
                           "properties" => {
                             "trigger" => {
                               "type" => %w[string null],
-                              "enum" => ["interval", "threshold", nil],
+                              "enum" => [*RULE_TRIGGERS, nil],
                               "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
                             },
                             "interval" => {
                               "type" => %w[string null],
-                              "enum" => ["weekly", "monthly", "quarterly", "yearly", "semiannual", nil],
+                              "enum" => [*RULE_INTERVALS, nil],
                               "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
                             },
                             "method" => {
                               "type" => %w[string null],
-                              "enum" => ["fixed", "target", nil],
+                              "enum" => [*RULE_METHODS, nil],
                               "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
                             },
                             "thresholdCredits" => {
@@ -439,7 +446,7 @@ module QuoteVersions
           rules = wallet_credit_payload["properties"]["recurringTransactionRules"]["items"]
           rules["required"] = ["trigger"]
           rules["properties"]["trigger"]["type"] = "string"
-          rules["properties"]["trigger"]["enum"] = %w[interval threshold]
+          rules["properties"]["trigger"]["enum"] = RULE_TRIGGERS
         end.freeze
 
         SCHEMERS = {
