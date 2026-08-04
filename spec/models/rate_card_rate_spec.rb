@@ -38,6 +38,36 @@ RSpec.describe RateCardRate do
   end
 
   describe "validations" do
+    describe "effective_from granularity" do
+      it "rejects a time component on an arrears card" do
+        card = create(:rate_card, billing_timing: "arrears")
+        rate = build(:rate_card_rate, rate_card: card, effective_from: "2026-12-01T17:00:00Z")
+        rate.valid?
+        expect(rate.errors.where(:effective_from).map(&:type)).to eq([:must_be_a_date])
+      end
+
+      it "accepts a date and a midnight datetime on an arrears card" do
+        card = create(:rate_card, billing_timing: "arrears")
+
+        expect(build(:rate_card_rate, rate_card: card, effective_from: "2026-12-01")).to be_valid
+        expect(build(:rate_card_rate, rate_card: card, effective_from: "2026-12-01T00:00:00Z")).to be_valid
+      end
+
+      it "accepts a time component on an advance card" do
+        card = create(:rate_card, billing_timing: "advance")
+
+        expect(build(:rate_card_rate, rate_card: card, effective_from: "2026-12-01T17:00:00Z")).to be_valid
+      end
+
+      it "caps arrears at one rate per day through the uniqueness rule" do
+        card = create(:rate_card, billing_timing: "arrears")
+        create(:rate_card_rate, rate_card: card, effective_from: "2026-12-01")
+        duplicate = build(:rate_card_rate, rate_card: card, code: "other", effective_from: "2026-12-01T00:00:00Z")
+        duplicate.valid?
+        expect(duplicate.errors.where(:effective_from, :value_already_exist)).to be_present
+      end
+    end
+
     it { is_expected.to validate_presence_of(:effective_from) }
     it { is_expected.to validate_presence_of(:rate_model) }
     it { is_expected.to validate_presence_of(:billing_interval_unit) }

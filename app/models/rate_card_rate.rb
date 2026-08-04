@@ -50,6 +50,7 @@ class RateCardRate < ApplicationRecord
   validates :billing_interval_count, numericality: {greater_than_or_equal_to: 1}
 
   validate :validate_effective_from_is_appended
+  validate :validate_effective_from_granularity
   validate :validate_pricing_unit_conversion_rate
 
   default_scope -> { kept }
@@ -61,6 +62,21 @@ class RateCardRate < ApplicationRecord
   # The past is immutable, the future is editable: a rate can land anywhere in
   # the pending sequence, but never at or before the rate that already priced
   # elapsed time (the active one).
+  # Arrears rates apply per whole day: period math never samples inside a day,
+  # so a time component could only create shadowed rates. One rate per day,
+  # enforced by the unique (rate_card_id, effective_from) index once every
+  # date normalises to midnight. Advance rates keep full instants — they price
+  # per event. REST refuses datetime strings on arrears at the service
+  # boundary; this value check backstops paths where the input is already
+  # coerced (GraphQL's ISO8601 scalar, internal callers).
+  def validate_effective_from_granularity
+    return if effective_from.blank?
+    return unless rate_card&.arrears?
+    return if effective_from == effective_from.beginning_of_day
+
+    errors.add(:effective_from, :must_be_a_date)
+  end
+
   def validate_effective_from_is_appended
     return if effective_from.blank?
     return if rate_card.blank?
