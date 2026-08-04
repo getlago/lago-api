@@ -120,19 +120,36 @@ module QuoteVersions
         def validate_charge_overrides(plan_item, plan, index)
           charge_overrides(plan_item).each_with_index do |charge_override, charge_index|
             field = plan_field(index, "overrides.charges.#{charge_index}.billableMetricCode")
-            snapshots = snapshot_charges(plan_item).select do |snapshot|
+            snapshots = snapshot_charges(plan_item).each_with_index.select do |snapshot, _|
               snapshot.dig("billableMetric", "code") == charge_override["billableMetricCode"]
             end
 
             next add_error(field:, error_code: "charge_not_found") if snapshots.empty?
             next add_error(field:, error_code: "ambiguous_charge_override") if snapshots.count > 1
 
-            charge = plan.charges.find { |plan_charge| plan_charge.id == snapshots.first["id"] }
+            snapshot, snapshot_index = snapshots.first
+            charge = plan.charges.find { |plan_charge| plan_charge.id == snapshot["id"] }
 
             next add_error(field:, error_code: "charge_not_found") if charge.nil?
 
             validate_charge_model(charge_override, charge, index, charge_index)
+            validate_snapshot_charge_model(
+              snapshot,
+              charge,
+              plan_field(index, "payload.charges.#{snapshot_index}.chargeModel")
+            )
           end
+        end
+
+        # The snapshot pins the charge model the approver was looking at, and an override omitting
+        # chargeModel would otherwise let the catalog drift away from it unnoticed, landing the
+        # negotiated properties on another model.
+        def validate_snapshot_charge_model(snapshot, charge, field)
+          charge_model = snapshot["chargeModel"]
+          return if charge_model.nil?
+          return if charge_model == charge.charge_model
+
+          add_error(field:, error_code: "charge_model_changed")
         end
 
         # Charges::OverrideService cannot switch a charge model and ignores the key, so properties
@@ -153,17 +170,35 @@ module QuoteVersions
             validate_fixed_charge_units(fixed_charge_override, index, fixed_charge_index)
 
             field = plan_field(index, "overrides.fixedCharges.#{fixed_charge_index}.addOnCode")
-            snapshots = snapshot_fixed_charges(plan_item).select do |snapshot|
+            snapshots = snapshot_fixed_charges(plan_item).each_with_index.select do |snapshot, _|
               snapshot.dig("addOn", "code") == fixed_charge_override["addOnCode"]
             end
 
             next add_error(field:, error_code: "fixed_charge_not_found") if snapshots.empty?
             next add_error(field:, error_code: "ambiguous_fixed_charge_override") if snapshots.count > 1
 
-            unless plan.fixed_charges.any? { |fixed_charge| fixed_charge.id == snapshots.first["id"] }
-              add_error(field:, error_code: "fixed_charge_not_found")
-            end
+            snapshot, snapshot_index = snapshots.first
+            fixed_charge = plan.fixed_charges.find { |plan_fixed_charge| plan_fixed_charge.id == snapshot["id"] }
+
+            next add_error(field:, error_code: "fixed_charge_not_found") if fixed_charge.nil?
+
+            validate_snapshot_fixed_charge_model(
+              snapshot,
+              fixed_charge,
+              plan_field(index, "payload.fixedCharges.#{snapshot_index}.chargeModel")
+            )
           end
+        end
+
+        # FixedCharges::OverrideService does refuse a model switch, but Plans::OverrideService never
+        # checks its result and the override carries no model of its own, so the snapshot is the only
+        # place the approved model survives.
+        def validate_snapshot_fixed_charge_model(snapshot, fixed_charge, field)
+          charge_model = snapshot["chargeModel"]
+          return if charge_model.nil?
+          return if charge_model == fixed_charge.charge_model
+
+          add_error(field:, error_code: "fixed_charge_model_changed")
         end
 
         # units is forwarded verbatim to FixedCharges::OverrideService, and FixedCharge validates it
