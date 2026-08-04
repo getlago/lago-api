@@ -177,6 +177,30 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         end
       end
 
+      context "with two entries on the same plan" do
+        let(:billing_items) do
+          {
+            "plans" => [
+              plan_item,
+              {
+                "id" => plan.id,
+                "type" => "plan",
+                "payload" => {"code" => plan.code, "subscriptionExternalId" => "sub_ext_43"},
+                "overrides" => {"invoiceDisplayName" => "Second seat"}
+              }
+            ]
+          }
+        end
+
+        it "does not carry the first negotiated amount over to the second" do
+          expect { execute_service.call }.to change(Subscription, :count).by(2)
+
+          second_plan = customer.subscriptions.find_by(external_id: "sub_ext_43").plan
+          expect(second_plan.invoice_display_name).to eq("Second seat")
+          expect(second_plan.amount_cents).to eq(100_000)
+        end
+      end
+
       context "when the overridden charge is gone from the plan" do
         before { charge.discard! }
 
