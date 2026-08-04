@@ -60,13 +60,26 @@ module QuoteVersions
 
         def validate_plans
           plans.each_with_index do |plan_item, index|
-            unless known_plan_ids.include?(plan_item["id"])
+            plan = known_plans_by_id[plan_item["id"]]
+
+            if plan.nil?
               add_error(field: plan_field(index, "id"), error_code: "plan_not_found")
               next
             end
 
+            validate_plan_currency(plan, index)
             validate_charge_overrides(plan_item, index)
             validate_fixed_charge_overrides(plan_item, index)
+          end
+        end
+
+        # NOTE: overrides carry no plan-level currency, so the plan's own currency is the one
+        # billed: a EUR deal on a USD plan would invoice the customer in USD.
+        def validate_plan_currency(plan, index)
+          return if self.class.currency_list.exclude?(quote_version.currency)
+
+          if plan.amount_currency != quote_version.currency
+            add_error(field: plan_field(index, "id"), error_code: "currencies_does_not_match")
           end
         end
 
@@ -119,7 +132,15 @@ module QuoteVersions
           end
         end
 
+        # The snapshot type is required at approve while the amount checks below follow the live
+        # coupon, so a coupon retyped since the quote was drafted must be flagged rather than
+        # silently followed: it changes the negotiated discount.
         def validate_coupon_snapshot(coupon, coupon_item, index)
+          if coupon_item.dig("payload", "type") != coupon.coupon_type
+            add_error(field: coupon_field(index, "payload.type"), error_code: "coupon_type_does_not_match")
+            return
+          end
+
           if coupon.fixed_amount? && coupon_item.dig("payload", "amountCents").nil?
             add_error(field: coupon_field(index, "payload.amountCents"), error_code: "value_is_mandatory")
           end
@@ -134,8 +155,19 @@ module QuoteVersions
             payload = wallet_credit_item["payload"] || {}
 
             validate_wallet_credit_amounts(payload, index)
+            validate_expiration(payload["expirationAt"], wallet_credit_field(index, "payload.expirationAt"))
             validate_recurring_rules(payload, index)
           end
+        end
+
+        # NOTE: futureness is only guaranteed at approval time. An order scheduled far enough
+        # ahead can still reach execution with a past expiration, which Wallets::ValidateService
+        # rejects then.
+        def validate_expiration(expiration_at, field)
+          return unless scope == :approve
+          return if ::Validators::ExpirationDateValidator.valid?(expiration_at)
+
+          add_error(field:, error_code: "invalid_date")
         end
 
         def validate_wallet_credit_amounts(payload, index)
@@ -162,7 +194,9 @@ module QuoteVersions
           rules.each_with_index do |rule, rule_index|
             validate_rule_trigger(rule, wallet_credit_index, rule_index)
             validate_rule_method(rule, wallet_credit_index, rule_index)
+            validate_rule_grants_target_top_up(rule, wallet_credit_index, rule_index)
             validate_rule_credits(rule, wallet_credit_index, rule_index)
+            validate_expiration(rule["expirationAt"], rule_field(wallet_credit_index, rule_index, "expirationAt"))
           end
         end
 
@@ -203,6 +237,21 @@ module QuoteVersions
             BigDecimal(target) < BigDecimal(rule["thresholdCredits"])
         end
 
+        # Upstream only accepts the flag on a target rule, see
+        # Wallets::RecurringTransactionRules::ValidateService#valid_grants_target_top_up?
+        def validate_rule_grants_target_top_up(rule, wallet_credit_index, rule_index)
+          return if rule["grantsTargetTopUp"].nil?
+          return if rule["method"] == "target"
+
+          add_error(
+            field: rule_field(wallet_credit_index, rule_index, "grantsTargetTopUp"),
+            error_code: "invalid_value"
+          )
+        end
+
+        # NOTE: rule credits are deliberately sign-agnostic, mirroring upstream
+        # Wallets::RecurringTransactionRules::ValidateService#valid_credits?. The wallet-level
+        # amounts above use valid_amount? like Wallets::ValidateService, hence the difference.
         def validate_rule_credits(rule, wallet_credit_index, rule_index)
           %w[paidCredits grantedCredits].each do |key|
             value = rule[key]
@@ -246,21 +295,20 @@ module QuoteVersions
           wallet_credit_field(wallet_credit_index, "payload.recurringTransactionRules.#{rule_index}.#{suffix}")
         end
 
-        def known_plan_ids
-          @known_plan_ids ||= quote_version
+        def known_plans_by_id
+          @known_plans_by_id ||= quote_version
             .organization
             .plans
             .with_discarded
             .where(id: plans.map { |plan_item| plan_item["id"] })
-            .pluck(:id)
-            .to_set
+            .index_by(&:id)
         end
 
         def known_charge_metric_codes
           @known_charge_metric_codes ||= Charge
             .with_discarded
             .joins(:billable_metric)
-            .where(plan_id: known_plan_ids.to_a)
+            .where(plan_id: known_plans_by_id.keys)
             .pluck(:plan_id, "billable_metrics.code")
             .to_set
         end
@@ -269,7 +317,7 @@ module QuoteVersions
           @known_fixed_charge_add_on_codes ||= FixedCharge
             .with_discarded
             .joins(:add_on)
-            .where(plan_id: known_plan_ids.to_a)
+            .where(plan_id: known_plans_by_id.keys)
             .pluck(:plan_id, "add_ons.code")
             .to_set
         end

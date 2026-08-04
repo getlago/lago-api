@@ -226,6 +226,15 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
+    context "when the plan currency differs from the version currency" do
+      let(:plan) { create(:plan, organization:, amount_currency: "USD") }
+
+      it "returns a currencies_does_not_match error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.id": ["currencies_does_not_match"]})
+      end
+    end
+
     context "when the charge override references a metric with no charge on the plan" do
       let(:charge_override) { super().merge("billableMetricCode" => "unknown_metric") }
 
@@ -381,6 +390,17 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
           )
         end
       end
+
+      context "when the coupon was retyped since the snapshot was taken" do
+        let(:coupon) { create(:coupon, organization:, coupon_type: "percentage", percentage_rate: 10) }
+
+        it "returns a coupon_type_does_not_match error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.coupons.0.payload.type": ["coupon_type_does_not_match"]}
+          )
+        end
+      end
     end
 
     context "when a fixed_amount coupon payload has no amountCents at update scope" do
@@ -508,6 +528,75 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
         expect(result.error.messages).to eq(
           {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.paidCredits": ["invalid_value"]}
         )
+      end
+    end
+
+    context "when the recurring rule grants a target top-up without the target method" do
+      let(:recurring_rule) do
+        {"trigger" => "interval", "interval" => "monthly", "method" => "fixed", "grantsTargetTopUp" => true}
+      end
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.grantsTargetTopUp": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when the recurring rule grants a target top-up with the target method" do
+      let(:recurring_rule) do
+        {
+          "trigger" => "interval",
+          "interval" => "monthly",
+          "method" => "target",
+          "targetOngoingBalance" => "500",
+          "grantsTargetTopUp" => true
+        }
+      end
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the recurring rule expirationAt is in the past" do
+      let(:recurring_rule) { super().merge("expirationAt" => 1.day.ago.iso8601) }
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "returns an invalid_date error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.expirationAt": ["invalid_date"]}
+          )
+        end
+      end
+    end
+
+    context "when the wallet credit expirationAt is in the past" do
+      let(:wallet_credit_payload) { super().merge("expirationAt" => 1.day.ago.iso8601) }
+      let(:scope) { :approve }
+
+      it "returns an invalid_date error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.walletCredits.0.payload.expirationAt": ["invalid_date"]}
+        )
+      end
+    end
+
+    context "when the wallet credit expirationAt is in the future" do
+      let(:wallet_credit_payload) { super().merge("expirationAt" => 1.year.from_now.iso8601) }
+      let(:scope) { :approve }
+
+      it "is valid" do
+        expect(validator).to be_valid
       end
     end
 

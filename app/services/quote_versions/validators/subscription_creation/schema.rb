@@ -133,6 +133,10 @@ module QuoteVersions
                               "minLength" => 1,
                               "x-error" => {"type" => "invalid_type", "minLength" => "invalid_value"}
                             },
+                            # NOTE: chargeModel is stored for the execution flow to consume,
+                            # Charges::OverrideService cannot switch models yet. properties is
+                            # deliberately only type-checked: its shape per charge model is
+                            # validated where the override is applied, not here.
                             "chargeModel" => {
                               "type" => %w[string null],
                               "enum" => [
