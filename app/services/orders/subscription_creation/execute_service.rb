@@ -135,7 +135,9 @@ module Orders
         payload = item["payload"] || {}
 
         {
-          external_id: payload["subscriptionExternalId"].presence || SecureRandom.uuid,
+          # localId is the quote line's own id, so a retry after a failed execution reuses the same
+          # external id instead of minting a new one.
+          external_id: payload["subscriptionExternalId"].presence || item["localId"].presence || SecureRandom.uuid,
           name: payload["subscriptionName"],
           billing_time: payload["billingTime"],
           subscription_at: subscription_datetime(payload["startDate"], quote_version.start_date),
