@@ -119,8 +119,7 @@ module Orders
       # Subscriptions::CreateService reuse, upgrade or downgrade it instead of creating one.
       def create_subscriptions
         plan_items.map do |item|
-          plan = plans_by_id[item["id"]]
-          result.not_found_failure!(resource: "plan").raise_if_error! if plan.nil?
+          plan = find_plan!(item["id"])
 
           ::Subscriptions::CreateService.call!(
             customer: order.customer,
@@ -349,13 +348,14 @@ module Orders
         Array(billing_items["walletCredits"])
       end
 
-      def plans_by_id
-        @plans_by_id ||= order
-          .organization
-          .plans
-          .includes(:charges, :fixed_charges)
-          .where(id: plan_items.map { |item| item["id"] })
-          .index_by(&:id)
+      # Subscriptions::CreateService assigns the negotiated amount onto the plan it is given and
+      # Plans::OverrideService dups it, so two items on the same plan get their own instance
+      # instead of inheriting each other's amount.
+      def find_plan!(plan_id)
+        plan = order.organization.plans.includes(:charges, :fixed_charges).find_by(id: plan_id)
+        result.not_found_failure!(resource: "plan").raise_if_error! if plan.nil?
+
+        plan
       end
 
       def coupons_by_id
