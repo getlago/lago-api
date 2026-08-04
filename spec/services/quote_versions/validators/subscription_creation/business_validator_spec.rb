@@ -15,8 +15,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       quote:,
       organization:,
       currency: "EUR",
-      start_date: Date.parse("2026-01-01"),
-      end_date: Date.parse("2026-12-31")
+      start_date: Date.current,
+      end_date: 1.year.from_now.to_date
     )
   end
   let(:plan) { create(:plan, organization:) }
@@ -133,8 +133,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
           quote:,
           organization:,
           currency: nil,
-          start_date: Date.parse("2026-01-01"),
-          end_date: Date.parse("2026-12-31")
+          start_date: Date.current,
+          end_date: 1.year.from_now.to_date
         )
       end
 
@@ -159,8 +159,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
           quote:,
           organization:,
           currency: "DOUBLOON",
-          start_date: Date.parse("2026-01-01"),
-          end_date: Date.parse("2026-12-31")
+          start_date: Date.current,
+          end_date: 1.year.from_now.to_date
         )
       end
 
@@ -212,8 +212,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
           quote:,
           organization:,
           currency: "EUR",
-          start_date: Date.parse("2026-12-31"),
-          end_date: Date.parse("2026-01-01")
+          start_date: 1.year.from_now.to_date,
+          end_date: 1.month.from_now.to_date
         )
       end
 
@@ -230,14 +230,40 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
           quote:,
           organization:,
           currency: "EUR",
-          start_date: Date.parse("2026-01-01"),
-          end_date: Date.parse("2026-01-01")
+          start_date: 1.month.from_now.to_date,
+          end_date: 1.month.from_now.to_date
         )
       end
 
       it "returns an invalid_date_range error at update scope" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq({start_date: ["invalid_date_range"]})
+      end
+    end
+
+    context "when the end date is today" do
+      let(:quote_version) do
+        create(
+          :quote_version,
+          quote:,
+          organization:,
+          currency: "EUR",
+          start_date: 1.month.ago.to_date,
+          end_date: Date.current
+        )
+      end
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "returns an invalid_date error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({end_date: ["invalid_date"]})
+        end
       end
     end
 
@@ -508,17 +534,19 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
     context "when the plan payload endDate is before its startDate" do
       let(:plan_payload) do
-        super().merge("startDate" => "2026-06-01T00:00:00Z", "endDate" => "2026-01-01T00:00:00Z")
+        super().merge("startDate" => 6.months.from_now.iso8601, "endDate" => 3.months.from_now.iso8601)
       end
 
-      it "returns an invalid_date_range error" do
+      it "returns an invalid_date_range error on the end date" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.plans.0.payload.startDate": ["invalid_date_range"]})
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.endDate": ["invalid_date_range"]})
       end
     end
 
     context "when the plan payload dates are date-only" do
-      let(:plan_payload) { super().merge("startDate" => "2026-01-01", "endDate" => "2026-12-31") }
+      let(:plan_payload) do
+        super().merge("startDate" => Date.current.iso8601, "endDate" => 1.year.from_now.to_date.iso8601)
+      end
 
       it "is valid" do
         expect(validator).to be_valid
@@ -527,17 +555,20 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
     context "when the plan payload dates fall on the same day" do
       let(:plan_payload) do
-        super().merge("startDate" => "2026-06-01T08:00:00Z", "endDate" => "2026-06-01T18:00:00Z")
+        super().merge(
+          "startDate" => 6.months.from_now.beginning_of_day.iso8601,
+          "endDate" => 6.months.from_now.end_of_day.iso8601
+        )
       end
 
-      it "returns an invalid_date_range error" do
+      it "returns an invalid_date_range error on the end date" do
         expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.plans.0.payload.startDate": ["invalid_date_range"]})
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.endDate": ["invalid_date_range"]})
       end
     end
 
     context "when the plan payload only overrides the start date, past the quote end date" do
-      let(:plan_payload) { super().merge("startDate" => "2027-01-01T00:00:00Z") }
+      let(:plan_payload) { super().merge("startDate" => 2.years.from_now.iso8601) }
 
       it "returns an invalid_date_range error" do
         expect(validator).not_to be_valid
@@ -546,7 +577,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
     end
 
     context "when the plan payload only overrides the end date, before the quote start date" do
-      let(:plan_payload) { super().merge("endDate" => "2025-12-31T00:00:00Z") }
+      let(:plan_payload) { super().merge("endDate" => 1.day.ago.iso8601) }
 
       it "returns an invalid_date_range error on the end date" do
         expect(validator).not_to be_valid
@@ -554,8 +585,35 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
+    context "when the plan payload endDate is today" do
+      let(:quote_version) do
+        create(
+          :quote_version,
+          quote:,
+          organization:,
+          currency: "EUR",
+          start_date: 1.month.ago.to_date,
+          end_date: 1.year.from_now.to_date
+        )
+      end
+      let(:plan_payload) { super().merge("endDate" => Time.current.iso8601) }
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "returns an invalid_date error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.plans.0.payload.endDate": ["invalid_date"]})
+        end
+      end
+    end
+
     context "when the plan payload only overrides the start date, inside the quote range" do
-      let(:plan_payload) { super().merge("startDate" => "2026-06-01T00:00:00Z") }
+      let(:plan_payload) { super().merge("startDate" => 6.months.from_now.iso8601) }
 
       it "is valid" do
         expect(validator).to be_valid
@@ -564,7 +622,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
     context "when the quote carries no dates and the plan overrides one" do
       let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
-      let(:plan_payload) { super().merge("startDate" => "2026-06-01T00:00:00Z") }
+      let(:plan_payload) { super().merge("startDate" => 6.months.from_now.iso8601) }
 
       it "is valid" do
         expect(validator).to be_valid
