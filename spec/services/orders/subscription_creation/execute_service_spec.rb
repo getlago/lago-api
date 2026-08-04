@@ -122,10 +122,20 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
       context "when the payload carries no external id" do
         let(:plan_payload) { super().except("subscriptionExternalId") }
 
-        it "generates one" do
+        it "falls back to the quote line id" do
           execute_service.call
 
-          expect(customer.subscriptions.sole.external_id).to be_present
+          expect(customer.subscriptions.sole.external_id).to eq("3d08b2df-4e4c-4d58-b415-a525c1663735")
+        end
+
+        context "when the item carries no local id either" do
+          let(:plan_item) { super().except("localId") }
+
+          it "generates one" do
+            execute_service.call
+
+            expect(customer.subscriptions.sole.external_id).to be_present
+          end
         end
       end
 
