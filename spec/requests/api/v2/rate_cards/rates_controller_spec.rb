@@ -12,7 +12,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
     let(:create_params) do
       {
         code: "launch_price",
-        effective_from: 1.month.from_now.iso8601,
+        effective_from: 1.month.from_now.beginning_of_day.iso8601,
         rate_model: "standard",
         rate_properties: {amount: "12"},
         billing_interval_unit: "month"
@@ -44,7 +44,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
   describe "PUT /api/v2/rate_cards/:rate_card_id/rates/:code" do
     subject { put_with_token(organization, "/api/v2/rate_cards/#{rate_card.code}/rates/#{rate.code}", {rate: update_params}) }
 
-    let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now) }
+    let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day) }
     let(:update_params) { {min_amount_cents: 500} }
 
     it "updates the pending rate" do
@@ -101,7 +101,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
     subject { delete_with_token(organization, "/api/v2/rate_cards/#{rate_card.code}/rates/#{rate.code}") }
 
     context "when the rate is pending" do
-      let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now) }
+      let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day) }
 
       it "deletes the rate" do
         expect { subject }.to change { rate.reload.discarded? }.from(false).to(true)
@@ -110,7 +110,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
     end
 
     context "when the rate is active" do
-      let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.day.ago) }
+      let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.day.ago.beginning_of_day) }
 
       it "returns a validation error" do
         subject
