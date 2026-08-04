@@ -493,7 +493,7 @@ DROP INDEX IF EXISTS public.index_rate_cards_on_product_filter_id;
 DROP INDEX IF EXISTS public.index_rate_cards_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_rate_cards_on_deleted_at;
-DROP INDEX IF EXISTS public.index_rate_card_rates_on_rate_card_id_and_effective_datetime;
+DROP INDEX IF EXISTS public.index_rate_card_rates_on_rate_card_id_and_effective_from;
 DROP INDEX IF EXISTS public.index_rate_card_rates_on_rate_card_id_and_code;
 DROP INDEX IF EXISTS public.index_rate_card_rates_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_rate_card_rates_on_organization_id;
@@ -5398,7 +5398,7 @@ CREATE TABLE public.rate_card_rates (
     organization_id uuid NOT NULL,
     rate_card_id uuid NOT NULL,
     code character varying NOT NULL,
-    effective_datetime timestamp(6) without time zone NOT NULL,
+    effective_from timestamp(6) without time zone NOT NULL,
     rate_model public.rate_card_rate_model NOT NULL,
     rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
     min_amount_cents bigint DEFAULT 0 NOT NULL,
@@ -10498,10 +10498,10 @@ CREATE UNIQUE INDEX index_rate_card_rates_on_rate_card_id_and_code ON public.rat
 
 
 --
--- Name: index_rate_card_rates_on_rate_card_id_and_effective_datetime; Type: INDEX; Schema: public; Owner: -
+-- Name: index_rate_card_rates_on_rate_card_id_and_effective_from; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_rate_card_rates_on_rate_card_id_and_effective_datetime ON public.rate_card_rates USING btree (rate_card_id, effective_datetime) WHERE (deleted_at IS NULL);
+CREATE UNIQUE INDEX index_rate_card_rates_on_rate_card_id_and_effective_from ON public.rate_card_rates USING btree (rate_card_id, effective_from) WHERE (deleted_at IS NULL);
 
 
 --

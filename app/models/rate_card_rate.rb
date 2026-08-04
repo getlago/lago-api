@@ -44,38 +44,38 @@ class RateCardRate < ApplicationRecord
   validates :code, presence: true
   validates :code, uniqueness: {scope: :rate_card_id, conditions: -> { where(deleted_at: nil) }}
   validates :billing_interval_unit, presence: true
-  validates :effective_datetime, presence: true
+  validates :effective_from, presence: true
   validates :rate_model, presence: true
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :billing_interval_count, numericality: {greater_than_or_equal_to: 1}
 
-  validate :validate_effective_datetime_is_appended
+  validate :validate_effective_from_is_appended
   validate :validate_pricing_unit_conversion_rate
 
   default_scope -> { kept }
 
   private
 
-  # Append-only timeline: a new rate's effective_datetime must be strictly greater
+  # Append-only timeline: a new rate's effective_from must be strictly greater
   # than the latest existing rate on the same card. No insertion between rates.
   # The past is immutable, the future is editable: a rate can land anywhere in
   # the pending sequence, but never at or before the rate that already priced
   # elapsed time (the active one).
-  def validate_effective_datetime_is_appended
-    return if effective_datetime.blank?
+  def validate_effective_from_is_appended
+    return if effective_from.blank?
     return if rate_card.blank?
 
     others = rate_card.rates.where.not(id:)
-    if others.where(effective_datetime:).exists?
-      errors.add(:effective_datetime, :value_already_exist)
+    if others.where(effective_from:).exists?
+      errors.add(:effective_from, :value_already_exist)
       return
     end
 
-    active_boundary = others.where(effective_datetime: ..Time.current).maximum(:effective_datetime)
+    active_boundary = others.where(effective_from: ..Time.current).maximum(:effective_from)
     return if active_boundary.blank?
-    return if effective_datetime > active_boundary
+    return if effective_from > active_boundary
 
-    errors.add(:effective_datetime, :must_be_after_active_rate)
+    errors.add(:effective_from, :must_be_after_active_rate)
   end
 
   def validate_pricing_unit_conversion_rate
@@ -97,7 +97,7 @@ end
 #  billing_interval_unit                :enum             not null
 #  code                                 :string           not null
 #  deleted_at                           :datetime
-#  effective_datetime                   :datetime         not null
+#  effective_from                       :datetime         not null
 #  min_amount_cents                     :bigint           default(0), not null
 #  rate_model                           :enum             not null
 #  rate_properties                      :jsonb            not null
@@ -108,11 +108,11 @@ end
 #
 # Indexes
 #
-#  index_rate_card_rates_on_deleted_at                           (deleted_at)
-#  index_rate_card_rates_on_organization_id                      (organization_id)
-#  index_rate_card_rates_on_rate_card_id                         (rate_card_id)
-#  index_rate_card_rates_on_rate_card_id_and_code                (rate_card_id,code) UNIQUE WHERE (deleted_at IS NULL)
-#  index_rate_card_rates_on_rate_card_id_and_effective_datetime  (rate_card_id,effective_datetime) UNIQUE WHERE (deleted_at IS NULL)
+#  index_rate_card_rates_on_deleted_at                       (deleted_at)
+#  index_rate_card_rates_on_organization_id                  (organization_id)
+#  index_rate_card_rates_on_rate_card_id                     (rate_card_id)
+#  index_rate_card_rates_on_rate_card_id_and_code            (rate_card_id,code) UNIQUE WHERE (deleted_at IS NULL)
+#  index_rate_card_rates_on_rate_card_id_and_effective_from  (rate_card_id,effective_from) UNIQUE WHERE (deleted_at IS NULL)
 #
 # Foreign Keys
 #

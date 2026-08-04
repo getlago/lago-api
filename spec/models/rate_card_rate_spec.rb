@@ -38,7 +38,7 @@ RSpec.describe RateCardRate do
   end
 
   describe "validations" do
-    it { is_expected.to validate_presence_of(:effective_datetime) }
+    it { is_expected.to validate_presence_of(:effective_from) }
     it { is_expected.to validate_presence_of(:rate_model) }
     it { is_expected.to validate_presence_of(:billing_interval_unit) }
 
@@ -54,7 +54,7 @@ RSpec.describe RateCardRate do
           :rate_card_rate,
           rate_card: rate.rate_card,
           organization: rate.organization,
-          effective_datetime: 1.month.from_now,
+          effective_from: 1.month.from_now,
           code: "launch_price"
         )
         duplicate.valid?
@@ -63,36 +63,36 @@ RSpec.describe RateCardRate do
       end
     end
 
-    describe "effective_datetime placement" do
+    describe "effective_from placement" do
       let(:rate_card) { create(:rate_card) }
 
       around { |example| travel_to(Time.zone.parse("2026-06-15")) { example.run } }
 
       before do
-        create(:rate_card_rate, rate_card:, effective_datetime: Time.zone.parse("2026-01-01"))
-        create(:rate_card_rate, rate_card:, effective_datetime: Time.zone.parse("2026-09-01"))
+        create(:rate_card_rate, rate_card:, effective_from: Time.zone.parse("2026-01-01"))
+        create(:rate_card_rate, rate_card:, effective_from: Time.zone.parse("2026-09-01"))
       end
 
       it "allows a rate between the active rate and a pending rate" do
-        rate = build(:rate_card_rate, rate_card:, effective_datetime: Time.zone.parse("2026-07-01"))
+        rate = build(:rate_card_rate, rate_card:, effective_from: Time.zone.parse("2026-07-01"))
         expect(rate).to be_valid
       end
 
       it "allows a rate after the latest pending rate" do
-        rate = build(:rate_card_rate, rate_card:, effective_datetime: Time.zone.parse("2026-10-01"))
+        rate = build(:rate_card_rate, rate_card:, effective_from: Time.zone.parse("2026-10-01"))
         expect(rate).to be_valid
       end
 
       it "rejects a rate at or before the active rate" do
-        rate = build(:rate_card_rate, rate_card:, effective_datetime: Time.zone.parse("2025-12-01"))
+        rate = build(:rate_card_rate, rate_card:, effective_from: Time.zone.parse("2025-12-01"))
         rate.valid?
-        expect(rate.errors.added?(:effective_datetime, :must_be_after_active_rate)).to be(true)
+        expect(rate.errors.added?(:effective_from, :must_be_after_active_rate)).to be(true)
       end
 
       it "rejects a rate sharing an existing rate timestamp" do
-        rate = build(:rate_card_rate, rate_card:, effective_datetime: Time.zone.parse("2026-09-01"))
+        rate = build(:rate_card_rate, rate_card:, effective_from: Time.zone.parse("2026-09-01"))
         rate.valid?
-        expect(rate.errors.added?(:effective_datetime, :value_already_exist)).to be(true)
+        expect(rate.errors.added?(:effective_from, :value_already_exist)).to be(true)
       end
     end
 

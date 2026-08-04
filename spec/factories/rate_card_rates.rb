@@ -5,7 +5,7 @@ FactoryBot.define do
     organization
     rate_card { association(:rate_card, organization:) }
     sequence(:code) { |n| "rate#{n}" }
-    effective_datetime { Time.current }
+    effective_from { Time.current }
     rate_model { "standard" }
     rate_properties { {"amount" => "10"} }
     min_amount_cents { 0 }

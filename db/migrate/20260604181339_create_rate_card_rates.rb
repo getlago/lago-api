@@ -11,7 +11,7 @@ class CreateRateCardRates < ActiveRecord::Migration[8.0]
 
       # Stable caller-provided identifier within the card.
       t.string :code, null: false
-      t.datetime :effective_datetime, null: false
+      t.datetime :effective_from, null: false
 
       t.enum :rate_model, enum_type: :rate_card_rate_model, null: false
       t.jsonb :rate_properties, null: false, default: {}
@@ -27,10 +27,10 @@ class CreateRateCardRates < ActiveRecord::Migration[8.0]
       t.timestamps
 
       t.index :deleted_at
-      t.index [:rate_card_id, :effective_datetime],
+      t.index [:rate_card_id, :effective_from],
         unique: true,
         where: "deleted_at IS NULL",
-        name: "index_rate_card_rates_on_rate_card_id_and_effective_datetime"
+        name: "index_rate_card_rates_on_rate_card_id_and_effective_from"
       t.index [:rate_card_id, :code],
         unique: true,
         where: "deleted_at IS NULL",
