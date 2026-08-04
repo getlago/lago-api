@@ -623,6 +623,15 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
       end
     end
 
+    context "when the wallet credit currency is not a known currency" do
+      let(:wallet_credit_payload) { super().merge("currency" => "EURO") }
+
+      it "returns an invalid_currency error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.walletCredits.0.payload.currency": ["invalid_currency"]})
+      end
+    end
+
     context "when the wallet credit expirationAt is not an ISO 8601 date-time" do
       let(:wallet_credit_payload) { super().merge("expirationAt" => "not-a-date") }
 

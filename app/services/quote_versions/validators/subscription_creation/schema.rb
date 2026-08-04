@@ -328,6 +328,11 @@ module QuoteVersions
                         "type" => %w[string null],
                         "x-error" => {"type" => "invalid_type"}
                       },
+                      "currency" => {
+                        "type" => %w[string null],
+                        "enum" => CURRENCIES + [nil],
+                        "x-error" => {"type" => "invalid_type", "enum" => "invalid_currency"}
+                      },
                       "expirationAt" => {
                         "type" => %w[string null],
                         "format" => "date-time",

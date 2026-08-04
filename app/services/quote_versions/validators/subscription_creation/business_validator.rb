@@ -146,8 +146,22 @@ module QuoteVersions
             payload = wallet_credit_item["payload"] || {}
 
             validate_wallet_credit_amounts(payload, index)
+            validate_wallet_credit_currency(payload, index)
             validate_expiration(payload["expirationAt"], wallet_credit_field(index, "payload.expirationAt"))
             validate_recurring_rules(payload, index)
+          end
+        end
+
+        # Unless the multi_currency flag is on, Wallets::CreateService forces the customer currency
+        # onto the wallet, so a credit quoted in another currency is either silently ignored or
+        # funds a wallet the customer never agreed to.
+        def validate_wallet_credit_currency(payload, index)
+          currency = payload["currency"]
+          return if currency.nil?
+          return if self.class.currency_list.exclude?(quote_version.currency)
+
+          if currency != quote_version.currency
+            add_error(field: wallet_credit_field(index, "payload.currency"), error_code: "currencies_does_not_match")
           end
         end
 

@@ -76,6 +76,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       "paidCredits" => "100.0",
       "grantedCredits" => "10.0",
       "rateAmount" => "1.0",
+      "currency" => "EUR",
       "recurringTransactionRules" => [recurring_rule]
     }
   end
@@ -528,6 +529,25 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
         expect(result.error.messages).to eq(
           {"billing_items.walletCredits.0.payload.recurringTransactionRules.0.paidCredits": ["invalid_value"]}
         )
+      end
+    end
+
+    context "when the wallet credit currency differs from the version currency" do
+      let(:wallet_credit_payload) { super().merge("currency" => "USD") }
+
+      it "returns a currencies_does_not_match error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.walletCredits.0.payload.currency": ["currencies_does_not_match"]}
+        )
+      end
+    end
+
+    context "when the wallet credit carries no currency" do
+      let(:wallet_credit_payload) { super().except("currency") }
+
+      it "is valid" do
+        expect(validator).to be_valid
       end
     end
 
