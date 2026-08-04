@@ -326,6 +326,24 @@ RSpec.describe DataExports::Csv::InvoiceFees do
           expect(exported_period).to eq(%w[2026-06-22 2026-07-21])
         end
       end
+
+      context "with a one-off add-on fee" do
+        let(:advance_fee) do
+          create(:add_on_fee,
+            invoice:,
+            organization: customer.organization,
+            properties: {
+              "from_datetime" => "2026-06-22T00:00:00Z",
+              "to_datetime" => "2026-07-21T23:59:59Z"
+            })
+        end
+
+        before { advance_fee }
+
+        it "exports the fee's stored period" do
+          expect(exported_period).to eq(%w[2026-06-22 2026-07-21])
+        end
+      end
     end
   end
 end

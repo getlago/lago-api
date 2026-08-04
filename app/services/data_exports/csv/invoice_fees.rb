@@ -74,7 +74,7 @@ module DataExports
             serialized_fee = fee_serializer_klass.new(fee).serialize
             invoice_subscription = invoice_subscriptions[fee.subscription_id]
 
-            billing_period = if invoice_subscription
+            billing_period = if invoice_subscription || fee.add_on?
               DataExports::Csv::ResolveFeeBillingPeriodService.call!(fee:, invoice_subscription:)
             end
 
