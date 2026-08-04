@@ -115,7 +115,7 @@ module Api
           :wallet_targetable,
           rates: [
             :code,
-            :effective_datetime,
+            :effective_from,
             :rate_model,
             :min_amount_cents,
             :billing_interval_count,
