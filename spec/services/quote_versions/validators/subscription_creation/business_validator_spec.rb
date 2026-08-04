@@ -194,8 +194,9 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
         )
       end
 
-      it "is valid" do
-        expect(validator).to be_valid
+      it "returns an invalid_date_range error at update scope" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({start_date: ["invalid_date_range"]})
       end
     end
 

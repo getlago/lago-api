@@ -44,7 +44,10 @@ module QuoteVersions
             add_error(field: :end_date, error_code: "value_is_mandatory") if end_date.blank?
           end
 
-          if start_date.present? && end_date.present? && end_date < start_date
+          # Subscriptions::ValidateService requires the ending date to be strictly after the
+          # subscription date, and these are the dates a plan without its own falls back to, so a
+          # zero-length range cannot produce a subscription.
+          if start_date.present? && end_date.present? && end_date <= start_date
             add_error(field: :start_date, error_code: "invalid_date_range")
           end
         end
