@@ -50,6 +50,22 @@ module QuoteVersions
           if start_date.present? && end_date.present? && end_date <= start_date
             add_error(field: :start_date, error_code: "invalid_date_range")
           end
+
+          validate_future_end_date(end_date, :end_date)
+        end
+
+        # Subscriptions::ValidateService also requires the ending date to be after today, and the
+        # quote pair is what a plan without its own dates falls back to. NOTE: futureness is only
+        # guaranteed at approval time. An order scheduled far enough ahead can still reach execution
+        # with a past ending date, which that service rejects then.
+        def validate_future_end_date(value, field)
+          return unless scope == :approve
+
+          end_date = Utils::Datetime.parse_iso8601(value)&.to_date
+          return if end_date.nil?
+          return if end_date > Time.current.to_date
+
+          add_error(field:, error_code: "invalid_date")
         end
 
         def validate_plans
@@ -177,13 +193,17 @@ module QuoteVersions
           # A plan carrying neither date bills the quote pair, which validate_dates already checked.
           return if start_date.nil? && end_date.nil?
 
+          # The quote's own ending date is checked by validate_dates, so only a payload one is
+          # reported here.
+          validate_future_end_date(end_date, plan_field(index, "payload.endDate"))
+
           effective_start = effective_date(start_date, quote_version.start_date)
           effective_end = effective_date(end_date, quote_version.end_date)
           return if effective_start.nil? || effective_end.nil?
           return if effective_end > effective_start
 
           add_error(
-            field: plan_field(index, start_date.nil? ? "payload.endDate" : "payload.startDate"),
+            field: plan_field(index, end_date.nil? ? "payload.startDate" : "payload.endDate"),
             error_code: "invalid_date_range"
           )
         end
