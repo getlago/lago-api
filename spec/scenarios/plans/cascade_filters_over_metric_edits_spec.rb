@@ -134,6 +134,7 @@ RSpec.describe "Cascade filters over metric edits", :premium do
     #   {type: [pages]}            @0.5   {type: [pages]}              @0.5
     keep_metric_values(models - %w[m1 m2])
 
+    # note: only elements of {type: [pages]} are counted
     expect(predicates(parent_charge).count(pages)).to eq(3)
     expect(predicates(child_charge)).to eq(predicates(parent_charge))
 
@@ -367,6 +368,309 @@ RSpec.describe "Cascade filters over metric edits", :premium do
 
     expect(predicates(parent_charge)).to eq([m5])
     expect(predicates(child_charge)).to eq([m5])
+  end
+
+  # A full model x region matrix, so every metric edit collapses filters two at a time —
+  # once per region — instead of one at a time. Prices encode their origin: the first digit
+  # is the model, the second the region (1 = EU, 2 = US), so `21` is {model2, EU}. That
+  # makes it readable which row a collapsed predicate came from.
+  describe "a model x region matrix" do
+    let(:matrix_metric) { create(:sum_billable_metric, organization:, code: "api_calls", field_name: "value") }
+    let(:matrix_models) { (1..5).map { "model#{it}" } }
+
+    let(:eu) { {"region" => %w[EU]} }
+    let(:us) { {"region" => %w[US]} }
+
+    before do
+      create(:billable_metric_filter, billable_metric: matrix_metric, key: "region", values: %w[EU US])
+      create(:billable_metric_filter, billable_metric: matrix_metric, key: "model", values: matrix_models)
+    end
+
+    def combo(model, region)
+      {"region" => [region], "model" => [model]}
+    end
+
+    def combo_filter(model, region, amount)
+      {
+        invoice_display_name: "#{model} #{region}",
+        properties: {amount:},
+        values: {region: [region], model: [model]}
+      }
+    end
+
+    def region_filter(region, amount)
+      {invoice_display_name: "Any #{region}", properties: {amount:}, values: {region: [region]}}
+    end
+
+    def matrix_plan_payload(filters, charge_id: nil, cascade: false)
+      charge = {
+        billable_metric_id: matrix_metric.id,
+        charge_model: "standard",
+        code: "calls_charge",
+        pay_in_advance: false,
+        properties: {amount: "0.01"},
+        filters:
+      }
+      charge[:id] = charge_id if charge_id
+
+      payload = {
+        name: "Calls Plan", code: "calls_plan", interval: "monthly", amount_cents: 0,
+        amount_currency: "EUR", pay_in_advance: false,
+        charges: [charge]
+      }
+      payload[:cascade_updates] = true if cascade
+      payload
+    end
+
+    def keep_matrix_models(kept)
+      update_metric(matrix_metric, {
+        filters: [{key: "region", values: %w[EU US]}, {key: "model", values: kept}]
+      })
+    end
+
+    def tally(charge)
+      charge.filters.reload.map(&:to_h).tally
+    end
+
+    def filter_priced(charge, predicate, amount)
+      charge.filters.reload.find { it.to_h == predicate && it.properties["amount"] == amount }
+    end
+
+    # Every model x region combination priced individually, then overridden for a customer
+    def setup_matrix_with_override
+      create_plan(matrix_plan_payload(
+        matrix_models.each_with_index.flat_map do |model, index|
+          [combo_filter(model, "EU", "#{index + 1}1"), combo_filter(model, "US", "#{index + 1}2")]
+        end
+      ))
+
+      parent_plan = organization.plans.find_by(code: "calls_plan")
+      parent_charge = parent_plan.charges.find_by(code: "calls_charge")
+
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: "sub_calls",
+        plan_code: "calls_plan"
+      })
+
+      subscription = organization.subscriptions.find_by(external_id: "sub_calls")
+      update_subscription_charge(subscription, "calls_charge", {properties: {amount: "0.01"}})
+
+      subscription.reload
+      {parent_plan:, parent_charge:, subscription:,
+       child_charge: subscription.plan.charges.find_by(code: "calls_charge")}
+    end
+
+    # Three metric edits, each collapsing one model into both region predicates, then a
+    # single plan edit that drops, reprices and adds in one request.
+    it "carries the matrix through three metric edits and one plan edit" do
+      ctx = setup_matrix_with_override
+      parent_charge = ctx[:parent_charge]
+      child_charge = ctx[:child_charge]
+
+      # STEP 0 — ten filters, one per combination, deep-copied onto the override.
+      #
+      #   {region: [EU], model: [model1]} @11   {region: [US], model: [model1]} @12
+      #   {region: [EU], model: [model2]} @21   {region: [US], model: [model2]} @22
+      #   {region: [EU], model: [model3]} @31   {region: [US], model: [model3]} @32
+      #   {region: [EU], model: [model4]} @41   {region: [US], model: [model4]} @42
+      #   {region: [EU], model: [model5]} @51   {region: [US], model: [model5]} @52
+      expect(tally(parent_charge).values).to all(eq(1))
+      expect(tally(parent_charge).size).to eq(10)
+      expect(tally(child_charge)).to eq(tally(parent_charge))
+
+      # STEP 1 — metric edit dropping model1 and allowing model6. The two model1 filters
+      # lose the `model` key and land on the bare region predicates, keeping their prices.
+      # model6 becomes allowed but creates nothing on its own.
+      #
+      #   {region: [EU], model: [model1]} @11  ->  {region: [EU]} @11
+      #   {region: [US], model: [model1]} @12  ->  {region: [US]} @12
+      #   everything else unchanged
+      keep_matrix_models(matrix_models - %w[model1] + %w[model6])
+
+      expect(tally(parent_charge)[eu]).to eq(1)
+      expect(tally(parent_charge)[us]).to eq(1)
+      expect(tally(parent_charge).values.sum).to eq(10)
+      expect(tally(child_charge)).to eq(tally(parent_charge))
+
+      # STEP 2 — metric edit dropping model2, so a second filter joins each region
+      #
+      #   {region: [EU], model: [model2]} @21  ->  {region: [EU]} @21
+      #   {region: [US], model: [model2]} @22  ->  {region: [US]} @22
+      keep_matrix_models(%w[model3 model4 model5 model6])
+
+      expect(tally(parent_charge)[eu]).to eq(2)
+      expect(tally(parent_charge)[us]).to eq(2)
+      expect(tally(child_charge)).to eq(tally(parent_charge))
+
+      # STEP 3 — metric edit dropping model3, so a third joins each region
+      #
+      #   {region: [EU], model: [model3]} @31  ->  {region: [EU]} @31
+      #   {region: [US], model: [model3]} @32  ->  {region: [US]} @32
+      #
+      #   {region: [EU]} @11 @21 @31            {region: [US]} @12 @22 @32
+      #   {region: [EU], model: [model4]} @41   {region: [US], model: [model4]} @42
+      #   {region: [EU], model: [model5]} @51   {region: [US], model: [model5]} @52
+      keep_matrix_models(%w[model4 model5 model6])
+
+      expect(tally(parent_charge)[eu]).to eq(3)
+      expect(tally(parent_charge)[us]).to eq(3)
+      expect(tally(parent_charge).values.sum).to eq(10)
+      expect(tally(child_charge)).to eq(tally(parent_charge))
+
+      # STEP 4 — one plan edit stating the end state. A predicate can only be named once
+      # in a payload, so the three filters on each region collapse to the one kept here:
+      # EU stays at 11, US is repriced to 99, model4 and model5 are untouched, and model6
+      # is added for both regions. The cascade is what brings the override in line.
+      #
+      #   parent and child, before        ->  parent and child, after
+      #   {region: [EU]} @11 @21 @31          {region: [EU]} @11
+      #   {region: [US]} @12 @22 @32          {region: [US]} @99
+      #   {region: [EU], model: [model4]} @41 {region: [EU], model: [model4]} @41
+      #   {region: [US], model: [model4]} @42 {region: [US], model: [model4]} @42
+      #   {region: [EU], model: [model5]} @51 {region: [EU], model: [model5]} @51
+      #   {region: [US], model: [model5]} @52 {region: [US], model: [model5]} @52
+      #                                       {region: [EU], model: [model6]} @61  (added)
+      #                                       {region: [US], model: [model6]} @62  (added)
+      update_plan(ctx[:parent_plan], matrix_plan_payload([
+        region_filter("EU", "11"),
+        region_filter("US", "99"),
+        combo_filter("model4", "EU", "41"),
+        combo_filter("model4", "US", "42"),
+        combo_filter("model5", "EU", "51"),
+        combo_filter("model5", "US", "52"),
+        combo_filter("model6", "EU", "61"),
+        combo_filter("model6", "US", "62")
+      ], charge_id: parent_charge.id, cascade: true))
+
+      expected = {
+        eu => 1, us => 1,
+        combo("model4", "EU") => 1, combo("model4", "US") => 1,
+        combo("model5", "EU") => 1, combo("model5", "US") => 1,
+        combo("model6", "EU") => 1, combo("model6", "US") => 1
+      }
+
+      expect(tally(parent_charge)).to eq(expected)
+      expect(tally(child_charge)).to eq(expected)
+
+      expect(prices_of(parent_charge, us)).to eq(%w[99])
+      expect(prices_of(child_charge, us)).to eq(%w[99])
+      expect(prices_of(child_charge, eu)).to eq(%w[11])
+      expect(prices_of(child_charge, combo("model6", "EU"))).to eq(%w[61])
+      expect(prices_of(child_charge, combo("model6", "US"))).to eq(%w[62])
+    end
+
+    # The plan-level payload names a predicate once, so it cannot say "drop one of the
+    # three filters on {region: [EU]} and keep the other two". The filter endpoints address
+    # a filter by id and can. A cascade job only carries a predicate, so each of the three
+    # requests below is its own example: they fail independently, and a failure on the
+    # delete does not hide what the reprice or the create does.
+    #
+    # After the three metric edits both sides hold:
+    #
+    #   {region: [EU]} @11 @21 @31            {region: [US]} @12 @22 @32
+    #   {region: [EU], model: [model4]} @41   {region: [US], model: [model4]} @42
+    #   {region: [EU], model: [model5]} @51   {region: [US], model: [model5]} @52
+    def collapse_to_three_per_region
+      ctx = setup_matrix_with_override
+
+      keep_matrix_models(matrix_models - %w[model1] + %w[model6])
+      keep_matrix_models(%w[model3 model4 model5 model6])
+      keep_matrix_models(%w[model4 model5 model6])
+
+      expect(tally(ctx[:parent_charge])[eu]).to eq(3)
+      expect(tally(ctx[:parent_charge])[us]).to eq(3)
+      expect(tally(ctx[:child_charge])).to eq(tally(ctx[:parent_charge]))
+
+      ctx
+    end
+
+    # Deleting one filter of a collapsed group must leave the other two, on both sides. The
+    # job can only name {region: [EU]}, so a cascade that discards every child filter on the
+    # predicate takes the customer's other two with it.
+    it "deletes only the targeted filter of a collapsed group" do
+      ctx = collapse_to_three_per_region
+      parent_charge = ctx[:parent_charge]
+      child_charge = ctx[:child_charge]
+
+      # REQUEST 1 — delete the filter that used to be {model3, EU}, the one priced 31.
+      #
+      #   parent, before: {region: [EU]} @11 @21 @31
+      #          after:   {region: [EU]} @11 @21
+      #   child,  before: {region: [EU]} @11 @21 @31
+      #          after:   {region: [EU]} @11 @21
+      delete_plan_charge_filter(
+        ctx[:parent_plan], parent_charge.code, filter_priced(parent_charge, eu, "31").id,
+        {filter: {cascade_updates: true}}
+      )
+
+      expect(tally(parent_charge)[eu]).to eq(2)
+      expect(prices_of(parent_charge, eu).sort).to eq(%w[11 21])
+
+      expect(tally(child_charge)[eu]).to eq(2)
+      expect(prices_of(child_charge, eu).sort).to eq(%w[11 21])
+
+      # The US side was not touched by this request
+      expect(tally(child_charge)[us]).to eq(3)
+    end
+
+    # Repricing one filter of a collapsed group must leave the other two at their own
+    # prices. `update_child_filters` keeps one match and discards the rest, which is right
+    # when the plan collapsed the group itself and wrong when the plan still holds three.
+    it "reprices only the targeted filter of a collapsed group" do
+      ctx = collapse_to_three_per_region
+      parent_charge = ctx[:parent_charge]
+      child_charge = ctx[:child_charge]
+
+      # REQUEST 2 — reprice the filter that used to be {model2, US}, priced 22, to 99.
+      #
+      #   parent, before: {region: [US]} @12 @22 @32
+      #          after:   {region: [US]} @12 @99 @32
+      #   child,  before: {region: [US]} @12 @22 @32
+      #          after:   {region: [US]} @12 @99 @32
+      update_plan_charge_filter(
+        ctx[:parent_plan], parent_charge.code, filter_priced(parent_charge, us, "22").id,
+        {properties: {amount: "99"}, cascade_updates: true}
+      )
+
+      expect(tally(parent_charge)[us]).to eq(3)
+      expect(prices_of(parent_charge, us).sort).to eq(%w[12 32 99])
+
+      expect(tally(child_charge)[us]).to eq(3)
+      expect(prices_of(child_charge, us).sort).to eq(%w[12 32 99])
+
+      # The EU side was not touched by this request
+      expect(tally(child_charge)[eu]).to eq(3)
+    end
+
+    # model6 was allowed back by the first metric edit, so filters for it can be created.
+    # This one does not depend on the collapsed group being handled correctly.
+    it "creates filters for a value the metric allowed back" do
+      ctx = collapse_to_three_per_region
+      parent_charge = ctx[:parent_charge]
+      child_charge = ctx[:child_charge]
+
+      # REQUEST 3 and 4
+      #
+      #   parent and child, after: {region: [EU], model: [model6]} @61
+      #                            {region: [US], model: [model6]} @62
+      create_plan_charge_filter(ctx[:parent_plan], parent_charge.code,
+        combo_filter("model6", "EU", "61").merge(cascade_updates: true))
+      create_plan_charge_filter(ctx[:parent_plan], parent_charge.code,
+        combo_filter("model6", "US", "62").merge(cascade_updates: true))
+
+      expect(tally(parent_charge)[combo("model6", "EU")]).to eq(1)
+      expect(tally(parent_charge)[combo("model6", "US")]).to eq(1)
+
+      expect(tally(child_charge)[combo("model6", "EU")]).to eq(1)
+      expect(tally(child_charge)[combo("model6", "US")]).to eq(1)
+      expect(prices_of(child_charge, combo("model6", "EU"))).to eq(%w[61])
+      expect(prices_of(child_charge, combo("model6", "US"))).to eq(%w[62])
+
+      # Creating a filter must not disturb the collapsed groups
+      expect(tally(child_charge)[eu]).to eq(3)
+      expect(tally(child_charge)[us]).to eq(3)
+    end
   end
 
   # CascadeService targets children whose plan has an active or pending subscription
