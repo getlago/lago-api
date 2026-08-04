@@ -77,6 +77,47 @@ RSpec.describe Mutations::Admin::BatchRollback do
     end
   end
 
+  context "when the batch contains an already rolled back log" do
+    let(:other_toggle_log) do
+      create(
+        :cs_admin_audit_log,
+        actor_user: admin_user,
+        organization:,
+        action: :toggle_on,
+        feature_type: :feature_flag,
+        feature_key: "multi_currency",
+        before_value: false,
+        after_value: true,
+        batch_id:
+      )
+    end
+
+    before do
+      organization.enable_feature_flag!("multi_currency")
+
+      create(
+        :cs_admin_audit_log,
+        actor_user: admin_user,
+        organization:,
+        action: :rollback,
+        feature_type: :premium_integration,
+        feature_key: "okta",
+        rollback_of: toggle_log,
+        batch_id:
+      )
+    end
+
+    it "skips it and rolls back the remaining logs" do
+      other_toggle_log
+
+      result = rollback
+
+      logs = result["data"]["adminBatchRollback"]
+      expect(logs.map { |log| log["rollbackOfId"] }).to eq([other_toggle_log.id])
+      expect(CsAdminAuditLog.where(rollback_of: toggle_log).count).to eq(1)
+    end
+  end
+
   context "when one of the rollbacks fails" do
     let(:other_organization) { create(:organization, premium_integrations: ["netsuite"]) }
 

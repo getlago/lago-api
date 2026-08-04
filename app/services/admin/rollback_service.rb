@@ -20,6 +20,13 @@ module Admin
         )
       end
 
+      if audit_log.rolled_back?
+        return result.single_validation_failure!(
+          error_code: "already_rolled_back",
+          field: :audit_log
+        )
+      end
+
       organization = audit_log.organization
       reversed_enabled = !audit_log.after_value
       current_value = currently_enabled?(organization)
