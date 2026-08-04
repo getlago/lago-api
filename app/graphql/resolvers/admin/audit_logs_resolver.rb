@@ -20,7 +20,7 @@ module Resolvers
       type Types::Admin::AuditLogType.collection_type, null: false
 
       def resolve(**args)
-        logs = CsAdminAuditLog.newest_first.includes(:organization)
+        logs = CsAdminAuditLog.newest_first.includes(:organization, :rollback)
 
         logs = logs.where(organization_id: args[:organization_ids]) if args[:organization_ids].present?
         logs = logs.where(actor_user_id: args[:actor_user_ids]) if args[:actor_user_ids].present?
