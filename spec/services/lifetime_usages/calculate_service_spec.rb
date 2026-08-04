@@ -22,7 +22,7 @@ RSpec.describe LifetimeUsages::CalculateService do
       2,
       invoice:,
       charge:,
-      customer:,
+      subscription:,
       organization:,
       amount_cents: 100,
       precise_coupons_amount_cents: 50
@@ -141,6 +141,31 @@ RSpec.describe LifetimeUsages::CalculateService do
         expect(result.lifetime_usage.invoiced_usage_amount_cents).to eq(200)
         expect(lifetime_usage.reload.invoiced_usage_amount_cents).to eq(200)
         expect(lifetime_usage.recalculate_invoiced_usage).to be false
+      end
+    end
+
+    context "with an invoice shared with another subscription of the same customer" do
+      let(:other_subscription) { create(:subscription, customer:, subscription_at:) }
+      let(:invoice) do
+        create(
+          :invoice,
+          :finalized,
+          :with_subscriptions,
+          customer:,
+          organization:,
+          subscriptions: [subscription, other_subscription]
+        )
+      end
+
+      before do
+        create(:charge_fee, invoice:, charge:, subscription:, organization:, amount_cents: 100)
+        create(:charge_fee, invoice:, charge:, subscription: other_subscription, organization:, amount_cents: 900)
+      end
+
+      it "ignores the charge fees of the sibling subscription" do
+        result = service.call
+        expect(result.lifetime_usage.invoiced_usage_amount_cents).to eq(100)
+        expect(lifetime_usage.reload.invoiced_usage_amount_cents).to eq(100)
       end
     end
   end
