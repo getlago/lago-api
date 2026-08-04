@@ -163,6 +163,10 @@ module QuoteVersions
           )
         end
 
+        # The execution flow resolves each date on its own, falling back to the quote's, and
+        # Subscriptions::ValidateService then requires the pair, compared as dates, to be strictly
+        # increasing. Both fallbacks are applied here so a plan overriding one side only is still
+        # checked against the quote's other side.
         def validate_plan_dates(plan_item, index)
           start_date = plan_item.dig("payload", "startDate")
           end_date = plan_item.dig("payload", "endDate")
@@ -170,11 +174,18 @@ module QuoteVersions
           valid_start = validate_plan_date(start_date, plan_field(index, "payload.startDate"))
           valid_end = validate_plan_date(end_date, plan_field(index, "payload.endDate"))
           return unless valid_start && valid_end
-          return if start_date.nil? || end_date.nil?
+          # A plan carrying neither date bills the quote pair, which validate_dates already checked.
+          return if start_date.nil? && end_date.nil?
 
-          if Time.zone.parse(end_date) < Time.zone.parse(start_date)
-            add_error(field: plan_field(index, "payload.startDate"), error_code: "invalid_date_range")
-          end
+          effective_start = effective_date(start_date, quote_version.start_date)
+          effective_end = effective_date(end_date, quote_version.end_date)
+          return if effective_start.nil? || effective_end.nil?
+          return if effective_end > effective_start
+
+          add_error(
+            field: plan_field(index, start_date.nil? ? "payload.endDate" : "payload.startDate"),
+            error_code: "invalid_date_range"
+          )
         end
 
         # Same ISO 8601 check as Subscriptions::ValidateService, the service these dates feed.
@@ -184,6 +195,12 @@ module QuoteVersions
 
           add_error(field:, error_code: "invalid_date")
           false
+        end
+
+        # Same parsing as Subscriptions::ValidateService: the payload carries ISO 8601 strings while
+        # the quote carries date columns, and the service compares both as dates.
+        def effective_date(payload_value, quote_value)
+          Utils::Datetime.parse_iso8601(payload_value || quote_value)&.to_date
         end
 
         # Subscriptions::CreateService resolves the payment method by id and organization only, so

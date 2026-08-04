@@ -525,6 +525,52 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
+    context "when the plan payload dates fall on the same day" do
+      let(:plan_payload) do
+        super().merge("startDate" => "2026-06-01T08:00:00Z", "endDate" => "2026-06-01T18:00:00Z")
+      end
+
+      it "returns an invalid_date_range error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.startDate": ["invalid_date_range"]})
+      end
+    end
+
+    context "when the plan payload only overrides the start date, past the quote end date" do
+      let(:plan_payload) { super().merge("startDate" => "2027-01-01T00:00:00Z") }
+
+      it "returns an invalid_date_range error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.startDate": ["invalid_date_range"]})
+      end
+    end
+
+    context "when the plan payload only overrides the end date, before the quote start date" do
+      let(:plan_payload) { super().merge("endDate" => "2025-12-31T00:00:00Z") }
+
+      it "returns an invalid_date_range error on the end date" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.endDate": ["invalid_date_range"]})
+      end
+    end
+
+    context "when the plan payload only overrides the start date, inside the quote range" do
+      let(:plan_payload) { super().merge("startDate" => "2026-06-01T00:00:00Z") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the quote carries no dates and the plan overrides one" do
+      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
+      let(:plan_payload) { super().merge("startDate" => "2026-06-01T00:00:00Z") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
     context "when the plan payload payment method belongs to the customer" do
       let(:payment_method) { create(:payment_method, organization:, customer:) }
       let(:plan_payload) { super().merge("paymentMethodId" => payment_method.id) }
