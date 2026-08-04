@@ -30,8 +30,29 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
     {
       "id" => plan.id,
       "type" => "plan",
-      "payload" => {"code" => plan.code},
+      "payload" => plan_payload,
       "overrides" => plan_overrides
+    }
+  end
+  let(:plan_payload) do
+    {
+      "code" => plan.code,
+      "charges" => [charge_snapshot],
+      "fixedCharges" => [fixed_charge_snapshot]
+    }
+  end
+  let(:charge_snapshot) do
+    {
+      "id" => charge.id,
+      "billableMetric" => {"code" => billable_metric.code},
+      "chargeModel" => charge.charge_model
+    }
+  end
+  let(:fixed_charge_snapshot) do
+    {
+      "id" => fixed_charge.id,
+      "addOn" => {"code" => fixed_charge.add_on.code},
+      "chargeModel" => fixed_charge.charge_model
     }
   end
   let(:plan_overrides) do
@@ -44,8 +65,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
   let(:charge_override) do
     {
       "billableMetricCode" => charge.billable_metric.code,
-      "chargeModel" => "graduated",
-      "properties" => {"graduatedRanges" => []}
+      "chargeModel" => charge.charge_model,
+      "properties" => {"amount" => "100"}
     }
   end
   let(:fixed_charge_override) { {"addOnCode" => fixed_charge.add_on.code, "units" => "3"} }
@@ -285,8 +306,58 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
     context "when the charge is discarded" do
       before { charge.discard! }
 
-      it "is valid" do
-        expect(validator).to be_valid
+      it "returns a charge_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.billableMetricCode": ["charge_not_found"]}
+        )
+      end
+    end
+
+    context "when the plan has two charges on the overridden metric" do
+      before { create(:standard_charge, plan:, billable_metric:) }
+
+      let(:plan_payload) { super().merge("charges" => [charge_snapshot, charge_snapshot.merge("id" => plan.charges.last.id)]) }
+
+      it "returns an ambiguous_charge_override error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.billableMetricCode": ["ambiguous_charge_override"]}
+        )
+      end
+    end
+
+    context "when the snapshot carries no charges" do
+      let(:plan_payload) { super().except("charges") }
+
+      it "returns a charge_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.billableMetricCode": ["charge_not_found"]}
+        )
+      end
+    end
+
+    context "when the snapshot charge belongs to another plan" do
+      let(:other_charge) { create(:standard_charge, plan: create(:plan, organization:), billable_metric:) }
+      let(:charge_snapshot) { super().merge("id" => other_charge.id) }
+
+      it "returns a charge_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.billableMetricCode": ["charge_not_found"]}
+        )
+      end
+    end
+
+    context "when the override charge model differs from the charge" do
+      let(:charge_override) { super().merge("chargeModel" => "graduated") }
+
+      it "returns a cannot_override_charge_model error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.chargeModel": ["cannot_override_charge_model"]}
+        )
       end
     end
 
@@ -315,8 +386,26 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
     context "when the fixed charge is discarded" do
       before { fixed_charge.discard! }
 
-      it "is valid" do
-        expect(validator).to be_valid
+      it "returns a fixed_charge_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.fixedCharges.0.addOnCode": ["fixed_charge_not_found"]}
+        )
+      end
+    end
+
+    context "when the plan has two fixed charges on the overridden add-on" do
+      before { create(:fixed_charge, plan:, add_on: fixed_charge.add_on) }
+
+      let(:plan_payload) do
+        super().merge("fixedCharges" => [fixed_charge_snapshot, fixed_charge_snapshot.merge("id" => plan.fixed_charges.last.id)])
+      end
+
+      it "returns an ambiguous_fixed_charge_override error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.fixedCharges.0.addOnCode": ["ambiguous_fixed_charge_override"]}
+        )
       end
     end
 
@@ -405,6 +494,55 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
       it "is valid" do
         expect(validator).to be_valid
+      end
+    end
+
+    context "when the plan payload dates are not ISO 8601" do
+      let(:plan_payload) { super().merge("startDate" => "not-a-date") }
+
+      it "returns an invalid_date error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.startDate": ["invalid_date"]})
+      end
+    end
+
+    context "when the plan payload endDate is before its startDate" do
+      let(:plan_payload) do
+        super().merge("startDate" => "2026-06-01T00:00:00Z", "endDate" => "2026-01-01T00:00:00Z")
+      end
+
+      it "returns an invalid_date_range error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.startDate": ["invalid_date_range"]})
+      end
+    end
+
+    context "when the plan payload dates are date-only" do
+      let(:plan_payload) { super().merge("startDate" => "2026-01-01", "endDate" => "2026-12-31") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the plan payload payment method belongs to the customer" do
+      let(:payment_method) { create(:payment_method, organization:, customer:) }
+      let(:plan_payload) { super().merge("paymentMethodId" => payment_method.id) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the plan payload payment method belongs to another customer" do
+      let(:payment_method) { create(:payment_method, organization:, customer: create(:customer, organization:)) }
+      let(:plan_payload) { super().merge("paymentMethodId" => payment_method.id) }
+
+      it "returns a payment_method_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.payload.paymentMethodId": ["payment_method_not_found"]}
+        )
       end
     end
 
@@ -718,6 +856,31 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
           {"billing_items.walletCredits.0.payload.currency": ["currencies_does_not_match"]}
+        )
+      end
+    end
+
+    context "when the wallet credit limits itself to a known billable metric" do
+      let(:wallet_credit_payload) do
+        super().merge("appliesTo" => {"feeTypes" => ["charge"], "billableMetricCodes" => [billable_metric.code]})
+      end
+
+      before { billable_metric }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the wallet credit limits itself to an unknown billable metric" do
+      let(:wallet_credit_payload) do
+        super().merge("appliesTo" => {"billableMetricCodes" => ["unknown_metric"]})
+      end
+
+      it "returns a billable_metric_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.walletCredits.0.payload.appliesTo.billableMetricCodes": ["billable_metric_not_found"]}
         )
       end
     end
