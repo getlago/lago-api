@@ -737,6 +737,51 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
     end
   end
 
+  describe "#sync_allowed?" do
+    subject(:sync_allowed_call) { payload.sync_allowed? }
+
+    let(:invoice) { create(:invoice, customer:, organization:) }
+
+    before { integration_customer }
+
+    context "when all the fees are zero-amount and there is no discount" do
+      before { create(:fee, invoice:, amount_cents: 0, taxes_amount_cents: 0) }
+
+      it "returns false" do
+        expect(subject).to be false
+      end
+    end
+
+    context "when at least one fee has a positive amount" do
+      before do
+        create(:fee, invoice:, amount_cents: 0, taxes_amount_cents: 0)
+        create(:fee, invoice:, amount_cents: 10_000, taxes_amount_cents: 200)
+      end
+
+      it "returns true" do
+        expect(subject).to be true
+      end
+    end
+
+    context "when the fees are zero-amount but a discount line exists" do
+      let(:invoice) { create(:invoice, customer:, organization:, credit_notes_amount_cents: 6000) }
+
+      before do
+        create(
+          :netsuite_collection_mapping,
+          integration:,
+          mapping_type: :credit_note,
+          settings: {external_id: "7", external_account_code: "77", external_name: ""}
+        )
+        create(:fee, invoice:, amount_cents: 0, taxes_amount_cents: 0)
+      end
+
+      it "returns true" do
+        expect(subject).to be true
+      end
+    end
+  end
+
   describe "#tax_item_complete?" do
     subject(:tax_item_complete_call) { payload.__send__(:tax_item_complete?) }
 
