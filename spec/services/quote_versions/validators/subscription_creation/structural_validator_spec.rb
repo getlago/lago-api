@@ -21,8 +21,28 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
       "code" => "base_plan",
       "name" => "Base Plan",
       "subscriptionExternalId" => "sub_ext_123",
+      "subscriptionName" => "Main subscription",
+      "billingTime" => "anniversary",
+      "startDate" => "2026-01-01T00:00:00Z",
+      "endDate" => "2026-12-31T00:00:00Z",
+      "paymentMethodId" => "b1a1d0dc-3e2a-4e12-8f2a-16f0d5b7a0c1",
       "amountCents" => "10000",
-      "charges" => [{"billableMetric" => {"code" => "api_calls"}, "chargeModel" => "standard"}]
+      "charges" => [charge_snapshot],
+      "fixedCharges" => [fixed_charge_snapshot]
+    }
+  end
+  let(:charge_snapshot) do
+    {
+      "id" => "9c4681ce-b915-486a-9d94-a294d444a89b",
+      "billableMetric" => {"code" => "api_calls", "name" => "API calls"},
+      "chargeModel" => "standard"
+    }
+  end
+  let(:fixed_charge_snapshot) do
+    {
+      "id" => "2f3a1b8c-5d6e-4f70-8a91-b2c3d4e5f607",
+      "addOn" => {"code" => "seats", "name" => "Seats"},
+      "chargeModel" => "standard"
     }
   end
   let(:plan_overrides) do
@@ -251,6 +271,63 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
       it "returns an invalid_value error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq({"billing_items.plans.0.payload.code": ["invalid_value"]})
+      end
+    end
+
+    context "when the plan payload billingTime is not in the enum" do
+      let(:plan_payload) { super().merge("billingTime" => "monthly") }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.billingTime": ["invalid_value"]})
+      end
+    end
+
+    context "when the plan payload paymentMethodId is not a uuid" do
+      let(:plan_payload) { super().merge("paymentMethodId" => "not-a-uuid") }
+
+      it "returns an invalid_format error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.paymentMethodId": ["invalid_format"]})
+      end
+    end
+
+    context "when the plan payload dates are date-only" do
+      let(:plan_payload) { super().merge("startDate" => "2026-01-01", "endDate" => "2026-12-31") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when a snapshot charge id is not a uuid" do
+      let(:charge_snapshot) { super().merge("id" => "not-a-uuid") }
+
+      it "returns an invalid_format error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.charges.0.id": ["invalid_format"]})
+      end
+    end
+
+    context "when a snapshot charge chargeModel is not in the enum" do
+      let(:charge_snapshot) { super().merge("chargeModel" => "flat") }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.payload.charges.0.chargeModel": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when a snapshot fixed charge chargeModel is not a fixed charge model" do
+      let(:fixed_charge_snapshot) { super().merge("chargeModel" => "package") }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.payload.fixedCharges.0.chargeModel": ["invalid_value"]}
+        )
       end
     end
 
@@ -701,6 +778,38 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
 
       it "is valid at update scope" do
         expect(validator).to be_valid
+      end
+    end
+
+    context "when the wallet credit appliesTo carries an unknown fee type" do
+      let(:wallet_credit_payload) do
+        super().merge("appliesTo" => {"feeTypes" => ["bogus"], "billableMetricCodes" => []})
+      end
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.walletCredits.0.payload.appliesTo.feeTypes.0": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when the wallet credit carries two recurring rules" do
+      let(:wallet_credit_payload) { super().merge("recurringTransactionRules" => [recurring_rule, recurring_rule]) }
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "returns an invalid_count error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.walletCredits.0.payload.recurringTransactionRules": ["invalid_count"]}
+          )
+        end
       end
     end
 
