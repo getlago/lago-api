@@ -22,6 +22,24 @@ RSpec.describe CsAdminAuditLog, type: :model do
       expect(subject).to belong_to(:actor_user).class_name("User")
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:rollback_of).class_name("CsAdminAuditLog").optional
+      expect(subject).to have_one(:rollback)
+        .class_name("CsAdminAuditLog")
+        .with_foreign_key(:rollback_of_id)
+        .inverse_of(:rollback_of)
+    end
+  end
+
+  describe "#rolled_back?" do
+    let(:audit_log) { create(:cs_admin_audit_log) }
+
+    it "is false when no other log points at it" do
+      expect(audit_log.rolled_back?).to be(false)
+    end
+
+    it "is true once a rollback log points at it" do
+      create(:cs_admin_audit_log, action: :rollback, rollback_of: audit_log, organization: audit_log.organization)
+
+      expect(audit_log.reload.rolled_back?).to be(true)
     end
   end
 

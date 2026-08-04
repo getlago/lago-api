@@ -540,6 +540,7 @@ type AdminAuditLog {
   organizationName: String!
   reason: String!
   rollbackOfId: ID
+  rolledBack: Boolean!
 }
 
 """
