@@ -18,7 +18,7 @@ RSpec.describe Mutations::RateCardRates::Destroy do
   let(:organization) { membership.organization }
   let(:rate_card) { create(:rate_card, organization:) }
   let(:rate_card_rate) do
-    create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.from_now)
+    create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
   end
 
   let(:mutation) do
@@ -40,7 +40,7 @@ RSpec.describe Mutations::RateCardRates::Destroy do
 
   context "with an active rate" do
     let(:rate_card_rate) do
-      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.ago)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.ago.beginning_of_day)
     end
 
     it "returns a validation error" do

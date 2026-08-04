@@ -61,8 +61,8 @@ class RateCardRate < ApplicationRecord
 
   default_scope -> { kept }
 
-  scope :pending, -> { where("effective_datetime > ?", Time.current) }
-  scope :effective, -> { where(effective_datetime: ..Time.current) }
+  scope :pending, -> { where("effective_from > ?", Time.current) }
+  scope :effective, -> { where(effective_from: ..Time.current) }
 
   # The charge validators read pricing data from a `properties` attribute.
   def properties
@@ -73,11 +73,11 @@ class RateCardRate < ApplicationRecord
   # the latest effective rate is active, future rates are pending, and earlier
   # effective rates have been superseded and are terminated.
   def status
-    return STATUSES[:pending] if effective_datetime > Time.current
+    return STATUSES[:pending] if effective_from > Time.current
 
     superseded = rate_card.rates
-      .where("effective_datetime > ?", effective_datetime)
-      .where(effective_datetime: ..Time.current)
+      .where("effective_from > ?", effective_from)
+      .where(effective_from: ..Time.current)
       .exists?
 
     superseded ? STATUSES[:terminated] : STATUSES[:active]
@@ -139,7 +139,7 @@ class RateCardRate < ApplicationRecord
   def validate_effective_from_is_appended
     return if effective_from.blank?
     return if rate_card.blank?
-    return unless new_record? || effective_datetime_changed?
+    return unless new_record? || effective_from_changed?
 
     others = rate_card.rates.where.not(id:)
     if others.where(effective_from:).exists?

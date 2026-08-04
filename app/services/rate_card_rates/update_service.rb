@@ -6,7 +6,7 @@ module RateCardRates
 
     # Per the editability matrix: a terminated rate is frozen, an active rate only
     # accepts new pricing values, a pending rate is fully editable.
-    FROZEN_ON_ACTIVE = %i[effective_datetime rate_model min_amount_cents billing_interval_count billing_interval_unit].freeze
+    FROZEN_ON_ACTIVE = %i[effective_from rate_model min_amount_cents billing_interval_count billing_interval_unit].freeze
 
     def initialize(rate_card_rate:, params:)
       @rate_card_rate = rate_card_rate
@@ -51,7 +51,7 @@ module RateCardRates
     attr_reader :rate_card_rate, :params
 
     def assign_attributes
-      rate_card_rate.effective_datetime = params[:effective_datetime] if params.key?(:effective_datetime)
+      rate_card_rate.effective_from = params[:effective_from] if params.key?(:effective_from)
       rate_card_rate.rate_model = params[:rate_model] if params.key?(:rate_model)
       rate_card_rate.rate_properties = params[:rate_properties] if params.key?(:rate_properties)
       rate_card_rate.min_amount_cents = params[:min_amount_cents] if params.key?(:min_amount_cents)

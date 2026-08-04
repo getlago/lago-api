@@ -16375,7 +16375,7 @@
               "deprecationReason": null
             },
             {
-              "name": "effectiveDatetime",
+              "name": "effectiveFrom",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -66684,7 +66684,7 @@
               "deprecationReason": null
             },
             {
-              "name": "effectiveDatetime",
+              "name": "effectiveFrom",
               "description": null,
               "args": [],
               "type": {
@@ -66950,7 +66950,7 @@
               "deprecationReason": null
             },
             {
-              "name": "effectiveDatetime",
+              "name": "effectiveFrom",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -79478,7 +79478,7 @@
               "deprecationReason": null
             },
             {
-              "name": "effectiveDatetime",
+              "name": "effectiveFrom",
               "description": null,
               "type": {
                 "kind": "SCALAR",

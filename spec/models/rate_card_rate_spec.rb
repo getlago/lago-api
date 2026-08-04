@@ -42,9 +42,9 @@ RSpec.describe RateCardRate do
     let(:organization) { rate_card.organization }
 
     it "derives the status from the card timeline" do
-      terminated = create(:rate_card_rate, organization:, rate_card:, effective_datetime: 2.months.ago)
-      active = create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.ago)
-      pending = create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.from_now)
+      terminated = create(:rate_card_rate, organization:, rate_card:, effective_from: 2.months.ago.beginning_of_day)
+      active = create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.ago.beginning_of_day)
+      pending = create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
 
       expect(terminated.status).to eq("terminated")
       expect(terminated).to be_terminated
@@ -59,8 +59,8 @@ RSpec.describe RateCardRate do
     describe ".pending and .effective" do
       it "splits rates around the current time" do
         rate_card = create(:rate_card)
-        effective = create(:rate_card_rate, organization: rate_card.organization, rate_card:, effective_datetime: 1.month.ago)
-        pending = create(:rate_card_rate, organization: rate_card.organization, rate_card:, effective_datetime: 1.month.from_now)
+        effective = create(:rate_card_rate, organization: rate_card.organization, rate_card:, effective_from: 1.month.ago.beginning_of_day)
+        pending = create(:rate_card_rate, organization: rate_card.organization, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
 
         expect(described_class.pending).to eq([pending])
         expect(described_class.effective).to eq([effective])
@@ -243,7 +243,7 @@ RSpec.describe RateCardRate do
           :rate_card_rate,
           rate_card: rate.rate_card,
           organization: rate.organization,
-          effective_from: 1.month.from_now,
+          effective_from: 1.month.from_now.beginning_of_day,
           code: "launch_price"
         )
         duplicate.valid?

@@ -100,7 +100,7 @@ class RateCard < ApplicationRecord
   # The active rate is the latest effective rate; later rates are pending and
   # earlier ones have been superseded (terminated).
   def active_rate
-    rates.effective.order(effective_datetime: :desc).first
+    rates.effective.order(effective_from: :desc).first
   end
 end
 

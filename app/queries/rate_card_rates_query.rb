@@ -8,7 +8,7 @@ class RateCardRatesQuery < BaseQuery
     rate_card_rates = base_scope
     rate_card_rates = with_rate_card(rate_card_rates) if filters.rate_card_id.present?
     rate_card_rates = paginate(rate_card_rates)
-    rate_card_rates = rate_card_rates.order(effective_datetime: :desc)
+    rate_card_rates = rate_card_rates.order(effective_from: :desc)
 
     result.rate_card_rates = rate_card_rates
     result

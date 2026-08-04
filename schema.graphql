@@ -3529,7 +3529,7 @@ input CreateRateCardRateInput {
   """
   clientMutationId: String
   code: String!
-  effectiveDatetime: ISO8601DateTime!
+  effectiveFrom: ISO8601DateTime!
   minAmountCents: BigInt
   rateCardId: ID!
   rateModel: RateCardRateModelEnum!
@@ -12203,7 +12203,7 @@ type RateCardRate {
   billingIntervalUnit: RateCardRateBillingIntervalUnitEnum!
   code: String!
   createdAt: ISO8601DateTime!
-  effectiveDatetime: ISO8601DateTime!
+  effectiveFrom: ISO8601DateTime!
   id: ID!
   minAmountCents: BigInt!
   rateModel: RateCardRateModelEnum!
@@ -12242,7 +12242,7 @@ input RateCardRateInput {
   billingIntervalCount: Int
   billingIntervalUnit: RateCardRateBillingIntervalUnitEnum!
   code: String!
-  effectiveDatetime: ISO8601DateTime!
+  effectiveFrom: ISO8601DateTime!
   minAmountCents: BigInt
   rateModel: RateCardRateModelEnum!
   rateProperties: JSON!
@@ -14832,7 +14832,7 @@ input UpdateRateCardRateInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  effectiveDatetime: ISO8601DateTime
+  effectiveFrom: ISO8601DateTime
   id: ID!
   minAmountCents: BigInt
   rateModel: RateCardRateModelEnum

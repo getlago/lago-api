@@ -10,7 +10,7 @@ RSpec.describe RateCardRatesQuery do
   let(:filters) { {} }
 
   let(:rate_card) { create(:rate_card, organization:) }
-  let!(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.day.ago) }
+  let!(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.day.ago.beginning_of_day) }
 
   before { create(:rate_card_rate, organization:) }
 

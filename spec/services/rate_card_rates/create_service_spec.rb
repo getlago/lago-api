@@ -11,7 +11,7 @@ RSpec.describe RateCardRates::CreateService do
   let(:params) do
     {
       code: "standard_price",
-      effective_datetime: Time.current.iso8601,
+      effective_from: Time.current.beginning_of_day.iso8601,
       rate_model: "standard",
       rate_properties: {"amount" => "10"},
       billing_interval_count: 1,
@@ -42,8 +42,8 @@ RSpec.describe RateCardRates::CreateService do
     expect(Utils::ActivityLog).to have_produced("rate_card.updated").after_commit.with(rate_card)
   end
 
-  context "when effective_datetime is in the future" do
-    before { params[:effective_datetime] = 1.month.from_now.iso8601 }
+  context "when effective_from is in the future" do
+    before { params[:effective_from] = 1.month.from_now.beginning_of_day.iso8601 }
 
     it "creates a pending rate" do
       expect(result.rate_card_rate.status).to eq("pending")
@@ -51,7 +51,7 @@ RSpec.describe RateCardRates::CreateService do
   end
 
   context "when a rate is already active" do
-    let!(:previous_rate) { create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.ago) }
+    let!(:previous_rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.ago.beginning_of_day) }
 
     it "terminates the previous rate and activates the new one" do
       expect(result.rate_card_rate.status).to eq("active")
@@ -59,23 +59,23 @@ RSpec.describe RateCardRates::CreateService do
     end
   end
 
-  context "when the effective_datetime is at or before the active rate" do
+  context "when the effective_from is at or before the active rate" do
     before do
-      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.day.ago)
-      params[:effective_datetime] = 2.days.ago.iso8601
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.day.ago.beginning_of_day)
+      params[:effective_from] = 2.days.ago.beginning_of_day.iso8601
     end
 
     it "returns a validation failure" do
       expect(result).not_to be_success
-      expect(result.error.messages[:effective_datetime]).to eq(["must_be_after_active_rate"])
+      expect(result.error.messages[:effective_from]).to eq(["must_be_after_active_rate"])
     end
   end
 
-  context "when the effective_datetime falls between the active rate and a pending rate" do
+  context "when the effective_from falls between the active rate and a pending rate" do
     before do
-      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.day.ago)
-      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 30.days.from_now)
-      params[:effective_datetime] = 10.days.from_now.iso8601
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.day.ago.beginning_of_day)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 30.days.from_now.beginning_of_day)
+      params[:effective_from] = 10.days.from_now.beginning_of_day.iso8601
     end
 
     it "creates the rate in the pending sequence" do

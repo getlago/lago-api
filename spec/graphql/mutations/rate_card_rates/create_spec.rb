@@ -21,7 +21,7 @@ RSpec.describe Mutations::RateCardRates::Create do
   let(:input) do
     {
       code: "gql_rate", rateCardId: rate_card.id,
-      effectiveDatetime: 1.month.from_now.iso8601,
+      effectiveFrom: 1.month.from_now.beginning_of_day.iso8601,
       rateModel: "standard",
       rateProperties: {amount: "10"},
       billingIntervalUnit: "month"

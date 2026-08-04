@@ -18,7 +18,7 @@ RSpec.describe Mutations::RateCardRates::Update do
   let(:organization) { membership.organization }
   let(:rate_card) { create(:rate_card, organization:) }
   let(:rate_card_rate) do
-    create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.from_now)
+    create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
   end
 
   let(:input) { {id: rate_card_rate.id, rateProperties: {amount: "25"}} }

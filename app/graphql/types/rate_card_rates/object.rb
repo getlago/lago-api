@@ -10,7 +10,7 @@ module Types
 
       field :code, String, null: false
 
-      field :effective_datetime, GraphQL::Types::ISO8601DateTime, null: false
+      field :effective_from, GraphQL::Types::ISO8601DateTime, null: false
       field :status, Types::RateCardRates::StatusEnum, null: false
 
       field :rate_model, Types::RateCardRates::RateModelEnum, null: false

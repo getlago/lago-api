@@ -10,7 +10,7 @@ RSpec.describe RateCardRates::UpdateService do
 
   context "with a pending rate" do
     let(:rate_card_rate) do
-      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.from_now)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
     end
 
     let(:params) { {rate_model: "standard", rate_properties: {"amount" => "25"}, billing_interval_count: 3} }
@@ -26,8 +26,8 @@ RSpec.describe RateCardRates::UpdateService do
       expect(Utils::ActivityLog).to have_produced("rate_card.updated").after_commit.with(rate_card)
     end
 
-    context "when the effective_datetime is moved to the past" do
-      let(:params) { {effective_datetime: Time.current.iso8601} }
+    context "when the effective_from is moved to the past" do
+      let(:params) { {effective_from: Time.current.beginning_of_day.iso8601} }
 
       it "activates the rate" do
         expect(result).to be_success
@@ -38,7 +38,7 @@ RSpec.describe RateCardRates::UpdateService do
 
   context "with an active rate" do
     let(:rate_card_rate) do
-      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.ago)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.ago.beginning_of_day)
     end
 
     context "when updating rate_properties" do
@@ -62,14 +62,14 @@ RSpec.describe RateCardRates::UpdateService do
 
   context "with a terminated rate" do
     let(:rate_card_rate) do
-      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 2.months.ago)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 2.months.ago.beginning_of_day)
     end
 
     let(:params) { {rate_properties: {"amount" => "42"}} }
 
     before do
       rate_card_rate
-      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.ago)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.ago.beginning_of_day)
     end
 
     it "returns a validation failure" do
@@ -90,7 +90,7 @@ RSpec.describe RateCardRates::UpdateService do
 
   context "when the card is attached to a subscription" do
     let(:rate_card_rate) do
-      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.from_now)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
     end
     let(:params) { {rate_properties: {"amount" => "25"}} }
 
