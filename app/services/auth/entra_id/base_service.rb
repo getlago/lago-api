@@ -53,7 +53,7 @@ module Auth
           client_secret: result.entra_id_integration.client_secret,
           grant_type: "authorization_code",
           code:,
-          redirect_uri: "#{ENV["LAGO_FRONT_URL"]}/auth/entra/callback",
+          redirect_uri: "#{Rails.application.config.lago_front_url}/auth/entra/callback",
           scope: "openid profile email"
         }
 
