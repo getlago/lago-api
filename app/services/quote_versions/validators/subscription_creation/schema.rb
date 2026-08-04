@@ -83,8 +83,8 @@ module QuoteVersions
                         "properties" => {
                           "amountCents" => {
                             "type" => %w[integer null],
-                            "minimum" => 0,
-                            "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
+                            "exclusiveMinimum" => 0,
+                            "x-error" => {"type" => "invalid_type", "exclusiveMinimum" => "invalid_value"}
                           },
                           "invoiceDisplayName" => {
                             "type" => %w[string null],
@@ -104,8 +104,8 @@ module QuoteVersions
                           "properties" => {
                             "amountCents" => {
                               "type" => "integer",
-                              "minimum" => 0,
-                              "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
+                              "exclusiveMinimum" => 0,
+                              "x-error" => {"type" => "invalid_type", "exclusiveMinimum" => "invalid_value"}
                             },
                             "recurring" => {
                               "type" => %w[boolean null],
@@ -418,6 +418,14 @@ module QuoteVersions
           plans = schema["properties"]["plans"]
           plans["minItems"] = 1
           plans["items"]["properties"]["payload"]["required"] = %w[code]
+
+          # Commitments::OverrideService assigns amount_cents only when the key is given, and
+          # Commitment requires it present and positive. A commitment carrying just a display name
+          # would therefore approve something that cannot be created.
+          minimum_commitment = plans["items"]["properties"]["overrides"]["properties"]["minimumCommitment"]
+          minimum_commitment["required"] = ["amountCents"]
+          minimum_commitment["x-error"]["required"] = "value_is_mandatory"
+          minimum_commitment["properties"]["amountCents"]["type"] = "integer"
 
           schema["properties"]["coupons"]["items"]["properties"]["payload"]["required"] =
             %w[code type]

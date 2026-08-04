@@ -335,6 +335,73 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
       end
     end
 
+    context "when the minimumCommitment amountCents is zero" do
+      let(:plan_overrides) { super().merge("minimumCommitment" => {"amountCents" => 0}) }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.minimumCommitment.amountCents": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when the minimumCommitment carries only an invoiceDisplayName" do
+      let(:plan_overrides) do
+        super().merge("minimumCommitment" => {"invoiceDisplayName" => "Min commitment"})
+      end
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "returns a value_is_mandatory error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.plans.0.overrides.minimumCommitment.amountCents": ["value_is_mandatory"]}
+          )
+        end
+      end
+    end
+
+    context "when the minimumCommitment amountCents is null" do
+      let(:plan_overrides) { super().merge("minimumCommitment" => {"amountCents" => nil}) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "returns an invalid_type error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.plans.0.overrides.minimumCommitment.amountCents": ["invalid_type"]}
+          )
+        end
+      end
+    end
+
+    context "when the minimumCommitment is null" do
+      let(:plan_overrides) { super().merge("minimumCommitment" => nil) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+    end
+
     context "when a usage threshold has no amountCents" do
       let(:plan_overrides) { super().merge("usageThresholds" => [{"recurring" => true}]) }
 
@@ -342,6 +409,17 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
           {"billing_items.plans.0.overrides.usageThresholds.0.amountCents": ["value_is_mandatory"]}
+        )
+      end
+    end
+
+    context "when a usage threshold amountCents is zero" do
+      let(:plan_overrides) { super().merge("usageThresholds" => [{"amountCents" => 0}]) }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.usageThresholds.0.amountCents": ["invalid_value"]}
         )
       end
     end
