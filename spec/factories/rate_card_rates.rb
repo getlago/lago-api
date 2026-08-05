@@ -5,7 +5,7 @@ FactoryBot.define do
     organization
     rate_card { association(:rate_card, organization:) }
     sequence(:code) { |n| "rate#{n}" }
-    # Midnight so the default passes the arrears date-granularity rule; the
+    # Midnight to match what the model canonicalizes arrears values to; the
     # factory's default card is arrears.
     effective_from { Time.current.beginning_of_day }
     rate_model { "standard" }

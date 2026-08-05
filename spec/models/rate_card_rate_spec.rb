@@ -38,31 +38,36 @@ RSpec.describe RateCardRate do
   end
 
   describe "validations" do
-    describe "effective_from granularity" do
-      it "rejects a time component on an arrears card" do
+    describe "effective_from normalization" do
+      it "canonicalizes a time component to midnight on an arrears card" do
         card = create(:rate_card, billing_timing: "arrears")
-        rate = build(:rate_card_rate, rate_card: card, effective_from: "2026-12-01T17:00:00Z")
-        rate.valid?
-        expect(rate.errors.where(:effective_from).map(&:type)).to eq([:must_be_a_date])
+        rate = create(:rate_card_rate, rate_card: card, effective_from: "2026-12-01T17:00:00Z")
+
+        expect(rate.effective_from).to eq(Time.zone.parse("2026-12-01T00:00:00Z"))
       end
 
-      it "accepts a date and a midnight datetime on an arrears card" do
+      it "stores a date and a midnight datetime as midnight on an arrears card" do
         card = create(:rate_card, billing_timing: "arrears")
+        midnight = Time.zone.parse("2026-12-01T00:00:00Z")
 
-        expect(build(:rate_card_rate, rate_card: card, effective_from: "2026-12-01")).to be_valid
-        expect(build(:rate_card_rate, rate_card: card, effective_from: "2026-12-01T00:00:00Z")).to be_valid
+        from_date = create(:rate_card_rate, rate_card: card, effective_from: "2026-12-01")
+        from_datetime = create(:rate_card_rate, rate_card: card, code: "other", effective_from: "2026-12-02T00:00:00Z")
+
+        expect(from_date.effective_from).to eq(midnight)
+        expect(from_datetime.effective_from).to eq(midnight + 1.day)
       end
 
-      it "accepts a time component on an advance card" do
+      it "keeps the full instant on an advance card" do
         card = create(:rate_card, billing_timing: "advance")
+        rate = create(:rate_card_rate, rate_card: card, effective_from: "2026-12-01T17:00:00Z")
 
-        expect(build(:rate_card_rate, rate_card: card, effective_from: "2026-12-01T17:00:00Z")).to be_valid
+        expect(rate.effective_from).to eq(Time.zone.parse("2026-12-01T17:00:00Z"))
       end
 
       it "caps arrears at one rate per day through the uniqueness rule" do
         card = create(:rate_card, billing_timing: "arrears")
         create(:rate_card_rate, rate_card: card, effective_from: "2026-12-01")
-        duplicate = build(:rate_card_rate, rate_card: card, code: "other", effective_from: "2026-12-01T00:00:00Z")
+        duplicate = build(:rate_card_rate, rate_card: card, code: "other", effective_from: "2026-12-01T17:00:00Z")
         duplicate.valid?
         expect(duplicate.errors.where(:effective_from, :value_already_exist)).to be_present
       end
