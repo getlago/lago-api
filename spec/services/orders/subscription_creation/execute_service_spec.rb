@@ -167,6 +167,20 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
           expect(commitment.amount_cents).to eq(50_000)
           expect(commitment.invoice_display_name).to eq("Yearly floor")
         end
+
+        context "when the override only renames the commitment" do
+          let(:plan_overrides) { super().merge("minimumCommitment" => {"invoiceDisplayName" => "Yearly floor"}) }
+
+          before { create(:commitment, plan:, amount_cents: 30_000) }
+
+          it "falls back to the plan's own amount" do
+            execute_service.call
+
+            commitment = customer.subscriptions.sole.plan.minimum_commitment
+            expect(commitment.amount_cents).to eq(30_000)
+            expect(commitment.invoice_display_name).to eq("Yearly floor")
+          end
+        end
       end
 
       context "with usage thresholds" do
