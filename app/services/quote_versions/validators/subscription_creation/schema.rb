@@ -426,14 +426,6 @@ module QuoteVersions
           plans["minItems"] = 1
           plans["items"]["properties"]["payload"]["required"] = %w[code]
 
-          # Commitments::OverrideService assigns amount_cents only when the key is given, and
-          # Commitment requires it present and positive. A commitment carrying just a display name
-          # would therefore approve something that cannot be created.
-          minimum_commitment = plans["items"]["properties"]["overrides"]["properties"]["minimumCommitment"]
-          minimum_commitment["required"] = ["amountCents"]
-          minimum_commitment["x-error"]["required"] = "value_is_mandatory"
-          minimum_commitment["properties"]["amountCents"]["type"] = "integer"
-
           schema["properties"]["coupons"]["items"]["properties"]["payload"]["required"] =
             %w[code type]
 

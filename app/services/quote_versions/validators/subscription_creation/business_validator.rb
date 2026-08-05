@@ -62,6 +62,7 @@ module QuoteVersions
             end
 
             validate_plan_currency(plan, index)
+            validate_minimum_commitment(plan, plan_item, index)
             validate_charge_overrides(plan_item, index)
             validate_fixed_charge_overrides(plan_item, index)
           end
@@ -75,6 +76,23 @@ module QuoteVersions
           if plan.amount_currency != quote_version.currency
             add_error(field: plan_field(index, "id"), error_code: "currencies_does_not_match")
           end
+        end
+
+        # Plans::OverrideService builds a fresh Commitment rather than duplicating the plan's own,
+        # and Commitment rejects a nil amount, so the amount has to reach it from one side or the
+        # other. NOTE: the amount resolved here is the plan's, so the subscription_creation
+        # execution service must pass it down when the override omits it.
+        def validate_minimum_commitment(plan, plan_item, index)
+          return unless scope == :approve
+
+          minimum_commitment = plan_item.dig("overrides", "minimumCommitment")
+          return if minimum_commitment.nil?
+          return unless (minimum_commitment["amountCents"] || plan.minimum_commitment&.amount_cents).nil?
+
+          add_error(
+            field: plan_field(index, "overrides.minimumCommitment.amountCents"),
+            error_code: "value_is_mandatory"
+          )
         end
 
         def validate_charge_overrides(plan_item, index)
@@ -349,6 +367,7 @@ module QuoteVersions
             .organization
             .plans
             .with_discarded
+            .includes(:minimum_commitment)
             .where(id: plans.map { |plan_item| plan_item["id"] })
             .index_by(&:id)
         end

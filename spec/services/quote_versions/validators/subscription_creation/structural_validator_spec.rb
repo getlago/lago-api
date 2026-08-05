@@ -362,14 +362,13 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
         expect(validator).to be_valid
       end
 
+      # The business validator decides whether the amount is mandatory, it can fall back to the
+      # plan's own commitment.
       context "when the scope is approve" do
         let(:scope) { :approve }
 
-        it "returns a value_is_mandatory error" do
-          expect(validator).not_to be_valid
-          expect(result.error.messages).to eq(
-            {"billing_items.plans.0.overrides.minimumCommitment.amountCents": ["value_is_mandatory"]}
-          )
+        it "is valid" do
+          expect(validator).to be_valid
         end
       end
     end
@@ -384,11 +383,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
       context "when the scope is approve" do
         let(:scope) { :approve }
 
-        it "returns an invalid_type error" do
-          expect(validator).not_to be_valid
-          expect(result.error.messages).to eq(
-            {"billing_items.plans.0.overrides.minimumCommitment.amountCents": ["invalid_type"]}
-          )
+        it "is valid" do
+          expect(validator).to be_valid
         end
       end
     end

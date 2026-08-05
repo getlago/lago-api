@@ -366,6 +366,48 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
+    context "when the minimum commitment override carries no amount" do
+      let(:plan_overrides) do
+        super().merge("minimumCommitment" => {"invoiceDisplayName" => "Min commitment"})
+      end
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "requires the amountCents" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq(
+            {"billing_items.plans.0.overrides.minimumCommitment.amountCents": ["value_is_mandatory"]}
+          )
+        end
+
+        context "when the plan carries a minimum commitment" do
+          before { create(:commitment, plan:) }
+
+          it "is valid" do
+            expect(validator).to be_valid
+          end
+        end
+      end
+    end
+
+    context "when the minimum commitment override amount is null" do
+      let(:plan_overrides) do
+        super().merge("minimumCommitment" => {"amountCents" => nil, "invoiceDisplayName" => "Min commitment"})
+      end
+      let(:scope) { :approve }
+
+      before { create(:commitment, plan:) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
     context "when the coupon does not exist" do
       let(:coupon_item) { super().merge("id" => "11111111-2222-3333-4444-555555555555") }
 
