@@ -11,6 +11,14 @@ module PaymentProviderCustomers
 
     self.table_name = "payment_provider_customers"
 
+    MANUAL_CODE = "manual"
+
+    CONNECTION_STATUSES = {
+      not_connected: "not_connected",
+      manual: "manual",
+      connected: "connected"
+    }.freeze
+
     belongs_to :customer
     belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
     belongs_to :organization
@@ -28,6 +36,12 @@ module PaymentProviderCustomers
       joins(:customer)
         .where(customers: {organization_id: organization_id})
         .where(provider_customer_id: provider_id)
+    end
+
+    # A manual payment row is a reserved null-provider connection (code "manual"). It is the
+    # implicit payment default when no provider connection is set.
+    def manual?
+      payment_provider_id.nil? && code == MANUAL_CODE
     end
 
     def provider_payment_methods

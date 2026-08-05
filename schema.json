@@ -19902,8 +19902,8 @@
                 "name": "AnrokCustomer",
                 "ofType": null
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use integrationCustomers instead"
             },
             {
               "name": "applicableTimezone",
@@ -19982,8 +19982,8 @@
                 "name": "AvalaraCustomer",
                 "ofType": null
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use integrationCustomers instead"
             },
             {
               "name": "billingConfiguration",
@@ -20056,6 +20056,22 @@
                     "name": "InvoiceCustomSection",
                     "ofType": null
                   }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "connectionStatus",
+              "description": "Payment connection status derived from the customer's default payment connection",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "PaymentProviderConnectionStatusEnum",
+                  "ofType": null
                 }
               },
               "isDeprecated": false,
@@ -20386,8 +20402,8 @@
                 "name": "HubspotCustomer",
                 "ofType": null
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use integrationCustomers instead"
             },
             {
               "name": "id",
@@ -20400,6 +20416,30 @@
                   "kind": "SCALAR",
                   "name": "ID",
                   "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integrationCustomers",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "UNION",
+                      "name": "IntegrationCustomer",
+                      "ofType": null
+                    }
+                  }
                 }
               },
               "isDeprecated": false,
@@ -20566,8 +20606,8 @@
                 "name": "NetsuiteCustomer",
                 "ofType": null
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use integrationCustomers instead"
             },
             {
               "name": "overdueBalances",
@@ -20618,6 +20658,30 @@
               "deprecationReason": null
             },
             {
+              "name": "paymentProviderCustomers",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "ProviderCustomer",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "phone",
               "description": null,
               "args": [],
@@ -20638,8 +20702,8 @@
                 "name": "ProviderCustomer",
                 "ofType": null
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use paymentProviderCustomers instead"
             },
             {
               "name": "salesforceCustomer",
@@ -20650,8 +20714,8 @@
                 "name": "SalesforceCustomer",
                 "ofType": null
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use integrationCustomers instead"
             },
             {
               "name": "sequentialId",
@@ -20847,8 +20911,8 @@
                 "name": "XeroCustomer",
                 "ofType": null
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use integrationCustomers instead"
             },
             {
               "name": "zipcode",
@@ -47833,6 +47897,35 @@
           "inputFields": null,
           "interfaces": [],
           "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "PaymentProviderConnectionStatusEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "not_connected",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "manual",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "connected",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
           "possibleTypes": null
         },
         {

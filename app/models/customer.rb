@@ -379,6 +379,21 @@ class Customer < ApplicationRecord
     anrok_customer || avalara_customer
   end
 
+  # Payment connection status derived from which payment connection is the customer default:
+  # "connected" when a provider row is default, "manual" when the reserved manual row is default,
+  # "not_connected" when no payment connection is default.
+  def payment_connection_status
+    default_connection = payment_provider_customers.find_by(is_default: true)
+
+    if default_connection.nil?
+      PaymentProviderCustomers::BaseCustomer::CONNECTION_STATUSES[:not_connected]
+    elsif default_connection.manual?
+      PaymentProviderCustomers::BaseCustomer::CONNECTION_STATUSES[:manual]
+    else
+      PaymentProviderCustomers::BaseCustomer::CONNECTION_STATUSES[:connected]
+    end
+  end
+
   def address_changed?
     ADDRESS_FIELDS.any? { |field| send(:"#{field}_changed?") }
   end
