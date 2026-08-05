@@ -74,6 +74,27 @@ RSpec.describe RateCardRate do
     end
 
     it { is_expected.to validate_presence_of(:effective_from) }
+
+    describe "effective_from parseability" do
+      it "rejects an unparseable value as invalid rather than missing" do
+        rate = build(:rate_card_rate, effective_from: "hello")
+        rate.valid?
+        expect(rate.errors.where(:effective_from).map(&:type)).to eq([:invalid])
+      end
+
+      it "rejects an impossible date as invalid rather than missing" do
+        rate = build(:rate_card_rate, effective_from: "2026-13-45")
+        rate.valid?
+        expect(rate.errors.where(:effective_from).map(&:type)).to eq([:invalid])
+      end
+
+      it "keeps a missing value on the presence error" do
+        rate = build(:rate_card_rate, effective_from: nil)
+        rate.valid?
+        expect(rate.errors.where(:effective_from).map(&:type)).to eq([:blank])
+      end
+    end
+
     it { is_expected.to validate_presence_of(:rate_model) }
     it { is_expected.to validate_presence_of(:billing_interval_unit) }
 

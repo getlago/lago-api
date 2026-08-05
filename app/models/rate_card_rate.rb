@@ -35,22 +35,23 @@ class RateCardRate < ApplicationRecord
 
   has_many :fees
 
-  # Nil is forbidden by the presence validations below (and NOT NULL in the
-  # schema). allow_nil here only keeps a missing value on the presence error
-  # (value_is_mandatory) instead of also failing inclusion (value_is_invalid).
+  # allow_nil here only keeps a missing value on the presence error
+  # (value_is_mandatory) instead of also failing inclusion (value_is_invalid)
   enum :rate_model, RATE_MODELS, validate: {allow_nil: true}
   enum :billing_interval_unit, BILLING_INTERVAL_UNITS, validate: {allow_nil: true}
 
   validates :code, presence: true
   validates :code, uniqueness: {scope: :rate_card_id, conditions: -> { where(deleted_at: nil) }}
   validates :billing_interval_unit, presence: true
-  validates :effective_from, presence: true
+  # The column is a datetime: an unparseable value casts to nil
+  validates :effective_from, presence: true, if: -> { effective_from_before_type_cast.blank? }
   validates :rate_model, presence: true
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :billing_interval_count, numericality: {greater_than_or_equal_to: 1}
 
   before_validation :normalize_effective_from
 
+  validate :validate_effective_from_parseable
   validate :validate_effective_from_is_appended
   validate :validate_pricing_unit_conversion_rate
 
@@ -58,13 +59,8 @@ class RateCardRate < ApplicationRecord
 
   private
 
-  # Arrears rates apply per whole day: period math never samples inside a day,
-  # so a time component carries no billing meaning and could only create
-  # shadowed rates. It is canonicalized away here — every arrears value lands
-  # on its day's midnight — which makes the unique (rate_card_id,
-  # effective_from) index a one-rate-per-day rule, and a second rate on the
-  # same day an exact duplicate (value_already_exist). Advance rates keep full
-  # instants — they price per event.
+  # Arrears rates apply per whole day, Advance rates keep full
+  # instants — they price per event
   def normalize_effective_from
     return if effective_from.blank?
     return unless rate_card&.arrears?
@@ -72,11 +68,16 @@ class RateCardRate < ApplicationRecord
     self.effective_from = effective_from.beginning_of_day
   end
 
+  def validate_effective_from_parseable
+    return if effective_from.present?
+    return if effective_from_before_type_cast.blank?
+
+    errors.add(:effective_from, :invalid)
+  end
+
   # Append-only timeline: a new rate's effective_from must be strictly greater
   # than the latest existing rate on the same card. No insertion between rates.
-  # The past is immutable, the future is editable: a rate can land anywhere in
-  # the pending sequence, but never at or before the rate that already priced
-  # elapsed time (the active one).
+  # The past is immutable, the future is editable
   def validate_effective_from_is_appended
     return if effective_from.blank?
     return if rate_card.blank?

@@ -19,8 +19,6 @@ class ProductFilter < ApplicationRecord
     presence: true,
     uniqueness: {scope: :product_id, conditions: -> { where(deleted_at: nil) }}
 
-  # created_at keeps the list order stable across renames (updated_at would
-  # reorder on every touch).
   default_scope -> { kept.order(created_at: :asc) }
 
   def self.ransackable_attributes(_auth_object = nil)
