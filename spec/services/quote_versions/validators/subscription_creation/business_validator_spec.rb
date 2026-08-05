@@ -159,14 +159,27 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       context "when the scope is approve" do
         let(:scope) { :approve }
 
-        it "requires both dates" do
+        it "requires the start date" do
           expect(validator).not_to be_valid
-          expect(result.error.messages).to eq(
-            {
-              start_date: ["value_is_mandatory"],
-              end_date: ["value_is_mandatory"]
-            }
-          )
+          expect(result.error.messages).to eq({start_date: ["value_is_mandatory"]})
+        end
+      end
+    end
+
+    context "when the end date is missing" do
+      let(:quote_version) do
+        create(:quote_version, quote:, organization:, currency: "EUR", start_date: Date.parse("2026-01-01"))
+      end
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "is valid" do
+          expect(validator).to be_valid
         end
       end
     end

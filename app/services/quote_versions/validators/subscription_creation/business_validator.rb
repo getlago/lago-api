@@ -39,11 +39,11 @@ module QuoteVersions
           start_date = quote_version.start_date
           end_date = quote_version.end_date
 
-          if scope == :approve
-            add_error(field: :start_date, error_code: "value_is_mandatory") if start_date.blank?
-            add_error(field: :end_date, error_code: "value_is_mandatory") if end_date.blank?
+          if scope == :approve && start_date.blank?
+            add_error(field: :start_date, error_code: "value_is_mandatory")
           end
 
+          # An open-ended deal is legitimate, the subscription simply carries no ending date, but
           # Subscriptions::ValidateService requires the ending date to be strictly after the
           # subscription date, and these are the dates a plan without its own falls back to, so a
           # zero-length range cannot produce a subscription.
