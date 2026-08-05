@@ -92,6 +92,15 @@ module Orders
       }.merge(written)
     end
 
+    def billing_items
+      @billing_items ||= order.billing_snapshot || {}
+    end
+
+    # A negotiated value overrides the catalog snapshot it was drafted from.
+    def effective_value(item, field)
+      item.dig("overrides", field) || item.dig("payload", field)
+    end
+
     def execution_errors(error)
       if error.respond_to?(:messages)
         error.messages.values.flatten

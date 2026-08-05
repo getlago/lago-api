@@ -51,8 +51,9 @@ module Orders
         payload = item["payload"] || {}
 
         {
-          # localId is the quote line's own id, so a retry after a failed execution reuses the same
-          # external id instead of minting a new one.
+          # Both quoted ids are stable, so a retry after a failed execution reuses the same external
+          # id. NOTE: localId is optional on plan items, so an item carrying neither mints a new
+          # external id on every attempt.
           external_id: payload["subscriptionExternalId"].presence || item["localId"].presence || SecureRandom.uuid,
           name: payload["subscriptionName"],
           billing_time: payload["billingTime"],
@@ -71,18 +72,19 @@ module Orders
       # their timezone.
       def subscription_datetime(payload_value, version_value)
         value = payload_value.presence || version_value
-        return value unless calendar_date?(value)
+        date = calendar_date(value)
+        return value if date.nil?
 
-        Utils::Datetime.parse_iso8601_date(value).in_time_zone(order.customer.applicable_timezone)
+        date.in_time_zone(order.customer.applicable_timezone)
       end
 
       # A string that only looks like a date is left alone for Subscriptions::ValidateService to
       # reject.
-      def calendar_date?(value)
-        return true if value.is_a?(Date)
-        return false unless value.is_a?(String) && CALENDAR_DATE.match?(value)
+      def calendar_date(value)
+        return value.to_date if value.is_a?(Date)
+        return nil unless value.is_a?(String) && CALENDAR_DATE.match?(value)
 
-        Utils::Datetime.parse_iso8601_date(value).present?
+        Utils::Datetime.parse_iso8601_date(value)
       end
 
       # PaymentMethods::ValidateService refuses an id without its type.
@@ -276,10 +278,6 @@ module Orders
         rules.presence
       end
 
-      def effective_value(item, field)
-        item.dig("overrides", field) || item.dig("payload", field)
-      end
-
       def plan_items
         Array(billing_items["plans"])
       end
@@ -308,10 +306,6 @@ module Orders
           .coupons
           .where(id: coupon_items.map { |item| item["id"] })
           .index_by(&:id)
-      end
-
-      def billing_items
-        @billing_items ||= quote_version.billing_items || {}
       end
 
       def quote_version

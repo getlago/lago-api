@@ -36,16 +36,8 @@ module Orders
         end
       end
 
-      def effective_value(item, field)
-        item.dig("overrides", field) || item.dig("payload", field)
-      end
-
       def add_on_items
-        Array((quote_version.billing_items || {})["addOns"])
-      end
-
-      def quote_version
-        order.quote_version
+        Array(billing_items["addOns"])
       end
     end
   end
