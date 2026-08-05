@@ -2,15 +2,15 @@
 
 module QuoteVersions
   module Validators
-    class OneOffValidator < BaseOrderTypeValidator
+    class SubscriptionCreationValidator < BaseOrderTypeValidator
       private
 
       def structural_validator_class
-        OneOff::StructuralValidator
+        SubscriptionCreation::StructuralValidator
       end
 
       def business_validator_class
-        OneOff::BusinessValidator
+        SubscriptionCreation::BusinessValidator
       end
     end
   end

@@ -37,6 +37,26 @@ FactoryBot.define do
       end
     end
 
+    trait :with_subscription_creation_billing_items do
+      transient do
+        plan { create(:plan, organization: quote.organization) }
+      end
+
+      currency { "EUR" }
+      billing_items do
+        {
+          "plans" => [
+            {
+              "id" => plan.id,
+              "localId" => SecureRandom.uuid,
+              "type" => "plan",
+              "payload" => {"code" => plan.code}
+            }
+          ]
+        }
+      end
+    end
+
     trait :voided do
       status { :voided }
       voided_at { Time.current }

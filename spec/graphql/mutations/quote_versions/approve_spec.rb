@@ -5,7 +5,17 @@ require "rails_helper"
 RSpec.describe Mutations::QuoteVersions::Approve do
   let(:required_permission) { "quotes:approve" }
   let(:membership) { create(:membership) }
-  let(:quote_version) { create(:quote_version, organization: membership.organization) }
+  let(:quote) { create(:quote, organization: membership.organization) }
+  let(:quote_version) do
+    create(
+      :quote_version,
+      :with_subscription_creation_billing_items,
+      quote:,
+      organization: membership.organization,
+      start_date: Date.new(2026, 1, 1),
+      end_date: Date.new(2027, 1, 1)
+    )
+  end
 
   let(:input) do
     {

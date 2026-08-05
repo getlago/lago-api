@@ -2,7 +2,7 @@
 
 module QuoteVersions
   module Validators
-    module OneOff
+    module SubscriptionCreation
       class StructuralValidator < BaseStructuralValidator
         private
 
