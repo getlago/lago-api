@@ -20,7 +20,7 @@ RSpec.describe Mutations::Superset::CreateGuestToken do
   end
 
   let(:result) do
-    BaseService::Result.new.tap { |r| r.guest_token = guest_token }
+    Auth::Superset::GuestTokenService::Result.new.tap { |r| r.guest_token = guest_token }
   end
 
   before do
@@ -51,7 +51,7 @@ RSpec.describe Mutations::Superset::CreateGuestToken do
 
   context "when the superset service fails" do
     let(:result) do
-      BaseService::Result.new.tap do |r|
+      Auth::Superset::GuestTokenService::Result.new.tap do |r|
         r.service_failure!(code: "superset_guest_token_failed", message: "Failed to mint guest token")
       end
     end
