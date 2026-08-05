@@ -1310,6 +1310,7 @@ DROP TABLE IF EXISTS public.active_storage_attachments;
 DROP TABLE IF EXISTS partman.template_public_enriched_events;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
 DROP FUNCTION IF EXISTS public.ensure_role_consistency();
+DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_kinds;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_direction;
 DROP TYPE IF EXISTS public.tax_status;
@@ -1860,6 +1861,17 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'wallet_ongoing_balance_amount',
     'wallet_credits_ongoing_balance',
     'billable_metric_lifetime_usage_units'
+);
+
+
+--
+-- Name: usage_monitoring_triggered_alert_kinds; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.usage_monitoring_triggered_alert_kinds AS ENUM (
+    'triggered',
+    'resolved',
+    'seeded'
 );
 
 
@@ -4356,7 +4368,8 @@ CREATE TABLE public.usage_monitoring_alert_thresholds (
     code character varying,
     recurring boolean DEFAULT false NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    notify_on character varying[] DEFAULT '{triggered}'::character varying[] NOT NULL
 );
 
 
@@ -4392,6 +4405,9 @@ CREATE TABLE public.usage_monitoring_triggered_alerts (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     wallet_id uuid,
+    kind public.usage_monitoring_triggered_alert_kinds DEFAULT 'triggered'::public.usage_monitoring_triggered_alert_kinds NOT NULL,
+    in_alarm_thresholds jsonb,
+    fully_resolved boolean,
     CONSTRAINT chk_triggered_alerts_subscription_xor_wallet CHECK (((subscription_id IS NOT NULL) <> (wallet_id IS NOT NULL)))
 );
 
@@ -14146,6 +14162,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260804131008'),
 ('20260803162623'),
 ('20260724094543'),
 ('20260724094542'),
