@@ -50,6 +50,49 @@ RSpec.describe RateCardRates::CreateService do
     end
   end
 
+  context "with an arrears card" do
+    it "canonicalizes a datetime to its day's midnight" do
+      params[:effective_from] = 1.month.from_now.change(hour: 17).iso8601
+
+      expect(result).to be_success
+      expect(result.rate_card_rate.effective_from).to eq(1.month.from_now.beginning_of_day)
+    end
+
+    it "accepts a bare date" do
+      params[:effective_from] = 1.month.from_now.to_date.iso8601
+
+      expect(result).to be_success
+      expect(result.rate_card_rate.effective_from).to eq(1.month.from_now.beginning_of_day)
+    end
+
+    it "refuses a second rate on the same day whatever its time" do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
+      params[:effective_from] = 1.month.from_now.change(hour: 17).iso8601
+
+      expect(result).not_to be_success
+      expect(result.error.messages[:effective_from]).to eq(["value_already_exist"])
+    end
+  end
+
+  context "with an advance card" do
+    let(:rate_card) { create(:rate_card, organization:, billing_timing: "advance") }
+
+    it "keeps the full instant" do
+      effective_at = 1.month.from_now.change(hour: 17)
+      params[:effective_from] = effective_at.iso8601
+
+      expect(result).to be_success
+      expect(result.rate_card_rate.effective_from).to eq(effective_at)
+    end
+
+    it "converts a bare date to midnight" do
+      params[:effective_from] = 1.month.from_now.to_date.iso8601
+
+      expect(result).to be_success
+      expect(result.rate_card_rate.effective_from).to eq(1.month.from_now.beginning_of_day)
+    end
+  end
+
   context "when a rate is already active" do
     let!(:previous_rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.ago.beginning_of_day) }
 

@@ -34,6 +34,15 @@ RSpec.describe RateCardRates::UpdateService do
         expect(result.rate_card_rate.status).to eq("active")
       end
     end
+
+    context "when the effective_from carries a time component on an arrears card" do
+      let(:params) { {effective_from: 2.months.from_now.change(hour: 17).iso8601} }
+
+      it "canonicalizes the value to its day's midnight" do
+        expect(result).to be_success
+        expect(result.rate_card_rate.effective_from).to eq(2.months.from_now.beginning_of_day)
+      end
+    end
   end
 
   context "with an active rate" do
