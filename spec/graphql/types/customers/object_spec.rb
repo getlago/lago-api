@@ -54,6 +54,9 @@ RSpec.describe Types::Customers::Object do
     expect(subject).to have_field(:netsuite_customer).of_type("NetsuiteCustomer")
     expect(subject).to have_field(:salesforce_customer).of_type("SalesforceCustomer")
     expect(subject).to have_field(:provider_customer).of_type("ProviderCustomer")
+    expect(subject).to have_field(:payment_provider_customers).of_type("[ProviderCustomer!]!")
+    expect(subject).to have_field(:connection_status).of_type("PaymentProviderConnectionStatusEnum!")
+    expect(subject).to have_field(:integration_customers).of_type("[IntegrationCustomer!]!")
     expect(subject).to have_field(:subscriptions).of_type("[Subscription!]!")
     expect(subject).to have_field(:xero_customer).of_type("XeroCustomer")
 
