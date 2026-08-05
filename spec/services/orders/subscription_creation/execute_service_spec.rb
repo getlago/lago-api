@@ -153,6 +153,50 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
           expect(overridden.units).to eq(5)
           expect(overridden.properties["amount"]).to eq("80")
         end
+
+        context "when the catalog switched the fixed charge model since approval" do
+          # The snapshot keeps the model the approver was looking at.
+          let(:plan_payload) do
+            super().merge("fixedCharges" => [super()["fixedCharges"].sole.merge("chargeModel" => "standard")])
+          end
+          let(:graduated_properties) do
+            {"graduated_ranges" => [{"from_value" => 0, "to_value" => nil, "per_unit_amount" => "1", "flat_amount" => "0"}]}
+          end
+
+          before { fixed_charge.update!(charge_model: :graduated, properties: graduated_properties) }
+
+          it "records the failure and marks the order failed" do
+            result = nil
+            expect { result = execute_service.call }.not_to change(Subscription, :count)
+
+            expect(result).not_to be_success
+
+            order.reload
+            expect(order.failed?).to eq(true)
+            expect(order.execution_record["errors"]).to eq(["fixed_charge_model_changed"])
+          end
+        end
+      end
+
+      context "when the catalog switched the charge model since approval" do
+        # The snapshot keeps the model the approver was looking at.
+        let(:plan_payload) do
+          super().merge("charges" => [super()["charges"].sole.merge("chargeModel" => "standard")])
+        end
+        let(:package_properties) { {"amount" => "50", "package_size" => 10, "free_units" => 0} }
+
+        before { charge.update!(charge_model: :package, properties: package_properties) }
+
+        it "records the failure and marks the order failed" do
+          result = nil
+          expect { result = execute_service.call }.not_to change(Subscription, :count)
+
+          expect(result).not_to be_success
+
+          order.reload
+          expect(order.failed?).to eq(true)
+          expect(order.execution_record["errors"]).to eq(["charge_model_changed"])
+        end
       end
 
       context "with a minimum commitment" do
@@ -505,6 +549,28 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
             expect(rule.target_ongoing_balance).to eq(500)
             expect(rule.grants_target_top_up).to eq(true)
             expect(rule.transaction_name).to eq("Monthly refill")
+          end
+        end
+
+        context "with a second wallet credit" do
+          let(:billing_items) do
+            super().merge(
+              "walletCredits" => super()["walletCredits"] + [
+                {
+                  "localId" => "3fd9b5cb-1a1e-4f8e-9ad6-8f6f45f9bd6c",
+                  "type" => "wallet_credit",
+                  "payload" => {"name" => "Overage credits", "rateAmount" => "2", "paidCredits" => "50", "grantedCredits" => "0"}
+                }
+              ]
+            )
+          end
+
+          it "creates both wallets and records both ids" do
+            expect { execute_service.call }.to change(Wallet, :count).by(2)
+
+            order.reload
+            expect(order.execution_record["wallet_ids"]).to match_array(customer.wallets.pluck(:id))
+            expect(customer.wallets.pluck(:code)).to match_array(%w[prepaid_credits overage_credits])
           end
         end
 

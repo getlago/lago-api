@@ -154,9 +154,12 @@ module Orders
           charge.dig("billableMetric", "code") == metric_code
         end
         charge_id = snapshot&.dig("id")
+        charge = plan.charges.find { |plan_charge| plan_charge.id == charge_id }
 
-        unless plan.charges.any? { |charge| charge.id == charge_id }
-          result.not_found_failure!(resource: "charge").raise_if_error!
+        result.not_found_failure!(resource: "charge").raise_if_error! if charge.nil?
+
+        if charge_model_changed?(snapshot, charge)
+          result.single_validation_failure!(field: :charge_model, error_code: "charge_model_changed").raise_if_error!
         end
 
         charge_id
@@ -167,12 +170,28 @@ module Orders
           fixed_charge.dig("addOn", "code") == add_on_code
         end
         fixed_charge_id = snapshot&.dig("id")
+        fixed_charge = plan.fixed_charges.find { |plan_fixed_charge| plan_fixed_charge.id == fixed_charge_id }
 
-        unless plan.fixed_charges.any? { |fixed_charge| fixed_charge.id == fixed_charge_id }
-          result.not_found_failure!(resource: "fixed_charge").raise_if_error!
+        result.not_found_failure!(resource: "fixed_charge").raise_if_error! if fixed_charge.nil?
+
+        if charge_model_changed?(snapshot, fixed_charge)
+          result
+            .single_validation_failure!(field: :fixed_charge_model, error_code: "fixed_charge_model_changed")
+            .raise_if_error!
         end
 
         fixed_charge_id
+      end
+
+      # The negotiated properties were approved against the model the snapshot pinned. A catalog
+      # model change since then makes them invalid for the charge they now land on, and the override
+      # services fail on that inside Plans::OverrideService, which ignores their result: the charge
+      # would be dropped and the subscription would bill nothing for it.
+      def charge_model_changed?(snapshot, chargeable)
+        charge_model = snapshot["chargeModel"]
+        return false if charge_model.nil?
+
+        charge_model != chargeable.charge_model
       end
 
       # Thresholds ride on the subscription, not on the overridden plan: plan_overrides
