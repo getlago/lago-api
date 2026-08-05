@@ -930,6 +930,22 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
           expect(validator).not_to be_valid
           expect(result.error.messages).to eq({"billing_items.coupons.1.id": ["plan_overlapping"]})
         end
+
+        # overlapping_limitations? transcribes plan_limitation_overlapping? from the service below,
+        # and nothing else would fail if that one changed. Running the same pair through it keeps the
+        # two verdicts in step.
+        context "when the same pair reaches AppliedCoupons::CreateService" do
+          before { charge }
+
+          it "is refused there too" do
+            AppliedCoupons::CreateService.call!(customer:, coupon:, params: {})
+
+            applied = AppliedCoupons::CreateService.call(customer:, coupon: other_coupon, params: {})
+
+            expect(applied).not_to be_success
+            expect(applied.error.code).to eq("plan_overlapping")
+          end
+        end
       end
     end
 
