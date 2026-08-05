@@ -34,6 +34,8 @@ module DataExports
           properties_period("from_datetime", "to_datetime") || commitment_period
         when :charge
           charge_period
+        when :add_on
+          properties_period("from_datetime", "to_datetime")
         else
           charges_period
         end

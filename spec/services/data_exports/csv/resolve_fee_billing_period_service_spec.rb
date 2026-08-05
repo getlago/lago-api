@@ -182,5 +182,21 @@ RSpec.describe DataExports::Csv::ResolveFeeBillingPeriodService do
         end
       end
     end
+
+    context "with an add-on fee" do
+      let(:fee_type) { "add_on" }
+      let(:invoice_subscription) { nil }
+      let(:properties) do
+        {
+          "from_datetime" => "2026-06-22T00:00:00Z",
+          "to_datetime" => "2026-07-21T23:59:59Z"
+        }
+      end
+
+      it "returns the stored fee boundaries" do
+        expect(result.from_datetime).to eq(Time.zone.parse("2026-06-22 00:00:00 UTC"))
+        expect(result.to_datetime).to eq(Time.zone.parse("2026-07-21 23:59:59 UTC"))
+      end
+    end
   end
 end

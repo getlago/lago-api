@@ -326,6 +326,62 @@ RSpec.describe DataExports::Csv::InvoiceFees do
           expect(exported_period).to eq(%w[2026-06-22 2026-07-21])
         end
       end
+
+      context "with an add-on fee" do
+        let(:add_on_boundaries) do
+          {
+            "from_datetime" => "2026-08-04T00:00:00Z",
+            "to_datetime" => "2026-08-04T23:59:59Z"
+          }
+        end
+        let(:exported_fee) { add_on_fee }
+
+        shared_examples "exports the stored add-on period" do
+          before { add_on_fee }
+
+          it "exports the stored calendar dates in UTC" do
+            expect(exported_period).to eq(%w[2026-08-04 2026-08-04])
+          end
+
+          context "when the customer has a negative UTC offset" do
+            let(:timezone) { "America/New_York" }
+
+            it "does not move the start date back one day" do
+              expect(exported_period).to eq(%w[2026-08-04 2026-08-04])
+            end
+          end
+
+          context "when the customer has a positive UTC offset" do
+            let(:timezone) { "Asia/Tokyo" }
+
+            it "does not move the end date forward one day" do
+              expect(exported_period).to eq(%w[2026-08-04 2026-08-04])
+            end
+          end
+        end
+
+        context "with a one-off fee" do
+          let(:add_on_fee) do
+            create(:one_off_fee,
+              invoice:,
+              organization: customer.organization,
+              properties: add_on_boundaries)
+          end
+
+          it_behaves_like "exports the stored add-on period"
+        end
+
+        context "with a legacy applied add-on fee" do
+          let(:add_on_fee) do
+            create(:add_on_fee,
+              invoice:,
+              organization: customer.organization,
+              properties: add_on_boundaries)
+          end
+
+          it_behaves_like "exports the stored add-on period"
+        end
+      end
     end
   end
 end
