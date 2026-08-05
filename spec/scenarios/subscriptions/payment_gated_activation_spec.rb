@@ -148,6 +148,109 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
   end
 
+  describe "activation payment requiring 3D Secure" do
+    let(:authentication_required_body) do
+      JSON.parse(
+        get_stripe_fixtures("payment_intent_authentication_required_response.json", version: "2025-04-30.basil")
+      ).deep_symbolize_keys
+    end
+
+    let(:authentication_required_error) do
+      error = authentication_required_body[:error]
+
+      Stripe::CardError.new(
+        error[:message],
+        nil,
+        code: error[:code],
+        http_status: 400,
+        json_body: authentication_required_body
+      )
+    end
+
+    let(:requires_action_intent) do
+      Stripe::PaymentIntent.construct_from(
+        JSON.parse(
+          get_stripe_fixtures("payment_intent_requires_action_response.json", version: "2025-04-30.basil")
+        ).deep_symbolize_keys
+      )
+    end
+
+    def stub_off_session_rejection_then_on_session_retry
+      call_count = 0
+
+      allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService) # rubocop:disable RSpec/AnyInstance
+        .to receive(:create_payment_intent) do
+          call_count += 1
+          raise authentication_required_error if call_count == 1
+
+          requires_action_intent
+        end
+    end
+
+    def simulate_rejected_intent_failure_webhook(payment)
+      PaymentProviders::Stripe::HandleEventService.call!(
+        organization:,
+        event_json: {
+          id: "evt_#{SecureRandom.hex(10)}",
+          object: "event",
+          type: "payment_intent.payment_failed",
+          data: {
+            object: {
+              id: payment.provider_payment_id,
+              object: "payment_intent",
+              status: "requires_payment_method",
+              last_payment_error: {code: "authentication_required"},
+              metadata: {
+                lago_invoice_id: payment.payable_id,
+                lago_customer_id: customer.id
+              }
+            }
+          }
+        }.to_json
+      )
+      perform_all_enqueued_jobs
+    end
+
+    context "when the Stripe connection supports 3DS" do
+      before do
+        stripe_provider.update!(supports_3ds: true)
+        stub_off_session_rejection_then_on_session_retry
+      end
+
+      it "keeps the subscription incomplete while the authentication retry is pending" do
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+
+        subscription = customer.subscriptions.sole
+        invoice = subscription.invoices.sole
+
+        expect(subscription).to be_incomplete
+        expect(subscription.cancellation_reason).to be_nil
+        expect(subscription.activation_rules.sole).to be_pending
+        expect(invoice.reload).to be_open
+        expect(invoice.payment_status).not_to eq("failed")
+        expect(invoice.payments.where(error_code: "authentication_required")).to exist
+      end
+
+      it "keeps the subscription incomplete when Stripe reports the rejected off-session intent as failed" do
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+
+        subscription = customer.subscriptions.sole
+        invoice = subscription.invoices.sole
+        rejected_payment = invoice.payments.find_by(error_code: "authentication_required")
+
+        simulate_rejected_intent_failure_webhook(rejected_payment)
+
+        expect(subscription.reload).to be_incomplete
+        expect(subscription.cancellation_reason).to be_nil
+        expect(subscription.activation_rules.sole).to be_pending
+        expect(invoice.reload).to be_open
+        expect(invoice.payment_status).not_to eq("failed")
+      end
+    end
+  end
+
   describe "payment failure: subscription canceled" do
     it "creates incomplete subscription, then cancels on payment failure" do
       # Stage 1: Create subscription — goes incomplete
