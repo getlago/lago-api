@@ -207,4 +207,39 @@ RSpec.describe Mutations::Customers::Update do
       expect(result_data["metadata"]).to be_present
     end
   end
+
+  context "with the payment_provider_customers array" do
+    let(:array_mutation) do
+      <<~GQL
+        mutation($input: UpdateCustomerInput!) {
+          updateCustomer(input: $input) {
+            id
+            connectionStatus
+            paymentProviderCustomers { id code isDefault }
+          }
+        }
+      GQL
+    end
+
+    let!(:existing_connection) { create(:stripe_customer, customer:, code: "stripe_eu", is_default: true) }
+
+    it "reconciles the connections declaratively and discards the omitted one" do
+      result = execute_query(
+        query: array_mutation,
+        input: {
+          id: customer.id,
+          externalId: customer.external_id,
+          paymentProviderCustomers: [
+            {type: "manual", code: "manual", isDefault: true}
+          ]
+        }
+      )
+
+      result_data = result["data"]["updateCustomer"]
+
+      expect(result_data["connectionStatus"]).to eq("manual")
+      expect(result_data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["manual"])
+      expect(existing_connection.reload).to be_discarded
+    end
+  end
 end

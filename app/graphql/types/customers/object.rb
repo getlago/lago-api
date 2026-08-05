@@ -45,12 +45,12 @@ module Types
 
       field :billing_configuration, Types::Customers::BillingConfiguration, null: true
 
-      field :payment_provider_customers, [Types::PaymentProviderCustomers::Provider], null: false
       field :connection_status,
         Types::PaymentProviderCustomers::ConnectionStatusEnum,
         null: false,
         method: :payment_connection_status,
         description: "Payment connection status derived from the customer's default payment connection"
+      field :payment_provider_customers, [Types::PaymentProviderCustomers::Provider], null: false
       field :subscriptions, [Types::Subscriptions::Object], resolver: Resolvers::Customers::SubscriptionsResolver
 
       field :integration_customers, [Types::IntegrationCustomers::Object], null: false

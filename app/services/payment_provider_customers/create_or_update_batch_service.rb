@@ -23,7 +23,7 @@ module PaymentProviderCustomers
 
       ActiveRecord::Base.transaction do
         discard_removed_connections
-        params_list.each { |params| upsert(params) }
+        params_list.each { |params| upsert_connection(params) }
         apply_default
       end
 
@@ -47,7 +47,7 @@ module PaymentProviderCustomers
       end
     end
 
-    def upsert(params)
+    def upsert_connection(params)
       if manual?(params)
         upsert_manual
       elsif params[:id]
@@ -87,7 +87,7 @@ module PaymentProviderCustomers
 
     # The element explicitly flagged as default wins; later flags override earlier ones.
     def apply_default
-      default_params = params_list.reverse.find { |params| params[:is_default] }
+      default_params = params_list.rfind { |params| params[:is_default] }
       return unless default_params
 
       connection = customer.payment_provider_customers.by_code(default_params[:code]).first

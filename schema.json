@@ -13428,18 +13428,6 @@
               "deprecationReason": null
             },
             {
-              "name": "providerCustomer",
-              "description": null,
-              "type": {
-                "kind": "INPUT_OBJECT",
-                "name": "ProviderCustomerInput",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "paymentProviderCustomers",
               "description": null,
               "type": {
@@ -13454,6 +13442,18 @@
                     "ofType": null
                   }
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "providerCustomer",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "ProviderCustomerInput",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -78639,18 +78639,6 @@
               "deprecationReason": null
             },
             {
-              "name": "providerCustomer",
-              "description": null,
-              "type": {
-                "kind": "INPUT_OBJECT",
-                "name": "ProviderCustomerInput",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "paymentProviderCustomers",
               "description": null,
               "type": {
@@ -78665,6 +78653,18 @@
                     "ofType": null
                   }
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "providerCustomer",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "ProviderCustomerInput",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
