@@ -9,15 +9,16 @@ RSpec.describe Subscriptions::TerminateEndedSubscriptionJob do
   before do
     allow(Subscriptions::TerminateService).to receive(:call!).and_call_original
     allow(Subscriptions::TerminateService).to receive(:call)
-      .with(subscription:)
+      .with(subscription:, terminated_at: subscription.ending_at)
       .and_return(result)
   end
 
   describe "#perform" do
-    it "calls the subscription service" do
+    it "calls the subscription service, pinning termination to ending_at" do
       described_class.perform_now(subscription)
 
-      expect(Subscriptions::TerminateService).to have_received(:call!).with(subscription:)
+      expect(Subscriptions::TerminateService)
+        .to have_received(:call!).with(subscription:, terminated_at: subscription.ending_at)
     end
 
     context "when the service returns a failure" do

@@ -67,13 +67,32 @@ module Invoices
     end
 
     def duplicated_invoices?
-      return false unless recurring
+      if recurring
+        return subscriptions_boundaries.any? do |subscription_id, boundaries|
+          subscription = Subscription.includes(:plan).find(subscription_id)
 
-      subscriptions_boundaries.any? do |subscription_id, boundaries|
-        subscription = Subscription.includes(:plan).find(subscription_id)
-
-        InvoiceSubscription.matching?(subscription, boundaries)
+          # NOTE: `include_terminating` also treats a period already invoiced by the
+          #       termination flow as billed, so the periodic biller cannot re-bill a
+          #       period that termination already covered (prevents the
+          #       termination-then-periodic double billing on the ending/billing day).
+          InvoiceSubscription.matching?(subscription, boundaries, include_terminating: true)
+        end
       end
+
+      # NOTE: The termination flow must not re-bill a period that the periodic biller has
+      #       already invoiced (e.g. billing ran before the termination job on the ending/
+      #       billing day). We check the termination-adjusted boundaries — the period that
+      #       is actually about to be billed — against existing recurring invoices.
+      return false unless terminating?
+
+      impacted_subscriptions.any? do |subscription|
+        boundaries = termination_boundaries(subscription, subscriptions_boundaries[subscription.id])
+        InvoiceSubscription.period_already_billed?(subscription, boundaries)
+      end
+    end
+
+    def terminating?
+      invoicing_reason.to_sym == :subscription_terminating
     end
 
     def subscriptions_boundaries

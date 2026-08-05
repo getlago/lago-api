@@ -312,8 +312,13 @@ RSpec.describe Subscriptions::OrganizationBillingService do
           let(:billing_at) { billed_on.first }
           let(:ending_at) { billing_at }
 
-          it "does not bill" do
-            expect { billing_service.call }.not_to have_enqueued_job
+          # NOTE: The biller is no longer skipped on the ending day — it bills the completed
+          #       period like any other. The termination flow only bills the final partial
+          #       period, and the period-based dedup prevents double billing.
+          it "bills the completed period" do
+            billing_service.call
+
+            expect_to_bill_together([subscription], billing_at)
           end
         end
 

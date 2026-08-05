@@ -15,7 +15,7 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
   end
 
   describe ".perform" do
-    it "enqueues a TerminateEndedSubscriptionJob for matching subscriptions" do
+    it "enqueues a TerminateEndedSubscriptionJob for subscriptions past their ending_at" do
       current_date = Time.current + 2.months
 
       travel_to(current_date) do
@@ -30,25 +30,25 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
       end
     end
 
-    context "with customer timezone" do
-      let(:ending_at) { DateTime.parse("2022-10-21 00:30:00") }
+    context "when the subscription ends later in the day" do
+      # ending_at is at 15:00, so the midnight run must NOT terminate it yet.
+      let(:ending_at) { DateTime.parse("2026-10-21 15:00:00") }
 
-      before do
-        subscription1.customer.update!(timezone: "America/New_York")
+      it "does not terminate it when the clock runs before ending_at (e.g. midnight)" do
+        travel_to(DateTime.parse("2026-10-21 00:05:00")) do
+          described_class.perform_now
+
+          expect(Subscriptions::TerminateEndedSubscriptionJob)
+            .not_to have_been_enqueued.with(subscription1)
+        end
       end
 
-      it "takes timezone into account" do
-        current_date = ending_at
-
-        travel_to(current_date) do
+      it "terminates it on the next hourly run after ending_at has passed" do
+        travel_to(DateTime.parse("2026-10-21 15:05:00")) do
           described_class.perform_now
 
           expect(Subscriptions::TerminateEndedSubscriptionJob)
             .to have_been_enqueued.with(subscription1)
-          expect(Subscriptions::TerminateEndedSubscriptionJob)
-            .not_to have_been_enqueued.with(subscription2)
-          expect(Subscriptions::TerminateEndedSubscriptionJob)
-            .not_to have_been_enqueued.with(subscription3)
         end
       end
     end

@@ -4,10 +4,15 @@ module Subscriptions
   class TerminateService < BaseService
     Result = BaseResult[:subscription]
 
-    def initialize(subscription:, async: true, upgrade: false, on_termination_credit_note: subscription&.on_termination_credit_note, on_termination_invoice: subscription&.on_termination_invoice)
+    def initialize(subscription:, async: true, upgrade: false, terminated_at: nil, on_termination_credit_note: subscription&.on_termination_credit_note, on_termination_invoice: subscription&.on_termination_invoice)
       @subscription = subscription
       @async = async
       @upgrade = upgrade
+      # NOTE: `terminated_at` lets the caller pin the termination instant. The clock that
+      #       terminates ended subscriptions passes `subscription.ending_at` so billing stops
+      #       exactly at the contractual end (no overshoot into the next period). Manual/API
+      #       termination leaves it nil and terminates at the current time.
+      @terminated_at = terminated_at
       @on_termination_credit_note = on_termination_credit_note.blank? ? :credit : on_termination_credit_note.to_sym
       @on_termination_invoice = on_termination_invoice.blank? ? :generate : on_termination_invoice.to_sym
 
@@ -29,7 +34,7 @@ module Subscriptions
             Utils::ActivityLog.produce_after_commit(previous, "subscription.updated")
           end
         elsif !subscription.terminated?
-          subscription.mark_as_terminated!
+          subscription.mark_as_terminated!(terminated_at || Time.current)
           update_on_termination_actions!
 
           if subscription.should_sync_hubspot_subscription?
@@ -90,7 +95,7 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :async, :upgrade, :on_termination_credit_note, :on_termination_invoice
+    attr_reader :subscription, :async, :upgrade, :terminated_at, :on_termination_credit_note, :on_termination_invoice
 
     def cancel_next_subscription
       # NOTE: Upgrade path: next_subscription is the new subscription we just persisted, not a stale scheduled change

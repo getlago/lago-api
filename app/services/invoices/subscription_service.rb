@@ -109,7 +109,11 @@ module Invoices
       raise
     rescue BaseService::ServiceFailure => e
       raise unless e.code.to_s == "duplicated_invoices"
-      raise unless invoicing_reason.to_sym == :subscription_periodic
+      # NOTE: A duplicated period is benign for periodic billing (two billers racing) and now
+      #       also for termination (the period was already billed periodically — see
+      #       CreateInvoiceSubscriptionService#duplicated_invoices?). In both cases we skip
+      #       silently rather than erroring.
+      raise unless invoicing_reason.to_sym.in?(%i[subscription_periodic subscription_terminating])
 
       result
     rescue ActiveRecord::StaleObjectError, BaseLockService::FailedToAcquireLock
