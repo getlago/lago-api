@@ -38,7 +38,7 @@ module Api
       end
 
       def update
-        credit_note = current_organization.credit_notes.find_by(id: params[:id])
+        credit_note = current_organization.credit_notes.not_deleted.find_by(id: params[:id])
         return not_found_error(resource: "credit_note") unless credit_note
 
         result = ::CreditNotes::UpdateService.new(credit_note:, partial_metadata: true, **update_params).call
@@ -93,7 +93,7 @@ module Api
       end
 
       def void
-        credit_note = current_organization.credit_notes.find_by(id: params[:id])
+        credit_note = current_organization.credit_notes.not_deleted.find_by(id: params[:id])
         return not_found_error(resource: "credit_note") unless credit_note
 
         result = ::CreditNotes::VoidService.new(credit_note:).call

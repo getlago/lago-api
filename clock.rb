@@ -154,6 +154,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.hour, "schedule:execute_scheduled_orders", at: "*:45") do
+    Clock::ExecuteScheduledOrdersJob
+      .set(sentry: {"slug" => "lago_execute_scheduled_orders", "cron" => "45 */1 * * *"})
+      .perform_later
+  end
+
   every(1.day, "schedule:clean_webhooks", at: "01:00") do
     Clock::WebhooksCleanupJob
       .set(sentry: {"slug" => "lago_clean_webhooks", "cron" => "0 1 * * *"})

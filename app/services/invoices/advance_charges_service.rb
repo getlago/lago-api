@@ -20,9 +20,11 @@ module Invoices
 
       return result if subscriptions.empty?
 
-      invoice = create_group_invoice
+      invoices = create_group_invoices
 
-      if invoice && !invoice.closed?
+      invoices.each do |invoice|
+        next if invoice.closed?
+
         SendWebhookJob.perform_later("invoice.created", invoice)
         Utils::ActivityLog.produce(invoice, "invoice.created")
         create_manual_payment(invoice)
@@ -32,7 +34,7 @@ module Invoices
         Utils::SegmentTrack.invoice_created(invoice)
       end
 
-      result.invoice = invoice
+      result.invoice = invoices.last
 
       result
     end
@@ -91,11 +93,20 @@ module Invoices
       ::Payments::ManualCreateJob.perform_later(organization:, params:)
     end
 
-    def create_group_invoice
+    # NOTE: The re-expanded subscription set (matched by external_id) can span several
+    #       purchase order numbers — e.g. a terminated and an active subscription sharing
+    #       an external_id after an upgrade. Each PO must produce its own invoice.
+    def create_group_invoices
+      subscriptions.group_by(&:purchase_order_number).values.filter_map do |subscriptions_group|
+        create_group_invoice(subscriptions_group)
+      end
+    end
+
+    def create_group_invoice(subscriptions_group)
       invoice = nil
 
       ActiveRecord::Base.transaction do
-        invoice = create_generating_invoice
+        invoice = create_generating_invoice(subscriptions_group)
         invoice.invoice_subscriptions.each do |is|
           is.subscription.fees
             .where(invoice: nil, payment_status: :succeeded)
@@ -125,7 +136,7 @@ module Invoices
       invoice
     end
 
-    def create_generating_invoice
+    def create_generating_invoice(subscriptions_group)
       # TODO: seems that skip_charges here might be deleted. Performed one test locally - worked without any additional charges.
       # Following the code - also did not find calling any service that would use this skip_charges
       invoice_result = Invoices::CreateGeneratingService.call(
@@ -134,12 +145,13 @@ module Invoices
         currency:,
         datetime: billing_at, # this is an int we need to convert it
         skip_charges: true,
-        billing_entity: initial_subscriptions.first&.billing_entity || customer.billing_entity
+        billing_entity: initial_subscriptions.first&.billing_entity || customer.billing_entity,
+        purchase_order_number: subscriptions_group.first&.purchase_order_number
       ) do |invoice|
         Invoices::CreateAdvanceChargesInvoiceSubscriptionService.call!(
           invoice:,
-          subscriptions_with_fees: subscriptions,
-          all_subscriptions: subscriptions + initial_subscriptions,
+          subscriptions_with_fees: subscriptions_group,
+          all_subscriptions: subscriptions_group + initial_subscriptions,
           timestamp: billing_at
         )
       end

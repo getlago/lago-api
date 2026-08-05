@@ -8,8 +8,7 @@ module PaymentProviderCustomers
     retry_on ActiveJob::DeserializationError
 
     def perform(adyen_customer)
-      result = PaymentProviderCustomers::AdyenService.new(adyen_customer).generate_checkout_url
-      result.raise_if_error!
+      PaymentProviderCustomers::AdyenService.call!(:generate_checkout_url, adyen_customer)
     end
   end
 end

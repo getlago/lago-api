@@ -4,12 +4,14 @@ module Invoices
   module Payments
     class MoneyhashService < BaseService
       include Customers::PaymentProviderFinder
+      include TypedResults
 
-      def initialize(invoice = nil)
-        @invoice = invoice
+      RESULTS = {
+        update_payment_status: BaseResult[:payment, :invoice],
+        generate_payment_url: BaseResult[:payment_url]
+      }.freeze
 
-        super(nil)
-      end
+      private
 
       def update_payment_status(organization_id:, provider_payment_id:, status:, amount_cents: nil, metadata: {})
         payment_obj = Payment.find_or_initialize_by(provider_payment_id: provider_payment_id)
@@ -39,7 +41,8 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url(payment_intent)
+      def generate_payment_url(invoice, payment_intent)
+        @invoice = invoice
         return result unless should_process_payment?
 
         response = client.post_with_response(
@@ -57,8 +60,6 @@ module Invoices
         deliver_error_webhook(e)
         result.service_failure!(code: e.error_code, message: e.message)
       end
-
-      private
 
       attr_accessor :invoice
 

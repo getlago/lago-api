@@ -48,4 +48,17 @@ RSpec.describe Mutations::CreditNotes::Void do
       expect_not_found(result)
     end
   end
+
+  context "when credit note is deleted" do
+    let(:credit_note) { create(:credit_note, :deleted, customer:, invoice:) }
+
+    it "returns an error" do
+      result = execute_query(
+        query: mutation,
+        input: {id: credit_note.id}
+      )
+
+      expect_not_found(result)
+    end
+  end
 end

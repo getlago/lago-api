@@ -2,6 +2,8 @@
 
 module PaymentProviders
   class AdyenService < BaseService
+    Result = BaseResult[:adyen_provider]
+
     def create_or_update(**args)
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization].id,

@@ -8,7 +8,7 @@ RSpec.describe Invoices::Payments::GocardlessCreateJob do
   it "calls the stripe create service" do
     allow(Invoices::Payments::CreateService).to receive(:call!)
       .with(invoice:, payment_provider: :gocardless)
-      .and_return(BaseService::Result.new)
+      .and_return(Invoices::Payments::CreateService::Result.new)
 
     described_class.perform_now(invoice)
 

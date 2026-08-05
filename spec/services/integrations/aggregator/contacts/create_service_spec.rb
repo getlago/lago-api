@@ -21,7 +21,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
   end
 
   let(:customer_link) do
-    url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+    url = Rails.application.config.lago_front_url
 
     URI.join(url, "/#{customer.organization.slug}/customer/", customer.id).to_s
   end
@@ -166,7 +166,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
             result = service_call
 
             expect(result).to be_success
-            expect(result.contact).to be(nil)
+            expect(result.contact_id).to be(nil)
           end
 
           it "does not create integration resource object" do

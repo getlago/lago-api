@@ -5,13 +5,13 @@ module Resolvers
     class InvoiceCollectionsResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
+      include BillingEntityArgsResolvable
 
       REQUIRED_PERMISSION = "analytics:view"
 
       description "Query invoice collections of an organization"
 
       argument :billing_entity_code, String, required: false
-      argument :billing_entity_id, ID, required: false
       argument :currency, Types::CurrencyEnum, required: false
       argument :is_customer_tin_empty, Boolean, required: false
 
@@ -19,6 +19,9 @@ module Resolvers
 
       def resolve(**args)
         raise unauthorized_error unless License.premium?
+
+        error = resolve_billing_entity!(args)
+        return error if error
 
         ::Analytics::InvoiceCollection.find_all_by(current_organization.id, **args.merge(months: 12))
       end

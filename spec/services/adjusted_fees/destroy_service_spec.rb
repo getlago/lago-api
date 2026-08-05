@@ -16,7 +16,7 @@ RSpec.describe AdjustedFees::DestroyService do
       adjusted_fee
       allow(Invoices::RefreshDraftService)
         .to receive(:call).with(invoice:)
-        .and_return(BaseService::Result.new)
+        .and_return(Invoices::RefreshDraftService::Result.new)
     end
 
     it "destroys the adjusted fee" do

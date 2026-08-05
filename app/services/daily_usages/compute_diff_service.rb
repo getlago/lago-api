@@ -2,6 +2,8 @@
 
 module DailyUsages
   class ComputeDiffService < BaseService
+    Result = BaseResult[:usage_diff]
+
     def initialize(daily_usage:, previous_daily_usage: nil)
       @daily_usage = daily_usage
       @previous_daily_usage = previous_daily_usage

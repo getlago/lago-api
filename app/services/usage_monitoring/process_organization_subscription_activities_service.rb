@@ -16,11 +16,11 @@ module UsageMonitoring
 
       # NOTE: If we need to handle different delays per organization, this would be done here.
 
-      queue_name = if dedicated?
-        Utils::DedicatedWorkerConfig::DEDICATED_ALERTS_QUEUE.to_s
-      else
-        ProcessSubscriptionActivityJob.queue_name
-      end
+      queue_name = Utils::DedicatedWorkerConfig.queue_for(
+        organization.id,
+        dedicated: Utils::DedicatedWorkerConfig::DEDICATED_ALERTS_QUEUE,
+        default: ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_ALERTS"]) ? :alerts : :default
+      ).to_s
 
       organization.subscription_activities.where(enqueued: false).select(:id).in_batches(of: BATCH_SIZE) do |batch|
         jobs = batch.map do |sa|
@@ -42,9 +42,5 @@ module UsageMonitoring
     private
 
     attr_reader :organization
-
-    def dedicated?
-      Utils::DedicatedWorkerConfig.enabled_for?(organization.id)
-    end
   end
 end

@@ -9,7 +9,7 @@ RSpec.describe Invoices::Payments::CreateJob do
   it "calls the stripe create service" do
     allow(Invoices::Payments::CreateService).to receive(:call!)
       .with(invoice:, payment_provider:, payment_method_params: {})
-      .and_return(BaseService::Result.new)
+      .and_return(Invoices::Payments::CreateService::Result.new)
 
     described_class.perform_now(invoice:, payment_provider:, payment_method_params: {})
 

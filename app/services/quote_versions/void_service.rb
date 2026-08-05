@@ -28,7 +28,6 @@ module QuoteVersions
             status: :voided,
             void_reason: reason,
             voided_at: Time.current,
-            share_token: nil,
             approved_at: nil
           )
 

@@ -2,6 +2,8 @@
 
 module IntegrationCustomers
   class BaseService < BaseService
+    Result = BaseResult[:integration_customer]
+
     def initialize(params:, integration:)
       @params = params
       @integration = integration

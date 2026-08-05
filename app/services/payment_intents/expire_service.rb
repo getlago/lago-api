@@ -15,12 +15,13 @@ module PaymentIntents
       payment_intents.find_each do |payment_intent|
         if payment_intent.provider_session_id.present?
           Invoices::Payments::PaymentProviders::Factory
-            .new_instance(invoice:)
-            .expire_payment_url(payment_intent)
-            .raise_if_error!
+            .for(invoice)
+            .call!(:expire_payment_url, invoice, payment_intent)
         end
 
-        payment_intent.expired!
+        # NOTE: also move expires_at into the past so the intent leaves the reuse window
+        #       (PaymentIntent.non_expired is time-based) and a fresh intent is generated next time.
+        payment_intent.update!(status: :expired, expires_at: Time.current)
       end
 
       result.payment_intents = payment_intents

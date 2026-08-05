@@ -14,7 +14,7 @@ RSpec.describe CreditNotes::GenerateXmlService, type: :service do
 
   let(:xml_service) { EInvoices::CreditNotes::Ubl::CreateService }
   let(:fake_xml) { "<xml>content</xml>" }
-  let(:create_xml_result) { BaseService::Result.new.tap { |result| result.xml = fake_xml } }
+  let(:create_xml_result) { EInvoices::CreditNotes::Ubl::CreateService::Result.new.tap { |result| result.xml = fake_xml } }
   let(:blank_xml_path) { Rails.root.join("spec/fixtures/blank.xml") }
 
   before do
@@ -78,7 +78,7 @@ RSpec.describe CreditNotes::GenerateXmlService, type: :service do
         it "results in error" do
           result = described_class.call(credit_note:, context:)
 
-          expect(result.success).to be_falsey
+          expect(result).not_to be_success
           expect(result.error.error_code).to eq("credit_note_not_found")
         end
       end
@@ -89,7 +89,7 @@ RSpec.describe CreditNotes::GenerateXmlService, type: :service do
         it "results in error" do
           result = described_class.call(credit_note:, context:)
 
-          expect(result.success).to be_falsey
+          expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
           expect(result.error.code).to eq("is_draft")
         end

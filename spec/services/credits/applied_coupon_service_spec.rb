@@ -45,7 +45,7 @@ RSpec.describe Credits::AppliedCouponService do
 
   context "with lock acquired" do
     around do |spec|
-      customer.with_advisory_lock("COUPONS-#{customer.id}", &spec)
+      customer.with_advisory_lock("customer-#{customer.id}-coupon", &spec)
     end
 
     describe "call" do

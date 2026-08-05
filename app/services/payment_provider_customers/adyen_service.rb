@@ -4,18 +4,23 @@ module PaymentProviderCustomers
   class AdyenService < BaseService
     include Lago::Adyen::ErrorHandlable
     include Customers::PaymentProviderFinder
+    include TypedResults
 
-    def initialize(adyen_customer = nil)
+    RESULTS = {
+      create: BaseResult[:adyen_customer, :checkout_url],
+      update: BaseResult,
+      generate_checkout_url: BaseResult[:checkout_url],
+      preauthorise: BaseResult[:adyen_customer]
+    }.freeze
+
+    private
+
+    def create(adyen_customer)
       @adyen_customer = adyen_customer
-
-      super(nil)
-    end
-
-    def create
       result.adyen_customer = adyen_customer
       return result if adyen_customer.provider_customer_id?
 
-      checkout_url_result = generate_checkout_url
+      checkout_url_result = generate_checkout_url(adyen_customer)
       return result unless checkout_url_result.success?
 
       result.checkout_url = checkout_url_result.checkout_url
@@ -27,11 +32,13 @@ module PaymentProviderCustomers
       result
     end
 
-    def update
+    def update(adyen_customer)
+      @adyen_customer = adyen_customer
       result
     end
 
-    def generate_checkout_url(send_webhook: true)
+    def generate_checkout_url(adyen_customer, send_webhook: true)
+      @adyen_customer = adyen_customer
       return result.not_found_failure!(resource: "adyen_payment_provider") unless adyen_payment_provider
 
       res = client.checkout.payment_links_api.payment_links(Lago::Adyen::Params.new(payment_link_params).to_h)
@@ -70,9 +77,7 @@ module PaymentProviderCustomers
       if event["success"] == "true"
         adyen_customer.update!(payment_method_id:, provider_customer_id: shopper_reference)
 
-        if organization.feature_flag_enabled?(:multiple_payment_methods)
-          handle_payment_methods(payment_method_id)
-        end
+        handle_payment_methods(payment_method_id)
 
         SendWebhookJob.perform_later("customer.payment_provider_created", customer)
       else
@@ -82,8 +87,6 @@ module PaymentProviderCustomers
       result.adyen_customer = adyen_customer
       result
     end
-
-    private
 
     attr_accessor :adyen_customer
 

@@ -180,6 +180,22 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
       end
     end
 
+    context "with purchase_order_number parameter" do
+      let(:params) do
+        {
+          wallet_id: wallet.id,
+          paid_credits:,
+          granted_credits:,
+          purchase_order_number: "PO-123"
+        }
+      end
+
+      it "creates paid and granted wallet transactions with the purchase order number" do
+        expect(result).to be_success
+        expect(result.wallet_transactions).to all(have_attributes(purchase_order_number: "PO-123"))
+      end
+    end
+
     context "with voided_invoice_id parameter" do
       let(:voided_invoice) { create(:invoice, :voided, organization:) }
       let(:params) do

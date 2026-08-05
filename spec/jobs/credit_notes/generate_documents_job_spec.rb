@@ -6,7 +6,7 @@ RSpec.describe CreditNotes::GenerateDocumentsJob do
   subject { described_class.perform_now(credit_note) }
 
   let(:credit_note) { create(:credit_note) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { CreditNotes::GeneratePdfService::Result.new }
 
   before do
     allow(CreditNotes::GeneratePdfService).to receive(:call).with(credit_note:, context: "api").and_return(result)

@@ -73,7 +73,7 @@ module BillableMetrics
             group_result_without_proration.grouped_by = aggregation.groups
           end
 
-          group_result = BaseService::Result.new
+          group_result = BillableMetrics::Aggregations::BaseService::Result.new
           group_result.grouped_by = aggregation.groups
           group_result.full_units_number = group_result_without_proration&.aggregation || 0
 
@@ -102,6 +102,13 @@ module BillableMetrics
       end
 
       def per_event_aggregation(grouped_by_values: nil, include_event_value: false)
+        if should_bypass_aggregation?
+          return ProratedPerEventAggregationResult.new.tap do |result|
+            result.event_aggregation = []
+            result.event_prorated_aggregation = []
+          end
+        end
+
         event_aggregation_array = []
         period_aggregation = event_store.with_grouped_by_values(grouped_by_values) do
           event_store.prorated_unique_count_breakdown(with_remove: true).map do |row|

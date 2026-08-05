@@ -15,6 +15,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update do
           id
           successRedirectUrl
           supports3ds
+          requireTermsOfServiceConsent
         }
       }
     GQL
@@ -38,7 +39,8 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update do
         input: {
           id: stripe_provider.id,
           successRedirectUrl: success_redirect_url,
-          supports3ds: true
+          supports3ds: true,
+          requireTermsOfServiceConsent: true
         }
       }
     )
@@ -47,6 +49,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update do
 
     expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
     expect(result_data["supports3ds"]).to eq(true)
+    expect(result_data["requireTermsOfServiceConsent"]).to eq(true)
   end
 
   context "when success redirect url is nil" do

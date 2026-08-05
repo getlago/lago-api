@@ -60,6 +60,7 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:base]).to eq(["invalid_payment_status"])
+        expect(result.payment_url).to be_nil
       end
     end
   end
@@ -95,12 +96,11 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     let(:provider) { "cashfree" }
     let(:code) { "cashfree_1" }
 
-    let(:payment_provider_service) { instance_double(PaymentRequests::Payments::CashfreeService) }
     let(:payment_provider) { create(:cashfree_provider, code:, organization:) }
     let(:provider_customer) { create(:cashfree_customer, payment_provider:, customer:) }
 
     let(:error_result) do
-      BaseService::Result.new.tap do |result|
+      PaymentRequests::Payments::CashfreeService::RESULTS.fetch(:generate_payment_url).new.tap do |result|
         result.fail_with_error!(
           BaseService::ThirdPartyFailure.new(
             result,
@@ -113,11 +113,11 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     end
 
     before do
-      allow(PaymentRequests::Payments::CashfreeService)
-        .to receive(:new)
-        .and_return(payment_provider_service)
+      provider_customer
 
-      allow(payment_provider_service).to receive(:generate_payment_url)
+      allow(PaymentRequests::Payments::CashfreeService)
+        .to receive(:call)
+        .with(:generate_payment_url, payment_request)
         .and_return(error_result)
     end
 
@@ -143,10 +143,8 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
   end
 
   context "when provider service return an error" do
-    let(:payment_provider_service) { instance_double(Invoices::Payments::StripeService) }
-
     let(:error_result) do
-      BaseService::Result.new.tap do |result|
+      PaymentRequests::Payments::StripeService::RESULTS.fetch(:generate_payment_url).new.tap do |result|
         result.fail_with_error!(
           BaseService::ServiceFailure.new(
             result,
@@ -158,11 +156,11 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     end
 
     before do
-      allow(Invoices::Payments::StripeService)
-        .to receive(:new)
-        .and_return(payment_provider_service)
+      provider_customer
 
-      allow(payment_provider_service).to receive(:generate_payment_url)
+      allow(PaymentRequests::Payments::StripeService)
+        .to receive(:call)
+        .with(:generate_payment_url, payment_request)
         .and_return(error_result)
     end
 

@@ -2,6 +2,8 @@
 
 module Coupons
   class CreateService < BaseService
+    Result = BaseResult[:coupon]
+
     def initialize(args)
       @args = args
       super

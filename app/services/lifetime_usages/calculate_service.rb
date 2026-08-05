@@ -2,6 +2,8 @@
 
 module LifetimeUsages
   class CalculateService < BaseService
+    Result = BaseResult[:lifetime_usage]
+
     def initialize(lifetime_usage:, current_usage: nil)
       @lifetime_usage = lifetime_usage
       @current_usage = current_usage
@@ -57,7 +59,8 @@ module LifetimeUsages
       @current_usage ||= Invoices::CustomerUsageService.call(
         customer: subscription.customer,
         subscription: subscription,
-        apply_taxes: false
+        apply_taxes: false,
+        with_cache: true
       ).usage
     end
 

@@ -40,6 +40,33 @@ RSpec.describe Resolvers::TaxesResolver do
     )
   end
 
+  context "when a tax is applied to the default billing entity" do
+    let(:query) do
+      <<~GQL
+        query {
+          taxes(limit: 5) {
+            collection { id appliedToOrganization appliedToBillingEntitiesCodes }
+          }
+        }
+      GQL
+    end
+
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:) }
+
+    it "resolves applied_to_organization from the billing entity join" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:
+      )
+
+      tax_response = result["data"]["taxes"]["collection"].first
+
+      expect(tax_response["appliedToOrganization"]).to eq(true)
+      expect(tax_response["appliedToBillingEntitiesCodes"]).to eq([organization.default_billing_entity.code])
+    end
+  end
+
   context "without current organization" do
     it "returns an error" do
       result = execute_graphql(current_user: membership.user, query:)

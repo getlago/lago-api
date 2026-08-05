@@ -13,7 +13,7 @@ RSpec.describe PaymentProviderCustomers::StripeSyncFundingInstructionsJob do
       .with(stripe_customer)
       .and_return(stripe_service)
     allow(stripe_service).to receive(:call)
-      .and_return(BaseService::Result.new)
+      .and_return(PaymentProviderCustomers::Stripe::SyncFundingInstructionsService::Result.new)
 
     stripe_sync_funding_instructions_job.perform_now(stripe_customer)
 

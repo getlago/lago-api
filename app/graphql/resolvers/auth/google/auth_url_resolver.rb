@@ -10,9 +10,7 @@ module Resolvers
         type Types::Auth::Google::AuthUrl, null: false
 
         def resolve(**_args)
-          result = ::Auth::GoogleService
-            .new
-            .authorize_url(context[:request])
+          result = ::Auth::GoogleService.call(:authorize_url, context[:request])
 
           result.success? ? result : result_error(result)
         end

@@ -8,7 +8,7 @@ RSpec.describe ChargeModels::Factory do
   let(:charge) { build(:standard_charge) }
 
   describe "#new_instance" do
-    let(:aggregation_result) { BaseService::Result.new }
+    let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
     let(:properties) { charge.properties }
 
     let(:result) { factory.new_instance(chargeable: charge, aggregation_result:, properties:) }
@@ -27,14 +27,14 @@ RSpec.describe ChargeModels::Factory do
 
         context "when charge is grouped" do
           let(:charge) { build(:standard_charge, properties: {grouped_by: ["cloud"]}) }
-          let(:aggregation_result) { BaseService::Result.new.tap { |r| r.aggregations = [BaseService::Result.new] } }
+          let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new.tap { |r| r.aggregations = [BillableMetrics::Aggregations::BaseService::Result.new] } }
 
           it { expect(result).to be_a(ChargeModels::GroupedService) }
         end
 
         context "when charge accepts target wallet" do
           let(:charge) { build(:standard_charge, accepts_target_wallet: true) }
-          let(:aggregation_result) { BaseService::Result.new.tap { |r| r.aggregations = [BaseService::Result.new] } }
+          let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new.tap { |r| r.aggregations = [BillableMetrics::Aggregations::BaseService::Result.new] } }
 
           it { expect(result).to be_a(ChargeModels::GroupedService) }
         end
@@ -47,7 +47,7 @@ RSpec.describe ChargeModels::Factory do
 
         context "when charge is prorated" do
           let(:charge) { build(:graduated_charge, prorated: true) }
-          let(:aggregation_result) { BaseService::Result.new.tap { |r| r.aggregator = [BaseService::Result.new] } }
+          let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new.tap { |r| r.aggregator = [BillableMetrics::Aggregations::BaseService::Result.new] } }
 
           it { expect(result).to be_a(ChargeModels::ProratedGraduatedService) }
         end

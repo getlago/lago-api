@@ -2,6 +2,8 @@
 
 module Invoices
   class ComputeTaxesAndTotalsService < BaseService
+    Result = BaseResult[:invoice, :non_invoiceable_fees]
+
     def initialize(invoice:, finalizing: true)
       @invoice = invoice
       @finalizing = finalizing

@@ -2,6 +2,8 @@
 
 module CreditNotes
   class ApplyTaxesService < BaseService
+    Result = BaseResult[:applied_taxes, :coupons_adjustment_amount_cents, :precise_taxes_amount_cents, :taxes_amount_cents, :taxes_rate]
+
     def initialize(invoice:, items:)
       @invoice = invoice
       @items = items

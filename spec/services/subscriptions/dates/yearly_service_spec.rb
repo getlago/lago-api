@@ -894,6 +894,42 @@ RSpec.describe Subscriptions::Dates::YearlyService do
     end
   end
 
+  describe "#fixed_charges_period_to_datetime" do
+    subject(:result) { date_service.fixed_charges_period_to_datetime }
+
+    let(:billing_time) { :calendar }
+
+    context "when billing charges monthly but not fixed charges" do
+      before { plan.update!(bill_charges_monthly: true) }
+
+      context "when the cycle bills fixed charges (first period)" do
+        let(:billing_at) { Time.zone.parse("01 Jan 2022") }
+
+        it "returns the fixed-charges period end, like fixed_charges_to_datetime" do
+          expect(result).to eq(date_service.fixed_charges_to_datetime)
+          expect(result.to_s).to eq("2021-12-31 23:59:59 UTC")
+        end
+      end
+
+      context "when the cycle does not bill fixed charges (charges-only run)" do
+        let(:billing_at) { Time.zone.parse("01 Feb 2022") }
+
+        it "still returns the period end even though fixed_charges_to_datetime is nil" do
+          expect(date_service.fixed_charges_to_datetime).to be_nil
+          expect(result.to_s).to eq("2021-12-31 23:59:59 UTC")
+        end
+      end
+    end
+
+    context "when subscription is not yet started" do
+      let(:started_at) { nil }
+
+      it "returns nil" do
+        expect(result).to be_nil
+      end
+    end
+  end
+
   describe "next_end_of_period" do
     let(:result) { date_service.next_end_of_period.to_s }
 

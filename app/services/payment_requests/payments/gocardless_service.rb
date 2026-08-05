@@ -5,6 +5,11 @@ module PaymentRequests
     class GocardlessService < BaseService
       include Customers::PaymentProviderFinder
       include Updatable
+      include TypedResults
+
+      RESULTS = {
+        update_payment_status: BaseResult[:payment, :payable]
+      }.freeze
 
       class MandateNotFoundError < StandardError
         DEFAULT_MESSAGE = "No mandate available for payment"
@@ -19,18 +24,15 @@ module PaymentRequests
         end
       end
 
-      def initialize(payable = nil)
-        @payable = payable
-
-        super(nil)
-      end
+      private
 
       def update_payment_status(provider_payment_id:, status:)
         payment = Payment.find_by(provider_payment_id:)
         return result.not_found_failure!(resource: "gocardless_payment") unless payment
 
+        @payable = payment.payable
         result.payment = payment
-        result.payable = payment.payable
+        result.payable = @payable
         return result if payment.payable.payment_succeeded?
 
         payment.status = status
@@ -53,9 +55,7 @@ module PaymentRequests
         result.fail_with_error!(e)
       end
 
-      private
-
-      attr_accessor :payable
+      attr_reader :payable
 
       delegate :organization, :customer, to: :payable
 

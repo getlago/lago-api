@@ -11,7 +11,7 @@ RSpec.describe Api::V1::DataApi::UsagesController do # rubocop:disable Rails/Fil
     let(:params) { {currency: "EUR"} }
 
     let(:result) do
-      BaseService::Result.new.tap do |result|
+      DataApi::UsagesService::Result.new.tap do |result|
         result.usages = [{amount_currency: nil, amount_cents: nil}]
       end
     end

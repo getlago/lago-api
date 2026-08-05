@@ -34,7 +34,7 @@ RSpec.describe Mutations::Integrations::SyncInvoice do
   let(:service) { instance_double(Integrations::Aggregator::Invoices::CreateService) }
 
   let(:result) do
-    r = BaseService::Result.new
+    r = Integrations::Aggregator::Invoices::CreateService::Result.new
     r.invoice_id = invoice.id
     r
   end

@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::StripeService do
-  subject(:stripe_service) { described_class.new(payment_request) }
-
   let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
   let(:billing_entity) { organization.default_billing_entity }
@@ -50,7 +48,7 @@ RSpec.describe PaymentRequests::Payments::StripeService do
     )
   end
 
-  describe "#generate_payment_url" do
+  describe ".call(:generate_payment_url)" do
     before do
       stripe_payment_provider
       stripe_customer
@@ -60,7 +58,7 @@ RSpec.describe PaymentRequests::Payments::StripeService do
     end
 
     it "generates payment url" do
-      stripe_service.generate_payment_url
+      described_class.call(:generate_payment_url, payment_request)
 
       expect(::Stripe::Checkout::Session)
         .to have_received(:create)
@@ -102,11 +100,39 @@ RSpec.describe PaymentRequests::Payments::StripeService do
         )
     end
 
+    it "does not require terms of service consent by default" do
+      described_class.call(:generate_payment_url, payment_request)
+
+      expect(::Stripe::Checkout::Session)
+        .to have_received(:create)
+        .with(
+          hash_excluding(:consent_collection),
+          hash_including({api_key: an_instance_of(String)})
+        )
+    end
+
+    context "when consent collection is enabled on the provider" do
+      let(:stripe_payment_provider) do
+        create(:stripe_provider, organization:, code:, require_terms_of_service_consent: true)
+      end
+
+      it "requires terms of service consent on the checkout session" do
+        described_class.call(:generate_payment_url, payment_request)
+
+        expect(::Stripe::Checkout::Session)
+          .to have_received(:create)
+          .with(
+            hash_including(consent_collection: {terms_of_service: "required"}),
+            hash_including({api_key: an_instance_of(String)})
+          )
+      end
+    end
+
     context "when payment request is related to a single overdue invoice" do
       let(:invoices) { [invoice_1] }
 
       it "includes the invoice number in stripe data" do
-        stripe_service.generate_payment_url
+        described_class.call(:generate_payment_url, payment_request)
 
         expect(::Stripe::Checkout::Session)
           .to have_received(:create)
@@ -148,7 +174,7 @@ RSpec.describe PaymentRequests::Payments::StripeService do
       end
 
       it "returns a failed result" do
-        result = stripe_service.generate_payment_url
+        result = described_class.call(:generate_payment_url, payment_request)
 
         expect(result).not_to be_success
 
@@ -159,9 +185,10 @@ RSpec.describe PaymentRequests::Payments::StripeService do
     end
   end
 
-  describe "#update_payment_status" do
+  describe ".call(:update_payment_status)" do
     subject(:result) do
-      stripe_service.update_payment_status(
+      described_class.call(
+        :update_payment_status,
         organization_id: organization.id,
         stripe_payment:,
         status:
@@ -188,8 +215,6 @@ RSpec.describe PaymentRequests::Payments::StripeService do
     end
 
     before do
-      allow(SegmentTrackJob).to receive(:perform_later)
-      allow(SendWebhookJob).to receive(:perform_later)
       payment
     end
 

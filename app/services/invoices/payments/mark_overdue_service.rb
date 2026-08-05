@@ -3,6 +3,8 @@
 module Invoices
   module Payments
     class MarkOverdueService < BaseService
+      Result = BaseResult[:invoice]
+
       def initialize(invoice:)
         @invoice = invoice
 

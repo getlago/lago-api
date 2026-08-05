@@ -95,6 +95,18 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       end
     end
 
+    context "when the subscription has a purchase order number" do
+      let(:subscription) do
+        create(:subscription, customer:, plan:, status: :active, purchase_order_number: "PO-SUB-123")
+      end
+
+      it "copies it to the invoice" do
+        invoice = invoice_service.call.invoice
+
+        expect(invoice.purchase_order_number).to eq("PO-SUB-123")
+      end
+    end
+
     it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
@@ -362,7 +374,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       before do
         allow(Fees::BuildPayInAdvanceFixedChargeService)
           .to receive(:call)
-          .and_return(BaseService::Result.new.service_failure!(code: "code", message: "message"))
+          .and_return(Fees::BuildPayInAdvanceFixedChargeService::Result.new.service_failure!(code: "code", message: "message"))
       end
 
       it "fails with a service failure" do
@@ -547,9 +559,9 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
 
         it "propagates the error" do
           allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
-            .to receive(:call).and_raise(Customers::FailedToAcquireLock)
+            .to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
 
-          expect { invoice_service.call }.to raise_error(Customers::FailedToAcquireLock)
+          expect { invoice_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
         end
       end
 

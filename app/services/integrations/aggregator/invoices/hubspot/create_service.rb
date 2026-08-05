@@ -5,6 +5,8 @@ module Integrations
     module Invoices
       module Hubspot
         class CreateService < BaseService
+          Result = BaseResult[:invoice_id, :external_id]
+
           def call
             return result unless integration
             return result unless integration.sync_invoices

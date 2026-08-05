@@ -52,6 +52,32 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         )
       end
 
+      context "when purchase_order_number is present in rule params" do
+        let(:rule_params) do
+          super().merge(purchase_order_number: "PO-RULE-123")
+        end
+
+        it "creates rule with the purchase order number" do
+          expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+          expect(wallet.recurring_transaction_rules.first.purchase_order_number).to eq("PO-RULE-123")
+        end
+      end
+
+      context "when purchase_order_number is too long" do
+        let(:rule_params) do
+          super().merge(purchase_order_number: "a" * 256)
+        end
+
+        it "returns a validation error" do
+          expect { create_service.call }.not_to change { wallet.reload.recurring_transaction_rules.count }
+
+          result = create_service.call
+          expect(result).to be_failure
+          expect(result.error.messages[:purchase_order_number]).to eq(["value_is_too_long"])
+        end
+      end
+
       context "when method is fixed" do
         let(:rule_params) do
           {

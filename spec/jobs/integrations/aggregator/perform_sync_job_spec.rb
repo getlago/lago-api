@@ -6,7 +6,7 @@ RSpec.describe Integrations::Aggregator::PerformSyncJob do
   subject(:perform_sync_job) { described_class.perform_now(integration:, sync_items:) }
 
   let(:integration) { create(:netsuite_integration) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Integrations::Aggregator::SyncService::Result.new }
 
   before do
     allow(Integrations::Aggregator::SyncService).to receive(:call).and_return(result)

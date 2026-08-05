@@ -53,6 +53,46 @@ RSpec.describe Events::EnrichService do
       )
     end
 
+    # enriched_at is what the lazy usage cache compares against to decide whether a cached usage
+    # value is stale, so losing its sub-second precision makes two enrichments within the same
+    # second indistinguishable. The assertion above (be_within(1.second)) would not catch that.
+    describe "enriched_at precision" do
+      # NOTE: travel_to and freeze_time zero out usec unless with_usec is passed, which would make
+      #       every assertion below pass trivially against a floored timestamp.
+      let(:frozen_at) { Time.zone.parse("2026-07-27T05:31:15.123456Z") }
+
+      # enriched_events is created with id: false and no primary key constraint, so #reload cannot
+      # build a WHERE clause. Re-query through the unique index instead.
+      def persisted_enriched_at
+        EnrichedEvent
+          .where(organization_id: organization.id, transaction_id: event.transaction_id)
+          .pick(:enriched_at)
+      end
+
+      it "stamps enriched_at with the full sub-second precision of the current time" do
+        enriched_event = travel_to(frozen_at, with_usec: true) do
+          enrich_service.call.enriched_events.first
+        end
+
+        expect(enriched_event.enriched_at).to eq(frozen_at)
+        expect(enriched_event.enriched_at.usec).to eq(123_456)
+      end
+
+      it "keeps the sub-second precision through the database round trip" do
+        travel_to(frozen_at, with_usec: true) { enrich_service.call }
+
+        # enriched_events.enriched_at is timestamp(6), so the microseconds must survive the write.
+        expect(persisted_enriched_at.usec).to eq(123_456)
+      end
+
+      it "does not floor enriched_at to the second" do
+        travel_to(frozen_at, with_usec: true) { enrich_service.call }
+
+        expect(persisted_enriched_at).to eq(frozen_at)
+        expect(persisted_enriched_at).not_to eq(frozen_at.change(usec: 0))
+      end
+    end
+
     context "with a precise_total_amount_cents set on the event" do
       let(:event) do
         create(

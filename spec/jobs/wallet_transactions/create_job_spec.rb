@@ -6,14 +6,16 @@ RSpec.describe WalletTransactions::CreateJob do
   subject(:create_job) { described_class }
 
   let(:organization) { create(:organization) }
-  let(:wallet) { create(:wallet) }
+  let(:customer) { create(:customer, organization:) }
+  let(:wallet) { create(:wallet, customer:) }
   let(:wallet_transaction_create_service) { instance_double(WalletTransactions::CreateFromParamsService) }
   let(:params) do
     {
       wallet_id: wallet.id,
       paid_credits: "1.00",
       granted_credits: "1.00",
-      source: "manual"
+      source: "manual",
+      purchase_order_number: "PO-123"
     }
   end
 
@@ -23,6 +25,14 @@ RSpec.describe WalletTransactions::CreateJob do
     described_class.perform_now(organization_id: organization.id, params:)
 
     expect(WalletTransactions::CreateFromParamsService).to have_received(:call!).with(organization:, params:)
+  end
+
+  it "creates wallet transactions with the purchase order number" do
+    expect do
+      described_class.perform_now(organization_id: organization.id, params:)
+    end.to change(WalletTransaction, :count).by(2)
+
+    expect(wallet.wallet_transactions.pluck(:purchase_order_number)).to match_array(%w[PO-123 PO-123])
   end
 
   describe "#lock_key_arguments" do

@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe PaymentReceipts::GeneratePdfJob do
   let(:payment_receipt) { create(:payment_receipt) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { PaymentReceipts::GeneratePdfService::Result.new }
 
   it "delegates to the Generate service" do
     allow(PaymentReceipts::GeneratePdfService).to receive(:call)

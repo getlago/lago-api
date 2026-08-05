@@ -86,7 +86,7 @@ RSpec.describe GraphqlController do
       end
 
       let(:token) do
-        Auth::TokenService.encode(user:)
+        Utils::AuthToken.encode(user:)
       end
 
       it "retrieves the current user" do
@@ -211,7 +211,7 @@ RSpec.describe GraphqlController do
     context "with query length validation" do
       let(:user) { create(:user) }
       let(:token) do
-        Auth::TokenService.encode(user:)
+        Utils::AuthToken.encode(user:)
       end
 
       it "rejects queries that exceed maximum length" do

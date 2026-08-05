@@ -2,6 +2,8 @@
 
 module Customers
   class DestroyService < BaseService
+    Result = BaseResult[:customer]
+
     def initialize(customer:)
       @customer = customer
 

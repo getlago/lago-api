@@ -695,8 +695,8 @@ RSpec.describe WalletTransactions::VoidService do
       context "when it fails to acquire the lock" do
         let(:lock_released_after) { 2.seconds }
 
-        it "raises a Customers::FailedToAcquireLock error" do
-          expect { subject }.to raise_error(Customers::FailedToAcquireLock)
+        it "raises a BaseLockService::FailedToAcquireLock error" do
+          expect { subject }.to raise_error(BaseLockService::FailedToAcquireLock)
         end
       end
 

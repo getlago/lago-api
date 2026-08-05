@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe WalletTransaction do
+  it_behaves_like "a model with a purchase order number"
+
   describe "validations" do
     it { is_expected.to validate_presence_of(:priority) }
     it { is_expected.to validate_inclusion_of(:priority).in_range(1..50) }

@@ -18,7 +18,7 @@ RSpec.describe ChargeModels::StandardService do
     aggregation_result.full_units_number = full_units_number if full_units_number
   end
 
-  let(:aggregation_result) { BaseService::Result.new }
+  let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
   let(:aggregation) { 10 }
   let(:total_aggregated_units) { nil }
   let(:full_units_number) { nil }

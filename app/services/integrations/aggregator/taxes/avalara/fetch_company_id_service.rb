@@ -5,6 +5,8 @@ module Integrations
     module Taxes
       module Avalara
         class FetchCompanyIdService < Integrations::Aggregator::BaseService
+          Result = BaseResult[:company]
+
           def action_path
             "v1/#{provider}/companies"
           end

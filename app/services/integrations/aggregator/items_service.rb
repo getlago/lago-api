@@ -3,6 +3,8 @@
 module Integrations
   module Aggregator
     class ItemsService < BaseService
+      Result = BaseResult[:items]
+
       LIMIT = 450
       MAX_SUBSEQUENT_REQUESTS = 15
 

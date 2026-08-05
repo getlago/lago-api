@@ -16,7 +16,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, plan:) }
 
-  let(:aggregation_result) { BaseService::Result.new }
+  let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
   let(:billable_metric) { create(:sum_billable_metric, recurring: true) }
   let(:aggregation) { 5.96667 }
   let(:aggregator) do
@@ -29,7 +29,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
   end
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:per_event_aggregation) do
-    BaseService::Result.new.tap do |r|
+    BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
       r.event_aggregation = [5, 5, 10, -6]
       r.event_prorated_aggregation = [3.5, 2.66667, 2, -2.2]
     end
@@ -74,10 +74,31 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     expect(apply_graduated_service.amount_details).to eq({})
   end
 
+  context "when zero usage" do
+    let(:aggregation) { 0 }
+    let(:per_event_aggregation) do
+      BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
+        r.event_aggregation = []
+        r.event_prorated_aggregation = []
+      end
+    end
+
+    before do
+      aggregation_result.aggregation = aggregation
+      aggregation_result.full_units_number = 0
+      aggregation_result.current_usage_units = 0
+    end
+
+    it "applies the flat amount from the first tier" do
+      expect(apply_graduated_service.amount).to eq(100)
+      expect(apply_graduated_service.unit_amount).to eq(0)
+    end
+  end
+
   context "with event that cannot be fully placed into the range" do
     let(:aggregation) { 3.86667 }
     let(:per_event_aggregation) do
-      BaseService::Result.new.tap do |r|
+      BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
         r.event_aggregation = [2, 5, 10, -6]
         r.event_prorated_aggregation = [1.4, 2.66667, 2, -2.2]
       end
@@ -99,7 +120,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
   context "with final number of units equals to zero" do
     let(:aggregation) { 1.613 }
     let(:per_event_aggregation) do
-      BaseService::Result.new.tap do |r|
+      BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
         r.event_aggregation = [1, 4, 1, -5, -1]
         r.event_prorated_aggregation = [0.7097, 1.54839, 0.2258, -0.80645, -0.0645]
       end
@@ -121,7 +142,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
   context "with negative event that results in changing range" do
     let(:aggregation) { 2.5 }
     let(:per_event_aggregation) do
-      BaseService::Result.new.tap do |r|
+      BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
         r.event_aggregation = [5, -2]
         r.event_prorated_aggregation = [3.5, -1]
       end
@@ -142,7 +163,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     context "with overflow and changing ranges" do
       let(:aggregation) { 3.2 }
       let(:per_event_aggregation) do
-        BaseService::Result.new.tap do |r|
+        BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
           r.event_aggregation = [4, 2, -3]
           r.event_prorated_aggregation = [2.8, 1, -0.6]
         end
@@ -164,7 +185,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     context "with multiple overflows in both directions" do
       let(:aggregation) { 4.9 }
       let(:per_event_aggregation) do
-        BaseService::Result.new.tap do |r|
+        BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
           r.event_aggregation = [5, 2, -4, 10]
           r.event_prorated_aggregation = [3.5, 1, -1.6, 2]
         end
@@ -187,7 +208,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
   context "with negative event that results in negative total amount" do
     let(:aggregation) { -31.33 }
     let(:per_event_aggregation) do
-      BaseService::Result.new.tap do |r|
+      BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
         r.event_aggregation = [5, -100]
         r.event_prorated_aggregation = [2, -33.33]
       end
@@ -208,7 +229,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     context "with only one range used" do
       let(:aggregation) { -31.73 }
       let(:per_event_aggregation) do
-        BaseService::Result.new.tap do |r|
+        BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
           r.event_aggregation = [4, -100]
           r.event_prorated_aggregation = [1.6, -33.33]
         end
@@ -231,7 +252,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
   context "when only one range is used" do
     let(:aggregation) { 0.7 }
     let(:per_event_aggregation) do
-      BaseService::Result.new.tap do |r|
+      BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
         r.event_aggregation = [1]
         r.event_prorated_aggregation = [0.7]
       end
@@ -282,7 +303,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
   context "with three ranges and one overflow" do
     let(:aggregation) { 6.36 }
     let(:per_event_aggregation) do
-      BaseService::Result.new.tap do |r|
+      BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
         r.event_aggregation = [2, 5, 10, -6, 4, 60]
         r.event_prorated_aggregation = [1.4, 2.5, 2, -2.2, 0.667, 2]
       end
@@ -331,7 +352,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     context "when there are two overflows" do
       let(:aggregation) { 75 }
       let(:per_event_aggregation) do
-        BaseService::Result.new.tap do |r|
+        BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
           r.event_aggregation = [75]
           r.event_prorated_aggregation = [75]
         end

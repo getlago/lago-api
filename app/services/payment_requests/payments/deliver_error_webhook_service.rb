@@ -3,6 +3,8 @@
 module PaymentRequests
   module Payments
     class DeliverErrorWebhookService < BaseService
+      Result = BaseResult
+
       def initialize(payment_request, params)
         @payment_request = payment_request
         @params = params

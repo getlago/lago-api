@@ -11,7 +11,8 @@ module Mutations
     type Types::Payloads::RegisterUserType
 
     def resolve(email:, password:, organization_name:)
-      result = UsersService.new.register(
+      result = UsersService.call(
+        :register,
         email,
         password,
         organization_name

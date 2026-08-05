@@ -7,7 +7,7 @@
     .invoice-resume.overflow-auto class="#{'mb-24' if subscription_fees(subscription.id).charge.any?}"
       table.invoice-resume-table width="100%"
         tr
-          td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date, format: :default))
+          td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: DateHelper.format(invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date), to_date: DateHelper.format(invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date))
           td.body-2 = I18n.t('invoice.unit')
           td.body-2 = I18n.t('invoice.tax_rate')
           td.body-2 = I18n.t('invoice.amount_without_tax')
@@ -25,7 +25,7 @@
         .invoice-resume.overflow-auto
           table.invoice-resume-table width="100%"
             tr
-              td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone&.to_date, format: :default))
+              td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: DateHelper.format(invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone&.to_date), to_date: DateHelper.format(invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone&.to_date))
               td.body-2 = I18n.t('invoice.unit')
               td.body-2 = I18n.t('invoice.tax_rate')
               td.body-2 = I18n.t('invoice.amount_without_tax')

@@ -12,7 +12,7 @@ Rspec.describe ChargeModels::CustomService do
     )
   end
 
-  let(:aggregation_result) { BaseService::Result.new }
+  let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
   let(:aggregation) { 10 }
   let(:total_aggregated_units) { nil }
   let(:full_units_number) { BigDecimal("10.0") }

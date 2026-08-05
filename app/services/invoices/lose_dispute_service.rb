@@ -2,6 +2,8 @@
 
 module Invoices
   class LoseDisputeService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(invoice:, payment_dispute_lost_at: nil, reason: nil)
       @invoice = invoice
       @payment_dispute_lost_at = payment_dispute_lost_at.presence || DateTime.current

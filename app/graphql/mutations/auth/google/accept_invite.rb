@@ -13,7 +13,7 @@ module Mutations
         type Types::Payloads::RegisterUserType
 
         def resolve(code:, invite_token:)
-          result = ::Auth::GoogleService.new.accept_invite(code, invite_token)
+          result = ::Auth::GoogleService.call(:accept_invite, code, invite_token)
 
           result.success? ? result : result_error(result)
         end

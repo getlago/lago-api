@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe PaymentReceipts::GenerateXmlJob do
   let(:payment_receipt) { create(:payment_receipt) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { PaymentReceipts::GenerateXmlService::Result.new }
 
   it "delegates to the Generate service" do
     allow(PaymentReceipts::GenerateXmlService).to receive(:call)

@@ -3,6 +3,8 @@
 module WalletTransactions
   module Payments
     class GeneratePaymentUrlService < BaseService
+      Result = BaseResult
+
       def initialize(wallet_transaction:)
         @wallet_transaction = wallet_transaction
         super

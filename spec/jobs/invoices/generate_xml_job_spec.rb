@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Invoices::GenerateXmlJob do
   let(:invoice) { create(:invoice) }
 
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::GenerateXmlService::Result.new }
   let(:service_class) { Invoices::GenerateXmlService }
   let(:generate_service) do
     instance_double(Invoices::GenerateXmlService)

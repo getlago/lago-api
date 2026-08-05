@@ -4,6 +4,8 @@ module Integrations
   module Aggregator
     module Contacts
       class BaseService < Integrations::Aggregator::BaseService
+        Result = BaseResult[:contact_id, :email]
+
         def action_path
           "v1/#{provider}/contacts"
         end

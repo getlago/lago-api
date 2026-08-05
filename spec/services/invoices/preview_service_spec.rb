@@ -513,6 +513,28 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 preview_service.call
               end.to change { Rails.cache.exist?(key) }.from(false).to(true)
             end
+
+            context "when the lazy charge usage cache flag is enabled", transaction: false do
+              before { organization.enable_feature_flag!(:lazy_charge_usage_cache) }
+
+              it "resolves the last-seen timestamps to feed the lazy cache" do
+                allow(Events::BillingPeriodFilterService).to receive(:call!).and_call_original
+
+                travel_to(timestamp) { preview_service.call }
+
+                expect(Events::BillingPeriodFilterService).to have_received(:call!)
+              end
+            end
+
+            context "when the lazy charge usage cache flag is disabled", transaction: false do
+              it "does not resolve the last-seen timestamps" do
+                allow(Events::BillingPeriodFilterService).to receive(:call!).and_call_original
+
+                travel_to(timestamp) { preview_service.call }
+
+                expect(Events::BillingPeriodFilterService).not_to have_received(:call!)
+              end
+            end
           end
 
           context "with fixed charges" do

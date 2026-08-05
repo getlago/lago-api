@@ -235,7 +235,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver do
   context "when query fails" do
     it "returns an error" do
       allow(InvoicesQuery).to receive(:call).and_return(
-        BaseService::Result.new.tap { |r| r.validation_failure!(errors: {base: ["test_error"]}) }
+        InvoicesQuery::Result.new.tap { |r| r.validation_failure!(errors: {base: ["test_error"]}) }
       )
 
       result = execute_graphql(

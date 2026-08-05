@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Wallets::ValidateLimitationsService do
   subject(:validate_service) { described_class.new(result, **args) }
 
-  let(:result) { BaseService::Result.new }
+  let(:result) { BaseResult[:billable_metrics, :billable_metric_identifiers].new }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:args) do

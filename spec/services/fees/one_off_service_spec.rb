@@ -366,5 +366,31 @@ RSpec.describe Fees::OneOffService do
         end
       end
     end
+
+    context "when an add-on is soft-deleted" do
+      before { add_on_first.discard! }
+
+      it "fails to resolve it by default" do
+        travel_to(current_time) do
+          result = one_off_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+        end
+      end
+
+      context "with with_discarded_add_ons enabled" do
+        subject(:one_off_service) { described_class.new(invoice:, fees:, with_discarded_add_ons: true) }
+
+        it "still bills the discarded add-on" do
+          travel_to(current_time) do
+            result = one_off_service.call
+
+            expect(result).to be_success
+            expect(result.fees.map(&:add_on_id)).to include(add_on_first.id)
+          end
+        end
+      end
+    end
   end
 end

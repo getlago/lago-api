@@ -23,6 +23,8 @@ RSpec.shared_context "with Stripe configured for customer" do
     customer.update! payment_provider: :stripe, payment_provider_code: stripe_provider.code
     stripe_customer
 
+    create(:payment_method, payment_provider_customer: stripe_customer, provider_method_id: stripe_pm_id, is_default: true)
+
     stub_request(:get, "https://api.stripe.com/v1/customers/#{stripe_cus_id}")
       .and_return(status: 200, body: stripe_customer_response)
     stub_request(:get, "https://api.stripe.com/v1/customers/#{stripe_cus_id}/payment_methods/#{stripe_pm_id}")

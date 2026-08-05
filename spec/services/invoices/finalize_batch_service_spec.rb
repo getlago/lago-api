@@ -18,7 +18,7 @@ RSpec.describe Invoices::FinalizeBatchService do
 
   describe "#call" do
     let(:finalize_service) { instance_double(Invoices::RefreshDraftAndFinalizeService) }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Invoices::RefreshDraftAndFinalizeService::Result.new }
     let(:invoice_ids) { invoices.map(&:id) }
     let(:invoices) { create_list(:invoice, 3, status: "draft", customer:) }
 

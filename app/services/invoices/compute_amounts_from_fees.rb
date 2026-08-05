@@ -2,6 +2,8 @@
 
 module Invoices
   class ComputeAmountsFromFees < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(invoice:, provider_taxes: nil)
       @invoice = invoice
       @provider_taxes = provider_taxes

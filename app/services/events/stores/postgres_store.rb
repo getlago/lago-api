@@ -22,49 +22,43 @@ module Events
         filters_scope(scope)
       end
 
-      def distinct_codes(codes: nil)
-        scope = Event.where(external_subscription_id: subscription.external_id)
-          .where(organization_id: subscription.organization.id)
-          .from_datetime(from_datetime)
-          .to_datetime(applicable_to_datetime)
-
-        if codes.nil?
-          scope.pluck("DISTINCT(code)")
-        else
-          codes.select { |code| scope.where(code:).exists? }
-        end
-      end
-
-      def distinct_charges_and_filters(codes: nil)
+      # Returns [charge_id, charge_filter_id, last_seen_at] tuples, where last_seen_at is the
+      # enriched_at of the most recent event for that charge/filter in the period.
+      def distinct_charges_and_filters(codes: nil, include_all_history: false)
+        lower_bound = include_all_history ? nil : from_datetime
         scope = EnrichedEvent.where(organization_id: subscription.organization_id)
           .where(subscription_id: subscription.id)
-          .where(timestamp: from_datetime..to_datetime)
+          .where(timestamp: lower_bound..to_datetime)
 
         scope = scope.where(code: codes) unless codes.nil?
-        scope.distinct.pluck(:charge_id, :charge_filter_id)
+        scope.group(:charge_id, :charge_filter_id)
+          .pluck(:charge_id, :charge_filter_id, Arel.sql("MAX(enriched_at)"))
       end
 
-      # Returns the distinct [code, properties] combinations present in the events of the
-      # period. Only properties present in the filter_keys are considered, so the result holds
-      # only the dimensions that can be matched against charge filters.
+      # Returns the distinct [code, properties, last_seen_at] combinations present in the events
+      # of the period. Only properties present in the filter_keys are considered, so the result
+      # holds only the dimensions that can be matched against charge filters.
       # An empty hash represents the default (no filter) bucket.
-      def distinct_codes_and_property_combinations(codes:, filter_keys:)
+      # last_seen_at is the created_at of the most recent event in the combination.
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false)
         scope = Event.where(external_subscription_id: subscription.external_id)
           .where(organization_id: subscription.organization_id)
           .where(code: codes)
-          .from_datetime(from_datetime)
           .to_datetime(applicable_to_datetime)
+        scope = scope.from_datetime(from_datetime) unless include_all_history
 
         scope
           .select(Arel.sql(<<~SQL.squish))
-            DISTINCT events.code AS code,
+            events.code AS code,
             coalesce((
               SELECT jsonb_object_agg(props.key, props.value)
               FROM jsonb_each_text(events.properties) AS props(key, value)
               WHERE props.key = ANY(#{filter_keys_array_sql(filter_keys)})
-            ), '{}'::jsonb) AS combination
+            ), '{}'::jsonb) AS combination,
+            MAX(events.created_at) AS last_seen_at
           SQL
-          .map { |row| [row.code, parse_combination(row)] }
+          .group("code, combination")
+          .map { |row| [row.code, parse_combination(row), row.last_seen_at] }
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)
@@ -312,12 +306,12 @@ module Events
         end
 
         sql = <<-SQL
-          SUM(
-            (#{sanitized_property_name})::numeric * (#{ratio})::numeric
-          ) AS sum_result
+          SUM((#{sanitized_property_name})::numeric * (#{ratio})::numeric) AS prorated_value,
+          SUM((#{sanitized_property_name})::numeric) AS value,
+          COUNT(*) AS events_count
         SQL
 
-        connection.execute(Arel.sql(events.select(sql).to_sql)).first["sum_result"]
+        build_prorated_aggregation_result(select_one(events.select(sql).to_sql))
       end
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
@@ -329,9 +323,9 @@ module Events
 
         sum_sql = <<-SQL
           #{sanitized_grouped_by.join(", ")},
-          SUM(
-            (#{sanitized_property_name})::numeric * (#{ratio})::numeric
-          ) AS sum_result
+          SUM((#{sanitized_property_name})::numeric * (#{ratio})::numeric) AS prorated_value,
+          SUM((#{sanitized_property_name})::numeric) AS value,
+          COUNT(*) AS events_count
         SQL
 
         sql = events
@@ -339,7 +333,7 @@ module Events
           .select(sum_sql)
           .to_sql
 
-        prepare_grouped_result(select_all(sql).rows)
+        prepare_grouped_prorated_result(select_all(sql).rows)
       end
 
       def sum_date_breakdown
@@ -566,6 +560,20 @@ module Events
             groups: build_groups(row[...-2], columns:),
             value: row[-2],
             events_count: row[-1]&.to_i
+          )
+        end
+      end
+
+      # NOTE: Same as prepare_grouped_aggregated_values but the last three columns of each
+      #       row are the prorated value, the non-prorated value and the events count,
+      #       returned as GroupedProratedAggregationResult.
+      def prepare_grouped_prorated_result(rows, columns: grouped_by)
+        rows.map do |row|
+          build_grouped_prorated_aggregation_result(
+            groups: build_groups(row[...-3], columns:),
+            prorated_value: row[-3],
+            value: row[-2],
+            events_count: row[-1]
           )
         end
       end

@@ -112,6 +112,52 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
     end
   end
 
+  context "when a sum result is injected" do
+    let(:injected_sum_result) { Events::Stores::BaseStore::AggregationResult.new(value: 999, events_count: 7) }
+
+    before { sum_service.injected_sum_result = injected_sum_result }
+
+    it "uses the injected result instead of querying the event store" do
+      result = sum_service.aggregate(options: {})
+
+      expect(result.aggregation).to eq(999)
+      expect(result.count).to eq(7)
+    end
+  end
+
+  context "when a grouped sum result is injected" do
+    let(:grouped_by) { %w[region] }
+    let(:injected_grouped_sum_result) do
+      [
+        Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "us"}, value: 100, events_count: 3),
+        Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "eu"}, value: 50, events_count: 2)
+      ]
+    end
+
+    before { sum_service.injected_grouped_sum_result = injected_grouped_sum_result }
+
+    it "builds the group results from the injected values" do
+      result = sum_service.aggregate(options: {})
+
+      expect(result.aggregations.map { |agg| [agg.grouped_by, agg.aggregation, agg.count] }).to match_array(
+        [
+          [{"region" => "us"}, 100, 3],
+          [{"region" => "eu"}, 50, 2]
+        ]
+      )
+    end
+
+    context "when the injected grouped result is blank" do
+      let(:injected_grouped_sum_result) { [] }
+
+      it "returns empty results" do
+        result = sum_service.aggregate(options: {})
+
+        expect(result.aggregations.map(&:aggregation)).to eq([0])
+      end
+    end
+  end
+
   context "when options are not present" do
     let(:options) { {} }
 

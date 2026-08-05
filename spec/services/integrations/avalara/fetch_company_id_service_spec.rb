@@ -7,7 +7,7 @@ RSpec.describe Integrations::Avalara::FetchCompanyIdService do
     let(:service_call) { described_class.call(integration:) }
     let(:company_id) { "abc-12345" }
     let(:integration) { create(:avalara_integration, company_id: nil) }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Integrations::Aggregator::Taxes::Avalara::FetchCompanyIdService::Result.new }
     let(:company) do
       {
         "id" => company_id

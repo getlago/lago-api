@@ -2,6 +2,8 @@
 
 module ChargeFilters
   class EventMatchingService < BaseService
+    Result = BaseResult[:matching_charge_filters, :charge_filter]
+
     def initialize(charge:, event:)
       @charge = charge
       @event = event
@@ -12,9 +14,8 @@ module ChargeFilters
     def call
       # NOTE: Find all filters matching event properties
       matching_filters = filters.select do |filter|
-        filter.to_h.all? do |key, values|
-          applicable_event_properties.key?(key) &&
-            (applicable_event_properties[key].to_s.in?(values) || values == [ChargeFilterValue::ALL_FILTER_VALUES])
+        filter.to_h_with_all_values.all? do |key, values|
+          applicable_event_properties.key?(key) && applicable_event_properties[key].to_s.in?(values.map(&:to_s))
         end
       end
 

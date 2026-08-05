@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Invoices::Payments::FlutterwaveService do
-  subject(:flutterwave_service) { described_class.new(invoice) }
+  subject(:flutterwave_service) do
+    described_class.new.tap { it.instance_variable_set(:@invoice, invoice) }
+  end
 
   let(:organization) { create(:organization, name: "Test Organization") }
   let(:customer) { create(:customer, organization: organization, email: "customer@example.com", name: "John Doe") }
@@ -15,20 +17,20 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
     flutterwave_customer
   end
 
-  describe "#update_payment_status" do
+  describe ".call(:update_payment_status)" do
     let(:flutterwave_payment) do
-      OpenStruct.new(
+      build(:flutterwave_payment,
         id: "flw_payment_123",
         metadata: {
           payment_type: "one-time",
           lago_invoice_id: invoice.id
-        }
-      )
+        })
     end
 
     context "when creating a new payment" do
       it "creates a new payment and updates invoice status" do
-        result = flutterwave_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: :succeeded,
           flutterwave_payment: flutterwave_payment
@@ -43,12 +45,13 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       end
 
       it "increments payment attempts on the invoice" do
-        expect { flutterwave_service.update_payment_status(organization_id: organization.id, status: :succeeded, flutterwave_payment: flutterwave_payment) }
+        expect { described_class.call(:update_payment_status, organization_id: organization.id, status: :succeeded, flutterwave_payment: flutterwave_payment) }
           .to change { invoice.reload.payment_attempts }.by(1)
       end
 
       it "sets correct payment details" do
-        result = flutterwave_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: :succeeded,
           flutterwave_payment: flutterwave_payment
@@ -63,7 +66,8 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
 
       it "enqueues a SendWebhookJob for payment.succeeded" do
         expect do
-          flutterwave_service.update_payment_status(
+          described_class.call(
+            :update_payment_status,
             organization_id: organization.id,
             status: :succeeded,
             flutterwave_payment: flutterwave_payment
@@ -83,16 +87,16 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       end
 
       let(:flutterwave_payment) do
-        OpenStruct.new(
+        build(:flutterwave_payment,
           id: "flw_payment_123",
-          metadata: {payment_type: "recurring"}
-        )
+          metadata: {payment_type: "recurring"})
       end
 
       before { existing_payment }
 
       it "updates the existing payment status" do
-        result = flutterwave_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: :succeeded,
           flutterwave_payment: flutterwave_payment
@@ -104,9 +108,10 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       end
 
       it "updates invoice payment status" do
-        allow(Invoices::UpdateService).to receive(:call).and_return(BaseService::Result.new)
+        allow(Invoices::UpdateService).to receive(:call).and_return(Invoices::UpdateService::Result.new)
 
-        flutterwave_service.update_payment_status(
+        described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: :succeeded,
           flutterwave_payment: flutterwave_payment
@@ -121,14 +126,14 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
 
     context "when payment is not found" do
       let(:flutterwave_payment) do
-        OpenStruct.new(
+        build(:flutterwave_payment,
           id: "nonexistent_payment",
-          metadata: {payment_type: "recurring"}
-        )
+          metadata: {payment_type: "recurring"})
       end
 
       it "returns not found failure" do
-        result = flutterwave_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: :succeeded,
           flutterwave_payment: flutterwave_payment
@@ -151,26 +156,24 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       end
 
       let(:flutterwave_payment) do
-        OpenStruct.new(
+        build(:flutterwave_payment,
           id: "flw_payment_123",
-          metadata: {payment_type: "recurring"}
-        )
+          metadata: {payment_type: "recurring"})
       end
 
       before { existing_payment }
 
       it "returns early without processing" do
-        service = described_class.new(succeeded_invoice)
-        allow(service).to receive(:update_invoice_payment_status)
+        expect_any_instance_of(described_class).not_to receive(:update_invoice_payment_status) # rubocop:disable RSpec/AnyInstance
 
-        result = service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: :succeeded,
           flutterwave_payment: flutterwave_payment
         )
 
         expect(result).to be_success
-        expect(service).not_to have_received(:update_invoice_payment_status)
       end
     end
 
@@ -181,11 +184,12 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       before do
         existing_payment1
         existing_payment2
-        allow(Invoices::UpdateService).to receive(:call).and_return(BaseService::Result.new)
+        allow(Invoices::UpdateService).to receive(:call).and_return(Invoices::UpdateService::Result.new)
       end
 
       it "calculates total paid amount correctly" do
-        flutterwave_service.update_payment_status(
+        described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: :succeeded,
           flutterwave_payment: flutterwave_payment
@@ -198,7 +202,7 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
     end
   end
 
-  describe "#generate_payment_url" do
+  describe ".call(:generate_payment_url)" do
     let(:payment_intent) { double }
     let(:http_client) { instance_double(LagoHttpClient::Client) }
     let(:successful_response) do
@@ -216,14 +220,14 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
     end
 
     it "creates a checkout session and returns payment URL" do
-      result = flutterwave_service.generate_payment_url(payment_intent)
+      result = described_class.call(:generate_payment_url, invoice, payment_intent)
 
       expect(result).to be_success
       expect(result.payment_url).to eq("https://checkout.flutterwave.com/v3/hosted/pay/test_link")
     end
 
     it "sends correct parameters to Flutterwave API" do
-      flutterwave_service.generate_payment_url(payment_intent)
+      described_class.call(:generate_payment_url, invoice, payment_intent)
 
       expect(http_client).to have_received(:post_with_response) do |body, headers|
         expect(body[:amount]).to eq(500.0)
@@ -253,7 +257,7 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       end
 
       it "returns third party failure" do
-        result = flutterwave_service.generate_payment_url(payment_intent)
+        result = described_class.call(:generate_payment_url, invoice, payment_intent)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ThirdPartyFailure)
@@ -300,8 +304,8 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       let(:payment) { create(:payment, payable: invoice) }
 
       before do
-        flutterwave_service.instance_variable_set(:@result, BaseService::Result.new.tap { |r| r.invoice = invoice })
-        allow(Invoices::UpdateService).to receive(:call).and_return(BaseService::Result.new)
+        flutterwave_service.instance_variable_set(:@result, Invoices::Payments::FlutterwaveService::RESULTS.fetch(:update_payment_status).new.tap { |r| r.invoice = invoice })
+        allow(Invoices::UpdateService).to receive(:call).and_return(Invoices::UpdateService::Result.new)
       end
 
       it "calls invoice update service with correct parameters" do

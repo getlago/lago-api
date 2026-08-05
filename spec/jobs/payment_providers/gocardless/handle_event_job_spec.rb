@@ -15,7 +15,7 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventJob do
     JSON.parse(File.read(path))["events"].first.to_json
   end
 
-  let(:service_result) { BaseService::Result.new }
+  let(:service_result) { PaymentProviders::Gocardless::HandleEventService::Result.new }
 
   it_behaves_like "a unique job" do
     let(:job_args) { [{payment_provider:, event_json:}] }

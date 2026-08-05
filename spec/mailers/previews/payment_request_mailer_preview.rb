@@ -48,7 +48,7 @@ class PaymentRequestMailerPreview < BasePreviewMailer
 
     ::PaymentRequests::Payments::GeneratePaymentUrlService.class_eval do
       def self.call(payable:)
-        BaseService::Result.new.tap do |result|
+        PaymentRequests::Payments::GeneratePaymentUrlService::Result.new.tap do |result|
           result.payment_url = "https://stripe.com/payment_url"
         end
       end

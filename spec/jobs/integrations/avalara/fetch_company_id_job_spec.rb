@@ -8,7 +8,7 @@ RSpec.describe Integrations::Avalara::FetchCompanyIdJob do
 
     let(:service) { instance_double(Integrations::Avalara::FetchCompanyIdService) }
     let(:integration) { create(:avalara_integration) }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Integrations::Avalara::FetchCompanyIdService::Result.new }
 
     before do
       allow(Integrations::Avalara::FetchCompanyIdService).to receive(:call).and_return(result)

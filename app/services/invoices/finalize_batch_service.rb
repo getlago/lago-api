@@ -2,6 +2,8 @@
 
 module Invoices
   class FinalizeBatchService < BaseService
+    Result = BaseResult[:invoice, :invoices]
+
     def initialize(organization:)
       @organization = organization
 

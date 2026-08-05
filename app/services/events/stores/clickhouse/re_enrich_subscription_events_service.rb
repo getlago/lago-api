@@ -84,7 +84,7 @@ module Events
             code: event.code,
             precise_total_amount_cents: event.precise_total_amount_cents.present? ? event.precise_total_amount_cents.to_s : "0.0",
             properties:,
-            ingested_at: Time.zone.now.iso8601[...-1],
+            ingested_at: Time.zone.now.iso8601(3)[...-1],
             source: Events::KafkaProducerService::EVENT_SOURCE,
             source_metadata: {
               api_post_processed: true,

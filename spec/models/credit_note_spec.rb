@@ -36,6 +36,12 @@ RSpec.describe CreditNote do
     end
   end
 
+  describe "enums" do
+    it do
+      expect(subject).to define_enum_for(:status).with_values(draft: 0, finalized: 1, deleted: 2)
+    end
+  end
+
   describe "sequential_id" do
     let(:invoice) { create(:invoice) }
     let(:customer) { invoice.customer }

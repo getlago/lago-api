@@ -13,7 +13,7 @@ module Mutations
         type Types::Payloads::LoginUserType
 
         def resolve(code:)
-          result = ::Auth::GoogleService.new.login(code)
+          result = ::Auth::GoogleService.call(:login, code)
           result.success? ? result : result_error(result)
         end
       end

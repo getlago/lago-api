@@ -10,7 +10,7 @@ RSpec.describe Order do
       expect(order).to define_enum_for(:status)
         .backed_by_column_of_type(:enum)
         .validating
-        .with_values(created: "created", executed: "executed")
+        .with_values(created: "created", executed: "executed", failed: "failed")
         .with_default(:created)
 
       expect(order).to define_enum_for(:execution_mode)
@@ -28,6 +28,25 @@ RSpec.describe Order do
       expect(order).to belong_to(:order_form)
       expect(order).to have_one(:quote_version).through(:order_form)
       expect(order).to have_one(:quote).through(:quote_version)
+    end
+  end
+
+  describe "Scopes" do
+    describe ".executable" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let!(:due) { create(:order, organization:, customer:, execution_mode: :execute_in_lago, execute_at: 1.hour.ago) }
+
+      before do
+        create(:order, organization:, customer:, execution_mode: :execute_in_lago, execute_at: 1.hour.from_now)
+        create(:order, organization:, customer:, execute_at: nil)
+        create(:order, :executed_in_lago, organization:, customer:, execute_at: 1.hour.ago)
+        create(:order, :failed, organization:, customer:, execute_at: 1.hour.ago)
+      end
+
+      it "returns due created orders" do
+        expect(described_class.executable).to eq([due])
+      end
     end
   end
 

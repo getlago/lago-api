@@ -678,4 +678,230 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService, :premium do
       expect(result.fee.amount_cents).to eq(10_000) # 10 units * $10 = $100
     end
   end
+
+  context "when organization has the fixed_charge_usage_delta_migration feature flag enabled" do
+    let(:organization) { create(:organization, feature_flags: ["fixed_charge_usage_delta_migration"]) }
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+    let(:usage_charge) do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric:,
+        pay_in_advance: true,
+        prorated: true,
+        deleted_at: Time.current
+      )
+    end
+
+    let(:boundaries) do
+      Subscriptions::DatesService.fixed_charge_pay_in_advance_interval(timestamp, subscription)
+    end
+
+    let(:usage_fee) do
+      create(
+        :charge_fee,
+        organization:,
+        subscription:,
+        charge: usage_charge,
+        units: 3,
+        properties: {
+          "charges_from_datetime" => boundaries[:fixed_charges_from_datetime].iso8601(3),
+          "charges_to_datetime" => boundaries[:fixed_charges_to_datetime].iso8601(3)
+        }
+      )
+    end
+
+    let(:fixed_charge_event) do
+      create(
+        :fixed_charge_event,
+        subscription:,
+        fixed_charge:,
+        units: 4,
+        timestamp: Time.zone.at(timestamp)
+      )
+    end
+
+    before do
+      usage_fee
+    end
+
+    it "counts the discarded usage charge units as already paid" do
+      expect(result).to be_success
+      expect(result.fee).to be_present
+      expect(result.fee.units).to eq(1) # 4 - 3 = 1 delta unit
+      expect(result.fee.amount_cents).to eq(1_000) # 1 unit * $10 = $10
+    end
+
+    context "when the fixed charge is prorated" do
+      let(:timestamp) { Time.zone.parse("2024-03-20").to_i }
+      let(:fixed_charge) do
+        create(
+          :fixed_charge,
+          plan:,
+          add_on:,
+          units: 10,
+          properties: {amount: "10"},
+          prorated: true,
+          pay_in_advance: true
+        )
+      end
+
+      it "creates a prorated fee for the delta units only" do
+        # From March 20 to March 31 is 12 days (31 - 20 + 1)
+        # Delta = 4 - 3 = 1 unit
+        # Amount = 1 * $10 * (12/31) ≈ $3.87
+        expect(result).to be_success
+        expect(result.fee.units).to eq(1)
+        expect(result.fee.amount_cents).to eq(387) # 1 * 1000 * (12/31) = 387.09 rounded to 387
+      end
+    end
+
+    context "when a fixed charge fee also exists for the period" do
+      let(:existing_fee) do
+        create(
+          :fee,
+          organization:,
+          subscription:,
+          fixed_charge:,
+          fee_type: :fixed_charge,
+          units: 1,
+          amount_cents: 1_000,
+          properties: {
+            "fixed_charges_from_datetime" => boundaries[:fixed_charges_from_datetime].iso8601(3),
+            "fixed_charges_to_datetime" => boundaries[:fixed_charges_to_datetime].iso8601(3)
+          }
+        )
+      end
+
+      let(:fixed_charge_event) do
+        create(
+          :fixed_charge_event,
+          subscription:,
+          fixed_charge:,
+          units: 5,
+          timestamp: Time.zone.at(timestamp)
+        )
+      end
+
+      before do
+        existing_fee
+      end
+
+      it "sums both fee types as already paid units" do
+        expect(result).to be_success
+        expect(result.fee.units).to eq(1) # 5 - (3 + 1) = 1 delta unit
+        expect(result.fee.amount_cents).to eq(1_000)
+      end
+    end
+
+    context "when units decrease below the usage charge units" do
+      let(:fixed_charge_event) do
+        create(
+          :fixed_charge_event,
+          subscription:,
+          fixed_charge:,
+          units: 2,
+          timestamp: Time.zone.at(timestamp)
+        )
+      end
+
+      it "creates a zero-amount fee" do
+        expect(result).to be_success
+        expect(result.fee.units).to eq(0)
+        expect(result.fee.amount_cents).to eq(0)
+      end
+    end
+
+    context "when the usage fee belongs to a previous billing period" do
+      let(:usage_fee) do
+        create(
+          :charge_fee,
+          organization:,
+          subscription:,
+          charge: usage_charge,
+          units: 3,
+          properties: {
+            "charges_from_datetime" => (boundaries[:fixed_charges_from_datetime] - 1.month).iso8601(3),
+            "charges_to_datetime" => (boundaries[:fixed_charges_to_datetime] - 1.month).iso8601(3)
+          }
+        )
+      end
+
+      it "does not count the usage charge units" do
+        expect(result).to be_success
+        expect(result.fee.units).to eq(4)
+        expect(result.fee.amount_cents).to eq(4_000)
+      end
+    end
+
+    context "when the usage charge is not discarded" do
+      let(:usage_charge) do
+        create(
+          :standard_charge,
+          plan:,
+          billable_metric:,
+          pay_in_advance: true,
+          prorated: true
+        )
+      end
+
+      it "does not count the usage charge units" do
+        expect(result).to be_success
+        expect(result.fee.units).to eq(4)
+        expect(result.fee.amount_cents).to eq(4_000)
+      end
+    end
+  end
+
+  context "when organization does not have the fixed_charge_usage_delta_migration feature flag" do
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+    let(:usage_charge) do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric:,
+        pay_in_advance: true,
+        prorated: true,
+        deleted_at: Time.current
+      )
+    end
+
+    let(:boundaries) do
+      Subscriptions::DatesService.fixed_charge_pay_in_advance_interval(timestamp, subscription)
+    end
+
+    let(:usage_fee) do
+      create(
+        :charge_fee,
+        organization:,
+        subscription:,
+        charge: usage_charge,
+        units: 3,
+        properties: {
+          "charges_from_datetime" => boundaries[:fixed_charges_from_datetime].iso8601(3),
+          "charges_to_datetime" => boundaries[:fixed_charges_to_datetime].iso8601(3)
+        }
+      )
+    end
+
+    let(:fixed_charge_event) do
+      create(
+        :fixed_charge_event,
+        subscription:,
+        fixed_charge:,
+        units: 4,
+        timestamp: Time.zone.at(timestamp)
+      )
+    end
+
+    before do
+      usage_fee
+    end
+
+    it "does not count the usage charge units" do
+      expect(result).to be_success
+      expect(result.fee.units).to eq(4)
+      expect(result.fee.amount_cents).to eq(4_000)
+    end
+  end
 end

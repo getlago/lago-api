@@ -3,6 +3,8 @@
 module Invoices
   module Payments
     class RetryBatchService < BaseService
+      Result = BaseResult[:invoice, :invoices]
+
       def initialize(organization_id:)
         @organization_id = organization_id
 

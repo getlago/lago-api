@@ -33,6 +33,7 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
           subscriptionAt
           endingAt
           progressiveBillingDisabled
+          purchaseOrderNumber
           customer {
             id
           },
@@ -74,6 +75,7 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
           billingTime: "anniversary",
           endingAt: ending_at.iso8601,
           progressiveBillingDisabled: true,
+          purchaseOrderNumber: "PO-123",
           usageThresholds: [
             amountCents: 100,
             thresholdDisplayName: "threshold display name"
@@ -107,7 +109,8 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
       "startedAt" => String,
       "billingTime" => "anniversary",
       "endingAt" => ending_at.iso8601,
-      "progressiveBillingDisabled" => true
+      "progressiveBillingDisabled" => true,
+      "purchaseOrderNumber" => "PO-123"
     )
     expect(result_data["customer"]).to include(
       "id" => customer.id

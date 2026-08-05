@@ -14,7 +14,7 @@ RSpec.describe IntegrationCustomers::HubspotService do
 
     let(:contact_id) { SecureRandom.uuid }
     let(:create_result) do
-      result = BaseService::Result.new
+      result = Integrations::Aggregator::Contacts::CreateService::Result.new
       result.contact_id = contact_id
       result.email = customer.email
       result

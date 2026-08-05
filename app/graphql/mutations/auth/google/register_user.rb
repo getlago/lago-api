@@ -13,7 +13,7 @@ module Mutations
         type Types::Payloads::RegisterUserType
 
         def resolve(code:, organization_name:)
-          result = ::Auth::GoogleService.new.register_user(code, organization_name)
+          result = ::Auth::GoogleService.call(:register_user, code, organization_name)
           result.success? ? result : result_error(result)
         end
       end

@@ -28,7 +28,8 @@ RSpec.describe Api::V1::WalletTransactionsController do
         wallet_id:,
         paid_credits: "10",
         granted_credits: "10",
-        name: "Custom Top-up Name"
+        name: "Custom Top-up Name",
+        purchase_order_number: "PO-789"
       }
     end
 
@@ -55,7 +56,11 @@ RSpec.describe Api::V1::WalletTransactionsController do
       expect(paid_transaction[:status]).to eq("pending")
       expect(granted_transaction[:status]).to eq("settled")
       expect(granted_transaction[:lago_id]).to be_present
-      expect(wallet_transactions).to all(include(name: "Custom Top-up Name", lago_wallet_id: wallet.id))
+      expect(wallet_transactions).to all(include(
+        name: "Custom Top-up Name",
+        lago_wallet_id: wallet.id,
+        purchase_order_number: "PO-789"
+      ))
     end
 
     context "when paid credits is below the wallet minimum" do
@@ -241,6 +246,31 @@ RSpec.describe Api::V1::WalletTransactionsController do
         expect(response).to have_http_status(:success)
         expect(json[:wallet_transactions].count).to eq(1)
         expect(json[:wallet_transactions].first[:lago_id]).to eq(wallet_transaction_second.id)
+      end
+    end
+
+    context "with metadata param" do
+      let(:params) { {metadata: {site_id: "alpha"}} }
+      let(:wallet_transaction_first) { create(:wallet_transaction, wallet:, metadata: [{"key" => "site_id", "value" => "alpha"}]) }
+      let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, metadata: [{"key" => "site_id", "value" => "beta"}]) }
+
+      it "returns only the transactions tagged with that key and value" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transactions].count).to eq(1)
+        expect(json[:wallet_transactions].first[:lago_id]).to eq(wallet_transaction_first.id)
+      end
+    end
+
+    context "when metadata is sent with a malformed shape" do
+      let(:params) { {metadata: "foo"} }
+
+      it "ignores the filter instead of erroring" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transactions].count).to eq(2)
       end
     end
 

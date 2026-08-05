@@ -223,6 +223,19 @@ RSpec.describe Api::V1::Subscriptions::FixedChargesController do
         end
       end
 
+      context "when subscription is incomplete" do
+        subject { put_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/fixed_charges/#{fixed_charge.code}?status=incomplete", {fixed_charge: update_params}) }
+
+        let(:subscription) { create(:subscription, :incomplete, external_id:, customer:, plan:) }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq({base: %w[subscription_incomplete]})
+        end
+      end
+
       context "when subscription already has plan override" do
         let(:overridden_plan) { create(:plan, organization:, parent: plan) }
         let(:subscription) { create(:subscription, customer:, plan: overridden_plan, external_id:) }

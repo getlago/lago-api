@@ -162,7 +162,7 @@ RSpec.describe Events::CreateService do
     end
 
     context "with an expression configured on the billable metric" do
-      let(:billable_metric) { create(:billable_metric, code:, organization:, field_name: "result", expression: "event.properties.left + event.properties.right") }
+      let(:billable_metric) { create(:sum_billable_metric, code:, organization:, field_name: "result", expression: "event.properties.left + event.properties.right") }
 
       let(:create_args) do
         {

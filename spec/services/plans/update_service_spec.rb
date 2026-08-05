@@ -485,7 +485,7 @@ RSpec.describe Plans::UpdateService do
             amount_currency: "EUR"
           }
         end
-        let(:plan_upgrade_result) { BaseService::Result.new }
+        let(:plan_upgrade_result) { Subscriptions::PlanUpgradeService::Result.new }
 
         before do
           allow(Subscriptions::PlanUpgradeService)
@@ -545,7 +545,7 @@ RSpec.describe Plans::UpdateService do
 
         context "when subscription upgrade fails" do
           let(:plan_upgrade_result) do
-            BaseService::Result.new.validation_failure!(
+            Subscriptions::PlanUpgradeService::Result.new.validation_failure!(
               errors: {billing_time: ["value_is_invalid"]}
             )
           end

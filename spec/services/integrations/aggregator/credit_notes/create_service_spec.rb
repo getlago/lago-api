@@ -448,7 +448,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       end
 
       it "returns result" do
-        expect(service_call).to be_a(BaseService::Result)
+        expect(service_call).to be_a(described_class::Result)
       end
 
       it_behaves_like "throttles!", :anrok, :netsuite, :xero

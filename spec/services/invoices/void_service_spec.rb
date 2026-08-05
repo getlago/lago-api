@@ -59,6 +59,17 @@ RSpec.describe Invoices::VoidService do
           expect(result.invoice).to be_voided
           expect(result.invoice.voided_at).to be_present
         end
+
+        context "when Meilisearch is enabled" do
+          before do
+            invoice
+            stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
+          end
+
+          it "enqueues a search reindex for the invoice" do
+            expect { void_service.call }.to have_enqueued_job_after_commit(Invoices::SearchIndexJob).with(invoice.id)
+          end
+        end
       end
 
       context "when the payment status is not succeeded" do
@@ -99,7 +110,15 @@ RSpec.describe Invoices::VoidService do
 
         context "when the invoice has applied credits from the wallet" do
           let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
-          let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, transaction_type: "outbound", amount: 100, credit_amount: 100) }
+          let(:wallet_transaction) do
+            create(:wallet_transaction,
+              wallet:,
+              invoice:,
+              purchase_order_number: "PO-123",
+              transaction_type: "outbound",
+              amount: 100,
+              credit_amount: 100)
+          end
 
           before do
             wallet_transaction
@@ -111,6 +130,7 @@ RSpec.describe Invoices::VoidService do
             expect(WalletTransactions::RecreditService).to have_received(:call).with(wallet_transaction: wallet_transaction)
             expect(wallet.wallet_transactions.count).to eq(2)
             expect(wallet.reload.credits_balance).to eq(200)
+            expect(wallet.wallet_transactions.inbound.last.purchase_order_number).to eq(wallet_transaction.purchase_order_number)
           end
         end
 

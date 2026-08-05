@@ -150,30 +150,19 @@ module Events
         SQL
       end
 
-      # DEPRECATED: This method will be replaced by distinct_charges_and_filters
-      #             to filter the charge and filters in a billing period.
-      #             See app/services/events/billing_period_filter_service.rb:42
-      def distinct_codes(codes: nil)
+      # Returns [charge_id, charge_filter_id, last_seen_at] tuples, where last_seen_at is the
+      # enriched_at of the most recent event for that charge/filter in the period.
+      def distinct_charges_and_filters(codes: nil, include_all_history: false)
+        lower_bound = include_all_history ? nil : from_datetime
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = ::Clickhouse::EventsEnrichedExpanded
             .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization_id)
-            .where(timestamp: from_datetime..applicable_to_datetime)
+            .where(timestamp: lower_bound..to_datetime)
 
           scope = scope.where(code: codes) unless codes.nil?
-          scope.pluck("DISTINCT(code)")
-        end
-      end
-
-      def distinct_charges_and_filters(codes: nil)
-        Events::Stores::Utils::ClickhouseConnection.with_retry do
-          scope = ::Clickhouse::EventsEnrichedExpanded
-            .where(external_subscription_id: subscription.external_id)
-            .where(organization_id: subscription.organization_id)
-            .where(timestamp: from_datetime..to_datetime)
-
-          scope = scope.where(code: codes) unless codes.nil?
-          scope.distinct.pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"))
+          scope.group("charge_id", "charge_filter_id")
+            .pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"), Arel.sql("MAX(enriched_at)"))
         end
       end
 
@@ -617,6 +606,7 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
             select: [
+              arel_table[:decimal_value],
               Arel::Nodes::InfixOperation.new(
                 "*",
                 arel_table[:decimal_value],
@@ -627,11 +617,14 @@ module Events
           )
 
           sql = with_ctes(ctes_sql, <<-SQL)
-            SELECT sum(events.prorated_value)
+            SELECT
+              sum(events.prorated_value) as prorated_value,
+              sum(events.decimal_value) as value,
+              count() as events_count
             FROM events
           SQL
 
-          connection.select_value(sql)
+          build_prorated_aggregation_result(connection.select_one(sql))
         end
       end
 
@@ -647,6 +640,7 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
             select: [arel_table[:sorted_grouped_by]] + [
+              arel_table[:decimal_value],
               Arel::Nodes::InfixOperation.new(
                 "*",
                 arel_table[:decimal_value],
@@ -659,12 +653,14 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               sorted_grouped_by as groups,
-              sum(events.prorated_value) as value
+              sum(events.prorated_value) as prorated_value,
+              sum(events.decimal_value) as value,
+              count() as events_count
             FROM events
             GROUP BY sorted_grouped_by
           SQL
 
-          prepare_grouped_result(connection.select_all(sql))
+          prepare_grouped_prorated_values(connection.select_all(sql))
         end
       end
 
@@ -868,7 +864,7 @@ module Events
         ]
 
         conditions << sql_condition("#{prefix}timestamp >= ?", from_datetime) if from_datetime
-        conditions << sql_condition("#{prefix}timestamp <= ?", to_datetime) if to_datetime
+        conditions << upper_timestamp_boundary_sql(to_datetime, prefix:) if to_datetime
         conditions << grouped_by_values_sql_condition(prefix) if include_grouped_by_values && grouped_by_values?
 
         conditions.join(" AND ")
@@ -968,6 +964,21 @@ module Events
             groups: r[:groups].transform_values(&:presence),
             value: decimal ? BigDecimal(r[:value].presence || 0) : r[:value],
             events_count: r[:events_count].presence&.to_i
+          )
+        end
+      end
+
+      # NOTE: like prepare_grouped_aggregated_values but each row also carries a prorated
+      #       value column, returned as GroupedProratedAggregationResult.
+      def prepare_grouped_prorated_values(result)
+        result.to_ary.map do |row|
+          r = row.symbolize_keys
+
+          build_grouped_prorated_aggregation_result(
+            groups: r[:groups].transform_values(&:presence),
+            prorated_value: r[:prorated_value],
+            value: r[:value],
+            events_count: r[:events_count]
           )
         end
       end

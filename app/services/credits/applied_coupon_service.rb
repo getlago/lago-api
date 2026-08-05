@@ -2,6 +2,8 @@
 
 module Credits
   class AppliedCouponService < BaseService
+    Result = BaseResult[:credit]
+
     def initialize(invoice:, applied_coupon:)
       @invoice = invoice
       @applied_coupon = applied_coupon
@@ -10,7 +12,7 @@ module Credits
     end
 
     def call
-      if !AppliedCoupons::LockService.new(customer:).locked?
+      if !Customers::LockService.new(customer:, scope: :coupon).locked?
         return result.service_failure!(code: "no_lock_acquired", message: "Calling this service without acquiring a lock is not allowed")
       end
 

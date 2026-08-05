@@ -3,27 +3,31 @@
 module PaymentProviderCustomers
   class CashfreeService < BaseService
     include Customers::PaymentProviderFinder
+    include TypedResults
 
-    def initialize(cashfree_customer = nil)
+    RESULTS = {
+      create: BaseResult[:cashfree_customer],
+      update: BaseResult,
+      generate_checkout_url: BaseResult
+    }.freeze
+
+    private
+
+    def create(cashfree_customer)
       @cashfree_customer = cashfree_customer
-
-      super(nil)
-    end
-
-    def create
       result.cashfree_customer = cashfree_customer
       result
     end
 
-    def update
+    def update(cashfree_customer)
+      @cashfree_customer = cashfree_customer
       result
     end
 
-    def generate_checkout_url(send_webhook: true)
+    def generate_checkout_url(cashfree_customer, send_webhook: true)
+      @cashfree_customer = cashfree_customer
       result.not_allowed_failure!(code: "feature_not_supported")
     end
-
-    private
 
     attr_accessor :cashfree_customer
 

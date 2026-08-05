@@ -45,7 +45,7 @@ RSpec.describe Integrations::Aggregator::CustomObjectService do
       expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
       expect(lago_client).to have_received(:get)
       expect(custom_object.id).to eq("35482707")
-      expect(custom_object.objectTypeId).to eq("2-35482707")
+      expect(custom_object.object_type_id).to eq("2-35482707")
     end
   end
 end

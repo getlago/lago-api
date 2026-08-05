@@ -4,6 +4,8 @@ module Integrations
   module Salesforce
     module Invoices
       class SyncService < BaseService
+        Result = BaseResult[:invoice_id]
+
         def initialize(invoice)
           @invoice = invoice
 

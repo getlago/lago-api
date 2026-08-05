@@ -46,7 +46,7 @@ module BillableMetrics
         last_events = event_store.grouped_last_event if billable_metric.recurring?
 
         result.aggregations = counts.map do |aggregation|
-          group_result = BaseService::Result.new
+          group_result = BillableMetrics::Aggregations::BaseService::Result.new
           group_result.grouped_by = aggregation.groups
           group_result.count = aggregation.events_count
 

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Wallets::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
-  let(:result) { BaseService::Result.new }
+  let(:result) { Wallets::CreateService::Result.new }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }

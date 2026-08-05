@@ -18,7 +18,7 @@ RSpec.describe Invoices::RetryBatchService do
 
   describe "#call" do
     let(:retry_service) { instance_double(Invoices::RetryService) }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Invoices::RetryService::Result.new }
     let(:invoice_ids) { [invoice_first.id, invoice_second.id] }
     let(:invoice_first) do
       create(

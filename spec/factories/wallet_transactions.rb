@@ -19,6 +19,10 @@ FactoryBot.define do
       failed_at { Time.current }
     end
 
+    trait :with_purchase_order_number do
+      purchase_order_number { "PO-123" }
+    end
+
     trait :with_invoice do
       transient do
         customer { association(:customer) }

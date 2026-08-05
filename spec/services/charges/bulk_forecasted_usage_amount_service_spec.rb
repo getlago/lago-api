@@ -27,7 +27,7 @@ RSpec.describe Charges::BulkForecastedUsageAmountService do
   let(:charge_filter) { create(:charge_filter, charge: charge1) }
 
   let(:price_result) do
-    BaseService::Result.new.tap do |result|
+    Charges::CalculatePriceService::Result.new.tap do |result|
       result.charge_amount_cents = 10
       result.subscription_amount_cents = 10
       result.total_amount_cents = 20

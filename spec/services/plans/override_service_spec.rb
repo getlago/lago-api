@@ -109,7 +109,6 @@ RSpec.describe Plans::OverrideService do
       charge
       fixed_charge
       usage_threshold
-      allow(SegmentTrackJob).to receive(:perform_later)
       filter_value
     end
 
@@ -153,7 +152,7 @@ RSpec.describe Plans::OverrideService do
     it "calls SegmentTrackJob" do
       plan = override_service.call.plan
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "plan_created",
         properties: {
@@ -255,6 +254,13 @@ RSpec.describe Plans::OverrideService do
       it "returns error" do
         expect { override_service.call }.not_to change(Plan, :count)
         expect(override_service.call).not_to be_success
+      end
+
+      it "returns the service's own result exposing plan" do
+        result = override_service.call
+
+        expect(result).to be_a(described_class::Result)
+        expect(result.plan).to be_nil
       end
     end
 

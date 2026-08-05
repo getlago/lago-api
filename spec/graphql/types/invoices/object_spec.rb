@@ -20,6 +20,7 @@ RSpec.describe Types::Invoices::Object do
     expect(subject).to have_field(:payment_dispute_losable).of_type("Boolean!")
     expect(subject).to have_field(:payment_dispute_lost_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:payment_status).of_type("InvoicePaymentStatusTypeEnum!")
+    expect(subject).to have_field(:purchase_order_number).of_type("String")
     expect(subject).to have_field(:status).of_type("InvoiceStatusTypeEnum!")
     expect(subject).to have_field(:voidable).of_type("Boolean!")
 

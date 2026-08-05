@@ -57,7 +57,6 @@ module QuoteVersions
       quote_version.dup.tap do |cloned|
         cloned.status = :draft
         cloned.sequential_id = nil
-        cloned.share_token = nil # regenerated on save
         cloned.void_reason = nil
         cloned.voided_at = nil
         cloned.approved_at = nil

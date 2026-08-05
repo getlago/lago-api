@@ -2,6 +2,8 @@
 
 module WebhookEndpoints
   class CreateService < BaseService
+    Result = BaseResult[:webhook_endpoint]
+
     def initialize(organization:, params:)
       @organization = organization
       @params = params

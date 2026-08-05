@@ -116,6 +116,7 @@ invoices:
   void:
     - finance
     - manager
+  delete:
   export:
     - finance
     - manager
@@ -155,6 +156,8 @@ orders:
     - finance
     - manager
   update:
+    - manager
+  execute:
     - manager
 organization:
   view:

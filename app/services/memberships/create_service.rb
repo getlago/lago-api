@@ -2,6 +2,8 @@
 
 module Memberships
   class CreateService < ::BaseService
+    Result = BaseResult[:membership]
+
     def initialize(user:, organization:)
       @user = user
       @organization = organization

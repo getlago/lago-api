@@ -24,11 +24,11 @@ module PaymentProviders
         case event.resource_type
         when "payments"
           if PAYMENT_ACTIONS.include?(event.action)
-            payment_service_klass(event)
-              .new.update_payment_status(
-                provider_payment_id: event.links.payment,
-                status: event.action
-              ).raise_if_error!
+            payment_service_klass(event).call!(
+              :update_payment_status,
+              provider_payment_id: event.links.payment,
+              status: event.action
+            )
           end
         when "refunds"
           if REFUND_ACTIONS.include?(event.action)

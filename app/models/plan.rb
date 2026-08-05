@@ -173,12 +173,14 @@ end
 #
 # Indexes
 #
-#  index_plans_on_bill_fixed_charges_monthly  (bill_fixed_charges_monthly) WHERE ((deleted_at IS NULL) AND (bill_fixed_charges_monthly IS TRUE))
-#  index_plans_on_created_at                  (created_at)
-#  index_plans_on_deleted_at                  (deleted_at)
-#  index_plans_on_organization_id             (organization_id)
-#  index_plans_on_organization_id_and_code    (organization_id,code) UNIQUE WHERE ((deleted_at IS NULL) AND (parent_id IS NULL))
-#  index_plans_on_parent_id                   (parent_id)
+#  index_plans_on_bill_fixed_charges_monthly         (bill_fixed_charges_monthly) WHERE ((deleted_at IS NULL) AND (bill_fixed_charges_monthly IS TRUE))
+#  index_plans_on_created_at                         (created_at)
+#  index_plans_on_deleted_at                         (deleted_at)
+#  index_plans_on_organization_id                    (organization_id)
+#  index_plans_on_organization_id_and_code           (organization_id,code) UNIQUE WHERE ((deleted_at IS NULL) AND (parent_id IS NULL))
+#  index_plans_on_organization_id_code_gin_trgm_ops  (organization_id,code) WHERE (deleted_at IS NULL) USING gin
+#  index_plans_on_organization_id_name_gin_trgm_ops  (organization_id,name) WHERE (deleted_at IS NULL) USING gin
+#  index_plans_on_parent_id                          (parent_id)
 #
 # Foreign Keys
 #

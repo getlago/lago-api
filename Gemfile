@@ -28,6 +28,7 @@ gem "sidekiq-throttled", "1.4.0" # '1.5.0' was losing some jobs
 gem "throttling"
 gem "device_detector"
 gem "dry-validation"
+gem "json_schemer"
 
 # Security
 gem "bcrypt"
@@ -41,6 +42,7 @@ gem "after_commit_everywhere"
 gem "clickhouse-activerecord", "~> 1.6.1"
 gem "discard", "~> 1.2"
 gem "kaminari-activerecord"
+gem "meilisearch-rails"
 gem "paper_trail"
 gem "pg"
 gem "ransack"
@@ -114,7 +116,6 @@ gem "valvat"
 
 # Data Export
 gem "csv", "~> 3.0"
-gem "ostruct"
 
 gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", ref: "2abd2b3"
 

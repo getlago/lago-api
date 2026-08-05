@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Invoices::Payments::CashfreeService do
-  subject(:cashfree_service) { described_class.new(invoice) }
+  subject(:cashfree_service) do
+    described_class.new.tap { it.instance_variable_set(:@invoice, invoice) }
+  end
 
   let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
@@ -27,7 +29,7 @@ RSpec.describe Invoices::Payments::CashfreeService do
 
   let(:total_paid_amount_cents) { 0 }
 
-  describe ".update_payment_status" do
+  describe ".call(:update_payment_status)" do
     let(:payment) do
       create(
         :payment,
@@ -51,7 +53,8 @@ RSpec.describe Invoices::Payments::CashfreeService do
     end
 
     it "updates the payment and invoice payment_status" do
-      result = cashfree_service.update_payment_status(
+      result = described_class.call(
+        :update_payment_status,
         organization_id: organization.id,
         status: cashfree_payment.status,
         cashfree_payment:
@@ -69,7 +72,8 @@ RSpec.describe Invoices::Payments::CashfreeService do
 
     it "enqueues a SendWebhookJob for payment.succeeded" do
       expect do
-        cashfree_service.update_payment_status(
+        described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: cashfree_payment.status,
           cashfree_payment:
@@ -87,7 +91,8 @@ RSpec.describe Invoices::Payments::CashfreeService do
       end
 
       it "updates the payment and invoice status" do
-        result = cashfree_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: cashfree_payment.status,
           cashfree_payment:
@@ -115,7 +120,8 @@ RSpec.describe Invoices::Payments::CashfreeService do
       before { invoice.payment_succeeded! }
 
       it "does not update the status of invoice and payment" do
-        result = cashfree_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: cashfree_payment.status,
           cashfree_payment:
@@ -136,7 +142,8 @@ RSpec.describe Invoices::Payments::CashfreeService do
       end
 
       it "does not update the payment_status of invoice" do
-        result = cashfree_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: cashfree_payment.status,
           cashfree_payment:
@@ -166,7 +173,8 @@ RSpec.describe Invoices::Payments::CashfreeService do
       end
 
       it "creates a payment and updates invoice payment status" do
-        result = cashfree_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           status: cashfree_payment.status,
           cashfree_payment:
@@ -240,8 +248,8 @@ RSpec.describe Invoices::Payments::CashfreeService do
     end
   end
 
-  describe ".generate_payment_url" do
-    subject(:result) { cashfree_service.generate_payment_url(payment_intent) }
+  describe ".call(:generate_payment_url)" do
+    subject(:result) { described_class.call(:generate_payment_url, invoice, payment_intent) }
 
     let(:payment_links_response) { Net::HTTPResponse.new("1.0", "200", "OK") }
     let(:payment_links_body) { {link_url: "https://payments-test.cashfree.com/links//U1mgll3c0e9g"}.to_json }

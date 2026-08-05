@@ -4,9 +4,10 @@ module Invoices
   class RegenerateFromVoidedService < BaseService
     Result = BaseResult[:invoice]
 
-    def initialize(voided_invoice:, fees_params:)
+    def initialize(voided_invoice:, fees_params:, purchase_order_number: :inherit)
       @voided_invoice = voided_invoice
       @fees_params = fees_params
+      @purchase_order_number = purchase_order_number
       @regenerated_invoice = nil
       super
     end
@@ -59,7 +60,7 @@ module Invoices
     private
 
     attr_accessor :regenerated_invoice
-    attr_reader :voided_invoice, :fees_params
+    attr_reader :voided_invoice, :fees_params, :purchase_order_number
 
     delegate :customer, to: :voided_invoice
 
@@ -269,7 +270,18 @@ module Invoices
         datetime: voided_invoice.created_at,
         billing_entity: voided_invoice.billing_entity
       ).invoice.tap do |invoice|
-        invoice.update!(voided_invoice_id: voided_invoice.id)
+        invoice.update!(
+          voided_invoice_id: voided_invoice.id,
+          purchase_order_number: resolved_purchase_order_number
+        )
+      end
+    end
+
+    def resolved_purchase_order_number
+      if purchase_order_number == :inherit
+        voided_invoice.purchase_order_number
+      else
+        purchase_order_number
       end
     end
 

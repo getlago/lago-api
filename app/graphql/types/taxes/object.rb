@@ -13,6 +13,7 @@ module Types
       field :name, String, null: false
       field :rate, Float, null: false
 
+      field :applied_to_billing_entities_codes, [String], null: false
       field :applied_to_organization, Boolean, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -25,6 +26,20 @@ module Types
 
       field :auto_generated, Boolean, null: false
 
+      def applied_to_organization
+        organization = dataloader.with(Sources::ActiveRecordAssociation, :organization).load(object)
+        default_billing_entity = dataloader.with(Sources::ActiveRecordAssociation, :default_billing_entity).load(organization)
+        if default_billing_entity.nil?
+          false
+        else
+          billing_entities.any? { |billing_entity| billing_entity.id == default_billing_entity.id }
+        end
+      end
+
+      def applied_to_billing_entities_codes
+        billing_entities.map(&:code).sort
+      end
+
       def add_ons_count
         object.add_ons.count
       end
@@ -35,6 +50,12 @@ module Types
 
       def plans_count
         object.plans.count
+      end
+
+      private
+
+      def billing_entities
+        dataloader.with(Sources::ActiveRecordAssociation, :billing_entities).load(object)
       end
     end
   end

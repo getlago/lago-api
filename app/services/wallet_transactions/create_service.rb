@@ -20,6 +20,7 @@ module WalletTransactions
           :invoice_requires_successful_payment,
           :name,
           :priority,
+          :purchase_order_number,
           :settled_at,
           :source,
           :status,

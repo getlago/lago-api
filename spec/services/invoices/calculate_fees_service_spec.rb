@@ -119,7 +119,6 @@ RSpec.describe Invoices::CalculateFeesService do
     fixed_charge
     fixed_charge_event
 
-    allow(SegmentTrackJob).to receive(:perform_later)
     allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
     allow(Credits::ProgressiveBillingService).to receive(:call).and_call_original
   end

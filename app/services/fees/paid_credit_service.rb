@@ -2,6 +2,8 @@
 
 module Fees
   class PaidCreditService < BaseService
+    Result = BaseResult[:fee]
+
     def initialize(invoice:, wallet_transaction:, customer:)
       @invoice = invoice
       @customer = customer

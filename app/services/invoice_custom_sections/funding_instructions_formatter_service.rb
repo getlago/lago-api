@@ -2,6 +2,8 @@
 
 module InvoiceCustomSections
   class FundingInstructionsFormatterService < BaseService
+    Result = BaseResult[:details]
+
     def initialize(funding_data:, locale:)
       @funding_data = funding_data
       @locale = locale

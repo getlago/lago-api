@@ -2,6 +2,8 @@
 
 module DailyUsages
   class ComputeService < BaseService
+    Result = BaseResult[:daily_usage]
+
     def initialize(subscription:, timestamp:)
       @subscription = subscription
       @timestamp = timestamp

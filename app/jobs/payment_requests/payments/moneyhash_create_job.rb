@@ -14,8 +14,7 @@ module PaymentRequests
       unique :until_executed
 
       def perform(payable)
-        result = PaymentRequests::Payments::MoneyhashService.new(payable).create
-        result.raise_if_error!
+        PaymentRequests::Payments::MoneyhashService.call!(:create, payable)
       end
     end
   end

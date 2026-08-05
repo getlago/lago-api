@@ -2,6 +2,8 @@
 
 module Coupons
   class UpdateService < BaseService
+    Result = BaseResult[:coupon]
+
     def initialize(coupon:, params:)
       @coupon = coupon
       @params = params

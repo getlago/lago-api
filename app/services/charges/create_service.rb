@@ -2,6 +2,8 @@
 
 module Charges
   class CreateService < BaseService
+    Result = BaseResult[:charge]
+
     def initialize(plan:, params:, cascade_updates: false)
       @plan = plan
       @params = params

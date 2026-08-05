@@ -86,7 +86,7 @@ RSpec.describe Api::V1::EventsController do
     end
 
     context "with expression configured on billable metric" do
-      let(:metric) { create(:billable_metric, field_name: "value", organization:, expression: "event.properties.a + event.properties.b") }
+      let(:metric) { create(:sum_billable_metric, field_name: "value", organization:, expression: "event.properties.a + event.properties.b") }
       let(:create_params) do
         {
           code: metric.code,
@@ -193,7 +193,7 @@ RSpec.describe Api::V1::EventsController do
     end
 
     context "with expression configured on billable metric" do
-      let(:metric) { create(:billable_metric, field_name: "value", organization:, expression: "event.properties.a + event.properties.b") }
+      let(:metric) { create(:sum_billable_metric, field_name: "value", organization:, expression: "event.properties.a + event.properties.b") }
       let(:batch_params) { [create_params] }
       let(:create_params) do
         {

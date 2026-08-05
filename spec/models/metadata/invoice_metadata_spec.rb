@@ -37,5 +37,29 @@ RSpec.describe Metadata::InvoiceMetadata do
 
       it { expect(metadata).not_to be_valid }
     end
+
+    context "when value length is invalid" do
+      let(:value) { "a" * 141 }
+
+      it { expect(metadata).not_to be_valid }
+    end
+
+    context "when value length is invalid but value is unchanged" do
+      let(:metadata) { create(:invoice_metadata, invoice:) }
+
+      before { metadata.update_column(:value, "a" * 141) } # rubocop:disable Rails/SkipsModelValidations
+
+      it { expect(metadata).to be_valid }
+    end
+  end
+
+  describe "normalizations" do
+    let(:key) { "he\u0000llo" }
+    let(:value) { "wo\u0000rld" }
+
+    it "strips null bytes from key and value" do
+      expect(metadata.key).to eq("hello")
+      expect(metadata.value).to eq("world")
+    end
   end
 end

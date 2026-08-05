@@ -252,7 +252,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService do
 
   context "with charge model error" do
     let(:error_result) do
-      BaseService::Result.new.tap do |result|
+      ChargeModels::StandardService::Result.new.tap do |result|
         result.service_failure!(code: "error", message: "message")
       end
     end

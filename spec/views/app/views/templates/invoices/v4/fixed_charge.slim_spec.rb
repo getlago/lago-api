@@ -66,6 +66,32 @@ RSpec.describe "templates/invoices/v4/fixed_charge.slim" do
     invoice_subscription
   end
 
+  context "with a purchase order number" do
+    let(:invoice) do
+      create(
+        :invoice,
+        :with_purchase_order_number,
+        customer:,
+        organization:,
+        number: "LAGO-202509-FC-001",
+        payment_due_date: Date.parse("2025-09-15"),
+        issuing_date: Date.parse("2025-09-01"),
+        invoice_type: :subscription,
+        total_amount_cents: 10000,
+        currency: "USD",
+        fees_amount_cents: 10000,
+        sub_total_excluding_taxes_amount_cents: 10000,
+        sub_total_including_taxes_amount_cents: 10000,
+        coupons_amount_cents: 0
+      )
+    end
+
+    it "renders the purchase order number under the invoice number" do
+      expect(rendered_template).to include("Purchase Order Number")
+      expect(rendered_template).to include("PO-123")
+    end
+  end
+
   context "with a single fixed charge fee" do
     let(:fixed_charge) do
       create(:fixed_charge, :pay_in_advance, plan:, add_on:)

@@ -101,6 +101,17 @@ module ApiErrors
     )
   end
 
+  def lock_acquisition_error(code:)
+    render(
+      json: {
+        status: 422,
+        error: "Unprocessable Entity",
+        code:
+      },
+      status: :unprocessable_content
+    )
+  end
+
   def render_error_response(error_result)
     case error_result.error
     when BaseService::NotFoundFailure
@@ -119,6 +130,8 @@ module ApiErrors
       too_many_provider_requests_error(error: error_result.error)
     when BaseService::ThirdPartyFailure
       thirdpary_error(error: error_result.error)
+    when BaseService::LockAcquisitionFailure
+      lock_acquisition_error(code: error_result.error.code)
     else
       raise(error_result.error)
     end

@@ -28,6 +28,7 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
           name
           subscriptionAt
           progressiveBillingDisabled
+          purchaseOrderNumber
           plan {
             fixedCharges {
               invoiceDisplayName
@@ -43,6 +44,7 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
       id: subscription.id,
       name: "New name",
       progressiveBillingDisabled: true,
+      purchaseOrderNumber: "PO-456",
       planOverrides: {
         fixedCharges: [
           {
@@ -72,6 +74,7 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
 
     expect(result_data["name"]).to eq("New name")
     expect(result_data["progressiveBillingDisabled"]).to be(true)
+    expect(result_data["purchaseOrderNumber"]).to eq("PO-456")
 
     expect(result_data["plan"]["fixedCharges"].first).to include(
       "invoiceDisplayName" => "NEW fixed charge display name",

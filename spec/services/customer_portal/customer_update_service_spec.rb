@@ -127,7 +127,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
 
     context "when applying taxes fails" do
       let(:apply_taxes_result) do
-        BaseService::Result.new.not_found_failure!(resource: "tax")
+        Customers::ApplyTaxesService::Result.new.not_found_failure!(resource: "tax")
       end
 
       before do

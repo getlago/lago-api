@@ -49,6 +49,7 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided do
         regenerateFromVoided(input: $input) {
           id
           voidedInvoiceId
+          purchaseOrderNumber
           fees {
             id
             invoiceDisplayName
@@ -99,6 +100,53 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided do
       expect(result_data["fees"].first["units"]).to eq(fee_input[:units])
       expect(result_data["fees"].first["preciseUnitAmount"]).to eq(fee_input[:unitAmountCents])
       expect(result_data["status"]).to eq("finalized")
+    end
+  end
+
+  context "when a purchaseOrderNumber is provided" do
+    it "stores the normalized value on the regenerated invoice" do
+      freeze_time do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {
+              voidedInvoiceId: voided_invoice.id,
+              fees: [fee_input],
+              purchaseOrderNumber: "  PO-EDITED  "
+            }
+          }
+        )
+
+        result_data = result.dig("data", "regenerateFromVoided")
+        expect(result_data["purchaseOrderNumber"]).to eq("PO-EDITED")
+      end
+    end
+  end
+
+  context "when purchaseOrderNumber is not provided" do
+    before { voided_invoice.update!(purchase_order_number: "PO-INHERIT") }
+
+    it "inherits the purchase order number from the voided invoice" do
+      freeze_time do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {
+              voidedInvoiceId: voided_invoice.id,
+              fees: [fee_input]
+            }
+          }
+        )
+
+        result_data = result.dig("data", "regenerateFromVoided")
+        expect(result_data["purchaseOrderNumber"]).to eq("PO-INHERIT")
+      end
     end
   end
 end

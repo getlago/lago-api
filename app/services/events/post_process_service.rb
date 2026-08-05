@@ -35,7 +35,7 @@ module Events
     delegate :organization, to: :event
 
     def customer
-      @customer ||= subscriptions.first&.customer
+      @customer ||= (subscriptions.first || fallback_subscription)&.customer
     end
 
     def subscriptions
@@ -59,8 +59,22 @@ module Events
       @active_subscription ||= begin
         subs = subscriptions.select(&:active?)
         raise "Multiple active subscriptions found" if subs.length > 1
-        subs.first
+        subs.first || fallback_subscription
       end
+    end
+
+    # Fallback for recurring events: when a backdated event matches no subscription, attach it to
+    # the currently active one.
+    def fallback_subscription
+      return @fallback_subscription if defined?(@fallback_subscription)
+      return @fallback_subscription = nil unless subscriptions.empty?
+      return @fallback_subscription = nil unless billable_metric&.recurring
+
+      @fallback_subscription = organization.subscriptions
+        .where(external_id: event.external_subscription_id)
+        .active
+        .order(started_at: :desc)
+        .first
     end
 
     def billable_metric
@@ -68,6 +82,7 @@ module Events
     end
 
     def expire_cached_charges
+      return if organization.feature_flag_enabled?(:lazy_charge_usage_cache)
       return if active_subscription.nil?
       return unless billable_metric
 
@@ -87,7 +102,10 @@ module Events
     def track_subscription_activity
       # NOTE: We don't eager load usage_thresholds or alerts here so it could be considered an N+1 query
       #       But there should be only one active subscription here, so it's better to not re-requery to eager load
-      subscriptions.select(&:active?).each do |subscription|
+      subs = subscriptions.select(&:active?)
+      subs = [fallback_subscription].compact if subs.empty?
+
+      subs.each do |subscription|
         date = Time.current.in_time_zone(customer.applicable_timezone).to_date
         UsageMonitoring::TrackSubscriptionActivityService.call(organization:, subscription:, date:)
       end
@@ -116,10 +134,10 @@ module Events
     end
 
     def charges
-      return Charge.none unless subscriptions.first
+      subscription = subscriptions.first || fallback_subscription
+      return Charge.none unless subscription
 
-      subscriptions
-        .first
+      subscription
         .plan
         .charges
         .pay_in_advance

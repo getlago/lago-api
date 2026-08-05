@@ -121,7 +121,7 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
   end
 
   context "with missing custom field" do
-    let(:billable_metric) { create(:billable_metric, organization:, field_name: "mandatory") }
+    let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "mandatory") }
 
     it "returns a list of events" do
       event

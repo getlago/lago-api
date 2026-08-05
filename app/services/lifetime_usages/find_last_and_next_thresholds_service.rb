@@ -2,6 +2,8 @@
 
 module LifetimeUsages
   class FindLastAndNextThresholdsService < BaseService
+    Result = BaseResult[:last_threshold_amount_cents, :next_threshold_amount_cents, :next_threshold_ratio]
+
     def initialize(lifetime_usage:)
       @lifetime_usage = lifetime_usage
 

@@ -7,7 +7,7 @@ RSpec.describe PaymentIntents::ExpireJob do
 
   before do
     allow(PaymentIntents::ExpireService)
-      .to receive(:call!).with(invoice:).and_return(BaseService::Result.new)
+      .to receive(:call!).with(invoice:).and_return(PaymentIntents::ExpireService::Result.new)
   end
 
   it "calls the expire service" do

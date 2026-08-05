@@ -8,7 +8,7 @@ RSpec.describe Payments::SetPaymentMethodAndCreateReceiptJob do
 
   before do
     allow(Payments::SetPaymentMethodDataService)
-      .to receive(:call!).with(payment:, provider_payment_method_id:).and_return(BaseService::Result.new)
+      .to receive(:call!).with(payment:, provider_payment_method_id:).and_return(Payments::SetPaymentMethodDataService::Result.new)
   end
 
   it "calls the service" do

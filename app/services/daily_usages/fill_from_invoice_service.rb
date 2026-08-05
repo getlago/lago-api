@@ -4,6 +4,8 @@ module DailyUsages
   class FillFromInvoiceService < BaseService
     Usage = Struct.new(:from_datetime, :to_datetime, :issuing_date, :currency, :amount_cents, :total_amount_cents, :taxes_amount_cents, :fees)
 
+    Result = BaseResult[:daily_usages]
+
     def initialize(invoice:, subscriptions:)
       @invoice = invoice
       @subscriptions = subscriptions

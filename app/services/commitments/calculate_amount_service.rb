@@ -2,6 +2,8 @@
 
 module Commitments
   class CalculateAmountService < BaseService
+    Result = BaseResult[:commitment_amount_cents]
+
     def initialize(commitment:, invoice_subscription:)
       @commitment = commitment
       @invoice_subscription = invoice_subscription

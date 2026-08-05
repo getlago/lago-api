@@ -4,6 +4,8 @@ module PaymentProviders
   module Adyen
     module Payments
       class CreateService < BaseService
+        Result = BaseResult[:payment, :error_message, :error_code, :reraise]
+
         def initialize(payment:, reference:, metadata:)
           @payment = payment
           @reference = reference
@@ -108,11 +110,7 @@ module PaymentProviders
         end
 
         def payment_method_id
-          if payment.organization.feature_flag_enabled?(:multiple_payment_methods)
-            payment.payment_method&.provider_method_id
-          else
-            provider_customer.payment_method_id
-          end
+          payment.payment_method&.provider_method_id || provider_customer.payment_method_id
         end
 
         def prepare_failed_result(error, reraise: false)

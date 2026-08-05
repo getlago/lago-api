@@ -2,6 +2,8 @@
 
 module Integrations
   class DestroyService < BaseService
+    Result = BaseResult[:integration]
+
     def initialize(integration:)
       @integration = integration
 

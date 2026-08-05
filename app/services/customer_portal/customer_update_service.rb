@@ -2,6 +2,8 @@
 
 module CustomerPortal
   class CustomerUpdateService < BaseService
+    Result = BaseResult[:customer]
+
     def initialize(customer:, args:)
       @customer = customer
       @args = args

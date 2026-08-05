@@ -16,6 +16,7 @@ RSpec.describe Types::Orders::Object do
     expect(subject).to have_field(:currency).of_type("String")
     expect(subject).to have_field(:execute_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:executed_at).of_type("ISO8601DateTime")
+    expect(subject).to have_field(:execution_record).of_type("OrderExecutionRecord!")
 
     expect(subject).to have_field(:customer).of_type("Customer!")
     expect(subject).to have_field(:order_form).of_type("OrderForm!")

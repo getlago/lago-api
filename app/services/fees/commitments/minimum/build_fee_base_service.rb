@@ -4,6 +4,8 @@ module Fees
   module Commitments
     module Minimum
       class BuildFeeBaseService < ::BaseService
+        Result = BaseResult[:fee]
+
         def initialize(invoice_subscription:)
           @invoice_subscription = invoice_subscription
           @minimum_commitment = invoice_subscription.subscription.plan.minimum_commitment

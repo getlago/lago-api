@@ -78,7 +78,8 @@ RSpec.describe Wallets::CreateService do
           metadata: nil,
           name: nil,
           priority: nil,
-          ignore_paid_top_up_limits: ignore_paid_top_up_limits_on_creation
+          ignore_paid_top_up_limits: ignore_paid_top_up_limits_on_creation,
+          purchase_order_number: nil
         }
       })
     end
@@ -161,6 +162,19 @@ RSpec.describe Wallets::CreateService do
       it "returns an error" do
         expect(service_result).not_to be_success
         expect(service_result.error.messages[:paid_credits]).to eq(["invalid_paid_credits", "invalid_amount"])
+      end
+    end
+
+    context "when purchase_order_number is too long" do
+      let(:params) do
+        super().merge(purchase_order_number: "a" * 256)
+      end
+
+      it "returns a validation error" do
+        expect { service_result }.not_to change(Wallet, :count)
+
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:purchase_order_number]).to eq(["value_is_too_long"])
       end
     end
 
@@ -527,6 +541,62 @@ RSpec.describe Wallets::CreateService do
         wallet = service_result.wallet
         expect(wallet.name).to eq("New Wallet")
         expect(wallet.reload.recurring_transaction_rules.count).to eq(1)
+      end
+
+      context "when wallet and recurring transaction rule have purchase order numbers" do
+        let(:params) do
+          super().merge(purchase_order_number: "PO-WALLET")
+        end
+        let(:rules) do
+          [
+            {
+              interval: "monthly",
+              method: "target",
+              paid_credits: "10.0",
+              granted_credits: "5.0",
+              target_ongoing_balance: "100.0",
+              trigger: "interval",
+              purchase_order_number: "PO-RULE"
+            }
+          ]
+        end
+
+        it "persists both purchase order numbers and enqueues the initial top-up with the rule value" do
+          expect { service_result }.to have_enqueued_job(WalletTransactions::CreateJob).with(
+            organization_id: organization.id,
+            params: hash_including(purchase_order_number: "PO-RULE")
+          )
+
+          wallet = service_result.wallet.reload
+          expect(wallet.purchase_order_number).to eq("PO-WALLET")
+          expect(wallet.recurring_transaction_rules.sole.purchase_order_number).to eq("PO-RULE")
+        end
+      end
+
+      context "when recurring transaction rule purchase order number is blank" do
+        let(:params) do
+          super().merge(purchase_order_number: "PO-WALLET")
+        end
+        let(:rules) do
+          [
+            {
+              interval: "monthly",
+              method: "target",
+              paid_credits: "10.0",
+              granted_credits: "5.0",
+              target_ongoing_balance: "100.0",
+              trigger: "interval",
+              purchase_order_number: "   "
+            }
+          ]
+        end
+
+        it "enqueues the initial top-up with the wallet purchase order number" do
+          expect { service_result }.to have_enqueued_job(WalletTransactions::CreateJob).with(
+            organization_id: organization.id,
+            params: hash_including(purchase_order_number: "PO-WALLET")
+          )
+        end
       end
 
       context "when recurring transaction rule has transaction_name" do

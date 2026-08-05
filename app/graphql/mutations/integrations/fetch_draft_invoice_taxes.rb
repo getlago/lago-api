@@ -27,11 +27,33 @@ module Mutations
 
       private
 
-      # Note: We need to pass invoice object to the service that return taxes. This service should
-      # work with real invoice objects. In this case, it should also work with invoice that is not stored yet,
-      # because we need to fetch taxes for one-off invoice UI form.
+      # One-off invoices previewed from the UI are not persisted yet, so we build lightweight
+      # stand-ins exposing only the subset of the Invoice / Fee interface the tax payloads read.
+      # They fail loudly if a payload starts reading an attribute we did not anticipate.
+      DraftInvoice = Data.define(:issuing_date, :currency, :customer) do
+        def voided? = false
+      end
+
+      DraftFee = Data.define(:add_on_id, :item_id, :sub_total_excluding_taxes_amount_cents) do
+        def id = nil
+
+        def item_key = nil
+
+        def units = nil
+
+        def amount_cents = nil
+
+        def charge? = false
+
+        def fixed_charge? = false
+
+        def commitment? = false
+
+        def subscription? = false
+      end
+
       def invoice(customer, args)
-        OpenStruct.new(
+        DraftInvoice.new(
           issuing_date: Time.current.in_time_zone(customer.applicable_timezone).to_date,
           currency: args[:currency],
           customer:
@@ -43,7 +65,7 @@ module Mutations
           unit_amount_cents = fee[:unit_amount_cents]
           units = fee[:units]&.to_f || 1
 
-          OpenStruct.new(
+          DraftFee.new(
             add_on_id: fee[:add_on_id],
             item_id: fee[:add_on_id],
             sub_total_excluding_taxes_amount_cents: (unit_amount_cents * units).round

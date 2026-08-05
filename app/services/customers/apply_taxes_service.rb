@@ -2,6 +2,8 @@
 
 module Customers
   class ApplyTaxesService < BaseService
+    Result = BaseResult[:applied_taxes]
+
     def initialize(customer:, tax_codes:)
       @customer = customer
       @tax_codes = tax_codes

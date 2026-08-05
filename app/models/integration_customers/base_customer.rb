@@ -16,7 +16,26 @@ module IntegrationCustomers
       IntegrationCustomers::AvalaraCustomer
     ].freeze
 
+    CATEGORIES = {
+      payment: "payment",
+      tax: "tax",
+      accounting: "accounting",
+      crm: "crm"
+    }.freeze
+
+    CATEGORY_BY_TYPE = {
+      "IntegrationCustomers::AnrokCustomer" => CATEGORIES[:tax],
+      "IntegrationCustomers::AvalaraCustomer" => CATEGORIES[:tax],
+      "IntegrationCustomers::NetsuiteCustomer" => CATEGORIES[:accounting],
+      "IntegrationCustomers::XeroCustomer" => CATEGORIES[:accounting],
+      "IntegrationCustomers::HubspotCustomer" => CATEGORIES[:crm],
+      "IntegrationCustomers::SalesforceCustomer" => CATEGORIES[:crm]
+    }.freeze
+
+    enum :category, CATEGORIES, validate: {allow_nil: true}
+
     validates :customer_id, uniqueness: {scope: :type}
+    validates :code, uniqueness: {scope: %i[customer_id category]}, allow_nil: true
     validate :only_one_tax_integration_per_customer, if: :tax_kind?
 
     scope :accounting_kind, -> do
@@ -58,6 +77,10 @@ module IntegrationCustomers
       end
     end
 
+    def self.category_for(customer_type)
+      CATEGORY_BY_TYPE[customer_type]
+    end
+
     def tax_kind?
       TAX_INTEGRATION_TYPES.include?(type)
     end
@@ -81,6 +104,9 @@ end
 # Database name: primary
 #
 #  id                   :uuid             not null, primary key
+#  category             :enum
+#  code                 :string
+#  is_default           :boolean          default(FALSE), not null
 #  settings             :jsonb            not null
 #  type                 :string           not null
 #  created_at           :datetime         not null
@@ -92,11 +118,13 @@ end
 #
 # Indexes
 #
-#  index_integration_customers_on_customer_id           (customer_id)
-#  index_integration_customers_on_customer_id_and_type  (customer_id,type) UNIQUE
-#  index_integration_customers_on_external_customer_id  (external_customer_id)
-#  index_integration_customers_on_integration_id        (integration_id)
-#  index_integration_customers_on_organization_id       (organization_id)
+#  index_integration_customers_on_customer_category_code     (customer_id,category,code) UNIQUE
+#  index_integration_customers_on_customer_category_default  (customer_id,category) UNIQUE WHERE is_default
+#  index_integration_customers_on_customer_id                (customer_id)
+#  index_integration_customers_on_customer_id_and_type       (customer_id,type) UNIQUE
+#  index_integration_customers_on_external_customer_id       (external_customer_id)
+#  index_integration_customers_on_integration_id             (integration_id)
+#  index_integration_customers_on_organization_id            (organization_id)
 #
 # Foreign Keys
 #

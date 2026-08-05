@@ -2,6 +2,8 @@
 
 module Invoices
   class ApplyTaxesService < BaseService
+    Result = BaseResult[:applied_taxes, :invoice]
+
     def initialize(invoice:)
       @invoice = invoice
 

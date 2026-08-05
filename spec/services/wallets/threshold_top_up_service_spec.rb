@@ -45,7 +45,8 @@ RSpec.describe Wallets::ThresholdTopUpService do
             invoice_requires_successful_payment: false,
             metadata: [],
             name: "Recurring Transaction Rule",
-            ignore_paid_top_up_limits: true
+            ignore_paid_top_up_limits: true,
+            purchase_order_number: nil
           },
           unique_transaction: true
         )
@@ -174,6 +175,76 @@ RSpec.describe Wallets::ThresholdTopUpService do
       end
     end
 
+    context "when rule has purchase_order_number" do
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "6.0",
+          paid_credits: "10.0",
+          granted_credits: "3.0",
+          purchase_order_number: "PO-RULE-123"
+        )
+      end
+
+      it "calls wallet transaction create job with the rule purchase order number" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(purchase_order_number: "PO-RULE-123"),
+            unique_transaction: true
+          )
+      end
+    end
+
+    context "when rule purchase_order_number is blank and wallet has purchase_order_number" do
+      let(:wallet) do
+        create(
+          :wallet,
+          balance_cents: 1000,
+          ongoing_balance_cents: 550,
+          ongoing_usage_balance_cents: 450,
+          credits_balance: 10.0,
+          credits_ongoing_balance: 5.5,
+          credits_ongoing_usage_balance: 4.0,
+          paid_top_up_min_amount_cents: 205_50,
+          purchase_order_number: "PO-WALLET-123"
+        )
+      end
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "6.0",
+          paid_credits: "10.0",
+          granted_credits: "3.0",
+          purchase_order_number: "   "
+        )
+      end
+
+      it "calls wallet transaction create job with the wallet purchase order number" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(purchase_order_number: "PO-WALLET-123"),
+            unique_transaction: true
+          )
+      end
+    end
+
+    context "when neither rule nor wallet has purchase_order_number" do
+      it "calls wallet transaction create job without purchase order number" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(purchase_order_number: nil),
+            unique_transaction: true
+          )
+      end
+    end
+
     context "when border has NOT been crossed" do
       let(:recurring_transaction_rule) do
         create(:recurring_transaction_rule, wallet:, trigger: "threshold", threshold_credits: "2.0")
@@ -234,7 +305,8 @@ RSpec.describe Wallets::ThresholdTopUpService do
               invoice_requires_successful_payment: false,
               metadata: [],
               name: "Recurring Transaction Rule",
-              ignore_paid_top_up_limits: false
+              ignore_paid_top_up_limits: false,
+              purchase_order_number: nil
             },
             unique_transaction: true
           )

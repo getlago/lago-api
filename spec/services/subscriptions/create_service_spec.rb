@@ -598,6 +598,36 @@ RSpec.describe Subscriptions::CreateService do
         end
       end
 
+      context "when the plan override fails" do
+        let(:params) do
+          {
+            external_customer_id:,
+            plan_code:,
+            name:,
+            external_id:,
+            billing_time:,
+            subscription_at:,
+            subscription_id:,
+            started_at:,
+            plan_overrides: {
+              amount_cents: 12_345,
+              minimum_commitment: {amount_cents: nil}
+            }
+          }
+        end
+
+        it "returns a failed result without raising" do
+          result = nil
+          expect { result = create_service.call }.not_to raise_error
+
+          expect(result).not_to be_success
+        end
+
+        it "rolls back without creating a subscription" do
+          expect { create_service.call }.not_to change(Subscription, :count)
+        end
+      end
+
       context "with invoice custom sections" do
         let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
 
@@ -1116,7 +1146,7 @@ RSpec.describe Subscriptions::CreateService do
 
           context "when subscription upgrade fails" do
             let(:result_failure) do
-              BaseService::Result.new.validation_failure!(
+              Subscriptions::PlanUpgradeService::Result.new.validation_failure!(
                 errors: {billing_time: ["value_is_invalid"]}
               )
             end
@@ -1560,7 +1590,7 @@ RSpec.describe Subscriptions::CreateService do
 
           context "when subscription downgrade fails" do
             let(:result_failure) do
-              BaseService::Result.new.validation_failure!(
+              Subscriptions::PlanDowngradeService::Result.new.validation_failure!(
                 errors: {billing_time: ["value_is_invalid"]}
               )
             end

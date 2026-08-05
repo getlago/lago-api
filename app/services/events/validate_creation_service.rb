@@ -2,6 +2,8 @@
 
 module Events
   class ValidateCreationService < BaseService
+    Result = BaseResult
+
     def initialize(organization:, event_params:, customer:, subscriptions: [])
       @organization = organization
       @event_params = event_params

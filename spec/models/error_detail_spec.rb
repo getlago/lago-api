@@ -12,11 +12,7 @@ RSpec.describe ErrorDetail do
     let(:error) { BaseService::ValidationFailure.new(result, messages: messages) }
     let(:messages) { ["message1", "message2"] }
 
-    let(:error_with_backtrace) do
-      error = OpenStruct.new
-      error.backtrace = "backtrace"
-      error
-    end
+    let(:error_with_backtrace) { Struct.new(:backtrace).new("backtrace") }
 
     describe ".create_generation_error_for" do
       it "does nothing if the invoice is nil" do

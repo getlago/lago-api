@@ -2,6 +2,8 @@
 
 module Charges
   class PayInAdvanceAggregationService < BaseService
+    Result = BaseResult
+
     def initialize(charge:, boundaries:, properties:, event:, charge_filter: nil)
       @charge = charge
       @boundaries = boundaries

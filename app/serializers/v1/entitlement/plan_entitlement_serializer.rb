@@ -15,7 +15,9 @@ module V1
       private
 
       def privileges
-        model.values.map do |ev|
+        model.values.filter_map do |ev|
+          next if ev.privilege.nil?
+
           {
             code: ev.privilege.code,
             name: ev.privilege.name,

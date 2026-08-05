@@ -3,8 +3,8 @@
 module Subscriptions
   class FlagRefreshedJob < ApplicationJob
     queue_as do
-      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_EVENTS"])
-        :events
+      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_ALERTS"])
+        :alerts_high_priority
       else
         :default
       end

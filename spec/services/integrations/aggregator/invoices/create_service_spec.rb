@@ -129,7 +129,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
   end
 
   let(:invoice_url) do
-    url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+    url = Rails.application.config.lago_front_url
 
     URI.join(url, "/#{invoice.customer.organization.slug}/customer/#{invoice.customer.id}/", "invoice/#{invoice.id}/overview").to_s
   end

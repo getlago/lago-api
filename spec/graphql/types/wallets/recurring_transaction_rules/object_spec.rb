@@ -25,5 +25,6 @@ RSpec.describe Types::Wallets::RecurringTransactionRules::Object do
     expect(subject).to have_field(:skip_invoice_custom_sections).of_type("Boolean")
     expect(subject).to have_field(:payment_method).of_type("PaymentMethod")
     expect(subject).to have_field(:payment_method_type).of_type("PaymentMethodTypeEnum")
+    expect(subject).to have_field(:purchase_order_number).of_type("String")
   end
 end

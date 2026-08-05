@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Invoices::FinalizeJob do
   let(:invoice) { create(:invoice) }
 
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::RefreshDraftAndFinalizeService::Result.new }
 
   it "delegates to the RefreshDraftAndFinalizeService service" do
     allow(Invoices::RefreshDraftAndFinalizeService).to receive(:call)
@@ -52,7 +52,7 @@ RSpec.describe Invoices::FinalizeJob do
 
   describe "retry_on" do
     [
-      [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
+      [BaseLockService::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
       [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 25],
       [Sequenced::SequenceError.new("Sequenced::SequenceError"), 15]
     ].each do |error, attempts|

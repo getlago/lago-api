@@ -4,6 +4,8 @@ module PaymentProviders
   module Cashfree
     module Customers
       class CreateService < BaseService
+        Result = BaseResult[:provider_customer]
+
         def initialize(customer:, payment_provider_id:, params:, async: true)
           @customer = customer
           @payment_provider_id = payment_provider_id

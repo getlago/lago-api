@@ -7,10 +7,6 @@ RSpec.describe BillableMetrics::CreateService do
   let(:organization) { membership.organization }
 
   describe "create" do
-    before do
-      allow(SegmentTrackJob).to receive(:perform_later)
-    end
-
     let(:create_args) do
       {
         name: "New Metric",
@@ -34,6 +30,42 @@ RSpec.describe BillableMetrics::CreateService do
       result = described_class.call(create_args)
 
       expect(SendWebhookJob).to have_been_enqueued.with("billable_metric.created", result.billable_metric)
+    end
+
+    it "expires the expression cache of the code" do
+      cache_key = BillableMetrics::ExpressionCacheService.new(organization.id, create_args[:code]).cache_key
+      allow(Rails.cache).to receive(:delete)
+
+      described_class.call(create_args)
+
+      expect(Rails.cache).to have_received(:delete).with(cache_key)
+    end
+
+    context "when an event was received for the code before the metric existed", cache: :memory do
+      let(:create_args) do
+        {
+          name: "New Metric",
+          code: "new_metric",
+          organization_id: organization.id,
+          aggregation_type: "sum_agg",
+          field_name: "result",
+          expression: "event.properties.left + event.properties.right"
+        }
+      end
+
+      let(:event) do
+        create(:event, organization:, code: create_args[:code], properties: {"left" => "1", "right" => "2"})
+      end
+
+      it "evaluates the expression on the following events" do
+        # This caches the absence of an expression for the code
+        Events::CalculateExpressionService.call(organization:, event:)
+
+        described_class.call(create_args)
+
+        result = Events::CalculateExpressionService.call(organization:, event:)
+        expect(result.event.properties["result"]).to eq(3)
+      end
     end
 
     context "with code already used by a deleted metric" do
@@ -92,7 +124,7 @@ RSpec.describe BillableMetrics::CreateService do
     it "calls SegmentTrackJob" do
       metric = described_class.call(create_args).billable_metric
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "billable_metric_created",
         properties: {

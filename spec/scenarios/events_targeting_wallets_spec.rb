@@ -480,10 +480,10 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
         # Refresh wallets
         recalculate_wallet_balances
 
-        # Without wallet targeting, all usage should be attributed to oldest wallet (wallet1)
-        # Total: 35 units * $10 = $350
-        expect(wallet1.reload.ongoing_usage_balance_cents).to eq(35_000)
-        expect(wallet2.reload.ongoing_usage_balance_cents).to eq(0)
+        # Without wallet targeting, ongoing usage cascades in priority order like billing:
+        # wallet1 fills ($200), the remaining $150 spills onto wallet2.
+        expect(wallet1.reload.ongoing_usage_balance_cents).to eq(20_000)
+        expect(wallet2.reload.ongoing_usage_balance_cents).to eq(15_000)
       end
 
       # Bill at end of month

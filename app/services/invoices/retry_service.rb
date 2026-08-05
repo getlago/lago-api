@@ -2,6 +2,8 @@
 
 module Invoices
   class RetryService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(invoice:)
       @invoice = invoice
 

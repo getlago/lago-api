@@ -7,18 +7,12 @@ RSpec.describe PaymentProviderCustomers::StripeCheckoutUrlJob do
 
   let(:stripe_customer) { create(:stripe_customer) }
 
-  let(:stripe_service) { instance_double(PaymentProviderCustomers::StripeService) }
-
   it "calls generate_checkout_url method" do
-    allow(PaymentProviderCustomers::StripeService).to receive(:new)
-      .with(stripe_customer)
-      .and_return(stripe_service)
-    allow(stripe_service).to receive(:generate_checkout_url)
-      .and_return(BaseService::Result.new)
+    allow(PaymentProviderCustomers::StripeService).to receive(:call!)
+      .and_return(PaymentProviderCustomers::StripeService::RESULTS.fetch(:generate_checkout_url).new)
 
     stripe_checkout_job.perform_now(stripe_customer)
 
-    expect(PaymentProviderCustomers::StripeService).to have_received(:new)
-    expect(stripe_service).to have_received(:generate_checkout_url)
+    expect(PaymentProviderCustomers::StripeService).to have_received(:call!).with(:generate_checkout_url, stripe_customer)
   end
 end

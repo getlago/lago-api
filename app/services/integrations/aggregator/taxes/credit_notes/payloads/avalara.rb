@@ -61,11 +61,10 @@ module Integrations
               elsif fee.subscription?
                 subscription_item
               end
-              mapped_item ||= OpenStruct.new
 
               {
                 "item_id" => fee.item_id,
-                "item_code" => mapped_item.external_id,
+                "item_code" => mapped_item&.external_id,
                 "unit" => fee.units,
                 "amount" => item_amount(item, fee)
               }

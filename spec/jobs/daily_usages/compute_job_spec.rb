@@ -8,7 +8,7 @@ RSpec.describe DailyUsages::ComputeJob do
   let(:subscription) { create(:subscription) }
   let(:timestamp) { Time.current }
 
-  let(:result) { BaseService::Result.new }
+  let(:result) { DailyUsages::ComputeService::Result.new }
 
   describe ".perform" do
     it "delegates to DailyUsages::ComputeService" do

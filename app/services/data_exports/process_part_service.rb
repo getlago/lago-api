@@ -2,6 +2,8 @@
 
 module DataExports
   class ProcessPartService < BaseService
+    Result = BaseResult[:data_export_part]
+
     def initialize(data_export_part:)
       @data_export_part = data_export_part
       @data_export = data_export_part.data_export

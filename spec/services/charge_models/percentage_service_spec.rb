@@ -19,7 +19,7 @@ RSpec.describe ChargeModels::PercentageService do
   end
 
   let(:running_total) { [50, 150, 400] }
-  let(:aggregation_result) { BaseService::Result.new }
+  let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
   let(:fixed_amount) { "2.0" }
   let(:aggregation) { 800 }
   let(:free_units_per_events) { 3 }
@@ -272,7 +272,7 @@ RSpec.describe ChargeModels::PercentageService do
     let(:free_units_per_total_aggregation) { "0" }
     let(:rate) { "2.99" }
 
-    let(:per_event_aggregation) { BaseService::Result.new.tap { |r| r.event_aggregation = [10, 80, 10_000] } }
+    let(:per_event_aggregation) { BillableMetrics::Aggregations::BaseService::PerEventAggregationResult.new.tap { |r| r.event_aggregation = [10, 80, 10_000] } }
     let(:running_total) { [] }
 
     before do

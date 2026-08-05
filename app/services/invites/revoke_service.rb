@@ -2,6 +2,8 @@
 
 module Invites
   class RevokeService < BaseService
+    Result = BaseResult[:invite]
+
     def initialize(invite)
       @invite = invite
       super

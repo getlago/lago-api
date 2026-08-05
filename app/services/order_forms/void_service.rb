@@ -12,11 +12,6 @@ module OrderForms
       super
     end
 
-    activity_loggable(
-      action: "order_form.voided",
-      record: -> { order_form }
-    )
-
     def call
       return result.not_found_failure!(resource: "order_form") unless order_form
       return result.forbidden_failure! unless order_forms_enabled?(order_form.organization)

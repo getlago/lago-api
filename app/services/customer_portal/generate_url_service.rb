@@ -2,6 +2,8 @@
 
 module CustomerPortal
   class GenerateUrlService < BaseService
+    Result = BaseResult[:url]
+
     def initialize(customer:)
       @customer = customer
 
@@ -14,7 +16,7 @@ module CustomerPortal
       public_authenticator = ActiveSupport::MessageVerifier.new(ENV["SECRET_KEY_BASE"])
       message = public_authenticator.generate(customer.id, expires_in: 12.hours)
 
-      result.url = "#{ENV["LAGO_FRONT_URL"]}/customer-portal/#{message}"
+      result.url = "#{Rails.application.config.lago_front_url}/customer-portal/#{message}"
 
       result
     end

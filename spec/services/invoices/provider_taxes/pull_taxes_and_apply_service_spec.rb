@@ -93,10 +93,6 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
       fee_subscription
       fee_charge
 
-      allow(SegmentTrackJob).to receive(:perform_later)
-      allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
-      allow(Invoices::Payments::GocardlessCreateJob).to receive(:perform_later).and_call_original
-
       integration_customer_tax
 
       allow(LagoHttpClient::Client).to receive(:new)
@@ -292,7 +288,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
       it "calls SegmentTrackJob" do
         invoice = pull_taxes_service.call.invoice
 
-        expect(SegmentTrackJob).to have_received(:perform_later).with(
+        expect(SegmentTrackJob).to have_been_enqueued.with(
           membership_id: CurrentContext.membership,
           event: "invoice_created",
           properties: {

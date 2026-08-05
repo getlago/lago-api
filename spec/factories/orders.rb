@@ -17,5 +17,13 @@ FactoryBot.define do
       execution_mode { :order_only }
       executed_at { Time.current }
     end
+
+    trait :failed do
+      status { :failed }
+      execution_mode { :execute_in_lago }
+      execution_record do
+        {executed_at: nil, execution_mode: "execute_in_lago", invoice_id: nil, errors: ["currencies_does_not_match"]}
+      end
+    end
   end
 end

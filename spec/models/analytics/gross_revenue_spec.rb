@@ -231,4 +231,30 @@ RSpec.describe Analytics::GrossRevenue do
       end
     end
   end
+
+  describe ".expire_cache_for_customer", cache: :redis do
+    subject(:expire_cache) { described_class.expire_cache_for_customer(organization_id, external_customer_id) }
+
+    let(:organization_id) { SecureRandom.uuid }
+    let(:external_customer_id) { "customer_01" }
+    let(:version_key) { described_class.cache_version_key(organization_id, external_customer_id) }
+
+    before { allow(Rails.cache).to receive(:delete_matched).and_call_original }
+
+    it "bumps the stored version token" do
+      initial_version = described_class.cache_version(organization_id, external_customer_id)
+
+      travel 1.second do
+        expire_cache
+      end
+
+      expect(Rails.cache.read(version_key, raw: true)).not_to eq(initial_version)
+    end
+
+    it "does not scan the keyspace" do
+      expire_cache
+
+      expect(Rails.cache).not_to have_received(:delete_matched)
+    end
+  end
 end

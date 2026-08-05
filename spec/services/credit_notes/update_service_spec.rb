@@ -21,11 +21,9 @@ RSpec.describe CreditNotes::UpdateService do
   end
 
   it "call SegmentTrackJob" do
-    allow(SegmentTrackJob).to receive(:perform_later)
-
     credit_note_service.call
 
-    expect(SegmentTrackJob).to have_received(:perform_later).with(
+    expect(SegmentTrackJob).to have_been_enqueued.with(
       membership_id: CurrentContext.membership,
       event: "refund_status_changed",
       properties: {

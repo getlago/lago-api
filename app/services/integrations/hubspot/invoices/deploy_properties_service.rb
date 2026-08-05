@@ -4,6 +4,8 @@ module Integrations
   module Hubspot
     module Invoices
       class DeployPropertiesService < Integrations::Aggregator::BaseService
+        Result = BaseResult[:response]
+
         VERSION = 2
 
         def action_path

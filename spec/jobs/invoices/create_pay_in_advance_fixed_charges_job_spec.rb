@@ -7,7 +7,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
 
   let(:subscription) { create(:subscription) }
   let(:timestamp) { Time.current.to_i }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::CreatePayInAdvanceFixedChargesService::Result.new }
 
   describe "#perform" do
     before do
@@ -23,7 +23,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
 
     context "when result is a failure" do
       let(:result) do
-        BaseService::Result.new.single_validation_failure!(error_code: "error")
+        Invoices::CreatePayInAdvanceFixedChargesService::Result.new.single_validation_failure!(error_code: "error")
       end
 
       it "raises an error" do
@@ -37,7 +37,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
 
     context "when result is a tax error" do
       let(:result) do
-        BaseService::Result.new.validation_failure!(errors: {tax_error: ["taxDateTooFarInFuture"]})
+        Invoices::CreatePayInAdvanceFixedChargesService::Result.new.validation_failure!(errors: {tax_error: ["taxDateTooFarInFuture"]})
       end
 
       it "does not raise an error" do
@@ -50,7 +50,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
     describe "retry_on" do
       [
         [Sequenced::SequenceError.new("Sequenced::SequenceError"), 15],
-        [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
+        [BaseLockService::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
         [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 25],
         [BaseService::ThrottlingError.new(provider_name: "Stripe"), 25]
       ].each do |error, attempts|

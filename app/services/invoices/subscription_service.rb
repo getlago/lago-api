@@ -2,6 +2,8 @@
 
 module Invoices
   class SubscriptionService < BaseService
+    Result = BaseResult[:invoice, :non_invoiceable_fees]
+
     def initialize(subscriptions:, timestamp:, invoicing_reason:, invoice: nil, skip_charges: false)
       @subscriptions = subscriptions
       @timestamp = timestamp
@@ -25,6 +27,10 @@ module Invoices
 
       if mixed_billing_entities?
         return result.validation_failure!(errors: {billing_entity: ["mixed_billing_entities"]})
+      end
+
+      if mixed_purchase_order_numbers?
+        return result.validation_failure!(errors: {purchase_order_number: ["mixed_purchase_order_numbers"]})
       end
 
       create_generating_invoice unless invoice
@@ -106,7 +112,7 @@ module Invoices
       raise unless invoicing_reason.to_sym == :subscription_periodic
 
       result
-    rescue ActiveRecord::StaleObjectError, Customers::FailedToAcquireLock
+    rescue ActiveRecord::StaleObjectError, BaseLockService::FailedToAcquireLock
       raise
     rescue => e
       result.fail_with_error!(e)
@@ -152,7 +158,8 @@ module Invoices
         invoicing_reason:,
         currency:,
         datetime: Time.zone.at(timestamp),
-        skip_charges:
+        skip_charges:,
+        purchase_order_number: subscriptions.first&.purchase_order_number
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions:, timestamp:, invoicing_reason:)
@@ -176,6 +183,10 @@ module Invoices
 
     def mixed_billing_entities?
       subscriptions.map(&:applicable_billing_entity_id).uniq.many?
+    end
+
+    def mixed_purchase_order_numbers?
+      subscriptions.map(&:purchase_order_number).uniq.many?
     end
 
     def set_invoice_generated_status

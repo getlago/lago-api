@@ -2,6 +2,8 @@
 
 module Fees
   class ApplyProviderTaxesService < BaseService
+    Result = BaseResult[:applied_taxes]
+
     def initialize(fee:, fee_taxes:)
       @fee = fee
       @fee_taxes = fee_taxes

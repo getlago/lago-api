@@ -69,6 +69,36 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    context "with the purchase order number" do
+      before { voided_invoice.update!(purchase_order_number: "PO-ORIGINAL") }
+
+      context "when no purchase_order_number is provided" do
+        it "inherits the value from the voided invoice" do
+          expect(regenerate_result.invoice.purchase_order_number).to eq("PO-ORIGINAL")
+        end
+      end
+
+      context "when a purchase_order_number is provided" do
+        it "stores the normalized provided value on the regenerated invoice" do
+          result = Invoices::RegenerateFromVoidedService.call!(
+            voided_invoice:, fees_params:, purchase_order_number: "  PO-EDITED  "
+          )
+
+          expect(result.invoice.purchase_order_number).to eq("PO-EDITED")
+        end
+      end
+
+      context "when a blank purchase_order_number is provided" do
+        it "clears the value on the regenerated invoice" do
+          result = Invoices::RegenerateFromVoidedService.call!(
+            voided_invoice:, fees_params:, purchase_order_number: "   "
+          )
+
+          expect(result.invoice.purchase_order_number).to be_nil
+        end
+      end
+    end
+
     context "when voided fee has pay_in_advance_event_transaction_id" do
       before do
         original_fee.update!(pay_in_advance_event_transaction_id: "txn_123", pay_in_advance: true)

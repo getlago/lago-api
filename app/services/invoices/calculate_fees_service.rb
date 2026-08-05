@@ -2,6 +2,8 @@
 
 module Invoices
   class CalculateFeesService < BaseService
+    Result = BaseResult[:invoice, :non_invoiceable_fees]
+
     def initialize(invoice:, recurring: false, context: nil)
       @invoice = invoice
       @timestamp = invoice.invoice_subscriptions.first&.timestamp
@@ -140,7 +142,7 @@ module Invoices
             plan:,
             customer:,
             skip_adjusted_fees: !adjusted_fee_exists,
-            filtered_aggregations: filters[charge.id] || []
+            filtered_aggregations: filters[charge.id]&.keys || []
           )
         end
     end

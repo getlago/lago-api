@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob do
   let(:organization) { create(:organization) }
 
+  it_behaves_like "a configurable queue", "alerts", "SIDEKIQ_ALERTS" do
+    let(:arguments) { create(:organization).id }
+  end
+
   before do
     allow(UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService).to receive(:call!)
   end

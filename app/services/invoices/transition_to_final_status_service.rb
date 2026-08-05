@@ -2,6 +2,8 @@
 
 module Invoices
   class TransitionToFinalStatusService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(invoice:)
       @invoice = invoice
       @customer = @invoice.customer

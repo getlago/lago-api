@@ -92,14 +92,22 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
     end
 
     ##
-    # wallet 1
-    # 1000 - 3000(from events) = -2000
-    # wallet 2
-    # 1000 - 500(from event) = 500
+    # USAGE                        WALLETS (priority order)
+    #
+    # bm1: $30 ────$10───────────▶ ┌─────────────────────────┐
+    #           │                  │ wallet ($10, bm1 only)  │ ongoing: $0
+    #           │                  └─────────────────────────┘
+    # bm2: $5 ─────$5───────┐      ┌─────────────────────────┐
+    #           │           └────▶ │ wallet2 ($10, bm2 only) │ ongoing: $5
+    #           │                  └─────────────────────────┘
+    #           └─$20 overflow───▶ ┌─────────────────────────┐
+    #                              │ wallet3 ($10, catch-all)│ ongoing: -$10
+    #                              └─────────────────────────┘
     ##
     it "updates the correct ongoing balances for each wallet" do
-      expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
+      expect_wallet(wallet, ongoing_usage: 1000, credits_usage: 10, ongoing: 0, credits: 0)
       expect_wallet(wallet2, ongoing_usage: 500, credits_usage: 5, ongoing: 500, credits: 5)
+      expect_wallet(wallet3, ongoing_usage: 2000, credits_usage: 20, ongoing: -1000, credits: -10)
     end
 
     context "when there is paid in advance charges" do
@@ -115,10 +123,19 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
         third_charge
       end
 
+      ##
+      # Same cascade as the parent scenario; bm3 usage is pay-in-advance, so it is
+      # already billed and nets to 0 -- it reaches no wallet.
+      #
+      # bm1: $30 ── $10 ▶ wallet ($10, bm1 only)    ongoing: $0
+      #          └─ $20 ▶ wallet3 ($10, catch-all)  ongoing: -$10
+      # bm2: $5 ──── $5 ▶ wallet2 ($10, bm2 only)   ongoing: $5
+      # bm3: paid in advance ──▶ nets to $0
+      ##
       it "updates the correct ongoing balances for each wallet" do
-        expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
+        expect_wallet(wallet, ongoing_usage: 1000, credits_usage: 10, ongoing: 0, credits: 0)
         expect_wallet(wallet2, ongoing_usage: 500, credits_usage: 5, ongoing: 500, credits: 5)
-        expect_wallet(wallet3, ongoing_usage: 0, credits_usage: 0, ongoing: 1000, credits: 10)
+        expect_wallet(wallet3, ongoing_usage: 2000, credits_usage: 20, ongoing: -1000, credits: -10)
       end
     end
 
@@ -171,16 +188,20 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       end
 
       ##
-      # wallet 1
-      # 1000 - 3000(from events) = -2000 #untouched
-      # wallet 2
-      # fee 2 is not taken into account because of the wallet restrictions
-      # 1000 - 500(from event) - 100(from invoice) ( 100 + 10(tax) - 10(already paid) )
-      # = 400 # progressive billing invoice
+      # The progressive billing invoice nets $1 out of bm2 ($1 + $0.10 tax - $0.10 coupon)
+      # and $1 out of bm3, before the cascade runs.
+      #
+      # bm1: $30 ──────── $10 ▶ wallet ($10, bm1 only)    ongoing: $0
+      #                └─ $20 ▶ wallet3 (overflow)
+      # bm2: $5 - $1 ────── $4 ▶ wallet2 ($10, bm2 only)  ongoing: $6
+      # bm3: $33 - $1 ──── $32 ▶ wallet3 (only match)
+      #
+      # wallet3 ($10, catch-all): $20 + $32 = $52 consumed, ongoing: -$42
       ##
       it "updates wallet ongoing balances including progressive billing invoice" do
-        expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
+        expect_wallet(wallet, ongoing_usage: 1000, credits_usage: 10, ongoing: 0, credits: 0)
         expect_wallet(wallet2, ongoing_usage: 400, credits_usage: 4, ongoing: 600, credits: 6)
+        expect_wallet(wallet3, ongoing_usage: 5200, credits_usage: 52, ongoing: -4200, credits: -42)
       end
     end
 
@@ -213,15 +234,17 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       end
 
       ##
-      # wallet 1
-      # 1000 - 3000(from events) = -2000 #untouched
-      # wallet 2
-      # 1000 - 500(from event) - 110(from draft invoice) + 70 (already paid)
-      # = 540 # progressive billing invoice
+      # The draft invoice adds $0.40 to bm2 ($1 + $0.10 tax - $0.70 already paid)
+      # before the cascade runs. bm3 has no charge here, so its event prices nothing.
+      #
+      # bm1: $30 ────────── $10 ▶ wallet ($10, bm1 only)    ongoing: $0
+      #                  └─ $20 ▶ wallet3 ($10, catch-all)  ongoing: -$10
+      # bm2: $5 + $0.40 ── $5.40 ▶ wallet2 ($10, bm2 only)  ongoing: $4.60
       ##
       it "updates wallet ongoing balances including progressive billing invoice" do
-        expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
+        expect_wallet(wallet, ongoing_usage: 1000, credits_usage: 10, ongoing: 0, credits: 0)
         expect_wallet(wallet2, ongoing_usage: 540, credits_usage: 5.4, ongoing: 460, credits: 4.6)
+        expect_wallet(wallet3, ongoing_usage: 2000, credits_usage: 20, ongoing: -1000, credits: -10)
       end
     end
   end

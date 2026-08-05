@@ -2,8 +2,8 @@
 
 FactoryBot.define do
   sequence :adyen_refunds_response do
-    OpenStruct.new(
-      response: {
+    Adyen::AdyenResult.new(
+      {
         "merchantAccount" => SecureRandom.uuid,
         "pspReference" => SecureRandom.uuid,
         "paymentPspReference" => SecureRandom.uuid,
@@ -12,7 +12,9 @@ FactoryBot.define do
           "currency" => "CHF",
           "value" => 134
         }
-      }
+      }.to_json,
+      {},
+      200
     )
   end
 end

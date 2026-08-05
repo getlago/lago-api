@@ -130,14 +130,13 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
     let(:fee2) { create(:fee, invoice: nil) }
 
     let(:fee_taxes) do
-      OpenStruct.new(
+      build(:tax_result,
         item_id: fee1.id,
         item_code: "lago_default_b2b",
         tax_breakdown: [
-          OpenStruct.new(name: "tax 1", type: "type1", rate: "0.50", tax_amount: 75.5),
-          OpenStruct.new(name: "tax 2", type: "type2", rate: "0.30", tax_amount: 45.3)
-        ]
-      )
+          build(:tax_breakdown_item, name: "tax 1", type: "type1", rate: "0.50", tax_amount: 75.5),
+          build(:tax_breakdown_item, name: "tax 2", type: "type2", rate: "0.30", tax_amount: 45.3)
+        ])
     end
 
     before do

@@ -4,14 +4,17 @@ module Invoices
   module Payments
     class StripeService < BaseService
       include Customers::PaymentProviderFinder
+      include TypedResults
 
       PROVIDER_NAME = "Stripe"
 
-      def initialize(invoice = nil)
-        @invoice = invoice
+      RESULTS = {
+        update_payment_status: BaseResult[:payment, :invoice],
+        generate_payment_url: BaseResult[:payment_url, :provider_session_id],
+        expire_payment_url: BaseResult
+      }.freeze
 
-        super
-      end
+      private
 
       def update_payment_status(organization_id:, status:, stripe_payment:, amount_cents: nil)
         payment = Payment.find_by(provider_payment_id: stripe_payment.id)
@@ -41,10 +44,7 @@ module Invoices
 
         deliver_webhook if payable_payment_status.to_sym == :succeeded
 
-        if status.to_s == "failed" && result.invoice.payments.excluding(result.payment).where(status: :requires_action).any?
-          # We don't update the invoice status because it's likely the webhook of a failed payment
-          # but there is already a retry in progress with 3DSecure authentication
-        else
+        unless authentication_retry_pending?(payment, status)
           update_invoice_payment_status(
             payment_status: payable_payment_status,
             processing: status == "processing"
@@ -60,7 +60,15 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url(payment_intent)
+      def authentication_retry_pending?(payment, status)
+        return false unless status.to_s == "failed"
+
+        payment.payment_provider&.retriable_authentication_failure?(payment.error_code) ||
+          payment.payable.payments.excluding(payment).where(status: :requires_action).any?
+      end
+
+      def generate_payment_url(invoice, payment_intent)
+        @invoice = invoice
         res = ::Stripe::Checkout::Session.create(
           payment_url_payload(payment_intent),
           {
@@ -78,7 +86,8 @@ module Invoices
       end
 
       # NOTE: Expires the hosted Stripe Checkout open Session so it can no longer be paid.
-      def expire_payment_url(payment_intent)
+      def expire_payment_url(invoice, payment_intent)
+        @invoice = invoice
         return result if payment_intent.provider_session_id.blank?
 
         session = ::Stripe::Checkout::Session.retrieve(
@@ -98,8 +107,6 @@ module Invoices
       rescue ::Stripe::InvalidRequestError # the other ones are on the retry job
         result
       end
-
-      private
 
       attr_accessor :invoice
 
@@ -145,7 +152,7 @@ module Invoices
       end
 
       def payment_url_payload(payment_intent)
-        {
+        payload = {
           line_items: [
             {
               quantity: 1,
@@ -175,6 +182,12 @@ module Invoices
             }
           }
         }
+
+        if stripe_payment_provider.require_terms_of_service_consent
+          payload[:consent_collection] = {terms_of_service: "required"}
+        end
+
+        payload
       end
 
       def description

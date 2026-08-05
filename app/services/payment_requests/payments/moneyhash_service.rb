@@ -4,14 +4,17 @@ module PaymentRequests
   module Payments
     class MoneyhashService < BaseService
       include Customers::PaymentProviderFinder
+      include TypedResults
 
-      def initialize(payable = nil)
+      RESULTS = {
+        create: BaseResult[:payable, :payment, :payable_payment_status],
+        update_payment_status: BaseResult[:payment, :payable]
+      }.freeze
+
+      private
+
+      def create(payable)
         @payable = payable
-
-        super(nil)
-      end
-
-      def create
         result.payable = payable
         return result.not_found_failure!(resource: "moneyhash_customer") if customer&.moneyhash_customer&.provider_customer_id.blank?
         return result.not_found_failure!(resource: "payment_method") if moneyhash_payment_method_id.nil?
@@ -67,8 +70,9 @@ module PaymentRequests
 
         return handle_missing_payment(organization_id, metadata) unless payment
 
+        @payable = payment.payable
         result.payment = payment
-        result.payable = payment.payable
+        result.payable = @payable
         return result if payment.payable.payment_succeeded?
         payment.update!(status: moneyhash_payment_provider.determine_payment_status(status))
 
@@ -84,9 +88,7 @@ module PaymentRequests
         result.fail_with_error!(e)
       end
 
-      private
-
-      attr_accessor :payable
+      attr_reader :payable
 
       delegate :organization, :customer, to: :payable
 
@@ -122,11 +124,7 @@ module PaymentRequests
       end
 
       def moneyhash_payment_method_id
-        if organization.feature_flag_enabled?(:multiple_payment_methods)
-          customer.default_payment_method&.provider_method_id
-        else
-          customer.moneyhash_customer.payment_method_id
-        end
+        customer.default_payment_method&.provider_method_id || customer.moneyhash_customer.payment_method_id
       end
 
       def should_process_payment?

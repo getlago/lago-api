@@ -3,14 +3,18 @@
 module PaymentProviderCustomers
   class GocardlessService < BaseService
     include Customers::PaymentProviderFinder
+    include TypedResults
 
-    def initialize(gocardless_customer = nil)
+    RESULTS = {
+      create: BaseResult[:gocardless_customer],
+      update: BaseResult,
+      generate_checkout_url: BaseResult[:checkout_url]
+    }.freeze
+
+    private
+
+    def create(gocardless_customer)
       @gocardless_customer = gocardless_customer
-
-      super(nil)
-    end
-
-    def create
       result.gocardless_customer = gocardless_customer
       return result if gocardless_customer.provider_customer_id?
 
@@ -27,11 +31,13 @@ module PaymentProviderCustomers
       result
     end
 
-    def update
+    def update(gocardless_customer)
+      @gocardless_customer = gocardless_customer
       result
     end
 
-    def generate_checkout_url(send_webhook: true)
+    def generate_checkout_url(gocardless_customer, send_webhook: true)
+      @gocardless_customer = gocardless_customer
       billing_request = create_billing_request(gocardless_customer.provider_customer_id)
       billing_request_flow = create_billing_request_flow(billing_request.id)
 
@@ -47,8 +53,6 @@ module PaymentProviderCustomers
 
       result
     end
-
-    private
 
     attr_accessor :gocardless_customer
 

@@ -5,13 +5,13 @@ module Resolvers
     class OverdueBalancesResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
+      include BillingEntityArgsResolvable
 
       REQUIRED_PERMISSION = "analytics:view"
 
       description "Query overdue balances of an organization"
 
       argument :billing_entity_code, String, required: false
-      argument :billing_entity_id, ID, required: false
       argument :currency, Types::CurrencyEnum, required: false
       argument :external_customer_id, String, required: false
       argument :is_customer_tin_empty, Boolean, required: false
@@ -22,6 +22,9 @@ module Resolvers
       type Types::Analytics::OverdueBalances::Object.collection_type, null: false
 
       def resolve(**args)
+        error = resolve_billing_entity!(args)
+        return error if error
+
         ::Analytics::OverdueBalance.find_all_by(current_organization.id, **args)
       end
     end

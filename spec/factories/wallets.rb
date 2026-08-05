@@ -28,6 +28,10 @@ FactoryBot.define do
       paid_top_up_max_amount_cents { rand(2000..5000) }
     end
 
+    trait :with_purchase_order_number do
+      purchase_order_number { "PO-123" }
+    end
+
     trait :with_inbound_transaction do
       after(:create) do |wallet|
         create(:wallet_transaction,

@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Admin::InvoicesController, type: [:request, :admin] do
   let(:invoice) { create(:invoice) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::GeneratePdfService::Result.new }
 
   before do
     allow(Invoices::GeneratePdfService).to receive(:call)

@@ -104,5 +104,22 @@ RSpec.describe ChargeFilters::EventMatchingService do
     it "returns the filter matching the most properties" do
       expect(service_result.charge_filter).to eq(filter2)
     end
+
+    context "when the event value is outside the billable metric filter defined values" do
+      let(:event_properties) do
+        {
+          payment_method: "card",
+          card_location: "domestic",
+          scheme: "amex", # not part of the scheme defined values (visa, mastercard)
+          card_type: "credit",
+          card_number: 2
+        }
+      end
+
+      it "does not match the ALL_FILTER_VALUES filter" do
+        expect(service_result.charge_filter).to be_nil
+        expect(service_result.matching_charge_filters).to be_empty
+      end
+    end
   end
 end

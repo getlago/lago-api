@@ -39,16 +39,6 @@ RSpec.describe QuoteVersion do
       expect(build(:quote_version)).to be_valid
     end
 
-    describe "share_token" do
-      it "is required for draft and approved statuses on update" do
-        draft = build(:quote_version, status: :draft, share_token: nil)
-        expect(draft.valid?(:update)).to be false
-
-        approved = build(:quote_version, status: :approved, share_token: nil, approved_at: Time.current)
-        expect(approved.valid?(:update)).to be false
-      end
-    end
-
     describe "void_reason and voided_at" do
       it "are required when status is voided" do
         quote_version = build(:quote_version, status: :voided, void_reason: nil, voided_at: nil)
@@ -79,24 +69,6 @@ RSpec.describe QuoteVersion do
       v1 = create(:quote_version, :voided, quote:, organization: quote.organization, sequential_id: nil)
       v2 = create(:quote_version, quote:, organization: quote.organization, sequential_id: nil)
       expect([v1.sequential_id, v2.sequential_id]).to eq([1, 2])
-    end
-  end
-
-  describe "ensure_share_token callback" do
-    it "generates a share_token for draft versions" do
-      quote_version = create(:quote_version, status: :draft, share_token: nil)
-      expect(quote_version.share_token).to be_present
-    end
-
-    it "does not generate a share_token for voided versions" do
-      quote_version = create(:quote_version, :voided)
-      expect(quote_version.share_token).to be_nil
-    end
-
-    it "preserves an explicitly assigned share_token" do
-      token = SecureRandom.uuid
-      quote_version = create(:quote_version, status: :draft, share_token: token)
-      expect(quote_version.share_token).to eq(token)
     end
   end
 

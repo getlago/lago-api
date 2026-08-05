@@ -37,7 +37,7 @@ module BillableMetrics
 
       def self.null_result(result, grouped_by_keys: nil, apply_aggregation: false)
         if apply_aggregation && grouped_by_keys.present?
-          result.aggregations = [null_result(BaseService::Result.new, grouped_by_keys: grouped_by_keys)]
+          result.aggregations = [null_result(Result.new, grouped_by_keys: grouped_by_keys)]
         else
           result.grouped_by = grouped_by_keys.index_with { nil } if grouped_by_keys
           result.aggregation = 0
@@ -112,8 +112,12 @@ module BillableMetrics
       #   Used only for in advance billing
       def per_event_aggregation(exclude_event: false, include_event_value: false, grouped_by_values: nil)
         PerEventAggregationResult.new.tap do |result|
-          result.event_aggregation = event_store.with_grouped_by_values(grouped_by_values) do
-            compute_per_event_aggregation(exclude_event:, include_event_value:)
+          result.event_aggregation = if should_bypass_aggregation?
+            []
+          else
+            event_store.with_grouped_by_values(grouped_by_values) do
+              compute_per_event_aggregation(exclude_event:, include_event_value:)
+            end
           end
         end
       end

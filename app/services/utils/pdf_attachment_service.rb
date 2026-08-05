@@ -2,6 +2,8 @@
 
 module Utils
   class PdfAttachmentService < BaseService
+    Result = BaseResult[:file]
+
     def initialize(file:, attachment:)
       @file = file
       @attachment = attachment

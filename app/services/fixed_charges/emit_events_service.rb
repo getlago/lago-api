@@ -19,7 +19,7 @@ module FixedCharges
           subscription_id: subscription.id,
           fixed_charge_id: fixed_charge.id,
           units: units_for(subscription),
-          timestamp: apply_units_immediately ? timestamp : next_billing_period(subscription)
+          timestamp: (apply_units_immediately && !subscription.incomplete?) ? timestamp : next_billing_period(subscription)
         }
       end
 
@@ -38,6 +38,10 @@ module FixedCharges
       # otherwise, emit events for all active subscriptions on the plan, except subscriptions
       # that carry a per-subscription units override for this fixed charge (their units are
       # decoupled from the plan-level value and a plan-level update must not touch them).
+      # Incomplete (payment-gated) subscriptions receive the event with a next-period
+      # timestamp even when apply_units_immediately is true: the customer paid (or is
+      # paying) the gating invoice for the original units, so a change made during gating
+      # must never be billed right after activation.
       if subscription
         # Emit events for active and incomplete subscriptions
         # Pending subscriptions will have events created when they activate
@@ -59,7 +63,7 @@ module FixedCharges
     end
 
     def next_billing_period(subscription)
-      ::Subscriptions::DatesService.new_instance(subscription, timestamp, current_usage: true).fixed_charges_to_datetime + 1.second
+      ::Subscriptions::DatesService.new_instance(subscription, timestamp, current_usage: true).fixed_charges_period_to_datetime + 1.second
     end
   end
 end

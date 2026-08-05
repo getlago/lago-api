@@ -171,7 +171,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
           end
 
           it "returns result" do
-            expect(service_call).to be_a(BaseService::Result)
+            expect(service_call).to be_a(BaseResult)
           end
 
           it "enqueues a SendWebhookJob" do

@@ -2,6 +2,8 @@
 
 module IntegrationCollectionMappings
   class CreateService < BaseService
+    Result = BaseResult[:integration_collection_mapping]
+
     attr_reader :params
 
     def initialize(params:)

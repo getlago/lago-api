@@ -15,18 +15,22 @@ module Events
 
       clickhouse_enabled = ENV["LAGO_CLICKHOUSE_ENABLED"].present?
 
-      # The subscription is queried in batches to avoid memory pressure
-      # and cross-database subqueries: events is built to live on a dedicated
-      # database (so is clickhouse) while subscriptions/charges live on the primary database.
-      subscriptions_relation.in_batches(of: BATCH_SIZE) do |batch|
-        rows = batch.pluck(:id, :external_id)
-        next if rows.empty?
+      billable_metric.charges.with_discarded.in_batches(of: CHARGE_BATCH_SIZE) do |charges|
+        plan_ids = charges.pluck(:plan_id).uniq
 
-        subscription_ids, external_subscription_ids = rows.transpose
+        # The subscription is queried in batches to avoid memory pressure
+        # and cross-database subqueries: events is built to live on a dedicated
+        # database (so is clickhouse) while subscriptions/charges live on the primary database.
+        Subscription.where(plan_id: plan_ids).in_batches(of: BATCH_SIZE) do |batch|
+          rows = batch.pluck(:id, :external_id)
+          next if rows.empty?
 
-        delete_postgres_events(subscription_ids, external_subscription_ids)
-        delete_clickhouse_events(external_subscription_ids) if clickhouse_enabled
-        expire_charge_caches(subscription_ids)
+          subscription_ids, external_subscription_ids = rows.transpose
+
+          delete_postgres_events(subscription_ids, external_subscription_ids)
+          delete_clickhouse_events(external_subscription_ids) if clickhouse_enabled
+          expire_charge_caches(subscription_ids)
+        end
       end
 
       result
@@ -35,6 +39,7 @@ module Events
     private
 
     BATCH_SIZE = 10_000
+    CHARGE_BATCH_SIZE = 1_000
     CLICKHOUSE_BATCH_SIZE = BATCH_SIZE / 2
     CLICKHOUSE_TABLES = {
       events_raw: :ingested_at,
@@ -46,16 +51,6 @@ module Events
     attr_reader :billable_metric, :deleted_at
 
     delegate :code, :organization_id, to: :billable_metric
-
-    def subscriptions_relation
-      # Explicit SQL join bypasses Charge's `default_scope -> { kept }` so
-      # discarded charges are still considered when collecting subscriptions.
-      Subscription
-        .joins(:plan)
-        .joins("INNER JOIN charges ON charges.plan_id = plans.id")
-        .where("charges.billable_metric_id = ?", billable_metric.id)
-        .distinct
-    end
 
     def delete_postgres_events(subscription_ids, external_subscription_ids)
       # Delete events having an old-style `subscription_id`

@@ -5,6 +5,8 @@ module PaymentProviders
     class HandleIncomingWebhookService < BaseService
       extend Forwardable
 
+      Result = BaseResult[:event]
+
       def initialize(inbound_webhook:)
         @inbound_webhook = inbound_webhook
 

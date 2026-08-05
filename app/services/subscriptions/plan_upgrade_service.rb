@@ -62,6 +62,7 @@ module Subscriptions
         billing_time: current_subscription.billing_time,
         ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
         consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : current_subscription.consolidate_invoice,
+        purchase_order_number: params.key?(:purchase_order_number) ? params[:purchase_order_number] : current_subscription.purchase_order_number,
         billing_entity_id: resolved_entity&.id || current_subscription.billing_entity_id
       )
 

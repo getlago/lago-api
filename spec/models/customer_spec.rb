@@ -84,11 +84,43 @@ RSpec.describe Customer do
         expect(described_class.normalize_value_for(field, "")).to be_nil
       end
     end
+
+    it "strips null bytes from identity and free-text attributes" do
+      normalized_customer = build(
+        :customer,
+        name: "Foo\u0000Bar",
+        firstname: "Jo\u0000hn",
+        lastname: "Do\u0000e",
+        legal_name: "Foo\u0000Corp",
+        legal_number: "12\u000034",
+        phone: "555\u00000199",
+        url: "https://ex\u0000ample.test",
+        logo_url: "https://ex\u0000ample.test/l.png",
+        tax_identification_number: "FR\u000012345"
+      )
+
+      expect(normalized_customer.name).to eq("FooBar")
+      expect(normalized_customer.firstname).to eq("John")
+      expect(normalized_customer.lastname).to eq("Doe")
+      expect(normalized_customer.legal_name).to eq("FooCorp")
+      expect(normalized_customer.legal_number).to eq("1234")
+      expect(normalized_customer.phone).to eq("5550199")
+      expect(normalized_customer.url).to eq("https://example.test")
+      expect(normalized_customer.logo_url).to eq("https://example.test/l.png")
+      expect(normalized_customer.tax_identification_number).to eq("FR12345")
+    end
+
+    it "keeps empty identity values as empty strings (not nil)" do
+      normalized_customer = build(:customer, firstname: "\u0000", lastname: "\u0000")
+
+      expect(normalized_customer.firstname).to eq("")
+      expect(normalized_customer.lastname).to eq("")
+    end
   end
 
   describe "validations" do
     subject(:customer) do
-      described_class.new(organization:, external_id:)
+      described_class.new(organization:, external_id:, billing_entity:)
     end
 
     let(:external_id) { SecureRandom.uuid }
@@ -118,6 +150,21 @@ RSpec.describe Customer do
 
       customer.timezone = "America/Guadeloupe"
       expect(customer).not_to be_valid
+    end
+
+    it "validates the name length" do
+      customer.name = "a" * 255
+      expect(customer).to be_valid
+
+      customer.name = "a" * 256
+      expect(customer).not_to be_valid
+    end
+
+    it "does not validate the name length when the name is unchanged" do
+      customer.save
+      customer.update_column(:name, "a" * 256) # rubocop:disable Rails/SkipsModelValidations
+      customer.timezone = "Europe/Paris"
+      expect(customer).to be_valid
     end
 
     describe "of email" do
@@ -1426,6 +1473,60 @@ RSpec.describe Customer do
 
       it "returns nil" do
         expect(customer.default_payment_method).to eq(nil)
+      end
+    end
+  end
+
+  describe "invoices search reindexing" do
+    let(:customer) { create(:customer) }
+
+    context "when Meilisearch is enabled" do
+      before do
+        customer
+        stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
+      end
+
+      {
+        name: "New name",
+        firstname: "New firstname",
+        lastname: "New lastname",
+        legal_name: "New legal name",
+        external_id: "new-external-id",
+        email: "new@email.test"
+      }.each do |field, value|
+        it "enqueues an invoices reindex after commit when #{field} changes" do
+          expect { customer.update!(field => value) }
+            .to have_enqueued_job_after_commit(Customers::ReindexInvoicesJob).with(customer.id)
+        end
+      end
+
+      it "enqueues an invoices reindex after commit when the customer is discarded" do
+        expect { customer.discard! }
+          .to have_enqueued_job_after_commit(Customers::ReindexInvoicesJob).with(customer.id)
+      end
+
+      it "enqueues an invoices reindex after commit when the customer is undiscarded" do
+        customer.discard!
+        ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+
+        expect { customer.undiscard! }
+          .to have_enqueued_job_after_commit(Customers::ReindexInvoicesJob).with(customer.id)
+      end
+
+      it "does not enqueue a reindex when no searchable field changes" do
+        expect { customer.update!(net_payment_term: 8) }
+          .not_to have_enqueued_job(Customers::ReindexInvoicesJob)
+      end
+
+      it "does not enqueue a reindex on creation" do
+        expect { create(:customer) }.not_to have_enqueued_job(Customers::ReindexInvoicesJob)
+      end
+    end
+
+    context "when Meilisearch is disabled" do
+      it "does not enqueue a reindex" do
+        expect { customer.update!(name: "New name") }
+          .not_to have_enqueued_job(Customers::ReindexInvoicesJob)
       end
     end
   end

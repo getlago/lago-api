@@ -52,6 +52,7 @@ RSpec.describe WalletTransactions::RecreditService do
         create(:wallet_transaction,
           wallet:,
           invoice: voided_invoice,
+          purchase_order_number: "PO-123",
           transaction_type: :outbound,
           credit_amount: 5.0)
       end
@@ -64,6 +65,7 @@ RSpec.describe WalletTransactions::RecreditService do
           voided_invoice_id: voided_invoice.id,
           transaction_type: "inbound",
           transaction_status: "granted",
+          purchase_order_number: wallet_transaction.purchase_order_number,
           credit_amount: wallet_transaction.credit_amount
         )
       end

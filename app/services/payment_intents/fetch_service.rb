@@ -17,10 +17,8 @@ module PaymentIntents
 
       if payment_intent.payment_url.blank?
         payment_url_result = Invoices::Payments::PaymentProviders::Factory
-          .new_instance(invoice:)
-          .generate_payment_url(payment_intent)
-
-        payment_url_result.raise_if_error!
+          .for(invoice)
+          .call!(:generate_payment_url, invoice, payment_intent)
 
         if payment_url_result.payment_url.blank?
           return result.single_validation_failure!(error_code: "payment_provider_error")

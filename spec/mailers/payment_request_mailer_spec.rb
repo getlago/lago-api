@@ -28,7 +28,7 @@ RSpec.describe PaymentRequestMailer do
   describe "#requested" do
     let(:payment_url) { Faker::Internet.url }
     let(:payment_url_result) do
-      BaseService::Result.new.tap do |result|
+      PaymentRequests::Payments::GeneratePaymentUrlService::Result.new.tap do |result|
         result.payment_url = payment_url
       end
     end
@@ -90,7 +90,7 @@ RSpec.describe PaymentRequestMailer do
 
     context "when no payment url is available" do
       let(:payment_url_result) do
-        BaseService::Result.new.tap do |result|
+        PaymentRequests::Payments::GeneratePaymentUrlService::Result.new.tap do |result|
           result.single_validation_failure!(error_code: "invalid_payment_provider")
         end
       end

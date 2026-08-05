@@ -29,6 +29,7 @@ class SendWebhookJob < ApplicationJob
     "invoice.drafted" => Webhooks::Invoices::DraftedService,
     "invoice.ready_to_finalize" => Webhooks::Invoices::ReadyToFinalizeService,
     "invoice.voided" => Webhooks::Invoices::VoidedService,
+    "invoice.deleted" => Webhooks::Invoices::DeletedService,
     "invoice.payment_dispute_lost" => Webhooks::Invoices::PaymentDisputeLostService,
     "invoice.payment_status_updated" => Webhooks::Invoices::PaymentStatusUpdatedService,
     "invoice.payment_overdue" => Webhooks::Invoices::PaymentOverdueService,

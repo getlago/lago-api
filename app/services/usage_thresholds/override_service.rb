@@ -2,6 +2,8 @@
 
 module UsageThresholds
   class OverrideService < BaseService
+    Result = BaseResult[:usage_thresholds]
+
     def initialize(usage_thresholds_params:, new_plan:)
       @usage_thresholds_params = usage_thresholds_params
       @new_plan = new_plan

@@ -6,7 +6,7 @@ RSpec.describe Integrations::Aggregator::Payments::CreateJob do
   subject(:create_job) { described_class }
 
   let(:payment) { create(:payment) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Integrations::Aggregator::Payments::CreateService::Result.new }
 
   before do
     allow(Integrations::Aggregator::Payments::CreateService).to receive(:call).and_return(result)

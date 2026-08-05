@@ -17,9 +17,9 @@ RSpec.describe ChargeModels::GroupedService do
     let(:charge_model) { ChargeModels::StandardService }
 
     let(:aggregation_result) do
-      BaseService::Result.new.tap do |result|
+      BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
         result.aggregations = group_results.map do |group_result|
-          BaseService::Result.new.tap do |aggregation|
+          BillableMetrics::Aggregations::BaseService::Result.new.tap do |aggregation|
             aggregation.aggregation = group_result[:aggregation]
             aggregation.count = group_result[:count]
             aggregation.grouped_by = group_result[:grouped_by]
@@ -76,9 +76,9 @@ RSpec.describe ChargeModels::GroupedService do
     let(:charge) { create(:dynamic_charge) }
 
     let(:aggregation_result) do
-      BaseService::Result.new.tap do |result|
+      BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
         result.aggregations = group_results.map do |group_result|
-          BaseService::Result.new.tap do |aggregation|
+          BillableMetrics::Aggregations::BaseService::Result.new.tap do |aggregation|
             aggregation.aggregation = group_result[:aggregation]
             aggregation.precise_total_amount_cents = group_result[:precise_total_amount_cents]
             aggregation.count = group_result[:count]

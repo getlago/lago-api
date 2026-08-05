@@ -10,7 +10,14 @@ module Pagination
 
   def pagination_metadata(records, **count_params)
     current_page = prev_page = next_page = total_pages = nil
-    total_count = _count_total(**count_params) { records.total_count }
+    total_count = _count_total(**count_params) do
+      if clickhouse_relation?(records)
+        # Handle Clickhouse intermittent errors
+        Events::Stores::Utils::ClickhouseConnection.with_retry { records.total_count }
+      else
+        records.total_count
+      end
+    end
 
     if total_count.positive?
       current_page = records.current_page
@@ -29,6 +36,10 @@ module Pagination
   end
 
   private
+
+  def clickhouse_relation?(records)
+    records.respond_to?(:klass) && records.klass < Clickhouse::BaseRecord
+  end
 
   # Computes total pages from the record count.
   # For kaminari collections, derives it from limit_value to avoid an extra COUNT(*) query.

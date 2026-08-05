@@ -1,0 +1,17 @@
+# Registry of constraints created with `NOT VALID` (via `validate: false`)
+# that still await validation.
+#
+# Adding a `NOT VALID` constraint is the right zero-downtime move, but it must
+# be followed by a validation migration, normally right after it in the same
+# PR. This file is only for constraints that cannot be validated right away
+# (e.g. existing rows must be backfilled or fixed first). It makes the
+# follow-up explicit: `spec/db/not_valid_constraints_spec.rb` fails when a
+# `NOT VALID` constraint in db/structure.sql is missing from this list, when
+# an entry here is no longer `NOT VALID` (validated: remove the entry), or
+# when an entry is past its `validate_by` date.
+#
+# Entry format:
+#
+# - table: payments
+#   constraint: payments_customer_id_null
+#   validate_by: 2026-08-09  # deadline for the validation follow-up

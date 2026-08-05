@@ -7,7 +7,7 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployObjectJob do
     subject(:deploy_object_job) { described_class }
 
     let(:integration) { create(:hubspot_integration) }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Integrations::Hubspot::Subscriptions::DeployObjectService::Result.new }
 
     before do
       allow(Integrations::Hubspot::Subscriptions::DeployObjectService).to receive(:call).and_return(result)

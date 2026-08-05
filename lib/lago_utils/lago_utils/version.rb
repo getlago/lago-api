@@ -5,14 +5,24 @@ module LagoUtils
     VERSION_FILE = Rails.root.join("LAGO_VERSION")
     GITHUB_BASE_URL = "https://github.com/getlago/lago-api"
 
-    Result = Data.define(:number, :github_url)
+    Result = Data.define(:number, :github_url, :sha) do
+      def sha_or_number
+        sha || number
+      end
+    end
 
     class << self
       def call(default:)
-        Result.new(version_number(default:), github_url)
+        Result.new(version_number(default:), github_url, sha)
       end
 
       private
+
+      def sha
+        file_content if git_hash?
+      rescue Errno::ENOENT
+        nil
+      end
 
       def version_number(default:)
         return release_date if git_hash?

@@ -21,6 +21,15 @@ RSpec.describe "exports_credit_notes view" do # rubocop:disable RSpec/DescribeCl
     row
   end
 
+  describe "deleted credit notes" do
+    it "excludes them from the export" do
+      deleted_credit_note = create(:credit_note, :deleted)
+
+      expect(row_for(credit_note.id)).to be_present
+      expect(row_for(deleted_credit_note.id)).to be_nil
+    end
+  end
+
   describe "full row" do
     context "with a fully populated credit note" do
       let(:credit_note) do

@@ -16,7 +16,7 @@ module Mutations
       field :credit_note_id, ID, null: true
 
       def resolve(**args)
-        credit_note = current_organization.credit_notes.find_by(id: args[:credit_note_id])
+        credit_note = current_organization.credit_notes.not_deleted.find_by(id: args[:credit_note_id])
 
         result = ::Integrations::Aggregator::CreditNotes::CreateService.call_async(credit_note:)
         result.success? ? result.credit_note_id : result_error(result)

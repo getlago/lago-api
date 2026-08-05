@@ -2,6 +2,8 @@
 
 module Invoices
   class CreateInvoiceSubscriptionService < BaseService
+    Result = BaseResult[:invoice_subscriptions]
+
     def initialize(invoice:, subscriptions:, timestamp:, invoicing_reason:, refresh: false)
       @invoice = invoice
       @subscriptions = subscriptions

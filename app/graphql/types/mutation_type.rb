@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+s # frozen_string_literal: true
+
 module Types
   class MutationType < Types::BaseObject
     field :login_user, mutation: Mutations::LoginUser
@@ -94,6 +96,15 @@ module Types
     field :generate_checkout_url, mutation: Mutations::PaymentMethods::GenerateCheckoutUrl
     field :set_payment_method_as_default, mutation: Mutations::PaymentMethods::SetAsDefault
 
+    field :create_integration_customer, mutation: Mutations::IntegrationCustomers::Create
+    field :create_payment_provider_customer, mutation: Mutations::PaymentProviderCustomers::Create
+    field :destroy_payment_provider_customer, mutation: Mutations::PaymentProviderCustomers::Destroy
+
+    field :set_integration_customer_as_default, mutation: Mutations::IntegrationCustomers::SetAsDefault
+    field :set_payment_provider_customer_as_default, mutation: Mutations::PaymentProviderCustomers::SetAsDefault
+    field :update_integration_customer, mutation: Mutations::IntegrationCustomers::Update
+    field :update_payment_provider_customer, mutation: Mutations::PaymentProviderCustomers::Update
+
     field :create_netsuite_integration, mutation: Mutations::Integrations::Netsuite::Create
     field :destroy_integration, mutation: Mutations::Integrations::Destroy
     field :update_netsuite_integration, mutation: Mutations::Integrations::Netsuite::Update
@@ -105,6 +116,7 @@ module Types
     field :update_integration_collection_mapping, mutation: Mutations::IntegrationCollectionMappings::Update
 
     field :destroy_integration_collection_mapping, mutation: Mutations::IntegrationCollectionMappings::Destroy
+    field :destroy_integration_customer, mutation: Mutations::IntegrationCustomers::Destroy
     field :destroy_integration_mapping, mutation: Mutations::IntegrationMappings::Destroy
 
     field :fetch_integration_accounts, mutation: Mutations::IntegrationItems::FetchAccounts
@@ -124,6 +136,7 @@ module Types
     field :void_credit_note, mutation: Mutations::CreditNotes::Void
 
     field :create_invoice, mutation: Mutations::Invoices::Create
+    field :delete_invoice, mutation: Mutations::Invoices::Delete
     field :download_invoice, mutation: Mutations::Invoices::Download
     field :download_invoice_xml, mutation: Mutations::Invoices::DownloadXml
     field :finalize_all_invoices, mutation: Mutations::Invoices::FinalizeAll
@@ -152,6 +165,7 @@ module Types
 
     field :void_order_form, mutation: Mutations::OrderForms::Void
 
+    field :execute_order, mutation: Mutations::Orders::Execute
     field :update_order, mutation: Mutations::Orders::Update
 
     field :download_payment_receipt, mutation: Mutations::PaymentReceipts::Download
@@ -200,6 +214,9 @@ module Types
     field :create_okta_integration, mutation: Mutations::Integrations::Okta::Create
     field :update_okta_integration, mutation: Mutations::Integrations::Okta::Update
 
+    field :create_entra_id_integration, mutation: Mutations::Integrations::EntraId::Create
+    field :update_entra_id_integration, mutation: Mutations::Integrations::EntraId::Update
+
     field :create_anrok_integration, mutation: Mutations::Integrations::Anrok::Create
     field :update_anrok_integration, mutation: Mutations::Integrations::Anrok::Update
 
@@ -220,6 +237,10 @@ module Types
     field :okta_accept_invite, mutation: Mutations::Auth::Okta::AcceptInvite
     field :okta_authorize, mutation: Mutations::Auth::Okta::Authorize
     field :okta_login, mutation: Mutations::Auth::Okta::Login
+
+    field :entra_id_accept_invite, mutation: Mutations::Auth::EntraId::AcceptInvite
+    field :entra_id_authorize, mutation: Mutations::Auth::EntraId::Authorize
+    field :entra_id_login, mutation: Mutations::Auth::EntraId::Login
 
     field :create_dunning_campaign, mutation: Mutations::DunningCampaigns::Create
     field :destroy_dunning_campaign, mutation: Mutations::DunningCampaigns::Destroy
@@ -252,8 +273,11 @@ module Types
     field :create_or_update_subscription_entitlement, mutation: Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement
     field :remove_subscription_entitlement, mutation: Mutations::Entitlement::RemoveSubscriptionEntitlement
 
+    field :ask_finance_assistant, mutation: Mutations::FinanceAssistant::Ask
     field :create_ai_conversation, mutation: Mutations::AiConversations::Create
 
     field :create_superset_guest_token, mutation: Mutations::Superset::CreateGuestToken
+
+    field :export_finance_assistant_result, mutation: Mutations::FinanceAssistant::Export
   end
 end

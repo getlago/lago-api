@@ -14,7 +14,7 @@ RSpec.describe CreditNotes::Refunds::StripeCreateJob do
       .with(credit_note)
       .and_return(refund_service)
     allow(refund_service).to receive(:create)
-      .and_return(BaseService::Result.new)
+      .and_return(CreditNotes::Refunds::StripeService::Result.new)
 
     described_class.perform_now(credit_note)
 

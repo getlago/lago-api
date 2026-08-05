@@ -3,6 +3,8 @@
 module Charges
   module EstimateInstant
     class StandardService < BaseService
+      Result = BaseResult[:units, :amount]
+
       def initialize(properties:, units:)
         @properties = properties
         @units = units

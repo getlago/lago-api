@@ -2,6 +2,8 @@
 
 module BillableMetrics
   class EvaluateExpressionService < BaseService
+    Result = BaseResult[:evaluation_result]
+
     def initialize(expression:, event:)
       @expression = expression
       @event = event || {}

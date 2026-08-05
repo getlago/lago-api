@@ -138,6 +138,7 @@ module Subscriptions
         external_id:,
         billing_time: billing_time || :calendar,
         ending_at: params[:ending_at],
+        purchase_order_number: params[:purchase_order_number],
         progressive_billing_disabled: params[:progressive_billing_disabled] || false,
         consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : true,
         billing_entity: resolve_billing_entity(organization: customer.organization, params:)
@@ -240,7 +241,7 @@ module Subscriptions
     end
 
     def override_plan(plan)
-      Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
+      Plans::OverrideService.call!(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
     end
 
     def target_plan_for_new_subscription

@@ -4,6 +4,8 @@ module DailyUsages
   class ComputeAllService < BaseService
     ENQUEUE_BATCH_SIZE = 1_000
 
+    Result = BaseResult
+
     def initialize(timestamp: Time.current)
       @timestamp = timestamp
 

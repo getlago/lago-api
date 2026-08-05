@@ -38,7 +38,7 @@ RSpec.describe Resolvers::Superset::DashboardsResolver do
   end
 
   let(:result) do
-    BaseService::Result.new.tap do |result|
+    Auth::SupersetService::Result.new.tap do |result|
       result.dashboards = dashboards
     end
   end
@@ -99,7 +99,7 @@ RSpec.describe Resolvers::Superset::DashboardsResolver do
 
   context "when the superset service fails" do
     let(:result) do
-      BaseService::Result.new.tap do |r|
+      Auth::SupersetService::Result.new.tap do |r|
         r.service_failure!(code: "superset_auth_failed", message: "Failed to authenticate with Superset")
       end
     end

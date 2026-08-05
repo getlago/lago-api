@@ -2,6 +2,8 @@
 
 module Invoices
   class EnsureCompletedViesCheckService < BaseService
+    Result = BaseResult[:non_invoiceable_fees]
+
     def initialize(invoice:, finalizing: true)
       @invoice = invoice
       @customer = invoice&.customer

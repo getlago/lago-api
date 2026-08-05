@@ -2,6 +2,8 @@
 
 module InboundWebhooks
   class CreateService < BaseService
+    Result = BaseResult[:inbound_webhook]
+
     def initialize(organization_id:, webhook_source:, payload:, event_type:, code: nil, signature: nil)
       @organization_id = organization_id
       @webhook_source = webhook_source

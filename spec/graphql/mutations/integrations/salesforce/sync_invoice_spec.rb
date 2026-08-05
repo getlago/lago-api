@@ -29,16 +29,25 @@ RSpec.describe Mutations::Integrations::Salesforce::SyncInvoice do
     GQL
   end
 
-  before do
-    allow(SendWebhookJob).to receive(:perform_later)
-    execute_graphql_call
-  end
+  before { execute_graphql_call }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:update"
 
   it "sends resync invoice webhook" do
-    expect(SendWebhookJob).to have_received(:perform_later).with("invoice.resynced", invoice)
+    expect(SendWebhookJob).to have_been_enqueued.with("invoice.resynced", invoice)
+  end
+
+  context "when the invoice is not visible" do
+    let(:invoice) { create(:invoice, customer:, organization:, status: :closed) }
+
+    it "does not enqueue the resync webhook" do
+      expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.resynced", invoice)
+    end
+
+    it "returns a not found error" do
+      expect_graphql_error(result: execute_graphql_call, message: "Resource not found")
+    end
   end
 end

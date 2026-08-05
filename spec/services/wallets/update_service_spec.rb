@@ -44,6 +44,28 @@ RSpec.describe Wallets::UpdateService do
       expect(Utils::ActivityLog).to have_produced("wallet.updated").after_commit.with(wallet)
     end
 
+    context "when purchase_order_number is present" do
+      let(:params) do
+        super().merge(purchase_order_number: "PO-WALLET-123")
+      end
+
+      it "updates the wallet purchase order number" do
+        expect(result).to be_success
+        expect(result.wallet.reload.purchase_order_number).to eq("PO-WALLET-123")
+      end
+    end
+
+    context "when purchase_order_number is too long" do
+      let(:params) do
+        super().merge(purchase_order_number: "a" * 256)
+      end
+
+      it "returns a validation error" do
+        expect(result).to be_failure
+        expect(result.error.messages[:purchase_order_number]).to eq(["value_is_too_long"])
+      end
+    end
+
     it "sends a `wallet.updated` webhook" do
       expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("wallet.updated", Wallet)
     end
@@ -311,6 +333,71 @@ RSpec.describe Wallets::UpdateService do
           expect(rule.granted_credits).to eq(105.0)
 
           expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+        end
+      end
+
+      context "when editing existing rule purchase_order_number" do
+        let(:rules) do
+          [
+            {
+              lago_id: recurring_transaction_rule.id,
+              trigger: "interval",
+              interval: "weekly",
+              paid_credits: "105",
+              granted_credits: "105",
+              purchase_order_number: "PO-RULE-123"
+            }
+          ]
+        end
+
+        it "updates the recurring rule purchase order number" do
+          expect(result).to be_success
+
+          rule = result.wallet.reload.recurring_transaction_rules.active.sole
+          expect(rule.id).to eq(recurring_transaction_rule.id)
+          expect(rule.purchase_order_number).to eq("PO-RULE-123")
+        end
+      end
+
+      context "when replacing rule with purchase_order_number" do
+        let(:rules) do
+          [
+            {
+              trigger: "interval",
+              interval: "weekly",
+              paid_credits: "105",
+              granted_credits: "105",
+              purchase_order_number: "PO-REPLACEMENT-123"
+            }
+          ]
+        end
+
+        it "creates the replacement rule with the purchase order number" do
+          expect(result).to be_success
+
+          rule = result.wallet.reload.recurring_transaction_rules.active.sole
+          expect(rule.id).not_to eq(recurring_transaction_rule.id)
+          expect(rule.purchase_order_number).to eq("PO-REPLACEMENT-123")
+        end
+      end
+
+      context "when recurring rule purchase_order_number is too long" do
+        let(:rules) do
+          [
+            {
+              lago_id: recurring_transaction_rule.id,
+              trigger: "interval",
+              interval: "weekly",
+              paid_credits: "105",
+              granted_credits: "105",
+              purchase_order_number: "a" * 256
+            }
+          ]
+        end
+
+        it "returns a validation error" do
+          expect(result).to be_failure
+          expect(result.error.messages[:purchase_order_number]).to eq(["value_is_too_long"])
         end
       end
 

@@ -25,6 +25,10 @@ module Subscriptions
       return result.not_found_failure!(resource: "subscription") unless subscription
       return result.not_allowed_failure!(code: "subscription_incomplete") if subscription.incomplete?
 
+      if params.key?(:purchase_order_number) && !subscription.pending? && !subscription.active?
+        return result.not_allowed_failure!(code: "purchase_order_number_not_editable")
+      end
+
       unless valid?(
         customer: subscription.customer,
         plan: subscription.plan,
@@ -53,6 +57,7 @@ module Subscriptions
       ActiveRecord::Base.transaction do
         subscription.name = params[:name] if params.key?(:name)
         subscription.ending_at = params[:ending_at] if params.key?(:ending_at)
+        subscription.purchase_order_number = params[:purchase_order_number] if params.key?(:purchase_order_number)
         subscription.progressive_billing_disabled = params[:progressive_billing_disabled] if params.key?(:progressive_billing_disabled)
         subscription.consolidate_invoice = params[:consolidate_invoice] if params.key?(:consolidate_invoice)
 

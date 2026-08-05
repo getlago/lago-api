@@ -35,7 +35,7 @@ RSpec.describe IntegrationCustomers::UpdateService do
       let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
 
       let(:update_result) do
-        result = BaseService::Result.new
+        result = Integrations::Aggregator::Contacts::UpdateService::Result.new
         result.contact_id = contact_id
         result
       end

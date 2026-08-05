@@ -2,6 +2,8 @@
 
 module Payments
   class LoseDisputeService < BaseService
+    Result = BaseResult[:invoices, :payment]
+
     def initialize(payment:, payment_dispute_lost_at: nil, reason: nil)
       @payment = payment
       @payable = payment&.payable

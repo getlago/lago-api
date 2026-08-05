@@ -97,13 +97,12 @@ RSpec.describe ChargeFilters::UpdateService do
         create(:charge_filter_value, charge_filter:, billable_metric_filter: card_location_filter, values: ["domestic"])
         create(:subscription, plan: child_plan, status: :active)
         child_charge
-        allow(ChargeFilters::CascadeJob).to receive(:perform_later)
       end
 
       it "triggers filter-level cascade via ChargeFilters::CascadeJob" do
         service
 
-        expect(ChargeFilters::CascadeJob).to have_received(:perform_later).with(
+        expect(ChargeFilters::CascadeJob).to have_been_enqueued.with(
           charge.id,
           "update",
           hash_including("card_location"),
@@ -123,13 +122,12 @@ RSpec.describe ChargeFilters::UpdateService do
         create(:charge_filter_value, charge_filter:, billable_metric_filter: card_location_filter, values: ["domestic"])
         create(:subscription, plan: child_plan, status: :active)
         child_charge
-        allow(Charges::UpdateChildrenJob).to receive(:perform_later)
       end
 
       it "does not trigger cascade update" do
         service
 
-        expect(Charges::UpdateChildrenJob).not_to have_received(:perform_later)
+        expect(Charges::UpdateChildrenJob).not_to have_been_enqueued
       end
     end
   end

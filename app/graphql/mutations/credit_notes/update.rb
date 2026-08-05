@@ -17,7 +17,7 @@ module Mutations
 
       def resolve(**args)
         result = ::CreditNotes::UpdateService.new(
-          credit_note: current_organization.credit_notes.find_by(id: args[:id]),
+          credit_note: current_organization.credit_notes.not_deleted.find_by(id: args[:id]),
           **args.slice(:refund_status, :metadata)
         ).call
 
