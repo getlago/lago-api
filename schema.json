@@ -895,24 +895,6 @@
               "description": "rate_card.deleted",
               "isDeprecated": false,
               "deprecationReason": null
-            },
-            {
-              "name": "rate_card_created",
-              "description": "rate_card.created",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "rate_card_updated",
-              "description": "rate_card.updated",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "rate_card_deleted",
-              "description": "rate_card.deleted",
-              "isDeprecated": false,
-              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -55678,7 +55660,7 @@
         {
           "kind": "INPUT_OBJECT",
           "name": "ProductFilterValueInput",
-          "description": "ProductCategory item filter value input arguments",
+          "description": "Product filter value input arguments",
           "fields": null,
           "inputFields": [
             {
@@ -68600,12 +68582,6 @@
             {
               "name": "product_filter",
               "description": "ProductFilter",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "rate_card",
-              "description": "RateCard",
               "isDeprecated": false,
               "deprecationReason": null
             },

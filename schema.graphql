@@ -10933,7 +10933,7 @@ type ProductFilterValue {
 }
 
 """
-ProductCategory item filter value input arguments
+Product filter value input arguments
 """
 input ProductFilterValueInput {
   billableMetricFilterId: ID!
@@ -12589,11 +12589,6 @@ enum ResourceTypeEnum {
   ProductFilter
   """
   product_filter
-
-  """
-  RateCard
-  """
-  rate_card
 
   """
   RateCard
