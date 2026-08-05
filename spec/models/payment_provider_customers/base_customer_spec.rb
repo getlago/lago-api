@@ -63,30 +63,6 @@ RSpec.describe PaymentProviderCustomers::BaseCustomer do
     end
   end
 
-  describe "#manual?" do
-    subject { payment_provider_customer.manual? }
-
-    context "when the row has no payment provider and the reserved manual code" do
-      let(:payment_provider_customer) { build(:stripe_customer, payment_provider: nil, code: "manual") }
-
-      it { is_expected.to be(true) }
-    end
-
-    context "when the row is backed by a payment provider" do
-      let(:payment_provider_customer) do
-        build(:stripe_customer, payment_provider: create(:stripe_provider), code: "manual")
-      end
-
-      it { is_expected.to be(false) }
-    end
-
-    context "when the row has no provider but a different code" do
-      let(:payment_provider_customer) { build(:stripe_customer, payment_provider: nil, code: "stripe_eu") }
-
-      it { is_expected.to be(false) }
-    end
-  end
-
   describe "#legacy_provider_method_id" do
     subject { customer.legacy_provider_method_id }
 
