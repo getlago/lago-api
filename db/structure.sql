@@ -4430,7 +4430,8 @@ CREATE VIEW public.exports_usage_monitoring_triggered_alerts AS
     ta.triggered_at,
     ta.created_at,
     ta.updated_at
-   FROM public.usage_monitoring_triggered_alerts ta;
+   FROM public.usage_monitoring_triggered_alerts ta
+  WHERE (ta.kind = 'triggered'::public.usage_monitoring_triggered_alert_kinds);
 
 
 --
@@ -14171,6 +14172,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260805201143'),
 ('20260805110509'),
 ('20260805110508'),
 ('20260804131008'),
