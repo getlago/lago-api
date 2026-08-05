@@ -399,15 +399,35 @@ module QuoteVersions
         end
 
         def plans_charging(metric_ids)
-          return [] if metric_ids.empty?
-
-          Charge.joins(:billable_metric).where(billable_metric: {id: metric_ids}).pluck(:plan_id)
+          metric_ids.flat_map { plans_by_metric_id[it] || [] }
         end
 
         def metrics_charged_by(plan_ids)
-          return [] if plan_ids.empty?
+          plan_ids.flat_map { metrics_by_plan_id[it] || [] }
+        end
 
-          Charge.joins(:plan).where(plan: {id: plan_ids}).pluck(:billable_metric_id)
+        # The charges connecting the two limitation kinds, resolved once for every coupon the quote
+        # carries rather than once per pair compared.
+        def plans_by_metric_id
+          @plans_by_metric_id ||= Charge
+            .joins(:billable_metric)
+            .where(billable_metric: {id: quoted_target_ids(:billable_metric_id)})
+            .pluck(:billable_metric_id, :plan_id)
+            .group_by(&:first)
+            .transform_values { |rows| rows.map(&:last) }
+        end
+
+        def metrics_by_plan_id
+          @metrics_by_plan_id ||= Charge
+            .joins(:plan)
+            .where(plan: {id: quoted_target_ids(:plan_id)})
+            .pluck(:plan_id, :billable_metric_id)
+            .group_by(&:first)
+            .transform_values { |rows| rows.map(&:last) }
+        end
+
+        def quoted_target_ids(attribute)
+          known_coupons_by_id.each_value.flat_map { |coupon| target_ids(coupon, attribute) }.uniq
         end
 
         def validate_coupon_currency(coupon, index)
