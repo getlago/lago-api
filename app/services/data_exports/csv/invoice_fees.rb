@@ -116,8 +116,8 @@ module DataExports
       def fee_period_dates(fee, billing_period, timezone)
         datetimes = [billing_period&.from_datetime, billing_period&.to_datetime]
 
-        # Add-on dates always use UTC start and end of day, regardless of the customer timezone.
-        # Keep the stored dates instead of converting them to the customer timezone.
+        # Add-on periods use the UTC date of each timestamp.
+        # Unlike other fees, do not convert them to the customer timezone.
         if fee.add_on?
           return datetimes.map { |datetime| datetime&.to_date }
         end
