@@ -21,6 +21,12 @@ module SubscriptionRateCards
     def call
       return result.not_found_failure!(resource: "applied_rate_card") unless subscription_rate_card
 
+      # The column is a date and NOT NULL: a malformed or null value would
+      # cast to nil and crash on save instead of failing cleanly.
+      if params.key?(:billing_anchor_date) && Utils::Datetime.parse_iso8601_date(params[:billing_anchor_date]).nil?
+        return result.single_validation_failure!(field: :billing_anchor_date, error_code: "value_is_invalid")
+      end
+
       if subscription_rate_card.subscription.pending?
         return update_pending_entry
       end

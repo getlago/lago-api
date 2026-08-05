@@ -36,6 +36,12 @@ module SubscriptionRateCards
         return result.single_validation_failure!(field: :currency, error_code: "currency_does_not_match")
       end
 
+      # The column is a date: a malformed value would cast to nil, fall
+      # through the NOT NULL constraint and crash instead of failing cleanly.
+      if params[:billing_anchor_date].present? && !Utils::Datetime.valid_format?(params[:billing_anchor_date])
+        return result.single_validation_failure!(field: :billing_anchor_date, error_code: "value_is_invalid")
+      end
+
       started_at = params[:started_at].presence || Time.current
 
       ActiveRecord::Base.transaction do

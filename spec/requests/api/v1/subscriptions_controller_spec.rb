@@ -81,6 +81,35 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "without a billing_anchor_date" do
+      it "returns the effective anchor instead of null" do
+        freeze_time do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:subscription][:billing_anchor_date]).to eq(Time.current.to_date.iso8601)
+        end
+      end
+    end
+
+    context "with a malformed billing_anchor_date" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          billing_anchor_date: "hello"
+        }
+      end
+
+      it "returns a validation error instead of silently dropping it" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :billing_anchor_date)).to eq(["value_is_invalid"])
+      end
+    end
+
     it "returns a success" do
       create(:plan, code: plan.code, parent_id: plan.id, organization:, description: "foo")
       create(:entitlement, organization:, plan:)

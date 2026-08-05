@@ -63,6 +63,15 @@ RSpec.describe SubscriptionRateCards::CreateService do
     end
   end
 
+  context "with a malformed billing_anchor_date" do
+    let(:params) { {rate_card_code: rate_card.code, billing_anchor_date: "hello"} }
+
+    it "returns a validation failure instead of crashing on the date cast" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:billing_anchor_date]).to eq(["value_is_invalid"])
+    end
+  end
+
   context "with a nested rate_phases sequence" do
     let(:params) do
       {

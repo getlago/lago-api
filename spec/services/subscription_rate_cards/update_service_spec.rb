@@ -34,6 +34,15 @@ RSpec.describe SubscriptionRateCards::UpdateService do
     end
   end
 
+  context "when updating the billing anchor with a malformed value" do
+    let(:params) { {billing_anchor_date: "hello"} }
+
+    it "returns a validation failure instead of crashing on the date cast" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:billing_anchor_date]).to eq(["value_is_invalid"])
+    end
+  end
+
   context "when the subscription is active" do
     let(:subscription) { create(:subscription, organization:) }
     let(:subscription_rate_card) do
