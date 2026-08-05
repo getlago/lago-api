@@ -11,6 +11,31 @@ RSpec.describe PaymentProviderCustomers::BaseCustomer do
     subject { create(:stripe_customer, code: "stripe_eu") }
 
     it { is_expected.to validate_uniqueness_of(:code).scoped_to(:customer_id).allow_nil }
+
+    context "when a provider-backed row uses the reserved manual code" do
+      subject { build(:stripe_customer, payment_provider: create(:stripe_provider), code: "manual") }
+
+      it "is invalid" do
+        expect(subject).not_to be_valid
+        expect(subject.errors.where(:code, :reserved)).to be_present
+      end
+    end
+
+    context "when the null-provider manual row uses the reserved manual code" do
+      subject { build(:manual_payment_provider_customer) }
+
+      it { is_expected.to be_valid }
+    end
+  end
+
+  describe ".by_code" do
+    subject { described_class.by_code("stripe_eu") }
+
+    let!(:matching) { create(:stripe_customer, code: "stripe_eu") }
+
+    before { create(:gocardless_customer, code: "gc_main") }
+
+    it { is_expected.to eq([matching]) }
   end
 
   describe "#manual?" do

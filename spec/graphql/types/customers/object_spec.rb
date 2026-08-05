@@ -226,4 +226,65 @@ RSpec.describe Types::Customers::Object do
       end
     end
   end
+
+  describe "paymentProviderCustomers list" do
+    let(:required_permission) { "customers:view" }
+    let(:membership) { create(:membership) }
+    let(:organization) { membership.organization }
+    let(:customer) { create(:customer, organization:) }
+
+    let(:query) do
+      <<~GQL
+        query($customerId: ID!) {
+          customer(id: $customerId) {
+            connectionStatus
+            paymentProviderCustomers { id code isDefault }
+          }
+        }
+      GQL
+    end
+
+    def execute
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {customerId: customer.id}
+      ).dig("data", "customer")
+    end
+
+    context "when the customer has no payment connection" do
+      it "returns a placeholder manual element and not_connected status" do
+        data = execute
+
+        expect(data["connectionStatus"]).to eq("not_connected")
+        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["manual"])
+        expect(data["paymentProviderCustomers"].first["isDefault"]).to be(false)
+      end
+    end
+
+    context "when the customer has a default provider connection" do
+      before { create(:stripe_customer, customer:, code: "stripe_eu", is_default: true) }
+
+      it "prepends the manual placeholder to the real connections" do
+        data = execute
+
+        expect(data["connectionStatus"]).to eq("connected")
+        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(%w[manual stripe_eu])
+      end
+    end
+
+    context "when the customer has a persisted manual connection" do
+      before { create(:manual_payment_provider_customer, customer:, is_default: true) }
+
+      it "returns the persisted manual row without duplicating it" do
+        data = execute
+
+        expect(data["connectionStatus"]).to eq("manual")
+        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["manual"])
+        expect(data["paymentProviderCustomers"].first["isDefault"]).to be(true)
+      end
+    end
+  end
 end

@@ -29,9 +29,11 @@ module PaymentProviderCustomers
 
     validates :customer_id, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :type}
     validates :code, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :customer_id}, allow_nil: true
+    validate :code_is_not_reserved
 
     settings_accessors :provider_mandate_id, :sync_with_provider
 
+    scope :by_code, ->(code) { where(code:) }
     scope :by_provider_id_from_organization, ->(organization_id, provider_id) do
       joins(:customer)
         .where(customers: {organization_id: organization_id})
@@ -54,6 +56,17 @@ module PaymentProviderCustomers
 
     def legacy_provider_method_id
       get_from_settings("payment_method_id") || get_from_settings("provider_mandate_id")
+    end
+
+    private
+
+    # The "manual" code is reserved for the null-provider manual connection; a provider-backed
+    # connection cannot use it.
+    def code_is_not_reserved
+      return unless code == MANUAL_CODE
+      return if payment_provider_id.nil?
+
+      errors.add(:code, :reserved)
     end
   end
 end
