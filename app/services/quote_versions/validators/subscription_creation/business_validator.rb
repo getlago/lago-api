@@ -138,6 +138,13 @@ module QuoteVersions
               charge,
               plan_field(index, "payload.charges.#{snapshot_index}.chargeModel")
             )
+            # The negotiated properties only mean something against the model they were drafted
+            # for, and a model that moved is already reported above.
+            next if model_changed?(charge_override["chargeModel"], charge) ||
+              model_changed?(snapshot["chargeModel"], charge)
+
+            validate_charge_properties(charge_override, charge, index, charge_index)
+            validate_charge_min_amount(charge_override, charge, index, charge_index)
           end
         end
 
@@ -145,9 +152,7 @@ module QuoteVersions
         # chargeModel would otherwise let the catalog drift away from it unnoticed, landing the
         # negotiated properties on another model.
         def validate_snapshot_charge_model(snapshot, charge, field)
-          charge_model = snapshot["chargeModel"]
-          return if charge_model.nil?
-          return if charge_model == charge.charge_model
+          return unless model_changed?(snapshot["chargeModel"], charge)
 
           add_error(field:, error_code: "charge_model_changed")
         end
@@ -155,13 +160,42 @@ module QuoteVersions
         # Charges::OverrideService cannot switch a charge model and ignores the key, so properties
         # negotiated for another model would land on the catalog one.
         def validate_charge_model(charge_override, charge, index, charge_index)
-          charge_model = charge_override["chargeModel"]
-          return if charge_model.nil?
-          return if charge_model == charge.charge_model
+          return unless model_changed?(charge_override["chargeModel"], charge)
 
           add_error(
             field: plan_field(index, "overrides.charges.#{charge_index}.chargeModel"),
             error_code: "cannot_override_charge_model"
+          )
+        end
+
+        # A quote that pinned no model follows whatever the catalog holds.
+        def model_changed?(quoted_charge_model, chargeable)
+          return false if quoted_charge_model.nil?
+
+          quoted_charge_model != chargeable.charge_model
+        end
+
+        def validate_charge_properties(charge_override, charge, index, charge_index)
+          properties = charge_override["properties"]
+          return if properties.nil?
+
+          field = plan_field(index, "overrides.charges.#{charge_index}.properties")
+          validate_properties(charge, properties, field)
+        # The model validators below assume a hash shaped for their charge model and raise on
+        # anything else, while a quoted payload is free-form.
+        rescue
+          add_error(field:, error_code: "invalid_value")
+        end
+
+        # Charge#validate_min_amount_cents refuses a minimum on a charge billed in advance, and
+        # Plans::OverrideService swallows that failure the same way.
+        def validate_charge_min_amount(charge_override, charge, index, charge_index)
+          return unless charge.pay_in_advance?
+          return unless charge_override["minAmountCents"].to_i.positive?
+
+          add_error(
+            field: plan_field(index, "overrides.charges.#{charge_index}.minAmountCents"),
+            error_code: "not_compatible_with_pay_in_advance"
           )
         end
 
@@ -187,6 +221,9 @@ module QuoteVersions
               fixed_charge,
               plan_field(index, "payload.fixedCharges.#{snapshot_index}.chargeModel")
             )
+            next if model_changed?(snapshot["chargeModel"], fixed_charge)
+
+            validate_fixed_charge_properties(fixed_charge_override, fixed_charge, index, fixed_charge_index)
           end
         end
 
@@ -194,11 +231,46 @@ module QuoteVersions
         # checks its result and the override carries no model of its own, so the snapshot is the only
         # place the approved model survives.
         def validate_snapshot_fixed_charge_model(snapshot, fixed_charge, field)
-          charge_model = snapshot["chargeModel"]
-          return if charge_model.nil?
-          return if charge_model == fixed_charge.charge_model
+          return unless model_changed?(snapshot["chargeModel"], fixed_charge)
 
           add_error(field:, error_code: "fixed_charge_model_changed")
+        end
+
+        # FixedCharges::OverrideService slices the properties down to the keys its charge model knows
+        # before saving, and FixedCharge requires them to be present, so an override drafted for
+        # another model filters down to nothing and takes the fixed charge with it.
+        def validate_fixed_charge_properties(fixed_charge_override, fixed_charge, index, fixed_charge_index)
+          properties = fixed_charge_override["properties"]
+          return if properties.nil?
+
+          field = plan_field(index, "overrides.fixedCharges.#{fixed_charge_index}.properties")
+          filtered = ChargeModels::FilterPropertiesService
+            .call(chargeable: fixed_charge, properties: properties.presence)
+            .properties
+
+          return add_error(field:, error_code: "invalid_value") if filtered.blank?
+
+          validate_properties(fixed_charge, filtered, field)
+        # Neither the filter nor the model validators tolerate a hash shaped for something else,
+        # while a quoted payload is free-form.
+        rescue
+          add_error(field:, error_code: "invalid_value")
+        end
+
+        # Plans::OverrideService calls the two override services without raise_if_error! and both
+        # rescue RecordInvalid, so properties the charge model rejects drop the charge from the
+        # override plan instead of failing execution: the subscription would then bill nothing at all
+        # for it. These are the validators the models themselves run.
+        def validate_properties(chargeable, properties, field)
+          validator = ChargePropertiesValidation::PROPERTIES_VALIDATORS
+            .fetch(chargeable.charge_model.to_sym, ::Charges::Validators::BaseService)
+            .new(charge: chargeable, properties:)
+
+          return if validator.valid?
+
+          validator.result.error.messages.each do |key, error_codes|
+            error_codes.each { add_error(field: :"#{field}.#{key}", error_code: it) }
+          end
         end
 
         # units is forwarded verbatim to FixedCharges::OverrideService, and FixedCharge validates it
