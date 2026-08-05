@@ -11,6 +11,12 @@ module UsageMonitoring
     end
 
     def call
+      # An upgrade carries the external_id that alerts are keyed by, so a stale row would score the live alert.
+      unless subscription.active?
+        subscription_activity.delete
+        return result
+      end
+
       exception_to_raise = nil
       lifetime_usage = find_or_create_lifetime_usage
 
