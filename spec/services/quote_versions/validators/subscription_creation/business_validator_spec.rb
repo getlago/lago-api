@@ -439,6 +439,15 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
         end
       end
 
+      context "when a fixed_amount coupon carries its amountCents in the overrides" do
+        let(:coupon_payload) { {"code" => coupon.code, "type" => "fixed_amount"} }
+        let(:coupon_item) { super().merge("overrides" => {"amountCents" => 15_000}) }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+
       context "when a percentage coupon payload has no percentageRate" do
         let(:coupon) { create(:coupon, organization:, coupon_type: "percentage", percentage_rate: 10) }
         let(:coupon_payload) { {"code" => coupon.code, "type" => "percentage", "percentageRate" => nil} }
@@ -448,6 +457,16 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
           expect(result.error.messages).to eq(
             {"billing_items.coupons.0.payload.percentageRate": ["value_is_mandatory"]}
           )
+        end
+      end
+
+      context "when a percentage coupon carries its percentageRate in the overrides" do
+        let(:coupon) { create(:coupon, organization:, coupon_type: "percentage", percentage_rate: 10) }
+        let(:coupon_payload) { {"code" => coupon.code, "type" => "percentage"} }
+        let(:coupon_item) { super().merge("overrides" => {"percentageRate" => 15.0}) }
+
+        it "is valid" do
+          expect(validator).to be_valid
         end
       end
 

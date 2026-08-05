@@ -151,11 +151,11 @@ module QuoteVersions
             return
           end
 
-          if coupon.fixed_amount? && coupon_item.dig("payload", "amountCents").nil?
+          if coupon.fixed_amount? && quoted_coupon_value(coupon_item, "amountCents").nil?
             add_error(field: coupon_field(index, "payload.amountCents"), error_code: "value_is_mandatory")
           end
 
-          if coupon.percentage? && coupon_item.dig("payload", "percentageRate").nil?
+          if coupon.percentage? && quoted_coupon_value(coupon_item, "percentageRate").nil?
             add_error(field: coupon_field(index, "payload.percentageRate"), error_code: "value_is_mandatory")
           end
         end
@@ -173,10 +173,16 @@ module QuoteVersions
           add_error(field: coupon_field(index, "#{section}.frequencyDuration"), error_code: "value_is_mandatory")
         end
 
-        # Mirrors how the execution service resolves an overridden coupon value, then the fallback
-        # AppliedCoupons::CreateService applies on the live coupon.
+        # A negotiated value overrides the catalog snapshot it was drafted from, the way the
+        # execution services resolve a quoted value, see Orders::OneOff::ExecuteService.
+        def quoted_coupon_value(coupon_item, field)
+          coupon_item.dig("overrides", field) || coupon_item.dig("payload", field)
+        end
+
+        # Adds the fallback AppliedCoupons::CreateService applies on the live coupon, for the
+        # values it defaults rather than requires.
         def effective_coupon_value(coupon_item, field, coupon_value)
-          coupon_item.dig("overrides", field) || coupon_item.dig("payload", field) || coupon_value
+          quoted_coupon_value(coupon_item, field) || coupon_value
         end
 
         def validate_wallet_credits
