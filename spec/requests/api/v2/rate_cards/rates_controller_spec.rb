@@ -12,7 +12,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
     let(:create_params) do
       {
         code: "launch_price",
-        effective_from: 1.month.from_now.beginning_of_day.iso8601,
+        effective_from: 1.month.from_now.to_date.iso8601,
         rate_model: "standard",
         rate_properties: {amount: "12"},
         billing_interval_unit: "month"
@@ -28,6 +28,47 @@ RSpec.describe Api::V2::RateCards::RatesController do
       expect(json[:rate][:lago_id]).to be_present
       expect(json[:rate][:rate_model]).to eq("standard")
       expect(json[:rate][:status]).to eq("pending")
+    end
+
+    it "returns effective_from as a midnight datetime on an arrears card" do
+      subject
+
+      expect(json[:rate][:effective_from]).to eq(1.month.from_now.beginning_of_day.iso8601)
+    end
+
+    context "when an arrears card receives a datetime string" do
+      before { create_params[:effective_from] = "2026-12-01T17:00:00Z" }
+
+      it "canonicalizes it to its day's midnight" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate][:effective_from]).to eq("2026-12-01T00:00:00Z")
+      end
+
+      context "when the day already has a rate" do
+        before { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-12-01")) }
+
+        it "returns a value_already_exist error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json.dig(:error_details, :effective_from)).to eq(["value_already_exist"])
+        end
+      end
+    end
+
+    context "with an advance card" do
+      let(:rate_card) { create(:rate_card, organization:, billing_timing: "advance") }
+
+      before { create_params[:effective_from] = "2026-12-01T17:00:00Z" }
+
+      it "accepts a datetime and returns it in full" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate][:effective_from]).to eq("2026-12-01T17:00:00Z")
+      end
     end
 
     context "when the rate card does not exist" do
