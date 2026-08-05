@@ -27,6 +27,7 @@ module Subscriptions
         plan:,
         subscription_at:,
         ending_at: params[:ending_at],
+        billing_anchor_date: params[:billing_anchor_date],
         payment_method: params[:payment_method],
         activation_rules: params[:activation_rules],
         subscription_type:
