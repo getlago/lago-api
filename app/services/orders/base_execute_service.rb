@@ -61,7 +61,7 @@ module Orders
       order.update!(
         status: :executed,
         executed_at:,
-        execution_record: execution_record(executed_at: executed_at.iso8601).merge(created)
+        execution_record: execution_record(executed_at: executed_at.iso8601, **created)
       )
     end
 
@@ -78,18 +78,10 @@ module Orders
       failed_result
     end
 
-    # Every order type writes the same keys, whether or not it can create such a record, so a
-    # reader never has to tell a missing key from an empty one.
     def execution_record(**written)
-      {
-        executed_at: nil,
-        execution_mode: order.execution_mode,
-        invoice_id: nil,
-        subscription_ids: [],
-        applied_coupon_ids: [],
-        wallet_ids: [],
-        errors: []
-      }.merge(written)
+      Order::EXECUTION_RECORD_DEFAULTS
+        .merge("execution_mode" => order.execution_mode)
+        .merge(written.stringify_keys)
     end
 
     def billing_items
