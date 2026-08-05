@@ -102,18 +102,21 @@ module Orders
           name: overrides["name"],
           description: overrides["description"],
           trial_period: overrides["trialPeriod"],
-          minimum_commitment: minimum_commitment(overrides),
+          minimum_commitment: minimum_commitment(overrides, plan),
           charges: charge_overrides(item, plan).presence,
           fixed_charges: fixed_charge_overrides(item, plan).presence
         }.compact
       end
 
-      def minimum_commitment(overrides)
+      # Plans::OverrideService builds a fresh Commitment rather than duplicating the plan's own, and
+      # Commitment rejects a nil amount, so an override renaming the commitment without repricing it
+      # only reaches a valid record if the plan's own amount is forwarded here.
+      def minimum_commitment(overrides, plan)
         commitment = overrides["minimumCommitment"]
         return nil if commitment.blank?
 
         {
-          amount_cents: commitment["amountCents"],
+          amount_cents: commitment["amountCents"] || plan.minimum_commitment&.amount_cents,
           invoice_display_name: commitment["invoiceDisplayName"]
         }.compact.presence
       end
@@ -293,7 +296,7 @@ module Orders
       # Plans::OverrideService dups it, so two items on the same plan get their own instance
       # instead of inheriting each other's amount.
       def find_plan!(plan_id)
-        plan = order.organization.plans.includes(:charges, :fixed_charges).find_by(id: plan_id)
+        plan = order.organization.plans.includes(:charges, :fixed_charges, :minimum_commitment).find_by(id: plan_id)
         result.not_found_failure!(resource: "plan").raise_if_error! if plan.nil?
 
         plan
