@@ -690,9 +690,7 @@ RSpec.describe Customer do
     end
 
     context "when the manual connection is default" do
-      before do
-        create(:stripe_customer, customer:, payment_provider: nil, provider_customer_id: nil, code: "manual", is_default: true)
-      end
+      before { create(:manual_payment_provider_customer, customer:, is_default: true) }
 
       it { is_expected.to eq("manual") }
     end

@@ -3134,6 +3134,7 @@ input CreateCustomerInput {
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
+  paymentProviderCustomers: [PaymentProviderCustomerInput!]
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput
@@ -10597,6 +10598,18 @@ enum PaymentProviderConnectionStatusEnum {
   not_connected
 }
 
+input PaymentProviderCustomerInput {
+  code: String
+  id: ID
+  isDefault: Boolean
+  paymentProvider: ProviderTypeEnum
+  paymentProviderCode: String
+  providerCustomerId: ID
+  providerPaymentMethods: [ProviderPaymentMethodsEnum!]
+  syncWithProvider: Boolean
+  type: String
+}
+
 """
 PaymentReceipt
 """
@@ -14769,6 +14782,7 @@ input UpdateCustomerInput {
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
+  paymentProviderCustomers: [PaymentProviderCustomerInput!]
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput

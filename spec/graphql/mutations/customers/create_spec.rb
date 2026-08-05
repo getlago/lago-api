@@ -214,6 +214,48 @@ RSpec.describe Mutations::Customers::Create do
     end
   end
 
+  context "with the payment_provider_customers array" do
+    let(:array_mutation) do
+      <<~GQL
+        mutation($input: CreateCustomerInput!) {
+          createCustomer(input: $input) {
+            id
+            connectionStatus
+            paymentProviderCustomers { id code isDefault }
+          }
+        }
+      GQL
+    end
+
+    it "creates the connections and marks the flagged one as default" do
+      stripe_provider
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permissions,
+        query: array_mutation,
+        variables: {
+          input: {
+            name: "Array Inc",
+            externalId: "array_inc",
+            paymentProviderCustomers: [
+              {type: "manual", code: "manual", isDefault: true},
+              {code: "stripe_eu", paymentProvider: "stripe", providerCustomerId: "cu_12345", providerPaymentMethods: ["card"]}
+            ]
+          }
+        }
+      )
+
+      result_data = result["data"]["createCustomer"]
+
+      expect(result_data["connectionStatus"]).to eq("manual")
+      expect(result_data["paymentProviderCustomers"].map { |c| c["code"] }).to match_array(%w[manual stripe_eu])
+      manual = result_data["paymentProviderCustomers"].find { |c| c["code"] == "manual" }
+      expect(manual["isDefault"]).to be(true)
+    end
+  end
+
   context "with validation errors" do
     it "returns an error with validation messages" do
       result = execute_graphql(

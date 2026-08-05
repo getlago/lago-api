@@ -40,12 +40,6 @@ module PaymentProviderCustomers
         .where(provider_customer_id: provider_id)
     end
 
-    # A manual payment row is a reserved null-provider connection (code "manual"). It is the
-    # implicit payment default when no provider connection is set.
-    def manual?
-      payment_provider_id.nil? && code == MANUAL_CODE
-    end
-
     def provider_payment_methods
       nil
     end
