@@ -50,7 +50,7 @@ RSpec.describe Api::V2::RateCardsController do
           rates: [
             {
               code: "launch_price",
-              effective_from: 1.minute.ago.beginning_of_day.iso8601,
+              effective_from: 1.minute.ago.to_date.iso8601,
               rate_model: "standard",
               rate_properties: {amount: "0.05"},
               billing_interval_count: 1,
@@ -58,7 +58,7 @@ RSpec.describe Api::V2::RateCardsController do
             },
             {
               code: "standard_price",
-              effective_from: 1.month.from_now.beginning_of_day.iso8601,
+              effective_from: 1.month.from_now.to_date.iso8601,
               rate_model: "standard",
               rate_properties: {amount: "0.07"},
               billing_interval_unit: "month"
@@ -82,7 +82,7 @@ RSpec.describe Api::V2::RateCardsController do
             code: "standard",
             currency: "EUR",
             rates: [
-              {code: "bad", effective_from: Time.current.beginning_of_day.iso8601, rate_model: "standard", rate_properties: {}, billing_interval_unit: "month"}
+              {code: "bad", effective_from: Time.current.to_date.iso8601, rate_model: "standard", rate_properties: {}, billing_interval_unit: "month"}
             ]
           }
         end
